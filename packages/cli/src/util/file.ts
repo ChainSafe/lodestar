@@ -3,8 +3,9 @@ import path from "node:path";
 import {Readable} from "node:stream";
 import stream from "node:stream/promises";
 import {ReadableStream as NodeReadableStream} from "node:stream/web";
-import {fetch} from "@lodestar/utils";
 import yaml from "js-yaml";
+import {fetch} from "@lodestar/utils";
+
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
 import {mkdir} from "./fs.js";
@@ -138,7 +139,7 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
       throw new Error("Response body is null");
     }
 
-    await stream.pipeline(Readable.fromWeb(res.body as NodeReadableStream), fs.createWriteStream(pathDest));
+    await stream.pipeline(Readable.fromWeb(res.body as unknown as NodeReadableStream), fs.createWriteStream(pathDest));
   }
 }
 
@@ -148,7 +149,10 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await fetch(pathOrUrl);
+    const res = await fetch(pathOrUrl, {
+      // Ensure we only receive SSZ responses if REST API is queried
+      headers: {accept: "application/octet-stream"},
+    });
     if (!res.ok) {
       throw new Error(`Failed to download file from ${pathOrUrl}: ${res.status} ${res.statusText}`);
     }

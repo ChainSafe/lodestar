@@ -69,7 +69,11 @@ export type ReqRespRequest = {
 /**
  * Request handler
  */
-export type ProtocolHandler = (req: ReqRespRequest, peerId: PeerId) => AsyncIterable<ResponseOutgoing>;
+export type ProtocolHandler = (
+  req: ReqRespRequest,
+  peerId: PeerId,
+  peerClient: string
+) => AsyncIterable<ResponseOutgoing>;
 
 /**
  * ReqResp Protocol Deceleration

@@ -1,6 +1,6 @@
+import {describe, expect, it} from "vitest";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
 import {Eth1Block} from "../../../../src/eth1/interface.js";

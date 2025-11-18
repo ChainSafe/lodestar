@@ -1,5 +1,5 @@
-import {phase0} from "@lodestar/types";
 import {beforeAll, describe, expect, it} from "vitest";
+import {phase0} from "@lodestar/types";
 import {getBeaconApi} from "../../../../../src/api/impl/beacon/index.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {Mutable} from "../../../../utils/types.js";

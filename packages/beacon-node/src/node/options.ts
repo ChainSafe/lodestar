@@ -15,6 +15,7 @@ import {MetricsOptions, defaultMetricsOptions} from "../metrics/options.js";
 import {MonitoringOptions, defaultMonitoringOptions} from "../monitoring/options.js";
 import {NetworkOptions, defaultNetworkOptions} from "../network/options.js";
 import {SyncOptions, defaultSyncOptions} from "../sync/options.js";
+
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";
 

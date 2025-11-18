@@ -1,5 +1,5 @@
-import {ErrorAborted, Histogram, Logger, TimeoutError, fetch} from "@lodestar/utils";
 import {Registry} from "prom-client";
+import {ErrorAborted, Histogram, Logger, TimeoutError, fetch} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
 import {createClientStats} from "./clientStats.js";
 import {MonitoringOptions, defaultMonitoringOptions} from "./options.js";

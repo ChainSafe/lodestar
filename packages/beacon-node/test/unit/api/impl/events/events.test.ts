@@ -1,7 +1,8 @@
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {toHex} from "@lodestar/utils";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
 import {BeaconChain, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/constants.js";
@@ -11,13 +12,13 @@ vi.mock("../../../../../src/chain/index.js", async (importActual) => {
 
   return {
     ...mod,
-    BeaconChain: vi.spyOn(mod, "BeaconChain").mockImplementation(() => {
+    BeaconChain: vi.spyOn(mod, "BeaconChain").mockImplementation(function MockedBeaconChain() {
       return {
         emitter: new ChainEventEmitter(),
         forkChoice: {
           getHead: vi.fn(),
         },
-      } as unknown as BeaconChain;
+      };
     }),
   };
 });
@@ -69,6 +70,23 @@ describe("Events api impl", () => {
       expect(events).toHaveLength(1);
       expect(events[0].type).toBe(routes.events.EventType.head);
       expect(events[0].message).not.toBeNull();
+    });
+
+    it("should emit data_column_sidecar event", async () => {
+      const events = getEvents([routes.events.EventType.dataColumnSidecar]);
+
+      const mockDataColumnSidecarEvent = {
+        blockRoot: ZERO_HASH_HEX,
+        index: 1,
+        slot: 123,
+        kzgCommitments: [toHex(ssz.deneb.KZGCommitment.defaultValue())],
+      };
+
+      chainEventEmmitter.emit(routes.events.EventType.dataColumnSidecar, mockDataColumnSidecarEvent);
+
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe(routes.events.EventType.dataColumnSidecar);
+      expect(events[0].message).toEqual(mockDataColumnSidecarEvent);
     });
   });
 });

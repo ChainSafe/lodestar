@@ -1,10 +1,10 @@
+import {beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {INTERVALS_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {beforeEach, describe, expect, it} from "vitest";
 import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
@@ -18,6 +18,7 @@ describe("Forkchoice / GetProposerHead", () => {
 
   const parentSlot = genesisSlot + 1;
   const headSlot = genesisSlot + 2;
+  const validatorCount = 100;
 
   let protoArr: ProtoArray;
 
@@ -204,7 +205,7 @@ describe("Forkchoice / GetProposerHead", () => {
       parentBlock: {...baseParentHeadBlock, weight: 211},
       headBlock: {...baseHeadBlock},
       expectReorg: false,
-      secFromSlot: config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2 + 1,
+      secFromSlot: config.getProposerReorgCutoffMs(ForkName.phase0) / 1000 + 1,
       expectedNotReorgedReason: NotReorgedReason.NotProposingOnTime,
     },
   ];
@@ -238,7 +239,7 @@ describe("Forkchoice / GetProposerHead", () => {
         currentSlot,
       });
 
-      const forkChoice = new ForkChoice(config, fcStore, protoArr, {
+      const forkChoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null, {
         proposerBoost: true,
         proposerBoostReorg: true,
       });

@@ -1,199 +1,381 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
-import {pruneSetToMax, toRootHex} from "@lodestar/utils";
-
-import {Metrics} from "../../metrics/index.js";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {ForkName, ForkPostFulu, ForkPreGloas, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {LodestarError, Logger} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
+import {IClock} from "../../util/clock.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
 import {
-  BlobsSource,
   BlockInput,
-  BlockInputDataBlobs,
-  BlockSource,
-  CachedData,
-  GossipedInputType,
-  NullBlockInput,
-  getBlockInput,
-  getBlockInputBlobs,
-} from "../blocks/types.js";
+  BlockInputBlobs,
+  BlockInputColumns,
+  BlockInputPreData,
+  BlockWithSource,
+  DAType,
+  ForkBlobsDA,
+  IBlockInput,
+  LogMetaBasic,
+  LogMetaBlobs,
+  LogMetaColumns,
+  SourceMeta,
+  isBlockInputBlobs,
+  isBlockInputColumns,
+  isDaOutOfRange,
+} from "../blocks/blockInput/index.js";
+import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
-export enum BlockInputAvailabilitySource {
-  GOSSIP = "gossip",
-  UNKNOWN_SYNC = "unknown_sync",
-}
+const MAX_BLOCK_INPUT_CACHE_SIZE = 5;
 
-type GossipedBlockInput =
-  | {type: GossipedInputType.block; signedBlock: SignedBeaconBlock}
-  | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar};
-
-type BlockInputCacheType = {
-  fork: ForkName;
-  block?: SignedBeaconBlock;
-  cachedData?: CachedData;
-  // block promise and its callback cached for delayed resolution
-  blockInputPromise: Promise<BlockInput>;
-  resolveBlockInput: (blockInput: BlockInput) => void;
+export type SeenBlockInputCacheModules = {
+  config: ChainForkConfig;
+  clock: IClock;
+  chainEvents: ChainEventEmitter;
+  signal: AbortSignal;
+  custodyConfig: CustodyConfig;
+  metrics: Metrics | null;
+  logger?: Logger;
 };
 
-const MAX_GOSSIPINPUT_CACHE = 5;
+export type GetByBlobOptions = {
+  throwErrorIfAlreadyKnown?: boolean;
+};
 
 /**
- * For predeneb, SeenGossipBlockInput only tracks and caches block so that we don't need to download known block
- * roots. From deneb, it serves same purpose plus tracks and caches the live blobs and blocks on the network to
- * solve data availability for the blockInput. If no block has been seen yet for some already seen blobs, it
- * responds will null, but on the first block or the consequent blobs it responds with blobs promise till all blobs
- * become available.
+ * Consumers that create BlockInputs or change types of old BlockInputs
  *
- * One can start processing block on blobs promise blockInput response and can await on the promise before
- * fully importing the block. The blobs promise is gets resolved as soon as all blobs corresponding to that
- * block are seen by SeenGossipBlockInput
+ * - gossipHandlers (block and blob)
+ * - beaconBlocksMaybeBlobsByRange
+ * - unavailableBeaconBlobsByRoot (beaconBlocksMaybeBlobsByRoot)
+ * - publishBlock in the beacon/blocks/index.ts API
+ *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/api/impl/beacon/blocks/index.ts#L62
+ * - maybeValidateBlobs in verifyBlocksDataAvailability (is_data_available spec function)
+ *   https://github.com/ChainSafe/lodestar/blob/unstable/packages/beacon-node/src/chain/blocks/verifyBlocksDataAvailability.ts#L111
+ *
+ *
+ * Pruning management for SeenBlockInputCache
+ * ------------------------------------------
+ * There are four cases for how pruning needs to be handled
+ * - Normal operation following head via gossip (and/or reqresp). For this situation the consumer (process pipeline or
+ *   caller of processBlock) will call the `prune` method to remove any processed BlockInputs from the cache. This will
+ *   also remove any ancestors of the processed BlockInput as that will also need to have been successfully processed
+ *   for import to work correctly
+ * - onFinalized event handler will help to prune any non-canonical forks once the chain finalizes. Any block-slots that
+ *   are before the finalized checkpoint will be pruned.
+ * - Range-sync periods.  The range process uses this cache to store and sync blocks with DA data as the chain is pulled
+ *   from peers.  We pull batches, by epoch, so 32 slots are pulled at a time and several batches are pulled concurrently.
+ *   It is important to set the MAX_BLOCK_INPUT_CACHE_SIZE high enough to support range sync activities.  Currently the
+ *   value is set for 5 batches of 32 slots.  As process block is called (similar to following head) the BlockInput and
+ *   its ancestors will be pruned.
+ * - Non-Finality times.  This is a bit more tricky.  There can be long periods of non-finality and storing everything
+ *   will cause OOM.  The pruneToMax will help ensure a hard limit on the number of stored blocks (with DA) that are held
+ *   in memory at any one time.  The value for MAX_BLOCK_INPUT_CACHE_SIZE is set to accommodate range-sync but in
+ *   practice this value may need to be massaged in the future if we find issues when debugging non-finality
  */
-export class SeenGossipBlockInput {
-  private blockInputCache = new Map<RootHex, BlockInputCacheType>();
 
-  prune(): void {
-    pruneSetToMax(this.blockInputCache, MAX_GOSSIPINPUT_CACHE);
+export class SeenBlockInput {
+  private readonly config: ChainForkConfig;
+  private readonly custodyConfig: CustodyConfig;
+  private readonly clock: IClock;
+  private readonly chainEvents: ChainEventEmitter;
+  private readonly signal: AbortSignal;
+  private readonly metrics: Metrics | null;
+  private readonly logger?: Logger;
+  private blockInputs = new Map<RootHex, IBlockInput>();
+
+  constructor({config, custodyConfig, clock, chainEvents, signal, metrics, logger}: SeenBlockInputCacheModules) {
+    this.config = config;
+    this.custodyConfig = custodyConfig;
+    this.clock = clock;
+    this.chainEvents = chainEvents;
+    this.signal = signal;
+    this.metrics = metrics;
+    this.logger = logger;
+
+    if (metrics) {
+      metrics.seenCache.blockInput.blockInputCount.addCollect(() =>
+        metrics.seenCache.blockInput.blockInputCount.set(this.blockInputs.size)
+      );
+    }
+
+    this.chainEvents.on(ChainEvent.forkChoiceFinalized, this.onFinalized);
+    this.signal.addEventListener("abort", () => {
+      this.chainEvents.off(ChainEvent.forkChoiceFinalized, this.onFinalized);
+    });
   }
 
-  hasBlock(blockRoot: RootHex): boolean {
-    return this.blockInputCache.has(blockRoot);
+  has(rootHex: RootHex): boolean {
+    return this.blockInputs.has(rootHex);
   }
 
-  getGossipBlockInput(
-    config: ChainForkConfig,
-    gossipedInput: GossipedBlockInput,
-    metrics: Metrics | null
-  ):
-    | {
-        blockInput: BlockInput;
-        blockInputMeta: {pending: GossipedInputType.blob | null; haveBlobs: number; expectedBlobs: number};
+  get(rootHex: RootHex): IBlockInput | undefined {
+    return this.blockInputs.get(rootHex);
+  }
+
+  /**
+   * Removes the single BlockInput from the cache
+   */
+  remove(rootHex: RootHex): void {
+    this.blockInputs.delete(rootHex);
+  }
+
+  /**
+   * Removes a processed BlockInput from the cache and also removes any ancestors of processed blocks
+   */
+  prune(rootHex: RootHex): void {
+    let blockInput = this.blockInputs.get(rootHex);
+    let parentRootHex = blockInput?.parentRootHex;
+    let deletedCount = 0;
+    while (blockInput) {
+      deletedCount++;
+      this.blockInputs.delete(blockInput.blockRootHex);
+      blockInput = this.blockInputs.get(parentRootHex ?? "");
+      parentRootHex = blockInput?.parentRootHex;
+    }
+    this.logger?.debug(`BlockInputCache.prune deleted ${deletedCount} cached BlockInputs`);
+    this.pruneToMaxSize();
+  }
+
+  onFinalized = (checkpoint: CheckpointWithHex) => {
+    let deletedCount = 0;
+    const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
+    for (const [rootHex, blockInput] of this.blockInputs) {
+      if (blockInput.slot < cutoffSlot) {
+        deletedCount++;
+        this.blockInputs.delete(rootHex);
       }
-    | {
-        blockInput: NullBlockInput;
-        blockInputMeta: {pending: GossipedInputType.block; haveBlobs: number; expectedBlobs: null};
-      } {
-    let blockHex: RootHex;
-    let blockCache: BlockInputCacheType;
-    let fork: ForkName;
+    }
+    this.logger?.debug(`BlockInputCache.onFinalized deleted ${deletedCount} cached BlockInputs`);
+    this.pruneToMaxSize();
+  };
 
-    if (gossipedInput.type === GossipedInputType.block) {
-      const {signedBlock} = gossipedInput;
-      fork = config.getForkName(signedBlock.message.slot);
+  getByBlock({blockRootHex, block, source, seenTimestampSec, peerIdStr}: BlockWithSource): BlockInput {
+    // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
+    let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
+    if (!blockInput) {
+      const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      blockHex = toRootHex(config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message));
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
+      // TODO GLOAS: Implement
+      if (isForkPostGloas(forkName)) {
+        throw Error("Not implemented");
+      }
+      // Pre-deneb
+      if (!isForkPostDeneb(forkName)) {
+        blockInput = BlockInputPreData.createFromBlock({
+          block,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          source,
+          seenTimestampSec,
+          peerIdStr,
+        });
+        // Fulu Only
+      } else if (isForkPostFulu(forkName)) {
+        blockInput = BlockInputColumns.createFromBlock({
+          block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          custodyColumns: this.custodyConfig.custodyColumns,
+          sampledColumns: this.custodyConfig.sampledColumns,
+          source,
+          seenTimestampSec,
+          peerIdStr,
+        });
+        // Deneb and Electra
+      } else {
+        blockInput = BlockInputBlobs.createFromBlock({
+          block: block as SignedBeaconBlock<ForkBlobsDA>,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          source,
+          seenTimestampSec,
+          peerIdStr,
+        });
+      }
+      this.blockInputs.set(blockInput.blockRootHex, blockInput);
+    }
 
-      blockCache.block = signedBlock;
+    if (!blockInput.hasBlock()) {
+      blockInput.addBlock({block, blockRootHex, source, seenTimestampSec, peerIdStr});
     } else {
-      const {blobSidecar} = gossipedInput;
-      const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
-      fork = config.getForkName(blobSidecar.signedBlockHeader.message.slot);
-
-      blockHex = toRootHex(blockRoot);
-      blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry(fork);
-
-      // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
-      blockCache.cachedData?.blobsCache.set(blobSidecar.index, blobSidecar);
+      this.logger?.debug("Attempt to cache block but is already cached on BlockInput", blockInput.getLogMeta());
+      this.metrics?.seenCache.blockInput.duplicateBlockCount.inc({source});
     }
 
-    if (!this.blockInputCache.has(blockHex)) {
-      this.blockInputCache.set(blockHex, blockCache);
+    return blockInput as BlockInput;
+  }
+
+  getByBlob(
+    {
+      blockRootHex,
+      blobSidecar,
+      source,
+      seenTimestampSec,
+      peerIdStr,
+    }: SourceMeta & {blockRootHex: RootHex; blobSidecar: deneb.BlobSidecar},
+    opts: GetByBlobOptions = {}
+  ): BlockInputBlobs {
+    // TODO(peerDAS): Why is it necessary to static cast this here. All conditional paths result in a valid value so should be defined correctly below
+    let blockInput = this.blockInputs.get(blockRootHex) as IBlockInput;
+    let created = false;
+    if (!blockInput) {
+      created = true;
+      const {forkName, daOutOfRange} = this.buildCommonProps(blobSidecar.signedBlockHeader.message.slot);
+      blockInput = BlockInputBlobs.createFromBlob({
+        blobSidecar,
+        blockRootHex,
+        daOutOfRange,
+        forkName,
+        source,
+        seenTimestampSec,
+        peerIdStr,
+      });
+      this.metrics?.seenCache.blockInput.createdByBlob.inc();
+      this.blockInputs.set(blockRootHex, blockInput);
     }
 
-    const {block: signedBlock, blockInputPromise, resolveBlockInput, cachedData} = blockCache;
-
-    if (signedBlock !== undefined) {
-      if (!isForkPostDeneb(fork)) {
-        return {
-          blockInput: getBlockInput.preData(config, signedBlock, BlockSource.gossip),
-          blockInputMeta: {pending: null, haveBlobs: 0, expectedBlobs: 0},
-        };
-      }
-
-      if (cachedData === undefined || !isForkPostDeneb(cachedData.fork)) {
-        throw Error("Missing or Invalid fork cached Data for post-deneb block");
-      }
-      const {blobsCache, resolveAvailability} = cachedData;
-
-      // block is available, check if all blobs have shown up
-      const {slot, body} = signedBlock.message;
-      const {blobKzgCommitments} = body as deneb.BeaconBlockBody;
-      const blockInfo = `blockHex=${blockHex}, slot=${slot}`;
-
-      if (blobKzgCommitments.length < blobsCache.size) {
-        throw Error(
-          `Received more blobs=${blobsCache.size} than commitments=${blobKzgCommitments.length} for ${blockInfo}`
-        );
-      }
-
-      if (blobKzgCommitments.length === blobsCache.size) {
-        const allBlobs = getBlockInputBlobs(blobsCache);
-        const blockData = {...allBlobs, blobsSource: BlobsSource.gossip, fork: cachedData.fork};
-        resolveAvailability(blockData);
-        metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-        const blockInput = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
-
-        resolveBlockInput(blockInput);
-        return {
-          blockInput,
-          blockInputMeta: {pending: null, haveBlobs: allBlobs.blobs.length, expectedBlobs: blobKzgCommitments.length},
-        };
-      }
-
-      const blockInput = getBlockInput.dataPromise(config, signedBlock, BlockSource.gossip, cachedData);
-
-      resolveBlockInput(blockInput);
-      return {
-        blockInput,
-        blockInputMeta: {
-          pending: GossipedInputType.blob,
-          haveBlobs: blobsCache.size,
-          expectedBlobs: blobKzgCommitments.length,
+    if (!isBlockInputBlobs(blockInput)) {
+      throw new SeenBlockInputCacheError(
+        {
+          code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
+          cachedType: blockInput.type,
+          requestedType: DAType.Blobs,
+          ...blockInput.getLogMeta(),
         },
-      };
+        `BlockInputType mismatch adding blobIndex=${blobSidecar.index}`
+      );
     }
 
-    // will need to wait for the block to showup
-    if (cachedData === undefined) {
-      throw Error("Missing cachedData for deneb+ blobs");
+    if (!blockInput.hasBlob(blobSidecar.index)) {
+      blockInput.addBlob({blobSidecar, blockRootHex, source, seenTimestampSec, peerIdStr});
+    } else if (!created) {
+      this.logger?.debug(
+        `Attempt to cache blob index #${blobSidecar.index} but is already cached on BlockInput`,
+        blockInput.getLogMeta()
+      );
+      this.metrics?.seenCache.blockInput.duplicateBlobCount.inc({source});
+      if (opts.throwErrorIfAlreadyKnown) {
+        throw new SeenBlockInputCacheError({
+          code: SeenBlockInputCacheErrorCode.GOSSIP_BLOB_ALREADY_KNOWN,
+          ...blockInput.getLogMeta(),
+        });
+      }
     }
-    const {blobsCache} = cachedData;
 
+    return blockInput;
+  }
+
+  getByColumn(
+    {
+      blockRootHex,
+      columnSidecar,
+      seenTimestampSec,
+      source,
+      peerIdStr,
+    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: fulu.DataColumnSidecar},
+    opts: GetByBlobOptions = {}
+  ): BlockInputColumns {
+    let blockInput = this.blockInputs.get(blockRootHex);
+    let created = false;
+    if (!blockInput) {
+      created = true;
+      const {forkName, daOutOfRange} = this.buildCommonProps(columnSidecar.signedBlockHeader.message.slot);
+      blockInput = BlockInputColumns.createFromColumn({
+        columnSidecar,
+        blockRootHex,
+        daOutOfRange,
+        forkName,
+        source,
+        seenTimestampSec,
+        peerIdStr,
+        custodyColumns: this.custodyConfig.custodyColumns,
+        sampledColumns: this.custodyConfig.sampledColumns,
+      });
+      this.metrics?.seenCache.blockInput.createdByBlob.inc();
+      this.blockInputs.set(blockRootHex, blockInput);
+    }
+
+    if (!isBlockInputColumns(blockInput)) {
+      throw new SeenBlockInputCacheError(
+        {
+          code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
+          cachedType: blockInput.type,
+          requestedType: DAType.Columns,
+          ...blockInput.getLogMeta(),
+        },
+        `BlockInputType mismatch adding columnIndex=${columnSidecar.index}`
+      );
+    }
+
+    if (!blockInput.hasColumn(columnSidecar.index)) {
+      blockInput.addColumn({columnSidecar, blockRootHex, source, seenTimestampSec, peerIdStr});
+    } else if (!created) {
+      this.logger?.debug(
+        `Attempt to cache column index #${columnSidecar.index} but is already cached on BlockInput`,
+        blockInput.getLogMeta()
+      );
+      this.metrics?.seenCache.blockInput.duplicateColumnCount.inc({source});
+      if (opts.throwErrorIfAlreadyKnown) {
+        throw new SeenBlockInputCacheError({
+          code: SeenBlockInputCacheErrorCode.GOSSIP_COLUMN_ALREADY_KNOWN,
+          ...blockInput.getLogMeta(),
+        });
+      }
+    }
+
+    return blockInput;
+  }
+
+  private buildCommonProps(slot: Slot): {
+    daOutOfRange: boolean;
+    forkName: ForkName;
+  } {
+    const forkName = this.config.getForkName(slot);
     return {
-      blockInput: {
-        block: null,
-        blockRootHex: blockHex,
-        cachedData,
-        blockInputPromise,
-      },
-      blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
+      forkName,
+      daOutOfRange: isDaOutOfRange(this.config, forkName, slot, this.clock.currentEpoch),
     };
   }
+
+  /**
+   * Use custom implementation of pruneSetToMax to allow for sorting by slot
+   * and deleting via key/rootHex
+   */
+  private pruneToMaxSize() {
+    let itemsToDelete = this.blockInputs.size - MAX_BLOCK_INPUT_CACHE_SIZE;
+
+    if (itemsToDelete > 0) {
+      const sorted = [...this.blockInputs.entries()].sort((a, b) => b[1].slot - a[1].slot);
+      for (const [rootHex] of sorted) {
+        this.blockInputs.delete(rootHex);
+        itemsToDelete--;
+        if (itemsToDelete <= 0) return;
+      }
+    }
+  }
 }
 
-function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
-  // Capture both the promise and its callbacks for blockInput and final availability
-  // It is not spec'ed but in tests in Firefox and NodeJS the promise constructor is run immediately
-  let resolveBlockInput: ((block: BlockInput) => void) | null = null;
-  const blockInputPromise = new Promise<BlockInput>((resolveCB) => {
-    resolveBlockInput = resolveCB;
-  });
-  if (resolveBlockInput === null) {
-    throw Error("Promise Constructor was not executed immediately");
-  }
-  if (!isForkPostDeneb(fork)) {
-    return {fork, blockInputPromise, resolveBlockInput};
-  }
-
-  let resolveAvailability: ((blobs: BlockInputDataBlobs) => void) | null = null;
-  const availabilityPromise = new Promise<BlockInputDataBlobs>((resolveCB) => {
-    resolveAvailability = resolveCB;
-  });
-
-  if (resolveAvailability === null) {
-    throw Error("Promise Constructor was not executed immediately");
-  }
-
-  const blobsCache = new Map();
-  const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability};
-  return {fork, blockInputPromise, resolveBlockInput, cachedData};
+enum SeenBlockInputCacheErrorCode {
+  WRONG_BLOCK_INPUT_TYPE = "BLOCK_INPUT_CACHE_ERROR_WRONG_BLOCK_INPUT_TYPE",
+  GOSSIP_BLOB_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_BLOB_ALREADY_KNOWN",
+  GOSSIP_COLUMN_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_COLUMN_ALREADY_KNOWN",
 }
+
+type SeenBlockInputCacheErrorType =
+  | (LogMetaBasic & {
+      code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE;
+      cachedType: DAType;
+      requestedType: DAType;
+    })
+  | (LogMetaBlobs & {
+      code: SeenBlockInputCacheErrorCode.GOSSIP_BLOB_ALREADY_KNOWN;
+    })
+  | (LogMetaColumns & {
+      code: SeenBlockInputCacheErrorCode.GOSSIP_COLUMN_ALREADY_KNOWN;
+    });
+
+class SeenBlockInputCacheError extends LodestarError<SeenBlockInputCacheErrorType> {}

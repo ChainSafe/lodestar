@@ -1,7 +1,6 @@
 import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Attestation, Slot, electra, phase0, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
-import {assert} from "@lodestar/utils";
+import {assert, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateAllForks, CachedBeaconStatePhase0} from "../types.js";
 import {computeEndSlotAtEpoch, computeEpochAtSlot} from "../util/index.js";
 import {isValidIndexedAttestation} from "./index.js";

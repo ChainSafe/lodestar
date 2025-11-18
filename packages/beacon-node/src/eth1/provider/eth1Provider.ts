@@ -10,12 +10,10 @@ import {
   toHex,
   toPrintableUrl,
 } from "@lodestar/utils";
-
 import {HTTP_CONNECTION_ERROR_CODES, HTTP_FATAL_ERROR_CODES} from "../../execution/engine/utils.js";
 import {isValidAddress} from "../../util/address.js";
 import {linspace} from "../../util/numpy.js";
-import {Eth1Block, Eth1ProviderState, IEth1Provider} from "../interface.js";
-import {EthJsonRpcBlockRaw} from "../interface.js";
+import {Eth1Block, Eth1ProviderState, EthJsonRpcBlockRaw, IEth1Provider} from "../interface.js";
 import {DEFAULT_PROVIDER_URLS, Eth1Options} from "../options.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {

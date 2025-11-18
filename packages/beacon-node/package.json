@@ -11,62 +11,84 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.32.0",
+  "version": "1.36.0",
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./api": {
+      "bun": "./src/api/index.ts",
+      "types": "./lib/api/index.d.ts",
       "import": "./lib/api/index.js"
     },
     "./chain": {
+      "bun": "./src/chain/index.ts",
+      "types": "./lib/chain/index.d.ts",
       "import": "./lib/chain/index.js"
     },
     "./constants": {
+      "bun": "./src/constants/index.ts",
+      "types": "./lib/constants/index.d.ts",
       "import": "./lib/constants/index.js"
     },
     "./db": {
+      "bun": "./src/db/index.ts",
+      "types": "./lib/db/index.d.ts",
       "import": "./lib/db/index.js"
     },
     "./eth1": {
+      "bun": "./src/eth1/index.ts",
+      "types": "./lib/eth1/index.d.ts",
       "import": "./lib/eth1/index.js"
     },
     "./metrics": {
+      "bun": "./src/metrics/index.ts",
+      "types": "./lib/metrics/index.d.ts",
       "import": "./lib/metrics/index.js"
     },
     "./monitoring": {
+      "bun": "./src/monitoring/index.ts",
+      "types": "./lib/monitoring/index.d.ts",
       "import": "./lib/monitoring/index.js"
     },
     "./network": {
+      "bun": "./src/network/index.ts",
+      "types": "./lib/network/index.d.ts",
       "import": "./lib/network/index.js"
     },
     "./node": {
+      "bun": "./src/node/index.ts",
+      "types": "./lib/node/index.d.ts",
       "import": "./lib/node/index.js"
     },
     "./sync": {
+      "bun": "./src/sync/index.ts",
+      "types": "./lib/sync/index.d.ts",
       "import": "./lib/sync/index.js"
     },
     "./util": {
+      "bun": "./src/util/index.ts",
+      "types": "./lib/util/index.d.ts",
       "import": "./lib/util/index.js"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
+  "imports": {
+    "#prometheus-gc-stats-wrapper": {
+      "bun": "./src/bun-wrappers/prometheus-gc-stats.ts",
+      "default": "@chainsafe/prometheus-gc-stats"
+    },
+    "#datastore-wrapper": {
+      "bun": "./src/network/peers/datastore_bun.ts",
+      "default": "datastore-level"
     }
   },
-  "types": "./lib/index.d.ts",
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "*.d.ts",
-    "*.js"
+    "src",
+    "lib",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -94,16 +116,16 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
     "@chainsafe/blst": "^2.2.0",
-    "@chainsafe/discv5": "^11.0.0",
-    "@chainsafe/enr": "^5.0.0",
-    "@chainsafe/libp2p-gossipsub": "^14.1.1",
-    "@chainsafe/libp2p-noise": "^16.1.0",
-    "@chainsafe/persistent-merkle-tree": "^1.2.0",
+    "@chainsafe/discv5": "^11.0.4",
+    "@chainsafe/enr": "^5.0.1",
+    "@chainsafe/libp2p-gossipsub": "^14.1.2",
+    "@chainsafe/libp2p-noise": "^16.1.5",
+    "@chainsafe/persistent-merkle-tree": "^1.2.1",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",
-    "@chainsafe/ssz": "^1.2.1",
-    "@chainsafe/threads": "^1.11.2",
-    "@crate-crypto/node-eth-kzg": "0.8.0",
+    "@chainsafe/ssz": "^1.2.2",
+    "@chainsafe/threads": "^1.11.3",
+    "@crate-crypto/node-eth-kzg": "0.9.1",
     "@ethersproject/abi": "^5.7.0",
     "@fastify/bearer-auth": "^10.0.1",
     "@fastify/cors": "^10.0.1",
@@ -118,21 +140,22 @@
     "@libp2p/peer-id": "^5.1.0",
     "@libp2p/prometheus-metrics": "^4.3.15",
     "@libp2p/tcp": "^10.1.8",
-    "@lodestar/api": "^1.32.0",
-    "@lodestar/config": "^1.32.0",
-    "@lodestar/db": "^1.32.0",
-    "@lodestar/fork-choice": "^1.32.0",
-    "@lodestar/light-client": "^1.32.0",
-    "@lodestar/logger": "^1.32.0",
-    "@lodestar/params": "^1.32.0",
-    "@lodestar/reqresp": "^1.32.0",
-    "@lodestar/state-transition": "^1.32.0",
-    "@lodestar/types": "^1.32.0",
-    "@lodestar/utils": "^1.32.0",
-    "@lodestar/validator": "^1.32.0",
+    "@lodestar/api": "^1.36.0",
+    "@lodestar/config": "^1.36.0",
+    "@lodestar/db": "^1.36.0",
+    "@lodestar/fork-choice": "^1.36.0",
+    "@lodestar/light-client": "^1.36.0",
+    "@lodestar/logger": "^1.36.0",
+    "@lodestar/params": "^1.36.0",
+    "@lodestar/reqresp": "^1.36.0",
+    "@lodestar/state-transition": "^1.36.0",
+    "@lodestar/types": "^1.36.0",
+    "@lodestar/utils": "^1.36.0",
+    "@lodestar/validator": "^1.36.0",
     "@multiformats/multiaddr": "^12.1.3",
     "datastore-core": "^10.0.2",
-    "datastore-level": "^11.0.1",
+    "datastore-fs": "^10.0.6",
+    "datastore-level": "^11.0.3",
     "deepmerge": "^4.3.1",
     "fastify": "^5.2.1",
     "interface-datastore": "^8.3.0",
@@ -150,7 +173,6 @@
     "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
-    "@types/datastore-level": "^3.0.0",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
     "it-drain": "^3.0.3",

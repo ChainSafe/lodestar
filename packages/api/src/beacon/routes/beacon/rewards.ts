@@ -1,7 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, ssz} from "@lodestar/types";
-
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";

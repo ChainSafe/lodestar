@@ -114,6 +114,9 @@ function getContributionIndices(
 
   const syncCommittee = state.epochCtx.getIndexedSyncCommittee(contribution.slot);
   // The bits in contribution.aggregationBits select validatorIndexes in the subcommittee starting at startIndex
-  const subcommitteeIndices = syncCommittee.validatorIndices.slice(startIndex, startIndex + SYNC_COMMITTEE_SUBNET_SIZE);
-  return contribution.aggregationBits.intersectValues(subcommitteeIndices);
+  const subcommitteeValidatorIndices = syncCommittee.validatorIndices.slice(
+    startIndex,
+    startIndex + SYNC_COMMITTEE_SUBNET_SIZE
+  );
+  return contribution.aggregationBits.intersectValues(subcommitteeValidatorIndices);
 }

@@ -2,7 +2,6 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
-
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export const blobSidecarsWrapperSsz = new ContainerType(
@@ -24,7 +23,7 @@ export const BLOB_SIDECARS_IN_WRAPPER_INDEX = 44;
  */
 export class BlobSidecarsRepository extends Repository<Uint8Array, BlobSidecarsWrapper> {
   constructor(config: ChainForkConfig, db: Db) {
-    const bucket = Bucket.allForks_blobSidecars;
+    const bucket = Bucket.deneb_blobSidecars;
     super(config, db, bucket, blobSidecarsWrapperSsz, getBucketNameByValue(bucket));
   }
 

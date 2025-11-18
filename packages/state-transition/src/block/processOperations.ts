@@ -1,6 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
 import {BeaconBlockBody, capella, electra} from "@lodestar/types";
-
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";

@@ -2,8 +2,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
-import {LogLevel} from "@lodestar/utils";
-import {fetch} from "@lodestar/utils";
+import {LogLevel, fetch} from "@lodestar/utils";
 import {BeaconArgs} from "../../../../../src/cmds/beacon/options.js";
 import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../../constants.js";
@@ -87,7 +86,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
         command: LODESTAR_BINARY_PATH,
         args: ["beacon", "--rcConfig", rcConfigPath, "--paramsFile", paramsPath],
         env: {
-          DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
+          DEBUG: process.env.ENABLE_DEBUG_LOGS ? "*,-winston:*" : "",
         },
       },
       logs: {

@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-
 import {IBeaconChain} from "../../chain/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";

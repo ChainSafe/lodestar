@@ -1,14 +1,12 @@
-import {BitArray} from "@chainsafe/ssz";
 import {TopicValidatorResult} from "@libp2p/interface";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {BlockInput, BlockInputType, BlockSource, CachedData} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
-import {ReqRespBridgeEventData} from "../../../../src/network/core/events.js";
-import {ReqRespBridgeEvent} from "../../../../src/network/core/events.js";
+import {ReqRespBridgeEvent, ReqRespBridgeEventData} from "../../../../src/network/core/events.js";
 import {NetworkWorkerApi} from "../../../../src/network/core/index.js";
 import {
   GossipType,
@@ -50,7 +48,10 @@ describe("data serialization through worker boundary", () => {
       id: 0,
       item: {data: bytes, boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}},
     },
-    [ReqRespBridgeEvent.incomingRequest]: {id: 0, callArgs: {method, req: {data: bytes, version: 1}, peerId}},
+    [ReqRespBridgeEvent.incomingRequest]: {
+      id: 0,
+      callArgs: {method, req: {data: bytes, version: 1}, peerId, peerClient: "Unknown"},
+    },
     [ReqRespBridgeEvent.incomingResponse]: {
       type: IteratorEventType.next,
       id: 0,
@@ -73,27 +74,12 @@ describe("data serialization through worker boundary", () => {
 
   // Defining tests in this notation ensures that any event data is tested and probably safe to send
   const networkEventData = filterByUsedEvents<NetworkEventData>(networkEventDirection, {
-    [NetworkEvent.peerConnected]: {peer, status: statusZero},
+    [NetworkEvent.peerConnected]: {peer, status: statusZero, custodyColumns: [1, 2, 3, 4], clientAgent: "CLIENT_AGENT"},
     [NetworkEvent.peerDisconnected]: {peer},
     [NetworkEvent.reqRespRequest]: {
       request: {method: ReqRespMethod.Status, body: statusZero},
       peer: getValidPeerId(),
-    },
-    [NetworkEvent.unknownBlockParent]: {
-      blockInput: {
-        type: BlockInputType.preData,
-        block: ssz.capella.SignedBeaconBlock.defaultValue(),
-        source: BlockSource.gossip,
-      },
-      peer,
-    },
-    [NetworkEvent.unknownBlock]: {
-      rootHex: ZERO_HASH_HEX,
-      peer,
-    },
-    [NetworkEvent.unknownBlockInput]: {
-      blockInput: getEmptyBlockInput(),
-      peer,
+      peerClient: "Unknown",
     },
     [NetworkEvent.pendingGossipsubMessage]: {
       topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}},
@@ -105,6 +91,8 @@ describe("data serialization through worker boundary", () => {
       msgSlot: 1000,
       msgId: ZERO_HASH_HEX,
       propagationSource: peerId,
+      clientAgent: "Unknown",
+      clientVersion: "NA",
       seenTimestampSec: 1600000000,
       startProcessUnixSec: 1600000000,
     },
@@ -146,6 +134,8 @@ describe("data serialization through worker boundary", () => {
     scrapeMetrics: [],
     writeProfile: [0, ""],
     writeDiscv5Profile: [0, ""],
+    setTargetGroupCount: [4],
+    setAdvertisedGroupCount: [4],
   };
 
   const lodestarPeer: routes.lodestar.LodestarNodePeer = {
@@ -172,7 +162,7 @@ describe("data serialization through worker boundary", () => {
       enr: "test-enr",
       p2pAddresses: ["/ip4/1.2.3.4/tcp/0"],
       discoveryAddresses: ["/ip4/1.2.3.4/tcp/0"],
-      metadata: ssz.altair.Metadata.defaultValue(),
+      metadata: ssz.fulu.Metadata.defaultValue(),
     },
     subscribeGossipCoreTopics: null,
     unsubscribeGossipCoreTopics: null,
@@ -215,6 +205,8 @@ describe("data serialization through worker boundary", () => {
     scrapeMetrics: "test-metrics",
     writeProfile: "",
     writeDiscv5Profile: "",
+    setAdvertisedGroupCount: null,
+    setTargetGroupCount: null,
   };
 
   type TestCase = {id: string; data: unknown; shouldFail?: boolean};
@@ -249,22 +241,3 @@ describe("data serialization through worker boundary", () => {
 });
 
 type Resolves<T extends Promise<unknown>> = T extends Promise<infer U> ? (U extends void ? null : U) : never;
-
-function getEmptyBlockInput(): BlockInput {
-  const cachedData = {
-    fork: ForkName.deneb,
-    blobsCache: new Map(),
-    // Actual promise raise this error when used in `worker.postMessage`
-    // DataCloneError: #<Promise> could not be cloned.
-    availabilityPromise: null,
-    // Actual function raise this error when used in `worker.postMessage`
-    // DataCloneError: function () { [native code] } could not be cloned
-    resolveAvailability: null,
-  } as unknown as CachedData;
-  return {
-    type: BlockInputType.dataPromise,
-    block: ssz.deneb.SignedBeaconBlock.defaultValue(),
-    source: BlockSource.gossip,
-    cachedData,
-  };
-}

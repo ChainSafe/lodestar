@@ -1,8 +1,8 @@
 import {PeerId} from "@libp2p/interface";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {LodestarError, fromHex} from "@lodestar/utils";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {Protocol, RespStatus} from "../../../src/index.js";
 import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
 import {handleRequest} from "../../../src/response/index.js";

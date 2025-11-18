@@ -1,3 +1,4 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -6,7 +7,6 @@ import {config as mainnetConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
@@ -75,7 +75,7 @@ describe("BlockDutiesService", () => {
 
     api.validator.produceBlockV3.mockResolvedValue(
       mockApiResponse({
-        data: signedBlock.message,
+        data: {block: signedBlock.message},
         meta: {
           version: ForkName.bellatrix,
           executionPayloadValue: BigInt(1),
@@ -97,7 +97,7 @@ describe("BlockDutiesService", () => {
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlockV2.mock.calls[0]).toEqual([
-      {signedBlockOrContents: signedBlock, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
+      {signedBlockContents: {signedBlock}, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
     ]);
 
     // ProduceBlockV3 is called with all correct arguments

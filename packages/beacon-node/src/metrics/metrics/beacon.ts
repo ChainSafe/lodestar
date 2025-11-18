@@ -1,5 +1,3 @@
-import {UpdateHeadOpt} from "@lodestar/fork-choice";
-import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ProducedBlockSource} from "@lodestar/types";
 import {BlockSelectionResult} from "../../api/impl/validator/index.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
@@ -73,68 +71,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     // Non-spec'ed
 
-    forkChoice: {
-      findHead: register.histogram<{caller: string}>({
-        name: "beacon_fork_choice_find_head_seconds",
-        help: "Time taken to find head in seconds",
-        buckets: [0.1, 1, 10],
-        labelNames: ["caller"],
-      }),
-      requests: register.gauge({
-        name: "beacon_fork_choice_requests_total",
-        help: "Count of occasions where fork choice has tried to find a head",
-      }),
-      errors: register.gauge<{entrypoint: UpdateHeadOpt}>({
-        name: "beacon_fork_choice_errors_total",
-        help: "Count of occasions where fork choice has returned an error when trying to find a head",
-        labelNames: ["entrypoint"],
-      }),
-      changedHead: register.gauge({
-        name: "beacon_fork_choice_changed_head_total",
-        help: "Count of occasions fork choice has found a new head",
-      }),
-      reorg: register.gauge({
-        name: "beacon_fork_choice_reorg_total",
-        help: "Count of occasions fork choice has switched to a different chain",
-      }),
-      reorgDistance: register.histogram({
-        name: "beacon_fork_choice_reorg_distance",
-        help: "Histogram of re-org distance",
-        // We need high resolution in the low range, since re-orgs are a rare but critical event.
-        // Add buckets up to 100 to capture high depth re-orgs. Above 100 things are going really bad.
-        buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
-      }),
-      votes: register.gauge({
-        name: "beacon_fork_choice_votes_count",
-        help: "Current count of votes in fork choice data structures",
-      }),
-      queuedAttestations: register.gauge({
-        name: "beacon_fork_choice_queued_attestations_count",
-        help: "Count of queued_attestations in fork choice per slot",
-      }),
-      validatedAttestationDatas: register.gauge({
-        name: "beacon_fork_choice_validated_attestation_datas_count",
-        help: "Current count of validatedAttestationDatas in fork choice data structures",
-      }),
-      balancesLength: register.gauge({
-        name: "beacon_fork_choice_balances_length",
-        help: "Current length of balances in fork choice data structures",
-      }),
-      nodes: register.gauge({
-        name: "beacon_fork_choice_nodes_count",
-        help: "Current count of nodes in fork choice data structures",
-      }),
-      indices: register.gauge({
-        name: "beacon_fork_choice_indices_count",
-        help: "Current count of indices in fork choice data structures",
-      }),
-      notReorgedReason: register.counter<{reason: NotReorgedReason}>({
-        name: "beacon_fork_choice_not_reorged_reason_total",
-        help: "Reason why the current head is not re-orged out",
-        labelNames: ["reason"],
-      }),
-    },
-
     parentBlockDistance: register.histogram({
       name: "beacon_imported_block_parent_distance",
       help: "Histogram of distance to parent block of valid imported blocks",
@@ -197,21 +133,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [0.001, 0.005, 0.01, 0.03, 0.05, 0.07, 0.1, 0.3, 0.5, 1],
       labelNames: ["source"],
     }),
-
-    blockProductionCaches: {
-      producedBlockRoot: register.gauge({
-        name: "beacon_blockroot_produced_cache_total",
-        help: "Count of cached produced block roots",
-      }),
-      producedBlindedBlockRoot: register.gauge({
-        name: "beacon_blinded_blockroot_produced_cache_total",
-        help: "Count of cached produced blinded block roots",
-      }),
-      producedContentsCache: register.gauge({
-        name: "beacon_contents_produced_cache_total",
-        help: "Count of cached produced blob contents",
-      }),
-    },
+    blockProductionCacheSize: register.gauge({
+      name: "beacon_block_production_cache_size",
+      help: "Count of cached produced results",
+    }),
 
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({
@@ -233,6 +158,37 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       payloadFetchErrors: register.gauge({
         name: "beacon_block_payload_errors_total",
         help: "Count of errors while fetching payloads",
+      }),
+    },
+
+    blobs: {
+      getBlobsV1Requests: register.gauge({
+        name: "beacon_get_blobs_v1_calls_total",
+        help: "Number of getBlobsV1 requests that get made",
+      }),
+      getBlobsV1RequestedBlobCount: register.gauge({
+        name: "beacon_get_blobs_v1_requested_blobs_count_total",
+        help: "Number of versioned hashes that get sent in getBlobsV1 request",
+      }),
+      getBlobsV1Error: register.gauge({
+        name: "beacon_get_blobs_v1_response_error_total",
+        help: "Number of getBlobsV1 calls that errored ",
+      }),
+      getBlobsV1Miss: register.gauge({
+        name: "beacon_get_blobs_v1_missing_blob_response_total",
+        help: "Number of getBlobsV1 misses where a versioned hash returns a null",
+      }),
+      getBlobsV1Hit: register.gauge({
+        name: "beacon_get_blobs_v1_blob_returned_response_total",
+        help: "Number of getBlobsV1 hits where a versioned hash returns blob",
+      }),
+      getBlobsV1HitButArrivedWhileWaiting: register.gauge({
+        name: "beacon_get_blobs_v1_blob_returned_but_arrived_during_response_total",
+        help: "Number of getBlobsV1 hits where a versioned hash returns blob but the blob already arrived via gossip",
+      }),
+      getBlobsV1HitUseful: register.gauge({
+        name: "beacon_get_blobs_v1_blob_useful_response_total",
+        help: "Number of getBlobsV1 hits where a versioned hash returns blob and the blob is needed so call is useful",
       }),
     },
 
@@ -268,26 +224,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_datapromise_blockinput_blobs_notfound_in_getblobs_cache_total",
         help: "Count of blobs that were newly seen and hence in not getblobs cache",
       }),
-      dataPromiseBlobsEngineGetBlobsApiRequests: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_queried_in_getblobs_api_total",
-        help: "Total number of blobs requested to the getblobs api",
-      }),
-      dataPromiseBlobsEngineGetBlobsApiNotNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_responded_nonnull_in_getblobs_api_total",
-        help: "Count of successful engine API responses that were not null",
-      }),
-      dataPromiseBlobsEngineGetBlobsApiNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_responded_null_in_getblobs_api_total",
-        help: "Count of engine API responses that were null",
-      }),
-      dataPromiseBlobsEngineApiGetBlobsErroredNull: register.gauge({
-        name: "beacon_datapromise_blockinput_blobs_errored_as_null_in_getblobs_api_total",
-        help: "Number of responses marked null due to errors in getblobs api",
-      }),
-      dataPromiseBlobsEngineApiGetBlobsUseful: register.gauge({
-        name: "beacon_datapromise_blockinput_getblobs_api_nonnull_responses_used_total",
-        help: "Count of successful non null engine API responses that were found useful",
-      }),
+
       dataPromiseBlobsFinallyQueriedFromNetwork: register.gauge({
         name: "beacon_datapromise_blockinput_blobs_finally_queried_from_network_total",
         help: "Number of blob requests finally sent to the network",
@@ -359,6 +296,79 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       dataPromiseBlockInputRetryTrackerCachePruned: register.gauge({
         name: "beacon_datapromise_blockinput_retry_tracker_cache_pruned",
         help: "datapromise retry tracker cache pruned count",
+      }),
+    },
+
+    // TODO(fulu): check if these and metrics in lodestar.ts for dataColumns should/can be combined or organized together
+    peerDas: {
+      dataColumnSidecarProcessingRequests: register.counter({
+        name: "beacon_data_column_sidecar_processing_requests_total",
+        help: "Number of data column sidecars submitted for processing",
+      }),
+      dataColumnSidecarProcessingSkip: register.counter({
+        name: "beacon_data_column_sidecar_processing_skip_total",
+        help: "Number of data column sidecars with processing skipped for gossip",
+      }),
+      dataColumnSidecarProcessingSuccesses: register.counter({
+        name: "beacon_data_column_sidecar_processing_successes_total",
+        help: "Number of data column sidecars verified for gossip",
+      }),
+      dataColumnSidecarGossipVerificationTime: register.histogram({
+        name: "beacon_data_column_sidecar_gossip_verification_seconds",
+        help: "Full runtime of data column sidecars gossip verification",
+        buckets: [0.025, 0.05, 0.1, 0.5, 1, 2, 5],
+      }),
+      dataColumnSidecarComputationTime: register.histogram({
+        name: "beacon_data_column_sidecar_computation_seconds",
+        help: "Time taken to compute data column sidecars, including cells and inclusion proof",
+        buckets: [0.1, 0.25, 0.5, 0.75, 1, 2, 5],
+      }),
+      dataColumnSidecarInclusionProofVerificationTime: register.histogram({
+        name: "beacon_data_column_sidecar_inclusion_proof_verification_seconds",
+        help: "Time taken to verify data_column sidecar inclusion proof",
+        buckets: [0.002, 0.004, 0.006, 0.008, 0.01, 0.05, 1, 2],
+      }),
+      dataColumnSidecarKzgProofsVerificationTime: register.histogram({
+        name: "beacon_data_column_sidecar_kzg_proofs_verification_seconds",
+        help: "Time taken to verify data_column sidecar kzg proofs",
+        buckets: [0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2, 0.5, 1],
+      }),
+      kzgVerificationDataColumnBatchTime: register.histogram({
+        name: "beacon_kzg_verification_data_column_batch_seconds",
+        help: "Runtime of batched data column kzg verification",
+        buckets: [0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 2, 5],
+      }),
+      getBlobsV2PreAllocationTime: register.histogram({
+        name: "beacon_engine_getBlobsV2_buffer_preallocation_duration_seconds",
+        help: "Runtime for pre-allocating buffers to use during getBlobsV2 calls",
+        buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1],
+      }),
+      getBlobsV2Requests: register.counter({
+        name: "beacon_engine_getBlobsV2_requests_total",
+        help: "Total number of engine_getBlobsV2 requests sent",
+      }),
+      getBlobsV2Responses: register.counter({
+        name: "beacon_engine_getBlobsV2_responses_total",
+        help: "Total number of engine_getBlobsV2 successful responses received",
+      }),
+      getBlobsV2RequestDuration: register.histogram({
+        name: "beacon_engine_getBlobsV2_request_duration_seconds",
+        help: "Duration of engine_getBlobsV2 requests",
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
+      }),
+      targetCustodyGroupCount: register.gauge({
+        name: "beacon_target_custody_group_count",
+        help: "Total number of custody groups within a node",
+      }),
+      reconstructedColumns: register.counter({
+        name: "beacon_data_availability_reconstructed_columns_total",
+        help: "Total count of reconstructed columns",
+      }),
+      dataColumnsReconstructionTime: register.histogram({
+        name: "beacon_data_availability_reconstruction_time_seconds",
+        help: "Time taken to reconstruct columns",
+        // this data comes from 20 blobs in `fusaka-devnet-1`, need to reevaluate in the future
+        buckets: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 2, 5],
       }),
     },
 

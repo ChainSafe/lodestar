@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import {rimraf} from "rimraf";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {runCliCommand} from "@lodestar/test-utils";
 import {fromHex} from "@lodestar/utils";
-import {rimraf} from "rimraf";
-import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {getLodestarCli} from "../../src/cli.js";
 import {testFilesDir} from "../utils.js";
 

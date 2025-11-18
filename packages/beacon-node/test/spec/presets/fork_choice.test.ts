@@ -1,8 +1,18 @@
 import path from "node:path";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
+import {
+  ACTIVE_PRESET,
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPreDeneb,
+  ForkPreFulu,
+  ForkPreGloas,
+  ForkSeq,
+} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -13,27 +23,28 @@ import {
   SignedBeaconBlock,
   bellatrix,
   deneb,
+  fulu,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {bnToNum, fromHex} from "@lodestar/utils";
-import {expect} from "vitest";
+import {bnToNum, fromHex, toHex} from "@lodestar/utils";
 import {
-  AttestationImportOpt,
-  BlobSidecarValidation,
-  BlobsSource,
-  BlockSource,
-  getBlockInput,
-} from "../../../src/chain/blocks/types.js";
+  BlockInputBlobs,
+  BlockInputColumns,
+  BlockInputPreData,
+  BlockInputSource,
+} from "../../../src/chain/blocks/blockInput/index.js";
+import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
+import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {computeInclusionProof} from "../../../src/util/blobs.js";
+import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
@@ -49,6 +60,7 @@ const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const BLOBS_FILE_NAME = "^(blobs)_([0-9a-zA-Z]+)$";
+const COLUMN_FILE_NAME = "^(column)_([0-9a-zA-Z]+)$";
 const POW_BLOCK_FILE_NAME = "^(pow_block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
@@ -59,7 +71,7 @@ const forkChoiceTest =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
   (fork) => {
     return {
-      testFunction: async (testcase) => {
+      testFunction: async (testcase, _directoryName, testCaseName) => {
         const {steps, anchorState} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
@@ -103,6 +115,7 @@ const forkChoiceTest =
             proposerBoostReorg: true,
           },
           {
+            privateKey: await generateKeyPair("secp256k1"),
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
             dataDir: ".",
@@ -113,6 +126,7 @@ const forkChoiceTest =
             metrics: null,
             validatorMonitor: null,
             anchorState,
+            isAnchorStateFinalized: true,
             eth1,
             executionEngine,
             executionBuilder: undefined,
@@ -129,7 +143,7 @@ const forkChoiceTest =
           for (const [i, step] of steps.entries()) {
             if (isTick(step)) {
               tickTime = bnToNum(step.tick);
-              const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+              const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
               logger.debug(`Step ${i}/${stepsLen} tick`, {currentSlot, valid: Boolean(step.valid), time: tickTime});
               clock.emit(ClockEvent.slot, currentSlot);
               clock.setSlot(currentSlot);
@@ -167,13 +181,26 @@ const forkChoiceTest =
                 throw Error(`No block ${step.block}`);
               }
 
+              // Post-Deneb and pre-Fulu, `columns` should not be present. Post-Fulu `blobs` and
+              // `proofs` should not be present.
               let blobs: deneb.Blob[] | undefined;
               let proofs: deneb.KZGProof[] | undefined;
+              let columns: fulu.DataColumnSidecar[] | undefined;
               if (step.blobs !== undefined) {
                 blobs = testcase.blobs.get(step.blobs);
               }
               if (step.proofs !== undefined) {
                 proofs = step.proofs.map((proof) => ssz.deneb.KZGProof.deserialize(fromHex(proof)));
+              }
+              if (step.columns !== undefined) {
+                columns = [];
+                for (const columnName of step.columns) {
+                  const column = testcase.columns.get(columnName);
+                  if (column === undefined) {
+                    throw Error(`Malformed spec test. Column file with name ${columnName} not found.`);
+                  }
+                  columns.push(column);
+                }
               }
 
               const {slot} = signedBlock.message;
@@ -181,6 +208,7 @@ const forkChoiceTest =
               const blockRoot = config
                 .getForkTypes(signedBlock.message.slot)
                 .BeaconBlock.hashTreeRoot(signedBlock.message);
+              const blockRootHex = toHex(blockRoot);
               logger.debug(`Step ${i}/${stepsLen} block`, {
                 slot,
                 id: step.block,
@@ -191,7 +219,50 @@ const forkChoiceTest =
 
               try {
                 let blockImport;
-                if (config.getForkSeq(slot) >= ForkSeq.deneb) {
+                const forkSeq = config.getForkSeq(slot);
+
+                if (forkSeq >= ForkSeq.fulu) {
+                  if (columns === undefined) {
+                    columns = [];
+                  }
+
+                  await validateBlockDataColumnSidecars(
+                    chain,
+                    slot,
+                    blockRoot,
+                    (signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments
+                      .length,
+                    columns
+                  );
+
+                  blockImport = BlockInputColumns.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
+                    blockRootHex,
+                    custodyColumns:
+                      // in most test case instances we do not want to assign any custody as there are no columns provided
+                      // with the test case.  For on_block_peerdas__not_available the exact situation that is being tested
+                      // is no availability so block processing should fail.  For this one test case add some default
+                      // custody so that the await will fail in verifyBlocksDataAvailability.ts
+                      testCaseName !== "on_block_peerdas__not_available" ? columns.map((c) => c.index) : [2, 4, 6, 8],
+                    sampledColumns:
+                      testCaseName !== "on_block_peerdas__not_available"
+                        ? columns.map((c) => c.index)
+                        : [2, 4, 6, 8, 10, 12, 14, 16],
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
+                  for (const column of columns) {
+                    blockImport.addColumn({
+                      blockRootHex,
+                      columnSidecar: column,
+                      source: BlockInputSource.gossip,
+                      seenTimestampSec: 0,
+                    });
+                  }
+                  // getBlockInput.availableData(config, signedBlock, BlockSource.gossip, blockData);
+                } else if (forkSeq >= ForkSeq.deneb && forkSeq < ForkSeq.fulu) {
                   if (blobs === undefined) {
                     // seems like some deneb tests don't have this and we are supposed to assume empty
                     // throw Error("Missing blobs for the deneb+ block");
@@ -216,17 +287,39 @@ const forkChoiceTest =
                       kzgCommitment: commitments[index],
                       kzgProof: (proofs ?? [])[index],
                       signedBlockHeader: signedBlockToSignedHeader(config, signedBlock),
-                      kzgCommitmentInclusionProof: computeInclusionProof(fork, signedBlock.message.body, index),
+                      kzgCommitmentInclusionProof: computePreFuluKzgCommitmentsInclusionProof(
+                        fork,
+                        signedBlock.message.body,
+                        index
+                      ),
                     };
                   });
 
-                  blockImport = getBlockInput.availableData(config, signedBlock, BlockSource.gossip, {
-                    fork: ForkName.deneb,
-                    blobs: blobSidecars,
-                    blobsSource: BlobsSource.gossip,
+                  blockImport = BlockInputBlobs.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostDeneb & ForkPreFulu>,
+                    blockRootHex,
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
                   });
+                  for (const blob of blobSidecars) {
+                    blockImport.addBlob({
+                      blockRootHex,
+                      blobSidecar: blob,
+                      source: BlockInputSource.gossip,
+                      seenTimestampSec: 0,
+                    });
+                  }
                 } else {
-                  blockImport = getBlockInput.preData(config, signedBlock, BlockSource.gossip);
+                  blockImport = BlockInputPreData.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPreDeneb>,
+                    blockRootHex,
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
                 }
 
                 await chain.processBlock(blockImport, {
@@ -296,7 +389,7 @@ const forkChoiceTest =
               // slot boundary.
               if (step.checks.time !== undefined && step.checks.time > 0)
                 expect(chain.forkChoice.getTime()).toEqualWithMessage(
-                  Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
+                  Math.floor(bnToNum(step.checks.time) / (config.SLOT_DURATION_MS / 1000)),
                   `Invalid forkchoice time at step ${i}`
                 );
               if (step.checks.justified_checkpoint) {
@@ -312,10 +405,10 @@ const forkChoiceTest =
                 );
               }
               if (step.checks.get_proposer_head) {
-                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
                   head,
-                  tickTime % config.SECONDS_PER_SLOT,
+                  tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );
                 logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
@@ -325,10 +418,10 @@ const forkChoiceTest =
                 );
               }
               if (step.checks.should_override_forkchoice_update) {
-                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
                   head.blockRoot,
-                  tickTime % config.SECONDS_PER_SLOT,
+                  tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );
                 if (result.shouldOverrideFcu === false) {
@@ -361,6 +454,7 @@ const forkChoiceTest =
           [ANCHOR_BLOCK_FILE_NAME]: ssz[fork].BeaconBlock,
           [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
           [BLOBS_FILE_NAME]: ssz.deneb.Blobs,
+          [COLUMN_FILE_NAME]: ssz.fulu.DataColumnSidecar,
           [POW_BLOCK_FILE_NAME]: ssz.bellatrix.PowBlock,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
@@ -369,6 +463,7 @@ const forkChoiceTest =
           // t has input file name as key
           const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
+          const columns = new Map<string, fulu.DataColumnSidecar>();
           const powBlocks = new Map<string, bellatrix.PowBlock>();
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
@@ -382,6 +477,10 @@ const forkChoiceTest =
             const blobsMatch = key.match(BLOBS_FILE_NAME);
             if (blobsMatch) {
               blobs.set(key, t[key]);
+            }
+            const columnMatch = key.match(COLUMN_FILE_NAME);
+            if (columnMatch) {
+              columns.set(key, t[key]);
             }
             const powBlockMatch = key.match(POW_BLOCK_FILE_NAME);
             if (powBlockMatch) {
@@ -403,12 +502,14 @@ const forkChoiceTest =
             steps: t["steps"] as ForkChoiceTestCase["steps"],
             blocks,
             blobs,
+            columns,
             powBlocks,
             attestations,
             attesterSlashings,
           };
         },
-        timeout: 10000,
+        // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
+        timeout: 15000,
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
@@ -465,6 +566,7 @@ type OnBlock = {
   block: string;
   blobs?: string;
   proofs?: string[];
+  columns?: string[];
   /** optional, default to `true`. */
   valid?: number;
 };
@@ -519,6 +621,7 @@ type ForkChoiceTestCase = {
   steps: Step[];
   blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
+  columns: Map<string, fulu.DataColumnSidecar>;
   powBlocks: Map<string, bellatrix.PowBlock>;
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
