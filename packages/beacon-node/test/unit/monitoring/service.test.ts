@@ -198,8 +198,12 @@ describe("monitoring / service", () => {
       service = new MonitoringService("beacon", {endpoint}, {register, logger});
 
       await service.send();
-
-      assertError({message: `Request to ${endpoint} failed, reason: connect ECONNREFUSED ${new URL(endpoint).host}`});
+      if (globalThis.Bun) {
+        // Bun native fetch respond with different errors
+        assertError({message: "TypeError: fetch failed"});
+      } else {
+        assertError({message: `Request to ${endpoint} failed, reason: connect ECONNREFUSED ${new URL(endpoint).host}`});
+      }
     });
 
     it("should abort pending requests if timeout is reached", async () => {
