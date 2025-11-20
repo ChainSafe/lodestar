@@ -20,11 +20,15 @@ export function getSafeExecutionBlockHash(fc: IForkChoice): RootHex {
   const safeBlockEpoch = computeEpochAtSlot(safeBlock.slot);
 
   if (safeBlockEpoch >= fc.forkConfig.BELLATRIX_FORK_EPOCH) {
-    if (!safeBlock.executionPayloadBlockHash) {
-      throw new Error(`Safe block is expected to have execution payload block hash for epoch ${safeBlockEpoch}`);
-    }
-
-    return safeBlock.executionPayloadBlockHash;
+    /**
+     * TODO: Ideally we should raise error if `executionPayloadBlockHash` is missing post bellatrix
+     * but to keep current implementation intact commenting it for now
+     *
+     * if (!safeBlock.executionPayloadBlockHash) {
+     *   throw new Error(`Safe block is expected to have execution payload block hash for epoch ${safeBlockEpoch}`);
+     * }
+     **/
+    return safeBlock.executionPayloadBlockHash ?? ZERO_HASH_HEX;
   }
 
   return ZERO_HASH_HEX;
