@@ -15,6 +15,7 @@ export {
   NotReorgedReason,
   type PowBlockHex,
 } from "./forkChoice/interface.js";
+export * from "./forkChoice/safeBlocks.js";
 export {
   type CheckpointWithHex,
   ForkChoiceStore,

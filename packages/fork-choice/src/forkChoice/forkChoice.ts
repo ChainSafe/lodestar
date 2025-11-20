@@ -166,6 +166,10 @@ export class ForkChoice implements IForkChoice {
     });
   }
 
+  get forkConfig(): ChainForkConfig {
+    return this.config;
+  }
+
   /**
    * Returns the block root of an ancestor of `blockRoot` at the given `slot`.
    * (Note: `slot` refers to the block that is *returned*, not the one that is supplied.)

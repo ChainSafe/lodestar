@@ -1,3 +1,4 @@
+import {ChainForkConfig} from "@lodestar/config";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -245,6 +246,11 @@ export interface IForkChoice {
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
    */
   getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
+
+  /**
+   * Return the fork config to which this fork choice instance is bound.
+   */
+  get forkConfig(): ChainForkConfig;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
