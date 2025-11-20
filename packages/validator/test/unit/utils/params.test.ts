@@ -1,16 +1,7 @@
 import {describe, expect, it} from "vitest";
-import {ChainConfig, chainConfigToJson} from "@lodestar/config";
+import {chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {networksChainConfig} from "@lodestar/config/networks";
 import {NotEqualParamsError, assertEqualParams} from "../../../src/util/params.js";
-import {lighthouseHoleskyConfig, nimbusHoleskyConfig, prysmHoleskyConfig, tekuHoleskyConfig} from "./interopConfigs.js";
-
-const testCases: {name: string; items: [ChainConfig, Record<string, string>]}[] = [
-  {name: "lighthouse", items: [networksChainConfig.holesky, lighthouseHoleskyConfig]},
-  {name: "prysm", items: [networksChainConfig.holesky, prysmHoleskyConfig]},
-  {name: "teku", items: [networksChainConfig.holesky, tekuHoleskyConfig]},
-  {name: "nimbus", items: [networksChainConfig.holesky, nimbusHoleskyConfig]},
-];
 
 describe("utils / params / assertEqualParams", () => {
   it("default == default", () => {
@@ -34,10 +25,4 @@ describe("utils / params / assertEqualParams", () => {
     delete chainConfigJson["DEPOSIT_CONTRACT_ADDRESS"];
     assertEqualParams(chainConfig, chainConfigJson);
   });
-
-  for (const {name, items} of testCases) {
-    it(`${name} holesky == lodestar holesky`, () => {
-      assertEqualParams(items[0], items[1]);
-    });
-  }
 });

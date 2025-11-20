@@ -19,7 +19,7 @@ export const selfSlashAttester: CliCommand<SelfSlashArgs, Record<never, never>, 
   describe: "Self slash validators of a provided mnemonic with AttesterSlashing",
   examples: [
     {
-      command: "self-slash-proposer --network holesky",
+      command: "self-slash-attester --network hoodi",
       description: "Self slash validators of a provided mnemonic",
     },
   ],
