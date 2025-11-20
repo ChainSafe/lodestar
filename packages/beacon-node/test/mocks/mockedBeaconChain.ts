@@ -10,6 +10,7 @@ import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
+import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {Eth1ForBlockProduction} from "../../src/eth1/index.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
@@ -28,6 +29,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
   syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
   beaconProposerCache: Mocked<BeaconProposerCache>;
+  seenBlockInputCache: Mocked<SeenBlockInput>;
   shufflingCache: Mocked<ShufflingCache>;
   regen: Mocked<QueuedStateRegenerator>;
   bls: {
@@ -73,6 +75,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
 vi.mock("../../src/chain/regen/index.js");
 vi.mock("../../src/eth1/index.js");
 vi.mock("../../src/chain/beaconProposerCache.js");
+vi.mock("../../src/chain/seenCache/seenGossipBlockInput.js");
 vi.mock("../../src/chain/shufflingCache.js");
 vi.mock("../../src/chain/lightClient/index.js");
 
@@ -140,6 +143,8 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
+      // @ts-expect-error
+      seenBlockInputCache: new SeenBlockInput(),
       shufflingCache: new ShufflingCache(),
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],
