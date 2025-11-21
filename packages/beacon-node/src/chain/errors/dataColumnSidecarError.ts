@@ -36,6 +36,7 @@ export enum DataColumnSidecarErrorCode {
   PROPOSAL_SIGNATURE_INVALID = "DATA_COLUMN_SIDECAR_ERROR_PROPOSAL_SIGNATURE_INVALID",
   INCLUSION_PROOF_INVALID = "DATA_COLUMN_SIDECAR_ERROR_INCLUSION_PROOF_INVALID",
   INCORRECT_PROPOSER = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_PROPOSER",
+  SSZ_DESERIALIZATION_FAILED = "DATA_COLUMN_SIDECAR_ERROR_SSZ_DESERIALIZATION_FAILED",
 }
 
 export type DataColumnSidecarErrorType =
@@ -97,7 +98,8 @@ export type DataColumnSidecarErrorType =
       actual: number;
     }
   | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH; slot: number; reason: string}
-  | {code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER; actualProposerIndex: number; expectedProposerIndex: number};
+  | {code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER; actualProposerIndex: number; expectedProposerIndex: number}
+  | {code: DataColumnSidecarErrorCode.SSZ_DESERIALIZATION_FAILED; length: number};
 
 export class DataColumnSidecarGossipError extends GossipActionError<DataColumnSidecarErrorType> {}
 export class DataColumnSidecarValidationError extends LodestarError<DataColumnSidecarErrorType> {}

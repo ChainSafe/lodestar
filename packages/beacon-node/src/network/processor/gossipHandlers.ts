@@ -67,6 +67,7 @@ import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightC
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {deserializeDataColumnSidecarUnsafe} from "../../util/sszBytes.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -547,7 +548,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
       const {serializedData} = gossipData;
-      const dataColumnSidecar = sszDeserialize(topic, serializedData);
+      const dataColumnSidecar = deserializeDataColumnSidecarUnsafe(serializedData);
+      if (dataColumnSidecar === null) {
+        // should not happen, if yes could be our bug in deserializeDataColumnSidecarUnsafe() so track this for investigation
+        throw new GossipActionError(GossipAction.IGNORE, {
+          code: DataColumnSidecarErrorCode.SSZ_DESERIALIZATION_FAILED,
+          length: serializedData.length,
+        });
+      }
+
       const dataColumnSlot = dataColumnSidecar.signedBlockHeader.message.slot;
       const index = dataColumnSidecar.index;
 
