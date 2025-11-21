@@ -20,6 +20,8 @@ import {
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {kzg} from "../../../src/util/kzg.js";
 import {
+  deserializeDataColumnSidecarUnsafe,
+  deserializeSignedBlockHeaderUnsafe,
   getAggregationBitsFromAttestationSerialized,
   getAttDataFromAttestationSerialized,
   getAttDataFromSignedAggregateAndProofElectra,
@@ -402,6 +404,64 @@ describe("BeaconState ssz serialized picking", () => {
     const invalidSlotDataSizes = [0, 20, 39];
     for (const size of invalidSlotDataSizes) {
       expect(getSlotFromBeaconStateSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+});
+
+describe("SignedBeaconBlockHeader deserialization", () => {
+  const slot = 1_000_000;
+  const header = ssz.phase0.SignedBeaconBlockHeader.defaultValue();
+  header.message.slot = slot;
+  const bytes = ssz.phase0.SignedBeaconBlockHeader.serialize(header);
+
+  it("should deserialize SignedBeaconBlockHeader correctly", () => {
+    const deserialized = ssz.phase0.SignedBeaconBlockHeader.deserialize(bytes);
+    expect(deserialized.message.slot).toBe(slot);
+    const deserialized2 = deserializeSignedBlockHeaderUnsafe(bytes);
+    if (deserialized2 === null) {
+      throw new Error("cannot deserialize SignedBeaconBlockHeader");
+    }
+    expect(deserialized2.message.slot).toBe(slot);
+    expect(ssz.phase0.SignedBeaconBlockHeader.equals(deserialized, deserialized2)).toBe(true);
+  });
+
+  it("return null if invalid data", () => {
+    const invalidDataSizes = [0, 100, 200, 300];
+    for (const size of invalidDataSizes) {
+      expect(deserializeSignedBlockHeaderUnsafe(Buffer.alloc(size))).toBeNull();
+    }
+  });
+});
+
+describe("DataColumnSidecar deserialization", () => {
+  const slot = 1_000_000;
+  const sidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+  sidecar.signedBlockHeader.message.slot = slot;
+  for (const numBlobs of [0, 1, 21, 42]) {
+    for (let i = 0; i < numBlobs; i++) {
+      sidecar.kzgCommitments.push(Buffer.alloc(48, i));
+      sidecar.kzgProofs.push(Buffer.alloc(48, i));
+    }
+    sidecar.kzgCommitmentsInclusionProof[0][0] = 100;
+    const bytes = ssz.fulu.DataColumnSidecar.serialize(sidecar);
+
+    it(`should deserialize DataColumnSidecar correctly blobs=${numBlobs}`, () => {
+      const deserialized = ssz.fulu.DataColumnSidecar.deserialize(bytes);
+      expect(deserialized.signedBlockHeader.message.slot).toBe(slot);
+      const deserialized2 = deserializeDataColumnSidecarUnsafe(bytes);
+      if (deserialized2 === null) {
+        throw new Error("cannot deserialize DataColumnSidecar");
+      }
+      expect(deserialized2.signedBlockHeader.message.slot).toBe(slot);
+      expect(deserialized2.kzgCommitmentsInclusionProof[0][0]).toBe(100);
+      expect(ssz.fulu.DataColumnSidecar.equals(deserialized, deserialized2)).toBe(true);
+    });
+  }
+
+  it("return null if invalid data", () => {
+    const invalidDataSizes = [0, 100, 200, 300];
+    for (const size of invalidDataSizes) {
+      expect(deserializeDataColumnSidecarUnsafe(Buffer.alloc(size))).toBeNull();
     }
   });
 });

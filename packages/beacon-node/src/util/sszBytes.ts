@@ -6,10 +6,13 @@ import {
   ForkName,
   ForkPostDeneb,
   ForkSeq,
+  KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
+  MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
 } from "@lodestar/params";
-import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
+import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
+import {DataColumnSidecar} from "@lodestar/types/fulu";
 
 export type BlockRootHex = RootHex;
 // pre-electra, AttestationData is used to cache attestations
@@ -418,6 +421,150 @@ export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot |
 }
 
 /**
+ * Deserialize DataColumnSidecar using the backed array itself instead of copying (which the ssz lib does)
+ * This method is unsafe if the input data is shared and modified later
+ */
+export function deserializeDataColumnSidecarUnsafe(data: Uint8Array): DataColumnSidecar | null {
+  let offset = 0;
+  const index = getIndexFromOffset(data, 0);
+  if (index === null) return null;
+  // index field is 8 bytes
+  offset += ssz.ColumnIndex.fixedSize;
+  const columnStartOffset = getUint32(data, offset);
+  // column field is not fixed size
+  offset += VARIABLE_FIELD_OFFSET;
+  const kzgCommitmentsStartOffset = getUint32(data, offset);
+  // kzgCommitments field is not fixed size
+  offset += VARIABLE_FIELD_OFFSET;
+  const kzgProofsStartOffset = getUint32(data, offset);
+  // kzgProofs field is not fixed size
+  offset += VARIABLE_FIELD_OFFSET;
+  const signedBlockHeader = deserializeSignedBlockHeaderUnsafe(
+    Uint8Array.prototype.subarray.call(data, offset, offset + SIGNED_BLOCK_HEADER_SIZE)
+  );
+  if (signedBlockHeader === null) return null;
+  // signedBlockHeader field is fixed size 208 bytes
+  offset += SIGNED_BLOCK_HEADER_SIZE;
+  const inclusionProofSize = ssz.fulu.KzgCommitmentsInclusionProof.fixedSize;
+  // this should not happen, just want to make the compiler happy
+  if (inclusionProofSize === null) return null;
+  const kzgCommitmentsInclusionProofData = Uint8Array.prototype.subarray.call(
+    data,
+    offset,
+    offset + inclusionProofSize
+  );
+  const kzgCommitmentsInclusionProof = new Array<Uint8Array>(KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH);
+  for (let i = 0; i < KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH; i++) {
+    kzgCommitmentsInclusionProof[i] = Uint8Array.prototype.subarray.call(
+      kzgCommitmentsInclusionProofData,
+      i * BYTES_PER_FIELD_ELEMENT,
+      (i + 1) * BYTES_PER_FIELD_ELEMENT
+    );
+  }
+
+  // deserialize for dynamic fields
+  const columnData = Uint8Array.prototype.subarray.call(data, columnStartOffset, kzgCommitmentsStartOffset);
+  if (columnData.length % ssz.fulu.Cell.fixedSize !== 0) return null;
+  const numCells = Math.floor(columnData.length / ssz.fulu.Cell.fixedSize);
+  const column = new Array<Uint8Array>(numCells);
+  for (let i = 0; i < numCells; i++) {
+    column[i] = Uint8Array.prototype.subarray.call(
+      columnData,
+      i * ssz.fulu.Cell.fixedSize,
+      (i + 1) * ssz.fulu.Cell.fixedSize
+    );
+  }
+
+  const kzgCommitmentsData = Uint8Array.prototype.subarray.call(data, kzgCommitmentsStartOffset, kzgProofsStartOffset);
+  if (kzgCommitmentsData.length % ssz.deneb.KZGCommitment.fixedSize !== 0) return null;
+  const numKzgCommitments = Math.floor(kzgCommitmentsData.length / ssz.deneb.KZGCommitment.fixedSize);
+  const kzgCommitments = new Array<Uint8Array>(numKzgCommitments);
+  for (let i = 0; i < numKzgCommitments; i++) {
+    kzgCommitments[i] = Uint8Array.prototype.subarray.call(
+      kzgCommitmentsData,
+      i * ssz.deneb.KZGCommitment.fixedSize,
+      (i + 1) * ssz.deneb.KZGCommitment.fixedSize
+    );
+  }
+
+  const kzgProofsData = Uint8Array.prototype.subarray.call(
+    data,
+    kzgProofsStartOffset,
+    // this is the last dynamic field
+    data.length
+  );
+  if (kzgProofsData.length % ssz.deneb.KZGProof.fixedSize !== 0) return null;
+  const numKzgProofs = Math.floor(kzgProofsData.length / ssz.deneb.KZGProof.fixedSize);
+  const kzgProofs = new Array<Uint8Array>(numKzgProofs);
+  for (let i = 0; i < numKzgProofs; i++) {
+    kzgProofs[i] = Uint8Array.prototype.subarray.call(
+      kzgProofsData,
+      i * ssz.deneb.KZGProof.fixedSize,
+      (i + 1) * ssz.deneb.KZGProof.fixedSize
+    );
+  }
+
+  return {
+    index,
+    column,
+    kzgCommitments,
+    kzgProofs,
+    signedBlockHeader,
+    kzgCommitmentsInclusionProof,
+  };
+}
+
+/** SignedBeaconBlockHeader is 208 bytes fixed size
+ *    message: BeaconBlockHeader - 112 bytes
+ *      slot: Slot - 8 bytes
+ *      proposer_index: ValidatorIndex - 8 bytes
+ *      parent_root: Root - 32 bytes
+ *      state_root: Root - 32 bytes
+ *      body_root: Root - 32 bytes
+ *    signature: BLSSignature - 96 bytes
+ */
+const SIGNED_BLOCK_HEADER_SIZE = 208;
+
+/**
+ * Deserialize SignedBeaconBlockHeader using the backed array itself instead of copying (which the ssz lib does)
+ * This method is unsafe if the input data is shared and modified later
+ */
+export function deserializeSignedBlockHeaderUnsafe(data: Uint8Array): phase0.SignedBeaconBlockHeader | null {
+  if (data.length !== SIGNED_BLOCK_HEADER_SIZE) return null;
+
+  let offset = 0;
+  const slot = getSlotFromOffset(data, offset);
+  if (slot === null) return null;
+  // slot is 8 bytes
+  offset += ssz.Slot.fixedSize;
+  const proposerIndex = getIndexFromOffset(data, offset);
+  if (proposerIndex === null) return null;
+  // proposerIndex is 8 bytes
+  offset += 8;
+  const parentRoot = Uint8Array.prototype.subarray.call(data, offset, offset + ssz.Root.fixedSize);
+  // parentRoot is 32 bytes
+  offset += ssz.Root.fixedSize;
+  const stateRoot = Uint8Array.prototype.subarray.call(data, offset, offset + ssz.Root.fixedSize);
+  // stateRoot is 32 bytes
+  offset += ssz.Root.fixedSize;
+  const bodyRoot = Uint8Array.prototype.subarray.call(data, offset, offset + ssz.Root.fixedSize);
+  // bodyRoot is 32 bytes
+  offset += ssz.Root.fixedSize;
+  // signature is 96 bytes
+  const signature = Uint8Array.prototype.subarray.call(data, offset, offset + ssz.BLSSignature.fixedSize);
+  return {
+    message: {
+      slot,
+      proposerIndex,
+      parentRoot,
+      stateRoot,
+      bodyRoot,
+    },
+    signature,
+  };
+}
+
+/**
  * BeaconState of all forks (up until Electra, check with new forks)
  * class BeaconState(Container):
  *   genesis_time: uint64                    - 8 bytes
@@ -453,7 +600,7 @@ export function getSlotFromBeaconStateSerialized(data: Uint8Array): Slot | null 
  * If the high bytes are not zero, return null
  */
 function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
-  return checkSlotHighBytes(data, offset) ? getSlotFromOffsetTrusted(data, offset) : null;
+  return checkSlotHighBytes(data, offset) ? getUint32(data, offset) : null;
 }
 
 /**
@@ -466,7 +613,7 @@ function getIndexFromOffset(data: Uint8Array, offset: number): (ValidatorIndex |
 /**
  * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
  */
-function getSlotFromOffsetTrusted(data: Uint8Array, offset: number): Slot {
+function getUint32(data: Uint8Array, offset: number): Slot {
   return (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0;
 }
 
