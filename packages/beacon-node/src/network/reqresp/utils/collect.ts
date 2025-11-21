@@ -1,6 +1,7 @@
 import {Type} from "@chainsafe/ssz";
 import {RequestError, RequestErrorCode, ResponseIncoming} from "@lodestar/reqresp";
-import {WithBytes} from "@lodestar/types";
+import {WithBytes, ssz} from "@lodestar/types";
+import {deserializeDataColumnSidecarUnsafe} from "../../../util/sszBytes.js";
 import {ResponseTypeGetter} from "../types.js";
 
 /**
@@ -77,6 +78,15 @@ export async function collectMaxResponseTypedWithBytes<T>(
 /** Light wrapper on type to wrap deserialize errors */
 export function sszDeserializeResponse<T>(type: Type<T>, bytes: Uint8Array): T {
   try {
+    if (type === ssz.fulu.DataColumnSidecar) {
+      // as we have cloned the ssz bytes getting thru worker boundary, it's safe to use unsafe deserialization here to avoid extra copy
+      const dataColumnSidecar = deserializeDataColumnSidecarUnsafe(bytes);
+      if (dataColumnSidecar === null) {
+        throw new Error("Failed to deserialize DataColumnSidecar");
+      }
+      return dataColumnSidecar as unknown as T;
+    }
+
     return type.deserialize(bytes);
   } catch (e) {
     throw new RequestError({code: RequestErrorCode.INVALID_RESPONSE_SSZ, errorMessage: (e as Error).message});

@@ -548,6 +548,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
       const {serializedData} = gossipData;
+      // as we have cloned the ssz bytes getting thru worker boundary, it's safe to use unsafe deserialization here to avoid extra copy
       const dataColumnSidecar = deserializeDataColumnSidecarUnsafe(serializedData);
       if (dataColumnSidecar === null) {
         // should not happen, if yes could be our bug in deserializeDataColumnSidecarUnsafe() so track this for investigation
