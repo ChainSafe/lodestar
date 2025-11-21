@@ -242,8 +242,6 @@ export async function validateBlockBlobSidecars(
 
       if (
         !(await chain.bls.verifySignatureSets([signatureSet], {
-          batchable: true,
-          priority: true,
           verifyOnMainThread: true,
         }))
       ) {
@@ -254,9 +252,9 @@ export async function validateBlockBlobSidecars(
           index: blobSidecars[0].index,
         });
       }
-    }
 
-    chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRootHex);
+      chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRootHex);
+    }
   }
 
   const commitments = [];

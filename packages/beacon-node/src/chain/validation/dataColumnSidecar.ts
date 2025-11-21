@@ -141,7 +141,7 @@ export async function validateGossipDataColumnSidecar(
     if (
       !(await chain.bls.verifySignatureSets([signatureSet], {
         // verify on main thread so that we only need to verify block proposer signature once per block
-        verifyOnMainThread: blockHeader.slot > chain.forkChoice.getHead().slot,
+        verifyOnMainThread: true,
       }))
     ) {
       const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message);
@@ -339,10 +339,7 @@ export async function validateBlockDataColumnSidecars(
       const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
 
       if (
-        !chain.seenBlockInputCache.has(toRootHex(blockRoot)) &&
         !(await chain.bls.verifySignatureSets([signatureSet], {
-          batchable: true,
-          priority: true,
           verifyOnMainThread: true,
         }))
       ) {
@@ -353,9 +350,9 @@ export async function validateBlockDataColumnSidecars(
           index: dataColumnSidecars[0].index,
         });
       }
-    }
 
-    chain.seenBlockInputCache.markVerifiedProposerSignature(slot, rootHex);
+      chain.seenBlockInputCache.markVerifiedProposerSignature(slot, rootHex);
+    }
   }
 
   const commitments: Uint8Array[] = [];
