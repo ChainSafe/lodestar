@@ -247,7 +247,7 @@ export async function validateBlockBlobSidecars(
       ) {
         throw new BlobSidecarValidationError({
           code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
-          blockRoot: toRootHex(blockRoot),
+          blockRoot: blockRootHex,
           slot: blockSlot,
           index: blobSidecars[0].index,
         });

@@ -144,8 +144,6 @@ export async function validateGossipDataColumnSidecar(
         verifyOnMainThread: true,
       }))
     ) {
-      const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message);
-      const blockRootHex = toRootHex(blockRoot);
       throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
         code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
         blockRoot: blockRootHex,
@@ -345,7 +343,7 @@ export async function validateBlockDataColumnSidecars(
       ) {
         throw new DataColumnSidecarValidationError({
           code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
-          blockRoot: toRootHex(blockRoot),
+          blockRoot: rootHex,
           slot: blockSlot,
           index: dataColumnSidecars[0].index,
         });
