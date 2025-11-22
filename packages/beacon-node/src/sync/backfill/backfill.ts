@@ -832,27 +832,32 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           ? verifiedBlocks
           : verifiedBlocks.slice(0, verifiedBlocks.length - 1);
 
-      if (blocksToPut.every((block) => this.chain.serializedCache.get(block))) {
-        await this.db.blockArchive.batchPutBinary(
-          blocksToPut.map((block) => ({
-            key: block.message.slot,
-            value: this.chain.serializedCache.get(block) as Uint8Array,
-            slot: block.message.slot,
-            blockRoot: this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
-            parentRoot: block.message.parentRoot,
-          }))
-        );
-      } else {
-        await this.db.blockArchive.batchPut(
-          blocksToPut.map((block) => ({
-            key: block.message.slot,
-            value: block,
-            slot: block.message.slot,
-            blockRoot: this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
-            parentRoot: block.message.parentRoot,
-          }))
-        );
+      const binaryPuts = [];
+      const nonBinaryPuts = [];
+
+      for (const block of blocksToPut) {
+        const serialized = this.chain.serializedCache.get(block);
+        const item = {
+          key: block.message.slot,
+          slot: block.message.slot,
+          blockRoot: this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+          parentRoot: block.message.parentRoot,
+        };
+
+        if (serialized) {
+          binaryPuts.push({...item, value: serialized});
+        } else {
+          nonBinaryPuts.push({...item, value: block});
+        }
       }
+
+      if (binaryPuts.length > 0) {
+        await this.db.blockArchive.batchPutBinary(binaryPuts);
+      }
+      if (nonBinaryPuts.length > 0) {
+        await this.db.blockArchive.batchPut(nonBinaryPuts);
+      }
+
       this.metrics?.backfillSync.totalBlocks.inc({method: BackfillSyncMethod.rangesync}, verifiedBlocks.length);
     }
 
