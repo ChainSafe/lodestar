@@ -7,7 +7,6 @@ import {
   ForkPostDeneb,
   ForkSeq,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
-  MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
 } from "@lodestar/params";
