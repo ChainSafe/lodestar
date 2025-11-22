@@ -148,9 +148,9 @@ export function sszDeserializeAttestation(fork: ForkName, serializedData: Uint8A
 export function sszDeserializeSingleAttestation(fork: ForkName, serializedData: Uint8Array): SingleAttestation {
   try {
     if (isForkPostElectra(fork)) {
-      return sszTypesFor(fork).SingleAttestation.deserialize(serializedData);
+      return sszTypesFor(fork).SingleAttestation.deserialize(serializedData, {reuseBytes: true});
     }
-    return sszTypesFor(fork).Attestation.deserialize(serializedData) as SingleAttestation;
+    return sszTypesFor(fork).Attestation.deserialize(serializedData, {reuseBytes: true}) as SingleAttestation;
   } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
