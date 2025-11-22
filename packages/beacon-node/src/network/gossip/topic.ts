@@ -123,7 +123,7 @@ export function getGossipSSZType(topic: GossipTopic) {
 export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: Uint8Array): SSZTypeOfGossipTopic<T> {
   const sszType = getGossipSSZType(topic);
   try {
-    return sszType.deserialize(serializedData) as SSZTypeOfGossipTopic<T>;
+    return sszType.deserialize(serializedData, {reuseBytes: true}) as SSZTypeOfGossipTopic<T>;
   } catch (_e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
