@@ -521,8 +521,7 @@ export class Network implements INetwork {
         this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V2, Version.V1],
         request
       ),
-      request,
-      this.chain.serializedCache
+      request
     );
   }
 
@@ -582,8 +581,7 @@ export class Network implements INetwork {
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       // request's count represent the slots, so the actual max count received could be slots * blobs per slot
       request.count * this.config.getMaxBlobsPerBlock(epoch),
-      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange],
-      this.chain.serializedCache
+      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }
 
@@ -603,8 +601,7 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       request.count * request.columns.length,
-      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange],
-      this.chain.serializedCache
+      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange]
     );
   }
 
