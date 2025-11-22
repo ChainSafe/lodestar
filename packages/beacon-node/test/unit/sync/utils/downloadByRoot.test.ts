@@ -44,7 +44,7 @@ describe("downloadByRoot.ts", () => {
 
     it("should successfully fetch and validate block with matching root", async () => {
       network = {
-        sendBeaconBlocksByRoot: vi.fn(() => [{data: capellaBlock.block}]),
+        sendBeaconBlocksByRoot: vi.fn(() => [capellaBlock.block]),
       } as unknown as INetwork;
 
       const response = await fetchAndValidateBlock({
@@ -74,7 +74,7 @@ describe("downloadByRoot.ts", () => {
 
     it("should throw error when block root doesn't match requested root", async () => {
       network = {
-        sendBeaconBlocksByRoot: vi.fn(() => [{data: capellaBlock.block}]),
+        sendBeaconBlocksByRoot: vi.fn(() => [capellaBlock.block]),
       } as unknown as INetwork;
 
       const invalidRoot = randomBytes(ROOT_SIZE);
