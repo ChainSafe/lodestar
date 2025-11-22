@@ -252,7 +252,11 @@ export async function requestByRange({
   const requests: Promise<unknown>[] = [];
 
   if (blocksRequest) {
-    requests.push(network.sendBeaconBlocksByRange(peerIdStr, blocksRequest));
+    requests.push(
+      network.sendBeaconBlocksByRange(peerIdStr, blocksRequest).then((blockResponse) => {
+        blocks = blockResponse;
+      })
+    );
   }
 
   if (blobsRequest) {
