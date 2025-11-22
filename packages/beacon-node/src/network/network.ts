@@ -20,7 +20,6 @@ import {
   SingleAttestation,
   SlotRootHex,
   SubnetID,
-  WithBytes,
   altair,
   capella,
   deneb,
@@ -513,7 +512,7 @@ export class Network implements INetwork {
   async sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<WithBytes<SignedBeaconBlock>[]> {
+  ): Promise<SignedBeaconBlock[]> {
     return collectSequentialBlocksInRange(
       this.sendReqRespRequest(
         peerId,
@@ -526,10 +525,7 @@ export class Network implements INetwork {
     );
   }
 
-  async sendBeaconBlocksByRoot(
-    peerId: PeerIdStr,
-    request: BeaconBlocksByRootRequest
-  ): Promise<WithBytes<SignedBeaconBlock>[]> {
+  async sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]> {
     return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(
         peerId,
@@ -539,7 +535,8 @@ export class Network implements INetwork {
         request
       ),
       request.length,
-      responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot]
+      responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
+      this.chain.serializedCache
     );
   }
 
@@ -592,7 +589,8 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
-      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot]
+      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot],
+      this.chain.serializedCache
     );
   }
 
@@ -614,7 +612,8 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
       request.reduce((total, {columns}) => total + columns.length, 0),
-      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot]
+      responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot],
+      this.chain.serializedCache
     );
   }
 

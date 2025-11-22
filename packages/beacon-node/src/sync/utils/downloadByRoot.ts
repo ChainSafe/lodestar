@@ -314,7 +314,7 @@ export async function fetchAndValidateBlock({
   blockRoot,
 }: Omit<FetchByRootAndValidateBlockProps, "chain">): Promise<SignedBeaconBlock> {
   const response = await network.sendBeaconBlocksByRoot(peerIdStr, [blockRoot]);
-  const block = response.at(0)?.data;
+  const block = response.at(0);
   if (!block) {
     throw new DownloadByRootError({
       code: DownloadByRootErrorCode.MISSING_BLOCK_RESPONSE,
