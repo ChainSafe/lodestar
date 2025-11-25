@@ -707,12 +707,12 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                     (data as BlockContents).block as BeaconBlock<ForkPreDeneb> // <- tranformation
                   );
           },
-          deserialize(data, {executionPayloadBlinded, version}) {
+          deserialize(data, opts, {executionPayloadBlinded, version}) {
             return executionPayloadBlinded
-              ? getPostBellatrixForkTypes(version).BlindedBeaconBlock.deserialize(data)
+              ? getPostBellatrixForkTypes(version).BlindedBeaconBlock.deserialize(data, opts)
               : isForkPostDeneb(version)
-                ? sszTypesFor(version).BlockContents.deserialize(data)
-                : {block: ssz[version].BeaconBlock.deserialize(data)}; // <- tranformation
+                ? sszTypesFor(version).BlockContents.deserialize(data, opts)
+                : {block: ssz[version].BeaconBlock.deserialize(data, opts)}; // <- tranformation
           },
         },
         meta: {

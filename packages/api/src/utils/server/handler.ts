@@ -118,7 +118,10 @@ export function createFastifyHandler<E extends Endpoint>(
         void resp.headers(metaHeaders);
         const data =
           response?.data instanceof Uint8Array
-            ? definition.resp.data.toJson(definition.resp.data.deserialize(response.data, response.meta), response.meta)
+            ? definition.resp.data.toJson(
+                definition.resp.data.deserialize(response.data, undefined, response.meta),
+                response.meta
+              )
             : definition.resp.data.toJson(response?.data, response?.meta);
         const metaJson = definition.resp.meta.toJson(response?.meta);
         if (definition.resp.transform) {
