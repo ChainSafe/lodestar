@@ -68,7 +68,7 @@ export function uncompress<T extends ArrayBuffer | Buffer | Uint8Array>(compress
       throw new Error("Invalid Snappy bitstream");
     }
   } else {
-    uncompressed = Buffer.alloc(length);
+    uncompressed = Buffer.allocUnsafe(length);
     if (!decompressor.uncompressToBuffer(uncompressed)) {
       throw new Error("Invalid Snappy bitstream");
     }
@@ -105,7 +105,7 @@ export function compress<T extends ArrayBuffer | Buffer | Uint8Array>(uncompress
     compressedView = new Uint8Array(compressed);
     length = compressor.compressToBuffer(compressedView);
   } else {
-    compressed = Buffer.alloc(maxLength) as T;
+    compressed = Buffer.allocUnsafe(maxLength) as T;
     length = compressor.compressToBuffer(compressed as Uint8Array);
   }
   if (!compressed.slice) {
