@@ -54,8 +54,8 @@ export function uncompress<T extends ArrayBuffer | Buffer | Uint8Array>(compress
   if (maxLength !== undefined && length > maxLength) {
     throw new Error(`The uncompressed length of ${length} is too big, expect at most ${maxLength}`);
   }
+
   let uncompressed: ArrayBuffer | Buffer | Uint8Array;
-  let uncompressedView: Uint8Array;
   if (uint8Mode) {
     uncompressed = new Uint8Array(length);
     if (!decompressor.uncompressToBuffer(uncompressed)) {
@@ -63,7 +63,7 @@ export function uncompress<T extends ArrayBuffer | Buffer | Uint8Array>(compress
     }
   } else if (arrayBufferMode) {
     uncompressed = new ArrayBuffer(length);
-    uncompressedView = new Uint8Array(uncompressed);
+    const uncompressedView = new Uint8Array(uncompressed);
     if (!decompressor.uncompressToBuffer(uncompressedView)) {
       throw new Error("Invalid Snappy bitstream");
     }
@@ -92,33 +92,21 @@ export function compress<T extends ArrayBuffer | Buffer | Uint8Array>(uncompress
   } else {
     uncompressedView = uncompressed;
   }
+
   const compressor = new SnappyCompressor(uncompressedView);
   const maxLength = compressor.maxCompressedLength();
-  let compressed: T;
-  let compressedView: Uint8Array;
-  let length: number;
   if (uint8Mode) {
-    compressed = new Uint8Array(maxLength) as T;
-    length = compressor.compressToBuffer(compressed as Uint8Array);
+    const compressed = new Uint8Array(maxLength);
+    const length = compressor.compressToBuffer(compressed as Uint8Array);
+    return compressed.subarray(0, length) as T;
   } else if (arrayBufferMode) {
-    compressed = new ArrayBuffer(maxLength) as T;
-    compressedView = new Uint8Array(compressed);
-    length = compressor.compressToBuffer(compressedView);
+    const compressed = new ArrayBuffer(maxLength) as T;
+    const compressedView = new Uint8Array(compressed);
+    const length = compressor.compressToBuffer(compressedView);
+    return compressed.slice(0, length) as T;
   } else {
-    compressed = Buffer.allocUnsafe(maxLength) as T;
-    length = compressor.compressToBuffer(compressed as Uint8Array);
+    const compressed = Buffer.allocUnsafe(maxLength) as T;
+    const length = compressor.compressToBuffer(compressed as Uint8Array);
+    return compressed.slice(0, length) as T;
   }
-  if (!compressed.slice) {
-    // ie11
-    const compressedArray = new Uint8Array(Array.prototype.slice.call(compressed, 0, length));
-    if (uint8Mode) {
-      return compressedArray as T;
-    }
-    if (arrayBufferMode) {
-      return compressedArray.buffer as T;
-    }
-    throw new Error("Not implemented");
-  }
-
-  return compressed.slice(0, length) as T;
 }
