@@ -289,8 +289,8 @@ export class Eth2Gossipsub extends GossipSub {
     // Register full score too
     metrics.gossipPeer.score.set(gossipScores);
 
-    for (const gossipType of [GossipType.data_column_sidecar, GossipType.beacon_attestation]) {
-      metrics.inboundTransformBufferPool.size.set({type: gossipType}, globalInboundCache.get(gossipType)?.size() ?? 0);
+    for (const [type, inboundCache] of globalInboundCache.entries()) {
+      metrics.inboundTransformBufferPool.size.set({type}, inboundCache.size());
     }
     for (const [type, count] of this.dataTransformSnappy.allocByTopicType.entries()) {
       metrics.inboundTransformBufferPool.allocs.set({type}, count);

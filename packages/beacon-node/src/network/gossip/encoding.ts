@@ -100,14 +100,36 @@ export class DataTransformSnappy implements DataTransform {
         // they will be added back to pool after emit to the main thread
         this.allocByTopicType.set(topic.type, this.allocByTopicType.get(topic.type) ?? 0 + 1);
         switch (topic.type) {
+          // TODO: reevaluate after each hard fork
+          // deneb + electra
+          case GossipType.blob_sidecar: {
+            buffer = new Uint8Array(ssz.deneb.BlobSidecar.fixedSize as number);
+            break;
+          }
+          // fulu
           case GossipType.data_column_sidecar: {
             const maxBlobs = this.config.getMaxBlobsPerBlock(topic.boundary.epoch);
             buffer = new Uint8Array(getMaxDataColumnSizeCarBytes(maxBlobs));
             break;
           }
+          // all forks
           case GossipType.beacon_attestation:
             buffer = new Uint8Array(ssz.electra.SingleAttestation.fixedSize as number);
             break;
+          case GossipType.beacon_aggregate_and_proof:
+            buffer = new Uint8Array(ssz.electra.SignedAggregateAndProof.maxSize);
+            break;
+          case GossipType.sync_committee:
+            buffer = new Uint8Array(ssz.altair.SyncCommitteeMessage.fixedSize as number);
+            break;
+          case GossipType.sync_committee_contribution_and_proof:
+            buffer = new Uint8Array(ssz.altair.SignedContributionAndProof.maxSize);
+            break;
+          case GossipType.beacon_block:
+          // should not put the max size of beacon block here
+          // instead of that, we allocate the exact size initially and reuse it
+          // if a bigger block comes, we fall back to allocate new buffer without reusing
+          // and use it for future blocks
           default:
             buffer = undefined;
             break;
@@ -181,7 +203,15 @@ export class InboundTransformBufferPool {
 }
 
 // pool of buffers for each topic to uncompress incoming messages into
+// TODO: reevaluate these numbers
 export const globalInboundCache = new Map<GossipType, InboundTransformBufferPool>();
+// electra
+globalInboundCache.set(GossipType.blob_sidecar, new InboundTransformBufferPool(9));
+// fulu
 globalInboundCache.set(GossipType.data_column_sidecar, new InboundTransformBufferPool(NUMBER_OF_COLUMNS));
-// TODO: reevaluate this number
 globalInboundCache.set(GossipType.beacon_attestation, new InboundTransformBufferPool(1_000));
+globalInboundCache.set(GossipType.beacon_aggregate_and_proof, new InboundTransformBufferPool(100));
+globalInboundCache.set(GossipType.sync_committee, new InboundTransformBufferPool(100));
+globalInboundCache.set(GossipType.sync_committee_contribution_and_proof, new InboundTransformBufferPool(100));
+globalInboundCache.set(GossipType.beacon_block, new InboundTransformBufferPool(1));
+// TODO: other topics
