@@ -6,6 +6,7 @@ import {
   ForkName,
   ForkPostDeneb,
   ForkSeq,
+  KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
 } from "@lodestar/params";
@@ -415,6 +416,28 @@ export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot |
   }
 
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
+}
+
+export function getMaxDataColumnSizeCarBytes(maxBlobs: number): number {
+  // index: 8 bytes
+  let maxSize = 8;
+  // column is dynamic size
+  maxSize += 4;
+  // column: Cell * maxBlobs = 64 * 32 * maxBlobs
+  maxSize += 64 * 32 * maxBlobs;
+  // kzgCommitments length is dynamic size
+  maxSize += 4;
+  // kzgCommitments: 48 * maxBlobs
+  maxSize += 48 * maxBlobs;
+  // kzgProofs length is dynamic size
+  maxSize += 4;
+  // kzgProofs: 48 * maxBlobs
+  maxSize += 48 * maxBlobs;
+  // SignedBeaconBlockHeader is 208 bytes
+  maxSize += 208;
+  maxSize += 32 * KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
+  // total fixed size = 208 bytes + variable size
+  return maxSize;
 }
 
 /**

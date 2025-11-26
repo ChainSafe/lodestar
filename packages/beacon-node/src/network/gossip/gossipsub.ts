@@ -13,7 +13,7 @@ import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {ClientKind} from "../peers/client.js";
 import {PeersData} from "../peers/peersData.js";
-import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
+import {DataTransformSnappy, fastMsgIdFn, globalInboundCache, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
 import {
@@ -116,7 +116,7 @@ export class Eth2Gossipsub extends GossipSub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       msgIdToStrFn: msgIdToStrFn,
-      dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE),
+      dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, config),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
         ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})
@@ -315,6 +315,11 @@ export class Eth2Gossipsub extends GossipSub {
         seenTimestampSec,
         startProcessUnixSec: null,
       });
+      // return msg.data to the pool
+      const inboundCache = globalInboundCache.get(topic.type);
+      if (inboundCache) {
+        inboundCache.add(msg.data.buffer as ArrayBuffer);
+      }
     });
   }
 

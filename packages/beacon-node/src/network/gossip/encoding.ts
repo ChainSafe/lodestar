@@ -1,13 +1,17 @@
 import {Message} from "@libp2p/interface";
-// snappyjs is better for compression for smaller payloads
-import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
 import {digest} from "@chainsafe/as-sha256";
 import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {DataTransform} from "@chainsafe/libp2p-gossipsub/types";
-import {ForkName} from "@lodestar/params";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
+import {LinkedList} from "../../util/array.js";
+import {getMaxDataColumnSizeCarBytes} from "../../util/sszBytes.js";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
+import {GossipType} from "./interface.js";
+import {compress, uncompress} from "./snappy/index.js";
 import {GossipTopicCache, getGossipSSZType} from "./topic.js";
 
 // Load WASM
@@ -70,7 +74,8 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 export class DataTransformSnappy implements DataTransform {
   constructor(
     private readonly gossipTopicCache: GossipTopicCache,
-    private readonly maxSizePerMessage: number
+    private readonly maxSizePerMessage: number,
+    private readonly config: BeaconConfig
   ) {}
 
   /**
@@ -80,14 +85,30 @@ export class DataTransformSnappy implements DataTransform {
    * - `outboundTransform()`: compress snappy payload
    */
   inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
-    const uncompressedData = uncompress(data, this.maxSizePerMessage);
+    const topic = this.gossipTopicCache.getTopic(topicStr);
+    let buffer: Uint8Array | undefined = undefined;
+    const inboundCache = globalInboundCache.get(topic.type);
+    if (inboundCache) {
+      const arraybuffer = inboundCache.pop();
+      if (arraybuffer) {
+        buffer = new Uint8Array(arraybuffer);
+      } else {
+        // for some first few messages when pool is empty, allocate new buffer
+        // they will be added back to pool after emit to the main thread
+        if (topic.type === GossipType.data_column_sidecar) {
+          const maxBlobs = this.config.getMaxBlobsPerBlock(topic.boundary.epoch);
+          buffer = new Uint8Array(getMaxDataColumnSizeCarBytes(maxBlobs));
+        } else if (topic.type === GossipType.beacon_attestation) {
+          buffer = new Uint8Array(ssz.electra.SingleAttestation.fixedSize as number);
+        }
+      }
+    }
+    const uncompressedData = uncompress(data, this.maxSizePerMessage, buffer);
+    const sszType = getGossipSSZType(topic);
 
     // check uncompressed data length before we extract beacon block root, slot or
     // attestation data at later steps
     const uncompressedDataLength = uncompressedData.length;
-    const topic = this.gossipTopicCache.getTopic(topicStr);
-    const sszType = getGossipSSZType(topic);
-
     if (uncompressedDataLength < sszType.minSize) {
       throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${sszType.minSize}`);
     }
@@ -110,3 +131,29 @@ export class DataTransformSnappy implements DataTransform {
     return compress(data);
   }
 }
+
+export class InboundTransformBufferPool {
+  private buffers: LinkedList<ArrayBuffer> = new LinkedList<ArrayBuffer>();
+  constructor(private readonly maxLength: number) {}
+
+  add(buffer: ArrayBuffer): void {
+    if (this.buffers.length >= this.maxLength) {
+      return;
+    }
+
+    this.buffers.push(buffer);
+  }
+
+  pop(): ArrayBuffer | null {
+    return this.buffers.pop();
+  }
+
+  size(): number {
+    return this.buffers.length;
+  }
+}
+
+// pool of buffers for each topic to uncompress incoming messages into
+export const globalInboundCache = new Map<GossipType, InboundTransformBufferPool>();
+globalInboundCache.set(GossipType.data_column_sidecar, new InboundTransformBufferPool(NUMBER_OF_COLUMNS));
+globalInboundCache.set(GossipType.beacon_attestation, new InboundTransformBufferPool(10_000));
