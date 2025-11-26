@@ -109,7 +109,8 @@ export class DataTransformSnappy implements DataTransform {
           // fulu
           case GossipType.data_column_sidecar: {
             const maxBlobs = this.config.getMaxBlobsPerBlock(topic.boundary.epoch);
-            buffer = new Uint8Array(getMaxDataColumnSizeCarBytes(maxBlobs));
+            // buffer = new Uint8Array(getMaxDataColumnSizeCarBytes(maxBlobs));
+            buffer = new Uint8Array(2 * getMaxDataColumnSizeCarBytes(maxBlobs));
             break;
           }
           // all forks
