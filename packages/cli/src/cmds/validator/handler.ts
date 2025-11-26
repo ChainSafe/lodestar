@@ -183,6 +183,9 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         fetch: args["externalSigner.fetch"],
         fetchInterval: args["externalSigner.fetchInterval"],
       },
+      clock: {
+        skipSlots: args["clock.skipSlots"],
+      },
     },
     metrics
   );
