@@ -3,7 +3,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkName, ForkPostFulu, ForkPreGloas, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {LodestarError, Logger} from "@lodestar/utils";
+import {LodestarError, Logger, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
@@ -83,6 +83,9 @@ export class SeenBlockInput {
   private readonly metrics: Metrics | null;
   private readonly logger?: Logger;
   private blockInputs = new Map<RootHex, IBlockInput>();
+  // using a Map of slot helps it more convenient to prune
+  // there should only 1 block root per slot but we need to always compare against rootHex
+  private verifiedProposerSignatures = new Map<Slot, Set<RootHex>>();
 
   constructor({config, custodyConfig, clock, chainEvents, signal, metrics, logger}: SeenBlockInputCacheModules) {
     this.config = config;
@@ -330,6 +333,22 @@ export class SeenBlockInput {
     return blockInput;
   }
 
+  isVerifiedProposerSignature(slot: Slot, blockRootHex: RootHex): boolean {
+    const seenSet = this.verifiedProposerSignatures.get(slot);
+    return seenSet?.has(blockRootHex) ?? false;
+  }
+
+  // Mark that the proposer signature for this slot and block root has been verified
+  // so that we only verify it once per slot
+  markVerifiedProposerSignature(slot: Slot, blockRootHex: RootHex): void {
+    let seenSet = this.verifiedProposerSignatures.get(slot);
+    if (!seenSet) {
+      seenSet = new Set<RootHex>();
+      this.verifiedProposerSignatures.set(slot, seenSet);
+    }
+    seenSet.add(blockRootHex);
+  }
+
   private buildCommonProps(slot: Slot): {
     daOutOfRange: boolean;
     forkName: ForkName;
@@ -356,6 +375,7 @@ export class SeenBlockInput {
         if (itemsToDelete <= 0) return;
       }
     }
+    pruneSetToMax(this.verifiedProposerSignatures, MAX_BLOCK_INPUT_CACHE_SIZE);
   }
 }
 
