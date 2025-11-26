@@ -67,5 +67,10 @@ export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
         labelNames: ["subnet", "boundary"],
       }),
     },
+    inboundTransformBufferPool: register.gauge<{type: GossipType}>({
+      name: "lodestar_gossip_inbound_transform_buffer_pool_size",
+      help: "Size of the inbound transform buffer pool per gossip type",
+      labelNames: ["type"],
+    }),
   };
 }

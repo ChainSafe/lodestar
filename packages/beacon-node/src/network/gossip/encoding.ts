@@ -156,4 +156,5 @@ export class InboundTransformBufferPool {
 // pool of buffers for each topic to uncompress incoming messages into
 export const globalInboundCache = new Map<GossipType, InboundTransformBufferPool>();
 globalInboundCache.set(GossipType.data_column_sidecar, new InboundTransformBufferPool(NUMBER_OF_COLUMNS));
-globalInboundCache.set(GossipType.beacon_attestation, new InboundTransformBufferPool(10_000));
+// TODO: reevaluate this number
+globalInboundCache.set(GossipType.beacon_attestation, new InboundTransformBufferPool(1_000));
