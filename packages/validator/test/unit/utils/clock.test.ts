@@ -101,7 +101,7 @@ describe("util / Clock", () => {
     expect(onSlot).toHaveBeenNthCalledWith(1, 0, expect.any(AbortSignal));
     expect(slotsCalled).toEqual([0]);
 
-    // Advance time by more than a slot
+    // Advance time to slot 2
     await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS * 2 + 200);
 
     // Slot 1 should be skipped and we should be on slot 2
