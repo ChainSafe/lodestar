@@ -418,6 +418,7 @@ export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot |
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
 }
 
+// TODO: review this
 export function getMaxDataColumnSizeCarBytes(maxBlobs: number): number {
   // index: 8 bytes
   let maxSize = 8;

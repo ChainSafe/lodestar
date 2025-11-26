@@ -92,7 +92,7 @@ export class DataTransformSnappy implements DataTransform {
     let buffer: Uint8Array | undefined = undefined;
     const inboundCache = globalInboundCache.get(topic.type);
     if (inboundCache) {
-      const arraybuffer = inboundCache.pop();
+      const arraybuffer = inboundCache.shift();
       if (arraybuffer) {
         buffer = new Uint8Array(arraybuffer);
       } else {
@@ -193,8 +193,12 @@ export class InboundTransformBufferPool {
     }
   }
 
-  pop(): ArrayBuffer | null {
-    return this.buffers.pop();
+  /**
+   * get from the head of the queue in order to get rid of the oldest buffer first
+   * in case the latter ones have bigger size
+   */
+  shift(): ArrayBuffer | null {
+    return this.buffers.shift();
   }
 
   size(): number {
