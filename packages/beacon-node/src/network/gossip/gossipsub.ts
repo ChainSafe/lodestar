@@ -81,6 +81,7 @@ export class Eth2Gossipsub extends GossipSub {
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
+  private readonly dataTransformSnappy: DataTransformSnappy;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
@@ -89,6 +90,7 @@ export class Eth2Gossipsub extends GossipSub {
     const gossipTopicCache = new GossipTopicCache(config);
 
     const scoreParams = computeGossipPeerScoreParams({config, eth2Context: modules.eth2Context});
+    const dataTransform = new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, config);
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -116,7 +118,7 @@ export class Eth2Gossipsub extends GossipSub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       msgIdToStrFn: msgIdToStrFn,
-      dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, config),
+      dataTransform,
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
         ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})
@@ -140,6 +142,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.peersData = peersData;
     this.events = events;
     this.gossipTopicCache = gossipTopicCache;
+    this.dataTransformSnappy = dataTransform;
 
     if (metricsRegister) {
       const metrics = createEth2GossipsubMetrics(metricsRegister);
@@ -287,7 +290,10 @@ export class Eth2Gossipsub extends GossipSub {
     metrics.gossipPeer.score.set(gossipScores);
 
     for (const gossipType of [GossipType.data_column_sidecar, GossipType.beacon_attestation]) {
-      metrics.inboundTransformBufferPool.set({type: gossipType}, globalInboundCache.get(gossipType)?.size() ?? 0);
+      metrics.inboundTransformBufferPool.size.set({type: gossipType}, globalInboundCache.get(gossipType)?.size() ?? 0);
+    }
+    for (const [type, count] of this.dataTransformSnappy.allocByTopicType.entries()) {
+      metrics.inboundTransformBufferPool.allocs.set({type}, count);
     }
   }
 

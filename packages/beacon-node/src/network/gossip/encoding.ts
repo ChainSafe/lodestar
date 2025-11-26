@@ -73,6 +73,8 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 }
 
 export class DataTransformSnappy implements DataTransform {
+  allocByTopicType = new Map<GossipType, number>();
+
   constructor(
     private readonly gossipTopicCache: GossipTopicCache,
     private readonly maxSizePerMessage: number,
@@ -96,6 +98,7 @@ export class DataTransformSnappy implements DataTransform {
       } else {
         // for some first few messages when pool is empty, allocate new buffer
         // they will be added back to pool after emit to the main thread
+        this.allocByTopicType.set(topic.type, this.allocByTopicType.get(topic.type) ?? 0 + 1);
         switch (topic.type) {
           case GossipType.data_column_sidecar: {
             const maxBlobs = this.config.getMaxBlobsPerBlock(topic.boundary.epoch);
@@ -111,7 +114,7 @@ export class DataTransformSnappy implements DataTransform {
         }
       }
     }
-    const uncompressedData = this.uncompress(data, buffer);
+    const uncompressedData = this.uncompress(topic.type, data, buffer);
     const sszType = getGossipSSZType(topic);
 
     // check uncompressed data length before we extract beacon block root, slot or
@@ -139,7 +142,7 @@ export class DataTransformSnappy implements DataTransform {
     return compress(data);
   }
 
-  private uncompress(data: Uint8Array, buffer: Uint8Array | undefined): Uint8Array {
+  private uncompress(type: GossipType, data: Uint8Array, buffer: Uint8Array | undefined): Uint8Array {
     try {
       return uncompress(data, this.maxSizePerMessage, buffer);
     } catch (e) {
@@ -147,6 +150,7 @@ export class DataTransformSnappy implements DataTransform {
         throw e;
       }
       if ((e as SnappyError<{code: SnappyErrorCode}>).type.code === SnappyErrorCode.UNCOMPRESS_BUFFER_TOO_SMALL) {
+        this.allocByTopicType.set(type, (this.allocByTopicType.get(type) ?? 0) + 1);
         return uncompress(data, this.maxSizePerMessage, undefined);
       }
       throw e;
