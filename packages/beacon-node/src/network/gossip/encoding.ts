@@ -11,6 +11,7 @@ import {LinkedList} from "../../util/array.js";
 import {getMaxDataColumnSizeCarBytes} from "../../util/sszBytes.js";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipType} from "./interface.js";
+import {SnappyError, SnappyErrorCode} from "./snappy/error.js";
 import {compress, uncompress} from "./snappy/index.js";
 import {GossipTopicCache, getGossipSSZType} from "./topic.js";
 
@@ -95,15 +96,22 @@ export class DataTransformSnappy implements DataTransform {
       } else {
         // for some first few messages when pool is empty, allocate new buffer
         // they will be added back to pool after emit to the main thread
-        if (topic.type === GossipType.data_column_sidecar) {
-          const maxBlobs = this.config.getMaxBlobsPerBlock(topic.boundary.epoch);
-          buffer = new Uint8Array(getMaxDataColumnSizeCarBytes(maxBlobs));
-        } else if (topic.type === GossipType.beacon_attestation) {
-          buffer = new Uint8Array(ssz.electra.SingleAttestation.fixedSize as number);
+        switch (topic.type) {
+          case GossipType.data_column_sidecar: {
+            const maxBlobs = this.config.getMaxBlobsPerBlock(topic.boundary.epoch);
+            buffer = new Uint8Array(getMaxDataColumnSizeCarBytes(maxBlobs));
+            break;
+          }
+          case GossipType.beacon_attestation:
+            buffer = new Uint8Array(ssz.electra.SingleAttestation.fixedSize as number);
+            break;
+          default:
+            buffer = undefined;
+            break;
         }
       }
     }
-    const uncompressedData = uncompress(data, this.maxSizePerMessage, buffer);
+    const uncompressedData = this.uncompress(data, buffer);
     const sszType = getGossipSSZType(topic);
 
     // check uncompressed data length before we extract beacon block root, slot or
@@ -130,6 +138,20 @@ export class DataTransformSnappy implements DataTransform {
     // No need to parse topic, everything is snappy compressed
     return compress(data);
   }
+
+  private uncompress(data: Uint8Array, buffer: Uint8Array | undefined): Uint8Array {
+    try {
+      return uncompress(data, this.maxSizePerMessage, buffer);
+    } catch (e) {
+      if (buffer === undefined || !(e instanceof SnappyError)) {
+        throw e;
+      }
+      if ((e as SnappyError<{code: SnappyErrorCode}>).type.code === SnappyErrorCode.UNCOMPRESS_BUFFER_TOO_SMALL) {
+        return uncompress(data, this.maxSizePerMessage, undefined);
+      }
+      throw e;
+    }
+  }
 }
 
 export class InboundTransformBufferPool {
@@ -137,11 +159,12 @@ export class InboundTransformBufferPool {
   constructor(private readonly maxLength: number) {}
 
   add(buffer: ArrayBuffer): void {
-    if (this.buffers.length >= this.maxLength) {
-      return;
-    }
-
+    // prefer new buffer because it may have bigger length than the old one
+    // for example when the max blobs per block increases
     this.buffers.push(buffer);
+    while (this.buffers.length > this.maxLength) {
+      this.buffers.shift();
+    }
   }
 
   pop(): ArrayBuffer | null {

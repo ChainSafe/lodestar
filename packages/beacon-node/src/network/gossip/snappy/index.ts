@@ -1,5 +1,6 @@
 import {SnappyCompressor} from "./compressor.js";
 import {SnappyDecompressor} from "./decompressor.js";
+import {SnappyError, SnappyErrorCode} from "./error.js";
 
 function isNode(): boolean {
   if (
@@ -20,13 +21,13 @@ export function uncompress<T extends Buffer | Uint8Array>(compressed: T, maxLeng
   const decompressor = new SnappyDecompressor(compressed);
   const length = decompressor.readUncompressedLength();
   if (length === -1) {
-    throw new Error("Invalid Snappy bitstream");
+    throw new SnappyError({code: SnappyErrorCode.UNCOMPRESS_CANNOT_EXTRACT_LENGTH});
   }
   if (maxLength !== undefined && length > maxLength) {
-    throw new Error(`The uncompressed length of ${length} is too big, expect at most ${maxLength}`);
+    throw new SnappyError({code: SnappyErrorCode.UNCOMPRESS_EXCEED_MAX_LENGTH});
   }
   if (outBuf !== undefined && outBuf.length < length) {
-    throw new Error(`The provided output buffer is too small: ${outBuf.length}, expect at least ${length}`);
+    throw new SnappyError({code: SnappyErrorCode.UNCOMPRESS_BUFFER_TOO_SMALL});
   }
 
   const uncompressed =
@@ -37,7 +38,7 @@ export function uncompress<T extends Buffer | Uint8Array>(compressed: T, maxLeng
         : Buffer.allocUnsafe(length);
 
   if (!decompressor.uncompressToBuffer(uncompressed)) {
-    throw new Error("Invalid Snappy bitstream");
+    throw new SnappyError({code: SnappyErrorCode.UNCOMPRESS_INVALID_BITSTREAM});
   }
   return uncompressed as T;
 }

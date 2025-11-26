@@ -1,0 +1,14 @@
+import {LodestarError} from "@lodestar/utils";
+
+export enum SnappyErrorCode {
+  UNCOMPRESS_EXCEED_MAX_LENGTH = "SNAPPY_ERROR_UNCOMPRESS_EXCEED_MAX_LENGTH",
+  UNCOMPRESS_CANNOT_EXTRACT_LENGTH = "SNAPPY_ERROR_UNCOMPRESS_CANNOT_EXTRACT_LENGTH",
+  UNCOMPRESS_BUFFER_TOO_SMALL = "SNAPPY_ERROR_UNCOMPRESS_BUFFER_TOO_SMALL",
+  UNCOMPRESS_INVALID_BITSTREAM = "SNAPPY_ERROR_UNCOMPRESS_INVALID_BITSTREAM",
+}
+
+export class SnappyError<T extends {code: string}> extends LodestarError<T> {
+  constructor(type: T) {
+    super(type);
+  }
+}
