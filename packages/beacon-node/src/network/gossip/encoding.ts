@@ -98,7 +98,7 @@ export class DataTransformSnappy implements DataTransform {
       } else {
         // for some first few messages when pool is empty, allocate new buffer
         // they will be added back to pool after emit to the main thread
-        this.allocByTopicType.set(topic.type, this.allocByTopicType.get(topic.type) ?? 0 + 1);
+        this.allocByTopicType.set(topic.type, (this.allocByTopicType.get(topic.type) ?? 0) + 1);
         switch (topic.type) {
           // TODO: reevaluate after each hard fork
           // deneb + electra
