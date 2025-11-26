@@ -203,15 +203,16 @@ export class InboundTransformBufferPool {
 }
 
 // pool of buffers for each topic to uncompress incoming messages into
-// TODO: reevaluate these numbers
+// these parameters were tuned based on hoodi + mainnet as of Nov 2025
 export const globalInboundCache = new Map<GossipType, InboundTransformBufferPool>();
 // electra
 globalInboundCache.set(GossipType.blob_sidecar, new InboundTransformBufferPool(9));
 // fulu
-globalInboundCache.set(GossipType.data_column_sidecar, new InboundTransformBufferPool(NUMBER_OF_COLUMNS));
-globalInboundCache.set(GossipType.beacon_attestation, new InboundTransformBufferPool(1_000));
-globalInboundCache.set(GossipType.beacon_aggregate_and_proof, new InboundTransformBufferPool(100));
-globalInboundCache.set(GossipType.sync_committee, new InboundTransformBufferPool(100));
+globalInboundCache.set(GossipType.data_column_sidecar, new InboundTransformBufferPool(NUMBER_OF_COLUMNS * 2));
+// depends on a node subscribing to all subnets or not, we can tweak this number later
+globalInboundCache.set(GossipType.beacon_attestation, new InboundTransformBufferPool(30_000));
+globalInboundCache.set(GossipType.beacon_aggregate_and_proof, new InboundTransformBufferPool(300));
+globalInboundCache.set(GossipType.sync_committee, new InboundTransformBufferPool(200));
 globalInboundCache.set(GossipType.sync_committee_contribution_and_proof, new InboundTransformBufferPool(100));
 globalInboundCache.set(GossipType.beacon_block, new InboundTransformBufferPool(1));
 // TODO: other topics
