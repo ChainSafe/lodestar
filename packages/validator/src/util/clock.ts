@@ -105,16 +105,14 @@ export class Clock implements IClock {
     let slot = getCurrentSlot(this.config, this.genesisTime);
     let slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
     while (!signal.aborted) {
-      if (timeItem === TimeItem.Slot && this.opts.skipSlots === false) {
-        // Do not await response to continue with next call to avoid skipping slots
-        fn(slotOrEpoch, signal).catch((e: Error) => {
-          if (!isErrorAborted(e)) this.logger.error("Error on runEvery fn", {}, e);
-        });
-      } else {
-        // Must catch fn() to ensure `sleep()` is awaited both for resolve and reject
-        await fn(slotOrEpoch, signal).catch((e: Error) => {
-          if (!isErrorAborted(e)) this.logger.error("Error on runEvery fn", {}, e);
-        });
+      // Must catch fn() to ensure `sleep()` is awaited both for resolve and reject
+      const task = fn(slotOrEpoch, signal).catch((e: Error) => {
+        if (!isErrorAborted(e)) this.logger.error("Error on runEvery fn", {}, e);
+      });
+
+      if (timeItem !== TimeItem.Slot || this.opts.skipSlots !== false) {
+        // await response to only continue with next task if current task finished within slot
+        await task;
       }
 
       try {
