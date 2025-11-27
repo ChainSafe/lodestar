@@ -134,8 +134,9 @@ export async function validateGossipBlobSidecar(
       });
     });
 
-  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blobSlot, blockHex)) {
-    // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
+  // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
+  const signature = blobSidecar.signedBlockHeader.signature;
+  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blobSlot, blockHex, signature)) {
     const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(blockState, blobSidecar.signedBlockHeader);
     // Don't batch so verification is not delayed
     if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
@@ -147,7 +148,7 @@ export async function validateGossipBlobSidecar(
       });
     }
 
-    chain.seenBlockInputCache.markVerifiedProposerSignature(blobSlot, blockHex);
+    chain.seenBlockInputCache.markVerifiedProposerSignature(blobSlot, blockHex, signature);
   }
 
   // verify if the blob inclusion proof is correct
@@ -236,7 +237,8 @@ export async function validateBlockBlobSidecars(
 
   if (chain !== null) {
     const blockRootHex = toRootHex(blockRoot);
-    if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRootHex)) {
+    const signature = firstSidecarSignedBlockHeader.signature;
+    if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRootHex, signature)) {
       const headState = await chain.getHeadState();
       const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
 
@@ -253,7 +255,7 @@ export async function validateBlockBlobSidecars(
         });
       }
 
-      chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRootHex);
+      chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRootHex, signature);
     }
   }
 
