@@ -336,7 +336,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "clock.skipSlots": {
     hidden: true,
     description: "Skip slots when tasks take more than one slot to run",
-    default: true,
     type: "boolean",
   },
 

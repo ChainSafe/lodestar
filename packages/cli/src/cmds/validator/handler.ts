@@ -184,7 +184,10 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         fetchInterval: args["externalSigner.fetchInterval"],
       },
       clock: {
-        skipSlots: args["clock.skipSlots"],
+        // We don't wanna skip slots if slot processing takes longer than slot duration
+        // in a distributed setup as delays might get caused by hanging HTTP requests
+        // due to DVT middleware not reaching the signature threshold
+        skipSlots: args["clock.skipSlots"] ?? !args.distributed,
       },
     },
     metrics
