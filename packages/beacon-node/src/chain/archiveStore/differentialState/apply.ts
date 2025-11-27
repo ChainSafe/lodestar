@@ -40,32 +40,23 @@ export async function applyStateRegenPlan(
       missingDiffs: artifacts.missingDiffs.join(","),
     });
   }
-
-  const orderedDiffs = [];
-  for (const diffSlot of plan.diffSlots) {
-    const diff = artifacts.diffs.find((d) => d.slot === diffSlot);
-    if (diff) {
-      orderedDiffs.push(diff);
-    }
-  }
-
-  if (orderedDiffs.length + artifacts.missingDiffs.length !== plan.diffSlots.length) {
+  if (artifacts.diffs.length + artifacts.missingDiffs.length !== plan.diffSlots.length) {
     throw new Error(`Can not find required state diffs ${plan.diffSlots.join(",")}`);
   }
 
-  if (plan.blockReplay && orderedDiffs.at(-1)?.slot !== plan.blockReplay.fromSlot - 1) {
+  if (plan.blockReplay && artifacts.diffs.at(-1)?.slot !== plan.blockReplay.fromSlot - 1) {
     throw new Error(`Can not replay blocks due to missing state diffs ${artifacts.missingDiffs.join(",")}`);
   }
 
   ctx.logger?.verbose("Replaying state diffs", {
     snapshotSlot: plan.snapshotSlot,
     diffPath: plan.diffSlots.join(","),
-    availableDiffs: orderedDiffs.map((d) => d.slot).join(","),
+    availableDiffs: artifacts.diffs.map((d) => d.slot).join(","),
   });
 
   const stateWithDiffApplied = await replayStateDifferentials(
     {codec: ctx.codec, logger: ctx.logger},
-    {stateDifferentials: orderedDiffs, stateSnapshot: artifacts.snapshot}
+    {stateDifferentials: artifacts.diffs, stateSnapshot: artifacts.snapshot}
   );
 
   if (stateWithDiffApplied.stateBytes.byteLength === 0 || stateWithDiffApplied.balancesBytes.byteLength === 0) {
