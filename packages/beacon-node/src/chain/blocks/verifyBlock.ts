@@ -7,7 +7,7 @@ import {
   computeEpochAtSlot,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {bellatrix, deneb} from "@lodestar/types";
+import {IndexedAttestation, bellatrix, deneb} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -47,6 +47,7 @@ export async function verifyBlocksInEpoch(
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
   dataAvailabilityStatuses: DataAvailabilityStatus[];
+  indexedAttestationsByBlock: IndexedAttestation[][];
 }> {
   const blocks = blockInputs.map((blockInput) => blockInput.getBlock());
   const lastBlock = blocks.at(-1);
@@ -89,6 +90,16 @@ export async function verifyBlocksInEpoch(
     throw Error(`preState at slot ${preState0.slot} must be dialed to block epoch ${block0Epoch}`);
   }
 
+  // Store indexed attestations for each block to avoid recomputing them during import
+  const indexedAttestationsByBlock: IndexedAttestation[][] = [];
+
+  for (const [i, block] of blocks.entries()) {
+    const fork = this.config.getForkSeq(block.message.slot);
+    indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) =>
+      preState0.epochCtx.getIndexedAttestation(fork, attestation)
+    );
+  }
+
   const abortController = new AbortController();
 
   try {
@@ -127,7 +138,15 @@ export async function verifyBlocksInEpoch(
 
       // All signatures at once
       opts.skipVerifyBlockSignatures !== true
-        ? verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts)
+        ? verifyBlocksSignatures(
+            this.bls,
+            this.logger,
+            this.metrics,
+            preState0,
+            blocks,
+            indexedAttestationsByBlock,
+            opts
+          )
         : Promise.resolve({verifySignaturesTime: Date.now()}),
 
       // ideally we want to only persist blocks after verifying them however the reality is there are
@@ -222,7 +241,7 @@ export async function verifyBlocksInEpoch(
       );
     }
 
-    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus};
+    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock};
   } finally {
     abortController.abort();
   }
