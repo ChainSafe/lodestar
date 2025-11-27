@@ -83,8 +83,7 @@ export function WithMeta<T, M extends {version: ForkName}>(getType: (m: M) => Ty
     toJson: (data, meta: M) => getType(meta).toJson(data),
     fromJson: (data, meta: M) => getType(meta).fromJson(data),
     serialize: (data, meta: M) => getType(meta).serialize(data),
-    deserialize: (data, opts: {reuseBytes?: boolean | undefined} | undefined, meta: M) =>
-      getType(meta).deserialize(data, opts),
+    deserialize: (data, opts: {reuseBytes?: boolean} | undefined, meta: M) => getType(meta).deserialize(data, opts),
   };
 }
 
@@ -95,7 +94,7 @@ export function WithVersion<T, M extends {version: ForkName}>(
     toJson: (data, meta: M) => getType(meta.version).toJson(data),
     fromJson: (data, meta: M) => getType(meta.version).fromJson(data),
     serialize: (data, meta: M) => getType(meta.version).serialize(data),
-    deserialize: (data, opts: {reuseBytes?: boolean | undefined} | undefined, meta: M) =>
+    deserialize: (data, opts: {reuseBytes?: boolean} | undefined, meta: M) =>
       getType(meta.version).deserialize(data, opts),
   };
 }

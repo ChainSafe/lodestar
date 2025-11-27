@@ -118,7 +118,7 @@ export type ResponseDataCodec<T, M> = {
   toJson: (data: T, meta: M) => unknown; // server
   fromJson: (data: unknown, meta: M) => T; // client
   serialize: (data: T, meta: M) => Uint8Array; // server
-  deserialize: (data: Uint8Array, opts: {reuseBytes?: boolean | undefined} | undefined, meta: M) => T; // client
+  deserialize: (data: Uint8Array, opts: {reuseBytes?: boolean} | undefined, meta: M) => T; // client
 };
 
 export type ResponseMetadataCodec<T> = {

@@ -116,7 +116,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
           break;
         }
         case WireFormat.ssz:
-          this._value = this.definition.resp.data.deserialize(rawBody.value, undefined, meta);
+          this._value = this.definition.resp.data.deserialize(rawBody.value, {}, meta);
           break;
       }
     }
