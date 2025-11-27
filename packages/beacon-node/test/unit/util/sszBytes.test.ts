@@ -17,6 +17,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
+import {DataColumnSidecar} from "@lodestar/types/fulu";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {kzg} from "../../../src/util/kzg.js";
 import {
@@ -32,6 +33,7 @@ import {
   getBlockRootFromSingleAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
   getCommitteeIndexFromSingleAttestationSerialized,
+  getDataColumnSideCarBytes,
   getLastProcessedSlotFromBeaconStateSerialized,
   getSignatureFromAttestationSerialized,
   getSignatureFromSingleAttestationSerialized,
@@ -404,6 +406,25 @@ describe("BeaconState ssz serialized picking", () => {
       expect(getSlotFromBeaconStateSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
+});
+
+it("getDataColumnSideCarBytes", () => {
+  for (const blobCount of [9, 21]) {
+    const blobs = Array.from({length: blobCount}, () => generateRandomBlob());
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
+    const columnIndex = 10;
+    const dataColumnSidecar: DataColumnSidecar = {
+      index: columnIndex,
+      column: Array.from({length: blobCount}, (_, rowNumber) => cellsAndProofs[rowNumber].cells[columnIndex]),
+      kzgCommitments,
+      kzgProofs: Array.from({length: blobCount}, (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]),
+      signedBlockHeader: ssz.phase0.SignedBeaconBlockHeader.defaultValue(),
+      kzgCommitmentsInclusionProof: ssz.fulu.KzgCommitmentsInclusionProof.defaultValue(),
+    };
+    const data = ssz.fulu.DataColumnSidecar.serialize(dataColumnSidecar);
+    expect(getDataColumnSideCarBytes(blobCount)).toBe(data.length);
+  }
 });
 
 function phase0SingleAttestationFromValues(

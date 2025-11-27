@@ -8,11 +8,11 @@ import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
 import {LinkedList} from "../../util/array.js";
-import {getMaxDataColumnSizeCarBytes} from "../../util/sszBytes.js";
+import {getDataColumnSideCarBytes} from "../../util/sszBytes.js";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {GossipType} from "./interface.js";
 import {SnappyError, SnappyErrorCode} from "./snappy/error.js";
-import {compress, uncompress} from "./snappy/index.js";
+import {compress, uncompress as uncompressSnappy} from "./snappy/index.js";
 import {GossipTopicCache, getGossipSSZType} from "./topic.js";
 
 // Load WASM
@@ -87,7 +87,7 @@ export class DataTransformSnappy implements DataTransform {
    * - `inboundTransform()`: decompress snappy payload
    * - `outboundTransform()`: compress snappy payload
    */
-  inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
+  inboundTransform(topicStr: string, compressedData: Uint8Array): Uint8Array {
     const topic = this.gossipTopicCache.getTopic(topicStr);
     let buffer: Uint8Array | undefined = undefined;
     const inboundCache = globalInboundCache.get(topic.type);
@@ -109,7 +109,8 @@ export class DataTransformSnappy implements DataTransform {
           // fulu
           case GossipType.data_column_sidecar: {
             const maxBlobs = this.config.getMaxBlobsPerBlock(topic.boundary.epoch);
-            buffer = new Uint8Array(getMaxDataColumnSizeCarBytes(maxBlobs));
+            // allocate based on max blobs in order to reuse the allocated buffer
+            buffer = new Uint8Array(getDataColumnSideCarBytes(maxBlobs));
             break;
           }
           // all forks
@@ -136,7 +137,7 @@ export class DataTransformSnappy implements DataTransform {
         }
       }
     }
-    const uncompressedData = this.uncompress(topic.type, data, buffer);
+    const uncompressedData = this.uncompress(topic.type, compressedData, buffer);
     const sszType = getGossipSSZType(topic);
 
     // check uncompressed data length before we extract beacon block root, slot or
@@ -164,16 +165,18 @@ export class DataTransformSnappy implements DataTransform {
     return compress(data);
   }
 
-  private uncompress(type: GossipType, data: Uint8Array, buffer: Uint8Array | undefined): Uint8Array {
+  private uncompress(type: GossipType, compressedData: Uint8Array, buffer: Uint8Array | undefined): Uint8Array {
     try {
-      return uncompress(data, this.maxSizePerMessage, buffer);
+      return uncompressSnappy(compressedData, this.maxSizePerMessage, buffer);
     } catch (e) {
       if (buffer === undefined || !(e instanceof SnappyError)) {
         throw e;
       }
+
       if ((e as SnappyError<{code: SnappyErrorCode}>).type.code === SnappyErrorCode.UNCOMPRESS_BUFFER_TOO_SMALL) {
+        // the provided buffer is too small, let snappy uncompress allocate a new one
         this.allocByTopicType.set(type, (this.allocByTopicType.get(type) ?? 0) + 1);
-        return uncompress(data, this.maxSizePerMessage, undefined);
+        return uncompressSnappy(compressedData, this.maxSizePerMessage, undefined);
       }
       throw e;
     }

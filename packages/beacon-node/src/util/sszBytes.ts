@@ -418,22 +418,21 @@ export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot |
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
 }
 
-// TODO: review this
-export function getMaxDataColumnSizeCarBytes(maxBlobs: number): number {
+export function getDataColumnSideCarBytes(blobCount: number): number {
   // index: 8 bytes
   let maxSize = 8;
   // column is dynamic size
   maxSize += 4;
   // column: Cell * maxBlobs = 64 * 32 * maxBlobs
-  maxSize += 64 * 32 * maxBlobs;
+  maxSize += 64 * 32 * blobCount;
   // kzgCommitments length is dynamic size
   maxSize += 4;
   // kzgCommitments: 48 * maxBlobs
-  maxSize += 48 * maxBlobs;
+  maxSize += 48 * blobCount;
   // kzgProofs length is dynamic size
   maxSize += 4;
   // kzgProofs: 48 * maxBlobs
-  maxSize += 48 * maxBlobs;
+  maxSize += 48 * blobCount;
   // SignedBeaconBlockHeader is 208 bytes
   maxSize += 208;
   maxSize += 32 * KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
