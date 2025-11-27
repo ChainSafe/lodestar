@@ -4,8 +4,7 @@ import {fileURLToPath} from "node:url";
 import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {WithBytes, phase0, ssz} from "@lodestar/types";
-import {ZERO_HASH} from "../../../../src/constants/constants.js";
+import {phase0, ssz} from "@lodestar/types";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./../../../../src/sync/backfill/errors.js";
 import {verifyBlockSequence} from "../../../../src/sync/backfill/verify.js";
 
@@ -23,9 +22,7 @@ describe("backfill sync - verify block sequence", () => {
   it("should verify valid chain of blocks", () => {
     const blocks = getBlocks();
 
-    expect(() =>
-      verifyBlockSequence(beaconConfig, blocks.slice(0, 2), blocks[2].data.message.parentRoot)
-    ).not.toThrow();
+    expect(() => verifyBlockSequence(beaconConfig, blocks.slice(0, 2), blocks[2].message.parentRoot)).not.toThrow();
   });
 
   it("should fail with sequence not anchored", () => {
@@ -42,20 +39,20 @@ describe("backfill sync - verify block sequence", () => {
         beaconConfig,
         // remove middle block
         blocks
-          .filter((b) => b.data.message.slot !== 2)
+          .filter((b) => b.message.slot !== 2)
           .slice(0, blocks.length - 2),
         // biome-ignore lint/style/noNonNullAssertion: using .at
-        blocks.at(-1)?.data.message.parentRoot!
+        blocks.at(-1)?.message.parentRoot!
       );
       if (error != null) throw new BackfillSyncError({code: error});
     }).toThrow(BackfillSyncErrorCode.NOT_LINEAR);
   });
 
   //first 4 mainnet blocks
-  function getBlocks(): WithBytes<phase0.SignedBeaconBlock>[] {
+  function getBlocks(): phase0.SignedBeaconBlock[] {
     const json = JSON.parse(fs.readFileSync(path.join(__dirname, "./blocks.json"), "utf-8")) as unknown[];
     return json.map((b) => {
-      return {data: ssz.phase0.SignedBeaconBlock.fromJson(b), bytes: ZERO_HASH};
+      return ssz.phase0.SignedBeaconBlock.fromJson(b);
     });
   }
 });

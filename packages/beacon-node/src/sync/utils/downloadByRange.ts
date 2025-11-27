@@ -254,7 +254,7 @@ export async function requestByRange({
   if (blocksRequest) {
     requests.push(
       network.sendBeaconBlocksByRange(peerIdStr, blocksRequest).then((blockResponse) => {
-        blocks = blockResponse.map(({data}) => data);
+        blocks = blockResponse;
       })
     );
   }

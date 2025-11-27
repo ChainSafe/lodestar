@@ -516,6 +516,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
       const blockInput = await validateBeaconBlob(blobSidecar, topic.subnet, peerIdStr, seenTimestampSec);
+      chain.serializedCache.set(blobSidecar, serializedData);
       if (!blockInput.hasBlockAndAllData()) {
         const cutoffTimeMs = getCutoffTimeMs(chain, blobSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
         chain.logger.debug("Received gossip blob, waiting for full data availability", {
@@ -562,6 +563,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         peerIdStr,
         seenTimestampSec
       );
+      chain.serializedCache.set(dataColumnSidecar, serializedData);
       const blockInputMeta = blockInput.getLogMeta();
       const {receivedColumns} = blockInputMeta;
       // it's not helpful to track every single column received
