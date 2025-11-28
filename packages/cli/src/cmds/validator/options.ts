@@ -61,6 +61,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "http.requestWireFormat"?: string;
     "http.responseWireFormat"?: string;
 
+    "clock.skipSlots"?: boolean;
+
     "externalSigner.url"?: string;
     "externalSigner.pubkeys"?: string[];
     "externalSigner.fetch"?: boolean;
@@ -329,6 +331,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description: `Preferred wire format for HTTP responses from beacon node. Can be one of \`${WireFormat.json}\` or \`${WireFormat.ssz}\``,
     defaultDescription: `${defaultInit.responseWireFormat}`,
     group: "http",
+  },
+
+  "clock.skipSlots": {
+    hidden: true,
+    description: "Skip slots when tasks take more than one slot to run",
+    type: "boolean",
   },
 
   // External signer

@@ -4,10 +4,10 @@ import {GenericContainer, StartedTestContainer, Wait} from "testcontainers";
 import {dirSync as tmpDirSync} from "tmp";
 import {ForkSeq} from "@lodestar/params";
 
-const web3signerVersion = "25.4.1";
+const web3signerVersion = "25.11.0";
 
 /** Till what version is the web3signer image updated for signature verification */
-const supportedForkSeq = ForkSeq.electra;
+const supportedForkSeq = ForkSeq.fulu;
 
 export type StartedExternalSigner = {
   container: StartedTestContainer;
