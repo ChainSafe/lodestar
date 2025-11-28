@@ -8,6 +8,7 @@ import {DataTransform} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
 import {intToBytes} from "@lodestar/utils";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
+import {Eth2GossipsubMetrics} from "./metrics.js";
 import {GossipTopicCache, getGossipSSZType} from "./topic.js";
 
 // Load WASM
@@ -70,7 +71,8 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 export class DataTransformSnappy implements DataTransform {
   constructor(
     private readonly gossipTopicCache: GossipTopicCache,
-    private readonly maxSizePerMessage: number
+    private readonly maxSizePerMessage: number,
+    private readonly metrics: Eth2GossipsubMetrics | null
   ) {}
 
   /**
@@ -87,6 +89,7 @@ export class DataTransformSnappy implements DataTransform {
     const uncompressedDataLength = uncompressedData.length;
     const topic = this.gossipTopicCache.getTopic(topicStr);
     const sszType = getGossipSSZType(topic);
+    this.metrics?.dataTransform.inbound.inc({type: topic.type});
 
     if (uncompressedDataLength < sszType.minSize) {
       throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${sszType.minSize}`);
@@ -102,7 +105,9 @@ export class DataTransformSnappy implements DataTransform {
    * Takes the data to be published (a topic and associated data) transforms the data. The
    * transformed data will then be used to create a `RawGossipsubMessage` to be sent to peers.
    */
-  outboundTransform(_topicStr: string, data: Uint8Array): Uint8Array {
+  outboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
+    const topic = this.gossipTopicCache.getTopic(topicStr);
+    this.metrics?.dataTransform.outbound.inc({type: topic.type});
     if (data.length > this.maxSizePerMessage) {
       throw Error(`ssz_snappy encoded data length ${data.length} > ${this.maxSizePerMessage}`);
     }
