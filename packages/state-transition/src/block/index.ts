@@ -52,8 +52,8 @@ export function processBlock(
 
   processBlockHeader(state, block);
 
-  // For gloas, processWithdrawals does not take a payload parameter
   if (fork >= ForkSeq.gloas) {
+    // Since gloas, processWithdrawals does not take a payload parameter
     processWithdrawals(fork, state as CachedBeaconStateGloas);
   } else if (fork >= ForkSeq.capella) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
