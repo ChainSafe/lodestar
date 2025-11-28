@@ -55,7 +55,10 @@ export function processBlock(
   // For gloas, processWithdrawals does not take a payload parameter
   if (fork >= ForkSeq.gloas) {
     processWithdrawals(fork, state as CachedBeaconStateGloas);
-  } else if (fork >= ForkSeq.capella) {
+  }
+  // TODO Deneb: Allow to disable withdrawals for interop testing
+  // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals
+  else if (fork >= ForkSeq.capella) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
     processWithdrawals(
       fork,

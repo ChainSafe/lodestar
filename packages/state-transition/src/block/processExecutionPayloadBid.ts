@@ -73,7 +73,7 @@ export function processExecutionPayloadBid(
 
   if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
     throw Error(
-      `Parent block root ${toRootHex(bid.parentBlockHash)} of bid does not match block's parent root ${toRootHex(block.parentRoot)}`
+      `Parent block root ${toRootHex(bid.parentBlockRoot)} of bid does not match block's parent root ${toRootHex(block.parentRoot)}`
     );
   }
 
