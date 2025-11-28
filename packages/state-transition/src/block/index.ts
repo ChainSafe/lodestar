@@ -53,7 +53,7 @@ export function processBlock(
   processBlockHeader(state, block);
 
   if (fork >= ForkSeq.gloas) {
-    // Since gloas, processWithdrawals does not take a payload parameter
+    // After gloas, processWithdrawals does not take a payload parameter
     processWithdrawals(fork, state as CachedBeaconStateGloas);
   } else if (fork >= ForkSeq.capella) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
@@ -66,7 +66,7 @@ export function processBlock(
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
-  // We call processExecutionPayload somehwere else post-gloas
+  // We call processExecutionPayload somewhere else post-gloas
   if (
     fork >= ForkSeq.bellatrix &&
     fork < ForkSeq.gloas &&
