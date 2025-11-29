@@ -180,6 +180,10 @@ export class EraReader {
           if (Buffer.compare(blockRoot, state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT]) !== 0) {
             throw new Error(`Block root mismatch at slot ${slot}`);
           }
+          // genesis block doesn't have valid signature
+          if (slot === 0) {
+            continue;
+          }
           const msg = ssz.phase0.SigningData.hashTreeRoot({
             objectRoot: blockRoot,
             domain: cachedGenesis.getDomain(slot, DOMAIN_BEACON_PROPOSER),
