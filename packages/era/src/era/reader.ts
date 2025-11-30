@@ -2,7 +2,7 @@ import {type FileHandle, open} from "node:fs/promises";
 import {basename} from "node:path";
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {ChainForkConfig, createCachedGenesis} from "@lodestar/config";
-import {DOMAIN_BEACON_PROPOSER, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {DOMAIN_BEACON_PROPOSER, GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconState, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {E2STORE_HEADER_SIZE, EntryType, readEntry, readVersion} from "../e2s.ts";
 import {snappyUncompress} from "../util.ts";
@@ -181,7 +181,7 @@ export class EraReader {
             throw new Error(`Block root mismatch at slot ${slot}`);
           }
           // genesis block doesn't have valid signature
-          if (slot === 0) {
+          if (slot === GENESIS_SLOT) {
             continue;
           }
           const msg = ssz.phase0.SigningData.hashTreeRoot({
