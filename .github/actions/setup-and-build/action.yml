@@ -9,17 +9,11 @@ runs:
   using: "composite"
   steps:
     - name: Setup Node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{inputs.node}}
         check-latest: true
         cache: pnpm
-
-    - name: Setup pnpm
-      shell: bash
-      run: |
-        corepack enable
-        corepack prepare
 
     - name: Node.js version
       id: node
