@@ -41,7 +41,7 @@ jobs:
         run: docker pull $MERGEMOCK_IMAGE
 
       - name: Test Lodestar <> mergemock relay
-        run: yarn test:sim:mergemock
+        run: pnpm test:sim:mergemock
         working-directory: packages/beacon-node
         env:
           EL_BINARY_DIR: ${{ env.MERGEMOCK_IMAGE }}

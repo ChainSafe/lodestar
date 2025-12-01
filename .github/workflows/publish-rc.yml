@@ -107,7 +107,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm registry
-        run: yarn run release:publish --dist-tag rc
+        run: pnpm run release:publish --dist-tag rc
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

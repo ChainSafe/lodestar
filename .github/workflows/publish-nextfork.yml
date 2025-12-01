@@ -7,7 +7,7 @@ concurrency:
 on:
   push:
     branches:
-      - peerDAS  # Nextfork branch
+      - peerDAS # Nextfork branch
 
 env:
   NEXT_FORK: peerDAS
@@ -26,7 +26,7 @@ jobs:
           node-version: 22
           registry-url: "https://registry.npmjs.org"
           check-latest: true
-          cache: yarn
+          cache: pnpm
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
@@ -37,12 +37,12 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/pnpm-lock.yaml', '**/package.json') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
+        run: pnpm install --frozen-lockfile && pnpm build
       - name: Build
-        run: yarn build
+        run: pnpm build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
       - name: Get version
