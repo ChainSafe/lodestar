@@ -25,6 +25,9 @@ importers:
       '@chainsafe/biomejs-config':
         specifier: ^1.0.0
         version: 1.0.0(@biomejs/biome@2.2.2)
+      '@lodestar/params':
+        specifier: 'workspace:'
+        version: link:packages/params
       '@types/node':
         specifier: ^22.18.6
         version: 22.18.6
@@ -79,6 +82,9 @@ importers:
       prettier:
         specifier: ^3.2.5
         version: 3.2.5
+      pretty-format:
+        specifier: ^29.7.0
+        version: 29.7.0
       process:
         specifier: ^0.11.10
         version: 0.11.10
@@ -339,6 +345,9 @@ importers:
         specifier: 1.0.2
         version: 1.0.2
     devDependencies:
+      '@libp2p/interface-internal':
+        specifier: ^2.3.18
+        version: 2.3.18
       '@types/qs':
         specifier: ^6.9.7
         version: 6.9.7
@@ -475,6 +484,9 @@ importers:
       '@types/inquirer':
         specifier: ^9.0.3
         version: 9.0.3
+      '@types/js-yaml':
+        specifier: ^4.0.5
+        version: 4.0.5
       '@types/proper-lockfile':
         specifier: ^4.1.4
         version: 4.1.4
@@ -487,6 +499,9 @@ importers:
 
   packages/config:
     dependencies:
+      '@chainsafe/as-sha256':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@chainsafe/ssz':
         specifier: ^1.2.2
         version: 1.2.2
@@ -692,6 +707,9 @@ importers:
 
   packages/prover:
     dependencies:
+      '@chainsafe/persistent-merkle-tree':
+        specifier: ^1.2.1
+        version: 1.2.1
       '@ethereumjs/block':
         specifier: ^4.2.2
         version: 4.2.2
@@ -762,6 +780,9 @@ importers:
       '@types/http-proxy':
         specifier: ^1.17.10
         version: 1.17.10
+      '@types/js-yaml':
+        specifier: ^4.0.5
+        version: 4.0.5
       '@types/yargs':
         specifier: ^17.0.24
         version: 17.0.24
@@ -817,6 +838,9 @@ importers:
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
+      it-stream-types:
+        specifier: ^2.0.2
+        version: 2.0.2
       libp2p:
         specifier: 2.9.0
         version: 2.9.0
@@ -899,6 +923,9 @@ importers:
         specifier: ^4.0.7
         version: 4.0.7(@types/node@22.18.6)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.7.0)
     devDependencies:
+      '@types/tmp':
+        specifier: ^0.2.3
+        version: 0.2.3
       '@types/yargs':
         specifier: ^17.0.24
         version: 17.0.24

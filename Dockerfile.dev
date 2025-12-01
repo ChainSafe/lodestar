@@ -10,9 +10,9 @@ WORKDIR /usr/app
 
 COPY . .
 
-RUN yarn install --non-interactive && yarn build
+RUN pnpm install --non-interactive && pnpm build
 
-RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
+RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
 ENV NODE_OPTIONS=--max-old-space-size=8192
 

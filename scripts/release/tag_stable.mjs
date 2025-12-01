@@ -20,7 +20,7 @@ usage(`
 Publish a Lodestar stable release.
 
 Usage:
-  yarn release:tag-stable <version> [commit]
+  pnpm release:tag-stable <version> [commit]
 
 See https://github.com/ChainSafe/lodestar/blob/unstable/RELEASE.md#3-merge-release-candidate
 `);

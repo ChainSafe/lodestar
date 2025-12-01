@@ -29,13 +29,13 @@
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
-- :toolbox: [Yarn](https://classic.yarnpkg.com/lang/en/)
+- :toolbox: [pnpm](https://pnpm.io/)
 
 ###### Developer Quickstart:
 
 ```bash
-yarn install
-yarn build
+pnpm install
+pnpm build
 ./lodestar --help
 ```
 

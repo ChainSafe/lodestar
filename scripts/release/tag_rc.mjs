@@ -22,7 +22,7 @@ usage(`
 Publish a Lodestar release candidate.
 
 Usage:
-  yarn release:tag-rc <version> [commit]
+  pnpm release:tag-rc <version> [commit]
 
 See https://github.com/ChainSafe/lodestar/blob/unstable/RELEASE.md#1-create-release-candidate
 `);
