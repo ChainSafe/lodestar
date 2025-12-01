@@ -7,7 +7,7 @@ This guide will provide instructions which include running a local execution nod
 :::info
 This guide specifically focuses on using Lodestar's Quickstart scripts which allows for near instant setup with the following technologies:
 
-- [Ubuntu v22.04 (LTS) x64 server](https://releases.ubuntu.com/22.04/)
+- [Ubuntu v24.04 (LTS) x64 server](https://releases.ubuntu.com/24.04/)
 - Ethereum Execution (eth1) clients:
   - [Erigon](https://github.com/ledgerwatch/erigon/releases) | [Github](https://github.com/ledgerwatch/erigon)
   - [Go-Ethereum (Geth)](https://geth.ethereum.org/) | [Github](https://github.com/ethereum/go-ethereum/releases/)
@@ -39,7 +39,7 @@ This guide assumes knowledge of Ethereum (ETH), Docker, staking and Linux.
 
 You require the following before getting started:
 
-- [Ubuntu Server v22.04 (LTS) amd64](https://releases.ubuntu.com/22.04/) or newer, installed and running on a local machine or in the cloud. _A locally running machine is encouraged for greater decentralization — if the cloud provider goes down then all nodes hosted with that provider go down._
+- [Ubuntu Server v24.04 (LTS) amd64](https://releases.ubuntu.com/24.04/) or newer, installed and running on a local machine or in the cloud. _A locally running machine is encouraged for greater decentralization — if the cloud provider goes down then all nodes hosted with that provider go down._
 
 - 32 ETH to run a solo validator with Lodestar. If running on testnet, contact us in our [ChainSafe Discord Server](https://discord.gg/642wB3XC3Q) for testnet Ether.
 

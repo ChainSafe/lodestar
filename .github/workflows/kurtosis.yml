@@ -9,7 +9,7 @@ jobs:
   test:
     timeout-minutes: 60
     name: Build and run Kurtosis
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,4 +24,4 @@ jobs:
       - name: Run test
         uses: ethpandaops/kurtosis-assertoor-github-action@v1
         with:
-          ethereum_package_args: '.github/workflows/assets/kurtosis_sim_test_config.yaml'
+          ethereum_package_args: ".github/workflows/assets/kurtosis_sim_test_config.yaml"

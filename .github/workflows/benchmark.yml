@@ -21,7 +21,7 @@ on:
 
 jobs:
   run:
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-4vcpu-ubuntu-2404
     # Skip for dependabot PRs, secrets are not made available and will fail
     # Don't run on forks. Forks don't have access to the S3 credentials and the workflow will fail
     if: |
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           check-latest: true
           cache: yarn
       - name: Node.js version

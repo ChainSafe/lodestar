@@ -7,7 +7,7 @@ concurrency:
 on:
   push:
     branches:
-      - peerDAS  # Nextfork branch
+      - peerDAS # Nextfork branch
 
 env:
   NEXT_FORK: peerDAS
@@ -15,7 +15,7 @@ env:
 jobs:
   npm:
     name: Publish to NPM Registry
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-4vcpu-ubuntu-04
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: "https://registry.npmjs.org"
           check-latest: true
           cache: yarn
@@ -109,7 +109,7 @@ jobs:
 
   docker:
     name: Publish to Docker Hub
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-4vcpu-ubuntu-2404
     needs: npm
     steps:
       - uses: actions/checkout@v4

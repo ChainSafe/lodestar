@@ -15,11 +15,11 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-4vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
@@ -71,7 +71,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       - uses: actions/checkout@v4
 
@@ -88,11 +88,11 @@ jobs:
   unit-tests:
     name: Unit Tests
     needs: type-checks
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-4vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
@@ -126,12 +126,12 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-4vcpu-ubuntu-2404
     needs: build
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -163,12 +163,12 @@ jobs:
 
   browser-tests:
     name: Browser Tests
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-4vcpu-ubuntu-2404
     needs: build
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -186,11 +186,11 @@ jobs:
   spec-tests:
     name: Spec tests
     needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-4vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"

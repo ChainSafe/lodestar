@@ -3,7 +3,7 @@
 # Run this on local host only.
 # Generated image is larger than production image. Do not use this for production.
 
-FROM --platform=${BUILDPLATFORM:-amd64} node:22 AS build_dev
+FROM --platform=${BUILDPLATFORM:-amd64} node:24 AS build_dev
 ARG COMMIT
 
 WORKDIR /usr/app
