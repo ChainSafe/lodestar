@@ -7,9 +7,15 @@ minimumReleaseAge: 2880
 
 nodeLinker: isolated
 
+overrides:
+  dns-over-http-resolver": "^2.1.1"
+  loupe": "^2.3.6"
+  nan": "^2.19.0"
+  elliptic: ">=6.6.1"
+
 onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - '@swc/core'
+  - "@parcel/watcher"
+  - "@swc/core"
   - aws-sdk
   - bigint-buffer
   - classic-level
