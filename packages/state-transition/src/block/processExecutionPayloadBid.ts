@@ -10,8 +10,7 @@ import {computeSigningRoot, getCurrentEpoch, getRandaoMix, isActiveValidator} fr
 
 export function processExecutionPayloadBid(
   state: CachedBeaconStateGloas,
-  // TODO GLOAS: Use BeaconBlock<ForkPostGloas> when lodestar/types is updated
-  block: gloas.BeaconBlock
+  block: BeaconBlock<ForkPostGloas>
 ): void {
   const signedBid = block.body.signedExecutionPayloadBid;
   const bid = signedBid.message;
