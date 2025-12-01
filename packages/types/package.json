@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.36.0",
+  "version": "1.37.0",
   "type": "module",
   "exports": {
     ".": {
@@ -77,7 +77,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/ssz": "^1.2.2",
-    "@lodestar/params": "^1.36.0",
+    "@lodestar/params": "^1.37.0",
     "ethereum-cryptography": "^2.0.0"
   },
   "keywords": [

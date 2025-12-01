@@ -89,6 +89,13 @@ export class Eth2Gossipsub extends GossipSub {
     const gossipTopicCache = new GossipTopicCache(config);
 
     const scoreParams = computeGossipPeerScoreParams({config, eth2Context: modules.eth2Context});
+    let metrics: Eth2GossipsubMetrics | null = null;
+    if (metricsRegister) {
+      metrics = createEth2GossipsubMetrics(metricsRegister);
+      metrics.gossipMesh.peersByType.addCollect(() =>
+        this.onScrapeLodestarMetrics(metrics as Eth2GossipsubMetrics, networkConfig)
+      );
+    }
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -116,7 +123,7 @@ export class Eth2Gossipsub extends GossipSub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       msgIdToStrFn: msgIdToStrFn,
-      dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE),
+      dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, metrics),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
         ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})
@@ -140,11 +147,6 @@ export class Eth2Gossipsub extends GossipSub {
     this.peersData = peersData;
     this.events = events;
     this.gossipTopicCache = gossipTopicCache;
-
-    if (metricsRegister) {
-      const metrics = createEth2GossipsubMetrics(metricsRegister);
-      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
-    }
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
