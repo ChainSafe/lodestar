@@ -80,11 +80,13 @@ export const ExecutionPayloadBid = new ContainerType(
     parentBlockHash: Bytes32,
     parentBlockRoot: Root,
     blockHash: Bytes32,
+    prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
     gasLimit: UintBn64,
     builderIndex: ValidatorIndex,
     slot: Slot,
     value: UintNum64,
+    executionPayment: UintNum64,
     blobKzgCommitmentsRoot: Root,
   },
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}

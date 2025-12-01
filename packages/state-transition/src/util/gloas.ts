@@ -52,3 +52,7 @@ export function isAttestationSameSlotRootCache(rootCache: RootCache, data: Attes
 
   return isMatchingBlockRoot && isCurrentBlockRoot;
 }
+
+export function isParentBlockFull(state: CachedBeaconStateGloas): boolean {
+  return byteArrayEquals(state.latestExecutionPayloadBid.blockHash, state.latestBlockHash);
+}

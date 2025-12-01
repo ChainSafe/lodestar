@@ -52,23 +52,21 @@ export function processBlock(
 
   processBlockHeader(state, block);
 
-  if (fork >= ForkSeq.capella) {
+  if (fork >= ForkSeq.gloas) {
+    // After gloas, processWithdrawals does not take a payload parameter
+    processWithdrawals(fork, state as CachedBeaconStateGloas);
+  } else if (fork >= ForkSeq.capella) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
-    // TODO Deneb: Allow to disable withdrawals for interop testing
-    // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals
-    if (fork >= ForkSeq.capella) {
-      // TODO
-      processWithdrawals(
-        fork,
-        state as CachedBeaconStateCapella,
-        fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
-      );
-    }
+    processWithdrawals(
+      fork,
+      state as CachedBeaconStateCapella,
+      fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
+    );
   }
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
-  // We call processExecutionPayload somehwere else post-gloas
+  // We call processExecutionPayload somewhere else post-gloas
   if (
     fork >= ForkSeq.bellatrix &&
     fork < ForkSeq.gloas &&

@@ -2,10 +2,11 @@ import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {DOMAIN_BEACON_BUILDER, FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
+import {toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.ts";
 import {CachedBeaconStateGloas} from "../types.ts";
 import {hasBuilderWithdrawalCredential} from "../util/gloas.ts";
-import {computeSigningRoot, getCurrentEpoch, isActiveValidator} from "../util/index.ts";
+import {computeSigningRoot, getCurrentEpoch, getRandaoMix, isActiveValidator} from "../util/index.ts";
 
 export function processExecutionPayloadBid(
   state: CachedBeaconStateGloas,
@@ -65,7 +66,20 @@ export function processExecutionPayloadBid(
   }
 
   if (!byteArrayEquals(bid.parentBlockHash, state.latestBlockHash)) {
-    throw Error(`Parent block hash of bid does not match state's latest block hash`);
+    throw Error(
+      `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)}`
+    );
+  }
+
+  if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
+    throw Error(
+      `Parent block root ${toRootHex(bid.parentBlockRoot)} of bid does not match block's parent root ${toRootHex(block.parentRoot)}`
+    );
+  }
+
+  const stateRandao = getRandaoMix(state, getCurrentEpoch(state));
+  if (!byteArrayEquals(bid.prevRandao, stateRandao)) {
+    throw Error(`Prev randao ${toHex(bid.prevRandao)} of bid does not match state's randao mix ${toHex(stateRandao)}`);
   }
 
   if (amount > 0) {

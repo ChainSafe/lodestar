@@ -11,7 +11,7 @@ import {
 import {ValidatorIndex, capella, ssz} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
-import {isBuilderPaymentWithdrawable} from "../util/gloas.ts";
+import {isBuilderPaymentWithdrawable, isParentBlockFull} from "../util/gloas.ts";
 import {
   decreaseBalance,
   getMaxEffectiveBalance,
@@ -23,8 +23,13 @@ import {
 export function processWithdrawals(
   fork: ForkSeq,
   state: CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas,
-  payload: capella.FullOrBlindedExecutionPayload
+  payload?: capella.FullOrBlindedExecutionPayload
 ): void {
+  // Return early if the parent block is empty
+  if (fork >= ForkSeq.gloas && !isParentBlockFull(state as CachedBeaconStateGloas)) {
+    return;
+  }
+
   // processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
   // processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas (EIP-7732)
   const {
@@ -34,24 +39,31 @@ export function processWithdrawals(
   } = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
-  if (isCapellaPayloadHeader(payload)) {
-    const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(expectedWithdrawals);
-    const actualWithdrawalsRoot = payload.withdrawalsRoot;
-    if (!byteArrayEquals(expectedWithdrawalsRoot, actualWithdrawalsRoot)) {
-      throw Error(
-        `Invalid withdrawalsRoot of executionPayloadHeader, expected=${toRootHex(
-          expectedWithdrawalsRoot
-        )}, actual=${toRootHex(actualWithdrawalsRoot)}`
-      );
+  // After gloas, withdrawals are verified later in processExecutionPayloadEnvelope
+  if (fork < ForkSeq.gloas) {
+    if (payload === undefined) {
+      throw Error("payload is required for pre-gloas processWithdrawals");
     }
-  } else {
-    if (expectedWithdrawals.length !== payload.withdrawals.length) {
-      throw Error(`Invalid withdrawals length expected=${numWithdrawals} actual=${payload.withdrawals.length}`);
-    }
-    for (let i = 0; i < numWithdrawals; i++) {
-      const withdrawal = expectedWithdrawals[i];
-      if (!ssz.capella.Withdrawal.equals(withdrawal, payload.withdrawals[i])) {
-        throw Error(`Withdrawal mismatch at index=${i}`);
+
+    if (isCapellaPayloadHeader(payload)) {
+      const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(expectedWithdrawals);
+      const actualWithdrawalsRoot = payload.withdrawalsRoot;
+      if (!byteArrayEquals(expectedWithdrawalsRoot, actualWithdrawalsRoot)) {
+        throw Error(
+          `Invalid withdrawalsRoot of executionPayloadHeader, expected=${toRootHex(
+            expectedWithdrawalsRoot
+          )}, actual=${toRootHex(actualWithdrawalsRoot)}`
+        );
+      }
+    } else {
+      if (expectedWithdrawals.length !== payload.withdrawals.length) {
+        throw Error(`Invalid withdrawals length expected=${numWithdrawals} actual=${payload.withdrawals.length}`);
+      }
+      for (let i = 0; i < numWithdrawals; i++) {
+        const withdrawal = expectedWithdrawals[i];
+        if (!ssz.capella.Withdrawal.equals(withdrawal, payload.withdrawals[i])) {
+          throw Error(`Withdrawal mismatch at index=${i}`);
+        }
       }
     }
   }
@@ -168,7 +180,7 @@ export function getExpectedWithdrawals(
           amount: BigInt(withdrawableBalance),
         });
         withdrawalIndex++;
-        withdrawnBalances.set(withdrawal.builderIndex, totalWithdrawn + Number(withdrawableBalance));
+        withdrawnBalances.set(withdrawal.builderIndex, totalWithdrawn + withdrawableBalance);
       }
       processedBuilderWithdrawalsCount++;
     }

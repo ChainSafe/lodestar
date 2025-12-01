@@ -4,7 +4,7 @@ import {DOMAIN_BEACON_BUILDER, ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_RO
 import {gloas, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.ts";
-import {computeExitEpochAndUpdateChurn, computeSigningRoot, computeTimeAtSlot, getRandaoMix} from "../util/index.ts";
+import {computeExitEpochAndUpdateChurn, computeSigningRoot, computeTimeAtSlot} from "../util/index.ts";
 import {processConsolidationRequest} from "./processConsolidationRequest.ts";
 import {processDepositRequest} from "./processDepositRequest.ts";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.ts";
@@ -98,7 +98,7 @@ function validateExecutionPayloadEnvelope(
   // Verify consistency with the committed bid
   if (envelope.builderIndex !== committedBid.builderIndex) {
     throw new Error(
-      `Builder index mismatch between enevelope and committed bid envelope=${envelope.builderIndex} committedBid=${committedBid.builderIndex}`
+      `Builder index mismatch between envelope and committed bid envelope=${envelope.builderIndex} committedBid=${committedBid.builderIndex}`
     );
   }
 
@@ -106,7 +106,7 @@ function validateExecutionPayloadEnvelope(
   const envelopeKzgRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(envelope.blobKzgCommitments);
   if (!byteArrayEquals(committedBid.blobKzgCommitmentsRoot, envelopeKzgRoot)) {
     throw new Error(
-      `Kzg commitment root mismatch between enevelope and committed bid envelope=${toHex(envelopeKzgRoot)} committedBid=${toHex(committedBid.blobKzgCommitmentsRoot)}`
+      `Kzg commitment root mismatch between envelope and committed bid envelope=${toHex(envelopeKzgRoot)} committedBid=${toHex(committedBid.blobKzgCommitmentsRoot)}`
     );
   }
 
@@ -139,10 +139,10 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // Verify prev_randao
-  if (!byteArrayEquals(payload.prevRandao, getRandaoMix(state, state.epochCtx.epoch))) {
+  // Verify prev_randao matches committed bid
+  if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
     throw new Error(
-      `Prev randao mismatch between envelope's payload and state envelope=${toHex(payload.prevRandao)} state=${toHex(getRandaoMix(state, state.epochCtx.epoch))}`
+      `Prev randao mismatch between committed bid and payload committedBid=${toHex(committedBid.prevRandao)} payload=${toHex(payload.prevRandao)}`
     );
   }
 
