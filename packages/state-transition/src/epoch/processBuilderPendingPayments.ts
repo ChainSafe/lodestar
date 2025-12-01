@@ -4,7 +4,9 @@ import {CachedBeaconStateGloas} from "../types.ts";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.ts";
 import {getBuilderPaymentQuorumThreshold} from "../util/gloas.ts";
 
-// Processes the builder pending payments from the previous epoch.
+/**
+ * Processes the builder pending payments from the previous epoch.
+ */
 export function processBuilderPendingPayments(state: CachedBeaconStateGloas): void {
   const quorum = getBuilderPaymentQuorumThreshold(state);
   const builderPendingPayments = state.builderPendingPayments.getAllReadonly();

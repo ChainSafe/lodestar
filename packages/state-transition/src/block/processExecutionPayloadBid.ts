@@ -1,17 +1,20 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {DOMAIN_BEACON_BUILDER, FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {gloas, ssz} from "@lodestar/types";
+import {
+  DOMAIN_BEACON_BUILDER,
+  FAR_FUTURE_EPOCH,
+  ForkPostGloas,
+  MIN_ACTIVATION_BALANCE,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
+import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.ts";
 import {CachedBeaconStateGloas} from "../types.ts";
 import {hasBuilderWithdrawalCredential} from "../util/gloas.ts";
 import {computeSigningRoot, getCurrentEpoch, getRandaoMix, isActiveValidator} from "../util/index.ts";
 
-export function processExecutionPayloadBid(
-  state: CachedBeaconStateGloas,
-  block: BeaconBlock<ForkPostGloas>
-): void {
+export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block: BeaconBlock<ForkPostGloas>): void {
   const signedBid = block.body.signedExecutionPayloadBid;
   const bid = signedBid.message;
   const {builderIndex, value: amount} = bid;

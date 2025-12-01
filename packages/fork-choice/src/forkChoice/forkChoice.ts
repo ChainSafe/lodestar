@@ -1617,7 +1617,6 @@ export class ForkChoice implements IForkChoice {
  * the specs mandates validating terminal conditions on the previously
  * imported merge block.
  */
-// TODO GLOAS: See if we need to update this for gloas
 export function assertValidTerminalPowBlock(
   config: ChainConfig,
   block: bellatrix.BeaconBlock,

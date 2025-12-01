@@ -154,7 +154,7 @@ function validateExecutionPayloadEnvelope(
   }
 
   // Verify commitments are under limit
-  if (envelope.blobKzgCommitments.length > state.config.getBlobParameters(state.epochCtx.epoch).maxBlobsPerBlock) {
+  if (envelope.blobKzgCommitments.length > state.config.getMaxBlobsPerBlock(state.epochCtx.epoch)) {
     throw new Error(
       `Kzg commitments exceed limit commitment.length=${envelope.blobKzgCommitments.length} limit=${state.config.getBlobParameters(state.epochCtx.epoch).maxBlobsPerBlock}`
     );
