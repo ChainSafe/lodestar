@@ -96,14 +96,14 @@ _The original is no longer maintained and had a configuration bug. This is a for
 git clone https://github.com/matthewkeil/flamescope
 cd flamescope
 pip3 install -r requirements.txt
-yarn
+pnpm install
 ```
 
 ## Usage
 
 ```sh
 mv /some_temp_dir/perf.out /path/to/flamescope/examples
-yarn dev
+pnpm dev
 ```
 
 Then navigate in a browser to `http://localhost:8080` and begin analyzing the data.
