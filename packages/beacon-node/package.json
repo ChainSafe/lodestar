@@ -93,13 +93,13 @@
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "tsc -p tsconfig.build.json",
-    "build:watch": "yarn run build --watch",
-    "build:release": "yarn clean && yarn run build",
+    "build:watch": "pnpm run build --watch",
+    "build:release": "pnpm clean && pnpm run build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
     "lint": "biome check src/ test/",
-    "lint:fix": "yarn run lint --write",
-    "test": "yarn test:unit && yarn test:e2e",
+    "lint:fix": "pnpm run lint --write",
+    "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "test:sim": "vitest run test/sim/**/*.test.ts",
@@ -110,7 +110,7 @@
     "test:spec:general": "vitest run --project spec-minimal test/spec/general/",
     "test:spec:minimal": "vitest run --project spec-minimal test/spec/presets/",
     "test:spec:mainnet": "vitest run --project spec-mainnet test/spec/presets/",
-    "test:spec": "yarn test:spec:bls && yarn test:spec:general && yarn test:spec:minimal && yarn test:spec:mainnet",
+    "test:spec": "pnpm test:spec:bls && pnpm test:spec:general && pnpm test:spec:minimal && pnpm test:spec:mainnet",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
@@ -173,6 +173,7 @@
     "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
+    "@libp2p/interface-internal": "^2.3.18",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
     "it-drain": "^3.0.3",

@@ -78,7 +78,7 @@ export async function handleRequest({
         const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method: protocol.method});
 
         const requestBody = await withTimeout(
-          () => pipe(stream.source as AsyncIterable<Uint8ArrayList>, requestDecode(protocol)),
+          () => pipe(stream.source, requestDecode(protocol)),
           REQUEST_TIMEOUT,
           signal
         ).catch((e: unknown) => {

@@ -22,7 +22,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet ETH_PORT=8661 ENGINE_PORT=8551 yarn vitest run test/sim/mergemock.test.ts
+// EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet ETH_PORT=8661 ENGINE_PORT=8551 pnpm vitest run test/sim/mergemock.test.ts
 // ```
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
