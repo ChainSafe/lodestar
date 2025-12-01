@@ -18,13 +18,6 @@ runs:
         node-version: ${{inputs.node}}
         check-latest: true
         cache: pnpm
-        package-manager-cache: false
-
-    - name: Enable corepack and install pnpm
-      shell: bash
-      run: |
-        corepack enable
-        corepack prepare pnpm@latest --activate
 
     - name: Node.js version
       id: node
