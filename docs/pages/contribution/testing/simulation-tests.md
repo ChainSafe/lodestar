@@ -43,7 +43,7 @@ This test is still included in our CI but is no longer as important as it once w
 Checks that Lodestar is compatible with other consensus validators and vice-versa. All tests use Geth as the EL.
 
 ```sh
-pnom -r test:sim:mixedclient --filter @chainsafe/lodestar
+pnpm -r test:sim:mixedclient --filter @chainsafe/lodestar
 ```
 
 ## Sim Test Infrastructure
