@@ -94,12 +94,19 @@
     "yargs": "^17.7.1"
   },
   "devDependencies": {
+    "@chainsafe/as-sha256": "^1.2.0",
+    "@ethereumjs/rlp": "^4.0.1",
+    "@types/tmp": "^0.2.3",
     "@lodestar/test-utils": "workspace:^",
     "@types/js-yaml": "^4.0.5",
     "@types/debug": "^4.1.7",
     "@types/inquirer": "^9.0.3",
     "@types/proper-lockfile": "^4.1.4",
     "@types/yargs": "^17.0.24",
-    "fastify": "^5.2.1"
+    "ethereum-cryptography": "^2.2.1",
+    "fastify": "^5.2.1",
+    "tmp": "^0.2.4",
+    "web3": "^4.0.3",
+    "web3-eth-accounts": "^4.0.3"
   }
 }

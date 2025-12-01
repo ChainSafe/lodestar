@@ -173,13 +173,19 @@
     "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
+    "@chainsafe/swap-or-not-shuffle": "^1.2.1",
+    "@libp2p/logger": "^5.1.21",
+    "@lodestar/spec-test-util": "workspace:^",
     "@libp2p/interface-internal": "^2.3.18",
+    "@types/js-yaml": "^4.0.5",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
     "it-drain": "^3.0.3",
     "it-pair": "^2.0.6",
+    "js-yaml": "^4.1.0",
     "rewiremock": "^3.14.5",
     "rimraf": "^4.4.1",
+    "snappy": "^7.2.2",
     "tmp": "^0.2.1"
   },
   "keywords": [

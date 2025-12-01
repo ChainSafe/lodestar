@@ -60,6 +60,8 @@
     "vitest": "^4.0.7"
   },
   "peerDependencies": {
+    "@chainsafe/ssz": "^1.2.2",
+    "@lodestar/types": "workspace:^",
     "vitest": "^4.0.7"
   }
 }

@@ -68,6 +68,9 @@
     "@lodestar/utils": "workspace:^",
     "bigint-buffer": "^1.1.5"
   },
+  "devDependencies": {
+    "@lodestar/api": "workspace:^"
+  },
   "keywords": [
     "ethereum",
     "eth-consensus",

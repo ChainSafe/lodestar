@@ -60,6 +60,8 @@
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
+    "@lodestar/logger": "workspace:^",
+    "@lodestar/spec-test-util": "workspace:^",
     "@lodestar/test-utils": "workspace:^",
     "bigint-buffer": "^1.1.5",
     "rimraf": "^4.4.1"

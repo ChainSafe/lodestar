@@ -76,6 +76,8 @@
   },
   "devDependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
+    "@fastify/cors": "^10.0.1",
+    "@lodestar/state-transition": "workspace:^",
     "@types/qs": "^6.9.7",
     "fastify": "^5.2.1",
     "qs": "^6.11.1",

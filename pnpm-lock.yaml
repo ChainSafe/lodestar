@@ -345,9 +345,21 @@ importers:
         specifier: 1.0.2
         version: 1.0.2
     devDependencies:
+      '@chainsafe/swap-or-not-shuffle':
+        specifier: ^1.2.1
+        version: 1.2.1
       '@libp2p/interface-internal':
         specifier: ^2.3.18
         version: 2.3.18
+      '@libp2p/logger':
+        specifier: ^5.1.21
+        version: 5.1.21
+      '@lodestar/spec-test-util':
+        specifier: workspace:^
+        version: link:../spec-test-util
+      '@types/js-yaml':
+        specifier: ^4.0.5
+        version: 4.0.5
       '@types/qs':
         specifier: ^6.9.7
         version: 6.9.7
@@ -360,12 +372,18 @@ importers:
       it-pair:
         specifier: ^2.0.6
         version: 2.0.6
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       rewiremock:
         specifier: ^3.14.5
         version: 3.14.5
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
+      snappy:
+        specifier: ^7.2.2
+        version: 7.2.2
       tmp:
         specifier: ^0.2.1
         version: 0.2.4
@@ -475,6 +493,12 @@ importers:
         specifier: ^17.7.1
         version: 17.7.2
     devDependencies:
+      '@chainsafe/as-sha256':
+        specifier: ^1.2.0
+        version: 1.2.0
+      '@ethereumjs/rlp':
+        specifier: ^4.0.1
+        version: 4.0.1
       '@lodestar/test-utils':
         specifier: workspace:^
         version: link:../test-utils
@@ -490,12 +514,27 @@ importers:
       '@types/proper-lockfile':
         specifier: ^4.1.4
         version: 4.1.4
+      '@types/tmp':
+        specifier: ^0.2.3
+        version: 0.2.3
       '@types/yargs':
         specifier: ^17.0.24
         version: 17.0.24
+      ethereum-cryptography:
+        specifier: ^2.2.1
+        version: 2.2.1
       fastify:
         specifier: ^5.2.1
         version: 5.3.2
+      tmp:
+        specifier: ^0.2.4
+        version: 0.2.4
+      web3:
+        specifier: ^4.0.3
+        version: 4.0.3(encoding@0.1.13)
+      web3-eth-accounts:
+        specifier: ^4.0.3
+        version: 4.0.3
 
   packages/config:
     dependencies:
@@ -652,6 +691,12 @@ importers:
       '@chainsafe/as-sha256':
         specifier: ^1.2.0
         version: 1.2.0
+      '@fastify/cors':
+        specifier: ^10.0.1
+        version: 10.0.1
+      '@lodestar/state-transition':
+        specifier: workspace:^
+        version: link:../state-transition
       '@types/qs':
         specifier: ^6.9.7
         version: 6.9.7
@@ -680,6 +725,9 @@ importers:
         specifier: ^4.5.0
         version: 4.6.0
     devDependencies:
+      '@chainsafe/ssz':
+        specifier: ^1.2.2
+        version: 1.2.2
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -789,6 +837,9 @@ importers:
       axios:
         specifier: ^1.3.4
         version: 1.8.2
+      deepmerge:
+        specifier: ^4.3.1
+        version: 4.3.1
       ethers:
         specifier: ^6.7.0
         version: 6.7.0
@@ -832,6 +883,18 @@ importers:
         specifier: ^2.4.7
         version: 2.4.8
     devDependencies:
+      '@chainsafe/ssz':
+        specifier: ^1.2.2
+        version: 1.2.2
+      '@libp2p/crypto':
+        specifier: ^5.1.7
+        version: 5.1.7
+      '@libp2p/logger':
+        specifier: ^5.1.21
+        version: 5.1.21
+      '@libp2p/peer-id':
+        specifier: ^5.1.8
+        version: 5.1.8
       '@lodestar/logger':
         specifier: workspace:^
         version: link:../logger
@@ -847,6 +910,12 @@ importers:
 
   packages/spec-test-util:
     dependencies:
+      '@chainsafe/ssz':
+        specifier: ^1.2.2
+        version: 1.2.2
+      '@lodestar/types':
+        specifier: workspace:^
+        version: link:../types
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
@@ -898,6 +967,10 @@ importers:
       bigint-buffer:
         specifier: ^1.1.5
         version: 1.1.5
+    devDependencies:
+      '@lodestar/api':
+        specifier: workspace:^
+        version: link:../api
 
   packages/test-utils:
     dependencies:
@@ -960,6 +1033,9 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
     devDependencies:
+      '@chainsafe/ssz':
+        specifier: ^1.2.2
+        version: 1.2.2
       '@types/js-yaml':
         specifier: ^4.0.5
         version: 4.0.5
@@ -1003,6 +1079,12 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
     devDependencies:
+      '@lodestar/logger':
+        specifier: workspace:^
+        version: link:../logger
+      '@lodestar/spec-test-util':
+        specifier: workspace:^
+        version: link:../spec-test-util
       '@lodestar/test-utils':
         specifier: workspace:^
         version: link:../test-utils
