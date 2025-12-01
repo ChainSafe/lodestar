@@ -12,6 +12,7 @@ lodestar-config.toml
 keys/
 keystores/
 test-db
+pnpm-debug.log
 package-lock.json
 LodestarValidatorDB/
 *.log
