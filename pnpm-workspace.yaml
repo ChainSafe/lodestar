@@ -1,0 +1,21 @@
+packages:
+  - packages/*
+
+linkWorkspacePackages: true
+
+minimumReleaseAge: 2880
+
+nodeLinker: isolated
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@swc/core'
+  - aws-sdk
+  - bigint-buffer
+  - classic-level
+  - core-js
+  - cpu-features
+  - electron
+  - esbuild
+  - nx
+  - ssh2

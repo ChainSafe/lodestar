@@ -61,8 +61,8 @@
   ],
   "dependencies": {
     "@chainsafe/ssz": "^1.2.2",
-    "@lodestar/params": "^1.37.0",
-    "@lodestar/types": "^1.37.0",
-    "@lodestar/utils": "^1.37.0"
+    "@lodestar/params": "workspace:^",
+    "@lodestar/types": "workspace:^",
+    "@lodestar/utils": "workspace:^"
   }
 }

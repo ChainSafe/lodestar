@@ -40,10 +40,10 @@
   },
   "dependencies": {
     "@chainsafe/blst": "^2.2.0",
-    "@lodestar/config": "^1.37.0",
-    "@lodestar/params": "^1.37.0",
-    "@lodestar/reqresp": "^1.37.0",
-    "@lodestar/types": "^1.37.0",
+    "@lodestar/config": "workspace:^",
+    "@lodestar/params": "workspace:^",
+    "@lodestar/reqresp": "workspace:^",
+    "@lodestar/types": "workspace:^",
     "uint8arraylist": "^2.4.7"
   }
 }
