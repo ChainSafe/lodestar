@@ -17,6 +17,7 @@ export function processExecutionPayloadEnvelope(
 ): void {
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
+  const fork = state.config.getForkSeq(envelope.slot);
 
   if (verify) {
     const builderIndex = envelope.builderIndex;
@@ -36,11 +37,11 @@ export function processExecutionPayloadEnvelope(
   }
 
   for (const withdrawal of requests.withdrawals) {
-    processWithdrawalRequest(ForkSeq.gloas, state, withdrawal);
+    processWithdrawalRequest(fork, state, withdrawal);
   }
 
   for (const consolidation of requests.consolidations) {
-    processConsolidationRequest(ForkSeq.gloas, state, consolidation);
+    processConsolidationRequest(fork, state, consolidation);
   }
 
   // Queue the builder payment
