@@ -105,8 +105,11 @@ export async function verifyBlocksInEpoch(
 
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
+
+    // All blocks are in the same epoch
+    const fork = this.config.getForkSeq(block0.message.slot);
+
     for (const [i, block] of blocks.entries()) {
-      const fork = this.config.getForkSeq(block.message.slot);
       indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) =>
         preState0.epochCtx.getIndexedAttestation(fork, attestation)
       );
