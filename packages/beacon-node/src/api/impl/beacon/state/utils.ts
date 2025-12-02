@@ -71,7 +71,7 @@ export async function getStateResponseWithRegen(
     typeof stateId === "string"
       ? await chain.getStateByStateRoot(stateId, {allowRegen: true})
       : typeof stateId === "number"
-        ? stateId >= chain.forkChoice.getFinalizedBlock().slot
+        ? stateId >= chain.forkChoice.getFinalizedBlock().slot && stateId <= chain.forkChoice.getHead().slot
           ? await chain.getStateBySlot(stateId, {allowRegen: true})
           : await chain.getHistoricalStateBySlot(stateId)
         : await chain.getStateOrBytesByCheckpoint(stateId);
