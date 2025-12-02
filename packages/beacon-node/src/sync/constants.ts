@@ -5,10 +5,18 @@ export const PARALLEL_HEAD_CHAINS = 2;
 export const MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS = 10;
 
 /** The number of times to retry a batch before it is considered failed. */
-export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 5;
+// export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 5;
+// this constant is increased a lot for peerDAS because we may have many failed download due to rate limit not implemented yet
+// TODO: change it back to 5 when this issue is implemented https://github.com/ChainSafe/lodestar/issues/8033
+export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 20;
 
-/** Consider batch faulty after downloading and processing this number of times */
-export const MAX_BATCH_PROCESSING_ATTEMPTS = 3;
+/**
+ * Consider batch faulty after downloading and processing this number of times
+ * as in https://github.com/ChainSafe/lodestar/issues/8147 we cannot proceed the sync chain if there is unknown parent
+ * from prior batch. For example a peer may send us a non-canonical chain segment or not returning all blocks
+ * in that case we should throw error and `RangeSync` should remove that error chain and add a new one.
+ **/
+export const MAX_BATCH_PROCESSING_ATTEMPTS = 0;
 
 /**
  * Number of slots to offset batches.
@@ -17,7 +25,7 @@ export const MAX_BATCH_PROCESSING_ATTEMPTS = 3;
  * the block necessary so switch from Finalized sync to Head sync won't be in the fork-choice and range sync would
  * be stuck in a loop downloading the previous epoch to finalized epoch, until we get rate-limited.
  *
- * After Jul2022 during finalized sync the entire epoch of finalized epoch will be downloaded fullfilling the goal
+ * After Jul2022 during finalized sync the entire epoch of finalized epoch will be downloaded fulfilling the goal
  * to switch to Head sync latter. This does not affect performance nor sync speed and just downloads a few extra
  * blocks that would be required by Head sync anyway. However, having an offset of 0 allows to send to the processor
  * blocks that belong to the same epoch, which enables batch verification optimizations.
@@ -48,3 +56,16 @@ export const EPOCHS_PER_BATCH = 1;
  * TODO: When switching branches usually all batches in AwaitingProcessing are dropped, could it be optimized?
  */
 export const BATCH_BUFFER_SIZE = Math.ceil(10 / EPOCHS_PER_BATCH);
+
+/**
+ * Maximum number of concurrent requests to perform with a SyncChain.
+ * This is according to the spec https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/p2p-interface.md
+ */
+export const MAX_CONCURRENT_REQUESTS = 2;
+
+/**
+ * Maximum number of epochs to download ahead when syncing.
+ * In fulu, to fully process a batch we may need to download columns from multiple peers
+ * so having this constant too big is a waste of resources and peers may rate limit us.
+ */
+export const MAX_LOOK_AHEAD_EPOCHS = 2;

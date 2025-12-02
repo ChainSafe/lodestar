@@ -1,48 +1,34 @@
 import {routes} from "@lodestar/api";
-import {createKeypairFromPeerId} from "@chainsafe/discv5";
+import {ApplicationMethods} from "@lodestar/api/server";
+import {ApiOptions} from "../../options.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
-import {IApiOptions} from "../../options.js";
-import {formatNodePeer, getRevelantConnection} from "./utils.js";
 
-export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, "network" | "sync">): routes.node.Api {
+export function getNodeApi(
+  opts: ApiOptions,
+  {network, sync}: Pick<ApiModules, "network" | "sync">
+): ApplicationMethods<routes.node.Endpoints> {
   return {
     async getNetworkIdentity() {
-      const enr = network.getEnr();
-      const keypair = createKeypairFromPeerId(network.peerId);
-      const discoveryAddresses = [
-        enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
-        enr?.getLocationMultiaddr("udp")?.toString() ?? null,
-      ].filter((addr): addr is string => Boolean(addr));
-
       return {
-        data: {
-          peerId: network.peerId.toB58String(),
-          enr: enr?.encodeTxt(keypair.privateKey) || "",
-          discoveryAddresses,
-          p2pAddresses: network.localMultiaddrs.map((m) => m.toString()),
-          metadata: network.metadata,
-        },
+        data: await network.getNetworkIdentity(),
       };
     },
 
-    async getPeer(peerIdStr) {
-      const connections = network.getConnectionsByPeer().get(peerIdStr);
-      if (!connections) {
+    async getPeer({peerId}) {
+      const peer = await network.dumpPeer(peerId);
+      if (!peer) {
         throw new ApiError(404, "Node has not seen this peer");
       }
-      return {data: formatNodePeer(peerIdStr, connections)};
+      return {data: peer};
     },
 
-    async getPeers(filters) {
-      const {state, direction} = filters || {};
-      const peers = Array.from(network.getConnectionsByPeer().entries())
-        .map(([peerIdStr, connections]) => formatNodePeer(peerIdStr, connections))
-        .filter(
-          (nodePeer) =>
-            (!state || state.length === 0 || state.includes(nodePeer.state)) &&
-            (!direction || direction.length === 0 || (nodePeer.direction && direction.includes(nodePeer.direction)))
-        );
+    async getPeers({state, direction}) {
+      const peers = (await network.dumpPeers()).filter(
+        (nodePeer) =>
+          (!state || state.length === 0 || state.includes(nodePeer.state)) &&
+          (!direction || direction.length === 0 || (nodePeer.direction && direction.includes(nodePeer.direction)))
+      );
 
       return {
         data: peers,
@@ -52,35 +38,19 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
 
     async getPeerCount() {
       // TODO: Implement disconnect count with on-disk persistence
-      let disconnected = 0;
-      let connecting = 0;
-      let connected = 0;
-      let disconnecting = 0;
+      const data = {
+        disconnected: 0,
+        connecting: 0,
+        connected: 0,
+        disconnecting: 0,
+      };
 
-      for (const connections of network.getConnectionsByPeer().values()) {
-        const relevantConnection = getRevelantConnection(connections);
-        switch (relevantConnection?.stat.status) {
-          case "open":
-            connected++;
-            break;
-          case "closing":
-            disconnecting++;
-            break;
-          case "closed":
-            disconnected++;
-            break;
-          default:
-            connecting++;
-        }
+      for (const peer of await network.dumpPeers()) {
+        data[peer.state]++;
       }
 
       return {
-        data: {
-          disconnected,
-          connecting,
-          connected,
-          disconnecting,
-        },
+        data,
       };
     },
 
@@ -96,14 +66,19 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
       return {data: sync.getSyncStatus()};
     },
 
-    async getHealth() {
-      if (sync.getSyncStatus().isSyncing) {
-        // 200: Node is ready
-        return routes.node.NodeHealth.SYNCING;
-      } else {
-        // 206: Node is syncing but can serve incomplete data
-        return routes.node.NodeHealth.READY;
+    async getHealth({syncingStatus}) {
+      if (syncingStatus != null && (syncingStatus < 100 || syncingStatus > 599)) {
+        throw new ApiError(400, `Invalid syncing status code: ${syncingStatus}`);
       }
+
+      const {isSyncing, isOptimistic, elOffline} = sync.getSyncStatus();
+
+      if (isSyncing || isOptimistic || elOffline) {
+        // 206: Node is syncing but can serve incomplete data
+        return {status: syncingStatus ?? routes.node.NodeHealth.SYNCING};
+      }
+      // 200: Node is ready
+      return {status: routes.node.NodeHealth.READY};
       // else {
       //   503: Node not initialized or having issues
       //   NOTE: Lodestar does not start its API until fully initialized, so this status can never be served

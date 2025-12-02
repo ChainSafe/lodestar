@@ -1,10 +1,9 @@
-import bls from "@chainsafe/bls";
-import type {SecretKey} from "@chainsafe/bls/types";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
+import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
+import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "./errors.js";
 import {parseRange} from "./format.js";
-import {ICliCommandOptions} from "./command.js";
 
 export type SecretKeysArgs = {
   mnemonic?: string;
@@ -12,7 +11,7 @@ export type SecretKeysArgs = {
   interopIndexes?: string;
 };
 
-export const secretKeysOptions: ICliCommandOptions<SecretKeysArgs> = {
+export const secretKeysOptions: CliCommandOptions<SecretKeysArgs> = {
   mnemonic: {
     description: "Mnemonic to derive private keys from",
     type: "string",
@@ -42,7 +41,7 @@ export function deriveSecretKeys(args: SecretKeysArgs): SecretKey[] {
 
     return indexes.map((index) => {
       const {signing} = deriveEth2ValidatorKeys(masterSK, index);
-      return bls.SecretKey.fromBytes(signing);
+      return SecretKey.fromBytes(signing);
     });
   }
 

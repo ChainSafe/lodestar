@@ -1,7 +1,5 @@
 import Case from "case";
 
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-
 export type KeyCase =
   | "snake"
   | "constant"
@@ -18,7 +16,7 @@ export function toExpectedCase(
   customCasingMap?: Record<string, string>
 ): string {
   if (expectedCase === "notransform") return value;
-  if (customCasingMap && customCasingMap[value]) return customCasingMap[value];
+  if (customCasingMap?.[value]) return customCasingMap[value];
   switch (expectedCase) {
     case "param":
       return Case.kebab(value);
@@ -29,11 +27,11 @@ export function toExpectedCase(
   }
 }
 
-function isObjectObject(val: unknown): boolean {
+function isObjectObject(val: unknown): val is object {
   return val != null && typeof val === "object" && Array.isArray(val) === false;
 }
 
-export function isPlainObject(o: unknown): boolean {
+export function isPlainObject(o: unknown): o is object {
   if (isObjectObject(o) === false) return false;
 
   // If has modified constructor
@@ -45,12 +43,16 @@ export function isPlainObject(o: unknown): boolean {
   if (isObjectObject(prot) === false) return false;
 
   // If constructor does not have an Object-specific method
-  if (prot.hasOwnProperty("isPrototypeOf") === false) {
+  if (Object.prototype.hasOwnProperty.call(prot, "isPrototypeOf") === false) {
     return false;
   }
 
   // Most likely a plain Object
   return true;
+}
+
+export function isEmptyObject(value: unknown): boolean {
+  return isObjectObject(value) && Object.keys(value).length === 0;
 }
 
 /**
@@ -59,7 +61,7 @@ export function isPlainObject(o: unknown): boolean {
  *
  * Inspired on lodash.mapValues, see https://lodash.com/docs/4.17.15#mapValues
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 export function mapValues<T extends {[K: string]: any}, R>(
   obj: T,
   iteratee: (value: T[keyof T], key: keyof T) => R
@@ -71,30 +73,27 @@ export function mapValues<T extends {[K: string]: any}, R>(
   return output;
 }
 
-export function objectToExpectedCase<T extends Record<string, unknown> | Record<string, unknown>[]>(
+export function objectToExpectedCase<T extends Record<string, unknown> | Record<string, unknown>[] | unknown[]>(
   obj: T,
   expectedCase: "snake" | "constant" | "camel" | "param" | "header" | "pascal" | "dot" | "notransform" = "camel"
 ): T {
   if (Array.isArray(obj)) {
     const newArr: unknown[] = [];
     for (let i = 0; i < obj.length; i++) {
-      newArr[i] = objectToExpectedCase(obj[i], expectedCase);
+      newArr[i] = objectToExpectedCase(obj[i] as T, expectedCase);
     }
-    return (newArr as unknown) as T;
+    return newArr as unknown as T;
   }
 
   if (Object(obj) === obj) {
     const newObj: Record<string, unknown> = {};
     for (const name of Object.getOwnPropertyNames(obj)) {
       const newName = toExpectedCase(name, expectedCase);
-      if (newName !== name && obj.hasOwnProperty(newName)) {
+      if (newName !== name && Object.prototype.hasOwnProperty.call(obj, newName)) {
         throw new Error(`object already has a ${newName} property`);
       }
 
-      newObj[newName] = objectToExpectedCase(
-        (obj as Record<string, unknown>)[name] as Record<string, unknown>,
-        expectedCase
-      );
+      newObj[newName] = objectToExpectedCase(obj[name] as Record<string, unknown>, expectedCase);
     }
     return newObj as T;
   }

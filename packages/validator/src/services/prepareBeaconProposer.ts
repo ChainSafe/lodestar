@@ -1,10 +1,9 @@
+import {ApiClient, routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
+import {GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, bellatrix} from "@lodestar/types";
-import {Api, routes} from "@lodestar/api";
-import {IBeaconConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-
-import {IClock, ILoggerVc, batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
+import {IClock, LoggerVc, batchItems} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 const REGISTRATION_CHUNK_SIZE = 512;
@@ -13,13 +12,13 @@ const REGISTRATION_CHUNK_SIZE = 512;
  * proposer data (currently `feeRecipient`) so that it can issue advance fcUs to
  * the engine for building execution payload with transactions.
  *
- * This needs to be done every epoch because the BN will cache it atmost for
+ * This needs to be done every epoch because the BN will cache it at most for
  * two epochs.
  */
 export function pollPrepareBeaconProposer(
-  config: IBeaconConfig,
-  logger: ILoggerVc,
-  api: Api,
+  config: BeaconConfig,
+  logger: LoggerVc,
+  api: ApiClient,
   clock: IClock,
   validatorStore: ValidatorStore,
   _metrics: Metrics | null
@@ -40,40 +39,42 @@ export function pollPrepareBeaconProposer(
       try {
         const proposers = indices.map(
           (index): routes.validator.ProposerPreparationData => ({
-            validatorIndex: String(index as number),
+            validatorIndex: index,
             feeRecipient: validatorStore.getFeeRecipientByIndex(index),
           })
         );
-        await api.validator.prepareBeaconProposer(proposers);
+        (await api.validator.prepareBeaconProposer({proposers})).assertOk();
+        logger.debug("Registered proposers with beacon node", {epoch, count: proposers.length});
       } catch (e) {
-        logger.error("Failed to register proposers with beacon", {epoch}, e as Error);
+        logger.error("Failed to register proposers with beacon node", {epoch}, e as Error);
       }
     }
   }
 
   clock.runEveryEpoch(prepareBeaconProposer);
-  // Since the registration of the validators to the BN as well as to builder (if enabled)
-  // is scheduled every epoch, there could be some time since the first scheduled run,
-  // so fire one registration right away as well
-  void prepareBeaconProposer(clock.getCurrentEpoch());
 }
 
 /**
  * This service is responsible for registering validators with the mev builder as they
  * might prepare and keep ready the execution payloads of just registered validators.
  *
- * This needs to be done every epoch because the builder(s) will cache it atmost for
+ * This needs to be done every epoch because the builder(s) will cache it at most for
  * two epochs.
  */
 export function pollBuilderValidatorRegistration(
-  config: IBeaconConfig,
-  logger: ILoggerVc,
-  api: Api,
+  config: BeaconConfig,
+  logger: LoggerVc,
+  api: ApiClient,
   clock: IClock,
   validatorStore: ValidatorStore,
   _metrics: Metrics | null
 ): void {
   async function registerValidator(epoch: Epoch): Promise<void> {
+    // Don't send validator registrations pre-genesis as mev-boost-relay will reject
+    // those registrations anyways if timestamp is before genesis time and we wanna
+    // avoid caching and re-sending them in subsequent requests
+    if (epoch < GENESIS_EPOCH) return;
+
     // Before bellatrix we don't need to update this data on bn/builder
     if (epoch < config.BELLATRIX_FORK_EPOCH - 1) return;
     const slot = epoch * SLOTS_PER_EPOCH;
@@ -81,12 +82,17 @@ export function pollBuilderValidatorRegistration(
     // registerValidator is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.registerValidator once
     await validatorStore.pollValidatorIndices().catch((e: Error) => {
-      logger.error("Error on pollValidatorIndices for prepareBeaconProposer", {epoch}, e);
+      logger.error("Error on pollValidatorIndices for registerValidator", {epoch}, e);
     });
     const pubkeyHexes = validatorStore
       .getAllLocalIndices()
       .map((index) => validatorStore.getPubkeyOfIndex(index))
-      .filter((pubkeyHex) => pubkeyHex !== undefined && validatorStore.isBuilderEnabled(pubkeyHex));
+      .filter(
+        (pubkeyHex): pubkeyHex is string =>
+          pubkeyHex !== undefined &&
+          validatorStore.getBuilderSelectionParams(pubkeyHex).selection !==
+            routes.validator.BuilderSelection.ExecutionOnly
+      );
 
     if (pubkeyHexes.length > 0) {
       const pubkeyHexesChunks = batchItems(pubkeyHexes, {batchSize: REGISTRATION_CHUNK_SIZE});
@@ -94,30 +100,20 @@ export function pollBuilderValidatorRegistration(
       for (const pubkeyHexes of pubkeyHexesChunks) {
         try {
           const registrations = await Promise.all(
-            pubkeyHexes.map(
-              (pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
-                // Just to make typescript happy as it can't figure out we have filtered
-                // undefined pubkeys above
-                if (pubkeyHex === undefined) {
-                  throw Error("All undefined pubkeys should have been filtered out");
-                }
-                const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
-                const gasLimit = validatorStore.getGasLimit(pubkeyHex);
-                return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
-              }
-            )
+            pubkeyHexes.map((pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
+              const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
+              const gasLimit = validatorStore.getGasLimit(pubkeyHex);
+              return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
+            })
           );
-          await api.validator.registerValidator(registrations);
+          (await api.validator.registerValidator({registrations})).assertOk();
+          logger.info("Published validator registrations to builder", {epoch, count: registrations.length});
         } catch (e) {
-          logger.error("Failed to register validator registrations with builder", {epoch}, e as Error);
+          logger.error("Failed to publish validator registrations to builder", {epoch}, e as Error);
         }
       }
     }
   }
 
   clock.runEveryEpoch(registerValidator);
-  // Since the registration of the validators to the BN as well as to builder (if enabled)
-  // is scheduled every epoch, there could be some time since the first scheduled run,
-  // so fire one registration right away as well
-  void registerValidator(clock.getCurrentEpoch());
 }

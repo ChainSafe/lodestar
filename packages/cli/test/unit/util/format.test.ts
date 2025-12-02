@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {isValidatePubkeyHex, parseRange} from "../../../src/util/index.js";
 
 describe("util / format / parseRange", () => {
@@ -10,7 +10,7 @@ describe("util / format / parseRange", () => {
 
   for (const {range, res} of testCases) {
     it(range, () => {
-      expect(parseRange(range)).to.deep.equal(res);
+      expect(parseRange(range)).toEqual(res);
     });
   }
 });
@@ -26,7 +26,7 @@ describe("util / format / isValidatePubkeyHex", () => {
 
   for (const [pubkeyHex, isValid] of Object.entries(testCases)) {
     it(pubkeyHex, () => {
-      expect(isValidatePubkeyHex(pubkeyHex)).equals(isValid);
+      expect(isValidatePubkeyHex(pubkeyHex)).toBe(isValid);
     });
   }
 });

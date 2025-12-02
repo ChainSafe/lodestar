@@ -1,14 +1,17 @@
-import {phase0, Slot} from "@lodestar/types";
+import {ResponseOutgoing} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {getSlotFromBytes} from "../../../util/multifork.js";
-import {ReqRespBlockResponse} from "../types.js";
+import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
+import {BeaconBlocksByRootRequest} from "../../../util/types.js";
 
 export async function* onBeaconBlocksByRoot(
-  requestBody: phase0.BeaconBlocksByRootRequest,
+  requestBody: BeaconBlocksByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<ReqRespBlockResponse> {
+): AsyncIterable<ResponseOutgoing> {
   for (const blockRoot of requestBody) {
     const root = blockRoot;
     const summary = chain.forkChoice.getBlock(root);
@@ -27,10 +30,19 @@ export async function* onBeaconBlocksByRoot(
         blockBytes = blockEntry.value;
       }
     }
+
     if (blockBytes) {
+      if (slot === undefined) {
+        const slotFromBytes = getSlotFromSignedBeaconBlockSerialized(blockBytes);
+        if (slotFromBytes === null) {
+          throw Error(`Invalid block bytes for block root ${toRootHex(root)}`);
+        }
+        slot = slotFromBytes;
+      }
+
       yield {
-        bytes: blockBytes,
-        slot: slot ?? getSlotFromBytes(blockBytes),
+        data: blockBytes,
+        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
       };
     }
   }

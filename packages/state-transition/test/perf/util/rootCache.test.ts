@@ -1,12 +1,12 @@
-import {itBench} from "@dapplion/benchmark";
-import {generatePerfTestCachedStatePhase0, perfStateId, perfStateEpoch} from "../util.js";
+import {bench, describe} from "@chainsafe/benchmark";
+import {RootCache, computeStartSlotAtEpoch, getBlockRootAtSlot} from "../../../src/util/index.js";
 import {State} from "../types.js";
-import {computeStartSlotAtEpoch, getBlockRootAtSlot, RootCache} from "../../../src/util/index.js";
+import {generatePerfTestCachedStatePhase0, perfStateEpoch, perfStateId} from "../util.js";
 
 const slot = computeStartSlotAtEpoch(perfStateEpoch) - 1;
 
-describe("RootCache.getBlockRootAtSlot", () => {
-  itBench<RootCache, RootCache>({
+describe("RootCache.getBlockRootAtSlot from rootCache", () => {
+  bench<RootCache, RootCache>({
     id: `RootCache.getBlockRootAtSlot - ${perfStateId}`,
     before: () => new RootCache(generatePerfTestCachedStatePhase0()),
     beforeEach: (rootCache) => rootCache,
@@ -20,7 +20,7 @@ describe("RootCache.getBlockRootAtSlot", () => {
 });
 
 describe("RootCache.getBlockRootAtSlot", () => {
-  itBench<State, State>({
+  bench<State, State>({
     id: `state getBlockRootAtSlot - ${perfStateId}`,
     before: () => generatePerfTestCachedStatePhase0() as State,
     beforeEach: (state) => state,

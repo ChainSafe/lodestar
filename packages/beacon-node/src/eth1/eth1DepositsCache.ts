@@ -1,24 +1,23 @@
-import {phase0, ssz} from "@lodestar/types";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {IFilterOptions} from "@lodestar/db";
-import {IChainForkConfig} from "@lodestar/config";
-
+import {ChainForkConfig} from "@lodestar/config";
+import {FilterOptions} from "@lodestar/db";
+import {phase0, ssz} from "@lodestar/types";
 import {IBeaconDb} from "../db/index.js";
-import {getEth1DataForBlocks} from "./utils/eth1Data.js";
-import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent.js";
-import {getDepositsWithProofs} from "./utils/deposits.js";
 import {Eth1Error, Eth1ErrorCode} from "./errors.js";
 import {Eth1Block} from "./interface.js";
+import {getDepositsWithProofs} from "./utils/deposits.js";
+import {getEth1DataForBlocks} from "./utils/eth1Data.js";
+import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent.js";
 
 export class Eth1DepositsCache {
   unsafeAllowDepositDataOverwrite: boolean;
   db: IBeaconDb;
-  config: IChainForkConfig;
+  config: ChainForkConfig;
 
-  constructor(opts: {unsafeAllowDepositDataOverwrite: boolean}, config: IChainForkConfig, db: IBeaconDb) {
+  constructor(opts: {unsafeAllowDepositDataOverwrite?: boolean}, config: ChainForkConfig, db: IBeaconDb) {
     this.config = config;
     this.db = db;
-    this.unsafeAllowDepositDataOverwrite = opts.unsafeAllowDepositDataOverwrite;
+    this.unsafeAllowDepositDataOverwrite = opts.unsafeAllowDepositDataOverwrite ?? false;
   }
 
   /**
@@ -28,7 +27,7 @@ export class Eth1DepositsCache {
    * have 100 proofs, but the Ethereum Consensus chain only acknowledges 50 of them, we must produce our
    * proofs with respect to a tree size of 50.
    */
-  async get(indexRange: IFilterOptions<number>, eth1Data: phase0.Eth1Data): Promise<phase0.Deposit[]> {
+  async get(indexRange: FilterOptions<number>, eth1Data: phase0.Eth1Data): Promise<phase0.Deposit[]> {
     const depositEvents = await this.db.depositEvent.values(indexRange);
     const depositRootTree = await this.db.depositDataRoot.getDepositRootTree();
     return getDepositsWithProofs(depositEvents, depositRootTree, eth1Data);
@@ -115,8 +114,8 @@ export class Eth1DepositsCache {
     blocks: Eth1Block[],
     lastProcessedDepositBlockNumber: number | null
   ): Promise<(phase0.Eth1Data & Eth1Block)[]> {
-    const highestBlock = blocks[blocks.length - 1]?.blockNumber;
-    return await getEth1DataForBlocks(
+    const highestBlock = blocks.at(-1)?.blockNumber;
+    return getEth1DataForBlocks(
       blocks,
       this.db.depositEvent.valuesStream({lte: highestBlock, reverse: true}),
       await this.db.depositDataRoot.getDepositRootTree(),
@@ -129,7 +128,7 @@ export class Eth1DepositsCache {
    */
   async getHighestDepositEventBlockNumber(): Promise<number | null> {
     const latestEvent = await this.db.depositEvent.lastValue();
-    return latestEvent && latestEvent.blockNumber;
+    return latestEvent?.blockNumber || null;
   }
 
   /**
@@ -137,6 +136,6 @@ export class Eth1DepositsCache {
    */
   async getLowestDepositEventBlockNumber(): Promise<number | null> {
     const firstEvent = await this.db.depositEvent.firstValue();
-    return firstEvent && firstEvent.blockNumber;
+    return firstEvent?.blockNumber || null;
   }
 }

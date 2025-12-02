@@ -1,15 +1,21 @@
+import {ApiClient, routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {
+  computeEpochAtSlot,
+  computeSyncPeriodAtEpoch,
+  computeSyncPeriodAtSlot,
+  isStartSlotOfEpoch,
+  isSyncCommitteeAggregator,
+} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
-import {Api, routes} from "@lodestar/api";
-import {extendError} from "@lodestar/utils";
-import {IClock, ILoggerVc} from "../util/index.js";
-import {PubkeyHex} from "../types.js";
+import {toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
+import {PubkeyHex} from "../types.js";
+import {IClock, LoggerVc} from "../util/index.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {syncCommitteeIndicesToSubnets} from "./utils.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -43,6 +49,8 @@ export type SyncDutySubnet = {
 export type SyncSelectionProof = {
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
+  /** This value will only be set if validator is part of distributed cluster and only has a key share */
+  partialSelectionProof?: BLSSignature;
   subcommitteeIndex: number;
 };
 
@@ -61,6 +69,10 @@ export type SyncDutyAndProofs = {
 // To assist with readability
 type DutyAtPeriod = {duty: SyncDutySubnet};
 
+type SyncCommitteeDutiesServiceOpts = {
+  distributedAggregationSelection?: boolean;
+};
+
 /**
  * Validators are part of a static long (~27h) sync committee, and part of static subnets.
  * However, the isAggregator role changes per slot.
@@ -70,16 +82,24 @@ export class SyncCommitteeDutiesService {
   private readonly dutiesByIndexByPeriod = new Map<SyncPeriod, Map<ValidatorIndex, DutyAtPeriod>>();
 
   constructor(
-    private readonly config: IChainForkConfig,
-    private readonly logger: ILoggerVc,
-    private readonly api: Api,
+    private readonly config: ChainForkConfig,
+    private readonly logger: LoggerVc,
+    private readonly api: ApiClient,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    metrics: Metrics | null
+    syncingStatusTracker: SyncingStatusTracker,
+    metrics: Metrics | null,
+    private readonly opts?: SyncCommitteeDutiesServiceOpts
   ) {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
+    syncingStatusTracker.runOnResynced(async (slot) => {
+      // Skip on first slot of epoch since tasks are already scheduled
+      if (!isStartSlotOfEpoch(slot)) {
+        return this.runDutiesTasks(computeEpochAtSlot(slot));
+      }
+    });
 
     if (metrics) {
       metrics.syncCommitteeDutiesCount.addCollect(() => {
@@ -216,9 +236,7 @@ export class SyncCommitteeDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (syncCommitteeSubscriptions.length > 0) {
       // TODO: Should log or throw?
-      await this.api.validator.prepareSyncCommitteeSubnets(syncCommitteeSubscriptions).catch((e: Error) => {
-        throw extendError(e, "Failed to subscribe to sync committee subnets");
-      });
+      (await this.api.validator.prepareSyncCommitteeSubnets({subscriptions: syncCommitteeSubscriptions})).assertOk();
     }
   }
 
@@ -231,14 +249,12 @@ export class SyncCommitteeDutiesService {
       return;
     }
 
-    const syncDuties = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e: Error) => {
-      throw extendError(e, "Failed to obtain SyncDuties");
-    });
+    const duties = (await this.api.validator.getSyncCommitteeDuties({epoch, indices: indexArr})).value();
 
     const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 
-    for (const duty of syncDuties.data) {
+    for (const duty of duties) {
       const {validatorIndex} = duty;
       if (!this.validatorStore.hasValidatorIndex(validatorIndex)) {
         continue;
@@ -247,7 +263,7 @@ export class SyncCommitteeDutiesService {
 
       // Note: For networks where `state.validators.length < SYNC_COMMITTEE_SIZE` the same validator can appear
       // multiple times in the sync committee. So `routes.validator.SyncDuty` `.validatorSyncCommitteeIndices`
-      // is an array, with all of those apparences.
+      // is an array, with all of those appearances.
       //
       // Validator signs two messages:
       // `SyncCommitteeMessage`:
@@ -255,7 +271,7 @@ export class SyncCommitteeDutiesService {
       //  - Validator signs and publishes only one message regardless of validatorSyncCommitteeIndices length
       // `SyncCommitteeContribution`:
       //  - depends on slot, blockRoot, validatorIndex, and subnet.
-      //  - Validator must sign and publish only one message per subnet MAX. Regarless of validatorSyncCommitteeIndices
+      //  - Validator must sign and publish only one message per subnet MAX. Regardless of validatorSyncCommitteeIndices
       const subnets = syncCommitteeIndicesToSubnets(duty.validatorSyncCommitteeIndices);
 
       // TODO: Enable dependentRoot functionality
@@ -271,7 +287,7 @@ export class SyncCommitteeDutiesService {
       // Using `alreadyWarnedReorg` avoids excessive logs.
 
       // TODO: Use memory-efficient toHexString()
-      const pubkeyHex = toHexString(duty.pubkey);
+      const pubkeyHex = toPubkeyHex(duty.pubkey);
       dutiesByIndex.set(validatorIndex, {duty: {pubkey: pubkeyHex, validatorIndex, subnets}});
     }
 
@@ -288,11 +304,23 @@ export class SyncCommitteeDutiesService {
     const dutiesAndProofs: SyncSelectionProof[] = [];
     for (const subnet of duty.subnets) {
       const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(duty.pubkey, slot, subnet);
-      dutiesAndProofs.push({
-        // selectionProof === null is used to check if is aggregator
-        selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
-        subcommitteeIndex: subnet,
-      });
+      if (this.opts?.distributedAggregationSelection) {
+        // Validator in distributed cluster only has a key share, not the full private key.
+        // Passing a partial selection proof to `is_sync_committee_aggregator` would produce incorrect result.
+        // SyncCommitteeService will exchange partial for combined selection proofs retrieved from
+        // distributed validator middleware client and determine aggregators at beginning of every slot.
+        dutiesAndProofs.push({
+          selectionProof: null,
+          partialSelectionProof: selectionProof,
+          subcommitteeIndex: subnet,
+        });
+      } else {
+        dutiesAndProofs.push({
+          // selectionProof === null is used to check if is aggregator
+          selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
+          subcommitteeIndex: subnet,
+        });
+      }
     }
     return dutiesAndProofs;
   }

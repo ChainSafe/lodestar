@@ -1,0 +1,70 @@
+import {RootHex, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
+import {LodestarError} from "@lodestar/utils";
+import {GossipActionError} from "./gossipValidation.js";
+
+export enum BlobSidecarErrorCode {
+  INDEX_TOO_LARGE = "BLOB_SIDECAR_ERROR_INDEX_TOO_LARGE",
+  INVALID_INDEX = "BLOB_SIDECAR_ERROR_INVALID_INDEX",
+  /** !bls.KeyValidate(block.body.blob_kzg_commitments[i]) */
+  INVALID_KZG = "BLOB_SIDECAR_ERROR_INVALID_KZG",
+  /** !verify_kzg_commitments_against_transactions(block.body.execution_payload.transactions, block.body.blob_kzg_commitments) */
+  INVALID_KZG_TXS = "BLOB_SIDECAR_ERROR_INVALID_KZG_TXS",
+  /** sidecar.beacon_block_slot != block.slot */
+  INCORRECT_SLOT = "BLOB_SIDECAR_ERROR_INCORRECT_SLOT",
+  /** BLSFieldElement in valid range (x < BLS_MODULUS) */
+  INVALID_BLOB = "BLOB_SIDECAR_ERROR_INVALID_BLOB",
+  /** !bls.KeyValidate(blobs_sidecar.kzg_aggregated_proof) */
+  INVALID_KZG_PROOF = "BLOBS_SIDECAR_ERROR_INVALID_KZG_PROOF",
+
+  // Validation errors when validating against an existing block
+
+  /** Block and sidecars blob count mismatch */
+  INCORRECT_SIDECAR_COUNT = "BLOBS_SIDECAR_ERROR_INCORRECT_SIDECAR_COUNT",
+  /** Sidecar doesn't match block */
+  INCORRECT_BLOCK = "BLOBS_SIDECAR_ERROR_INCORRECT_BLOCK",
+  /** Sidecars proofs not valid */
+  INVALID_KZG_PROOF_BATCH = "BLOBS_SIDECAR_ERROR_INVALID_KZG_PROOF_BATCH",
+
+  // following errors are adapted from the block errors
+  FUTURE_SLOT = "BLOB_SIDECAR_ERROR_FUTURE_SLOT",
+  WOULD_REVERT_FINALIZED_SLOT = "BLOB_SIDECAR_ERROR_WOULD_REVERT_FINALIZED_SLOT",
+  ALREADY_KNOWN = "BLOB_SIDECAR_ERROR_ALREADY_KNOWN",
+  PARENT_UNKNOWN = "BLOB_SIDECAR_ERROR_PARENT_UNKNOWN",
+  NOT_LATER_THAN_PARENT = "BLOB_SIDECAR_ERROR_NOT_LATER_THAN_PARENT",
+  PROPOSAL_SIGNATURE_INVALID = "BLOB_SIDECAR_ERROR_PROPOSAL_SIGNATURE_INVALID",
+  INCLUSION_PROOF_INVALID = "BLOB_SIDECAR_ERROR_INCLUSION_PROOF_INVALID",
+  INCORRECT_PROPOSER = "BLOB_SIDECAR_ERROR_INCORRECT_PROPOSER",
+}
+
+export type BlobSidecarErrorType =
+  | {code: BlobSidecarErrorCode.INDEX_TOO_LARGE; blobIdx: number; maxBlobsPerBlock: number}
+  | {code: BlobSidecarErrorCode.INVALID_INDEX; blobIdx: number; subnet: SubnetID}
+  | {code: BlobSidecarErrorCode.INVALID_KZG; blobIdx: number}
+  | {code: BlobSidecarErrorCode.INVALID_KZG_TXS}
+  | {code: BlobSidecarErrorCode.INCORRECT_SLOT; blockSlot: Slot; blobSlot: Slot; blobIdx: number}
+  | {code: BlobSidecarErrorCode.INVALID_BLOB; blobIdx: number}
+  | {code: BlobSidecarErrorCode.INVALID_KZG_PROOF; blobIdx: number}
+  | {code: BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT; slot: number; expected: number; actual: number}
+  | {code: BlobSidecarErrorCode.INCORRECT_BLOCK; slot: number; blobIdx: number; expected: string; actual: string}
+  | {code: BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH; slot: number; reason: string}
+  | {code: BlobSidecarErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
+  | {code: BlobSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
+  | {code: BlobSidecarErrorCode.ALREADY_KNOWN; root: RootHex}
+  | {
+      code: BlobSidecarErrorCode.PARENT_UNKNOWN;
+      parentRoot: RootHex;
+      slot: Slot;
+      blockRoot: RootHex;
+    }
+  | {code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
+  | {
+      code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID;
+      blockRoot: RootHex;
+      slot: Slot;
+      index: number;
+    }
+  | {code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; blobIdx: number}
+  | {code: BlobSidecarErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex};
+
+export class BlobSidecarGossipError extends GossipActionError<BlobSidecarErrorType> {}
+export class BlobSidecarValidationError extends LodestarError<BlobSidecarErrorType> {}

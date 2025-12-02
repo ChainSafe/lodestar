@@ -1,7 +1,7 @@
-import {Slot} from "@lodestar/types";
+import {Slot, SubnetID} from "@lodestar/types";
 
 export type RequestedSubnet = {
-  subnet: number;
+  subnet: SubnetID;
   /**
    * Slot after which the network will stop maintaining a min number of peers
    * connected to `subnetId`RequestedSubnet
@@ -14,13 +14,13 @@ export type RequestedSubnet = {
  */
 export class SubnetMap {
   /** Map of subnets and the slot until they are needed */
-  private subnets = new Map<number, Slot>();
+  private subnets = new Map<SubnetID, Slot>();
 
   get size(): number {
     return this.subnets.size;
   }
 
-  has(subnet: number): boolean {
+  has(subnet: SubnetID): boolean {
     return this.subnets.has(subnet);
   }
 
@@ -35,18 +35,18 @@ export class SubnetMap {
   /**
    * Get last active slot of a subnet.
    */
-  getToSlot(subnet: number): number | undefined {
+  getToSlot(subnet: SubnetID): Slot | undefined {
     return this.subnets.get(subnet);
   }
 
-  isActiveAtSlot(subnet: number, slot: Slot): boolean {
+  isActiveAtSlot(subnet: SubnetID, slot: Slot): boolean {
     const toSlot = this.subnets.get(subnet);
     return toSlot !== undefined && toSlot >= slot; // ACTIVE: >=
   }
 
   /** Return subnetIds with a `toSlot` equal greater than `currentSlot` */
-  getActive(currentSlot: Slot): number[] {
-    const subnetIds: number[] = [];
+  getActive(currentSlot: Slot): SubnetID[] {
+    const subnetIds: SubnetID[] = [];
     for (const [subnet, toSlot] of this.subnets.entries()) {
       if (toSlot >= currentSlot) {
         subnetIds.push(subnet);
@@ -67,8 +67,8 @@ export class SubnetMap {
   }
 
   /** Return subnetIds with a `toSlot` less than `currentSlot`. Also deletes expired entries */
-  getExpired(currentSlot: Slot): number[] {
-    const subnetIds: number[] = [];
+  getExpired(currentSlot: Slot): SubnetID[] {
+    const subnetIds: SubnetID[] = [];
     for (const [subnet, toSlot] of this.subnets.entries()) {
       if (toSlot < currentSlot) {
         subnetIds.push(subnet);
@@ -78,11 +78,11 @@ export class SubnetMap {
     return subnetIds;
   }
 
-  getAll(): number[] {
+  getAll(): SubnetID[] {
     return Array.from(this.subnets.keys());
   }
 
-  delete(subnet: number): void {
+  delete(subnet: SubnetID): void {
     this.subnets.delete(subnet);
   }
 }

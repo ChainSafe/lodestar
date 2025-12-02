@@ -1,35 +1,24 @@
-import {
-  AttesterFlags,
-  FLAG_ELIGIBLE_ATTESTER,
-  hasMarkers,
-  IAttesterStatus,
-  toAttesterFlags,
-} from "../../../src/index.js";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochProcess} from "../../../src/types.js";
+import {AttesterFlags, toAttesterFlags} from "../../../src/index.js";
+import {CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochTransitionCache} from "../../../src/types.js";
 
 /**
- * Generate an incomplete EpochProcess to simulate any network condition relevant to getAttestationDeltas
+ * Generate an incomplete EpochTransitionCache to simulate any network condition relevant to getAttestationDeltas
  * @param isInInactivityLeak true if in inactivity leak
  * @param flagFactors factor (0,1) of validators that have that flag set to true
  */
-export function generateBalanceDeltasEpochProcess(
+export function generateBalanceDeltasEpochTransitionCache(
   state: CachedBeaconStatePhase0 | CachedBeaconStateAltair,
   isInInactivityLeak: boolean,
   flagFactors: FlagFactors
-): EpochProcess {
+): EpochTransitionCache {
   const vc = state.validators.length;
 
-  const statuses = generateStatuses(state.validators.length, flagFactors);
-  const eligibleValidatorIndices: number[] = [];
-  for (let i = 0; i < statuses.length; i++) {
-    if (hasMarkers(statuses[i].flags, FLAG_ELIGIBLE_ATTESTER)) {
-      eligibleValidatorIndices.push(i);
-    }
-  }
+  const {proposerIndices, inclusionDelays, flags} = generateStatuses(state.validators.length, flagFactors);
 
-  const epochProcess: Partial<EpochProcess> = {
-    statuses,
-    eligibleValidatorIndices,
+  const cache: Partial<EpochTransitionCache> = {
+    proposerIndices,
+    inclusionDelays,
+    flags,
     totalActiveStakeByIncrement: vc,
     baseRewardPerIncrement: 726,
     prevEpochUnslashedStake: {
@@ -40,24 +29,26 @@ export function generateBalanceDeltasEpochProcess(
     prevEpoch: isInInactivityLeak ? state.finalizedCheckpoint.epoch - 500 : state.finalizedCheckpoint.epoch,
   };
 
-  return epochProcess as EpochProcess;
+  return cache as EpochTransitionCache;
 }
 
 export type FlagFactors = Record<keyof AttesterFlags, number> | number;
 
-function generateStatuses(vc: number, flagFactors: FlagFactors): IAttesterStatus[] {
+function generateStatuses(
+  vc: number,
+  flagFactors: FlagFactors
+): {proposerIndices: number[]; inclusionDelays: number[]; flags: number[]} {
   const totalProposers = 32;
-  const statuses = new Array<IAttesterStatus>(vc);
+  const proposerIndices = new Array<number>(vc);
+  const inclusionDelays = new Array<number>(vc);
+  const flags = new Array(vc).fill(0);
 
   for (let i = 0; i < vc; i++) {
     // Set to number to set all validators to the same value
     if (typeof flagFactors === "number") {
-      statuses[i] = {
-        flags: flagFactors,
-        proposerIndex: i % totalProposers,
-        inclusionDelay: 1 + (i % 4),
-        active: true,
-      };
+      proposerIndices[i] = i % totalProposers;
+      inclusionDelays[i] = 1 + (i % 4);
+      flags[i] = flagFactors;
     } else {
       // Use a factor to set some validators to this flag
       const flagsObj: AttesterFlags = {
@@ -70,14 +61,11 @@ function generateStatuses(vc: number, flagFactors: FlagFactors): IAttesterStatus
         unslashed: i < vc * flagFactors.unslashed, // 6
         eligibleAttester: i < vc * flagFactors.eligibleAttester, // 7
       };
-      statuses[i] = {
-        flags: toAttesterFlags(flagsObj),
-        proposerIndex: i % totalProposers,
-        inclusionDelay: 1 + (i % 4),
-        active: true,
-      };
+      proposerIndices[i] = i % totalProposers;
+      inclusionDelays[i] = 1 + (i % 4);
+      flags[i] = toAttesterFlags(flagsObj);
     }
   }
 
-  return statuses;
+  return {proposerIndices, inclusionDelays, flags};
 }

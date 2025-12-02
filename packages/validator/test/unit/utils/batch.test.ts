@@ -1,7 +1,7 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {batchItems} from "../../../src/util/index.js";
 
-describe("util / batch", function () {
+describe("util / batch", () => {
   const testCases: {items: string[]; expected: string[][]}[] = [
     {items: [], expected: []},
     {items: ["1"], expected: [["1"]]},
@@ -36,7 +36,7 @@ describe("util / batch", function () {
 
   for (const {items: pubkeys, expected} of testCases) {
     it(`Batch ${pubkeys.length} items`, () => {
-      expect(batchItems(pubkeys, {batchSize: 2, maxBatches: 3})).to.deep.equal(expected);
+      expect(batchItems(pubkeys, {batchSize: 2, maxBatches: 3})).toEqual(expected);
     });
   }
 });

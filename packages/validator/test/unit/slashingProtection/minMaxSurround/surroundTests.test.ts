@@ -1,13 +1,10 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {describe, expect, it} from "vitest";
 import {
   MinMaxSurround,
   MinMaxSurroundAttestation,
   SurroundAttestationError,
 } from "../../../../src/slashingProtection/minMaxSurround/index.js";
 import {DistanceStoreMemory, emptyPubkey} from "./utils.js";
-
-chai.use(chaiAsPromised);
 
 // Test values from prysmaticlabs/prysm
 // https://github.com/prysmaticlabs/prysm/blob/9e712e4598dce20b7b0786d46f64371bbd8cd3ca/slasher/detection/attestations/spanner_test.go#L270
@@ -207,7 +204,7 @@ describe("surroundTests", () => {
         } catch (e) {
           if (e instanceof SurroundAttestationError) {
             if (slashableEpoch !== undefined) {
-              expect(e.type.attestation2Target).to.equal(slashableEpoch, "Wrong slashableEpoch");
+              expect(e.type.attestation2Target).toBe(slashableEpoch);
             }
           } else {
             throw Error(`Wrong error type: ${(e as Error).stack}`);

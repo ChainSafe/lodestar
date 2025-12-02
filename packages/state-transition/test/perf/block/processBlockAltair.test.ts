@@ -1,5 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
-import {ssz} from "@lodestar/types";
+import {bench, describe} from "@chainsafe/benchmark";
 import {
   ACTIVE_PRESET,
   MAX_ATTESTATIONS,
@@ -10,9 +9,15 @@ import {
   PresetName,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {CachedBeaconStateAltair, stateTransition} from "../../../src/index.js";
-import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
+import {ssz} from "@lodestar/types";
+import {
+  CachedBeaconStateAltair,
+  DataAvailabilityStatus,
+  ExecutionPayloadStatus,
+  stateTransition,
+} from "../../../src/index.js";
 import {StateBlock} from "../types.js";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
 import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
 // As of Jun 12 2021
@@ -62,7 +67,7 @@ import {BlockAltairOpts, getBlockAltair} from "./util.js";
 //
 //
 // ### Hashing the state
-// Hashing cost is dependant on how many nodes have been modified in the tree. After mutating the state, just count
+// Hashing cost is dependent on how many nodes have been modified in the tree. After mutating the state, just count
 // how many nodes have no cached _root, then multiply by the cost of hashing.
 //
 
@@ -101,11 +106,11 @@ describe("altair processBlock", () => {
 
   for (const {id, opts} of testCases) {
     for (const hashState of [false, true]) {
-      itBench<StateBlock, StateBlock>({
+      bench<StateBlock, StateBlock>({
         id: `altair processBlock - ${perfStateId} ${id}` + (hashState ? " hashState" : ""),
         before: () => {
           const state = generatePerfTestCachedStateAltair();
-          const block = getBlockAltair(state as CachedBeaconStateAltair, opts);
+          const block = getBlockAltair(state, opts);
           // Populate permanent root caches of the block
           ssz.altair.BeaconBlock.hashTreeRoot(block.message);
           // Populate tree root caches of the state
@@ -120,6 +125,8 @@ describe("altair processBlock", () => {
         },
         fn: ({state, block}) => {
           const postState = stateTransition(state, block, {
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
             verifyProposer: false,
             verifySignatures: false,
             verifyStateRoot: false,

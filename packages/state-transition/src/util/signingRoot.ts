@@ -1,5 +1,5 @@
-import {Domain, phase0, ssz} from "@lodestar/types";
 import {Type} from "@chainsafe/ssz";
+import {Domain, phase0, ssz} from "@lodestar/types";
 
 /**
  * Return the signing root of an object by calculating the root of the object-domain tree.

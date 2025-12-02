@@ -1,7 +1,14 @@
-import {Epoch, Slot, Root, phase0, allForks} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
-
+import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {
+  BeaconBlock,
+  BeaconBlockHeader,
+  Epoch,
+  Root,
+  SignedBeaconBlock,
+  SignedBeaconBlockHeader,
+  Slot,
+} from "@lodestar/types";
 import {ZERO_HASH} from "../constants/index.js";
 import {BeaconStateAllForks} from "../types.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
@@ -28,10 +35,7 @@ export function getBlockRoot(state: BeaconStateAllForks, epoch: Epoch): Root {
 /**
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
  */
-export function getTemporaryBlockHeader(
-  config: IChainForkConfig,
-  block: allForks.BeaconBlock
-): phase0.BeaconBlockHeader {
+export function getTemporaryBlockHeader(config: ChainForkConfig, block: BeaconBlock): BeaconBlockHeader {
   return {
     slot: block.slot,
     proposerIndex: block.proposerIndex,
@@ -45,12 +49,24 @@ export function getTemporaryBlockHeader(
 /**
  * Receives a BeaconBlock, and produces the corresponding BeaconBlockHeader.
  */
-export function blockToHeader(config: IChainForkConfig, block: allForks.BeaconBlock): phase0.BeaconBlockHeader {
+export function blockToHeader(config: ChainForkConfig, block: BeaconBlock): BeaconBlockHeader {
   return {
     stateRoot: block.stateRoot,
     proposerIndex: block.proposerIndex,
     slot: block.slot,
     parentRoot: block.parentRoot,
     bodyRoot: config.getForkTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
+  };
+}
+
+export function signedBlockToSignedHeader(
+  config: ChainForkConfig,
+  signedBlock: SignedBeaconBlock
+): SignedBeaconBlockHeader {
+  const message = blockToHeader(config, signedBlock.message);
+  const signature = signedBlock.signature;
+  return {
+    message,
+    signature,
   };
 }

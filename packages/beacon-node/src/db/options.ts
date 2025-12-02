@@ -1,7 +1,7 @@
-export interface IDatabaseOptions {
+export type DatabaseOptions = {
   name: string;
-}
+};
 
-export const defaultDbOptions: IDatabaseOptions = {
+export const defaultDbOptions: DatabaseOptions = {
   name: "./.tmp/lodestar-db",
 };

@@ -1,2 +1,2 @@
 export * from "./peerManager.js";
-export * from "./score.js";
+export * from "./score/index.js";

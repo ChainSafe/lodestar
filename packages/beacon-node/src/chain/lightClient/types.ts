@@ -1,5 +1,3 @@
-import {altair, phase0} from "@lodestar/types";
-
 /**
  * We aren't creating the sync committee proofs separately because our ssz library automatically adds leaves to composite types,
  * so they're already included in the state proof, currently with no way to specify otherwise
@@ -28,31 +26,8 @@ import {altair, phase0} from "@lodestar/types";
  * ```
  */
 export type SyncCommitteeWitness = {
-  /** Vector[Bytes32, 4] */
+  /** Vector[Bytes32, 4] or Vector[Bytes32, 5] depending on the fork */
   witness: Uint8Array[];
   currentSyncCommitteeRoot: Uint8Array;
   nextSyncCommitteeRoot: Uint8Array;
 };
-
-export type PartialLightClientUpdateFinalized = {
-  isFinalized: true;
-  attestedHeader: phase0.BeaconBlockHeader;
-  /** Precomputed root to prevent re-hashing */
-  blockRoot: Uint8Array;
-  // Finalized data
-  finalityBranch: Uint8Array[];
-  finalizedCheckpoint: phase0.Checkpoint;
-  finalizedHeader: phase0.BeaconBlockHeader;
-  syncAggregate: altair.SyncAggregate;
-};
-
-export type PartialLightClientUpdateNonFinalized = {
-  isFinalized: false;
-  attestedHeader: phase0.BeaconBlockHeader;
-  /** Precomputed root to prevent re-hashing */
-  blockRoot: Uint8Array;
-  // Finalized data
-  syncAggregate: altair.SyncAggregate;
-};
-
-export type PartialLightClientUpdate = PartialLightClientUpdateFinalized | PartialLightClientUpdateNonFinalized;

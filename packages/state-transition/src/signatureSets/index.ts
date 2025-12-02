@@ -1,15 +1,18 @@
-import {allForks, altair} from "@lodestar/types";
-import {computeEpochAtSlot, ISignatureSet} from "../util/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import {ForkSeq} from "@lodestar/params";
+import {SignedBeaconBlock, altair, capella} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
-import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import {ISignatureSet} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
+import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
-import {getProposerSignatureSet} from "./proposer.js";
+import {getBlockProposerSignatureSet} from "./proposer.js";
+import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
 
 export * from "./attesterSlashings.js";
+export * from "./blsToExecutionChange.js";
 export * from "./indexedAttestation.js";
 export * from "./proposer.js";
 export * from "./proposerSlashings.js";
@@ -22,12 +25,15 @@ export * from "./voluntaryExits.js";
  */
 export function getBlockSignatureSets(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock,
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;
   }
 ): ISignatureSet[] {
+  // fork based validations
+  const fork = state.config.getForkSeq(signedBlock.message.slot);
+
   const signatureSets = [
     getRandaoRevealSignatureSet(state, signedBlock.message),
     ...getProposerSlashingsSignatureSets(state, signedBlock),
@@ -37,11 +43,11 @@ export function getBlockSignatureSets(
   ];
 
   if (!opts?.skipProposerSignature) {
-    signatureSets.push(getProposerSignatureSet(state, signedBlock));
+    signatureSets.push(getBlockProposerSignatureSet(state, signedBlock));
   }
 
   // Only after altair fork, validate tSyncCommitteeSignature
-  if (computeEpochAtSlot(signedBlock.message.slot) >= state.config.ALTAIR_FORK_EPOCH) {
+  if (fork >= ForkSeq.altair) {
     const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(
       state as CachedBeaconStateAltair,
       (signedBlock as altair.SignedBeaconBlock).message
@@ -49,6 +55,17 @@ export function getBlockSignatureSets(
     // There may be no participants in this syncCommitteeSignature, so it must not be validated
     if (syncCommitteeSignatureSet) {
       signatureSets.push(syncCommitteeSignatureSet);
+    }
+  }
+
+  // only after capella fork
+  if (fork >= ForkSeq.capella) {
+    const blsToExecutionChangeSignatureSets = getBlsToExecutionChangeSignatureSets(
+      state.config,
+      signedBlock as capella.SignedBeaconBlock
+    );
+    if (blsToExecutionChangeSignatureSets.length > 0) {
+      signatureSets.push(...blsToExecutionChangeSignatureSets);
     }
   }
 

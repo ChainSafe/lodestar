@@ -1,6 +1,7 @@
+import {AbortOptions} from "@libp2p/interface";
 import {BaseDatastore} from "datastore-core";
-import LevelDatastore from "datastore-level";
-import {Key, KeyQuery, Query, Options, Pair} from "interface-datastore";
+import {Key, KeyQuery, Pair, Query} from "interface-datastore";
+import {LevelDatastore} from "#datastore-wrapper";
 
 type MemoryItem = {
   lastAccessedMs: number;
@@ -57,7 +58,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     return this._dbDatastore.close();
   }
 
-  async put(key: Key, val: Uint8Array): Promise<void> {
+  async put(key: Key, val: Uint8Array, _options?: AbortOptions): Promise<Key> {
     return this._put(key, val, false);
   }
 
@@ -65,7 +66,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
    * Same interface to put with "fromDb" option, if this item is updated back from db
    * Move oldest items from memory data store to db if it's over this._maxMemoryItems
    */
-  async _put(key: Key, val: Uint8Array, fromDb = false): Promise<void> {
+  async _put(key: Key, val: Uint8Array, fromDb = false): Promise<Key> {
     while (this._memoryDatastore.size >= this._maxMemoryItems) {
       // it's likely this is called only 1 time
       await this.pruneMemoryDatastore();
@@ -83,6 +84,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     }
 
     if (!fromDb) await this._addDirtyItem(keyStr);
+    return key;
   }
 
   /**
@@ -113,7 +115,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     } catch (err) {
       // this is the same to how js-datastore-level handles notFound error
       // https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8edb31590ec0bc/src/index.js#L121
-      if (((err as unknown) as {notFound: boolean}).notFound) return false;
+      if ((err as {notFound: boolean}).notFound) return false;
       throw err;
     }
     return true;
@@ -124,21 +126,21 @@ export class Eth2PeerDataStore extends BaseDatastore {
     await this._dbDatastore.delete(key);
   }
 
-  async *_all(q: Query, options?: Options): AsyncIterable<Pair> {
+  async *_all(q: Query): AsyncIterable<Pair> {
     for (const [key, value] of this._memoryDatastore.entries()) {
       yield {
         key: new Key(key),
         value: value.data,
       };
     }
-    yield* this._dbDatastore.query(q, options);
+    yield* this._dbDatastore.query(q);
   }
 
-  async *_allKeys(q: KeyQuery, options?: Options): AsyncIterable<Key> {
+  async *_allKeys(q: KeyQuery): AsyncIterable<Key> {
     for (const key of this._memoryDatastore.keys()) {
       yield new Key(key);
     }
-    yield* this._dbDatastore.queryKeys(q, options);
+    yield* this._dbDatastore.queryKeys(q);
   }
 
   private async _addDirtyItem(keyStr: string): Promise<void> {
@@ -146,8 +148,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     if (this._dirtyItems.size >= this._threshold) {
       try {
         await this._commitData();
-        // eslint-disable-next-line no-empty
-      } catch (e) {}
+      } catch (_e) {}
     }
   }
 

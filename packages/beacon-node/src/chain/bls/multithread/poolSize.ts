@@ -4,9 +4,9 @@ try {
   if (typeof navigator !== "undefined") {
     defaultPoolSize = navigator.hardwareConcurrency ?? 4;
   } else {
-    defaultPoolSize = (await import("node:os")).cpus().length;
+    defaultPoolSize = (await import("node:os")).availableParallelism();
   }
-} catch (e) {
+} catch (_e) {
   defaultPoolSize = 8;
 }
 

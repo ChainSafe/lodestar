@@ -1,7 +1,7 @@
-import {expect} from "chai";
+import {beforeAll, describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {BLSPubkey, ssz, ValidatorIndex} from "@lodestar/types";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {BLSPubkey, ValidatorIndex, ssz} from "@lodestar/types";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 
 describe("api / impl / validator / utils", () => {
@@ -10,7 +10,7 @@ describe("api / impl / validator / utils", () => {
   const pubkeys: BLSPubkey[] = [];
   const indexes: ValidatorIndex[] = [];
   let state: BeaconStateAllForks;
-  before("Prepare state", () => {
+  beforeAll(() => {
     state = ssz.phase0.BeaconState.defaultViewDU();
     const validator = ssz.phase0.Validator.defaultValue();
     const validators = state.validators;
@@ -24,6 +24,6 @@ describe("api / impl / validator / utils", () => {
 
   it("getPubkeysForIndices", () => {
     const pubkeysRes = getPubkeysForIndices(state.validators, indexes);
-    expect(pubkeysRes.map(toHexString)).to.deep.equal(pubkeys.map(toHexString));
+    expect(pubkeysRes.map(toHexString)).toEqual(pubkeys.map(toHexString));
   });
 });

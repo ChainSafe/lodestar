@@ -1,7 +1,7 @@
 {
   "name": "@lodestar/beacon-node",
   "description": "A Typescript implementation of the beacon chain",
-  "license": "LGPL-3.0",
+  "license": "Apache-2.0",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "repository": {
@@ -11,156 +11,174 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.0.0",
+  "version": "1.37.0",
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./api": {
+      "bun": "./src/api/index.ts",
+      "types": "./lib/api/index.d.ts",
       "import": "./lib/api/index.js"
     },
     "./chain": {
+      "bun": "./src/chain/index.ts",
+      "types": "./lib/chain/index.d.ts",
       "import": "./lib/chain/index.js"
     },
     "./constants": {
+      "bun": "./src/constants/index.ts",
+      "types": "./lib/constants/index.d.ts",
       "import": "./lib/constants/index.js"
     },
     "./db": {
+      "bun": "./src/db/index.ts",
+      "types": "./lib/db/index.d.ts",
       "import": "./lib/db/index.js"
     },
     "./eth1": {
+      "bun": "./src/eth1/index.ts",
+      "types": "./lib/eth1/index.d.ts",
       "import": "./lib/eth1/index.js"
     },
-    "./executionEngine": {
-      "import": "./lib/executionEngine/index.js"
-    },
     "./metrics": {
+      "bun": "./src/metrics/index.ts",
+      "types": "./lib/metrics/index.d.ts",
       "import": "./lib/metrics/index.js"
     },
+    "./monitoring": {
+      "bun": "./src/monitoring/index.ts",
+      "types": "./lib/monitoring/index.d.ts",
+      "import": "./lib/monitoring/index.js"
+    },
     "./network": {
+      "bun": "./src/network/index.ts",
+      "types": "./lib/network/index.d.ts",
       "import": "./lib/network/index.js"
     },
     "./node": {
+      "bun": "./src/node/index.ts",
+      "types": "./lib/node/index.d.ts",
       "import": "./lib/node/index.js"
     },
     "./sync": {
+      "bun": "./src/sync/index.ts",
+      "types": "./lib/sync/index.d.ts",
       "import": "./lib/sync/index.js"
     },
     "./util": {
+      "bun": "./src/util/index.ts",
+      "types": "./lib/util/index.d.ts",
       "import": "./lib/util/index.js"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
+  "imports": {
+    "#prometheus-gc-stats-wrapper": {
+      "bun": "./src/bun-wrappers/prometheus-gc-stats.ts",
+      "default": "@chainsafe/prometheus-gc-stats"
+    },
+    "#datastore-wrapper": {
+      "bun": "./src/network/peers/datastore_bun.ts",
+      "default": "datastore-level"
     }
   },
-  "types": "./lib/index.d.ts",
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "*.d.ts",
-    "*.js"
+    "src",
+    "lib",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "tsc -p tsconfig.build.json",
-    "build:lib:watch": "yarn run build:lib --watch",
+    "build:watch": "yarn run build --watch",
     "build:release": "yarn clean && yarn run build",
-    "build:types:watch": "yarn run build:types --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
-    "coverage": "codecov -F lodestar",
-    "lint": "eslint --color --ext .ts src/ test/",
-    "lint:fix": "yarn run lint --fix",
-    "pretest": "yarn run check-types",
+    "lint": "biome check src/ test/",
+    "lint:fix": "yarn run lint --write",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit:minimal": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
-    "test:unit:mainnet": "LODESTAR_PRESET=mainnet nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit-mainnet/**/*.test.ts'",
-    "test:unit": "yarn test:unit:minimal && yarn test:unit:mainnet",
-    "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
-    "test:sim": "mocha 'test/sim/**/*.test.ts'",
-    "test:sim:singleThread": "mocha 'test/sim/singleNodeSingleThread.test.ts'",
-    "test:sim:singleThreadMultiNode": "mocha 'test/sim/multiNodeSingleThread.test.ts'",
-    "test:sim:multiThread": "mocha 'test/sim/multiNodeMultiThread.test.ts'",
-    "test:sim:merge-interop": "mocha 'test/sim/merge-interop.test.ts'",
+    "test:unit": "vitest run --project unit --project unit-minimal",
+    "test:e2e": "vitest run --project e2e --project e2e-mainnet",
+    "test:sim": "vitest run test/sim/**/*.test.ts",
+    "test:sim:mergemock": "vitest run test/sim/mergemock.test.ts",
+    "test:sim:blobs": "vitest run test/sim/4844-interop.test.ts",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
-    "check-spec-tests": "mocha test/spec/checkCoverage.ts",
-    "test:spec-general": "mocha --config .mocharc.spec.cjs 'test/spec/general/**/*.test.ts'",
-    "test:spec-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.cjs 'test/spec/presets/**/*.test.ts'",
-    "test:spec-mainnet": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.cjs 'test/spec/presets/**/*.test.ts'",
-    "test:spec": "yarn test:spec-general && yarn test:spec-minimal && yarn test:spec-mainnet",
+    "test:spec:bls": "vitest run --project spec-minimal test/spec/bls/",
+    "test:spec:general": "vitest run --project spec-minimal test/spec/general/",
+    "test:spec:minimal": "vitest run --project spec-minimal test/spec/presets/",
+    "test:spec:mainnet": "vitest run --project spec-mainnet test/spec/presets/",
+    "test:spec": "yarn test:spec:bls && yarn test:spec:general && yarn test:spec:minimal && yarn test:spec:mainnet",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/as-sha256": "^0.3.1",
-    "@chainsafe/bls": "7.1.1",
-    "@chainsafe/discv5": "^0.7.1",
-    "@chainsafe/libp2p-noise": "5.0.3",
-    "@chainsafe/persistent-merkle-tree": "^0.4.2",
-    "@chainsafe/snappy-stream": "5.1.1",
-    "@chainsafe/ssz": "^0.9.2",
-    "@chainsafe/threads": "^1.10.0",
-    "@ethersproject/abi": "^5.0.0",
-    "@lodestar/api": "^1.0.0",
-    "@lodestar/config": "^1.0.0",
-    "@lodestar/db": "^1.0.0",
-    "@lodestar/fork-choice": "^1.0.0",
-    "@lodestar/light-client": "^1.0.0",
-    "@lodestar/params": "^1.0.0",
-    "@lodestar/state-transition": "^1.0.0",
-    "@lodestar/types": "^1.0.0",
-    "@lodestar/utils": "^1.0.0",
-    "@lodestar/validator": "^1.0.0",
-    "@types/datastore-level": "^3.0.0",
-    "bl": "^5.0.0",
-    "buffer-xor": "^2.0.2",
-    "cross-fetch": "^3.1.4",
-    "datastore-core": "^7.0.1",
-    "datastore-level": "^6.0.2",
-    "deepmerge": "^3.2.0",
-    "fastify": "3.15.1",
-    "fastify-bearer-auth": "6.1.0",
-    "fastify-cors": "^6.0.1",
-    "gc-stats": "^1.4.0",
-    "interface-datastore": "^5.1.2",
-    "it-all": "^1.0.4",
-    "it-pipe": "^1.1.0",
+    "@chainsafe/as-sha256": "^1.2.0",
+    "@chainsafe/blst": "^2.2.0",
+    "@chainsafe/discv5": "^11.0.4",
+    "@chainsafe/enr": "^5.0.1",
+    "@chainsafe/libp2p-gossipsub": "^14.1.2",
+    "@chainsafe/libp2p-noise": "^16.1.5",
+    "@chainsafe/persistent-merkle-tree": "^1.2.1",
+    "@chainsafe/prometheus-gc-stats": "^1.0.0",
+    "@chainsafe/pubkey-index-map": "^3.0.0",
+    "@chainsafe/ssz": "^1.2.2",
+    "@chainsafe/threads": "^1.11.3",
+    "@crate-crypto/node-eth-kzg": "0.9.1",
+    "@ethersproject/abi": "^5.7.0",
+    "@fastify/bearer-auth": "^10.0.1",
+    "@fastify/cors": "^10.0.1",
+    "@fastify/swagger": "^9.0.0",
+    "@fastify/swagger-ui": "^5.0.1",
+    "@libp2p/bootstrap": "^11.0.32",
+    "@libp2p/crypto": "^5.0.15",
+    "@libp2p/identify": "^3.0.27",
+    "@libp2p/interface": "^2.7.0",
+    "@libp2p/mdns": "^11.0.32",
+    "@libp2p/mplex": "^11.0.32",
+    "@libp2p/peer-id": "^5.1.0",
+    "@libp2p/prometheus-metrics": "^4.3.15",
+    "@libp2p/tcp": "^10.1.8",
+    "@lodestar/api": "^1.37.0",
+    "@lodestar/config": "^1.37.0",
+    "@lodestar/db": "^1.37.0",
+    "@lodestar/fork-choice": "^1.37.0",
+    "@lodestar/light-client": "^1.37.0",
+    "@lodestar/logger": "^1.37.0",
+    "@lodestar/params": "^1.37.0",
+    "@lodestar/reqresp": "^1.37.0",
+    "@lodestar/state-transition": "^1.37.0",
+    "@lodestar/types": "^1.37.0",
+    "@lodestar/utils": "^1.37.0",
+    "@lodestar/validator": "^1.37.0",
+    "@multiformats/multiaddr": "^12.1.3",
+    "datastore-core": "^10.0.2",
+    "datastore-fs": "^10.0.6",
+    "datastore-level": "^11.0.3",
+    "deepmerge": "^4.3.1",
+    "fastify": "^5.2.1",
+    "interface-datastore": "^8.3.0",
+    "it-all": "^3.0.4",
+    "it-pipe": "^3.0.1",
     "jwt-simple": "0.5.6",
-    "libp2p": "^0.36.2",
-    "libp2p-bootstrap": "^0.14.0",
-    "libp2p-gossipsub": "^0.14.1",
-    "libp2p-mdns": "^0.18.0",
-    "libp2p-mplex": "^0.10.5",
-    "libp2p-tcp": "^0.17.2",
-    "multiaddr": "^10.0.1",
-    "peer-id": "^0.16.0",
-    "prom-client": "^13.2.0",
-    "prometheus-gc-stats": "^0.6.3",
+    "libp2p": "2.9.0",
+    "multiformats": "^11.0.1",
+    "prom-client": "^15.1.0",
+    "qs": "^6.11.1",
     "snappyjs": "^0.7.0",
-    "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
-    "varint": "^6.0.0"
+    "systeminformation": "^5.22.9",
+    "uint8arraylist": "^2.4.7",
+    "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
-    "@types/bl": "^5.0.1",
-    "@types/eventsource": "^1.1.5",
-    "@types/it-all": "^1.0.0",
-    "@types/jwt-simple": "0.5.33",
-    "@types/leveldown": "^4.0.2",
-    "@types/prometheus-gc-stats": "^0.6.1",
-    "@types/supertest": "^2.0.8",
-    "@types/tmp": "^0.2.0",
-    "@types/varint": "^6.0.0",
-    "eventsource": "^2.0.2",
-    "rewiremock": "^3.14.3",
-    "rimraf": "^3.0.2",
+    "@types/qs": "^6.9.7",
+    "@types/tmp": "^0.2.3",
+    "it-drain": "^3.0.3",
+    "it-pair": "^2.0.6",
+    "rewiremock": "^3.14.5",
+    "rimraf": "^4.4.1",
     "tmp": "^0.2.1"
   },
   "keywords": [

@@ -1,7 +1,7 @@
-import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
 import {Node} from "@chainsafe/persistent-merkle-tree";
 import {CompositeViewDU} from "@chainsafe/ssz";
+import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {phase0, ssz} from "@lodestar/types";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 
 /**
@@ -48,19 +48,18 @@ export function becomesNewEth1Data(
   // Then isEqualEth1DataView compares cached roots (HashObject as of Jan 2022) which is much cheaper
   // than doing structural equality, which requires tree -> value conversions
   let sameVotesCount = 0;
-  const eth1DataVotes = state.eth1DataVotes.getAllReadonly();
-  for (let i = 0; i < eth1DataVotes.length; i++) {
-    if (isEqualEth1DataView(eth1DataVotes[i], newEth1Data)) {
+  // biome-ignore lint/complexity/noForEach: ssz api
+  state.eth1DataVotes.forEach((eth1DataVote) => {
+    if (isEqualEth1DataView(eth1DataVote, newEth1Data)) {
       sameVotesCount++;
     }
-  }
+  });
 
   // The +1 is to account for the `eth1Data` supplied to the function.
   if ((sameVotesCount + 1) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD) {
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 function isEqualEth1DataView(

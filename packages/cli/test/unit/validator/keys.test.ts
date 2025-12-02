@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {expect} from "chai";
+import {afterEach, describe, expect, it} from "vitest";
 import {importKeystoreDefinitionsFromExternalDir} from "../../../src/cmds/validator/signers/importExternalKeystores.js";
 
 describe("validator / signers / importKeystoreDefinitionsFromExternalDir", () => {
@@ -10,7 +10,7 @@ describe("validator / signers / importKeystoreDefinitionsFromExternalDir", () =>
     if (tmpDir) fs.rmSync(tmpDir, {recursive: true});
   });
 
-  it("should filter out deposit data files", function () {
+  it("should filter out deposit data files", () => {
     tmpDir = fs.mkdtempSync("cli-keystores-import-test");
 
     // Populate dir
@@ -27,10 +27,7 @@ describe("validator / signers / importKeystoreDefinitionsFromExternalDir", () =>
     const password = "12345678";
     const definitions = importKeystoreDefinitionsFromExternalDir({keystoresPath: [tmpDir], password});
 
-    expect(definitions.map((def) => def.keystorePath).sort()).to.deep.equal(
-      toReadFilepaths.sort(),
-      "Wrong read keystore paths"
-    );
+    expect(definitions.map((def) => def.keystorePath).sort()).toEqual(toReadFilepaths.sort());
   });
 
   function inTmp(filepath: string): string {

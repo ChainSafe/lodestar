@@ -1,10 +1,14 @@
-import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
+import {ChainForkConfig} from "@lodestar/config";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
+import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
-import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
+
+export type ClockOptions = {
+  skipSlots?: boolean;
+};
 
 export interface IClock {
   readonly genesisTime: number;
@@ -16,6 +20,7 @@ export interface IClock {
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
   msToSlot(slot: Slot): number;
+  msFromSlot(slot: Slot): number;
   secFromSlot(slot: Slot): number;
   getCurrentSlot(): Slot;
   getCurrentEpoch(): Epoch;
@@ -29,13 +34,17 @@ export enum TimeItem {
 export class Clock implements IClock {
   readonly genesisTime: number;
   readonly secondsPerSlot: number;
-  private readonly config: IChainForkConfig;
-  private readonly logger: ILogger;
+  private readonly config: ChainForkConfig;
+  private readonly logger: Logger;
   private readonly fns: {timeItem: TimeItem; fn: RunEveryFn}[] = [];
 
-  constructor(config: IChainForkConfig, logger: ILogger, opts: {genesisTime: number}) {
+  constructor(
+    config: ChainForkConfig,
+    logger: Logger,
+    private readonly opts: {genesisTime: number} & ClockOptions
+  ) {
     this.genesisTime = opts.genesisTime;
-    this.secondsPerSlot = config.SECONDS_PER_SLOT;
+    this.secondsPerSlot = config.SLOT_DURATION_MS / 1000;
     this.config = config;
     this.logger = logger;
   }
@@ -70,15 +79,19 @@ export class Clock implements IClock {
     this.fns.push({timeItem: TimeItem.Epoch, fn});
   }
 
-  /** Miliseconds from now to a specific slot */
+  /** Milliseconds from now to a specific slot */
   msToSlot(slot: Slot): number {
-    const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * slot;
-    return timeAt * 1000 - Date.now();
+    return computeTimeAtSlot(this.config, slot, this.genesisTime) * 1000 - Date.now();
+  }
+
+  /** Milliseconds elapsed from a specific slot to now */
+  msFromSlot(slot: Slot): number {
+    return Date.now() - computeTimeAtSlot(this.config, slot, this.genesisTime) * 1000;
   }
 
   /** Seconds elapsed from a specific slot to now */
   secFromSlot(slot: Slot): number {
-    return Date.now() / 1000 - (this.genesisTime + this.config.SECONDS_PER_SLOT * slot);
+    return Date.now() / 1000 - computeTimeAtSlot(this.config, slot, this.genesisTime);
   }
 
   /**
@@ -88,21 +101,39 @@ export class Clock implements IClock {
    * on an overloaded/latent system rather than overload it even more.
    */
   private async runAtMostEvery(timeItem: TimeItem, signal: AbortSignal, fn: RunEveryFn): Promise<void> {
-    // Run immediatelly first
+    // Run immediately first
     let slot = getCurrentSlot(this.config, this.genesisTime);
     let slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
     while (!signal.aborted) {
       // Must catch fn() to ensure `sleep()` is awaited both for resolve and reject
-      await fn(slotOrEpoch, signal).catch((e: Error) => {
+      const task = fn(slotOrEpoch, signal).catch((e: Error) => {
         if (!isErrorAborted(e)) this.logger.error("Error on runEvery fn", {}, e);
       });
+
+      if (timeItem !== TimeItem.Slot || this.opts.skipSlots !== false) {
+        // await response to only continue with next task if current task finished within slot
+        await task;
+      }
 
       try {
         await sleep(this.timeUntilNext(timeItem), signal);
         // calling getCurrentSlot here may not be correct when we're close to the next slot
         // it's safe to call getCurrentSlotAround after we sleep
-        slot = getCurrentSlotAround(this.config, this.genesisTime);
-        slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
+        const nextSlot = getCurrentSlotAround(this.config, this.genesisTime);
+
+        if (timeItem === TimeItem.Slot) {
+          if (nextSlot > slot + 1) {
+            // It's not very likely that we skip more than one slot as HTTP timeout is set
+            // to SLOT_DURATION_MS so we will fail task before skipping another slot.
+            this.logger.warn("Skipped slot due to task taking more than one slot to run", {
+              skippedSlot: slot + 1,
+            });
+          }
+          slotOrEpoch = nextSlot;
+        } else {
+          slotOrEpoch = computeEpochAtSlot(nextSlot);
+        }
+        slot = nextSlot;
       } catch (e) {
         if (e instanceof ErrorAborted) {
           return;
@@ -113,32 +144,29 @@ export class Clock implements IClock {
   }
 
   private timeUntilNext(timeItem: TimeItem): number {
-    const miliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
+    const milliSecondsPerSlot = this.config.SLOT_DURATION_MS;
     const msFromGenesis = Date.now() - this.genesisTime * 1000;
 
     if (timeItem === TimeItem.Slot) {
       if (msFromGenesis >= 0) {
-        return miliSecondsPerSlot - (msFromGenesis % miliSecondsPerSlot);
-      } else {
-        return Math.abs(msFromGenesis % miliSecondsPerSlot);
+        return milliSecondsPerSlot - (msFromGenesis % milliSecondsPerSlot);
       }
-    } else {
-      const miliSecondsPerEpoch = SLOTS_PER_EPOCH * miliSecondsPerSlot;
-      if (msFromGenesis >= 0) {
-        return miliSecondsPerEpoch - (msFromGenesis % miliSecondsPerEpoch);
-      } else {
-        return Math.abs(msFromGenesis % miliSecondsPerEpoch);
-      }
+      return Math.abs(msFromGenesis) % milliSecondsPerSlot;
     }
+    const milliSecondsPerEpoch = SLOTS_PER_EPOCH * milliSecondsPerSlot;
+    if (msFromGenesis >= 0) {
+      return milliSecondsPerEpoch - (msFromGenesis % milliSecondsPerEpoch);
+    }
+    return Math.abs(msFromGenesis) % milliSecondsPerEpoch;
   }
 }
 
 /**
  * Same to the spec but we use Math.round instead of Math.floor.
  */
-export function getCurrentSlotAround(config: IChainForkConfig, genesisTime: TimeSeconds): Slot {
+export function getCurrentSlotAround(config: ChainForkConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
-  const slotsSinceGenesis = Math.round(diffInSeconds / config.SECONDS_PER_SLOT);
+  const slotsSinceGenesis = Math.round((diffInSeconds * 1000) / config.SLOT_DURATION_MS);
   return GENESIS_SLOT + slotsSinceGenesis;
 }
 

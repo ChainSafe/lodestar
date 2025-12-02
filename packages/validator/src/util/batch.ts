@@ -1,6 +1,5 @@
 /**
- * Divide pubkeys into batches, each batch contains at most 5 http requests,
- * each request can work on at most 40 pubkeys.
+ * Convert array of items into array of batched item arrays
  */
 export function batchItems<T>(items: T[], opts: {batchSize: number; maxBatches?: number}): T[][] {
   const batches: T[][] = [];

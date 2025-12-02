@@ -1,8 +1,8 @@
-import {ICliCommand} from "../util/command.js";
-import {selfSlashProposer} from "./selfSlashProposer.js";
+import {CliCommand} from "@lodestar/utils";
 import {selfSlashAttester} from "./selfSlashAttester.js";
+import {selfSlashProposer} from "./selfSlashProposer.js";
 
-export const cmds: Required<ICliCommand<Record<never, never>, Record<never, never>>>["subcommands"] = [
+export const cmds: Required<CliCommand<Record<never, never>, Record<never, never>>>["subcommands"] = [
   selfSlashProposer,
   selfSlashAttester,
 ];

@@ -1,35 +1,33 @@
-import path from "node:path";
-import util from "node:util";
 import child from "node:child_process";
+import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {expect, use} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import util from "node:util";
+import {describe, expect, it, vi} from "vitest";
 
 const scriptNames = {
   ok: "setPresetOk.ts",
   error: "setPresetError.ts",
 };
 
-use(chaiAsPromised);
-
 const exec = util.promisify(child.exec);
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const tsNodeBinary = path.join(__dirname, "../../../../node_modules/.bin/ts-node-esm");
 
-describe("setPreset", function () {
+describe("setPreset", () => {
   // Allow time for ts-node to compile Typescript source
-  this.timeout(30_000);
+  vi.setConfig({testTimeout: 30_000});
 
   it("Should correctly set preset", async () => {
-    await exec(`${tsNodeBinary} ${path.join(__dirname, scriptNames.ok)}`);
+    // `LODESTAR_PRESET` must not be set to properly test setting preset
+    if (process.env.LODESTAR_PRESET) delete process.env.LODESTAR_PRESET;
+
+    await exec(`node --loader ts-node/esm ${path.join(__dirname, scriptNames.ok)}`);
   });
 
   it("Should throw trying to set preset in the wrong order", async () => {
-    await expect(exec(`${tsNodeBinary} ${path.join(__dirname, scriptNames.error)}`)).to.be.rejectedWith(
+    await expect(exec(`node --loader ts-node/esm ${path.join(__dirname, scriptNames.error)}`)).rejects.toThrow(
       "Lodestar preset is already frozen"
     );
   });

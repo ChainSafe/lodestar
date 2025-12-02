@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {LodestarError, mapValues} from "@lodestar/utils";
 
 export function expectThrowsLodestarError(fn: () => void, expectedErr: LodestarError<any> | string): void {
@@ -36,24 +36,28 @@ export function expectLodestarErrorCode<T extends {code: string}>(err: LodestarE
   if (!(err instanceof LodestarError)) throw Error(`err not instanceof LodestarError: ${(err as Error).stack}`);
 
   const code = err.type.code;
-  expect(code).to.deep.equal(expectedCode, "Wrong LodestarError code");
+  expect(code).toEqual(expectedCode);
 }
 
 export function expectLodestarError<T extends {code: string}>(err1: LodestarError<T>, err2: LodestarError<T>): void {
-  if (!(err1 instanceof LodestarError)) throw Error(`err1 not instanceof LodestarError: ${(err1 as Error).stack}`);
-  if (!(err2 instanceof LodestarError)) throw Error(`err2 not instanceof LodestarError: ${(err2 as Error).stack}`);
+  if (!(err1 instanceof LodestarError))
+    throw Error(`err1(${err1}) not instanceof LodestarError: ${(err1 as Error).stack}`);
+  if (!(err2 instanceof LodestarError))
+    throw Error(`err2(${err2}) not instanceof LodestarError: ${(err2 as Error).stack}`);
 
   const errMeta1 = getErrorMetadata(err1);
   const errMeta2 = getErrorMetadata(err2);
-  expect(errMeta1).to.deep.equal(errMeta2, "Wrong LodestarError metadata");
+  expect(errMeta1).toEqual(errMeta2);
 }
 
 export function getErrorMetadata<T extends {code: string}>(err: LodestarError<T> | Error | unknown): unknown {
   if (err instanceof LodestarError) {
     return mapValues(err.getMetadata(), (value) => getErrorMetadata(value as any));
-  } else if (err instanceof Error) {
-    return err.message;
-  } else {
-    return err;
   }
+
+  if (err instanceof Error) {
+    return err.message;
+  }
+
+  return err;
 }

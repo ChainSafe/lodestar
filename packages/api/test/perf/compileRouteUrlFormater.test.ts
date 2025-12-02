@@ -1,19 +1,18 @@
-import {compileRouteUrlFormater} from "../../src/utils/urlFormat.js";
-
-/* eslint-disable no-console */
+import {bench, describe} from "@chainsafe/benchmark";
+import {compileRouteUrlFormatter} from "../../src/utils/urlFormat.js";
 
 describe("route parse", () => {
-  it.skip("Benchmark compileRouteUrlFormater", () => {
+  bench.skip("Benchmark compileRouteUrlFormatter", () => {
     const path = "/eth/v1/validator/:name/attester/:epoch";
     const args = {epoch: 5, name: "HEAD"};
 
     console.time("compile");
     for (let i = 0; i < 1e6; i++) {
-      compileRouteUrlFormater(path);
+      compileRouteUrlFormatter(path);
     }
     console.timeEnd("compile");
 
-    const fn = compileRouteUrlFormater(path);
+    const fn = compileRouteUrlFormatter(path);
 
     console.log(fn(args));
 

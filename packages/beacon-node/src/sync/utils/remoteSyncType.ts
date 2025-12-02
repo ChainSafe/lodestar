@@ -1,6 +1,7 @@
 import {IForkChoice} from "@lodestar/fork-choice";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {phase0, Slot} from "@lodestar/types";
+import {Slot, Status} from "@lodestar/types";
+import {IBeaconChain} from "../../chain/interface.ts";
 import {ChainTarget} from "../range/utils/index.js";
 
 /** The type of peer relative to our current state */
@@ -21,8 +22,8 @@ function withinRangeOf(value: number, target: number, range: number): boolean {
 }
 
 export function getPeerSyncType(
-  local: phase0.Status,
-  remote: phase0.Status,
+  local: Status,
+  remote: Status,
   forkChoice: IForkChoice,
   slotImportTolerance: number
 ): PeerSyncType {
@@ -49,36 +50,33 @@ export function getPeerSyncType(
     return PeerSyncType.Behind;
   }
 
-  //
-  else if (remote.finalizedEpoch > local.finalizedEpoch) {
+  if (remote.finalizedEpoch > local.finalizedEpoch) {
     if (
       // Peer is in next epoch, and head is within range => SYNCED
-      (local.finalizedEpoch + 1 == remote.finalizedEpoch &&
+      (local.finalizedEpoch + 1 === remote.finalizedEpoch &&
         withinRangeOf(remote.headSlot, local.headSlot, slotImportTolerance)) ||
       // Peer's head is known => SYNCED
       forkChoice.hasBlock(remote.headRoot)
     ) {
       return PeerSyncType.FullySynced;
-    } else {
-      return PeerSyncType.Advanced;
     }
+    return PeerSyncType.Advanced;
   }
 
   // remote.finalizedEpoch == local.finalizedEpoch
-  else {
-    // NOTE: if a peer has our same `finalizedEpoch` with a different `finalized_root`
-    // they are not considered relevant and won't be propagated to sync.
-    // Check if the peer is the peer is inside the tolerance range to be considered synced.
-    if (remote.headSlot < nearRangeStart) {
-      return PeerSyncType.Behind;
-    } else if (remote.headSlot > nearRangeEnd && !forkChoice.hasBlock(remote.headRoot)) {
-      // This peer has a head ahead enough of ours and we have no knowledge of their best block.
-      return PeerSyncType.Advanced;
-    } else {
-      // This peer is either in the tolerance range, or ahead us with an already rejected block.
-      return PeerSyncType.FullySynced;
-    }
+  // NOTE: if a peer has our same `finalizedEpoch` with a different `finalized_root`
+  // they are not considered relevant and won't be propagated to sync.
+  // Check if the peer is the peer is inside the tolerance range to be considered synced.
+  if (remote.headSlot < nearRangeStart) {
+    return PeerSyncType.Behind;
   }
+
+  if (remote.headSlot > nearRangeEnd && !forkChoice.hasBlock(remote.headRoot)) {
+    // This peer has a head ahead enough of ours and we have no knowledge of their best block.
+    return PeerSyncType.Advanced;
+  }
+  // This peer is either in the tolerance range, or ahead us with an already rejected block.
+  return PeerSyncType.FullySynced;
 }
 
 export enum RangeSyncType {
@@ -96,19 +94,21 @@ export const rangeSyncTypes = Object.keys(RangeSyncType) as RangeSyncType[];
  * - The remotes finalized epoch is greater than our current finalized epoch and we have
  *   not seen the finalized hash before
  */
-export function getRangeSyncType(local: phase0.Status, remote: phase0.Status, forkChoice: IForkChoice): RangeSyncType {
+export function getRangeSyncType(local: Status, remote: Status, forkChoice: IForkChoice): RangeSyncType {
   if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {
     return RangeSyncType.Finalized;
-  } else {
-    return RangeSyncType.Head;
   }
+  return RangeSyncType.Head;
 }
 
 export function getRangeSyncTarget(
-  local: phase0.Status,
-  remote: phase0.Status,
-  forkChoice: IForkChoice
+  local: Status,
+  remote: Status,
+  chain: IBeaconChain
 ): {syncType: RangeSyncType; startEpoch: Slot; target: ChainTarget} {
+  const forkChoice = chain.forkChoice;
+
+  // finalized sync
   if (remote.finalizedEpoch > local.finalizedEpoch && !forkChoice.hasBlock(remote.finalizedRoot)) {
     return {
       // If  RangeSyncType.Finalized, the range of blocks fetchable from startEpoch and target must allow to switch
@@ -134,16 +134,30 @@ export function getRangeSyncTarget(
         root: remote.finalizedRoot,
       },
     };
-  } else {
-    return {
-      syncType: RangeSyncType.Head,
-      // The new peer has the same finalized (earlier filters should prevent a peer with an
-      // earlier finalized chain from reaching here).
-      startEpoch: Math.min(computeEpochAtSlot(local.headSlot), remote.finalizedEpoch),
-      target: {
-        slot: remote.headSlot,
-        root: remote.headRoot,
-      },
-    };
   }
+
+  // we don't want to sync from epoch < minEpoch
+  // if we boot from an unfinalized checkpoint state, we don't want to sync before anchorStateLatestBlockSlot
+  // if we boot from a finalized checkpoint state, anchorStateLatestBlockSlot is trusted and we also don't want to sync before it
+  const minEpoch = Math.max(remote.finalizedEpoch, computeEpochAtSlot(chain.anchorStateLatestBlockSlot));
+
+  // head sync
+  return {
+    syncType: RangeSyncType.Head,
+    // The new peer has the same finalized `remote.finalizedEpoch == local.finalizedEpoch` since
+    // previous filters should prevent a peer with an earlier finalized chain from reaching here.
+    //
+    // By default and during stable network conditions, the head sync always starts from
+    // the finalized epoch (even though it's the head sync) because finalized epoch is < local head.
+    // This is to prevent the issue noted here https://github.com/ChainSafe/lodestar/pull/7509#discussion_r1984353063.
+    //
+    // During non-finality of the network, when starting from an unfinalized checkpoint state, we don't want
+    // to sync before anchorStateLatestBlockSlot as finalized epoch is too far away. Local head will also be
+    // the same to that value at startup, the head sync always starts from anchorStateLatestBlockSlot in this case.
+    startEpoch: Math.min(computeEpochAtSlot(local.headSlot), minEpoch),
+    target: {
+      slot: remote.headSlot,
+      root: remote.headRoot,
+    },
+  };
 }

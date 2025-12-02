@@ -1,7 +1,7 @@
-import {IChainForkConfig} from "@lodestar/config";
-import {Api} from "../routes/index.js";
-import {ServerInstance, ServerRoute, RouteConfig, registerRoute} from "../../utils/server/index.js";
-
+import type {FastifyInstance} from "fastify";
+import {ChainForkConfig} from "@lodestar/config";
+import {ApplicationMethods, FastifyRoute} from "../../utils/server/index.js";
+import {Endpoints} from "../routes/index.js";
 import * as beacon from "./beacon.js";
 import * as configApi from "./config.js";
 import * as debug from "./debug.js";
@@ -9,34 +9,35 @@ import * as events from "./events.js";
 import * as lightclient from "./lightclient.js";
 import * as lodestar from "./lodestar.js";
 import * as node from "./node.js";
+import * as proof from "./proof.js";
 import * as validator from "./validator.js";
 
-// Re-export for convenience
-export {RouteConfig};
+export type BeaconApiMethods = {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
 
 export function registerRoutes(
-  server: ServerInstance,
-  config: IChainForkConfig,
-  api: Api,
-  enabledNamespaces: (keyof Api)[]
+  server: FastifyInstance,
+  config: ChainForkConfig,
+  methods: BeaconApiMethods,
+  enabledNamespaces: (keyof Endpoints)[]
 ): void {
   const routesByNamespace: {
-    // Enforces that we are declaring routes for every routeId in `Api`
-    [K in keyof Api]: () => {
-      // The ReqTypes are enforced in each getRoutes return type
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      [K2 in keyof Api[K]]: ServerRoute<any>;
+    // Enforces that we are declaring routes for every routeId in `Endpoints`
+    [K in keyof Endpoints]: () => {
+      // The Endpoints are enforced in each getRoutes return type
+      // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
+      [K2 in keyof Endpoints[K]]: FastifyRoute<any>;
     };
   } = {
     // Initializes route types and their definitions
-    beacon: () => beacon.getRoutes(config, api.beacon),
-    config: () => configApi.getRoutes(config, api.config),
-    debug: () => debug.getRoutes(config, api.debug),
-    events: () => events.getRoutes(config, api.events),
-    lightclient: () => lightclient.getRoutes(config, api.lightclient),
-    lodestar: () => lodestar.getRoutes(config, api.lodestar),
-    node: () => node.getRoutes(config, api.node),
-    validator: () => validator.getRoutes(config, api.validator),
+    beacon: () => beacon.getRoutes(config, methods.beacon),
+    config: () => configApi.getRoutes(config, methods.config),
+    debug: () => debug.getRoutes(config, methods.debug),
+    events: () => events.getRoutes(config, methods.events),
+    lightclient: () => lightclient.getRoutes(config, methods.lightclient),
+    lodestar: () => lodestar.getRoutes(config, methods.lodestar),
+    node: () => node.getRoutes(config, methods.node),
+    proof: () => proof.getRoutes(config, methods.proof),
+    validator: () => validator.getRoutes(config, methods.validator),
   };
 
   for (const namespace of enabledNamespaces) {
@@ -46,7 +47,9 @@ export function registerRoutes(
     }
 
     for (const route of Object.values(routes())) {
-      registerRoute(server, route);
+      // Append the namespace as a tag for downstream consumption
+      route.schema.tags = [namespace];
+      server.route(route);
     }
   }
 }

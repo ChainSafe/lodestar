@@ -1,9 +1,9 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {processInactivityUpdates} from "../../../src/epoch/processInactivityUpdates.js";
 import {StateAltairEpoch} from "../types.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 import {mutateInactivityScores} from "./util.js";
-import {FlagFactors, generateBalanceDeltasEpochProcess} from "./utilPhase0.js";
+import {FlagFactors, generateBalanceDeltasEpochTransitionCache} from "./utilPhase0.js";
 
 // PERF: Cost = iterate over an array of size $VALIDATOR_COUNT + 'proportional' to how many validtors are inactive or
 // have been inactive in the past, i.e. that require an update to their inactivityScore. Worst case = all validators
@@ -38,17 +38,17 @@ describe("altair processInactivityUpdates", () => {
   ];
 
   for (const {id, isInInactivityLeak, flagFactors, factorWithPositive} of testCases) {
-    itBench<StateAltairEpoch, StateAltairEpoch>({
+    bench<StateAltairEpoch, StateAltairEpoch>({
       id: `altair processInactivityUpdates - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {
         const state = generatePerfTestCachedStateAltair({goBackOneSlot: true});
-        const epochProcess = generateBalanceDeltasEpochProcess(state, isInInactivityLeak, flagFactors);
+        const cache = generateBalanceDeltasEpochTransitionCache(state, isInInactivityLeak, flagFactors);
         mutateInactivityScores(state, factorWithPositive);
-        return {state, epochProcess};
+        return {state, cache};
       },
-      beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => processInactivityUpdates(state, epochProcess),
+      beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
+      fn: ({state, cache}) => processInactivityUpdates(state, cache),
     });
   }
 });

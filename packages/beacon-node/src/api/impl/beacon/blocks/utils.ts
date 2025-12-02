@@ -1,16 +1,16 @@
-import {allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {blockToHeader} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {fromHexString} from "@chainsafe/ssz";
-import {IBeaconDb} from "../../../../db/index.js";
+import {blockToHeader} from "@lodestar/state-transition";
+import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {IBeaconChain} from "../../../../chain/interface.js";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
+import {rootHexRegex} from "../../../../eth1/provider/utils.js";
 import {ApiError, ValidationError} from "../../errors.js";
 
 export function toBeaconHeaderResponse(
-  config: IChainForkConfig,
-  block: allForks.SignedBeaconBlock,
+  config: ChainForkConfig,
+  block: SignedBeaconBlock,
   canonical = false
 ): routes.beacon.BlockHeaderResponse {
   return {
@@ -23,66 +23,53 @@ export function toBeaconHeaderResponse(
   };
 }
 
-export async function resolveBlockId(
-  forkChoice: IForkChoice,
-  db: IBeaconDb,
-  blockId: routes.beacon.BlockId
-): Promise<allForks.SignedBeaconBlock> {
-  const block = await resolveBlockIdOrNull(forkChoice, db, blockId);
-  if (!block) {
-    throw new ApiError(404, `No block found for id '${blockId}'`);
-  }
-
-  return block;
-}
-
-async function resolveBlockIdOrNull(
-  forkChoice: IForkChoice,
-  db: IBeaconDb,
-  blockId: routes.beacon.BlockId
-): Promise<allForks.SignedBeaconBlock | null> {
+export function resolveBlockId(forkChoice: IForkChoice, blockId: routes.beacon.BlockId): RootHex | Slot {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
-    const head = forkChoice.getHead();
-    return db.block.get(fromHexString(head.blockRoot));
+    return forkChoice.getHead().blockRoot;
   }
 
   if (blockId === "genesis") {
-    return db.blockArchive.get(GENESIS_SLOT);
+    return GENESIS_SLOT;
   }
 
   if (blockId === "finalized") {
-    return await db.blockArchive.get(forkChoice.getFinalizedBlock().slot);
+    return forkChoice.getFinalizedBlock().blockRoot;
   }
 
-  let blockSummary;
-  let getBlockByBlockArchive;
+  if (blockId === "justified") {
+    return forkChoice.getJustifiedBlock().blockRoot;
+  }
 
   if (blockId.startsWith("0x")) {
-    const blockHash = fromHexString(blockId);
-    blockSummary = forkChoice.getBlock(blockHash);
-    getBlockByBlockArchive = async () => await db.blockArchive.getByRoot(blockHash);
-  } else {
-    // block id must be slot
-    const blockSlot = parseInt(blockId, 10);
-    if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
+    if (!rootHexRegex.test(blockId)) {
       throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
     }
-    blockSummary = forkChoice.getCanonicalBlockAtSlot(blockSlot);
-    getBlockByBlockArchive = async () => await db.blockArchive.get(blockSlot);
+    return blockId;
   }
 
-  if (blockSummary) {
-    // All unfinalized blocks **and the finalized block** are tracked by the fork choice.
-    // Unfinalized blocks are stored in the block repository, but the finalized block is in the block archive
-    const finalized = forkChoice.getFinalizedBlock();
-    if (blockSummary.slot === finalized.slot) {
-      return await db.blockArchive.get(finalized.slot);
-    } else {
-      return await db.block.get(fromHexString(blockSummary.blockRoot));
-    }
-  } else {
-    // Blocks not in the fork choice are in the block archive
-    return await getBlockByBlockArchive();
+  // block id must be slot
+  const blockSlot = parseInt(blockId, 10);
+  if (Number.isNaN(blockSlot) && Number.isNaN(blockSlot - 0)) {
+    throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
   }
+  return blockSlot;
+}
+
+export async function getBlockResponse(
+  chain: IBeaconChain,
+  blockId: routes.beacon.BlockId
+): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
+  const rootOrSlot = resolveBlockId(chain.forkChoice, blockId);
+
+  const res =
+    typeof rootOrSlot === "string"
+      ? await chain.getBlockByRoot(rootOrSlot)
+      : await chain.getCanonicalBlockAtSlot(rootOrSlot);
+
+  if (!res) {
+    throw new ApiError(404, `Block not found for id '${blockId}'`);
+  }
+
+  return res;
 }

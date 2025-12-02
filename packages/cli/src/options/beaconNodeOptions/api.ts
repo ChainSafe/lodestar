@@ -1,37 +1,51 @@
-import {defaultOptions, IBeaconNodeOptions, allNamespaces} from "@lodestar/beacon-node";
-import {ICliCommandOptions} from "../../util/index.js";
+import {IBeaconNodeOptions, allNamespaces, defaultOptions} from "@lodestar/beacon-node";
+import {CliCommandOptions} from "@lodestar/utils";
 
-const enabledAll = "*";
+export const enabledAll = "*";
+export const enabledAllBashFriendly = "all";
 
-export interface IApiArgs {
-  "api.maxGindicesInProof": number;
-  "rest.namespace": string[];
-  "rest.cors": string;
-  rest: boolean;
-  "rest.address": string;
-  "rest.port": number;
-  "rest.bodyLimit": number;
+/**
+ * Coerce function to transform bash-friendly 'all' to CORS spec '*'
+ */
+export function coerceCors(cors: string): string {
+  return cors === enabledAllBashFriendly ? enabledAll : cors;
 }
 
-export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
+export type ApiArgs = {
+  "api.maxGindicesInProof"?: number;
+  "rest.namespace"?: string[];
+  "rest.cors"?: string;
+  rest: boolean;
+  "rest.address"?: string;
+  "rest.port": number;
+  "rest.headerLimit"?: number;
+  "rest.bodyLimit"?: number;
+  "rest.stacktraces"?: boolean;
+  "rest.swaggerUI"?: boolean;
+};
+
+export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
   return {
     maxGindicesInProof: args["api.maxGindicesInProof"],
     rest: {
       api: args["rest.namespace"] as IBeaconNodeOptions["api"]["rest"]["api"],
       cors: args["rest.cors"],
-      enabled: args["rest"],
+      enabled: args.rest,
       address: args["rest.address"],
       port: args["rest.port"],
+      headerLimit: args["rest.headerLimit"],
       bodyLimit: args["rest.bodyLimit"],
+      stacktraces: args["rest.stacktraces"],
+      swaggerUI: args["rest.swaggerUI"],
     },
   };
 }
 
-export const options: ICliCommandOptions<IApiArgs> = {
+export const options: CliCommandOptions<ApiArgs> = {
   rest: {
     type: "boolean",
     description: "Enable/disable HTTP API",
-    defaultDescription: String(defaultOptions.api.rest.enabled),
+    default: defaultOptions.api.rest.enabled,
     group: "api",
   },
 
@@ -45,23 +59,25 @@ export const options: ICliCommandOptions<IApiArgs> = {
 
   "rest.namespace": {
     type: "array",
-    choices: [...allNamespaces, enabledAll],
-    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAll}' to enable all namespaces`,
+    choices: [...allNamespaces, enabledAll, enabledAllBashFriendly],
+    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAllBashFriendly}' (or '${enabledAll}') to enable all namespaces`,
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",
     coerce: (namespaces: string[]): string[] => {
-      // Enable all
-      if (namespaces.includes(enabledAll)) return allNamespaces;
+      if (namespaces.includes(enabledAll) || namespaces.includes(enabledAllBashFriendly)) {
+        return allNamespaces;
+      }
       // Parse ["debug,lodestar"] to ["debug", "lodestar"]
-      return namespaces.map((val) => val.split(",")).flat(1);
+      return namespaces.flatMap((val) => val.split(","));
     },
   },
 
   "rest.cors": {
     type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for HTTP API",
+    description: `Configures the Access-Control-Allow-Origin CORS header for HTTP API. Use '${enabledAllBashFriendly}' to allow all origins`,
     defaultDescription: defaultOptions.api.rest.cors,
     group: "api",
+    coerce: coerceCors,
   },
 
   "rest.address": {
@@ -74,12 +90,31 @@ export const options: ICliCommandOptions<IApiArgs> = {
   "rest.port": {
     type: "number",
     description: "Set port for HTTP API",
-    defaultDescription: String(defaultOptions.api.rest.port),
+    default: defaultOptions.api.rest.port,
     group: "api",
+  },
+  "rest.headerLimit": {
+    hidden: true,
+    type: "number",
+    description: "Defines the maximum length of request headers, in bytes, the server is allowed to accept",
   },
   "rest.bodyLimit": {
     hidden: true,
     type: "number",
     description: "Defines the maximum payload, in bytes, the server is allowed to accept",
+  },
+
+  "rest.stacktraces": {
+    hidden: true,
+    type: "boolean",
+    description: "Return stacktraces in HTTP error responses",
+    group: "api",
+  },
+
+  "rest.swaggerUI": {
+    type: "boolean",
+    description: "Enable Swagger UI for API exploration at http://{address}:{port}/documentation",
+    default: Boolean(defaultOptions.api.rest.swaggerUI),
+    group: "api",
   },
 };

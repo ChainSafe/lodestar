@@ -1,13 +1,14 @@
+import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "./utils.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
-  private readonly metrics: IMetrics | null;
+  private readonly metrics: Metrics | null;
 
-  constructor({metrics = null}: {metrics: IMetrics | null}) {
+  constructor({metrics = null}: {metrics: Metrics | null}) {
     this.metrics = metrics;
   }
 
@@ -21,20 +22,66 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     }));
 
     // Count time after aggregating
-    const startNs = process.hrtime.bigint();
-
+    const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
     const isValid = verifySignatureSetsMaybeBatch(setsAggregated);
 
     // Don't use a try/catch, only count run without exceptions
-    const endNs = process.hrtime.bigint();
-    const totalSec = Number(startNs - endNs) / 1e9;
-    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec);
-    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec / sets.length);
+    if (timer) {
+      timer();
+    }
 
     return isValid;
   }
 
+  async verifySignatureSetsSameMessage(
+    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    message: Uint8Array
+  ): Promise<boolean[]> {
+    const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+    const pubkey = aggregatePublicKeys(sets.map((set) => set.publicKey));
+    let isAllValid = true;
+    // validate signature = true
+    const signatures = sets.map((set) => {
+      try {
+        return Signature.fromBytes(set.signature, true);
+      } catch (_) {
+        // at least one set has malformed signature
+        isAllValid = false;
+        return null;
+      }
+    });
+
+    if (isAllValid) {
+      const signature = aggregateSignatures(signatures as Signature[]);
+      isAllValid = verify(message, pubkey, signature);
+    }
+
+    let result: boolean[];
+    if (isAllValid) {
+      result = sets.map(() => true);
+    } else {
+      result = sets.map((set, i) => {
+        const sig = signatures[i];
+        if (sig === null) {
+          return false;
+        }
+        return verify(message, set.publicKey, sig);
+      });
+    }
+
+    if (timer) {
+      timer();
+    }
+
+    return result;
+  }
+
   async close(): Promise<void> {
     // nothing to do
+  }
+
+  canAcceptWork(): boolean {
+    // Since sigs are verified blocking the main thread, there's no mechanism to throttle
+    return true;
   }
 }

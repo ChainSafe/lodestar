@@ -1,14 +1,10 @@
-export interface ILevelDbControllerMetrics {
-  dbReadReq: ICounter<"bucket">;
-  dbReadItems: ICounter<"bucket">;
-  dbWriteReq: ICounter<"bucket">;
-  dbWriteItems: ICounter<"bucket">;
-}
+import {Counter, Gauge, Histogram} from "@lodestar/utils";
 
-type Labels<T extends string> = Partial<Record<T, string | number>>;
-
-interface ICounter<T extends string> {
-  inc(value?: number): void;
-  inc(labels: Labels<T>, value?: number): void;
-  inc(arg1?: Labels<T> | number, arg2?: number): void;
-}
+export type LevelDbControllerMetrics = {
+  dbReadReq: Counter<{bucket: string}>;
+  dbReadItems: Counter<{bucket: string}>;
+  dbWriteReq: Counter<{bucket: string}>;
+  dbWriteItems: Counter<{bucket: string}>;
+  dbSizeTotal: Gauge;
+  dbApproximateSizeTime: Histogram;
+};

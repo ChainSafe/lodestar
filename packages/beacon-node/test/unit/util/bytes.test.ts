@@ -1,6 +1,5 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-
 import {byteArrayEquals} from "../../../src/util/bytes.js";
 
 /** Reference implementation of byteArrayConcat */
@@ -19,7 +18,7 @@ describe("util / bytes", () => {
 
     for (const {hexArr, res} of testCases) {
       it(`${res}`, () => {
-        expect(toHexString(byteArrayConcat(hexArr.map(fromHexString)))).to.equal(res);
+        expect(toHexString(byteArrayConcat(hexArr.map(fromHexString)))).toBe(res);
       });
     }
   });
@@ -34,7 +33,7 @@ describe("util / bytes", () => {
 
     for (const {hex1, hex2, isEqual} of testCases) {
       it(`${hex1} == ${hex2} -> ${isEqual}`, () => {
-        expect(byteArrayEquals(fromHexString(hex1), fromHexString(hex2))).to.equal(isEqual);
+        expect(byteArrayEquals(fromHexString(hex1), fromHexString(hex2))).toBe(isEqual);
       });
     }
   });

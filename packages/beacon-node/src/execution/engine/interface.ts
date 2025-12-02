@@ -1,9 +1,21 @@
-import {bellatrix, RootHex} from "@lodestar/types";
-import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, ApiPayloadAttributes} from "./payloadIdCache.js";
+import {
+  CONSOLIDATION_REQUEST_TYPE,
+  DEPOSIT_REQUEST_TYPE,
+  ForkName,
+  ForkPostFulu,
+  ForkPreFulu,
+  WITHDRAWAL_REQUEST_TYPE,
+} from "@lodestar/params";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
+import {BlobAndProof} from "@lodestar/types/deneb";
+import {BlobAndProofV2} from "@lodestar/types/fulu";
+import {DATA} from "../../eth1/provider/utils.js";
+import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
+import {ExecutionPayloadBody} from "./types.js";
 
-export {PayloadIdCache, PayloadId, ApiPayloadAttributes};
-export enum ExecutePayloadStatus {
+export {PayloadIdCache, type PayloadId, type WithdrawalV1};
+
+export enum ExecutionPayloadStatus {
   /** given payload is valid */
   VALID = "VALID",
   /** given payload is invalid */
@@ -25,20 +37,64 @@ export enum ExecutePayloadStatus {
   UNSAFE_OPTIMISTIC_STATUS = "UNSAFE_OPTIMISTIC_STATUS",
 }
 
+export enum ExecutionEngineState {
+  ONLINE = "ONLINE",
+  OFFLINE = "OFFLINE",
+  SYNCING = "SYNCING",
+  SYNCED = "SYNCED",
+  AUTH_FAILED = "AUTH_FAILED",
+}
+
+/**
+ * Client code as defined in https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#clientcode
+ * ClientCode.XX is dedicated to other clients which do not have their own code
+ */
+export enum ClientCode {
+  BU = "BU", // besu
+  EJ = "EJ", // ethereumJS
+  EG = "EG", // erigon
+  GE = "GE", // go-ethereum
+  GR = "GR", // grandine
+  LH = "LH", // lighthouse
+  LS = "LS", // lodestar
+  NM = "NM", // nethermind
+  NB = "NB", // nimbus
+  TK = "TK", // teku
+  PM = "PM", // prysm
+  RH = "RH", // reth
+  XX = "XX", // unknown
+}
+
+export type ExecutionRequestType =
+  | typeof DEPOSIT_REQUEST_TYPE
+  | typeof WITHDRAWAL_REQUEST_TYPE
+  | typeof CONSOLIDATION_REQUEST_TYPE;
+
+export function isExecutionRequestType(type: number): type is ExecutionRequestType {
+  return type === DEPOSIT_REQUEST_TYPE || type === WITHDRAWAL_REQUEST_TYPE || type === CONSOLIDATION_REQUEST_TYPE;
+}
+
 export type ExecutePayloadResponse =
-  | {status: ExecutePayloadStatus.SYNCING | ExecutePayloadStatus.ACCEPTED; latestValidHash: null; validationError: null}
-  | {status: ExecutePayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
-  | {status: ExecutePayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
   | {
-      status: ExecutePayloadStatus.INVALID_BLOCK_HASH | ExecutePayloadStatus.ELERROR | ExecutePayloadStatus.UNAVAILABLE;
+      status: ExecutionPayloadStatus.SYNCING | ExecutionPayloadStatus.ACCEPTED;
+      latestValidHash: null;
+      validationError: null;
+    }
+  | {status: ExecutionPayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
+  | {status: ExecutionPayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
+  | {
+      status:
+        | ExecutionPayloadStatus.INVALID_BLOCK_HASH
+        | ExecutionPayloadStatus.ELERROR
+        | ExecutionPayloadStatus.UNAVAILABLE;
       latestValidHash: null;
       validationError: string;
     };
 
 export type ForkChoiceUpdateStatus =
-  | ExecutePayloadStatus.VALID
-  | ExecutePayloadStatus.INVALID
-  | ExecutePayloadStatus.SYNCING;
+  | ExecutionPayloadStatus.VALID
+  | ExecutionPayloadStatus.INVALID
+  | ExecutionPayloadStatus.SYNCING;
 
 export type PayloadAttributes = {
   timestamp: number;
@@ -46,13 +102,18 @@ export type PayloadAttributes = {
   // DATA is anyway a hex string, so we can just track it as a hex string to
   // avoid any conversions
   suggestedFeeRecipient: string;
+  withdrawals?: capella.Withdrawal[];
+  parentBeaconBlockRoot?: Uint8Array;
 };
 
-export type TransitionConfigurationV1 = {
-  terminalTotalDifficulty: QUANTITY;
-  terminalBlockHash: DATA;
-  terminalBlockNumber: QUANTITY;
+export type ClientVersion = {
+  code: ClientCode;
+  name: string;
+  version: string;
+  commit: string;
 };
+
+export type VersionedHashes = Uint8Array[];
 
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
@@ -61,6 +122,10 @@ export type TransitionConfigurationV1 = {
  * - Integrated code into the same binary
  */
 export interface IExecutionEngine {
+  readonly state: ExecutionEngineState;
+
+  readonly clientVersion?: ClientVersion | null;
+
   payloadIdCache: PayloadIdCache;
   /**
    * A state transition function which applies changes to the self.execution_state.
@@ -71,7 +136,13 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  notifyNewPayload(
+    fork: ForkName,
+    executionPayload: ExecutionPayload,
+    versionedHashes?: VersionedHashes,
+    parentBeaconBlockRoot?: Root,
+    executionRequests?: ExecutionRequests
+  ): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates
@@ -86,6 +157,7 @@ export interface IExecutionEngine {
    * Should be called in response to fork-choice head and finalized events
    */
   notifyForkchoiceUpdate(
+    fork: ForkName,
     headBlockHash: RootHex,
     safeBlockHash: RootHex,
     finalizedBlockHash: RootHex,
@@ -99,9 +171,29 @@ export interface IExecutionEngine {
    * Required for block producing
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
-  getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload>;
+  getPayload(
+    fork: ForkName,
+    payloadId: PayloadId
+  ): Promise<{
+    executionPayload: ExecutionPayload;
+    executionPayloadValue: Wei;
+    blobsBundle?: BlobsBundle;
+    executionRequests?: ExecutionRequests;
+    shouldOverrideBuilder?: boolean;
+  }>;
 
-  exchangeTransitionConfigurationV1(
-    transitionConfiguration: TransitionConfigurationV1
-  ): Promise<TransitionConfigurationV1>;
+  getPayloadBodiesByHash(fork: ForkName, blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
+
+  getPayloadBodiesByRange(fork: ForkName, start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
+
+  getBlobs(
+    fork: ForkPostFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<BlobAndProofV2[] | null>;
+  getBlobs(
+    fork: ForkPreFulu,
+    versionedHashes: VersionedHashes,
+    buffers?: Uint8Array[]
+  ): Promise<(BlobAndProof | null)[]>;
 }

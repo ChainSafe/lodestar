@@ -1,14 +1,22 @@
-import PeerId from "peer-id";
-import {altair, phase0} from "@lodestar/types";
+import {Direction, PeerId} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
+import {ChainConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {CustodyIndex, Status, SubnetID, altair, phase0} from "@lodestar/types";
+import {MapDef} from "@lodestar/utils";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
-import {MapDef} from "../../../util/map.js";
+import {NetworkCoreMetrics} from "../../core/metrics.js";
 import {RequestedSubnet} from "./subnetMap.js";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
 const TARGET_SUBNET_PEERS = 6;
+
+/**
+ * This is for non-sampling groups only. This is a very easy number to achieve given an average of 6.25 peers per column subnet on public networks.
+ * This is needed to always maintain some minimum peers on all subnets so that when we publish a block, we're sure we pubish to all column subnets.
+ */
+const TARGET_GROUP_PEERS_PER_SUBNET = 4;
 
 /**
  * This is used in the pruning logic. We avoid pruning peers on sync-committees if doing so would
@@ -30,51 +38,127 @@ const LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS = -2;
  */
 const PEERS_TO_CONNECT_OVERSHOOT_FACTOR = 3;
 
+/**
+ * Keep at least 10% of outbound peers. For rationale, see https://github.com/ChainSafe/lodestar/issues/2215
+ */
+const OUTBOUND_PEERS_RATIO = 0.1;
+
 const attnetsZero = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
 const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
-type SubnetDiscvQuery = {subnet: number; toSlot: number; maxPeersToDiscover: number};
+type SubnetDiscvQuery = {subnet: SubnetID; toSlot: number; maxPeersToDiscover: number};
+
+/**
+ * A map of das custody group index to maxPeersToDiscover
+ */
+export type CustodyGroupQueries = Map<CustodyIndex, number>;
+
+/**
+ * Comparison of our status vs a peer's status.
+ *
+ * The main usage of this score is to feed into peer priorization during syncing, and especially when the node is having trouble finding data during syncing
+ *
+ * For network stability, we DON'T distinguish peers that are far behind us vs peers that are close to us.
+ */
+enum StatusScore {
+  /** The peer is close to our chain */
+  CLOSE_TO_US = -1,
+  /** The peer is far ahead of chain */
+  FAR_AHEAD = 0,
+}
+
+/**
+ * In practice, this score only tracks if the peer is far ahead of us or not during syncing.
+ * When the node is synced, the peer is always CLOSE_TO_US.
+ */
+function computeStatusScore(ours: Status, theirs: Status | null, opts: PrioritizePeersOpts): StatusScore {
+  if (theirs === null) {
+    return StatusScore.CLOSE_TO_US;
+  }
+
+  if (theirs.finalizedEpoch > ours.finalizedEpoch) {
+    return StatusScore.FAR_AHEAD;
+  }
+
+  if (theirs.headSlot > ours.headSlot + opts.starvationThresholdSlots) {
+    return StatusScore.FAR_AHEAD;
+  }
+
+  // It's dangerous to downscore peers that are far behind.
+  // This means we'd be more likely to disconnect peers that are attempting to sync, which would affect network stability.
+  // if (ours.headSlot > theirs.headSlot + opts.starvationThresholdSlots) {
+  //   return StatusScore.FAR_BEHIND;
+  // }
+
+  return StatusScore.CLOSE_TO_US;
+}
 
 type PeerInfo = {
   id: PeerId;
+  direction: Direction | null;
+  statusScore: StatusScore;
   attnets: phase0.AttestationSubnets;
   syncnets: altair.SyncSubnets;
+  samplingGroups: CustodyIndex[];
   attnetsTrueBitIndices: number[];
   syncnetsTrueBitIndices: number[];
   score: number;
+};
+
+export type PrioritizePeersOpts = {
+  targetPeers: number;
+  maxPeers: number;
+  targetGroupPeers: number;
+  status: Status;
+  starved: boolean;
+  starvationPruneRatio: number;
+  starvationThresholdSlots: number;
+  outboundPeersRatio?: number;
+  targetSubnetPeers?: number;
 };
 
 export enum ExcessPeerDisconnectReason {
   LOW_SCORE = "low_score",
   NO_LONG_LIVED_SUBNET = "no_long_lived_subnet",
   TOO_GROUPED_SUBNET = "too_grouped_subnet",
+  FIND_BETTER_PEERS = "find_better_peers",
 }
 
 /**
  * Prioritize which peers to disconect and which to connect. Conditions:
  * - Reach `targetPeers`
+ *   - If we're starved for data, prune additional peers
  * - Don't exceed `maxPeers`
- * - Ensure there are enough peers per active subnet
+ * - Ensure there are enough peers per column subnets, attestation subnets and sync committee subnets
  * - Prioritize peers with good score
+ *
+ * pre-fulu samplingGroups is not used and this function returns empty custodyGroupQueries
  */
 export function prioritizePeers(
   connectedPeersInfo: {
     id: PeerId;
+    direction: Direction | null;
+    status: Status | null;
     attnets: phase0.AttestationSubnets | null;
     syncnets: altair.SyncSubnets | null;
+    samplingGroups: CustodyIndex[] | null;
     score: number;
   }[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number},
-  targetSubnetPeers = TARGET_SUBNET_PEERS
+  samplingGroups: CustodyIndex[] | undefined,
+  opts: PrioritizePeersOpts,
+  config: ChainConfig,
+  metrics: NetworkCoreMetrics | null
 ): {
   peersToConnect: number;
   peersToDisconnect: Map<ExcessPeerDisconnectReason, PeerId[]>;
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
-  targetSubnetPeers?: number;
+  custodyGroupQueries: CustodyGroupQueries;
 } {
+  const {targetPeers, maxPeers} = opts;
+
   let peersToConnect = 0;
   const peersToDisconnect = new MapDef<ExcessPeerDisconnectReason, PeerId[]>(() => []);
 
@@ -82,19 +166,25 @@ export function prioritizePeers(
   const connectedPeers = connectedPeersInfo.map(
     (peer): PeerInfo => ({
       id: peer.id,
+      direction: peer.direction,
+      statusScore: computeStatusScore(opts.status, peer.status, opts),
       attnets: peer.attnets ?? attnetsZero,
       syncnets: peer.syncnets ?? syncnetsZero,
+      samplingGroups: peer.samplingGroups ?? [],
       attnetsTrueBitIndices: peer.attnets?.getTrueBitIndexes() ?? [],
       syncnetsTrueBitIndices: peer.syncnets?.getTrueBitIndexes() ?? [],
       score: peer.score,
     })
   );
 
-  const {attnetQueries, syncnetQueries, peerHasDuty} = requestAttnetPeers(
+  const {attnetQueries, syncnetQueries, custodyGroupQueries, dutiesByPeer} = requestSubnetPeers(
     connectedPeers,
     activeAttnets,
     activeSyncnets,
-    targetSubnetPeers
+    samplingGroups,
+    opts,
+    config,
+    metrics
   );
 
   const connectedPeerCount = connectedPeers.length;
@@ -110,14 +200,7 @@ export function prioritizePeers(
       maxPeers - connectedPeerCount
     );
   } else if (connectedPeerCount > targetPeers) {
-    pruneExcessPeers({
-      connectedPeers,
-      peerHasDuty,
-      targetPeers,
-      targetSubnetPeers,
-      activeAttnets,
-      peersToDisconnect,
-    });
+    pruneExcessPeers(connectedPeers, dutiesByPeer, activeAttnets, peersToDisconnect, opts);
   }
 
   return {
@@ -125,27 +208,34 @@ export function prioritizePeers(
     peersToDisconnect,
     attnetQueries,
     syncnetQueries,
+    custodyGroupQueries,
   };
 }
 
 /**
- * If more peers are needed in attnets and syncnets, create SubnetDiscvQuery for each subnet
+ * If more peers are needed in attnets and syncnets and column subnets, create SubnetDiscvQuery for each subnet
+ * pre-fulu samplingGroups is not used and this function returns empty custodyGroupQueries
  */
-function requestAttnetPeers(
+function requestSubnetPeers(
   connectedPeers: PeerInfo[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  targetSubnetPeers: number
+  ourSamplingGroups: CustodyIndex[] | undefined,
+  opts: PrioritizePeersOpts,
+  config: ChainConfig,
+  metrics: NetworkCoreMetrics | null
 ): {
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
-  peerHasDuty: Map<PeerInfo, boolean>;
+  custodyGroupQueries: CustodyGroupQueries;
+  dutiesByPeer: Map<PeerInfo, number>;
 } {
+  const {targetSubnetPeers = TARGET_SUBNET_PEERS} = opts;
   const attnetQueries: SubnetDiscvQuery[] = [];
   const syncnetQueries: SubnetDiscvQuery[] = [];
 
-  // To filter out peers that are part of 1+ attnets of interest from possible disconnection
-  const peerHasDuty = new Map<PeerInfo, boolean>();
+  // To filter out peers containing enough attnets of interest from possible disconnection
+  const dutiesByPeer = new Map<PeerInfo, number>();
 
   // attnets, do we need queries for more peers
   if (activeAttnets.length > 0) {
@@ -154,16 +244,14 @@ function requestAttnetPeers(
 
     for (const peer of connectedPeers) {
       const trueBitIndices = peer.attnetsTrueBitIndices;
-      let hasDuty = false;
+      let dutyCount = 0;
       for (const {subnet} of activeAttnets) {
         if (trueBitIndices.includes(subnet)) {
-          hasDuty = true;
+          dutyCount += 1;
           peersPerSubnet.set(subnet, 1 + (peersPerSubnet.get(subnet) ?? 0));
         }
       }
-      if (hasDuty) {
-        peerHasDuty.set(peer, true);
-      }
+      dutiesByPeer.set(peer, dutyCount);
     }
 
     for (const {subnet, toSlot} of activeAttnets) {
@@ -182,16 +270,14 @@ function requestAttnetPeers(
 
     for (const peer of connectedPeers) {
       const trueBitIndices = peer.syncnetsTrueBitIndices;
-      let hasDuty = false;
+      let dutyCount = dutiesByPeer.get(peer) ?? 0;
       for (const {subnet} of activeSyncnets) {
         if (trueBitIndices.includes(subnet)) {
-          hasDuty = true;
+          dutyCount += 1;
           peersPerSubnet.set(subnet, 1 + (peersPerSubnet.get(subnet) ?? 0));
         }
       }
-      if (hasDuty) {
-        peerHasDuty.set(peer, true);
-      }
+      dutiesByPeer.set(peer, dutyCount);
     }
 
     for (const {subnet, toSlot} of activeSyncnets) {
@@ -203,7 +289,36 @@ function requestAttnetPeers(
     }
   }
 
-  return {attnetQueries, syncnetQueries, peerHasDuty};
+  const custodyGroupQueries: CustodyGroupQueries = new Map();
+  // pre-fulu
+  if (ourSamplingGroups == null) {
+    return {attnetQueries, syncnetQueries, custodyGroupQueries, dutiesByPeer};
+  }
+
+  // column subnets, do we need queries for more peers
+  const targetGroupPeersPerSamplingGroup = opts.targetGroupPeers;
+  const peersPerGroup = new Map<CustodyIndex, number>();
+  for (const peer of connectedPeers) {
+    const peerSamplingGroups = peer.samplingGroups;
+    for (const group of peerSamplingGroups) {
+      peersPerGroup.set(group, 1 + (peersPerGroup.get(group) ?? 0));
+    }
+  }
+
+  const ourSamplingGroupSet = new Set(ourSamplingGroups);
+  for (let groupIndex = 0; groupIndex < config.NUMBER_OF_CUSTODY_GROUPS; groupIndex++) {
+    const peersInGroup = peersPerGroup.get(groupIndex) ?? 0;
+    metrics?.peerCountPerSamplingGroup.set({groupIndex}, peersInGroup);
+    const targetGroupPeers = ourSamplingGroupSet.has(groupIndex)
+      ? targetGroupPeersPerSamplingGroup
+      : TARGET_GROUP_PEERS_PER_SUBNET;
+    if (peersInGroup < targetGroupPeers) {
+      // We need more peers
+      custodyGroupQueries.set(groupIndex, targetGroupPeers - peersInGroup);
+    }
+  }
+
+  return {attnetQueries, syncnetQueries, custodyGroupQueries, dutiesByPeer};
 }
 
 /**
@@ -217,33 +332,65 @@ function requestAttnetPeers(
  *
  * Although the logic looks complicated, we'd prune 5 peers max per heartbeat based on the mainnet config.
  */
-function pruneExcessPeers({
-  connectedPeers,
-  peerHasDuty,
-  targetPeers,
-  targetSubnetPeers,
-  activeAttnets,
-  peersToDisconnect,
-}: {
-  connectedPeers: PeerInfo[];
-  peerHasDuty: Map<PeerInfo, boolean>;
-  targetPeers: number;
-  targetSubnetPeers: number;
-  activeAttnets: RequestedSubnet[];
-  peersToDisconnect: MapDef<ExcessPeerDisconnectReason, PeerId[]>;
-}): void {
+function pruneExcessPeers(
+  connectedPeers: PeerInfo[],
+  dutiesByPeer: Map<PeerInfo, number>,
+  activeAttnets: RequestedSubnet[],
+  peersToDisconnect: MapDef<ExcessPeerDisconnectReason, PeerId[]>,
+  opts: PrioritizePeersOpts
+): void {
+  const {targetPeers, targetSubnetPeers = TARGET_SUBNET_PEERS, outboundPeersRatio = OUTBOUND_PEERS_RATIO} = opts;
   const connectedPeerCount = connectedPeers.length;
-  const connectedPeersWithoutDuty = connectedPeers.filter((peer) => !peerHasDuty.get(peer));
-  // sort from least score to high
-  const worstPeers = sortBy(shuffle(connectedPeersWithoutDuty), (peer) => peer.score);
+  const outboundPeersTarget = Math.round(outboundPeersRatio * connectedPeerCount);
+
+  // Count outbound peers
+  let outboundPeers = 0;
+  for (const peer of connectedPeers) {
+    if (peer.direction === "outbound") {
+      outboundPeers++;
+    }
+  }
+
+  let outboundPeersEligibleForPruning = 0;
+
+  const sortedPeers = sortPeersToPrune(connectedPeers, dutiesByPeer);
+
+  const peersEligibleForPruning = sortedPeers
+    // Then, iterate from highest score to lowest doing a manual filter for duties and outbound ratio
+    .filter((peer) => {
+      // Peers with duties are not eligible for pruning
+      if ((dutiesByPeer.get(peer) ?? 0) > 0) {
+        return false;
+      }
+
+      // Peers far ahead when we're starved for data are not eligible for pruning
+      if (opts.starved && peer.statusScore === StatusScore.FAR_AHEAD) {
+        return false;
+      }
+
+      // outbound peers up to OUTBOUND_PEER_RATIO sorted by highest score and not eligible for pruning
+      if (peer.direction === "outbound") {
+        if (outboundPeers - outboundPeersEligibleForPruning > outboundPeersTarget) {
+          outboundPeersEligibleForPruning++;
+        } else {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
   let peersToDisconnectCount = 0;
   const noLongLivedSubnetPeersToDisconnect: PeerId[] = [];
-  const peersToDisconnectTarget = connectedPeerCount - targetPeers;
+
+  const peersToDisconnectTarget =
+    // if we're starved for data, prune additional peers
+    connectedPeerCount - targetPeers + (opts.starved ? targetPeers * opts.starvationPruneRatio : 0);
 
   // 1. Lodestar prefers disconnecting peers that does not have long lived subnets
   // See https://github.com/ChainSafe/lodestar/issues/3940
   // peers with low score will be disconnected through heartbeat in the end
-  for (const peer of worstPeers) {
+  for (const peer of peersEligibleForPruning) {
     const hasLongLivedSubnet = peer.attnetsTrueBitIndices.length > 0 || peer.syncnetsTrueBitIndices.length > 0;
     if (!hasLongLivedSubnet && peersToDisconnectCount < peersToDisconnectTarget) {
       noLongLivedSubnetPeersToDisconnect.push(peer.id);
@@ -254,7 +401,7 @@ function pruneExcessPeers({
 
   // 2. Disconnect peers that have score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS
   const badScorePeersToDisconnect: PeerId[] = [];
-  for (const peer of worstPeers) {
+  for (const peer of peersEligibleForPruning) {
     if (
       peer.score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS &&
       peersToDisconnectCount < peersToDisconnectTarget &&
@@ -326,15 +473,67 @@ function pruneExcessPeers({
     }
 
     peersToDisconnect.set(ExcessPeerDisconnectReason.TOO_GROUPED_SUBNET, tooGroupedPeersToDisconnect);
+
+    // 4. Ensure to always to prune to target peers
+    // In rare case, all peers may have duties and good score but very low long lived subnet,
+    // and not too grouped to any subnets, we need to always disconnect peers until it reaches targetPeers
+    // because we want to keep improving peers (long lived subnets + score)
+    // otherwise we'll not able to accept new peer connection to consider better peers
+    // see https://github.com/ChainSafe/lodestar/issues/5198
+    const remainingPeersToDisconnect: PeerId[] = [];
+    for (const {id} of sortedPeers) {
+      if (peersToDisconnectCount >= peersToDisconnectTarget) {
+        break;
+      }
+      if (
+        noLongLivedSubnetPeersToDisconnect.includes(id) ||
+        badScorePeersToDisconnect.includes(id) ||
+        tooGroupedPeersToDisconnect.includes(id)
+      ) {
+        continue;
+      }
+      remainingPeersToDisconnect.push(id);
+      peersToDisconnectCount++;
+    }
+
+    peersToDisconnect.set(ExcessPeerDisconnectReason.FIND_BETTER_PEERS, remainingPeersToDisconnect);
   }
+}
+
+/**
+ * Sort peers ascending, peer-0 has the most chance to prune, peer-n has the least.
+ * Shuffling first to break ties.
+ * prefer sorting by status score (applicable during syncing), then dutied subnets, then number of long lived subnets, then peer score
+ * peer score is the last criteria since they are supposed to be in the same score range,
+ * bad score peers are removed by peer manager anyway
+ */
+export function sortPeersToPrune(connectedPeers: PeerInfo[], dutiesByPeer: Map<PeerInfo, number>): PeerInfo[] {
+  return shuffle(connectedPeers).sort((p1, p2) => {
+    const dutiedSubnet1 = dutiesByPeer.get(p1) ?? 0;
+    const dutiedSubnet2 = dutiesByPeer.get(p2) ?? 0;
+    if (dutiedSubnet1 === dutiedSubnet2) {
+      const statusScore = p1.statusScore - p2.statusScore;
+      if (statusScore !== 0) {
+        return statusScore;
+      }
+      const [longLivedSubnets1, longLivedSubnets2] = [p1, p2].map(
+        (p) => p.attnetsTrueBitIndices.length + p.syncnetsTrueBitIndices.length
+      );
+      if (longLivedSubnets1 === longLivedSubnets2) {
+        return p1.score - p2.score;
+      }
+      return longLivedSubnets1 - longLivedSubnets2;
+    }
+    return dutiedSubnet1 - dutiedSubnet2;
+  });
 }
 
 /**
  * Find subnet that has the most peers and > TARGET_SUBNET_PEERS, return null if peers are not grouped
  * to any subnets.
  */
-function findMaxPeersSubnet(subnetToPeers: Map<number, PeerInfo[]>, targetSubnetPeers: number): number | null {
-  let maxPeersSubnet: number | null = null;
+function findMaxPeersSubnet(subnetToPeers: Map<number, PeerInfo[]>, targetSubnetPeers: number): SubnetID | null {
+  let maxPeersSubnet: SubnetID | null = null;
   let maxPeerCountPerSubnet = -1;
 
   for (const [subnet, peers] of subnetToPeers) {

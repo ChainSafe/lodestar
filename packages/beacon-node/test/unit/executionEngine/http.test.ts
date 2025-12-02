@@ -1,33 +1,39 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
+import {Logger} from "@lodestar/logger";
+import {ForkName} from "@lodestar/params";
+import {RpcPayload} from "../../../src/eth1/interface.js";
+import {numToQuantity} from "../../../src/eth1/provider/utils.js";
+import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {
-  ExecutionEngineHttp,
   parseExecutionPayload,
   serializeExecutionPayload,
-  defaultExecutionEngineHttpOpts,
-} from "../../../src/execution/engine/http.js";
-
-chai.use(chaiAsPromised);
+  serializeExecutionPayloadBody,
+} from "../../../src/execution/engine/types.js";
+import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
 
 describe("ExecutionEngine / http", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
-  after(async () => {
+  afterAll(async () => {
     while (afterCallbacks.length > 0) {
       const callback = afterCallbacks.pop();
       if (callback) await callback();
     }
   });
 
-  let executionEngine: ExecutionEngineHttp;
+  let executionEngine: IExecutionEngine;
   let returnValue: unknown = {};
   let reqJsonRpcPayload: unknown = {};
 
-  before("Prepare server", async () => {
+  beforeAll(async () => {
     const controller = new AbortController();
     const server = fastify({logger: false});
 
     server.post("/", async (req) => {
+      if ((req.body as RpcPayload).method === "engine_getClientVersionV1") {
+        // Ignore client version requests
+        return [];
+      }
       reqJsonRpcPayload = req.body;
       delete (reqJsonRpcPayload as {id?: number}).id;
       return returnValue;
@@ -38,15 +44,16 @@ describe("ExecutionEngine / http", () => {
       await server.close();
     });
 
-    const baseUrl = await server.listen(0);
+    const baseUrl = await server.listen({port: 0});
 
-    executionEngine = new ExecutionEngineHttp(
+    executionEngine = initializeExecutionEngine(
       {
+        mode: "http",
         urls: [baseUrl],
-        retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
+        retries: defaultExecutionEngineHttpOpts.retries,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
       },
-      {signal: controller.signal}
+      {signal: controller.signal, logger: console as unknown as Logger}
     );
   });
 
@@ -79,10 +86,11 @@ describe("ExecutionEngine / http", () => {
     };
     returnValue = response;
 
-    const payload = await executionEngine.getPayload("0x0");
+    const payloadWithValue = await executionEngine.getPayload(ForkName.bellatrix, "0x0");
+    const payload = payloadWithValue.executionPayload;
 
-    expect(serializeExecutionPayload(payload)).to.deep.equal(response.result, "Wrong returned payload");
-    expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
+    expect(serializeExecutionPayload(ForkName.bellatrix, payload)).toEqual(response.result);
+    expect(reqJsonRpcPayload).toEqual(request);
   });
 
   it("notifyNewPayload", async () => {
@@ -119,10 +127,13 @@ describe("ExecutionEngine / http", () => {
       result: {status: "VALID", latestValidHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"},
     };
 
-    const {status} = await executionEngine.notifyNewPayload(parseExecutionPayload(request.params[0]));
+    const {status} = await executionEngine.notifyNewPayload(
+      ForkName.bellatrix,
+      parseExecutionPayload(ForkName.bellatrix, request.params[0]).executionPayload
+    );
 
-    expect(status).to.equal("VALID", "Wrong returned execute payload result");
-    expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
+    expect(status).toBe("VALID");
+    expect(reqJsonRpcPayload).toEqual(request);
   });
 
   it("notifyForkchoiceUpdate", async () => {
@@ -147,12 +158,120 @@ describe("ExecutionEngine / http", () => {
     };
 
     await executionEngine.notifyForkchoiceUpdate(
+      ForkName.bellatrix,
       forkChoiceHeadData.headBlockHash,
       forkChoiceHeadData.safeBlockHash,
       forkChoiceHeadData.finalizedBlockHash
     );
 
-    expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
+    expect(reqJsonRpcPayload).toEqual(request);
+  });
+
+  it("getPayloadBodiesByHash", async () => {
+    /**
+     *  curl -X GET -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadBodiesByHashV1","params":[
+        [
+          "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+        ]
+      ],"id":67}' http://localhost:8545
+     */
+    const response = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: [
+        {
+          transactions: [
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          ],
+          withdrawals: [
+            {
+              index: "0x0",
+              validatorIndex: "0xffff",
+              address: "0x0200000000000000000000000000000000000000",
+              amount: "0x7b",
+            },
+          ],
+        },
+        null, // null returned for missing blocks
+        {
+          transactions: [
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          ],
+          withdrawals: null, // withdrawals is null pre-capella
+        },
+      ],
+    };
+
+    const reqBlockHashes = [
+      "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+      "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed111",
+      "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed000",
+    ];
+
+    const request = {
+      jsonrpc: "2.0",
+      method: "engine_getPayloadBodiesByHashV1",
+      params: [reqBlockHashes],
+    };
+
+    returnValue = response;
+
+    const res = await executionEngine.getPayloadBodiesByHash(ForkName.bellatrix, reqBlockHashes);
+
+    expect(reqJsonRpcPayload).toEqual(request);
+    expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
+  });
+
+  it("getPayloadBodiesByRange", async () => {
+    /**
+     *  curl -X GET -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadBodiesByRangeV1","params":[ QUANTITY, QUANTITY],"id":67}' http://localhost:8545
+     */
+    const startBlockNumber = 2;
+    const blockCount = 3;
+    const response = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: [
+        {
+          transactions: [
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          ],
+          withdrawals: [
+            {
+              index: "0x0",
+              validatorIndex: "0xffff",
+              address: "0x0200000000000000000000000000000000000000",
+              amount: "0x7b",
+            },
+          ],
+        },
+        null, // null returned for missing blocks
+        {
+          transactions: [
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          ],
+          withdrawals: null, // withdrawals is null pre-capella
+        },
+      ],
+    };
+
+    const request = {
+      jsonrpc: "2.0",
+      method: "engine_getPayloadBodiesByRangeV1",
+      params: [numToQuantity(startBlockNumber), numToQuantity(blockCount)],
+    };
+
+    returnValue = response;
+
+    const res = await executionEngine.getPayloadBodiesByRange(ForkName.bellatrix, startBlockNumber, blockCount);
+
+    expect(reqJsonRpcPayload).toEqual(request);
+    expect(res.map(serializeExecutionPayloadBody)).toEqual(response.result);
   });
 
   it("error - unknown payload", async () => {
@@ -164,7 +283,7 @@ describe("ExecutionEngine / http", () => {
     const response = {jsonrpc: "2.0", id: 67, error: {code: 5, message: "unknown payload"}};
     returnValue = response;
 
-    await expect(executionEngine.getPayload(request.params[0])).to.be.rejectedWith(
+    await expect(executionEngine.getPayload(ForkName.bellatrix, request.params[0])).rejects.toThrow(
       "JSON RPC error: unknown payload, engine_getPayload"
     );
   });

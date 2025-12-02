@@ -19,7 +19,7 @@ const network = "mainnet";
 const client = getClient({baseUrl: getInfuraBeaconUrl(network)}, {config});
 
 async function run(): Promise<void> {
-  const {data: headBlock} = await client.beacon.getBlockHeader("head");
+  const headBlock = (await client.beacon.getBlockHeader({blockId: "head"})).value();
 
   // Count operations
   let blocks = 0;
@@ -37,9 +37,9 @@ async function run(): Promise<void> {
   const batchSize = 32;
 
   for (let slot = startSlot; slot > 0; slot -= batchSize) {
-    const blockPromises: ReturnType<typeof client.beacon.getBlock>[] = [];
+    const blockPromises: ReturnType<typeof client.beacon.getBlockV2>[] = [];
     for (let s = slot - batchSize; s < slot; s++) {
-      blockPromises.push(client.beacon.getBlock(s));
+      blockPromises.push(client.beacon.getBlockV2({blockId: s}));
     }
 
     const results = await Promise.allSettled(blockPromises);
@@ -49,7 +49,7 @@ async function run(): Promise<void> {
         continue;
       }
 
-      const block = result.value.data;
+      const block = result.value.value();
 
       blocks++;
       attestations += block.message.body.attestations.length;
@@ -65,7 +65,6 @@ async function run(): Promise<void> {
       }
     }
 
-    /* eslint-disable no-console */
     console.log({
       slot,
       blocks,

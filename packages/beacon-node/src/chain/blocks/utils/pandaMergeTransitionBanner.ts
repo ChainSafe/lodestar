@@ -1,4 +1,3 @@
-/* eslint-disable no-useless-escape */
 // Note: 1 extra new line for space
 // Note: String.raw preserve backslash character
 //       see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/raw

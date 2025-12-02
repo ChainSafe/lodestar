@@ -1,6 +1,6 @@
-import {PeerAction} from "../peers/score.js";
-import {Method} from "./types.js";
-import {RequestError, RequestErrorCode} from "./request/index.js";
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
+import {PeerAction} from "../peers/score/index.js";
+import {ReqRespMethod} from "./types.js";
 
 /**
  * libp2p-ts does not include types for the error codes.
@@ -8,7 +8,6 @@ import {RequestError, RequestErrorCode} from "./request/index.js";
  * https://github.com/libp2p/js-libp2p/blob/6350a187c7c207086e42436ccbcabd59af6f5e3d/src/errors.js#L32
  */
 const libp2pErrorCodes = {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   ERR_UNSUPPORTED_PROTOCOL: "ERR_UNSUPPORTED_PROTOCOL",
 };
 
@@ -20,9 +19,11 @@ const multiStreamSelectErrorCodes = {
   protocolSelectionFailed: "protocol selection failed",
 };
 
-export function onOutgoingReqRespError(e: RequestError, method: Method): PeerAction | null {
+export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): PeerAction | null {
   switch (e.type.code) {
     case RequestErrorCode.INVALID_REQUEST:
+    case RequestErrorCode.INVALID_RESPONSE_SSZ:
+    case RequestErrorCode.SSZ_OVER_MAX_SIZE:
       return PeerAction.LowToleranceError;
 
     case RequestErrorCode.SERVER_ERROR:
@@ -32,7 +33,7 @@ export function onOutgoingReqRespError(e: RequestError, method: Method): PeerAct
 
     case RequestErrorCode.DIAL_TIMEOUT:
     case RequestErrorCode.DIAL_ERROR:
-      return e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed) && method === Method.Ping
+      return e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed) && method === ReqRespMethod.Ping
         ? PeerAction.Fatal
         : PeerAction.LowToleranceError;
     // TODO: Detect SSZDecodeError and return PeerAction.Fatal
@@ -40,10 +41,12 @@ export function onOutgoingReqRespError(e: RequestError, method: Method): PeerAct
     case RequestErrorCode.TTFB_TIMEOUT:
     case RequestErrorCode.RESP_TIMEOUT:
       switch (method) {
-        case Method.Ping:
+        case ReqRespMethod.Ping:
+        case ReqRespMethod.Status:
+        case ReqRespMethod.Metadata:
           return PeerAction.LowToleranceError;
-        case Method.BeaconBlocksByRange:
-        case Method.BeaconBlocksByRoot:
+        case ReqRespMethod.BeaconBlocksByRange:
+        case ReqRespMethod.BeaconBlocksByRoot:
           return PeerAction.MidToleranceError;
         default:
           return null;
@@ -52,15 +55,16 @@ export function onOutgoingReqRespError(e: RequestError, method: Method): PeerAct
 
   if (e.message.includes(libp2pErrorCodes.ERR_UNSUPPORTED_PROTOCOL)) {
     switch (method) {
-      case Method.Ping:
+      case ReqRespMethod.Ping:
         return PeerAction.Fatal;
-      case Method.Metadata:
-      case Method.Status:
+      case ReqRespMethod.Metadata:
+      case ReqRespMethod.Status:
         return PeerAction.LowToleranceError;
       default:
         return null;
     }
   }
 
+  // other errors like RequestErrorCode.RESP_RATE_LIMITED could come from ourself, not the peer so we should not penalize them
   return null;
 }

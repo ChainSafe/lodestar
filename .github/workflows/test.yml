@@ -1,76 +1,225 @@
 name: Tests
+# only one can run at a time
+concurrency:
+  # If PR, cancel prev commits. head_ref = source branch name on pull_request, null if push
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
-on: 
+on:
   push:
-    # We intentionally don't run push on feature branches. See PR for rational. 
+    # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
 
 jobs:
-  tests-main:
-    name: Tests
-    runs-on: ubuntu-latest
+  build:
+    name: Build
+    runs-on: buildjet-4vcpu-ubuntu-2204
     strategy:
       fail-fast: false
       matrix:
-        node: [16]
+        node: [22]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: ${{matrix.node}}
-      - name: Node.js version
-        id: node
-        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
-      - name: Restore dependencies
-        uses: actions/cache@master
-        id: cache-deps
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
-      - name: Install & build
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional && yarn build
-      - name: Build
-        run: yarn build
-        if: steps.cache-deps.outputs.cache-hit == 'true'
-      # </common-build>
+          node: ${{ matrix.node }}
 
-      # Cache validator slashing protection data tests
-      - name: Restore spec tests cache
-        uses: actions/cache@master
-        with:
-          path: packages/validator/spec-tests
-          key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
-
-      # Misc sanity checks
-      - name: Lint Grafana dashboards
-        run: node scripts/validate-grafana-dashboard.mjs ./dashboards
       - name: Test root binary exists
         run: ./lodestar --version
+
       - name: Reject yarn.lock changes
         run: .github/workflows/scripts/reject_yarn_lock_changes.sh
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
+  lint:
+    name: Lint
+    needs: build
+    runs-on: "ubuntu-latest"
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: ${{ matrix.node }}
+
+      - name: Assert yarn prints no warnings
+        run: scripts/assert_no_yarn_warnings.sh
+
+      - name: Lint yarn lockfile
+        run: npx lockfile-lint --path yarn.lock --allowed-hosts npm yarn github.com --allowed-schemes "https:" "git+https:"
+
+      - name: Lint Code
+        run: yarn lint
+
+      - name: Lint Grafana dashboards
+        run: scripts/validate-grafana-dashboards.sh
+
+      - name: Assert ESM module exports
+        run: node scripts/assert_exports.mjs
+
+  type-checks:
+    name: Type Checks
+    needs: build
+    runs-on: "ubuntu-latest"
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: ${{ matrix.node }}
+
       - name: Check Types
-        run: yarn run check-types
-      # Test docs generation, even if not published
-      - name: Build docs
-        run: yarn build:docs
+        run: yarn check-types
 
       - name: README check
-        run: yarn run check-readme
+        run: yarn check-readme
 
-      - name: Lint
-        run: yarn lint
-      - name: Check Build
-        run: yarn check-build
+  unit-tests:
+    name: Unit Tests
+    needs: type-checks
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: ${{ matrix.node }}
+
+      # Cache validator slashing protection data tests
+      - name: Restore spec tests cache
+        uses: actions/cache@v4
+        with:
+          path: packages/validator/spec-tests
+          key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
+
       - name: Unit tests
-        run: yarn test:unit
+        # id: unit_tests
+        # Rever to "yarn test:unit" when finished debugging core dumps
+        # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
+        run: yarn vitest run --project unit --project unit-minimal --coverage
+
+      # # Remove when finished debugging core dumps
+      # - uses: './.github/actions/core-dump'
+      #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
+
       - name: Upload coverage data
-        run: yarn coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          verbose: true # optional (default = false)
+          flags: "unit"
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22]
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v4
+
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: ${{ matrix.node }}
+
+      - name: Load env variables
+        uses: ./.github/actions/dotenv
+
+      - name: Run the e2e test environment
+        run: scripts/run_e2e_env.sh start
+
+      - name: E2E tests
+        run: yarn test:e2e
+        env:
+          GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
+
+      - name: Stop the e2e test environment
+        run: scripts/run_e2e_env.sh stop
+
+      - name: Upload debug log test for test env
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-e2e-test-logs-node-${{matrix.node}}
+          path: test-logs/e2e-test-env
+
+  browser-tests:
+    name: Browser Tests
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22]
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: ${{ matrix.node }}
+      - name: Install
+        run: yarn playwright install
+      - name: Browser tests
+        run: |
+          export DISPLAY=':99.0'
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          yarn test:browsers
+
+  spec-tests:
+    name: Spec tests
+    needs: build
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: ${{ matrix.node }}
+
+      # Download spec tests with cache
+      - name: Restore spec tests cache
+        uses: actions/cache@v4
+        with:
+          path: packages/beacon-node/spec-tests
+          key: spec-test-data-${{ hashFiles('packages/beacon-node/test/spec/specTestVersioning.ts') }}
+      - name: Download spec tests
+        run: yarn download-spec-tests
+      # Run them in different steps to quickly identifying which command failed
+      # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
+      # many of the suites have identical names for minimal and mainnet
+      - name: Spec tests general
+        run: yarn test:spec:general
+        working-directory: packages/beacon-node
+      - name: Spec tests bls
+        run: yarn test:spec:bls
+        working-directory: packages/beacon-node
+      - name: Spec tests minimal
+        run: yarn test:spec:minimal
+        working-directory: packages/beacon-node
+      - name: Spec tests mainnet
+        run: NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec:mainnet
+        working-directory: packages/beacon-node
+      - name: Spec tests validator
+        run: yarn test:spec
+        working-directory: packages/validator

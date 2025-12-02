@@ -1,15 +1,19 @@
+import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {Api, EventData, EventType} from "../../../../src/beacon/routes/events.js";
+import {
+  Endpoints,
+  EventData,
+  EventType,
+  blobSidecarSSE,
+  dataColumnSidecarSSE,
+} from "../../../../src/beacon/routes/events.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const abortController = new AbortController();
-const root = Buffer.alloc(32, 0);
 
-/* eslint-disable @typescript-eslint/no-empty-function, @typescript-eslint/naming-convention */
-
-export const testData: GenericServerTestCases<Api> = {
+export const testData: GenericServerTestCases<Endpoints> = {
   eventstream: {
-    args: [[EventType.head, EventType.chainReorg], abortController.signal, function onEvent() {}],
+    args: {topics: [EventType.head, EventType.chainReorg], signal: abortController.signal, onEvent: () => {}},
     res: undefined,
   },
 };
@@ -31,10 +35,12 @@ export const eventTestData: EventData = {
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
     executionOptimistic: false,
   },
-  [EventType.attestation]: ssz.phase0.Attestation.fromJson({
+  [EventType.blockGossip]: {
+    slot: 10,
+    block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+  },
+  [EventType.attestation]: ssz.electra.Attestation.fromJson({
     aggregation_bits: "0x01",
-    signature:
-      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
     data: {
       slot: "1",
       index: "1",
@@ -42,9 +48,97 @@ export const eventTestData: EventData = {
       source: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
       target: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
     },
+    signature:
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    committee_bits: "0x0000000000000001",
+  }),
+  [EventType.singleAttestation]: ssz.electra.SingleAttestation.fromJson({
+    committee_index: "1",
+    attester_index: "1",
+    data: {
+      slot: "1",
+      index: "1",
+      beacon_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      source: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
+      target: {epoch: "1", root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},
+    },
+    signature:
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
   }),
   [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit.fromJson({
     message: {epoch: "1", validator_index: "1"},
+    signature:
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+  }),
+  [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing.fromJson({
+    signed_header_1: {
+      message: {
+        slot: "0",
+        proposer_index: "0",
+        parent_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        state_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        body_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+      },
+      signature:
+        "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    },
+    signed_header_2: {
+      message: {
+        slot: "0",
+        proposer_index: "0",
+        parent_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        state_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        body_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+      },
+      signature:
+        "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    },
+  }),
+  [EventType.attesterSlashing]: ssz.phase0.AttesterSlashing.fromJson({
+    attestation_1: {
+      attesting_indices: ["0", "1"],
+      data: {
+        slot: "0",
+        index: "0",
+        beacon_block_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        source: {
+          epoch: "0",
+          root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        },
+        target: {
+          epoch: "0",
+          root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        },
+      },
+      signature:
+        "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    },
+    attestation_2: {
+      attesting_indices: ["0", "1"],
+      data: {
+        slot: "0",
+        index: "0",
+        beacon_block_root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        source: {
+          epoch: "0",
+          root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        },
+        target: {
+          epoch: "0",
+          root: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        },
+      },
+      signature:
+        "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    },
+  }),
+  [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange.fromJson({
+    message: {
+      validator_index: "1",
+      from_bls_pubkey:
+        "0x933ad9491b62059dd065b560d256d8957a8c402cc6e8d8ee7290ae11e8f7329267a8811c397529dac52ae1342ba58c95",
+      to_execution_address: "0x9Be8d619c56699667c1feDCD15f6b14D8B067F72",
+    },
     signature:
       "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
   }),
@@ -81,14 +175,103 @@ export const eventTestData: EventData = {
     signature:
       "0xac118511474a94f857300b315c50585c32a713e4452e26a6bb98cdb619936370f126ed3b6bb64469259ee92e69791d9e12d324ce6fd90081680ce72f39d85d50b0ff977260a8667465e613362c6d6e6e745e1f9323ec1d6f16041c4e358839ac",
   }),
-  [EventType.lightclientOptimisticUpdate]: {
-    syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
-    attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+  [EventType.lightClientOptimisticUpdate]: {
+    version: ForkName.altair,
+    data: ssz.altair.LightClientOptimisticUpdate.fromJson({
+      attested_header: {
+        beacon: {
+          slot: "1",
+          proposer_index: "1",
+          parent_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          state_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          body_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        },
+      },
+      sync_aggregate: {
+        sync_committee_bits:
+          "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffffffffffffffffffffffbffffffffffffffffffffbffffffffffffff",
+        sync_committee_signature:
+          "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+      },
+      signature_slot: "1",
+    }),
   },
-  [EventType.lightclientFinalizedUpdate]: {
-    attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
-    finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
-    finalityBranch: [root],
-    syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
+  [EventType.lightClientFinalityUpdate]: {
+    version: ForkName.altair,
+    data: ssz.altair.LightClientFinalityUpdate.fromJson({
+      attested_header: {
+        beacon: {
+          slot: "1",
+          proposer_index: "1",
+          parent_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          state_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          body_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        },
+      },
+      finalized_header: {
+        beacon: {
+          slot: "1",
+          proposer_index: "1",
+          parent_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          state_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          body_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        },
+      },
+      finality_branch: [
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      ],
+      sync_aggregate: {
+        sync_committee_bits:
+          "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffffffffffffffffffffffbffffffffffffffffffffbffffffffffffff",
+        sync_committee_signature:
+          "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+      },
+      signature_slot: "1",
+    }),
   },
+  [EventType.payloadAttributes]: {
+    version: ForkName.electra,
+    data: ssz.electra.SSEPayloadAttributes.fromJson({
+      proposer_index: "123",
+      proposal_slot: "10",
+      parent_block_number: "9",
+      parent_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      parent_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+      payload_attributes: {
+        timestamp: "123456",
+        prev_randao: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        suggested_fee_recipient: "0x0000000000000000000000000000000000000000",
+        withdrawals: [
+          {
+            index: "5",
+            validator_index: "10",
+            address: "0x0000000000000000000000000000000000000000",
+            amount: "15640",
+          },
+        ],
+        parent_beacon_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      },
+    }),
+  },
+  [EventType.blobSidecar]: blobSidecarSSE.fromJson({
+    block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+    index: "1",
+    kzg_commitment:
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    slot: "1",
+    versioned_hash: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+  }),
+  [EventType.dataColumnSidecar]: dataColumnSidecarSSE.fromJson({
+    block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+    index: "1",
+    slot: "1",
+    kzg_commitments: [
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    ],
+  }),
 };

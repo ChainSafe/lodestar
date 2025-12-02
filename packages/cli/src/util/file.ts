@@ -1,30 +1,25 @@
 import fs from "node:fs";
 import path from "node:path";
-import stream from "node:stream";
-import {promisify} from "node:util";
-import got from "got";
+import {Readable} from "node:stream";
+import stream from "node:stream/promises";
+import {ReadableStream as NodeReadableStream} from "node:stream/web";
 import yaml from "js-yaml";
-const {load, dump, FAILSAFE_SCHEMA, Schema, Type} = yaml;
+import {fetch} from "@lodestar/utils";
 
-export const yamlSchema = new Schema({
-  include: [FAILSAFE_SCHEMA],
+const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
+
+import {mkdir} from "./fs.js";
+
+export const yamlSchema = FAILSAFE_SCHEMA.extend({
   implicit: [
     new Type("tag:yaml.org,2002:str", {
       kind: "scalar",
       construct: function construct(data) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return data !== null ? data : "";
       },
     }),
   ],
 });
-
-/**
- * Maybe create a directory
- */
-export function mkdir(dirname: string): void {
-  fs.mkdirSync(dirname, {recursive: true});
-}
 
 export enum FileFormat {
   json = "json",
@@ -44,7 +39,7 @@ export function parse<T>(contents: string, fileFormat: FileFormat): T {
     case FileFormat.yml:
       return load(contents, {schema: yamlSchema}) as T;
     default:
-      return (contents as unknown) as T;
+      return contents as unknown as T;
   }
 }
 
@@ -62,7 +57,7 @@ export function stringify(obj: unknown, fileFormat: FileFormat): string {
       contents = dump(obj, {schema: yamlSchema});
       break;
     default:
-      contents = (obj as unknown) as string;
+      contents = obj as string;
   }
   return contents;
 }
@@ -72,10 +67,20 @@ export function stringify(obj: unknown, fileFormat: FileFormat): string {
  *
  * Serialize either to json, yaml, or toml
  */
-export function writeFile(filepath: string, obj: unknown): void {
+export function writeFile(filepath: string, obj: unknown, options: fs.WriteFileOptions = "utf-8"): void {
   mkdir(path.dirname(filepath));
   const fileFormat = path.extname(filepath).substr(1);
-  fs.writeFileSync(filepath, stringify(obj, fileFormat as FileFormat), "utf-8");
+  fs.writeFileSync(filepath, typeof obj === "string" ? obj : stringify(obj, fileFormat as FileFormat), options);
+}
+
+/**
+ * Create a file with `600 (-rw-------)` permissions
+ * *Note*: 600: Owner has full read and write access to the file,
+ * while no other user can access the file
+ */
+export function writeFile600Perm(filepath: string, obj: unknown, options?: fs.WriteFileOptions): void {
+  writeFile(filepath, obj, options);
+  fs.chmodSync(filepath, "0600");
 }
 
 /**
@@ -101,9 +106,8 @@ export function readFileIfExists<T>(filepath: string, acceptedFormats?: string[]
   } catch (e) {
     if ((e as {code: string}).code === "ENOENT") {
       return null;
-    } else {
-      throw e;
     }
+    throw e;
   }
 }
 
@@ -126,7 +130,16 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
   if (!fs.existsSync(pathDest)) {
     mkdir(path.dirname(pathDest));
-    await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(pathDest));
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to download file from ${url}: ${res.status} ${res.statusText}`);
+    }
+
+    if (!res.body) {
+      throw new Error("Response body is null");
+    }
+
+    await stream.pipeline(Readable.fromWeb(res.body as unknown as NodeReadableStream), fs.createWriteStream(pathDest));
   }
 }
 
@@ -136,11 +149,17 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await got.get(pathOrUrl, {encoding: "binary"});
-    return res.rawBody;
-  } else {
-    return await fs.promises.readFile(pathOrUrl);
+    const res = await fetch(pathOrUrl, {
+      // Ensure we only receive SSZ responses if REST API is queried
+      headers: {accept: "application/octet-stream"},
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to download file from ${pathOrUrl}: ${res.status} ${res.statusText}`);
+    }
+    const arrayBuffer = await res.arrayBuffer();
+    return new Uint8Array(arrayBuffer);
   }
+  return fs.promises.readFile(pathOrUrl);
 }
 
 /**

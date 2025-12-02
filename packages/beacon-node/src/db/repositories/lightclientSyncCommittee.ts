@@ -1,6 +1,7 @@
-import {IChainForkConfig} from "@lodestar/config";
-import {Bucket, IDatabaseController, Repository} from "@lodestar/db";
+import {ChainForkConfig} from "@lodestar/config";
+import {DatabaseController, Repository} from "@lodestar/db";
 import {altair, ssz} from "@lodestar/types";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
  * Historical sync committees by SyncCommittee hash tree root
@@ -8,7 +9,8 @@ import {altair, ssz} from "@lodestar/types";
  * Used to prepare lightclient updates and initial snapshots
  */
 export class SyncCommitteeRepository extends Repository<Uint8Array, altair.SyncCommittee> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>) {
-    super(config, db, Bucket.lightClient_syncCommittee, ssz.altair.SyncCommittee);
+  constructor(config: ChainForkConfig, db: DatabaseController<Uint8Array, Uint8Array>) {
+    const bucket = Bucket.lightClient_syncCommittee;
+    super(config, db, bucket, ssz.altair.SyncCommittee, getBucketNameByValue(bucket));
   }
 }

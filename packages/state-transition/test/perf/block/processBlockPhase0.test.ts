@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {
   ACTIVE_PRESET,
   MAX_ATTESTATIONS,
@@ -8,9 +8,9 @@ import {
   MAX_VOLUNTARY_EXITS,
   PresetName,
 } from "@lodestar/params";
-import {stateTransition} from "../../../src/index.js";
-import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
+import {DataAvailabilityStatus, ExecutionPayloadStatus, stateTransition} from "../../../src/index.js";
 import {StateBlock} from "../types.js";
+import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
 import {BlockOpts, getBlockPhase0} from "./util.js";
 
 // As of Jun 12 2021
@@ -63,7 +63,7 @@ import {BlockOpts, getBlockPhase0} from "./util.js";
 //   - processVoluntaryExit    : -
 //
 // ### Hashing the state
-// Hashing cost is dependant on how many nodes have been modified in the tree. After mutating the state, just count
+// Hashing cost is dependent on how many nodes have been modified in the tree. After mutating the state, just count
 // how many nodes have no cached _root, then multiply by the cost of hashing.
 //
 
@@ -98,7 +98,7 @@ describe("phase0 processBlock", () => {
   ];
 
   for (const {id, opts} of testCases) {
-    itBench<StateBlock, StateBlock>({
+    bench<StateBlock, StateBlock>({
       id: `phase0 processBlock - ${perfStateId} ${id}`,
       before: () => {
         const state = generatePerfTestCachedStatePhase0();
@@ -109,6 +109,8 @@ describe("phase0 processBlock", () => {
       beforeEach: ({state, block}) => ({state: state.clone(), block}),
       fn: ({state, block}) => {
         stateTransition(state, block, {
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
           verifyProposer: false,
           verifySignatures: false,
           verifyStateRoot: false,

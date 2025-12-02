@@ -1,72 +1,63 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import Libp2p from "libp2p";
-import GossipsubDefault from "libp2p-gossipsub";
-// TODO remove once Gossipsub goes ESM
-const Gossipsub = ((GossipsubDefault as unknown) as {default: unknown}).default as typeof GossipsubDefault;
-import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types.js";
-import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score/index.js";
-import PeerId from "peer-id";
-import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
-import {IBeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {allForks, altair, phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-
-import {IMetrics} from "../../metrics/index.js";
-import {Map2d, Map2dArr} from "../../util/map.js";
-import {Eth2Context} from "../../chain/index.js";
-import {PeersData} from "../peers/peersData.js";
+import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
+import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
+import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
+import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
+import {BeaconConfig, ForkBoundary} from "@lodestar/config";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {SubnetID} from "@lodestar/types";
+import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
+import {RegistryMetricCreator} from "../../metrics/index.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
+import {Libp2p} from "../interface.js";
+import {NetworkConfig} from "../networkConfig.js";
 import {ClientKind} from "../peers/client.js";
-import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
+import {PeersData} from "../peers/peersData.js";
+import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
+import {GossipTopic, GossipType} from "./interface.js";
+import {Eth2GossipsubMetrics, createEth2GossipsubMetrics} from "./metrics.js";
 import {
-  GossipJobQueues,
-  GossipTopic,
-  GossipTopicMap,
-  GossipType,
-  GossipTypeMap,
-  ValidatorFnsByType,
-  GossipHandlers,
-} from "./interface.js";
-import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic.js";
-import {DataTransformSnappy, fastMsgIdFn, msgIdFn} from "./encoding.js";
-import {createValidatorFnsByType} from "./validation/index.js";
-
-import {
-  computeGossipPeerScoreParams,
-  gossipScoreThresholds,
   GOSSIP_D,
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
+  computeGossipPeerScoreParams,
+  gossipScoreThresholds,
 } from "./scoringParameters.js";
+import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
-// TODO: Export this type
-type GossipsubEvents = {
-  "gossipsub:message": {
-    propagationSource: PeerId;
-    msgId: string;
-    msg: GossipsubMessage;
-  };
+const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
+
+export type Eth2Context = {
+  activeValidatorCount: number;
+  currentSlot: number;
+  currentEpoch: number;
 };
 
 export type Eth2GossipsubModules = {
-  config: IBeaconConfig;
+  networkConfig: NetworkConfig;
   libp2p: Libp2p;
-  logger: ILogger;
-  metrics: IMetrics | null;
-  signal: AbortSignal;
+  logger: Logger;
+  metricsRegister: RegistryMetricCreator | null;
   eth2Context: Eth2Context;
-  gossipHandlers: GossipHandlers;
   peersData: PeersData;
+  events: NetworkEventBus;
 };
 
 export type Eth2GossipsubOpts = {
   allowPublishToZeroPeers?: boolean;
+  gossipsubD?: number;
+  gossipsubDLow?: number;
+  gossipsubDHigh?: number;
+  gossipsubAwaitHandler?: boolean;
+  disableFloodPublish?: boolean;
+  skipParamsLog?: boolean;
+  disableLightClientServer?: boolean;
 };
+
+export type ForkBoundaryLabel = string;
 
 /**
  * Wrapper around js-libp2p-gossipsub with the following extensions:
@@ -81,103 +72,97 @@ export type Eth2GossipsubOpts = {
  *
  * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
-export class Eth2Gossipsub extends Gossipsub {
-  readonly jobQueues: GossipJobQueues;
+export class Eth2Gossipsub extends GossipSub {
   readonly scoreParams: Partial<PeerScoreParams>;
-  private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
+  private readonly config: BeaconConfig;
+  private readonly logger: Logger;
   private readonly peersData: PeersData;
+  private readonly events: NetworkEventBus;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
 
-  private readonly validatorFnsByType: ValidatorFnsByType;
-
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
-    const gossipTopicCache = new GossipTopicCache(modules.config);
+    const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
+    const {networkConfig, logger, metricsRegister, peersData, events} = modules;
+    const {config} = networkConfig;
+    const gossipTopicCache = new GossipTopicCache(config);
 
-    const scoreParams = computeGossipPeerScoreParams(modules);
-    const {config, logger, metrics, signal, gossipHandlers, peersData} = modules;
+    const scoreParams = computeGossipPeerScoreParams({config, eth2Context: modules.eth2Context});
+    let metrics: Eth2GossipsubMetrics | null = null;
+    if (metricsRegister) {
+      metrics = createEth2GossipsubMetrics(metricsRegister);
+      metrics.gossipMesh.peersByType.addCollect(() =>
+        this.onScrapeLodestarMetrics(metrics as Eth2GossipsubMetrics, networkConfig)
+      );
+    }
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super(modules.libp2p, {
-      gossipIncoming: true,
+    super(modules.libp2p.services.components, {
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
-      allowPublishToZeroPeers: opts.allowPublishToZeroPeers,
-      D: GOSSIP_D,
-      Dlo: GOSSIP_D_LOW,
-      Dhi: GOSSIP_D_HIGH,
+      allowPublishToZeroTopicPeers: allowPublishToZeroPeers,
+      D: gossipsubD ?? GOSSIP_D,
+      Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
+      Dhi: gossipsubDHigh ?? GOSSIP_D_HIGH,
       Dlazy: 6,
       heartbeatInterval: GOSSIPSUB_HEARTBEAT_INTERVAL,
       fanoutTTL: 60 * 1000,
       mcacheLength: 6,
       mcacheGossip: 3,
-      seenTTL: 550 * GOSSIPSUB_HEARTBEAT_INTERVAL,
+      // this should be in ms
+      seenTTL: config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
+      // For a single stream, await processing each RPC before processing the next
+      awaitRpcHandler: opts.gossipsubAwaitHandler,
+      // For a single RPC, await processing each message before processing the next
+      awaitRpcMessageHandler: opts.gossipsubAwaitHandler,
       // the default in gossipsub is 3s is not enough since lodestar suffers from I/O lag
       gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
-      // Use the bellatrix max size if the merge is configured. pre-merge using this size
-      // could only be an issue on outgoing payloads, its highly unlikely we will send out
-      // a chunk bigger than GOSSIP_MAX_SIZE pre merge even on mainnet network.
-      //
-      // TODO: figure out a way to dynamically transition to the size
-      dataTransform: new DataTransformSnappy(
-        isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
-      ),
-      metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
-      metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
+      msgIdToStrFn: msgIdToStrFn,
+      dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, metrics),
+      metricsRegister: metricsRegister as MetricsRegister | null,
+      metricsTopicStrToLabel: metricsRegister
+        ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})
+        : undefined,
       asyncValidation: true,
+
+      maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
+      // serialize message once and send to all peers when publishing
+      batchPublish: true,
+      // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
+      // publish to some more topic peers to make sure we always publish to at least GOSSIP_D peers
+      floodPublish: !opts?.disableFloodPublish,
+      // Only send IDONTWANT messages if the message size is larger than this
+      // This should be large enough to not send IDONTWANT for "small" messages
+      // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
+      idontwantMinDataSize: 16829,
     });
     this.scoreParams = scoreParams;
     this.config = config;
     this.logger = logger;
     this.peersData = peersData;
+    this.events = events;
     this.gossipTopicCache = gossipTopicCache;
 
-    // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
-    // libp2p-js layer will emit the message to an EventEmitter that won't be listened by anyone.
-    // TODO: Force to ensure there's a validatorFunction attached to every received topic.
-    const {validatorFnsByType, jobQueues} = createValidatorFnsByType(gossipHandlers, {
-      config,
-      logger,
-      metrics,
-      signal,
-    });
-    this.validatorFnsByType = validatorFnsByType;
-    this.jobQueues = jobQueues;
-
-    if (metrics) {
-      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
-    }
-
-    this.on("gossipsub:message", this.onGossipsubMessage.bind(this));
+    this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
+    this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
-    this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
-  }
-
-  /**
-   * Publish a `GossipObject` on a `GossipTopic`
-   */
-  async publishObject<K extends GossipType>(topic: GossipTopicMap[K], object: GossipTypeMap[K]): Promise<number> {
-    const topicStr = this.getGossipTopicString(topic);
-    const sszType = getGossipSSZType(topic);
-    const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
-    const sentPeers = await this.publish(topicStr, messageData);
-    this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
-    return sentPeers;
+    if (!opts.skipParamsLog) {
+      this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
+    }
   }
 
   /**
    * Subscribe to a `GossipTopic`
    */
   subscribeTopic(topic: GossipTopic): void {
-    const topicStr = this.getGossipTopicString(topic);
+    const topicStr = stringifyGossipTopic(this.config, topic);
     // Register known topicStr
     this.gossipTopicCache.setTopic(topicStr, topic);
 
@@ -189,75 +174,17 @@ export class Eth2Gossipsub extends Gossipsub {
    * Unsubscribe to a `GossipTopic`
    */
   unsubscribeTopic(topic: GossipTopic): void {
-    const topicStr = this.getGossipTopicString(topic);
+    const topicStr = stringifyGossipTopic(this.config, topic);
     this.logger.verbose("Unsubscribe to gossipsub topic", {topic: topicStr});
     this.unsubscribe(topicStr);
   }
 
-  async publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void> {
-    const fork = this.config.getForkName(signedBlock.message.slot);
-    await this.publishObject<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock);
-  }
-
-  async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {
-    const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
-    return await this.publishObject<GossipType.beacon_aggregate_and_proof>(
-      {type: GossipType.beacon_aggregate_and_proof, fork},
-      aggregateAndProof
-    );
-  }
-
-  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number> {
-    const fork = this.config.getForkName(attestation.data.slot);
-    return await this.publishObject<GossipType.beacon_attestation>(
-      {type: GossipType.beacon_attestation, fork, subnet},
-      attestation
-    );
-  }
-
-  async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
-    const fork = this.config.getForkName(computeStartSlotAtEpoch(voluntaryExit.message.epoch));
-    await this.publishObject<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, fork}, voluntaryExit);
-  }
-
-  async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    const fork = this.config.getForkName(Number(proposerSlashing.signedHeader1.message.slot as bigint));
-    await this.publishObject<GossipType.proposer_slashing>(
-      {type: GossipType.proposer_slashing, fork},
-      proposerSlashing
-    );
-  }
-
-  async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void> {
-    const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
-    await this.publishObject<GossipType.attester_slashing>(
-      {type: GossipType.attester_slashing, fork},
-      attesterSlashing
-    );
-  }
-
-  async publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<void> {
-    const fork = this.config.getForkName(signature.slot);
-    await this.publishObject<GossipType.sync_committee>({type: GossipType.sync_committee, fork, subnet}, signature);
-  }
-
-  async publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<void> {
-    const fork = this.config.getForkName(contributionAndProof.message.contribution.slot);
-    await this.publishObject<GossipType.sync_committee_contribution_and_proof>(
-      {type: GossipType.sync_committee_contribution_and_proof, fork},
-      contributionAndProof
-    );
-  }
-
-  private getGossipTopicString(topic: GossipTopic): string {
-    return stringifyGossipTopic(this.config, topic);
-  }
-
-  private onScrapeLodestarMetrics(metrics: IMetrics): void {
-    const mesh = this["mesh"] as Map<string, Set<string>>;
+  private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics, networkConfig: NetworkConfig): void {
+    const mesh = this.mesh;
+    // biome-ignore lint/complexity/useLiteralKeys: `topics` is a private attribute
     const topics = this["topics"] as Map<string, Set<string>>;
-    const peers = this["peers"] as Map<string, unknown>;
-    const score = this["score"] as PeerScore;
+    const peers = this.peers;
+    const score = this.score;
     const meshPeersByClient = new Map<string, number>();
     const meshPeerIdStrs = new Set<string>();
 
@@ -266,9 +193,10 @@ export class Eth2Gossipsub extends Gossipsub {
       {peersMap: topics, metricsGossip: metrics.gossipTopic, type: "topics"},
     ]) {
       // Pre-aggregate results by fork so we can fill the remaining metrics with 0
-      const peersByTypeByFork = new Map2d<ForkName, GossipType, number>();
-      const peersByBeaconAttSubnetByFork = new Map2dArr<ForkName, number>();
-      const peersByBeaconSyncSubnetByFork = new Map2dArr<ForkName, number>();
+      const peersByTypeByBoundary = new Map2d<ForkBoundaryLabel, GossipType, number>();
+      const peersByBeaconAttSubnetByBoundary = new Map2dArr<ForkBoundaryLabel, number>();
+      const peersByBeaconSyncSubnetByBoundary = new Map2dArr<ForkBoundaryLabel, number>();
+      const peersByDataColumnSubnetByBoundary = new Map2dArr<ForkBoundaryLabel, number>();
 
       // loop through all mesh entries, count each set size
       for (const [topicString, peers] of peersMap) {
@@ -279,12 +207,15 @@ export class Eth2Gossipsub extends Gossipsub {
         // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
         const topic = this.gossipTopicCache.getKnownTopic(topicString);
         if (topic !== undefined) {
+          const boundary = getForkBoundaryLabel(topic.boundary);
           if (topic.type === GossipType.beacon_attestation) {
-            peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+            peersByBeaconAttSubnetByBoundary.set(boundary, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {
-            peersByBeaconSyncSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+            peersByBeaconSyncSubnetByBoundary.set(boundary, topic.subnet, peers.size);
+          } else if (topic.type === GossipType.data_column_sidecar) {
+            peersByDataColumnSubnetByBoundary.set(boundary, topic.subnet, peers.size);
           } else {
-            peersByTypeByFork.set(topic.fork, topic.type, peers.size);
+            peersByTypeByBoundary.set(boundary, topic.type, peers.size);
           }
         }
 
@@ -292,8 +223,7 @@ export class Eth2Gossipsub extends Gossipsub {
           for (const peer of peers) {
             if (!meshPeerIdStrs.has(peer)) {
               meshPeerIdStrs.add(peer);
-              const client =
-                this.peersData.connectedPeers.get(peer)?.agentClient?.toString() ?? ClientKind.Unknown.toString();
+              const client = this.peersData.connectedPeers.get(peer)?.agentClient?.toString() ?? ClientKind.Unknown;
               meshPeersByClient.set(client, (meshPeersByClient.get(client) ?? 0) + 1);
             }
           }
@@ -302,23 +232,28 @@ export class Eth2Gossipsub extends Gossipsub {
 
       // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
       // zero out all gossip type & subnet choices, so the dashboard will register them
-      for (const [fork, peersByType] of peersByTypeByFork.map) {
+      for (const [boundary, peersByType] of peersByTypeByBoundary.map) {
         for (const type of Object.values(GossipType)) {
-          metricsGossip.peersByType.set({fork, type}, peersByType.get(type) ?? 0);
+          metricsGossip.peersByType.set({boundary, type}, peersByType.get(type) ?? 0);
         }
       }
-      for (const [fork, peersByBeaconAttSubnet] of peersByBeaconAttSubnetByFork.map) {
+      for (const [boundary, peersByBeaconAttSubnet] of peersByBeaconAttSubnetByBoundary.map) {
         for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
           metricsGossip.peersByBeaconAttestationSubnet.set(
-            {fork, subnet: attSubnetLabel(subnet)},
+            {boundary, subnet: attSubnetLabel(subnet)},
             peersByBeaconAttSubnet[subnet] ?? 0
           );
         }
       }
-      for (const [fork, peersByBeaconSyncSubnet] of peersByBeaconSyncSubnetByFork.map) {
+      for (const [boundary, peersByBeaconSyncSubnet] of peersByBeaconSyncSubnetByBoundary.map) {
         for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
           // SYNC_COMMITTEE_SUBNET_COUNT is < 9, no need to prepend a 0 to the label
-          metricsGossip.peersBySyncCommitteeSubnet.set({fork, subnet}, peersByBeaconSyncSubnet[subnet] ?? 0);
+          metricsGossip.peersBySyncCommitteeSubnet.set({boundary, subnet}, peersByBeaconSyncSubnet[subnet] ?? 0);
+        }
+      }
+      for (const [boundary, peersByDataColumnSubnet] of peersByDataColumnSubnetByBoundary.map) {
+        for (const subnet of networkConfig.custodyConfig.sampleGroups) {
+          metricsGossip.peersByDataColumnSubnet.set({boundary, subnet}, peersByDataColumnSubnet[subnet] ?? 0);
         }
       }
     }
@@ -355,7 +290,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
-    const {propagationSource, msgId, msg} = event;
+    const {propagationSource, msgId, msg} = event.detail;
 
     // Also validates that the topicStr is known
     const topic = this.gossipTopicCache.getTopic(msg.topic);
@@ -363,14 +298,35 @@ export class Eth2Gossipsub extends Gossipsub {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
-    // Puts object in queue, validates, then processes
-    this.validatorFnsByType[topic.type](topic, msg, propagationSource.toString(), seenTimestampSec)
-      .then((acceptance) => {
-        this.reportMessageValidationResult(msgId, propagationSource, acceptance);
-      })
-      .catch((e) => {
-        this.logger.error("Error onGossipsubMessage", {}, e);
+    const peerIdStr = propagationSource.toString();
+    const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
+    const clientVersion = this.peersData.getAgentVersion(peerIdStr);
+
+    // Use setTimeout to yield to the macro queue
+    // Without this we'll have huge event loop lag
+    // See https://github.com/ChainSafe/lodestar/issues/5604
+    callInNextEventLoop(() => {
+      this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+        topic,
+        msg,
+        msgId,
+        // Hot path, use cached .toString() version
+        propagationSource: peerIdStr,
+        clientVersion,
+        clientAgent,
+        seenTimestampSec,
+        startProcessUnixSec: null,
       });
+    });
+  }
+
+  private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
+    // Use setTimeout to yield to the macro queue
+    // Without this we'll have huge event loop lag
+    // See https://github.com/ChainSafe/lodestar/issues/5604
+    callInNextEventLoop(() => {
+      this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
+    });
   }
 }
 
@@ -378,35 +334,50 @@ export class Eth2Gossipsub extends Gossipsub {
  * Left pad subnets to two characters. Assumes ATTESTATION_SUBNET_COUNT < 99
  * Otherwise grafana sorts the mesh peers chart as: [1,11,12,13,...]
  */
-function attSubnetLabel(subnet: number): string {
+function attSubnetLabel(subnet: SubnetID): string {
   if (subnet > 9) return String(subnet);
-  else return `0${subnet}`;
+
+  return `0${subnet}`;
 }
 
-function getMetricsTopicStrToLabel(config: IBeaconConfig): TopicStrToLabel {
+function getMetricsTopicStrToLabel(
+  networkConfig: NetworkConfig,
+  opts: {disableLightClientServer: boolean}
+): TopicStrToLabel {
+  const {config} = networkConfig;
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
-  const topics: GossipTopic[] = [];
+  const {forkBoundariesAscendingEpochOrder} = config;
 
-  for (const {name: fork} of config.forksAscendingEpochOrder) {
-    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      topics.push({fork, type: GossipType.beacon_attestation, subnet});
+  for (let i = 0; i < forkBoundariesAscendingEpochOrder.length; i++) {
+    const currentForkBoundary = forkBoundariesAscendingEpochOrder[i];
+    const nextForkBoundary = forkBoundariesAscendingEpochOrder[i + 1];
+
+    // Edge case: If multiple fork boundaries start at the same epoch, only consider the latest one
+    if (nextForkBoundary && currentForkBoundary.epoch === nextForkBoundary.epoch) {
+      continue;
     }
 
-    for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-      topics.push({fork, type: GossipType.sync_committee, subnet});
+    const topics = getCoreTopicsAtFork(networkConfig, currentForkBoundary.fork, {
+      subscribeAllSubnets: true,
+      disableLightClientServer: opts.disableLightClientServer,
+    });
+    for (const topic of topics) {
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: currentForkBoundary}), topic.type);
     }
-
-    topics.push({fork, type: GossipType.beacon_block});
-    topics.push({fork, type: GossipType.beacon_aggregate_and_proof});
-    topics.push({fork, type: GossipType.voluntary_exit});
-    topics.push({fork, type: GossipType.proposer_slashing});
-    topics.push({fork, type: GossipType.attester_slashing});
-    topics.push({fork, type: GossipType.sync_committee_contribution_and_proof});
-  }
-
-  for (const topic of topics) {
-    metricsTopicStrToLabel.set(stringifyGossipTopic(config, topic), topic.type);
   }
 
   return metricsTopicStrToLabel;
+}
+
+// Topics of the same ForkBoundary should have the same ForkBoundary object
+// we don't want to create a new string for every topic
+const boundaryLabelMap = new Map<ForkBoundary, ForkBoundaryLabel>();
+function getForkBoundaryLabel(boundary: ForkBoundary): ForkBoundaryLabel {
+  let label = boundaryLabelMap.get(boundary);
+  if (label === undefined) {
+    label = `${boundary.fork}_${boundary.epoch}`;
+    boundaryLabelMap.set(boundary, label);
+  }
+
+  return label;
 }

@@ -1,28 +1,24 @@
 import path from "node:path";
-import rimraf from "rimraf";
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
-import {DeletionStatus, getClient, ImportStatus} from "@lodestar/api/keymanager";
+import {rimraf} from "rimraf";
+import {beforeAll, describe, expect, it, onTestFinished, vi} from "vitest";
+import {HttpStatusCode} from "@lodestar/api";
+import {DeletionStatus, ImportStatus, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
+import {bufferStderr, getKeystoresStr, spawnCliCommand} from "@lodestar/test-utils";
 import {Interchange} from "@lodestar/validator";
-import {testFilesDir} from "../utils.js";
-import {bufferStderr, describeCliTest} from "../utils/childprocRunner.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
-import {expectDeepEquals, getAfterEachCallbacks} from "../utils/runUtils.js";
-import {expectKeys, getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
-import {getKeystoresStr} from "../utils/keystores.js";
+import {expectDeepEquals} from "../utils/runUtils.js";
+import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
+import {testFilesDir} from "../utils.js";
 
-chai.use(chaiAsPromised);
+describe("import keystores from api", () => {
+  vi.setConfig({testTimeout: 30_000});
 
-describeCliTest("import keystores from api", function ({spawnCli}) {
   const dataDir = path.join(testFilesDir, "import-keystores-test");
 
-  before("Clean dataDir", () => {
+  beforeAll(() => {
     rimraf.sync(dataDir);
   });
-
-  const afterEachCallbacks = getAfterEachCallbacks();
-  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, dataDir});
 
   /** Generated from  const sk = bls.SecretKey.fromKeygen(Buffer.alloc(32, 0xaa)); */
   const passphrase = "AAAAAAAA0000000000";
@@ -33,16 +29,35 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
 
   const genesisValidatorsRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
   const slashingProtection: Interchange = {
-    /* eslint-disable @typescript-eslint/naming-convention */
     metadata: {
       interchange_format_version: "5",
       genesis_validators_root: genesisValidatorsRoot,
     },
     data: [],
   };
+
+  /** From multiple tries, 20_000 results in a JSON of ~ 3MB */
+  const SLASHING_PROTECTION_ENTRIES = 20_000;
+  for (let i = 0; i < SLASHING_PROTECTION_ENTRIES; i++) {
+    slashingProtection.data.push({
+      pubkey: "0x" + String(i).padStart(96, "0"),
+      signed_blocks: [],
+      signed_attestations: [],
+    });
+    // // Uncomment to test if size is correct
+    // if (i % 100 === 0) {
+    //   console.log(i, Buffer.from(JSON.stringify(slashingProtection), "utf8").length / 1e6);
+    // }
+  }
+
   const slashingProtectionStr = JSON.stringify(slashingProtection);
 
-  itKeymanagerStep("run 'validator' and import remote keys from API", async function (keymanagerClient) {
+  it("run 'validator' and import remote keys from API", async () => {
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
+    onTestFinished(async () => {
+      await stopValidator();
+    });
+
     // Produce and encrypt keystores
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
 
@@ -50,9 +65,13 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     await expectKeys(keymanagerClient, [], "Wrong listKeys before importing");
 
     // Import test keys
-    const importRes = await keymanagerClient.importKeystores(keystoresStr, passphrases, slashingProtectionStr);
+    const importRes = await keymanagerClient.importKeystores({
+      keystores: keystoresStr,
+      passwords: passphrases,
+      slashingProtection: slashingProtectionStr,
+    });
     expectDeepEquals(
-      importRes.data,
+      importRes.value(),
       pubkeys.map(() => ({status: ImportStatus.imported})),
       "Wrong importKeystores response"
     );
@@ -61,30 +80,32 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys after importing");
 
     // Attempt to import the same keys again
-    const importAgainRes = await keymanagerClient.importKeystores(keystoresStr, passphrases, slashingProtectionStr);
+    const importAgainRes = await keymanagerClient.importKeystores({
+      keystores: keystoresStr,
+      passwords: passphrases,
+      slashingProtection: slashingProtectionStr,
+    });
     expectDeepEquals(
-      importAgainRes.data,
+      importAgainRes.value(),
       pubkeys.map(() => ({status: ImportStatus.duplicate})),
       "Wrong importKeystores again response"
     );
 
     // Attempt to run a second process and expect the keystore lock to throw
-    const vcProc2 = spawnCli([
-      // ⏎
-      "validator",
-      `--dataDir=${dataDir}`,
-    ]);
+    const validator = await spawnCliCommand("packages/cli/bin/lodestar.js", ["validator", "--dataDir", dataDir], {
+      logPrefix: "vc-2",
+    });
 
     await new Promise<void>((resolve, reject) => {
       // logger.error is printed to stdout, Yargs errors are printed in stderr
-      const vcProc2Stderr = bufferStderr(vcProc2);
-      vcProc2.on("exit", (code) => {
+      const vcProc2Stderr = bufferStderr(validator);
+      validator.on("exit", (code) => {
         if (code !== null && code > 0) {
           // process should exit with code > 0, and an error related to locks. Sample error:
-          // vc 351591:  ✖ Error: EEXIST: file already exists, open '/tmp/tmp-351554-dMctEAj7sJIz/import-keystores-test/keystores/0x8be678633e927aa0435addad5dcd5283fef6110d91362519cd6d43e61f6c017d724fa579cc4b2972134e050b6ba120c0/voting-keystore.json.lock'
-          // at Object.openSync (node:fs:585:3)
-          // at Module.exports.lockSync (/home/lion/Code/eth2.0/lodestar/node_modules/lockfile/lockfile.js:277:17)
-          if (/EEXIST.*voting-keystore\.json\.lock/.test(vcProc2Stderr.read())) {
+          // vc 351591:  ✖ Error: '/tmp/tmp-5080-lwNxdM5Ok9ya/import-keystores-test/keystores/0x8be678633e927aa0435addad5dcd5283fef6110d91362519cd6d43e61f6c017d724fa579cc4b2972134e050b6ba120c0/voting-keystore.json' already in use by another process
+          // at /home/runner/actions-runner/_work/lodestar/lodestar/node_modules/proper-lockfile/lib/lockfile.js:68:47
+          // ... more stack trace
+          if (/Error.*voting-keystore\.json' already in use by another process/.test(vcProc2Stderr.read())) {
             resolve();
           } else {
             reject(Error(`Second validator proc exited with unknown error. stderr:\n${vcProc2Stderr.read()}`));
@@ -96,14 +117,18 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     });
   });
 
-  itKeymanagerStep("run 'validator' check keys are loaded + delete", async function (keymanagerClient) {
+  it("run 'validator' check keys are loaded + delete", async () => {
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
+    onTestFinished(async () => {
+      await stopValidator();
+    });
     // Check that keys imported in previous it() are still there
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys before deleting");
 
     // Delete keys
-    const deleteRes = await keymanagerClient.deleteKeys(pubkeys);
+    const deleteRes = await keymanagerClient.deleteKeys({pubkeys});
     expectDeepEquals(
-      deleteRes.data,
+      deleteRes.value().statuses,
       pubkeys.map(() => ({status: DeletionStatus.deleted})),
       "Wrong deleteKeys response"
     );
@@ -112,13 +137,28 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     await expectKeys(keymanagerClient, [], "Wrong listKeys after deleting");
   });
 
-  itKeymanagerStep("different process check no keys are loaded", async function (keymanagerClient) {
+  it("different process check no keys are loaded", async () => {
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
+    onTestFinished(async () => {
+      await stopValidator();
+    });
+
     // After deleting there should be no keys
     await expectKeys(keymanagerClient, [], "Wrong listKeys");
   });
 
-  itKeymanagerStep("reject calls without bearerToken", async function (_, {keymanagerUrl}) {
-    const keymanagerClientNoAuth = getClient({baseUrl: keymanagerUrl, bearerToken: undefined}, {config});
-    await expect(keymanagerClientNoAuth.listRemoteKeys()).to.rejectedWith("Unauthorized");
+  it("reject calls without bearerToken", async () => {
+    const {stopValidator} = await startValidatorWithKeyManager([], {dataDir});
+    onTestFinished(async () => {
+      await stopValidator();
+    });
+
+    const keymanagerClientNoAuth = getClient(
+      {baseUrl: "http://localhost:38011", globalInit: {bearerToken: undefined}},
+      {config}
+    );
+    const res = await keymanagerClientNoAuth.listRemoteKeys();
+    expect(res.ok).toBe(false);
+    expect(res.status).toEqual(HttpStatusCode.UNAUTHORIZED);
   });
 });

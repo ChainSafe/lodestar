@@ -1,0 +1,56 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`forkName > should have valid allForks 1`] = `
+[
+  "phase0",
+  "altair",
+  "bellatrix",
+  "capella",
+  "deneb",
+  "electra",
+  "fulu",
+  "gloas",
+]
+`;
+
+exports[`forkName > should have valid post-altair forks 1`] = `
+[
+  "altair",
+  "bellatrix",
+  "capella",
+  "deneb",
+  "electra",
+  "fulu",
+  "gloas",
+]
+`;
+
+exports[`forkName > should have valid post-bellatrix forks 1`] = `
+[
+  "bellatrix",
+  "capella",
+  "deneb",
+  "electra",
+  "fulu",
+  "gloas",
+]
+`;
+
+exports[`forkName > should have valid post-capella forks 1`] = `
+[
+  "capella",
+  "deneb",
+  "electra",
+  "fulu",
+  "gloas",
+]
+`;
+
+exports[`forkName > should have valid post-deneb forks 1`] = `
+[
+  "deneb",
+  "electra",
+  "fulu",
+  "gloas",
+]
+`;

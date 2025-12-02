@@ -1,11 +1,12 @@
-import {ssz} from "@lodestar/types";
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
-import {newZeroedArray, RootCache} from "../util/index.js";
+import {ForkSeq} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {getAttestationParticipationStatus} from "../block/processAttestationsAltair.js";
+import {getCachedBeaconState} from "../cache/stateCache.js";
+import {CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../types.js";
+import {RootCache, newZeroedArray} from "../util/index.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
-import {getCachedBeaconState} from "../cache/stateCache.js";
-import {getAttestationParticipationStatus} from "../block/processAttestationsAltair.js";
 
 /**
  * Upgrade a state from phase0 to altair.
@@ -69,8 +70,9 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   stateAltair.inactivityScores = ssz.altair.InactivityScores.toViewDU(newZeroedArray(validatorCount));
 
   const {syncCommittee, indices} = getNextSyncCommittee(
+    ForkSeq.altair,
     stateAltair,
-    stateAltair.epochCtx.nextShuffling.activeIndices,
+    stateAltair.epochCtx.nextActiveIndices,
     stateAltair.epochCtx.effectiveBalanceIncrements
   );
   const syncCommitteeView = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
@@ -90,15 +92,16 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   //
   // TODO: This could only drop the caches of index 15,16. However this would couple this code tightly with SSZ ViewDU
   //       internals. If the cache is not cleared, consuming the ViewDU instance could break in strange ways.
+  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateAltair["clearCache"]();
 
   // TODO: describe issue. Compute progressive target balances
   //
-  // Note: in EpochContext.afterProcessEpoch previousTargetUnslashedBalanceIncrements is overwritten,
+  // Note: in EpochCache.afterProcessEpoch previousTargetUnslashedBalanceIncrements is overwritten,
   //       currentTargetUnslashedBalanceIncrements is rotated to previousTargetUnslashedBalanceIncrements
   //
   // Here target balance is computed in full, which is slightly less performant than doing so in the loop
-  // above but gurantees consistency with EpochContext.createFromState(). Note execution order below:
+  // above but gurantees consistency with EpochCache.createFromState(). Note execution order below:
   // ```
   // processEpoch()
   // epochCtx.afterProcessEpoch()
@@ -128,6 +131,7 @@ function translateParticipation(
   for (const attestation of pendingAttesations.getAllReadonly()) {
     const data = attestation.data;
     const attestationFlags = getAttestationParticipationStatus(
+      ForkSeq.altair,
       data,
       attestation.inclusionDelay,
       epochCtx.epoch,

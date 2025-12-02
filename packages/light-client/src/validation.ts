@@ -1,20 +1,32 @@
-import {altair, Root, Slot, ssz} from "@lodestar/types";
-import bls from "@chainsafe/bls/switchable";
+import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
+import {BeaconConfig} from "@lodestar/config";
 import {
-  FINALIZED_ROOT_INDEX,
-  FINALIZED_ROOT_DEPTH,
-  NEXT_SYNC_COMMITTEE_INDEX,
-  NEXT_SYNC_COMMITTEE_DEPTH,
-  MIN_SYNC_COMMITTEE_PARTICIPANTS,
   DOMAIN_SYNC_COMMITTEE,
+  FINALIZED_ROOT_DEPTH,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  FINALIZED_ROOT_INDEX,
+  FINALIZED_ROOT_INDEX_ELECTRA,
+  MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  NEXT_SYNC_COMMITTEE_DEPTH,
+  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
+  NEXT_SYNC_COMMITTEE_INDEX,
+  NEXT_SYNC_COMMITTEE_INDEX_ELECTRA,
 } from "@lodestar/params";
-import {IBeaconConfig} from "@lodestar/config";
-import {routes} from "@lodestar/api";
-import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
-import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
+import {
+  LightClientFinalityUpdate,
+  LightClientUpdate,
+  Root,
+  Slot,
+  altair,
+  isELectraLightClientFinalityUpdate,
+  isElectraLightClientUpdate,
+  ssz,
+} from "@lodestar/types";
 import {SyncCommitteeFast} from "./types.js";
 import {computeSyncPeriodAtSlot} from "./utils/clock.js";
+import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
+import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 
 /**
  *
@@ -23,9 +35,9 @@ import {computeSyncPeriodAtSlot} from "./utils/clock.js";
  * @param update the light client update for validation
  */
 export function assertValidLightClientUpdate(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   syncCommittee: SyncCommitteeFast,
-  update: altair.LightClientUpdate
+  update: LightClientUpdate
 ): void {
   // DIFF FROM SPEC: An update with the same header.slot can be valid and valuable to the lightclient
   // It may have more consensus and result in a better snapshot whilst not advancing the state
@@ -36,11 +48,15 @@ export function assertValidLightClientUpdate(
   // }
 
   // Verify update header root is the finalized root of the finality header, if specified
-  const isFinalized = !isEmptyHeader(update.finalizedHeader);
+  const isFinalized = !isEmptyHeader(update.finalizedHeader.beacon);
   if (isFinalized) {
     assertValidFinalityProof(update);
   } else {
-    assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_DEPTH, "finalityBranches");
+    assertZeroHashes(
+      update.finalityBranch,
+      isElectraLightClientUpdate(update) ? FINALIZED_ROOT_DEPTH_ELECTRA : FINALIZED_ROOT_DEPTH,
+      "finalityBranches"
+    );
   }
 
   // DIFF FROM SPEC:
@@ -49,8 +65,8 @@ export function assertValidLightClientUpdate(
   assertValidSyncCommitteeProof(update);
 
   const {attestedHeader} = update;
-  const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
-  assertValidSignedHeader(config, syncCommittee, update.syncAggregate, headerBlockRoot, attestedHeader.slot);
+  const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader.beacon);
+  assertValidSignedHeader(config, syncCommittee, update.syncAggregate, headerBlockRoot, attestedHeader.beacon.slot);
 }
 
 /**
@@ -65,21 +81,28 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: routes.lightclient.LightclientFinalizedUpdate): void {
+export function assertValidFinalityProof(update: LightClientFinalityUpdate): void {
+  const finalizedRootDepth = isELectraLightClientFinalityUpdate(update)
+    ? FINALIZED_ROOT_DEPTH_ELECTRA
+    : FINALIZED_ROOT_DEPTH;
+  const finalizedRootIndex = isELectraLightClientFinalityUpdate(update)
+    ? FINALIZED_ROOT_INDEX_ELECTRA
+    : FINALIZED_ROOT_INDEX;
+
   if (
     !isValidMerkleBranch(
-      ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),
+      ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader.beacon),
       update.finalityBranch,
-      FINALIZED_ROOT_DEPTH,
-      FINALIZED_ROOT_INDEX,
-      update.attestedHeader.stateRoot
+      finalizedRootDepth,
+      finalizedRootIndex,
+      update.attestedHeader.beacon.stateRoot
     )
   ) {
     throw Error("Invalid finality header merkle branch");
   }
 
-  const updatePeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
-  const updateFinalityPeriod = computeSyncPeriodAtSlot(update.finalizedHeader.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(update.attestedHeader.beacon.slot);
+  const updateFinalityPeriod = computeSyncPeriodAtSlot(update.finalizedHeader.beacon.slot);
   if (updateFinalityPeriod !== updatePeriod) {
     throw Error(`finalityHeader period ${updateFinalityPeriod} != header period ${updatePeriod}`);
   }
@@ -95,14 +118,14 @@ export function assertValidFinalityProof(update: routes.lightclient.LightclientF
  *
  * Where `hashTreeRoot(state) == update.header.stateRoot`
  */
-export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate): void {
+export function assertValidSyncCommitteeProof(update: LightClientUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
       update.nextSyncCommitteeBranch,
-      NEXT_SYNC_COMMITTEE_DEPTH,
-      NEXT_SYNC_COMMITTEE_INDEX,
-      update.attestedHeader.stateRoot
+      isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA : NEXT_SYNC_COMMITTEE_DEPTH,
+      isElectraLightClientUpdate(update) ? NEXT_SYNC_COMMITTEE_INDEX_ELECTRA : NEXT_SYNC_COMMITTEE_INDEX,
+      update.attestedHeader.beacon.stateRoot
     )
   ) {
     throw Error("Invalid next sync committee merkle branch");
@@ -125,7 +148,7 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
  * @param signedHeaderRoot Takes header root instead of the head itself to prevent re-hashing on SSE
  */
 export function assertValidSignedHeader(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   syncCommittee: SyncCommitteeFast,
   syncAggregate: altair.SyncAggregate,
   signedHeaderRoot: Root,

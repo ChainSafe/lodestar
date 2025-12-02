@@ -1,22 +1,29 @@
-import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {ProtoBlock, IForkChoice, ExecutionStatus} from "@lodestar/fork-choice";
-import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
-import {phase0, Slot, ssz} from "@lodestar/types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {config} from "@lodestar/config/default";
-import {IBeaconConfig} from "@lodestar/config";
-import {IBeaconChain} from "../../../src/chain/index.js";
-import {IStateRegenerator} from "../../../src/chain/regen/index.js";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
+import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
+import {
+  DataAvailabilityStatus,
+  computeEpochAtSlot,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+} from "@lodestar/state-transition";
+import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
 } from "../../../../state-transition/test/perf/util.js";
+import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
+import {IBeaconChain} from "../../../src/chain/index.js";
+import {defaultChainOptions} from "../../../src/chain/options.js";
+import {IStateRegenerator} from "../../../src/chain/regen/index.js";
 import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
-import {BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
+import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
+import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
+import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
-import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
+import {testLogger} from "../logger.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -25,21 +32,26 @@ export type AttestationValidDataOpts = {
   bitIndex?: number;
   targetRoot?: Uint8Array;
   beaconBlockRoot?: Uint8Array;
+  blsVerifyAllMainThread?: boolean;
   state: ReturnType<typeof generateTestCachedBeaconStateOnlyValidators>;
 };
 
 /**
  * Generate a valid gossip Attestation object. Common logic for unit and perf tests
  */
-export function getAttestationValidData(
-  opts: AttestationValidDataOpts
-): {chain: IBeaconChain; attestation: phase0.Attestation; subnet: number; validatorIndex: number} {
+export function getAttestationValidData(opts: AttestationValidDataOpts): {
+  chain: IBeaconChain;
+  attestation: phase0.Attestation;
+  subnet: SubnetID;
+  validatorIndex: number;
+} {
   const currentSlot = opts.currentSlot ?? 100;
   const attSlot = opts.attSlot ?? currentSlot;
   const attIndex = opts.attIndex ?? 0;
   const bitIndex = opts.bitIndex ?? 0;
   const targetRoot = opts.targetRoot ?? ZERO_HASH;
   const beaconBlockRoot = opts.beaconBlockRoot ?? ZERO_HASH;
+  const blsVerifyAllMainThread = opts.blsVerifyAllMainThread ?? true;
   // Create cached state
   const state = opts.state;
 
@@ -62,9 +74,28 @@ export function getAttestationValidData(
     unrealizedFinalizedEpoch: 0,
     unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
+    timeliness: false,
+
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
-  const forkChoice = ({
+
+  const shufflingCache = new ShufflingCache(null, null, {}, [
+    {
+      shuffling: state.epochCtx.previousShuffling,
+      decisionRoot: state.epochCtx.previousDecisionRoot,
+    },
+    {
+      shuffling: state.epochCtx.currentShuffling,
+      decisionRoot: state.epochCtx.currentDecisionRoot,
+    },
+    {
+      shuffling: state.epochCtx.nextShuffling,
+      decisionRoot: state.epochCtx.nextDecisionRoot,
+    },
+  ]);
+
+  const forkChoice = {
     getBlock: (root) => {
       if (!ssz.Root.equals(root, beaconBlockRoot)) return null;
       return headBlock;
@@ -73,7 +104,8 @@ export function getAttestationValidData(
       if (rootHex !== toHexString(beaconBlockRoot)) return null;
       return headBlock;
     },
-  } as Partial<IForkChoice>) as IForkChoice;
+    getDependentRoot: () => state.epochCtx.currentDecisionRoot,
+  } as Partial<IForkChoice> as IForkChoice;
 
   const committeeIndices = state.epochCtx.getBeaconCommittee(attSlot, attIndex);
   const validatorIndex = committeeIndices[bitIndex];
@@ -106,20 +138,28 @@ export function getAttestationValidData(
   const subnet = state.epochCtx.computeSubnetForSlot(attSlot, attIndex);
 
   // Add state to regen
-  const regen = ({
+  const regen = {
     getState: async () => state,
-  } as Partial<IStateRegenerator>) as IStateRegenerator;
+    // TODO: remove this once we have a better way to get state
+    getStateSync: () => state,
+  } as Partial<IStateRegenerator> as IStateRegenerator;
 
-  const chain = ({
+  const chain = {
     clock,
-    config: config as IBeaconConfig,
+    config: state.config,
     forkChoice,
     regen,
     seenAttesters: new SeenAttesters(),
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
-    bls: new BlsSingleThreadVerifier({metrics: null}),
-    waitForBlockOfAttestation: () => Promise.resolve(false),
-  } as Partial<IBeaconChain>) as IBeaconChain;
+    seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
+    bls: blsVerifyAllMainThread
+      ? new BlsSingleThreadVerifier({metrics: null})
+      : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
+    waitForBlock: () => Promise.resolve(false),
+    index2pubkey: state.epochCtx.index2pubkey,
+    shufflingCache,
+    opts: defaultChainOptions,
+  } as Partial<IBeaconChain> as IBeaconChain;
 
   return {chain, attestation, subnet, validatorIndex};
 }

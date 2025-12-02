@@ -1,13 +1,11 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {expect} from "chai";
-import {config} from "@lodestar/config/default";
-import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
+import {beforeAll, describe, expect, it} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {routes} from "../../../src/beacon/index.js";
-import {ReqSerializers} from "../../../src/utils/types.js";
-import {Schema} from "../../../src/utils/schema.js";
-import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
+import {IgnoredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
+import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 // Import all testData and merge below
 import {testData as beaconTestData} from "./testData/beacon.js";
 import {testData as configTestData} from "./testData/config.js";
@@ -15,56 +13,31 @@ import {testData as debugTestData} from "./testData/debug.js";
 import {eventTestData, testData as eventsTestData} from "./testData/events.js";
 import {testData as lightclientTestData} from "./testData/lightclient.js";
 import {testData as nodeTestData} from "./testData/node.js";
+import {testData as proofsTestData} from "./testData/proofs.js";
 import {testData as validatorTestData} from "./testData/validator.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v2.3.0";
+const version = "v4.0.0-alpha.1";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
 
-const routesData = {
-  ...routes.beacon.routesData,
-  ...routes.config.routesData,
-  ...routes.debug.routesData,
-  ...routes.events.routesData,
-  ...routes.lightclient.routesData,
-  ...routes.node.routesData,
-  ...routes.validator.routesData,
-};
+const config = createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0});
 
-// Additional definition not used in production
-const getEventsReqSerializers = (): ReqSerializers<routes.events.Api, routes.events.ReqTypes> => ({
-  eventstream: {
-    writeReq: (topics) => ({query: {topics}}),
-    parseReq: ({query}) => [query.topics, null as any, null as any],
-    schema: {query: {topics: Schema.StringArray}},
-  },
-});
-
-const reqSerializers = {
-  ...routes.beacon.getReqSerializers(config),
-  ...routes.config.getReqSerializers(),
-  ...routes.debug.getReqSerializers(),
-  ...getEventsReqSerializers(),
-  ...routes.lightclient.getReqSerializers(),
-  ...routes.node.getReqSerializers(),
-  ...routes.validator.getReqSerializers(),
-};
-
-const returnTypes = {
-  ...routes.beacon.getReturnTypes(),
-  ...routes.config.getReturnTypes(),
-  ...routes.debug.getReturnTypes(),
-  ...routes.lightclient.getReturnTypes(),
-  ...routes.node.getReturnTypes(),
-  ...routes.validator.getReturnTypes(),
+const definitions = {
+  ...routes.beacon.getDefinitions(config),
+  ...routes.config.getDefinitions(config),
+  ...routes.debug.getDefinitions(config),
+  ...routes.events.getDefinitions(config),
+  ...routes.lightclient.getDefinitions(config),
+  ...routes.node.getDefinitions(config),
+  ...routes.proof.getDefinitions(config),
+  ...routes.validator.getDefinitions(config),
 };
 
 const testDatas = {
@@ -74,14 +47,28 @@ const testDatas = {
   ...eventsTestData,
   ...lightclientTestData,
   ...nodeTestData,
+  ...proofsTestData,
   ...validatorTestData,
 };
 
+const ignoredOperations = [
+  /* missing route */
+  "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
+  "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
+];
+
+const ignoredProperties: Record<string, IgnoredProperty> = {
+  /* 
+   https://github.com/ChainSafe/lodestar/issues/6168
+   /query/syncing_status - must be integer
+   */
+  getHealth: {request: ["query.syncing_status"]},
+};
+
 const openApiJson = await fetchOpenApiSpec(openApiFile);
-runTestCheckAgainstSpec(openApiJson, routesData, reqSerializers, returnTypes, testDatas, {
-  // TODO: Investigate why schema validation fails otherwise
-  routesDropOneOf: ["produceBlockV2", "produceBlindedBlock", "publishBlindedBlock"],
-});
+runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
+
+const ignoredTopics: string[] = [];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:
@@ -95,20 +82,22 @@ describe("eventstream event data", () => {
   //     "value": "event: head\ndata: {\"slot\":\"10\", \"block\":\"0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf\", \"state\":\"0x600e852a08c1200654ddf11025f1ceacb3c2e74bdd5c630cde0838b2591b69f9\", \"epoch_transition\":false, \"previous_duty_dependent_root\":\"0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91\", \"current_duty_dependent_root\":\"0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91\", \"execution_optimistic\": false}\n"
   //   }, ... }
   const eventstreamExamples =
-    openApiJson.paths["/eth/v1/events"]["get"].responses["200"].content?.["text/event-stream"].examples;
+    openApiJson.paths["/eth/v1/events"]["get"].responses["200"]?.content?.["text/event-stream"].examples;
 
-  before("Check eventstreamExamples exists", () => {
+  beforeAll(() => {
     if (!eventstreamExamples) {
       throw Error(`eventstreamExamples not defined: ${eventstreamExamples}`);
     }
   });
 
-  const eventSerdes = routes.events.getEventSerdes();
-  const knownTopics = Object.values(routes.events.EventType) as string[];
+  const eventSerdes = routes.events.getEventSerdes(config);
+  const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
-  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {})) {
+  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {}).filter(
+    ([topic]) => !ignoredTopics.includes(topic)
+  )) {
     it(topic, () => {
-      if (!knownTopics.includes(topic)) {
+      if (!knownTopics.has(topic)) {
         throw Error(`topic ${topic} not implemented`);
       }
 
@@ -123,13 +112,12 @@ describe("eventstream event data", () => {
       if (testEvent == null) {
         throw Error(`No eventTestData for ${topic}`);
       }
-
       const testEventJson = eventSerdes.toJson({
         type: topic as routes.events.EventType,
         message: testEvent,
       } as routes.events.BeaconEvent);
 
-      expect(testEventJson).deep.equals(exampleDataJson, `eventTestData[${topic}] does not match spec's example`);
+      expect(testEventJson).toEqual(exampleDataJson);
     });
   }
 });

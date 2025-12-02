@@ -1,9 +1,6 @@
 import {RootHex} from "@lodestar/types";
-import {bytesToBigInt, bigIntToBytes} from "@lodestar/utils";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {bigIntToBytes, bytesToBigInt, fromHex, fromHexInto, toHex} from "@lodestar/utils";
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
 export type QUANTITY = string;
@@ -21,7 +18,9 @@ export function isJsonRpcTruncatedError(error: Error): boolean {
     // Truncated responses usually get as 200 but since it's truncated the JSON will be invalid
     error instanceof ErrorParseJson ||
     // Otherwise guess Infura error message of too many events
-    (error instanceof Error && error.message.includes("query returned more than 10000 results"))
+    (error instanceof Error && error.message.includes("query returned more than 10000 results")) ||
+    // Nethermind enforces limits on JSON RPC batch calls
+    (error instanceof Error && error.message.toLowerCase().includes("batch size limit exceeded"))
   );
 }
 
@@ -32,7 +31,7 @@ export function bytesToHex(bytes: Uint8Array): string {
     return "0x" + bytes[0].toString(16);
   }
 
-  return toHexString(bytes);
+  return toHex(bytes);
 }
 
 /**
@@ -54,7 +53,7 @@ export function numToQuantity(num: number | bigint): QUANTITY {
  */
 export function quantityToNum(hex: QUANTITY, id = ""): number {
   const num = parseInt(hex, 16);
-  if (isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
+  if (Number.isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
   return num;
 }
 
@@ -83,7 +82,7 @@ export function quantityToBytes(hex: QUANTITY): Uint8Array {
  * Compress a 32 ByteVector into a QUANTITY
  */
 export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
-  const bn = bytesToBigInt(bytes as Uint8Array, "le");
+  const bn = bytesToBigInt(bytes, "le");
   return numToQuantity(bn);
 }
 
@@ -100,16 +99,16 @@ export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
  * - WRONG: 004200 (must be prefixed 0x)
  */
 export function bytesToData(bytes: Uint8Array): DATA {
-  return toHexString(bytes);
+  return toHex(bytes);
 }
 
 /**
  * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
  */
-export function dataToBytes(hex: DATA, fixedLength?: number): Uint8Array {
+export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
   try {
-    const bytes = fromHexString(hex);
-    if (fixedLength !== undefined && bytes.length !== fixedLength) {
+    const bytes = fromHex(hex);
+    if (fixedLength != null && bytes.length !== fixedLength) {
       throw Error(`Wrong data length ${bytes.length} expected ${fixedLength}`);
     }
     return bytes;
@@ -117,6 +116,15 @@ export function dataToBytes(hex: DATA, fixedLength?: number): Uint8Array {
     (e as Error).message = `Invalid hex string: ${(e as Error).message}`;
     throw e;
   }
+}
+
+/**
+ * Convert DATA into a preallocated buffer
+ * fromHexInto will throw if buffer's length is not the same as the decoded hex length
+ */
+export function dataIntoBytes(hex: DATA, buffer: Uint8Array): Uint8Array {
+  fromHexInto(hex, buffer);
+  return buffer;
 }
 
 /**

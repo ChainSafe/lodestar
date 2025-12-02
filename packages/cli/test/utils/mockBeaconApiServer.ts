@@ -1,7 +1,7 @@
-import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
-import {registerRoutes} from "@lodestar/api/beacon/server";
-import {Api, allNamespaces} from "@lodestar/api";
-import {IChainForkConfig} from "@lodestar/config";
+import {allNamespaces} from "@lodestar/api";
+import {BeaconApiMethods, registerRoutes} from "@lodestar/api/beacon/server";
+import {RestApiServer, RestApiServerModules, RestApiServerOpts} from "@lodestar/beacon-node";
+import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
@@ -9,12 +9,21 @@ import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 
 const ZERO_HASH_HEX = toHex(Buffer.alloc(32, 0));
 
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
+
 export type MockBeaconApiOpts = {
   genesisValidatorsRoot?: string;
 };
 
 class MockBeaconRestApiServer extends RestApiServer {
-  constructor(optsArg: RestApiServerOpts, modules: RestApiServerModules, config: IChainForkConfig, api: Api) {
+  constructor(
+    optsArg: RestApiServerOpts,
+    modules: RestApiServerModules,
+    config: ChainForkConfig,
+    api: BeaconApiMethods
+  ) {
     super(optsArg, modules);
 
     // Instantiate and register the routes with matching namespace in `opts.api`
@@ -23,7 +32,7 @@ class MockBeaconRestApiServer extends RestApiServer {
 }
 
 export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBeaconApiOpts): MockBeaconRestApiServer {
-  const api = ({
+  const api = {
     beacon: {
       // Return random genesis data, for genesisValidatorsRoot
       async getGenesis() {
@@ -36,16 +45,19 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
 
       // Return empty to never discover the validators
       async getStateValidators() {
-        return {data: [], executionOptimistic: false};
+        return {data: [], executionOptimistic: false, finalized: false};
       },
-    } as Partial<Api["beacon"]>,
+      async postStateValidators() {
+        return {data: [], executionOptimistic: false, finalized: false};
+      },
+    },
 
     config: {
       // Return empty spec to skip config validation
       async getSpec() {
         return {data: {}};
       },
-    } as Partial<Api["config"]>,
+    },
 
     events: {
       eventstream() {
@@ -60,11 +72,11 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
       async prepareBeaconProposer() {
         // Do nothing
       },
-    } as Partial<Api["validator"]>,
-  } as Partial<Api>) as Api;
+    },
+  } as DeepPartial<BeaconApiMethods>;
 
   const logger = testLogger("mock-beacon-api");
-  const restApiServer = new MockBeaconRestApiServer(opts, {logger, metrics: null}, config, api);
+  const restApiServer = new MockBeaconRestApiServer(opts, {logger, metrics: null}, config, api as BeaconApiMethods);
 
   return restApiServer;
 }

@@ -1,209 +1,175 @@
-import {ForkName} from "@lodestar/params";
-import {allForks, phase0, ssz, Slot} from "@lodestar/types";
+import {Type} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkName, ForkPostAltair, isForkPostAltair} from "@lodestar/params";
+import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
+import {
+  LightClientBootstrap,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  Metadata,
+  Root,
+  SignedBeaconBlock,
+  Status,
+  altair,
+  deneb,
+  fulu,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
+import {
+  BeaconBlocksByRootRequest,
+  BeaconBlocksByRootRequestType,
+  BlobSidecarsByRootRequest,
+  BlobSidecarsByRootRequestType,
+  DataColumnSidecarsByRootRequest,
+  DataColumnSidecarsByRootRequestType,
+} from "../../util/types.js";
 
-export const protocolPrefix = "/eth2/beacon_chain/req";
+export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
-/** ReqResp protocol names or methods. Each Method can have multiple versions and encodings */
-export enum Method {
+/** ReqResp protocol names or methods. Each ReqRespMethod can have multiple versions and encodings */
+export enum ReqRespMethod {
+  // Phase 0
   Status = "status",
   Goodbye = "goodbye",
   Ping = "ping",
   Metadata = "metadata",
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
+  BlobSidecarsByRange = "blob_sidecars_by_range",
+  BlobSidecarsByRoot = "blob_sidecars_by_root",
+  DataColumnSidecarsByRange = "data_column_sidecars_by_range",
+  DataColumnSidecarsByRoot = "data_column_sidecars_by_root",
+  LightClientBootstrap = "light_client_bootstrap",
+  LightClientUpdatesByRange = "light_client_updates_by_range",
+  LightClientFinalityUpdate = "light_client_finality_update",
+  LightClientOptimisticUpdate = "light_client_optimistic_update",
 }
 
-/** RPC Versions */
-export enum Version {
-  V1 = "1",
-  V2 = "2",
-}
-
-/**
- * Available request/response encoding strategies:
- * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#encoding-strategies
- */
-export enum Encoding {
-  SSZ_SNAPPY = "ssz_snappy",
-}
-
-export type Protocol = {
-  method: Method;
-  version: Version;
-  encoding: Encoding;
+// To typesafe events to network
+export type RequestBodyByMethod = {
+  [ReqRespMethod.Status]: Status;
+  [ReqRespMethod.Goodbye]: phase0.Goodbye;
+  [ReqRespMethod.Ping]: phase0.Ping;
+  [ReqRespMethod.Metadata]: null;
+  [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
+  [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequest;
+  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
+  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
+  [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequest;
+  [ReqRespMethod.LightClientBootstrap]: Root;
+  [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
+  [ReqRespMethod.LightClientFinalityUpdate]: null;
+  [ReqRespMethod.LightClientOptimisticUpdate]: null;
 };
 
-export const protocolsSupported: [Method, Version, Encoding][] = [
-  [Method.Status, Version.V1, Encoding.SSZ_SNAPPY],
-  [Method.Goodbye, Version.V1, Encoding.SSZ_SNAPPY],
-  [Method.Ping, Version.V1, Encoding.SSZ_SNAPPY],
-  [Method.Metadata, Version.V1, Encoding.SSZ_SNAPPY],
-  [Method.Metadata, Version.V2, Encoding.SSZ_SNAPPY],
-  [Method.BeaconBlocksByRange, Version.V1, Encoding.SSZ_SNAPPY],
-  [Method.BeaconBlocksByRange, Version.V2, Encoding.SSZ_SNAPPY],
-  [Method.BeaconBlocksByRoot, Version.V1, Encoding.SSZ_SNAPPY],
-  [Method.BeaconBlocksByRoot, Version.V2, Encoding.SSZ_SNAPPY],
-];
+type ResponseBodyByMethod = {
+  [ReqRespMethod.Status]: Status;
+  [ReqRespMethod.Goodbye]: phase0.Goodbye;
+  [ReqRespMethod.Ping]: phase0.Ping;
+  [ReqRespMethod.Metadata]: Metadata;
+  // Do not matter
+  [ReqRespMethod.BeaconBlocksByRange]: SignedBeaconBlock;
+  [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
+  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
+  [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecar;
 
-export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
-  [Method.Status]: true, // Exactly 1 response chunk
-  [Method.Goodbye]: true,
-  [Method.Ping]: true,
-  [Method.Metadata]: true,
-  [Method.BeaconBlocksByRange]: false, // A stream, 0 or more response chunks
-  [Method.BeaconBlocksByRoot]: false,
+  [ReqRespMethod.LightClientBootstrap]: LightClientBootstrap;
+  [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
+  [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
+  [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
 };
-
-export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
-export enum ContextBytesType {
-  /** 0 bytes chunk, can be ignored */
-  Empty,
-  /** A fixed-width 4 byte <context-bytes>, set to the ForkDigest matching the chunk: compute_fork_digest(fork_version, genesis_validators_root) */
-  ForkDigest,
-}
-
-/** Meaning of the <context-bytes> chunk per protocol */
-export function contextBytesTypeByProtocol(protocol: Protocol): ContextBytesType {
-  switch (protocol.method) {
-    case Method.Status:
-    case Method.Goodbye:
-    case Method.Ping:
-    case Method.Metadata:
-      return ContextBytesType.Empty;
-    case Method.BeaconBlocksByRange:
-    case Method.BeaconBlocksByRoot:
-      switch (protocol.version) {
-        case Version.V1:
-          return ContextBytesType.Empty;
-        case Version.V2:
-          return ContextBytesType.ForkDigest;
-      }
-  }
-}
 
 /** Request SSZ type for each method and ForkName */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getRequestSzzTypeByMethod(method: Method) {
-  switch (method) {
-    case Method.Status:
-      return ssz.phase0.Status;
-    case Method.Goodbye:
-      return ssz.phase0.Goodbye;
-    case Method.Ping:
-      return ssz.phase0.Ping;
-    case Method.Metadata:
-      return null;
-    case Method.BeaconBlocksByRange:
-      return ssz.phase0.BeaconBlocksByRangeRequest;
-    case Method.BeaconBlocksByRoot:
-      return ssz.phase0.BeaconBlocksByRootRequest;
+export const requestSszTypeByMethod: (
+  fork: ForkName,
+  config: BeaconConfig
+) => {
+  [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
+} = (fork, config) => ({
+  // Status type should ideally be determined by protocol version and not fork but since
+  // we only start using the new status version after the fork this is not an issue
+  [ReqRespMethod.Status]: sszTypesFor(fork).Status,
+  [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
+  [ReqRespMethod.Ping]: ssz.phase0.Ping,
+  [ReqRespMethod.Metadata]: null,
+
+  [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
+  [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
+  [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
+  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
+  [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
+
+  [ReqRespMethod.LightClientBootstrap]: ssz.Root,
+  [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
+  [ReqRespMethod.LightClientFinalityUpdate]: null,
+  [ReqRespMethod.LightClientOptimisticUpdate]: null,
+});
+
+export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
+
+const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version) => {
+  if (version === Version.V1) {
+    return ssz.phase0.SignedBeaconBlock;
   }
-}
 
-export type RequestBodyByMethod = {
-  [Method.Status]: phase0.Status;
-  [Method.Goodbye]: phase0.Goodbye;
-  [Method.Ping]: phase0.Ping;
-  [Method.Metadata]: null;
-  [Method.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
-  [Method.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
+  return ssz[fork].SignedBeaconBlock;
 };
 
-/** Response SSZ type for each method and ForkName */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getResponseSzzTypeByMethod(protocol: Protocol, forkName: ForkName) {
-  switch (protocol.method) {
-    case Method.Status:
-      return ssz.phase0.Status;
-    case Method.Goodbye:
-      return ssz.phase0.Goodbye;
-    case Method.Ping:
-      return ssz.phase0.Ping;
-    case Method.Metadata: {
-      // V1 -> phase0.Metadata, V2 -> altair.Metadata
-      const fork = protocol.version === Version.V1 ? ForkName.phase0 : ForkName.altair;
-      return ssz[fork].Metadata;
-    }
-    case Method.BeaconBlocksByRange:
-    case Method.BeaconBlocksByRoot:
-      // SignedBeaconBlock type is changed in altair
-      return ssz[forkName].SignedBeaconBlock;
+export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]>} = {
+  [ReqRespMethod.Status]: (_, version) => (version === Version.V2 ? ssz.fulu.Status : ssz.phase0.Status),
+  [ReqRespMethod.Goodbye]: () => ssz.phase0.Goodbye,
+  [ReqRespMethod.Ping]: () => ssz.phase0.Ping,
+  [ReqRespMethod.Metadata]: (_, version) =>
+    version === Version.V1 ? ssz.phase0.Metadata : version === Version.V2 ? ssz.altair.Metadata : ssz.fulu.Metadata,
+  [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
+  [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
+  [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
+  [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
+  [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
+  [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
+  [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
+  [ReqRespMethod.DataColumnSidecarsByRange]: () => ssz.fulu.DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: () => ssz.fulu.DataColumnSidecar,
+  [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
+    sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
+};
+
+function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
+  if (isForkPostAltair(fork)) {
+    return fork;
   }
+  throw Error(`Not a post-altair fork ${fork}`);
 }
-
-/** Return either an ssz type or the serializer for ReqRespBlockResponse */
-export function getOutgoingSerializerByMethod(protocol: Protocol): OutgoingSerializer {
-  switch (protocol.method) {
-    case Method.Status:
-      return ssz.phase0.Status;
-    case Method.Goodbye:
-      return ssz.phase0.Goodbye;
-    case Method.Ping:
-      return ssz.phase0.Ping;
-    case Method.Metadata: {
-      // V1 -> phase0.Metadata, V2 -> altair.Metadata
-      const fork = protocol.version === Version.V1 ? ForkName.phase0 : ForkName.altair;
-      return ssz[fork].Metadata;
-    }
-    case Method.BeaconBlocksByRange:
-    case Method.BeaconBlocksByRoot:
-      return reqRespBlockResponseSerializer;
-  }
-}
-
-type CommonResponseBodyByMethod = {
-  [Method.Status]: phase0.Status;
-  [Method.Goodbye]: phase0.Goodbye;
-  [Method.Ping]: phase0.Ping;
-  [Method.Metadata]: phase0.Metadata;
-};
-
-// Used internally by lodestar to response to beacon_blocks_by_range and beacon_blocks_by_root
-// without having to deserialize and serialize from/to bytes
-export type OutgoingResponseBodyByMethod = CommonResponseBodyByMethod & {
-  [Method.BeaconBlocksByRange]: ReqRespBlockResponse;
-  [Method.BeaconBlocksByRoot]: ReqRespBlockResponse;
-};
-
-// p2p protocol in the spec
-export type IncomingResponseBodyByMethod = CommonResponseBodyByMethod & {
-  [Method.BeaconBlocksByRange]: allForks.SignedBeaconBlock;
-  [Method.BeaconBlocksByRoot]: allForks.SignedBeaconBlock;
-};
-
-// Helper types to generically define the arguments of the encoder functions
-
-export type RequestBody = RequestBodyByMethod[Method];
-export type OutgoingResponseBody = OutgoingResponseBodyByMethod[Method];
-export type IncomingResponseBody = IncomingResponseBodyByMethod[Method];
-export type RequestOrIncomingResponseBody = RequestBody | IncomingResponseBody;
-export type RequestOrOutgoingResponseBody = RequestBody | OutgoingResponseBody;
-
-export type RequestType = Exclude<ReturnType<typeof getRequestSzzTypeByMethod>, null>;
-export type ResponseType = ReturnType<typeof getResponseSzzTypeByMethod>;
-export type RequestOrResponseType = RequestType | ResponseType;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OutgoingSerializer = {serialize: (body: any) => Uint8Array};
-
-// Link each method with its type for more type-safe event handlers
 
 export type RequestTypedContainer = {
-  [K in Method]: {method: K; body: RequestBodyByMethod[K]};
-}[Method];
-export type ResponseTypedContainer = {
-  [K in Method]: {method: K; body: OutgoingResponseBodyByMethod[K]};
-}[Method];
+  [K in ReqRespMethod]: {method: K; body: RequestBodyByMethod[K]};
+}[ReqRespMethod];
 
-/** Serializer for ReqRespBlockResponse */
-export const reqRespBlockResponseSerializer = {
-  serialize: (chunk: ReqRespBlockResponse): Uint8Array => {
-    return chunk.bytes;
-  },
+export enum Version {
+  V1 = 1,
+  V2 = 2,
+  V3 = 3,
+}
+
+export type OutgoingRequestArgs = {
+  peerId: string;
+  method: ReqRespMethod;
+  versions: number[];
+  requestData: Uint8Array;
 };
 
-/** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
-export type ReqRespBlockResponse = {
-  /** Deserialized data of allForks.SignedBeaconBlock */
-  bytes: Uint8Array;
-  slot: Slot;
+export type IncomingRequestArgs = {
+  method: ReqRespMethod;
+  req: ReqRespRequest;
+  peerId: string;
+  peerClient: string;
 };
+
+export type GetReqRespHandlerFn = (method: ReqRespMethod) => ProtocolHandler;

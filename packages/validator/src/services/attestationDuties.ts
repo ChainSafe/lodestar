@@ -1,14 +1,14 @@
+import {ApiClient, routes} from "@lodestar/api";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {extendError, sleep} from "@lodestar/utils";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
-import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
-import {Api, routes} from "@lodestar/api";
-import {toHexString} from "@chainsafe/ssz";
-import {batchItems, IClock, ILoggerVc} from "../util/index.js";
-import {PubkeyHex} from "../types.js";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {BLSSignature, Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
+import {PubkeyHex} from "../types.js";
+import {IClock, LoggerVc, batchItems} from "../util/index.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
+import {SyncingStatusTracker} from "./syncingStatusTracker.js";
+import {ValidatorStore} from "./validatorStore.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -26,10 +26,16 @@ export type AttDutyAndProof = {
   duty: routes.validator.AttesterDuty;
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
+  /** This value will only be set if validator is part of distributed cluster and only has a key share */
+  partialSelectionProof?: BLSSignature;
 };
 
 // To assist with readability
 type AttDutiesAtEpoch = {dependentRoot: RootHex; dutiesByIndex: Map<ValidatorIndex, AttDutyAndProof>};
+
+type AttestationDutiesServiceOpts = {
+  distributedAggregationSelection?: boolean;
+};
 
 export class AttestationDutiesService {
   /** Maps a validator public key to their duties for each epoch */
@@ -41,27 +47,48 @@ export class AttestationDutiesService {
   private readonly pendingDependentRootByEpoch = new Map<Epoch, RootHex>();
 
   constructor(
-    private readonly logger: ILoggerVc,
-    private readonly api: Api,
+    private readonly logger: LoggerVc,
+    private readonly api: ApiClient,
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
     chainHeadTracker: ChainHeaderTracker,
-    private readonly metrics: Metrics | null
+    syncingStatusTracker: SyncingStatusTracker,
+    private readonly metrics: Metrics | null,
+    private readonly opts?: AttestationDutiesServiceOpts
   ) {
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
     clock.runEverySlot(this.prepareForNextEpoch);
     chainHeadTracker.runOnNewHead(this.onNewHead);
+    syncingStatusTracker.runOnResynced(async (slot) => {
+      // Skip on first slot of epoch since tasks are already scheduled
+      if (!isStartSlotOfEpoch(slot)) {
+        return this.runDutiesTasks(computeEpochAtSlot(slot));
+      }
+    });
 
     if (metrics) {
       metrics.attesterDutiesCount.addCollect(() => {
+        const currentSlot = this.clock.getCurrentSlot();
         let duties = 0;
-        for (const attDutiesAtEpoch of this.dutiesByIndexByEpoch.values()) {
+        let nextDutySlot = null;
+        for (const [epoch, attDutiesAtEpoch] of this.dutiesByIndexByEpoch) {
           duties += attDutiesAtEpoch.dutiesByIndex.size;
+
+          // Epochs are sorted, stop searching once a next duty slot is found
+          if (epoch < this.clock.currentEpoch || nextDutySlot !== null) continue;
+
+          for (const {duty} of attDutiesAtEpoch.dutiesByIndex.values()) {
+            // Set next duty slot to the closest future slot found in all duties
+            if (duty.slot > currentSlot && (nextDutySlot === null || duty.slot < nextDutySlot)) {
+              nextDutySlot = duty.slot;
+            }
+          }
         }
         metrics.attesterDutiesCount.set(duties);
         metrics.attesterDutiesEpochCount.set(this.dutiesByIndexByEpoch.size);
+        if (nextDutySlot !== null) metrics.attesterDutiesNextSlot.set(nextDutySlot);
       });
     }
   }
@@ -69,7 +96,7 @@ export class AttestationDutiesService {
   removeDutiesForKey(pubkey: PubkeyHex): void {
     for (const [epoch, attDutiesAtEpoch] of this.dutiesByIndexByEpoch) {
       for (const [vIndex, attDutyAndProof] of attDutiesAtEpoch.dutiesByIndex) {
-        if (toHexString(attDutyAndProof.duty.pubkey) === pubkey) {
+        if (toPubkeyHex(attDutyAndProof.duty.pubkey) === pubkey) {
           attDutiesAtEpoch.dutiesByIndex.delete(vIndex);
           if (attDutiesAtEpoch.dutiesByIndex.size === 0) {
             this.dutiesByIndexByEpoch.delete(epoch);
@@ -101,14 +128,15 @@ export class AttestationDutiesService {
    * If a reorg dependent root comes at a slot other than last slot of epoch
    * just update this.pendingDependentRootByEpoch() and process here
    */
-  private prepareForNextEpoch = async (slot: Slot): Promise<void> => {
+  private prepareForNextEpoch = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     // only interested in last slot of epoch
     if ((slot + 1) % SLOTS_PER_EPOCH !== 0) {
       return;
     }
 
+    // TODO GLOAS: re-evaluate this timing
     // during the 1 / 3 of epoch, last block of epoch may come
-    await sleep(this.clock.msToSlot(slot + 1 / 3));
+    await sleep(this.clock.msToSlot(slot + 1 / 3), signal);
 
     const nextEpoch = computeEpochAtSlot(slot) + 1;
     const dependentRoot = this.dutiesByIndexByEpoch.get(nextEpoch)?.dependentRoot;
@@ -191,12 +219,7 @@ export class AttestationDutiesService {
     }
 
     // If there are any subscriptions, push them out to the beacon node.
-    if (beaconCommitteeSubscriptions.length > 0) {
-      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
-      await Promise.all(subscriptionsBatches.map(this.api.validator.prepareBeaconCommitteeSubnet)).catch((e: Error) => {
-        throw extendError(e, "Failed to subscribe to beacon committee subnets");
-      });
-    }
+    await this.subscribeToBeaconCommitteeSubnets(beaconCommitteeSubscriptions);
   }
 
   /**
@@ -208,19 +231,18 @@ export class AttestationDutiesService {
       return;
     }
 
-    const attesterDuties = await this.api.validator.getAttesterDuties(epoch, indexArr).catch((e: Error) => {
-      throw extendError(e, "Failed to obtain attester duty");
-    });
-
-    const {dependentRoot} = attesterDuties;
-    const relevantDuties = attesterDuties.data.filter((duty) => {
-      const pubkeyHex = toHexString(duty.pubkey);
+    const res = await this.api.validator.getAttesterDuties({epoch, indices: indexArr});
+    const attesterDuties = res.value();
+    const {dependentRoot} = res.meta();
+    const relevantDuties = attesterDuties.filter((duty) => {
+      const pubkeyHex = toPubkeyHex(duty.pubkey);
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
     });
 
     this.logger.debug("Downloaded attester duties", {epoch, dependentRoot, count: relevantDuties.length});
 
-    const priorDependentRoot = this.dutiesByIndexByEpoch.get(epoch)?.dependentRoot;
+    const dutiesAtEpoch = this.dutiesByIndexByEpoch.get(epoch);
+    const priorDependentRoot = dutiesAtEpoch?.dependentRoot;
     const dependentRootChanged = priorDependentRoot !== undefined && priorDependentRoot !== dependentRoot;
 
     if (!priorDependentRoot || dependentRootChanged) {
@@ -230,15 +252,34 @@ export class AttestationDutiesService {
         dutiesByIndex.set(duty.validatorIndex, dutyAndProof);
       }
       this.dutiesByIndexByEpoch.set(epoch, {dependentRoot, dutiesByIndex});
-    }
 
-    if (priorDependentRoot && dependentRootChanged) {
-      this.metrics?.attesterDutiesReorg.inc();
-      this.logger.warn("Attester duties re-org. This may happen from time to time", {
-        priorDependentRoot: priorDependentRoot,
-        dependentRoot: dependentRoot,
-        epoch,
-      });
+      if (priorDependentRoot && dependentRootChanged) {
+        this.metrics?.attesterDutiesReorg.inc();
+        this.logger.warn("Attester duties re-org. This may happen from time to time", {
+          priorDependentRoot: priorDependentRoot,
+          dependentRoot: dependentRoot,
+          epoch,
+        });
+      }
+    } else {
+      const existingDuties = dutiesAtEpoch.dutiesByIndex;
+      const existingDutiesCount = existingDuties.size;
+      const discoveredNewDuties = relevantDuties.length > existingDutiesCount;
+
+      if (discoveredNewDuties) {
+        for (const duty of relevantDuties) {
+          if (!existingDuties.has(duty.validatorIndex)) {
+            const dutyAndProof = await this.getDutyAndProof(duty);
+            existingDuties.set(duty.validatorIndex, dutyAndProof);
+          }
+        }
+
+        this.logger.debug("Discovered new attester duties", {
+          epoch,
+          dependentRoot,
+          count: relevantDuties.length - existingDutiesCount,
+        });
+      }
     }
   }
 
@@ -321,10 +362,52 @@ export class AttestationDutiesService {
       .catch((e: Error) => {
         this.logger.error("Failed to redownload attester duties when reorg happens", logContext, e);
       });
+
+    const beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[] = [];
+    const epochDuties = this.dutiesByIndexByEpoch.get(dutyEpoch)?.dutiesByIndex;
+
+    if (epochDuties) {
+      for (const {duty, selectionProof} of epochDuties.values()) {
+        beaconCommitteeSubscriptions.push({
+          validatorIndex: duty.validatorIndex,
+          committeesAtSlot: duty.committeesAtSlot,
+          committeeIndex: duty.committeeIndex,
+          slot: duty.slot,
+          isAggregator: selectionProof !== null,
+        });
+      }
+    }
+
+    // Previous subscriptions are no longer valid and need to be updated
+    await this.subscribeToBeaconCommitteeSubnets(beaconCommitteeSubscriptions);
+  }
+
+  private async subscribeToBeaconCommitteeSubnets(
+    beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[]
+  ): Promise<void> {
+    if (beaconCommitteeSubscriptions.length > 0) {
+      const subscriptionsBatches = batchItems(beaconCommitteeSubscriptions, {batchSize: SUBSCRIPTIONS_PER_REQUEST});
+      const responses = await Promise.all(
+        subscriptionsBatches.map((subscriptions) => this.api.validator.prepareBeaconCommitteeSubnet({subscriptions}))
+      );
+
+      for (const res of responses) {
+        res.assertOk();
+      }
+    }
   }
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
     const selectionProof = await this.validatorStore.signAttestationSelectionProof(duty.pubkey, duty.slot);
+
+    if (this.opts?.distributedAggregationSelection) {
+      // Validator in distributed cluster only has a key share, not the full private key.
+      // Passing a partial selection proof to `is_aggregator` would produce incorrect result.
+      // AttestationService will exchange partial for combined selection proofs retrieved from
+      // distributed validator middleware client and determine aggregators at beginning of every slot.
+      return {duty, selectionProof: null, partialSelectionProof: selectionProof};
+    }
+
     const isAggregator = isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof);
 
     return {

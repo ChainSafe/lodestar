@@ -1,8 +1,9 @@
-import {itBench} from "@dapplion/benchmark";
-import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochProcess} from "../../../src/index.js";
+import {bench, describe} from "@chainsafe/benchmark";
+import {ForkSeq} from "@lodestar/params";
 import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache, beforeProcessEpoch} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to only validators that active + exit. For mainnet conditions:
 // - indicesEligibleForActivationQueue: Maxing deposits triggers 512 validator mutations
@@ -48,11 +49,11 @@ describe("phase0 processRegistryUpdates", () => {
     },
   ];
 
-  // Provide flat `epochProcess.balances` + flat `epochProcess.validators`
+  // Provide flat `cache.balances` + flat `cache.validators`
   // which will it update validators tree
 
   for (const {id, notTrack, lengths} of testCases) {
-    itBench<StateEpoch, StateEpoch>({
+    bench<StateEpoch, StateEpoch>({
       id: `phase0 processRegistryUpdates - ${vc} ${id}`,
       // WeakRef keeps a strong reference to its constructor value until the event loop ticks.
       // Without this `sleep(0)` all the SubTree(s) created updating the validators registry
@@ -61,8 +62,8 @@ describe("phase0 processRegistryUpdates", () => {
       minRuns: 5, // Worst case is very slow
       noThreshold: notTrack,
       before: () => getRegistryUpdatesTestData(vc, lengths),
-      beforeEach: async ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => processRegistryUpdates(state, epochProcess),
+      beforeEach: async ({state, cache}) => ({state: state.clone(), cache}),
+      fn: ({state, cache}) => processRegistryUpdates(ForkSeq.phase0, state, cache),
     });
   }
 });
@@ -77,22 +78,22 @@ type IndicesLengths = {
  * Create a state that causes `changeRatio` fraction (0,1) of validators to change their effective balance.
  */
 function getRegistryUpdatesTestData(
-  vc: number,
+  _vc: number,
   lengths: IndicesLengths
 ): {
   state: CachedBeaconStateAllForks;
-  epochProcess: EpochProcess;
+  cache: EpochTransitionCache;
 } {
   const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const epochProcess = beforeProcessEpoch(state);
+  const cache = beforeProcessEpoch(state);
 
-  epochProcess.indicesToEject = linspace(lengths.indicesToEject);
-  epochProcess.indicesEligibleForActivationQueue = linspace(lengths.indicesEligibleForActivationQueue);
-  epochProcess.indicesEligibleForActivation = linspace(lengths.indicesEligibleForActivation);
+  cache.indicesToEject = linspace(lengths.indicesToEject);
+  cache.indicesEligibleForActivationQueue = linspace(lengths.indicesEligibleForActivationQueue);
+  cache.indicesEligibleForActivation = linspace(lengths.indicesEligibleForActivation);
 
   return {
     state,
-    epochProcess,
+    cache,
   };
 }
 

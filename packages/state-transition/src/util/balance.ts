@@ -2,7 +2,7 @@ import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
 import {Gwei, ValidatorIndex} from "@lodestar/types";
 import {bigIntMax} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {BeaconStateAllForks} from "..";
+import {BeaconStateAllForks} from "../index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 
 /**
@@ -37,7 +37,8 @@ export function increaseBalance(state: BeaconStateAllForks, index: ValidatorInde
  * Set to ``0`` when underflow.
  */
 export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorIndex, delta: number): void {
-  const newBalance = state.balances.get(index) - delta;
+  const currentBalance = state.balances.get(index);
+  const newBalance = currentBalance > delta ? state.balances.get(index) - delta : 0;
   // TODO: Is it necessary to protect against underflow here? Add unit test
   state.balances.set(index, Math.max(0, newBalance));
 }
@@ -55,18 +56,28 @@ export function getEffectiveBalanceIncrementsZeroInactive(
   const validatorCount = justifiedState.validators.length;
   const {effectiveBalanceIncrements} = justifiedState.epochCtx;
   // Slice up to `validatorCount` since it won't be mutated, nor accessed beyond `validatorCount`
-  const effectiveBalanceIncrementsZeroInactive = effectiveBalanceIncrements.slice(0, validatorCount);
+  // NOTE: Force to use Uint16Array.slice (copy) instead of Buffer.call (not copy)
+  const effectiveBalanceIncrementsZeroInactive = Uint16Array.prototype.slice.call(
+    effectiveBalanceIncrements,
+    0,
+    validatorCount
+  );
 
   let j = 0;
-  for (let i = 0; i < validatorCount; i++) {
+  justifiedState.validators.forEachValue((validator, i) => {
+    const {slashed} = validator;
     if (i === activeIndices[j]) {
       // active validator
       j++;
+      if (slashed) {
+        // slashed validator
+        effectiveBalanceIncrementsZeroInactive[i] = 0;
+      }
     } else {
       // inactive validator
       effectiveBalanceIncrementsZeroInactive[i] = 0;
     }
-  }
+  });
 
   return effectiveBalanceIncrementsZeroInactive;
 }

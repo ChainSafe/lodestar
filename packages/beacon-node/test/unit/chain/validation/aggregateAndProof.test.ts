@@ -1,21 +1,21 @@
-import {toHexString} from "@chainsafe/ssz";
+import {describe, it} from "vitest";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {IBeaconChain} from "../../../../src/chain/index.js";
-import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
-import {validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-// eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
+import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
+import {IBeaconChain} from "../../../../src/chain/index.js";
+import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {memoOnce} from "../../../utils/cache.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {
-  getAggregateAndProofValidData,
   AggregateAndProofValidDataOpts,
+  getAggregateAndProofValidData,
 } from "../../../utils/validationData/aggregateAndProof.js";
 
 describe("chain / validation / aggregateAndProof", () => {
-  const vc = 64;
-  const stateSlot = 100;
+  const vc = 8192;
+  const stateSlot = 400;
 
   const UNKNOWN_ROOT = Buffer.alloc(32, 1);
   const KNOWN_TARGET_ROOT = Buffer.alloc(32, 0xd0);
@@ -23,7 +23,6 @@ describe("chain / validation / aggregateAndProof", () => {
 
   const getState = memoOnce(() => generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot}));
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function getValidData(opts?: Partial<AggregateAndProofValidDataOpts>) {
     return getAggregateAndProofValidData({
       currentSlot: stateSlot,
@@ -40,7 +39,8 @@ describe("chain / validation / aggregateAndProof", () => {
   it("Valid", async () => {
     const {chain, signedAggregateAndProof} = getValidData({});
 
-    await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
+    const fork = chain.config.getForkName(stateSlot);
+    await validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
   });
 
   it("BAD_TARGET_EPOCH", async () => {
@@ -73,6 +73,7 @@ describe("chain / validation / aggregateAndProof", () => {
     // Register attester as already seen
     chain.seenAggregatedAttestations.add(
       attData.target.epoch,
+      attData.index,
       toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData)),
       {aggregationBits, trueBitCount: aggregationBits.getTrueBitIndexes().length},
       false
@@ -136,8 +137,20 @@ describe("chain / validation / aggregateAndProof", () => {
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE);
   });
 
+  it("WRONG_NUMBER_OF_AGGREGATION_BITS", async () => {
+    const attIndex = 1;
+    const {chain, signedAggregateAndProof} = getValidData({attIndex});
+    const {aggregationBits} = signedAggregateAndProof.message.aggregate;
+    signedAggregateAndProof.message.aggregate.aggregationBits = new BitArray(
+      aggregationBits.uint8Array,
+      aggregationBits.bitLen - 1
+    );
+
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS);
+  });
+
   it("INVALID_SIGNATURE - selection proof sig", async () => {
-    const bitIndex = 1;
+    const bitIndex = 126;
     const {chain, signedAggregateAndProof} = getValidData({bitIndex});
     // Swap the selectionProof signature with the overall sig of the object
     signedAggregateAndProof.message.selectionProof = signedAggregateAndProof.signature;
@@ -170,6 +183,11 @@ describe("chain / validation / aggregateAndProof", () => {
     signedAggregateAndProof: phase0.SignedAggregateAndProof,
     errorCode: AttestationErrorCode
   ): Promise<void> {
-    await expectRejectedWithLodestarError(validateGossipAggregateAndProof(chain, signedAggregateAndProof), errorCode);
+    const fork = chain.config.getForkName(stateSlot);
+    const serializedData = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
+    await expectRejectedWithLodestarError(
+      validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData),
+      errorCode
+    );
   }
 });

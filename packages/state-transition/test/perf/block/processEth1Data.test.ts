@@ -1,8 +1,8 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {ACTIVE_PRESET, PresetName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../src/index.js";
 import {processEth1Data} from "../../../src/block/processEth1Data.js";
+import {CachedBeaconStateAllForks} from "../../../src/index.js";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
 import {getBlockAltair} from "./util.js";
 
@@ -24,11 +24,11 @@ describe("altair processEth1Data", () => {
   ];
 
   for (const {id} of testCases) {
-    itBench<StateEth1Data, StateEth1Data>({
+    bench<StateEth1Data, StateEth1Data>({
       id: `altair processEth1Data - ${perfStateId} ${id}`,
       before: () => {
         const state = generatePerfTestCachedStateAltair();
-        const block = getBlockAltair(state as CachedBeaconStateAltair, {
+        const block = getBlockAltair(state, {
           proposerSlashingLen: 0,
           attesterSlashingLen: 0,
           attestationLen: 90,

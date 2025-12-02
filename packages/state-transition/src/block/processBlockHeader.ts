@@ -1,15 +1,16 @@
-import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {allForks, ssz, isBlindedBeaconBlock} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {byteArrayEquals} from "@chainsafe/ssz";
+import {BeaconBlock, BlindedBeaconBlock, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
-
+import {CachedBeaconStateAllForks} from "../types.js";
+import {blindedOrFullBlockToHeader} from "../util/index.js";
 /**
  * Converts a Deposit record (created by the eth-execution deposit contract) into a Validator object that goes into the eth-consensus state.
  *
  * PERF: Fixed work independent of block contents.
  * NOTE: `block` body root MUST be pre-cached.
  */
-export function processBlockHeader(state: CachedBeaconStateAllForks, block: allForks.FullOrBlindedBeaconBlock): void {
+export function processBlockHeader(state: CachedBeaconStateAllForks, block: BeaconBlock | BlindedBeaconBlock): void {
   const slot = state.slot;
   // verify that the slots match
   if (block.slot !== slot) {
@@ -29,25 +30,21 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
     );
   }
 
-  const types = state.config.getForkTypes(slot);
   // verify that the parent matches
   if (!byteArrayEquals(block.parentRoot, ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
     throw new Error(
-      `Block parent root ${toHexString(block.parentRoot)} does not match state latest block, block slot=${slot}`
+      `Block parent root ${toRootHex(block.parentRoot)} does not match state latest block, block slot=${slot}`
     );
   }
 
-  const bodyRoot = isBlindedBeaconBlock(block)
-    ? ssz.bellatrix.BlindedBeaconBlockBody.hashTreeRoot(block.body)
-    : types.BeaconBlockBody.hashTreeRoot(block.body);
-
+  const blockHeader = blindedOrFullBlockToHeader(state.config, block);
   // cache current block as the new latest block
   state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU({
-    slot: slot,
-    proposerIndex: block.proposerIndex,
+    slot,
+    proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: ZERO_HASH,
-    bodyRoot,
+    bodyRoot: blockHeader.bodyRoot,
   });
 
   // verify proposer is not slashed. Only once per block, may use the slower read from tree

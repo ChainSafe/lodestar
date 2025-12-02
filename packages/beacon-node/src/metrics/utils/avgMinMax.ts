@@ -1,21 +1,21 @@
 import {GaugeConfiguration} from "prom-client";
+import {AvgMinMax as IAvgMinMax, LabelKeys, LabelsGeneric} from "@lodestar/utils";
 import {GaugeExtra} from "./gauge.js";
 
 type GetValuesFn = () => number[];
-type Labels<T extends string> = Partial<Record<T, string | number>>;
 
 /**
  * Special non-standard "Histogram" that captures the avg, min and max of values
  */
-export class AvgMinMax<T extends string> {
-  private readonly sum: GaugeExtra<string>;
-  private readonly avg: GaugeExtra<string>;
-  private readonly min: GaugeExtra<string>;
-  private readonly max: GaugeExtra<string>;
+export class AvgMinMax<Labels extends LabelsGeneric> implements IAvgMinMax<Labels> {
+  private readonly sum: GaugeExtra<Labels>;
+  private readonly avg: GaugeExtra<Labels>;
+  private readonly min: GaugeExtra<Labels>;
+  private readonly max: GaugeExtra<Labels>;
 
   private getValuesFn: GetValuesFn | null = null;
 
-  constructor(configuration: GaugeConfiguration<T>) {
+  constructor(configuration: GaugeConfiguration<LabelKeys<Labels>>) {
     this.sum = new GaugeExtra({...configuration, name: `${configuration.name}_sum`});
     this.avg = new GaugeExtra({...configuration, name: `${configuration.name}_avg`});
     this.min = new GaugeExtra({...configuration, name: `${configuration.name}_min`});
@@ -33,8 +33,8 @@ export class AvgMinMax<T extends string> {
   }
 
   set(values: number[]): void;
-  set(labels: Labels<T>, values: number[]): void;
-  set(arg1?: Labels<T> | number[], arg2?: number[]): void {
+  set(labels: Labels, values: number[]): void;
+  set(arg1?: Labels | number[], arg2?: number[]): void {
     if (arg2 === undefined) {
       const values = arg1 as number[];
       const {sum, avg, min, max} = getStats(values);
@@ -44,7 +44,7 @@ export class AvgMinMax<T extends string> {
       this.max.set(max);
     } else {
       const values = (arg2 !== undefined ? arg2 : arg1) as number[];
-      const labels = arg1 as Labels<T>;
+      const labels = arg1 as Labels;
       const {sum, avg, min, max} = getStats(values);
       this.sum.set(labels, sum);
       this.avg.set(labels, avg);

@@ -1,18 +1,43 @@
+import {ApiClient, routes} from "@lodestar/api";
 import {ValidatorIndex} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
-import {Api} from "@lodestar/api";
-import {batchItems} from "../util/index.js";
+import {Logger, MapDef, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
+import {batchItems} from "../util/index.js";
 
 /**
- * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.
- * For reasoning on the specific number see: https://github.com/ChainSafe/lodestar/pull/2730#issuecomment-866749083
+ * This is to prevent the "Request body is too large" issue for http post.
+ * Typical servers accept up to 1MB (2 ** 20 bytes) of request body, for example fastify and nginx.
+ * A hex encoded public key with "0x"-prefix has a size of 98 bytes + 2 bytes to account for commas
+ * and other JSON padding. `Math.floor(2 ** 20 / 100) == 10485`, we can send up to ~10k keys per request.
  */
-const PUBKEYS_PER_REQUEST = 10;
+const PUBKEYS_PER_REQUEST = 10_000;
 
 // To assist with readability
 type PubkeyHex = string;
+
+// To assist with logging statuses, we only log the statuses that are not active_exiting or withdrawal_possible
+type SimpleValidatorStatus = "pending" | "active" | "exited" | "withdrawn";
+
+const statusToSimpleStatusMapping = (status: routes.beacon.ValidatorStatus): SimpleValidatorStatus => {
+  switch (status) {
+    case "active_exiting":
+    case "active_slashed":
+    case "active_ongoing":
+      return "active";
+
+    case "withdrawal_possible":
+    case "exited_slashed":
+    case "exited_unslashed":
+      return "exited";
+
+    case "pending_initialized":
+    case "pending_queued":
+      return "pending";
+
+    case "withdrawal_done":
+      return "withdrawn";
+  }
+};
 
 export class IndicesService {
   readonly index2pubkey = new Map<ValidatorIndex, PubkeyHex>();
@@ -21,7 +46,11 @@ export class IndicesService {
   // Request indices once
   private pollValidatorIndicesPromise: Promise<ValidatorIndex[]> | null = null;
 
-  constructor(private readonly logger: ILogger, private readonly api: Api, private readonly metrics: Metrics | null) {
+  constructor(
+    private readonly logger: Logger,
+    private readonly api: ApiClient,
+    private readonly metrics: Metrics | null
+  ) {
     if (metrics) {
       metrics.indices.addCollect(() => metrics.indices.set(this.index2pubkey.size));
     }
@@ -46,7 +75,7 @@ export class IndicesService {
     return this.index2pubkey.has(index);
   }
 
-  pollValidatorIndices(pubkeysHex: PubkeyHex[]): Promise<ValidatorIndex[]> {
+  async pollValidatorIndices(pubkeysHex: PubkeyHex[]): Promise<ValidatorIndex[]> {
     // Ensures pollValidatorIndicesInternal() is not called more than once at the same time.
     // AttestationDutiesService, SyncCommitteeDutiesService and DoppelgangerService will call this function at the same time, so this will
     // cache the promise and return it to the second caller, preventing calling the API twice for the same data.
@@ -54,9 +83,8 @@ export class IndicesService {
       return this.pollValidatorIndicesPromise;
     }
 
-    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex);
-    // Once the pollValidatorIndicesInternal() resolves or rejects null the cached promise so it can be called again.
-    this.pollValidatorIndicesPromise.finally(() => {
+    this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex).finally(() => {
+      // Once the pollValidatorIndicesInternal() resolves or rejects null the cached promise so it can be called again.
       this.pollValidatorIndicesPromise = null;
     });
     return this.pollValidatorIndicesPromise;
@@ -81,7 +109,7 @@ export class IndicesService {
     }
 
     // Query the remote BN to resolve a pubkey to a validator index.
-    // support up to 1000 pubkeys per poll
+    // support up to 10k pubkeys per poll
     const pubkeysHexBatches = batchItems(pubkeysHexToDiscover, {batchSize: PUBKEYS_PER_REQUEST});
 
     const newIndices: number[] = [];
@@ -90,24 +118,48 @@ export class IndicesService {
       newIndices.push(...validatorIndicesArr);
     }
 
-    this.logger.info("Discovered new validators", {count: newIndices.length});
     this.metrics?.discoveredIndices.inc(newIndices.length);
 
     return newIndices;
   }
 
   private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
-    const validatorsState = await this.api.beacon.getStateValidators("head", {id: pubkeysHex});
+    const validators = (await this.api.beacon.postStateValidators({stateId: "head", validatorIds: pubkeysHex})).value();
+
     const newIndices = [];
-    for (const validatorState of validatorsState.data) {
-      const pubkeyHex = toHexString(validatorState.validator.pubkey);
+
+    const allValidatorStatuses = new MapDef<SimpleValidatorStatus, number>(() => 0);
+
+    for (const validator of validators) {
+      // Group all validators by status
+      const status = statusToSimpleStatusMapping(validator.status);
+      allValidatorStatuses.set(status, allValidatorStatuses.getOrDefault(status) + 1);
+
+      const pubkeyHex = toPubkeyHex(validator.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
-        this.logger.debug("Discovered validator", {pubkey: pubkeyHex, index: validatorState.index});
-        this.pubkey2index.set(pubkeyHex, validatorState.index);
-        this.index2pubkey.set(validatorState.index, pubkeyHex);
-        newIndices.push(validatorState.index);
+        this.logger.info("Validator seen on beacon chain", {
+          validatorIndex: validator.index,
+          pubKey: pubkeyHex,
+        });
+        this.pubkey2index.set(pubkeyHex, validator.index);
+        this.index2pubkey.set(validator.index, pubkeyHex);
+        newIndices.push(validator.index);
       }
     }
+
+    // The number of validators that are not in the beacon chain
+    const pendingCount = pubkeysHex.length - validators.length;
+
+    allValidatorStatuses.set("pending", allValidatorStatuses.getOrDefault("pending") + pendingCount);
+
+    // Retrieve the number of validators for each status
+    const statuses = Object.fromEntries(Array.from(allValidatorStatuses.entries()).filter((entry) => entry[1] > 0));
+
+    // The total number of validators
+    const total = pubkeysHex.length;
+
+    this.logger.info("Validator statuses", {...statuses, total});
+
     return newIndices;
   }
 }

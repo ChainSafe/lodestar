@@ -1,18 +1,22 @@
-import {itBench} from "@dapplion/benchmark";
-import PeerId from "peer-id";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {altair, phase0} from "@lodestar/types";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {PeerId} from "@libp2p/interface";
+import {peerIdFromPrivateKey} from "@libp2p/peer-id";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {config} from "@lodestar/config/default";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {altair, phase0, ssz} from "@lodestar/types";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
-import {prioritizePeers, RequestedSubnet} from "../../../../../src/network/peers/utils/index.js";
+import {RequestedSubnet, prioritizePeers} from "../../../../../src/network/peers/utils/index.js";
 import {getAttnets, getSyncnets} from "../../../../utils/network.js";
 
 describe("prioritizePeers", () => {
   const seedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[] = [];
 
-  before(function () {
+  beforeAll(async () => {
     for (let i = 0; i < defaultNetworkOptions.maxPeers; i++) {
-      const peer = new PeerId(Buffer.from(`peer-${i}`));
-      peer.toB58String = () => `peer-${i}`;
+      const pk = await generateKeyPair("secp256k1");
+      const peer = peerIdFromPrivateKey(pk);
+      peer.toString = () => `peer-${i}`;
       seedPeers.push({
         id: peer,
         attnets: getAttnets([]),
@@ -81,7 +85,7 @@ describe("prioritizePeers", () => {
     attnetPercentage,
     syncnetPercentage,
   } of testCases) {
-    itBench({
+    bench({
       id: `prioritizePeers score ${lowestScore}:${highestScore} att ${requestedAttnets.count}-${attnetPercentage} sync ${requestedSyncNets.count}-${syncnetPercentage}`,
       beforeEach: () => {
         /**
@@ -90,8 +94,9 @@ describe("prioritizePeers", () => {
          * No peer with no long-lived subnets
          * No peer with bad score
          **/
-        const connectedPeers = seedPeers.map((peer, i) => ({
+        const connectedPeers: Parameters<typeof prioritizePeers>[0] = seedPeers.map((peer, i) => ({
           ...peer,
+          direction: null,
           attnets: getAttnets(
             Array.from({length: Math.floor(attnetPercentage * ATTESTATION_SUBNET_COUNT)}, (_, i) => i)
           ),
@@ -99,6 +104,8 @@ describe("prioritizePeers", () => {
             Array.from({length: Math.floor(syncnetPercentage * SYNC_COMMITTEE_SUBNET_COUNT)}, (_, i) => i)
           ),
           score: lowestScore + ((highestScore - lowestScore) * i) / defaultNetworkOptions.maxPeers,
+          samplingGroups: [],
+          status: ssz.phase0.Status.defaultValue(),
         }));
 
         const attnets: RequestedSubnet[] = [];
@@ -110,10 +117,24 @@ describe("prioritizePeers", () => {
         for (let i = 0; i < requestedSyncNets.count; i++) {
           syncnets.push({subnet: requestedSyncNets.start + i, toSlot: 1_000_000});
         }
-        return {connectedPeers, attnets, syncnets};
+        return {connectedPeers, attnets, syncnets, samplingGroups: []};
       },
-      fn: ({connectedPeers, attnets, syncnets}) => {
-        prioritizePeers(connectedPeers, attnets, syncnets, defaultNetworkOptions);
+      fn: ({connectedPeers, attnets, syncnets, samplingGroups}) => {
+        prioritizePeers(
+          connectedPeers,
+          attnets,
+          syncnets,
+          samplingGroups,
+          {
+            ...defaultNetworkOptions,
+            status: ssz.phase0.Status.defaultValue(),
+            starved: false,
+            starvationPruneRatio: 0.05,
+            starvationThresholdSlots: SLOTS_PER_EPOCH * 2,
+          },
+          config,
+          null
+        );
       },
     });
   }

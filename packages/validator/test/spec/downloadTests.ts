@@ -1,7 +1,5 @@
-import {downloadGenericSpecTests} from "@lodestar/spec-test-util";
-import {SPEC_TEST_LOCATION, SPEC_TEST_VERSION, SPEC_TEST_REPO_URL, TESTS_TO_DOWNLOAD} from "./params.js";
-
-/* eslint-disable no-console */
+import {downloadGenericSpecTests} from "@lodestar/spec-test-util/downloadTests";
+import {SPEC_TEST_LOCATION, SPEC_TEST_REPO_URL, SPEC_TEST_VERSION, TESTS_TO_DOWNLOAD} from "./params.js";
 
 downloadGenericSpecTests(
   {

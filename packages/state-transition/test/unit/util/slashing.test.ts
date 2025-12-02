@@ -1,17 +1,16 @@
-import {assert} from "chai";
-
+import {describe, expect, it} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Epoch, phase0, ssz} from "@lodestar/types";
 import {isSlashableAttestationData} from "../../../src/util/index.js";
 import {randBetween} from "../../utils/misc.js";
-import {generateAttestationDataBigint} from "../../utils/attestation.js";
 
 describe("isSlashableAttestationData", () => {
   it("Attestation data with the same target epoch should return true", () => {
     const epoch1 = randBetween(1, 1000);
     const epoch2 = epoch1 + 1;
-    const a1 = generateAttestationDataBigint(epoch1, epoch2);
-    const a2 = generateAttestationDataBigint(epoch1 - 1, epoch2);
-    assert.isTrue(isSlashableAttestationData(a1, a2));
+    const a1 = getAttestationDataAt(epoch1, epoch2);
+    const a2 = getAttestationDataAt(epoch1 - 1, epoch2);
+    expect(isSlashableAttestationData(a1, a2)).toBe(true);
   });
 
   it("Attestation data with disjoint source/target epochs should return false", () => {
@@ -19,9 +18,9 @@ describe("isSlashableAttestationData", () => {
     const epoch2 = epoch1 + 1;
     const epoch3 = epoch1 + 2;
     const epoch4 = epoch1 + 3;
-    const a1 = generateAttestationDataBigint(epoch1, epoch2);
-    const a2 = generateAttestationDataBigint(epoch3, epoch4);
-    assert.isFalse(isSlashableAttestationData(a1, a2));
+    const a1 = getAttestationDataAt(epoch1, epoch2);
+    const a2 = getAttestationDataAt(epoch3, epoch4);
+    expect(isSlashableAttestationData(a1, a2)).toBe(false);
   });
 
   it("Should return false if the second attestation does not have a greater source epoch", () => {
@@ -32,15 +31,15 @@ describe("isSlashableAttestationData", () => {
     const targetEpoch1 = randBetween(1, 1000);
     const targetEpoch2 = targetEpoch1 - 1;
 
-    const a1 = generateAttestationDataBigint(sourceEpoch1, targetEpoch1);
-    const a2Hi = generateAttestationDataBigint(sourceEpoch2Hi, targetEpoch2);
+    const a1 = getAttestationDataAt(sourceEpoch1, targetEpoch1);
+    const a2Hi = getAttestationDataAt(sourceEpoch2Hi, targetEpoch2);
 
-    assert.isFalse(isSlashableAttestationData(a1, a2Hi));
+    expect(isSlashableAttestationData(a1, a2Hi)).toBe(false);
 
     // Second attestation has a smaller source epoch.
     const sourceEpoch2Lo = sourceEpoch1 - 1;
-    const a2Lo = generateAttestationDataBigint(sourceEpoch2Lo, targetEpoch2);
-    assert.isFalse(isSlashableAttestationData(a1, a2Lo));
+    const a2Lo = getAttestationDataAt(sourceEpoch2Lo, targetEpoch2);
+    expect(isSlashableAttestationData(a1, a2Lo)).toBe(false);
   });
 
   it("Should return false if the second attestation does not have a smaller target epoch", () => {
@@ -55,16 +54,23 @@ describe("isSlashableAttestationData", () => {
     // First slot in the epoch
     let targetSlot2 = (targetEpoch - 1) * SLOTS_PER_EPOCH;
 
-    let a1 = generateAttestationDataBigint(targetSlot1, sourceEpoch1);
-    let a2 = generateAttestationDataBigint(targetSlot2, sourceEpoch2);
+    let a1 = getAttestationDataAt(targetSlot1, sourceEpoch1);
+    let a2 = getAttestationDataAt(targetSlot2, sourceEpoch2);
 
-    assert.isFalse(isSlashableAttestationData(a1, a2));
+    expect(isSlashableAttestationData(a1, a2)).toBe(false);
 
     // Second attestation has a greater target epoch.
     targetSlot1 = targetEpoch * SLOTS_PER_EPOCH;
     targetSlot2 = (targetEpoch + 1) * SLOTS_PER_EPOCH;
-    a1 = generateAttestationDataBigint(targetSlot1, sourceEpoch1);
-    a2 = generateAttestationDataBigint(targetSlot2, sourceEpoch2);
-    assert.isFalse(isSlashableAttestationData(a1, a2));
+    a1 = getAttestationDataAt(targetSlot1, sourceEpoch1);
+    a2 = getAttestationDataAt(targetSlot2, sourceEpoch2);
+    expect(isSlashableAttestationData(a1, a2)).toBe(false);
   });
 });
+
+function getAttestationDataAt(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationDataBigint {
+  const data = ssz.phase0.AttestationDataBigint.defaultValue();
+  data.source.epoch = BigInt(sourceEpoch);
+  data.target.epoch = BigInt(targetEpoch);
+  return data;
+}

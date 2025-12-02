@@ -1,38 +1,38 @@
-import {config} from "@lodestar/config/default";
-import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
-import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {createIBeaconConfig, createIChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
 import {
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
+  ForkName,
+  ForkSeq,
   MAX_ATTESTATIONS,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
+import {BeaconState, Slot, phase0, ssz} from "@lodestar/types";
+import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
 import {
-  interopSecretKey,
-  computeEpochAtSlot,
-  getActiveValidatorIndices,
-  PubkeyIndexMap,
-  newFilledArray,
-  createCachedBeaconState,
   computeCommitteeCount,
+  computeEpochAtSlot,
+  createCachedBeaconState,
+  interopSecretKey,
+  newFilledArray,
+  processSlots,
 } from "../../src/index.js";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStatePhase0,
-  CachedBeaconStateAltair,
-  BeaconStatePhase0,
   BeaconStateAltair,
+  BeaconStatePhase0,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
 } from "../../src/types.js";
-import {profilerLogger} from "../utils/logger.js";
-import {interopPubkeysCached} from "../utils/interop.js";
 import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
-import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
-import {processSlots} from "../../src/index.js";
+import {getActiveValidatorIndices} from "../../src/util/validator.js";
+import {interopPubkeysCached} from "../utils/interop.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -41,7 +41,6 @@ let phase0SignedBlock: phase0.SignedBeaconBlock | null = null;
 let altairState: BeaconStateAltair | null = null;
 let altairCachedState23637: CachedBeaconStateAltair | null = null;
 let altairCachedState23638: CachedBeaconStateAltair | null = null;
-const logger = profilerLogger();
 
 /**
  * Number of validators in prater is 210000 as of May 2021
@@ -62,10 +61,9 @@ const secretKeyByModIndex = new Map<number, SecretKey>();
 const epoch = 23638;
 export const perfStateEpoch = epoch;
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/explicit-module-boundary-types
 export function getPubkeys(vc = numValidators) {
   const pubkeysMod = interopPubkeysCached(keypairsMod);
-  const pubkeysModObj = pubkeysMod.map((pk) => bls.PublicKey.fromBytes(pk, CoordType.jacobian));
+  const pubkeysModObj = pubkeysMod.map((pk) => PublicKey.fromBytes(pk));
   const pubkeys = Array.from({length: vc}, (_, i) => pubkeysMod[i % keypairsMod]);
   return {pubkeysMod, pubkeysModObj, pubkeys};
 }
@@ -86,7 +84,6 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
   return sk;
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function getPubkeyCaches({pubkeysMod, pubkeysModObj}: ReturnType<typeof getPubkeys>) {
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkey2index = new PubkeyIndexMap();
@@ -119,10 +116,6 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
 
     // no justificationBits
     phase0State = ssz.phase0.BeaconState.toViewDU(state);
-    logger.verbose("Loaded phase0 state", {
-      slot: state.slot,
-      numValidators: state.validators.length,
-    });
 
     // cache roots
     phase0State.hashTreeRoot();
@@ -132,7 +125,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     const state = phase0State.clone();
     state.slot -= 1;
     phase0CachedState23637 = createCachedBeaconState(state, {
-      config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+      config: createBeaconConfig(config, state.genesisValidatorsRoot),
       pubkey2index,
       index2pubkey,
     });
@@ -201,7 +194,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     ) as CachedBeaconStatePhase0;
     phase0CachedState23638.slot += 1;
   }
-  const resultingState = opts && opts.goBackOneSlot ? phase0CachedState23637 : phase0CachedState23638;
+  const resultingState = opts?.goBackOneSlot ? phase0CachedState23637 : phase0CachedState23638;
 
   return resultingState.clone();
 }
@@ -217,12 +210,18 @@ export function cachedStateAltairPopulateCaches(state: CachedBeaconStateAltair):
   state.inactivityScores.getAll();
 }
 
-export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean}): CachedBeaconStateAltair {
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
+/**
+ * Warning: This function has side effects on the cached state
+ * The order in which the caches are populated is important and can cause stable tests to fail.
+ */
+export function generatePerfTestCachedStateAltair(opts?: {
+  goBackOneSlot: boolean;
+  vc?: number;
+}): CachedBeaconStateAltair {
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
   const {pubkey2index, index2pubkey} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const altairConfig = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
+  const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   const origState = generatePerformanceStateAltair(pubkeys);
 
@@ -230,7 +229,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
     const state = origState.clone();
     state.slot -= 1;
     altairCachedState23637 = createCachedBeaconState(state, {
-      config: createIBeaconConfig(altairConfig, state.genesisValidatorsRoot),
+      config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
       pubkey2index,
       index2pubkey,
     });
@@ -242,7 +241,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
     ) as CachedBeaconStateAltair;
     altairCachedState23638.slot += 1;
   }
-  const resultingState = opts && opts.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
+  const resultingState = opts?.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
 
   return resultingState.clone();
 }
@@ -253,8 +252,8 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
 export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): BeaconStateAltair {
   if (!altairState) {
     const pubkeys = pubkeysArg || getPubkeys().pubkeys;
-    const statePhase0 = buildPerformanceStatePhase0();
-    const state = (statePhase0 as allForks.BeaconState) as altair.BeaconState;
+    const statePhase0 = buildPerformanceStatePhase0(pubkeys);
+    const state = statePhase0 as BeaconState as BeaconState<ForkName.altair>;
 
     state.previousEpochParticipation = newFilledArray(pubkeys.length, 0b111);
     state.currentEpochParticipation = state.previousEpochParticipation;
@@ -272,15 +271,16 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     const activeValidatorIndices = getActiveValidatorIndices(altairState, epoch);
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrements(altairState);
-    const {syncCommittee} = getNextSyncCommittee(altairState, activeValidatorIndices, effectiveBalanceIncrements);
+    const {syncCommittee} = getNextSyncCommittee(
+      ForkSeq.altair,
+      altairState,
+      activeValidatorIndices,
+      effectiveBalanceIncrements
+    );
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
 
     altairState = ssz.altair.BeaconState.toViewDU(state);
-    logger.verbose("Loaded phase0 state", {
-      slot: altairState.slot,
-      numValidators: altairState.validators.length,
-    });
     // cache roots
     altairState.hashTreeRoot();
   }
@@ -303,7 +303,6 @@ export function generatePerformanceBlockPhase0(): phase0.SignedBeaconBlock {
     );
     // eth1Data, graffiti, attestations
     phase0SignedBlock = block;
-    logger.verbose("Loaded block", {slot: phase0SignedBlock.message.slot});
   }
 
   return phase0SignedBlock;
@@ -435,9 +434,13 @@ export function generateTestCachedBeaconStateOnlyValidators({
     throw Error(`Wrong number of validators in the state: ${state.validators.length} !== ${vc}`);
   }
 
-  return createCachedBeaconState(state, {
-    config: createIBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkey2index,
-    index2pubkey,
-  });
+  return createCachedBeaconState(
+    state,
+    {
+      config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      pubkey2index,
+      index2pubkey,
+    },
+    {skipSyncPubkeys: true}
+  );
 }

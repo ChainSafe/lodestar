@@ -1,23 +1,35 @@
-import {toHexString} from "@chainsafe/ssz";
+import {ChainConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/logger";
 import {phase0} from "@lodestar/types";
-import {IChainConfig} from "@lodestar/config";
-import {fromHex} from "@lodestar/utils";
-
-import {linspace} from "../../util/numpy.js";
-import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
-import {Eth1Block, IEth1Provider} from "../interface.js";
-import {Eth1Options} from "../options.js";
+import {
+  FetchError,
+  createElapsedTimeTracker,
+  fromHex,
+  isErrorAborted,
+  isFetchError,
+  toHex,
+  toPrintableUrl,
+} from "@lodestar/utils";
+import {HTTP_CONNECTION_ERROR_CODES, HTTP_FATAL_ERROR_CODES} from "../../execution/engine/utils.js";
 import {isValidAddress} from "../../util/address.js";
-import {EthJsonRpcBlockRaw} from "../interface.js";
-import {JsonRpcHttpClient, JsonRpcHttpClientMetrics, ReqOpts} from "./jsonRpcHttpClient.js";
-import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
+import {linspace} from "../../util/numpy.js";
+import {Eth1Block, Eth1ProviderState, EthJsonRpcBlockRaw, IEth1Provider} from "../interface.js";
+import {DEFAULT_PROVIDER_URLS, Eth1Options} from "../options.js";
+import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
+import {
+  ErrorJsonRpcResponse,
+  HttpRpcError,
+  JsonRpcHttpClient,
+  JsonRpcHttpClientEvent,
+  JsonRpcHttpClientMetrics,
+  ReqOpts,
+} from "./jsonRpcHttpClient.js";
+import {dataToBytes, isJsonRpcTruncatedError, numToQuantity, quantityToNum} from "./utils.js";
 
 /**
  * Binds return types to Ethereum JSON RPC methods
  */
-interface IEthJsonRpcReturnTypes {
+type EthJsonRpcReturnTypes = {
   eth_getBlockByNumber: EthJsonRpcBlockRaw | null;
   eth_getBlockByHash: EthJsonRpcBlockRaw | null;
   eth_blockNumber: string;
@@ -33,7 +45,7 @@ interface IEthJsonRpcReturnTypes {
     data: string;
     topics: string[];
   }[];
-}
+};
 
 // Define static options once to prevent extra allocations
 const getBlocksByNumberOpts: ReqOpts = {routeId: "getBlockByNumber_batched"};
@@ -42,26 +54,75 @@ const getBlockByHashOpts: ReqOpts = {routeId: "getBlockByHash"};
 const getBlockNumberOpts: ReqOpts = {routeId: "getBlockNumber"};
 const getLogsOpts: ReqOpts = {routeId: "getLogs"};
 
+const isOneMinutePassed = createElapsedTimeTracker({minElapsedTime: 60_000});
+
 export class Eth1Provider implements IEth1Provider {
   readonly deployBlock: number;
   private readonly depositContractAddress: string;
   private readonly rpc: JsonRpcHttpClient;
+  // The default state is ONLINE, it will be updated to offline if we receive a http error
+  private state: Eth1ProviderState = Eth1ProviderState.ONLINE;
+  private logger?: Logger;
 
   constructor(
-    config: Pick<IChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex">,
+    config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
+    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex" | "jwtId" | "jwtVersion"> & {
+      logger?: Logger;
+    },
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null
   ) {
+    this.logger = opts.logger;
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
-    this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
-    this.rpc = new JsonRpcHttpClient(opts.providerUrls, {
+    this.depositContractAddress = toHex(config.DEPOSIT_CONTRACT_ADDRESS);
+
+    const providerUrls = opts.providerUrls ?? DEFAULT_PROVIDER_URLS;
+    this.rpc = new JsonRpcHttpClient(providerUrls, {
       signal,
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it
       shouldNotFallback: isJsonRpcTruncatedError,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
+      jwtId: opts.jwtId,
+      jwtVersion: opts.jwtVersion,
       metrics: metrics,
     });
+    this.logger?.info("Eth1 provider", {urls: providerUrls.map(toPrintableUrl).toString()});
+
+    this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
+      const oldState = this.state;
+      this.state = Eth1ProviderState.ONLINE;
+
+      if (oldState !== Eth1ProviderState.ONLINE) {
+        this.logger?.info("Eth1 provider is back online", {oldState, newState: this.state});
+      }
+    });
+
+    this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
+      if (isErrorAborted(error)) {
+        this.state = Eth1ProviderState.ONLINE;
+      } else if ((error as unknown) instanceof HttpRpcError || (error as unknown) instanceof ErrorJsonRpcResponse) {
+        this.state = Eth1ProviderState.ERROR;
+      } else if (error && isFetchError(error) && HTTP_FATAL_ERROR_CODES.includes((error as FetchError).code)) {
+        this.state = Eth1ProviderState.OFFLINE;
+      } else if (error && isFetchError(error) && HTTP_CONNECTION_ERROR_CODES.includes((error as FetchError).code)) {
+        this.state = Eth1ProviderState.AUTH_FAILED;
+      }
+
+      if (this.state !== Eth1ProviderState.ONLINE && isOneMinutePassed()) {
+        this.logger?.error(
+          "Eth1 provider error",
+          {
+            state: this.state,
+            lastErrorAt: new Date(Date.now() - isOneMinutePassed.msSinceLastCall).toLocaleTimeString(),
+          },
+          error
+        );
+      }
+    });
+  }
+
+  getState(): Eth1ProviderState {
+    return this.state;
   }
 
   async validateContract(): Promise<void> {
@@ -90,7 +151,7 @@ export class Eth1Provider implements IEth1Provider {
    */
   async getBlocksByNumber(fromBlock: number, toBlock: number): Promise<EthJsonRpcBlockRaw[]> {
     const method = "eth_getBlockByNumber";
-    const blocksArr = await this.rpc.fetchBatch<IEthJsonRpcReturnTypes[typeof method]>(
+    const blocksArr = await this.rpc.fetchBatch<EthJsonRpcReturnTypes[typeof method]>(
       linspace(fromBlock, toBlock).map((blockNumber) => ({method, params: [numToQuantity(blockNumber), false]})),
       getBlocksByNumberOpts
     );
@@ -104,7 +165,7 @@ export class Eth1Provider implements IEth1Provider {
   async getBlockByNumber(blockNumber: number | "latest"): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByNumber";
     const blockNumberHex = typeof blockNumber === "string" ? blockNumber : numToQuantity(blockNumber);
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    return this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>(
       // false = include only transaction roots, not full objects
       {method, params: [blockNumberHex, false]},
       getBlockByNumberOpts
@@ -113,7 +174,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getBlockByHash(blockHashHex: string): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByHash";
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    return this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>(
       // false = include only transaction roots, not full objects
       {method, params: [blockHashHex, false]},
       getBlockByHashOpts
@@ -122,7 +183,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getBlockNumber(): Promise<number> {
     const method = "eth_blockNumber";
-    const blockNumberRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    const blockNumberRaw = await this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>(
       {method, params: []},
       getBlockNumberOpts
     );
@@ -131,7 +192,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getCode(address: string): Promise<string> {
     const method = "eth_getCode";
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: [address, "latest"]});
+    return this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>({method, params: [address, "latest"]});
   }
 
   async getLogs(options: {
@@ -146,7 +207,7 @@ export class Eth1Provider implements IEth1Provider {
       fromBlock: numToQuantity(options.fromBlock),
       toBlock: numToQuantity(options.toBlock),
     };
-    const logsRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    const logsRaw = await this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>(
       {method, params: [hexOptions]},
       getLogsOpts
     );

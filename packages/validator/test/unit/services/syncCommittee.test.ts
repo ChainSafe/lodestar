@@ -1,116 +1,171 @@
-import {expect} from "chai";
-import sinon from "sinon";
-import bls from "@chainsafe/bls";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
-import {createIChainForkConfig} from "@lodestar/config";
+import {routes} from "@lodestar/api";
+import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {SyncCommitteeService} from "../../../src/services/syncCommittee.js";
-import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties.js";
-import {ValidatorStore} from "../../../src/services/validatorStore.js";
-import {getApiClientStub} from "../../utils/apiStub.js";
-import {loggerVc} from "../../utils/logger.js";
-import {ClockMock} from "../../utils/clock.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
+import {SyncCommitteeService, SyncCommitteeServiceOpts} from "../../../src/services/syncCommittee.js";
+import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties.js";
+import {SyncingStatusTracker} from "../../../src/services/syncingStatusTracker.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
+import {ClockMock} from "../../utils/clock.js";
+import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH} from "../../utils/types.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
+vi.mock("../../../src/services/validatorStore.js");
+vi.mock("../../../src/services/emitter.js");
+vi.mock("../../../src/services/chainHeaderTracker.js");
+vi.mock("../../../src/services/syncingStatusTracker.js");
 
-describe("SyncCommitteeService", function () {
-  const sandbox = sinon.createSandbox();
-
-  const api = getApiClientStub(sandbox);
-  const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
-    sinon.SinonStubbedInstance<ValidatorStore>;
-  const chainHeaderTracker = sinon.createStubInstance(ChainHeaderTracker) as ChainHeaderTracker &
-    sinon.SinonStubbedInstance<ChainHeaderTracker>;
+describe("SyncCommitteeService", () => {
+  const api = getApiClientStub();
+  // @ts-expect-error - Mocked class don't need parameters
+  const validatorStore = vi.mocked(new ValidatorStore({}, {defaultConfig: {}}));
+  const emitter = vi.mocked(new ValidatorEventEmitter());
+  // @ts-expect-error - Mocked class don't need parameters
+  const chainHeaderTracker = vi.mocked(new ChainHeaderTracker());
+  // @ts-expect-error - Mocked class don't need parameters
+  const syncingStatusTracker = vi.mocked(new SyncingStatusTracker({}, api, new ClockMock(), null));
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
-  const config = createIChainForkConfig({
+  const config = createChainForkConfig({
     ...mainnetConfig,
-    SECONDS_PER_SLOT: 1 / 1000, // Make slot time super short: 1 ms
-    ALTAIR_FORK_EPOCH: 0, // Activate Altair immediatelly
-  });
-
-  before(() => {
-    const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
-    validatorStore.hasVotingPubkey.returns(true);
-    validatorStore.hasSomeValidators.returns(true);
-    validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
+    SLOT_DURATION_MS: 1, // Make slot time super short: 1 ms
+    ALTAIR_FORK_EPOCH: 0, // Activate Altair immediately
   });
 
   let controller: AbortController; // To stop clock
-  beforeEach(() => (controller = new AbortController()));
-  afterEach(() => controller.abort());
+  beforeEach(() => {
+    controller = new AbortController();
+    const secretKeys = Array.from({length: 1}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
 
-  it("Should produce, sign, and publish a sync committee + contribution", async () => {
-    const clock = new ClockMock();
-    const syncCommitteeService = new SyncCommitteeService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      chainHeaderTracker,
-      null
-    );
+    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
+    vi.spyOn(validatorStore, "votingPubkeys");
+    vi.spyOn(validatorStore, "hasVotingPubkey");
+    vi.spyOn(validatorStore, "hasSomeValidators");
+    vi.spyOn(validatorStore, "signAttestationSelectionProof");
+    vi.spyOn(validatorStore, "signSyncCommitteeSignature");
+    vi.spyOn(validatorStore, "signContributionAndProof");
 
-    const beaconBlockRoot = Buffer.alloc(32, 0x4d);
-    const syncCommitteeSignature = ssz.altair.SyncCommitteeMessage.defaultValue();
-    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
-    const contributionAndProof = ssz.altair.SignedContributionAndProof.defaultValue();
-    const duties: SyncDutyAndProofs[] = [
-      {
-        duty: {
-          pubkey: toHexString(pubkeys[0]),
-          validatorIndex: 0,
-          subnets: [0],
-        },
-        selectionProofs: [{selectionProof: ZERO_HASH, subcommitteeIndex: 0}],
-      },
-    ];
+    vi.spyOn(chainHeaderTracker, "getCurrentChainHead");
 
-    // Return empty replies to duties service
-    api.beacon.getStateValidators.resolves({data: [], executionOptimistic: false});
-    api.validator.getSyncCommitteeDuties.resolves({data: [], executionOptimistic: false});
-
-    // Mock duties service to return some duties directly
-    syncCommitteeService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);
-
-    // Mock beacon's sync committee and contribution routes
-
-    chainHeaderTracker.getCurrentChainHead.returns(beaconBlockRoot);
-    api.beacon.submitPoolSyncCommitteeSignatures.resolves();
-    api.validator.produceSyncCommitteeContribution.resolves({data: contribution});
-    api.validator.publishContributionAndProofs.resolves();
-
-    // Mock signing service
-    validatorStore.signSyncCommitteeSignature.resolves(syncCommitteeSignature);
-    validatorStore.signContributionAndProof.resolves(contributionAndProof);
-
-    // Trigger clock onSlot for slot 0
-    await clock.tickSlotFns(0, controller.signal);
-
-    // Must submit the signature received through signSyncCommitteeSignature()
-    expect(api.beacon.submitPoolSyncCommitteeSignatures.callCount).to.equal(
-      1,
-      "submitPoolSyncCommitteeSignatures() must be called once"
-    );
-    expect(api.beacon.submitPoolSyncCommitteeSignatures.getCall(0).args).to.deep.equal(
-      [[syncCommitteeSignature]], // 1 arg, = syncCommitteeSignature[]
-      "wrong submitPoolSyncCommitteeSignatures() args"
-    );
-
-    // Must submit the aggregate received through produceSyncCommitteeContribution() then signContributionAndProof()
-    expect(api.validator.publishContributionAndProofs.callCount).to.equal(
-      1,
-      "publishContributionAndProofs() must be called once"
-    );
-    expect(api.validator.publishContributionAndProofs.getCall(0).args).to.deep.equal(
-      [[contributionAndProof]], // 1 arg, = contributionAndProof[]
-      "wrong publishContributionAndProofs() args"
-    );
+    validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
+    validatorStore.hasVotingPubkey.mockReturnValue(true);
+    validatorStore.hasSomeValidators.mockReturnValue(true);
+    validatorStore.signAttestationSelectionProof.mockResolvedValue(ZERO_HASH);
   });
+  afterEach(() => {
+    controller.abort();
+    vi.resetAllMocks();
+  });
+
+  const testContexts: [string, SyncCommitteeServiceOpts][] = [
+    ["With default configuration", {}],
+    ["With distributed aggregation selection enabled", {distributedAggregationSelection: true}],
+  ];
+
+  for (const [title, opts] of testContexts) {
+    describe(title, () => {
+      it("Should produce, sign, and publish a sync committee + contribution", async () => {
+        const clock = new ClockMock();
+        const syncCommitteeService = new SyncCommitteeService(
+          config,
+          loggerVc,
+          api,
+          clock,
+          validatorStore,
+          emitter,
+          chainHeaderTracker,
+          syncingStatusTracker,
+          null,
+          opts
+        );
+
+        const beaconBlockRoot = Buffer.alloc(32, 0x4d);
+        const syncCommitteeSignature = ssz.altair.SyncCommitteeMessage.defaultValue();
+        const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
+        const contributionAndProof = ssz.altair.SignedContributionAndProof.defaultValue();
+        const duties: SyncDutyAndProofs[] = [
+          {
+            duty: {
+              pubkey: toHexString(pubkeys[0]),
+              validatorIndex: 0,
+              subnets: [0],
+            },
+            selectionProofs: [
+              {
+                selectionProof: opts.distributedAggregationSelection ? null : ZERO_HASH,
+                partialSelectionProof: opts.distributedAggregationSelection ? ZERO_HASH : undefined,
+                subcommitteeIndex: 0,
+              },
+            ],
+          },
+        ];
+
+        // Return empty replies to duties service
+        api.beacon.postStateValidators.mockResolvedValue(
+          mockApiResponse({data: [], meta: {executionOptimistic: false, finalized: false}})
+        );
+        api.validator.getSyncCommitteeDuties.mockResolvedValue(
+          mockApiResponse({data: [], meta: {executionOptimistic: false}})
+        );
+
+        // Mock duties service to return some duties directly
+        vi.spyOn(syncCommitteeService["dutiesService"], "getDutiesAtSlot").mockResolvedValue(duties);
+
+        // Mock beacon's sync committee and contribution routes
+
+        chainHeaderTracker.getCurrentChainHead.mockReturnValue(beaconBlockRoot);
+        api.beacon.submitPoolSyncCommitteeSignatures.mockResolvedValue(mockApiResponse({}));
+        api.validator.produceSyncCommitteeContribution.mockResolvedValue(mockApiResponse({data: contribution}));
+        api.validator.publishContributionAndProofs.mockResolvedValue(mockApiResponse({}));
+
+        if (opts.distributedAggregationSelection) {
+          // Mock distributed validator middleware client selections endpoint
+          // and return a selection proof that passes `is_sync_committee_aggregator` test
+          api.validator.submitSyncCommitteeSelections.mockResolvedValue(
+            mockApiResponse({
+              data: [{validatorIndex: 0, slot: 0, subcommitteeIndex: 0, selectionProof: Buffer.alloc(1, 0x19)}],
+            })
+          );
+        }
+
+        // Mock signing service
+        validatorStore.signSyncCommitteeSignature.mockResolvedValue(syncCommitteeSignature);
+        validatorStore.signContributionAndProof.mockResolvedValue(contributionAndProof);
+
+        // Trigger clock onSlot for slot 0
+        await clock.tickSlotFns(0, controller.signal);
+
+        if (opts.distributedAggregationSelection) {
+          // Must submit partial sync committee selection proof based on duty
+          const selection: routes.validator.SyncCommitteeSelection = {
+            validatorIndex: 0,
+            slot: 0,
+            subcommitteeIndex: 0,
+            selectionProof: ZERO_HASH,
+          };
+          expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledOnce();
+          expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledWith({selections: [selection]});
+        }
+
+        // Must submit the signature received through signSyncCommitteeSignature()
+        expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledOnce();
+        expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledWith({
+          signatures: [syncCommitteeSignature],
+        });
+
+        // Must submit the aggregate received through produceSyncCommitteeContribution() then signContributionAndProof()
+        expect(api.validator.publishContributionAndProofs).toHaveBeenCalledOnce();
+        expect(api.validator.publishContributionAndProofs).toHaveBeenCalledWith({
+          contributionAndProofs: [contributionAndProof],
+        });
+      });
+    });
+  }
 });

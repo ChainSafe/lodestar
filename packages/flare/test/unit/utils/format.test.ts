@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {parseRange} from "../../../src/util/format.js";
 
 describe("utils / format", () => {
@@ -10,7 +10,7 @@ describe("utils / format", () => {
 
   for (const {range, indexes} of testCases) {
     it(range, () => {
-      expect(parseRange(range)).to.deep.equal(indexes);
+      expect(parseRange(range)).toEqual(indexes);
     });
   }
 });

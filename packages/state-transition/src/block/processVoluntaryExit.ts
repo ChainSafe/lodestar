@@ -1,9 +1,19 @@
-import {FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {isActiveValidator} from "../util/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
 import {initiateValidatorExit} from "./index.js";
+
+export enum VoluntaryExitValidity {
+  valid = "valid",
+  inactive = "inactive",
+  alreadyExited = "already_exited",
+  earlyEpoch = "early_epoch",
+  shortTimeActive = "short_time_active",
+  pendingWithdrawals = "pending_withdrawals",
+  invalidSignature = "invalid_signature",
+}
 
 /**
  * Process a VoluntaryExit operation. Initiates the exit of a validator.
@@ -11,38 +21,71 @@ import {initiateValidatorExit} from "./index.js";
  * PERF: Work depends on number of VoluntaryExit per block. On regular networks the average is 0 / block.
  */
 export function processVoluntaryExit(
+  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  if (!isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature)) {
-    throw Error("Invalid voluntary exit");
+  const validity = getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
+  if (validity !== VoluntaryExitValidity.valid) {
+    throw Error(`Invalid voluntary exit at forkSeq=${fork} reason=${validity}`);
   }
 
   const validator = state.validators.get(signedVoluntaryExit.message.validatorIndex);
-  initiateValidatorExit(state, validator);
+  initiateValidatorExit(fork, state, validator);
 }
 
-export function isValidVoluntaryExit(
+export function getVoluntaryExitValidity(
+  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
-): boolean {
+): VoluntaryExitValidity {
   const {config, epochCtx} = state;
   const voluntaryExit = signedVoluntaryExit.message;
   const validator = state.validators.get(voluntaryExit.validatorIndex);
   const currentEpoch = epochCtx.epoch;
 
-  return (
-    // verify the validator is active
-    isActiveValidator(validator, currentEpoch) &&
-    // verify exit has not been initiated
-    validator.exitEpoch === FAR_FUTURE_EPOCH &&
-    // exits must specify an epoch when they become valid; they are not valid before then
-    currentEpoch >= voluntaryExit.epoch &&
-    // verify the validator had been active long enough
-    currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD &&
-    // verify signature
-    (!verifySignature || verifyVoluntaryExitSignature(state, signedVoluntaryExit))
-  );
+  // verify the validator is active
+  if (!isActiveValidator(validator, currentEpoch)) {
+    return VoluntaryExitValidity.inactive;
+  }
+
+  // verify exit has not been initiated
+  if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
+    return VoluntaryExitValidity.alreadyExited;
+  }
+
+  // exits must specify an epoch when they become valid; they are not valid before then
+  if (currentEpoch < voluntaryExit.epoch) {
+    return VoluntaryExitValidity.earlyEpoch;
+  }
+
+  // verify the validator had been active long enough
+  if (currentEpoch < validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD) {
+    return VoluntaryExitValidity.shortTimeActive;
+  }
+
+  // only exit validator if it has no pending withdrawals in the queue
+  if (
+    fork >= ForkSeq.electra &&
+    getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) !== 0
+  ) {
+    return VoluntaryExitValidity.pendingWithdrawals;
+  }
+
+  if (verifySignature && !verifyVoluntaryExitSignature(state, signedVoluntaryExit)) {
+    return VoluntaryExitValidity.invalidSignature;
+  }
+
+  return VoluntaryExitValidity.valid;
+}
+
+export function isValidVoluntaryExit(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  verifySignature = true
+): boolean {
+  return getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature) === VoluntaryExitValidity.valid;
 }

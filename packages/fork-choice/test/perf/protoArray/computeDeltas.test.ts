@@ -1,97 +1,66 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {expect} from "chai";
-import {
-  CachedBeaconStateAltair,
-  computeStartSlotAtEpoch,
-  EffectiveBalanceIncrements,
-  getEffectiveBalanceIncrementsZeroed,
-} from "@lodestar/state-transition";
-import {TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
-import {generatePerfTestCachedStateAltair} from "../../../../state-transition/test/perf/util.js";
-import {VoteTracker} from "../../../src/protoArray/interface.js";
+import {beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
+import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
-import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice.js";
-
-/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
-const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
-function flagIsTimelySource(flag: number): boolean {
-  return (flag & TIMELY_SOURCE) === TIMELY_SOURCE;
-}
+import {NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
 
 describe("computeDeltas", () => {
-  let originalState: CachedBeaconStateAltair;
-  const indices: Map<string, number> = new Map<string, number>();
   let oldBalances: EffectiveBalanceIncrements;
   let newBalances: EffectiveBalanceIncrements;
 
-  const oldRoot = "0x32dec344944029ba183ac387a7aa1f2068591c00e9bfadcfb238e50fbe9ea38e";
-  const newRoot = "0xb59f3a209f639dd6b5645ea9fad8d441df44c3be93bd1bbf50ef90bf124d1238";
+  // it's not much differences between 1h vs 4h or even 1d proto nodes
+  const numProtoNode = (60 * 60) / 12;
+  const inactiveValidatorsPercentages = [0, 0.1, 0.2, 0.5];
 
-  before(function () {
-    this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
+  const numValidators = [1_400_000, 2_100_000];
+  for (const numValidator of numValidators) {
+    beforeAll(
+      () => {
+        oldBalances = getEffectiveBalanceIncrementsZeroed(numValidator);
+        newBalances = getEffectiveBalanceIncrementsZeroed(numValidator);
 
-    originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
-
-    const previousEpochParticipationArr = originalState.previousEpochParticipation.getAll();
-    const currentEpochParticipationArr = originalState.currentEpochParticipation.getAll();
-
-    const numPreviousEpochParticipation = previousEpochParticipationArr.filter(flagIsTimelySource).length;
-    const numCurrentEpochParticipation = currentEpochParticipationArr.filter(flagIsTimelySource).length;
-
-    expect(numPreviousEpochParticipation).to.equal(250000, "Wrong numPreviousEpochParticipation");
-    expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");
-
-    oldBalances = getEffectiveBalanceIncrementsZeroed(numPreviousEpochParticipation);
-    newBalances = getEffectiveBalanceIncrementsZeroed(numPreviousEpochParticipation);
-
-    for (let i = 0; i < numPreviousEpochParticipation; i++) {
-      oldBalances[i] = 32;
-      newBalances[i] = 32;
-    }
-    for (let i = 0; i < 10000; i++) {
-      indices.set("" + i, i);
-    }
-    indices.set(oldRoot, 1001);
-    indices.set(newRoot, 1001);
-  });
-
-  setBenchOpts({
-    minMs: 30 * 1000,
-    maxMs: 40 * 1000,
-  });
-
-  itBench({
-    id: "computeDeltas",
-    beforeEach: () => {
-      const votes: VoteTracker[] = [];
-      const epoch = originalState.epochCtx.currentShuffling.epoch;
-      const committee = originalState.epochCtx.getBeaconCommittee(computeStartSlotAtEpoch(epoch), 0);
-      for (let i = 0; i < 250000; i++) {
-        if (committee.includes(i)) {
-          votes.push({
-            currentRoot: oldRoot,
-            nextRoot: newRoot,
-            nextEpoch: epoch,
-          });
-        } else {
-          votes.push({
-            currentRoot: oldRoot,
-            nextRoot: oldRoot,
-            nextEpoch: epoch - 1,
-          });
+        for (let i = 0; i < numValidator; i++) {
+          oldBalances[i] = 32;
+          newBalances[i] = 32;
         }
-      }
-      return votes;
-    },
-    fn: (votes) => {
-      computeDeltas(indices, votes, oldBalances, newBalances);
-    },
-  });
+      },
+      2 * 60 * 1000
+    );
 
-  itBench({
-    id: "computeProposerBoostScoreFromBalances",
-    fn: () => {
-      computeProposerBoostScoreFromBalances(newBalances, {slotsPerEpoch: 32, proposerScoreBoost: 70});
-    },
-  });
+    setBenchOpts({
+      minMs: 10 * 1000,
+      maxMs: 10 * 1000,
+    });
+
+    for (const inainactiveValidatorsPercentage of inactiveValidatorsPercentages) {
+      if (inainactiveValidatorsPercentage < 0 || inainactiveValidatorsPercentage > 1) {
+        throw new Error("inactiveValidatorsPercentage must be between 0 and 1");
+      }
+      // this results in [null, 10, 5, 2], ie for 10% inactive validators, every validator index ending with 0 is inactive
+      const inactiveValidatorMod =
+        inainactiveValidatorsPercentage === 0 ? null : Math.floor(1 / inainactiveValidatorsPercentage);
+      const voteCurrentIndices = Array.from({length: numValidator}, () => NULL_VOTE_INDEX);
+      const voteNextIndices = Array.from({length: numValidator}, () => NULL_VOTE_INDEX);
+      bench({
+        id: `computeDeltas ${numValidator} validators ${inainactiveValidatorsPercentage * 100}% inactive`,
+        beforeEach: () => {
+          for (let i = 0; i < numValidator; i++) {
+            if (inactiveValidatorMod != null && i % inactiveValidatorMod === 0) continue;
+            voteCurrentIndices[i] = Math.floor(numProtoNode / 2);
+            voteNextIndices[i] = Math.floor(numProtoNode / 2) + 1;
+          }
+          return {voteCurrentIndices, voteNextIndices};
+        },
+        fn: ({voteCurrentIndices, voteNextIndices}) => {
+          computeDeltas(
+            numProtoNode,
+            voteCurrentIndices,
+            voteNextIndices,
+            oldBalances,
+            newBalances,
+            new Set([1, 2, 3, 4, 5])
+          );
+        },
+      });
+    }
+  }
 });

@@ -1,10 +1,9 @@
-import {phase0} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
-
-import {isSlashableValidator, isSlashableAttestationData, getAttesterSlashableIndices} from "../util/index.js";
+import {AttesterSlashing} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
-import {slashValidator} from "./slashValidator.js";
+import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
 import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
+import {slashValidator} from "./slashValidator.js";
 
 /**
  * Process an AttesterSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed
@@ -15,7 +14,7 @@ import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
 export function processAttesterSlashing(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attesterSlashing: phase0.AttesterSlashing,
+  attesterSlashing: AttesterSlashing,
   verifySignatures = true
 ): void {
   assertValidAttesterSlashing(state, attesterSlashing, verifySignatures);
@@ -39,7 +38,7 @@ export function processAttesterSlashing(
 
 export function assertValidAttesterSlashing(
   state: CachedBeaconStateAllForks,
-  attesterSlashing: phase0.AttesterSlashing,
+  attesterSlashing: AttesterSlashing,
   verifySignatures = true
 ): void {
   const attestation1 = attesterSlashing.attestation1;

@@ -1,12 +1,98 @@
-import {FullOrBlindedBeaconBlock, FullOrBlindedSignedBeaconBlock} from "../allForks/types.js";
-import {ts as bellatrix} from "../bellatrix/index.js";
+import {FINALIZED_ROOT_DEPTH_ELECTRA, ForkPostBellatrix, ForkPostDeneb, ForkPostElectra} from "@lodestar/params";
+import {
+  Attestation,
+  BeaconBlock,
+  BeaconBlockBody,
+  BlindedBeaconBlock,
+  BlindedBeaconBlockBody,
+  BlockContents,
+  ExecutionPayload,
+  ExecutionPayloadAndBlobsBundle,
+  ExecutionPayloadHeader,
+  LightClientFinalityUpdate,
+  LightClientUpdate,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
+  SignedBlockContents,
+  SingleAttestation,
+} from "../types.js";
 
-export function isBlindedBeaconBlock(block: FullOrBlindedBeaconBlock): block is bellatrix.BlindedBeaconBlock {
-  return (block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader !== undefined;
+export function isExecutionPayload<F extends ForkPostBellatrix>(
+  payload: ExecutionPayload<F> | ExecutionPayloadHeader<F>
+): payload is ExecutionPayload<F> {
+  // we just check transactionsRoot for determining as it the base field
+  // that is present and differs from ExecutionPayload for all forks
+  return (payload as ExecutionPayload<F>).transactions !== undefined;
 }
 
-export function isBlindedSignedBeaconBlock(
-  signedBlock: FullOrBlindedSignedBeaconBlock
-): signedBlock is bellatrix.SignedBlindedBeaconBlock {
-  return (signedBlock as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
+export function isExecutionPayloadHeader<F extends ForkPostBellatrix>(
+  payload: ExecutionPayload<F> | ExecutionPayloadHeader<F>
+): payload is ExecutionPayloadHeader<F> {
+  // we just check transactionsRoot for determining as it the base field
+  // that is present and differs from ExecutionPayload for all forks
+  return (payload as ExecutionPayloadHeader<F>).transactionsRoot !== undefined;
+}
+
+export function isExecutionPayloadAndBlobsBundle<F extends ForkPostDeneb>(
+  data: ExecutionPayload<ForkPostBellatrix> | ExecutionPayloadAndBlobsBundle<F>
+): data is ExecutionPayloadAndBlobsBundle<F> {
+  return (data as ExecutionPayloadAndBlobsBundle<ForkPostDeneb>).blobsBundle !== undefined;
+}
+
+export function isBlindedBeaconBlock<F extends ForkPostBellatrix>(
+  block: BeaconBlock | BlockContents | SignedBeaconBlock | SignedBlockContents
+): block is BlindedBeaconBlock<F> {
+  return (block as BeaconBlock).body !== null && isBlindedBeaconBlockBody((block as BeaconBlock).body);
+}
+
+export function isBlindedSignedBeaconBlock<F extends ForkPostBellatrix>(
+  signedBlock: SignedBeaconBlock | SignedBlockContents
+): signedBlock is SignedBlindedBeaconBlock<F> {
+  return (signedBlock as SignedBlindedBeaconBlock<F>).message.body.executionPayloadHeader !== undefined;
+}
+
+export function isBlindedBeaconBlockBody<F extends ForkPostBellatrix>(
+  body: BeaconBlockBody | BlindedBeaconBlockBody
+): body is BlindedBeaconBlockBody<F> {
+  return (body as BlindedBeaconBlockBody).executionPayloadHeader !== undefined;
+}
+
+export function isDenebBlockContents(
+  data: BeaconBlock | BlockContents | SignedBeaconBlock | SignedBlockContents
+): data is BlockContents<ForkPostDeneb> {
+  return (data as BlockContents<ForkPostDeneb>).kzgProofs !== undefined;
+}
+
+export function isDenebSignedBlockContents(
+  data: BeaconBlock | BlockContents | SignedBeaconBlock | SignedBlockContents
+): data is SignedBlockContents<ForkPostDeneb> {
+  return (data as SignedBlockContents<ForkPostDeneb>).kzgProofs !== undefined;
+}
+
+export function isElectraAttestation(attestation: Attestation): attestation is Attestation<ForkPostElectra> {
+  return (attestation as Attestation<ForkPostElectra>).committeeBits !== undefined;
+}
+
+export function isElectraSingleAttestation(
+  singleAttestation: SingleAttestation
+): singleAttestation is SingleAttestation<ForkPostElectra> {
+  return (singleAttestation as SingleAttestation<ForkPostElectra>).committeeIndex !== undefined;
+}
+
+export function isElectraLightClientUpdate(update: LightClientUpdate): update is LightClientUpdate<ForkPostElectra> {
+  const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
+  return (
+    updatePostElectra.finalityBranch !== undefined &&
+    updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
+  );
+}
+
+export function isELectraLightClientFinalityUpdate(
+  update: LightClientFinalityUpdate
+): update is LightClientFinalityUpdate<ForkPostElectra> {
+  const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
+  return (
+    updatePostElectra.finalityBranch !== undefined &&
+    updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
+  );
 }

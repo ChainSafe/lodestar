@@ -1,0 +1,5 @@
+name: "Setup env variables using .env file"
+description: "Load .env file from root of repo and setup for CI runner"
+runs:
+  using: "node20"
+  main: index.js

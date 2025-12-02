@@ -1,18 +1,9 @@
-import {expect} from "chai";
-import {Root, phase0} from "@lodestar/types";
+import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface";
+import {logger} from "@libp2p/logger";
+import {Uint8ArrayList} from "uint8arraylist";
+import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {Libp2pStream} from "../../../../src/network/index.js";
-import {generateEmptySignedBlock} from "../../../utils/block.js";
-
-export function createStatus(): phase0.Status {
-  return {
-    finalizedEpoch: 1,
-    finalizedRoot: Buffer.alloc(32, 0),
-    forkDigest: Buffer.alloc(4),
-    headRoot: Buffer.alloc(32, 0),
-    headSlot: 10,
-  };
-}
+import {Root} from "@lodestar/types";
 
 export function generateRoots(count: number, offset = 0): Root[] {
   const roots: Root[] = [];
@@ -32,36 +23,41 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
   }
 }
 
-export function generateEmptySignedBlocks(n = 3): phase0.SignedBeaconBlock[] {
-  return Array.from({length: n}).map(() => generateEmptySignedBlock());
-}
-
 /**
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
-export function expectEqualByteChunks(chunks: Buffer[], expectedChunks: Buffer[], message?: string): void {
-  expect(chunks.map(toHexString)).to.deep.equal(expectedChunks.map(toHexString), message);
+export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[]): void {
+  expect(chunks.map(toHexString)).toEqual(expectedChunks.map(toHexString));
 }
 
 /**
  * Useful to simulate a LibP2P stream source emitting prepared bytes
  * and capture the response with a sink accessible via `this.resultChunks`
  */
-export class MockLibP2pStream implements Libp2pStream {
-  source: Libp2pStream["source"];
-  resultChunks: Buffer[] = [];
+export class MockLibP2pStream implements Stream {
+  id = "mock";
+  log = logger("mock");
+  direction: Direction = "inbound";
+  timeline = {
+    open: Date.now(),
+  };
+  status: StreamStatus = "open";
+  readStatus: ReadStatus = "ready";
+  writeStatus: WriteStatus = "ready";
+  metadata = {};
+  source: Stream["source"];
+  resultChunks: Uint8Array[] = [];
 
-  constructor(requestChunks: Buffer[]) {
+  constructor(requestChunks: Uint8ArrayList[]) {
     this.source = arrToSource(requestChunks);
   }
-
-  sink: Libp2pStream["sink"] = async (source) => {
+  sink: Stream["sink"] = async (source) => {
     for await (const chunk of source) {
-      this.resultChunks.push(chunk);
+      this.resultChunks.push(chunk.subarray());
     }
   };
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  close: Libp2pStream["close"] = () => {};
-  reset: Libp2pStream["reset"] = () => this.close();
-  abort: Libp2pStream["abort"] = () => this.close();
+  close: Stream["close"] = async () => {};
+  closeRead = async (): Promise<void> => {};
+  closeWrite = async (): Promise<void> => {};
+  abort: Stream["abort"] = () => this.close();
 }

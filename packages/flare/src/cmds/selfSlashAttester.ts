@@ -1,16 +1,12 @@
-import bls from "@chainsafe/bls";
-import type {SecretKey} from "@chainsafe/bls/types";
+import {SecretKey, aggregateSignatures} from "@chainsafe/blst";
 import {getClient} from "@lodestar/api";
-import {phase0, ssz} from "@lodestar/types";
+import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {toHexString} from "@lodestar/utils";
 import {computeSigningRoot} from "@lodestar/state-transition";
-import {ICliCommand} from "../util/command.js";
-import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
-
-/* eslint-disable no-console */
+import {AttesterSlashing, phase0, ssz} from "@lodestar/types";
+import {CliCommand, toPubkeyHex} from "@lodestar/utils";
+import {SecretKeysArgs, deriveSecretKeys, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 type SelfSlashArgs = SecretKeysArgs & {
   server: string;
@@ -18,12 +14,12 @@ type SelfSlashArgs = SecretKeysArgs & {
   batchSize: string;
 };
 
-export const selfSlashAttester: ICliCommand<SelfSlashArgs, Record<never, never>, void> = {
+export const selfSlashAttester: CliCommand<SelfSlashArgs, Record<never, never>, void> = {
   command: "self-slash-attester",
   describe: "Self slash validators of a provided mnemonic with AttesterSlashing",
   examples: [
     {
-      command: "self-slash-proposer --network goerli",
+      command: "self-slash-proposer --network holesky",
       description: "Self slash validators of a provided mnemonic",
     },
   ],
@@ -54,7 +50,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
   const slot = BigInt(args.slot); // Throws if not valid
   const batchSize = parseInt(args.batchSize);
 
-  if (isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
+  if (Number.isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
   if (batchSize <= 0) throw Error(`batchSize must be > 0: ${batchSize}`);
   if (batchSize > MAX_VALIDATORS_PER_COMMITTEE) throw Error("batchSize must be < MAX_VALIDATORS_PER_COMMITTEE");
 
@@ -63,8 +59,9 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
   const client = getClient({baseUrl: args.server}, {config: chainConfig});
 
   // Get genesis data to perform correct signatures
-  const {data: genesis} = await client.beacon.getGenesis();
-  const config = createIBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
+  const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).value();
+
+  const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   // TODO: Allow to customize the ProposerSlashing payloads
 
@@ -80,7 +77,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 
     // Retrieve the status all all validators in range at once
     const pksHex = sks.map((sk) => sk.toPublicKey().toHex());
-    const {data: validators} = await client.beacon.getStateValidators("head", {id: pksHex});
+    const validators = (await client.beacon.postStateValidators({stateId: "head", validatorIds: pksHex})).value();
 
     // All validators in the batch will be part of the same AttesterSlashing
     const attestingIndices = validators.map((v) => v.index);
@@ -91,9 +88,9 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
     for (let i = 0; i < pksHex.length; i++) {
       const {index, status, validator} = validators[i];
       const pkHex = pksHex[i];
-      const validatorPkHex = toHexString(validator.pubkey);
+      const validatorPkHex = toPubkeyHex(validator.pubkey);
       if (validatorPkHex !== pkHex) {
-        throw Error(`getStateValidators did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
+        throw Error(`Beacon node did not return same validator pubkey: ${validatorPkHex} != ${pkHex}`);
       }
 
       if (status === "active_slashed" || status === "exited_slashed") {
@@ -118,7 +115,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
       target: {epoch: BigInt(0), root: rootB},
     };
 
-    const attesterSlashing: phase0.AttesterSlashing = {
+    const attesterSlashing: AttesterSlashing = {
       attestation1: {
         attestingIndices,
         data: data1,
@@ -131,7 +128,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
       },
     };
 
-    await client.beacon.submitPoolAttesterSlashings(attesterSlashing);
+    (await client.beacon.submitPoolAttesterSlashingsV2({attesterSlashing})).assertOk();
 
     successCount += attestingIndices.length;
     const indexesStr = attestingIndices.join(",");
@@ -140,7 +137,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 }
 
 function signAttestationDataBigint(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   sks: SecretKey[],
   data: phase0.AttestationDataBigint
 ): Uint8Array {
@@ -149,5 +146,5 @@ function signAttestationDataBigint(
   const signingRoot = computeSigningRoot(ssz.phase0.AttestationDataBigint, data, proposerDomain);
 
   const sigs = sks.map((sk) => sk.sign(signingRoot));
-  return bls.Signature.aggregate(sigs).toBytes();
+  return aggregateSignatures(sigs).toBytes();
 }

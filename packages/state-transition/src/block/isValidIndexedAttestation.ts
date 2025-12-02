@@ -1,15 +1,15 @@
-import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {phase0} from "@lodestar/types";
+import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
+import {IndexedAttestation, IndexedAttestationBigint} from "@lodestar/types";
+import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {verifySignatureSet} from "../util/index.js";
-import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
  */
 export function isValidIndexedAttestation(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestation,
+  indexedAttestation: IndexedAttestation,
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
@@ -18,14 +18,13 @@ export function isValidIndexedAttestation(
 
   if (verifySignature) {
     return verifySignatureSet(getIndexedAttestationSignatureSet(state, indexedAttestation));
-  } else {
-    return true;
   }
+  return true;
 }
 
 export function isValidIndexedAttestationBigint(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestationBigint,
+  indexedAttestation: IndexedAttestationBigint,
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
@@ -34,9 +33,8 @@ export function isValidIndexedAttestationBigint(
 
   if (verifySignature) {
     return verifySignatureSet(getIndexedAttestationBigintSignatureSet(state, indexedAttestation));
-  } else {
-    return true;
   }
+  return true;
 }
 
 /**
@@ -44,7 +42,11 @@ export function isValidIndexedAttestationBigint(
  */
 export function isValidIndexedAttestationIndices(state: CachedBeaconStateAllForks, indices: number[]): boolean {
   // verify max number of indices
-  if (!(indices.length > 0 && indices.length <= MAX_VALIDATORS_PER_COMMITTEE)) {
+  const maxIndices =
+    state.config.getForkSeq(state.slot) >= ForkSeq.electra
+      ? MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
+      : MAX_VALIDATORS_PER_COMMITTEE;
+  if (!(indices.length > 0 && indices.length <= maxIndices)) {
     return false;
   }
 
@@ -59,7 +61,8 @@ export function isValidIndexedAttestationIndices(state: CachedBeaconStateAllFork
 
   // check if indices are out of bounds, by checking the highest index (since it is sorted)
   // TODO - SLOW CODE - Does this .length check the tree and is expensive?
-  if (indices[indices.length - 1] >= state.validators.length) {
+  const lastIndex = indices.at(-1);
+  if (lastIndex && lastIndex >= state.validators.length) {
     return false;
   }
 

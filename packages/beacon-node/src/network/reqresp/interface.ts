@@ -1,86 +1,13 @@
-import LibP2p from "libp2p";
-import PeerId from "peer-id";
-import {ForkName} from "@lodestar/params";
-import {IBeaconConfig} from "@lodestar/config";
-import {allForks, phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
-import {IPeerRpcScoreStore} from "../peers/index.js";
-import {MetadataController} from "../metadata.js";
-import {INetworkEventBus} from "../events.js";
-import {PeersData} from "../peers/peersData.js";
-import {IMetrics} from "../../metrics/index.js";
-import {ReqRespHandlers} from "./handlers/index.js";
-import {RequestTypedContainer} from "./types.js";
-
-export interface IReqResp {
-  start(): void;
-  stop(): void;
-  status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
-  goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
-  ping(peerId: PeerId): Promise<phase0.Ping>;
-  metadata(peerId: PeerId, fork?: ForkName): Promise<allForks.Metadata>;
-  beaconBlocksByRange(
-    peerId: PeerId,
-    request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<allForks.SignedBeaconBlock[]>;
-  beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
-  pruneOnPeerDisconnect(peerId: PeerId): void;
-}
-
-export interface IReqRespModules {
-  config: IBeaconConfig;
-  libp2p: LibP2p;
-  peersData: PeersData;
-  logger: ILogger;
-  metadata: MetadataController;
-  reqRespHandlers: ReqRespHandlers;
-  peerRpcScores: IPeerRpcScoreStore;
-  networkEventBus: INetworkEventBus;
-  metrics: IMetrics | null;
-}
-
-export type Libp2pConnection = {
-  stream: Libp2pStream;
-  /**
-   * When dialing a protocol you may request multiple protocols by order of preference.
-   * Libp2p will negotiate a protocol and the one stablished will be returned in this variable.
-   * Example value: `'/eth2/beacon_chain/req/metadata/1/ssz_snappy'`
-   */
-  protocol: string;
-};
-
-/**
- * Stream types from libp2p.dialProtocol are too vage and cause compilation type issues
- * These source and sink types are more precise to our usage
- */
-export type Libp2pStream = {
-  source: AsyncIterable<Buffer>;
-  sink: (source: AsyncIterable<Buffer>) => Promise<void>;
-  /**
-   * `libp2p-mplex`: Close for reading
-   * ```ts
-   * () => stream.source.end()
-   * ```
-   */
-  close: () => void;
-  /**
-   * `libp2p-mplex`: Close immediately for reading and writing (remote error)
-   */
-  reset: () => void;
-  /**
-   * `libp2p-mplex`: Close for reading and writing (local error)
-   */
-  abort: (err: Error) => void;
-};
+import {PeerId} from "@libp2p/interface";
 
 /**
  * Rate limiter interface for inbound and outbound requests.
  */
-export interface IRateLimiter {
-  /**
-   * Allow to request or response based on rate limit params configured.
-   */
-  allowRequest(peerId: PeerId, requestTyped: RequestTypedContainer): boolean;
+export interface RateLimiter {
+  /** Allow to request or response based on rate limit params configured. */
+  allowRequest(peerId: PeerId): boolean;
+  /** Rate limit check for block count */
+  allowBlockByRequest(peerId: PeerId, numBlock: number): boolean;
 
   /**
    * Prune by peer id
@@ -89,3 +16,30 @@ export interface IRateLimiter {
   start(): void;
   stop(): void;
 }
+
+//  Request/Response constants
+export enum RespStatus {
+  /**
+   * A normal response follows, with contents matching the expected message schema and encoding specified in the request
+   */
+  SUCCESS = 0,
+  /**
+   * The contents of the request are semantically invalid, or the payload is malformed,
+   * or could not be understood. The response payload adheres to the ErrorMessage schema
+   */
+  INVALID_REQUEST = 1,
+  /**
+   * The responder encountered an error while processing the request. The response payload adheres to the ErrorMessage schema
+   */
+  SERVER_ERROR = 2,
+  /**
+   * The responder does not have requested resource.  The response payload adheres to the ErrorMessage schema (described below). Note: This response code is only valid as a response to BlocksByRange
+   */
+  RESOURCE_UNAVAILABLE = 3,
+  /**
+   * Our node does not have bandwidth to serve requests due to either per-peer quota or total quota.
+   */
+  RATE_LIMITED = 139,
+}
+
+export type RpcResponseStatusError = Exclude<RespStatus, RespStatus.SUCCESS>;

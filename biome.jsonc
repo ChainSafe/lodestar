@@ -1,0 +1,296 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": [
+    "@chainsafe/biomejs-config",
+    "@chainsafe/biomejs-config/recommended",
+    "@chainsafe/biomejs-config/nodejs",
+    "@chainsafe/biomejs-config/esm"
+  ],
+  "vcs": {
+    "defaultBranch": "unstable"
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "identifierOrder": "lexicographic",
+            "groups": [
+              [
+                // Bun modules
+                ":BUN:",
+                // Node.js modules
+                ":NODE:"
+              ],
+              [
+                // Modules imported with the `npm:` protocol
+                "npm:*",
+                "npm:*/**"
+              ],
+              [
+                // Libraries
+                ":PACKAGE:",
+                // Libraries
+                ":PACKAGE_WITH_PROTOCOL:",
+                "!@chainsafe/**",
+                "!@lodestar/**"
+              ],
+              [
+                // URLs
+                ":URL:",
+                // Sharp aliases
+                ":ALIAS:"
+              ],
+              ["@chainsafe/**", "@lodestar/**"],
+              // All other paths
+              ":PATH:"
+            ]
+          }
+        },
+        "useSortedKeys": { "level": "off", "options": { "sortOrder": "lexicographic" } }
+      }
+    }
+  },
+  "files": {
+    "includes": [
+      "**/packages/**/*/src/**/*.ts",
+      "**/packages/**/*/test/**/*.ts",
+      "**/configs/**/*.ts",
+      "vitest.config.ts",
+      "!**/lib",
+      "!packages/**/*/spec-tests",
+      "!packages/**/*/node_modules/"
+    ]
+  },
+  "javascript": {
+    "globals": ["Bun"]
+  },
+  "linter": {
+    "rules": {
+      "correctness": {
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "forceJsExtensions": false
+          }
+        },
+        "useParseIntRadix": {
+          "level": "off"
+        },
+        "noPrivateImports": "error"
+      },
+      "performance": {
+        // This rule should be enabled but with considerations and careful review
+        "noDelete": "off"
+      },
+      "style": {
+        // Will be enabled in a separate PR
+        "useArrayLiterals": "off",
+        // There are a lot of places we mutate params, should be fixed in an independent PR.
+        "noParameterAssign": "off",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": { "fetch": "Please use 'fetch' from '@lodestar/api' instead." }
+          }
+        },
+        // In some cases the enums are initialized with values of other enums
+        "useLiteralEnumMembers": "off",
+        // We use `+` operator for string concatenation a lot
+        "useTemplate": "off",
+        // We use to export types and object without differentiating
+        "useExportType": "off",
+        // We use to import types and object without differentiating
+        "useImportType": "off",
+        // We prefer to auto-initialize enums
+        "useEnumInitializers": "off",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "strictCase": false,
+            "requireAscii": true,
+            "conventions": [
+              // Skip __dirname and any variable starting with _, for rest check next convention
+              {
+                "selector": {
+                  "kind": "variable"
+                },
+                "match": "(?:__dirname)|(?:_.*)|(.*)"
+              },
+              {
+                "selector": {
+                  "kind": "variable"
+                },
+                "formats": ["camelCase", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeLike"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "objectLiteralProperty"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "objectLiteralMethod"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              // Skip any property starting with _ and then check for next convention
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "match": "(?:_.*)|(.*)"
+              },
+              {
+                "selector": {
+                  "kind": "classProperty"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeProperty"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "typeMethod"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "enumMember"
+                },
+                "formats": ["camelCase", "snake_case", "PascalCase", "CONSTANT_CASE"]
+              },
+              {
+                "selector": {
+                  "kind": "indexParameter"
+                },
+                "formats": ["camelCase", "PascalCase"]
+              },
+              {
+                "selector": {
+                  "kind": "function"
+                },
+                "formats": ["camelCase", "PascalCase"]
+              }
+            ]
+          }
+        },
+        // Currently there is no way to validate `imports` against package `exports` unless
+        // we change the tsconfig `moduleResolution`. This is a workaround for most common pattern
+        // used to export the files from packages
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": "**/lib/**",
+                "message": "Avoid importing directly from a package's internal 'lib' directory. This can cause issues when the package is updated."
+              }
+            ]
+          }
+        }
+      },
+      "suspicious": {
+        // Will be enabled in separate PR
+        "useIterableCallbackReturn": "off",
+        // There is a lot of empty code blocks, should be enabled and clean up separately.
+        "noEmptyBlockStatements": "off",
+        // We are using `Object.prototype.hasOwnProperty` a lot because compiling lib is set to prior 2022
+        "noPrototypeBuiltins": "off"
+      },
+      "nursery": {
+        // Need to enable this rule with exception to anonymous functions
+        "useExplicitType": "off",
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error"
+      },
+      "complexity": {
+        // Should be done in a separate PR
+        "useIndexOf": "off",
+        // Should be done in a separate PR
+        "useDateNow": "off",
+        // The code usage looks suspicious so it should be enabled in a separate PR
+        "noCommaOperator": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/packages/**/test/**"],
+      "linter": {
+        "rules": {
+          "correctness": { "noPrivateImports": "off" },
+          "style": { "noRestrictedImports": "off" }
+        }
+      }
+    },
+    // Code using console output
+    {
+      "includes": ["**/packages/cli/src/**", "**/packages/test-utils/src/**", "**/packages/flare/src/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    // All test files
+    {
+      "includes": ["**/packages/spec-test-util/src/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            // During tests we often need to use private/protected attributes, which is only possible with literal keys
+            "useLiteralKeys": "off"
+          },
+          "suspicious": {
+            // During tests it's quicker to define variables with `let` without specifying types
+            "noImplicitAnyLet": "off",
+            // During testing we use `any` type for quick assignments
+            "noExplicitAny": "off",
+            // Console logging is often used in tests
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/packages/beacon-node/src/db/buckets.ts",
+        "**/packages/beacon-node/src/execution/engine/mock.ts",
+        "**/packages/beacon-node/src/execution/engine/types.ts",
+        "**/packages/beacon-node/src/eth1/provider/eth1Provider.ts",
+        "**/packages/validator/src/buckets.ts",
+        "**/packages/prover/src/types.ts",
+        "**/prover/src/utils/process.ts",
+        "**/prover/src/verified_requests/**/*.ts",
+        "**/packages/types/src/utils/**/*.ts",
+        "**/packages/beacon-node/test/spec/bls/bls.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "off",
+              "options": {}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

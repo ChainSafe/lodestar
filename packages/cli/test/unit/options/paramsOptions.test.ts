@@ -1,6 +1,6 @@
-import {expect} from "chai";
-import {parseBeaconParamsArgs} from "../../../src/options/paramsOptions.js";
+import {describe, expect, it} from "vitest";
 import {IBeaconParamsUnparsed} from "../../../src/config/types.js";
+import {parseBeaconParamsArgs} from "../../../src/options/paramsOptions.js";
 
 describe("options / paramsOptions", () => {
   it("Should parse BeaconParams", () => {
@@ -11,13 +11,11 @@ describe("options / paramsOptions", () => {
     };
 
     const expectedBeaconParams: Partial<IBeaconParamsUnparsed> = {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: "0x00000001",
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       DEPOSIT_CONTRACT_ADDRESS: "0x1234567890123456789012345678901234567890",
     };
 
     const beaconParams = parseBeaconParamsArgs(beaconParamsArgs);
-    expect(beaconParams).to.deep.equal(expectedBeaconParams);
+    expect(beaconParams).toEqual(expectedBeaconParams);
   });
 });

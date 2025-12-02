@@ -1,22 +1,36 @@
-import sinon, {SinonStubbedInstance} from "sinon";
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
 import all from "it-all";
-
+import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ContainerType} from "@chainsafe/ssz";
-import {Bytes32, ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {Db, LevelDbController, Repository, Bucket} from "@lodestar/db";
+import {Db, Repository} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
+import {Bytes32, ssz} from "@lodestar/types";
+import {Bucket} from "../../../../src/db/buckets.js";
 
-chai.use(chaiAsPromised);
+vi.mock("@lodestar/db/controller/level", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@lodestar/db/controller/level")>();
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
+  return {
+    ...mod,
+    LevelDbController: vi.spyOn(mod, "LevelDbController").mockImplementation(function MockedLevelDbController() {
+      return {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+        values: vi.fn(),
+        valuesStream: vi.fn(),
+        batchDelete: vi.fn(),
+        batchPut: vi.fn(),
+      };
+    }),
+  };
+});
+
 interface TestType {
   bool: boolean;
   bytes: Bytes32;
 }
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const TestSSZType = new ContainerType({
   bool: ssz.Boolean,
   bytes: ssz.Bytes32,
@@ -24,113 +38,113 @@ const TestSSZType = new ContainerType({
 
 class TestRepository extends Repository<string, TestType> {
   constructor(db: Db) {
-    super(config, db, Bucket.phase0_depositEvent, TestSSZType);
+    super(config, db, Bucket.phase0_depositEvent, TestSSZType, "phase0_depositEvent");
   }
 }
 
-describe("database repository", function () {
-  const sandbox = sinon.createSandbox();
+describe("database repository", () => {
+  let repository: TestRepository, controller: MockedObject<LevelDbController>;
 
-  let repository: TestRepository, controller: SinonStubbedInstance<LevelDbController>;
-
-  beforeEach(function () {
-    controller = sandbox.createStubInstance(LevelDbController);
-    repository = new TestRepository(controller);
+  beforeEach(() => {
+    controller = vi.mocked(new LevelDbController({} as any, {} as any, {} as any));
+    repository = new TestRepository(controller as unknown as LevelDbController);
   });
 
-  it("should get single item", async function () {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should get single item", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(TestSSZType.serialize(item) as Buffer);
+    controller.get.mockResolvedValue(TestSSZType.serialize(item) as Buffer);
     const result = await repository.get("id");
-    expect(result).to.be.deep.equal(item);
-    expect(controller.get.calledOnce).to.equal(true);
+    expect(item).toEqual({...result, bytes: Buffer.from(result?.bytes ?? [])});
+    expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
-  it("should return null if item not found", async function () {
-    controller.get.resolves(null);
+  it("should return null if item not found", async () => {
+    controller.get.mockResolvedValue(null);
     const result = await repository.get("id");
-    expect(result).to.be.deep.equal(null);
-    expect(controller.get.calledOnce).to.equal(true);
+    expect(result).toEqual(null);
+    expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
-  it("should return true if item exists", async function () {
+  it("should return true if item exists", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(TestSSZType.serialize(item) as Buffer);
+    controller.get.mockResolvedValue(TestSSZType.serialize(item) as Buffer);
     const result = await repository.has("id");
-    expect(result).to.equal(true);
-    expect(controller.get.calledOnce).to.equal(true);
+    expect(result).toBe(true);
+    expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
-  it("should return false if item doesnt exists", async function () {
-    controller.get.resolves(null);
+  it("should return false if item doesnt exists", async () => {
+    controller.get.mockResolvedValue(null);
     const result = await repository.has("id");
-    expect(result).to.equal(false);
-    expect(controller.get.calledOnce).to.equal(true);
+    expect(result).toBe(false);
+    expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
-  it("should store with hashTreeRoot as id", async function () {
+  it("should store with hashTreeRoot as id", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    await expect(repository.add(item)).to.not.be.rejected;
-    expect(controller.put.calledOnce).to.equal(true);
+    await expect(repository.add(item)).resolves.toBeUndefined();
+    expect(controller.put).toHaveBeenCalledTimes(1);
   });
 
-  it("should store with given id", async function () {
+  it("should store with given id", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    await expect(repository.put("1", item)).to.not.be.rejected;
-    expect(controller.put.calledOnce).to.equal(true);
+    await expect(repository.put("1", item)).resolves.toBeUndefined();
+    expect(controller.put).toHaveBeenCalledTimes(1);
   });
 
-  it("should delete", async function () {
-    await expect(repository.delete("1")).to.not.be.rejected;
-    expect(controller.delete.calledOnce).to.equal(true);
+  it("should delete", async () => {
+    await expect(repository.delete("1")).resolves.toBeUndefined();
+    expect(controller.delete).toHaveBeenCalledTimes(1);
   });
 
-  it("should return all items", async function () {
+  it("should return all items", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     const itemSerialized = TestSSZType.serialize(item);
     const items = [itemSerialized, itemSerialized, itemSerialized];
-    controller.values.resolves(items as Buffer[]);
-    const result = await repository.values();
-    expect(result).to.be.deep.equal([item, item, item]);
-    expect(controller.values.calledOnce).to.equal(true);
+    controller.values.mockResolvedValue(items as Buffer[]);
+    const result = (await repository.values()).map((v) => ({...v, bytes: Buffer.from(v.bytes)}));
+    expect(result).toEqual([item, item, item]);
+    expect(controller.values).toHaveBeenCalledTimes(1);
   });
 
-  it("should return range of items", async function () {
+  it("should return range of items", async () => {
     await repository.values({gt: "a", lt: "b"});
-    expect(controller.values.calledOnce).to.equal(true);
+    expect(controller.values).toHaveBeenCalledTimes(1);
   });
 
-  it("should delete given items", async function () {
+  it("should delete given items", async () => {
     await repository.batchDelete(["1", "2", "3"]);
-    expect(controller.batchDelete.withArgs(sinon.match((criteria: unknown[]) => criteria.length === 3)).calledOnce).to
-      .be.true;
+    expect(controller.batchDelete.mock.calls[0][0]).toHaveLength(3);
   });
 
-  it("should delete given items by value", async function () {
+  it("should delete given items by value", async () => {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await repository.batchRemove([item, item]);
-    expect(controller.batchDelete.withArgs(sinon.match((criteria: unknown[]) => criteria.length === 2)).calledOnce).to
-      .be.true;
+
+    expect(controller.batchDelete.mock.calls[0][0]).toHaveLength(2);
   });
 
-  it("should add multiple values", async function () {
+  it("should add multiple values", async () => {
     await repository.batchAdd([
       {bool: true, bytes: Buffer.alloc(32)},
       {bool: false, bytes: Buffer.alloc(32)},
     ]);
-    expect(controller.batchPut.withArgs(sinon.match((criteria: unknown[]) => criteria.length === 2)).calledOnce).to.be
-      .true;
+
+    expect(controller.batchPut.mock.calls[0][0]).toHaveLength(2);
   });
 
-  it("should fetch values stream", async function () {
+  it("should fetch values stream", async () => {
     async function* sample(): AsyncGenerator<Buffer> {
       yield TestSSZType.serialize({bool: true, bytes: Buffer.alloc(32)}) as Buffer;
       yield TestSSZType.serialize({bool: false, bytes: Buffer.alloc(32)}) as Buffer;
     }
 
-    controller.valuesStream.returns(sample());
-
+    controller.valuesStream.mockReturnValue(sample());
     const result = await all(repository.valuesStream());
-    expect(result.length).to.be.equal(2);
+    expect(result.length).toBe(2);
   });
 });

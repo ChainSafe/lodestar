@@ -1,19 +1,14 @@
-import {Epoch} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {MapDef} from "../util/map.js";
-import {IMetrics} from "../metrics/index.js";
+import {Epoch} from "@lodestar/types";
 
 const PROPOSER_PRESERVE_EPOCHS = 2;
 
 export type ProposerPreparationData = routes.validator.ProposerPreparationData;
 
 export class BeaconProposerCache {
-  private readonly feeRecipientByValidatorIndex: MapDef<string, {epoch: Epoch; feeRecipient: string}>;
-  constructor(opts: {suggestedFeeRecipient: string}, private readonly metrics?: IMetrics | null) {
-    this.feeRecipientByValidatorIndex = new MapDef<string, {epoch: Epoch; feeRecipient: string}>(() => ({
-      epoch: 0,
-      feeRecipient: opts.suggestedFeeRecipient,
-    }));
+  private readonly feeRecipientByValidatorIndex: Map<number, {epoch: Epoch; feeRecipient: string}>;
+  constructor(readonly opts: {suggestedFeeRecipient: string}) {
+    this.feeRecipientByValidatorIndex = new Map();
   }
 
   add(epoch: Epoch, {validatorIndex, feeRecipient}: ProposerPreparationData): void {
@@ -30,11 +25,15 @@ export class BeaconProposerCache {
     }
   }
 
-  getOrDefault(proposerIndex: number | string): string {
-    return this.feeRecipientByValidatorIndex.getOrDefault(`${proposerIndex}`).feeRecipient;
+  getOrDefault(proposerIndex: number): string {
+    return this.feeRecipientByValidatorIndex.get(proposerIndex)?.feeRecipient ?? this.opts.suggestedFeeRecipient;
   }
 
-  get(proposerIndex: number | string): string | undefined {
-    return this.feeRecipientByValidatorIndex.get(`${proposerIndex}`)?.feeRecipient;
+  get(proposerIndex: number): string | undefined {
+    return this.feeRecipientByValidatorIndex.get(proposerIndex)?.feeRecipient;
+  }
+
+  getValidatorIndices(): number[] {
+    return Array.from(this.feeRecipientByValidatorIndex.keys());
   }
 }

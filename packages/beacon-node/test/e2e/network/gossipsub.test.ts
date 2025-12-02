@@ -1,40 +1,31 @@
-import sinon from "sinon";
-import {expect} from "chai";
-import {createIBeaconConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
-import {phase0, ssz} from "@lodestar/types";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-
-import {getReqRespHandlers, Network} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
-import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
-
-import {generateEmptySignedBlock} from "../../utils/block.js";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
-import {createNode} from "../../utils/network.js";
-import {generateState} from "../../utils/state.js";
-import {StubbedBeaconDb} from "../../utils/stub/index.js";
+import {GossipHandlerParamGeneric, GossipHandlers, GossipType} from "../../../src/network/gossip/index.js";
+import {Network} from "../../../src/network/index.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
-import {testLogger} from "../../utils/logger.js";
+import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 
-const multiaddr = "/ip4/127.0.0.1/tcp/0";
+describe("gossipsub / main thread", () => {
+  vi.setConfig({testTimeout: 3000});
 
-const opts: INetworkOptions = {
-  ...defaultNetworkOptions,
-  maxPeers: 1,
-  targetPeers: 1,
-  bootMultiaddrs: [],
-  localMultiaddrs: [],
-  discv5FirstQueryDelayMs: 0,
-  discv5: null,
-};
+  runTests({useWorker: false});
+});
 
-describe("gossipsub", function () {
-  if (this.timeout() < 15 * 1000) this.timeout(15 * 1000);
-  this.retries(2); // This test fail sometimes, with a 5% rate.
+/**
+ * This is nice to have to investigate networking issue in local environment.
+ * Since we use vitest to run tests in parallel, including this causes the test to be unstable.
+ * See https://github.com/ChainSafe/lodestar/issues/6358
+ */
+describe.skip("gossipsub / worker", () => {
+  vi.setConfig({testTimeout: 3000});
 
-  const logger = testLogger();
+  runTests({useWorker: true});
+});
 
+function runTests({useWorker}: {useWorker: boolean}): void {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -43,126 +34,255 @@ describe("gossipsub", function () {
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  // Schedule all forks at ALTAIR_FORK_EPOCH to avoid generating the pubkeys cache
+  const config = createChainForkConfig({
+    ...defaultChainConfig,
+    ALTAIR_FORK_EPOCH: 1,
+    BELLATRIX_FORK_EPOCH: 1,
+    CAPELLA_FORK_EPOCH: 1,
+  });
+  const START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
+
   async function mockModules(gossipHandlersPartial?: Partial<GossipHandlers>) {
-    const controller = new AbortController();
-
-    const block = generateEmptySignedBlock();
-    const state = generateState({
-      finalizedCheckpoint: {
-        epoch: 0,
-        root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
-      },
+    const [netA, closeA] = await getNetworkForTest(`gossipsub-${useWorker ? "worker" : "main"}-A`, config, {
+      opts: {useWorker},
+      gossipHandlersPartial,
     });
-
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
-    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
-    const db = new StubbedBeaconDb(config);
-    const reqRespHandlers = getReqRespHandlers({db, chain});
-    const gossipHandlers = gossipHandlersPartial as GossipHandlers;
-
-    const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr)]);
-    const loggerA = testLogger("A");
-    const loggerB = testLogger("B");
-
-    const modules = {
-      config: beaconConfig,
-      chain,
-      db,
-      reqRespHandlers,
-      gossipHandlers,
-      signal: controller.signal,
-      metrics: null,
-    };
-    const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: loggerA});
-    const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: loggerB});
-
-    await Promise.all([netA.start(), netB.start()]);
+    const [netB, closeB] = await getNetworkForTest(`gossipsub-${useWorker ? "worker" : "main"}-B`, config, {
+      opts: {useWorker},
+      gossipHandlersPartial,
+    });
 
     afterEachCallbacks.push(async () => {
-      await chain.close();
-      controller.abort();
-      await Promise.all([netA.stop(), netB.stop()]);
-      sinon.restore();
+      await closeA();
+      await closeB();
     });
 
-    return {netA, netB, chain, controller};
+    return {netA, netB};
   }
 
-  it("Publish and receive a voluntaryExit", async function () {
-    let onVoluntaryExit: (ve: phase0.SignedVoluntaryExit) => void;
-    const onVoluntaryExitPromise = new Promise<phase0.SignedVoluntaryExit>((resolve) => (onVoluntaryExit = resolve));
+  it("Publish and receive a voluntaryExit", async () => {
+    let onVoluntaryExit: (ve: Uint8Array) => void;
+    const onVoluntaryExitPromise = new Promise<Uint8Array>((resolve) => {
+      onVoluntaryExit = resolve;
+    });
 
-    const {netA, netB, controller} = await mockModules({
-      [GossipType.voluntary_exit]: async (voluntaryExit) => {
-        onVoluntaryExit(voluntaryExit);
+    const {netA, netB} = await mockModules({
+      [GossipType.voluntary_exit]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
+        onVoluntaryExit(gossipData.serializedData);
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
-    while (!controller.signal.aborted) {
+    while (!netA.closed) {
       await sleep(500);
-      const topicStr = netA.gossip.getTopics()[0];
-      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
     const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
-    await netA.gossip.publishVoluntaryExit(voluntaryExit);
+    voluntaryExit.message.epoch = config.ALTAIR_FORK_EPOCH;
+    await netA.publishVoluntaryExit(voluntaryExit);
 
     const receivedVoluntaryExit = await onVoluntaryExitPromise;
-    expect(receivedVoluntaryExit).to.deep.equal(voluntaryExit);
+    expect(Buffer.from(receivedVoluntaryExit)).toEqual(
+      Buffer.from(ssz.phase0.SignedVoluntaryExit.serialize(voluntaryExit))
+    );
   });
 
-  it("Publish and receive 1000 voluntaryExits", async function () {
-    const receivedVoluntaryExits: phase0.SignedVoluntaryExit[] = [];
+  it("Publish and receive a blsToExecutionChange", async () => {
+    let onBlsToExecutionChange: (blsToExec: Uint8Array) => void;
+    const onBlsToExecutionChangePromise = new Promise<Uint8Array>((resolve) => {
+      onBlsToExecutionChange = resolve;
+    });
 
-    const {netA, netB, controller} = await mockModules({
-      [GossipType.voluntary_exit]: async (voluntaryExit) => {
-        receivedVoluntaryExits.push(voluntaryExit);
+    const {netA, netB} = await mockModules({
+      [GossipType.bls_to_execution_change]: async ({
+        gossipData,
+      }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
+        onBlsToExecutionChange(gossipData.serializedData);
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
-    while (!controller.signal.aborted) {
+    while (!netA.closed) {
       await sleep(500);
-      const topicStr = netA.gossip.getTopics()[0];
-      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
-    const msgCount = 1000;
+    const blsToExec = ssz.capella.SignedBLSToExecutionChange.defaultValue();
+    await netA.publishBlsToExecutionChange(blsToExec);
 
-    for (let i = 0; i < msgCount; i++) {
-      const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
-      voluntaryExit.message.epoch = i;
-      netA.gossip.publishVoluntaryExit(voluntaryExit).catch((e: Error) => {
-        logger.error("Error on publishVoluntaryExit", {}, e);
-      });
-    }
-
-    // Wait to receive all the messages. A timeout error will happen otherwise
-    while (!controller.signal.aborted) {
-      await sleep(500);
-      if (receivedVoluntaryExits.length >= msgCount) {
-        break;
-      }
-    }
+    const receivedblsToExec = await onBlsToExecutionChangePromise;
+    expect(Buffer.from(receivedblsToExec)).toEqual(
+      Buffer.from(ssz.capella.SignedBLSToExecutionChange.serialize(blsToExec))
+    );
   });
-});
+
+  it("Publish and receive an attesterSlashing", async () => {
+    let onAttesterSlashingChange: (payload: Uint8Array) => void;
+    const onAttesterSlashingChangePromise = new Promise<Uint8Array>((resolve) => {
+      onAttesterSlashingChange = resolve;
+    });
+
+    const {netA, netB} = await mockModules({
+      [GossipType.attester_slashing]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
+        onAttesterSlashingChange(gossipData.serializedData);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
+
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!netA.closed) {
+      await sleep(500);
+      if (await hasSomeMeshPeer(netA)) {
+        break;
+      }
+    }
+
+    const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
+    await netA.publishAttesterSlashing(attesterSlashing);
+
+    const received = await onAttesterSlashingChangePromise;
+    expect(Buffer.from(received)).toEqual(Buffer.from(ssz.phase0.AttesterSlashing.serialize(attesterSlashing)));
+  });
+
+  it("Publish and receive a proposerSlashing", async () => {
+    let onProposerSlashingChange: (payload: Uint8Array) => void;
+    const onProposerSlashingChangePromise = new Promise<Uint8Array>((resolve) => {
+      onProposerSlashingChange = resolve;
+    });
+
+    const {netA, netB} = await mockModules({
+      [GossipType.proposer_slashing]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
+        onProposerSlashingChange(gossipData.serializedData);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
+
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!netA.closed) {
+      await sleep(500);
+      if (await hasSomeMeshPeer(netA)) {
+        break;
+      }
+    }
+
+    const proposerSlashing = ssz.phase0.ProposerSlashing.defaultValue();
+    await netA.publishProposerSlashing(proposerSlashing);
+
+    const received = await onProposerSlashingChangePromise;
+    expect(Buffer.from(received)).toEqual(Buffer.from(ssz.phase0.ProposerSlashing.serialize(proposerSlashing)));
+  });
+
+  it("Publish and receive a LightClientOptimisticUpdate", async () => {
+    let onLightClientOptimisticUpdate: (ou: Uint8Array) => void;
+    const onLightClientOptimisticUpdatePromise = new Promise<Uint8Array>((resolve) => {
+      onLightClientOptimisticUpdate = resolve;
+    });
+
+    const {netA, netB} = await mockModules({
+      [GossipType.light_client_optimistic_update]: async ({
+        gossipData,
+      }: GossipHandlerParamGeneric<GossipType.light_client_optimistic_update>) => {
+        onLightClientOptimisticUpdate(gossipData.serializedData);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
+
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!netA.closed) {
+      await sleep(500);
+      if (await hasSomeMeshPeer(netA)) {
+        break;
+      }
+    }
+
+    const lightClientOptimisticUpdate = ssz.capella.LightClientOptimisticUpdate.defaultValue();
+    lightClientOptimisticUpdate.signatureSlot = START_SLOT;
+    await netA.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
+
+    const optimisticUpdate = await onLightClientOptimisticUpdatePromise;
+    expect(Buffer.from(optimisticUpdate)).toEqual(
+      Buffer.from(ssz.capella.LightClientOptimisticUpdate.serialize(lightClientOptimisticUpdate))
+    );
+  });
+
+  it("Publish and receive a LightClientFinalityUpdate", async () => {
+    let onLightClientFinalityUpdate: (fu: Uint8Array) => void;
+    const onLightClientFinalityUpdatePromise = new Promise<Uint8Array>((resolve) => {
+      onLightClientFinalityUpdate = resolve;
+    });
+
+    const {netA, netB} = await mockModules({
+      [GossipType.light_client_finality_update]: async ({
+        gossipData,
+      }: GossipHandlerParamGeneric<GossipType.light_client_finality_update>) => {
+        onLightClientFinalityUpdate(gossipData.serializedData);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
+
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!netA.closed) {
+      await sleep(500);
+      if (await hasSomeMeshPeer(netA)) {
+        break;
+      }
+    }
+
+    const lightClientFinalityUpdate = ssz.capella.LightClientFinalityUpdate.defaultValue();
+    lightClientFinalityUpdate.signatureSlot = START_SLOT;
+    await netA.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
+
+    const optimisticUpdate = await onLightClientFinalityUpdatePromise;
+    expect(Buffer.from(optimisticUpdate)).toEqual(
+      Buffer.from(ssz.capella.LightClientFinalityUpdate.serialize(lightClientFinalityUpdate))
+    );
+  });
+}
+
+async function hasSomeMeshPeer(net: Network): Promise<boolean> {
+  return Object.values(await net.dumpMeshPeers()).some((peers) => peers.length > 0);
+}

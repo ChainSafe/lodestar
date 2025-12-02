@@ -1,6 +1,22 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {VoteTracker, HEX_ZERO_HASH} from "./interface.js";
+import {ValidatorIndex} from "@lodestar/types";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
+import {NULL_VOTE_INDEX, VoteIndex} from "./interface.js";
+
+// reuse arrays to avoid memory reallocation and gc
+const deltas = new Array<number>();
+
+export type DeltasResult = {
+  deltas: number[];
+  equivocatingValidators: number;
+  // inactive validators before beacon node started
+  oldInactiveValidators: number;
+  // new inactive validators after beacon node started
+  newInactiveValidators: number;
+  // below is for active validators
+  unchangedVoteValidators: number;
+  newVoteValidators: number;
+};
 
 /**
  * Returns a list of `deltas`, where there is one delta for each of the indices in `indices`
@@ -12,64 +28,126 @@ import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
  * - If a value in `indices` is greater to or equal to `indices.length`.
  */
 export function computeDeltas(
-  indices: Map<string, number>,
-  votes: VoteTracker[],
+  numProtoNodes: number,
+  voteCurrentIndices: VoteIndex[],
+  voteNextIndices: VoteIndex[],
   oldBalances: EffectiveBalanceIncrements,
-  newBalances: EffectiveBalanceIncrements
-): number[] {
-  const deltas = Array.from({length: indices.size}, () => 0);
-  const zeroHash = HEX_ZERO_HASH;
-  for (let vIndex = 0; vIndex < votes.length; vIndex++) {
-    const vote = votes[vIndex];
+  newBalances: EffectiveBalanceIncrements,
+  equivocatingIndices: Set<ValidatorIndex>
+): DeltasResult {
+  if (voteCurrentIndices.length !== voteNextIndices.length) {
+    throw new Error(
+      `voteCurrentIndices and voteNextIndices must have the same length: ${voteCurrentIndices.length} !== ${voteNextIndices.length}`
+    );
+  }
+
+  if (numProtoNodes >= NULL_VOTE_INDEX) {
+    // this never happen in practice, but we check to be safe
+    throw new Error(`numProtoNodes must be less than NULL_VOTE_INDEX: ${numProtoNodes} >= ${NULL_VOTE_INDEX}`);
+  }
+
+  deltas.length = numProtoNodes;
+  deltas.fill(0);
+
+  // avoid creating new variables in the loop to potentially reduce GC pressure
+  let oldBalance: number, newBalance: number;
+  let currentIndex: VoteIndex, nextIndex: VoteIndex;
+  // sort equivocating indices to avoid Set.has() in the loop
+  const equivocatingArray = Array.from(equivocatingIndices).sort((a, b) => a - b);
+  let equivocatingIndex = 0;
+  let equivocatingValidatorIndex = equivocatingArray[equivocatingIndex];
+
+  const equivocatingValidators = equivocatingIndices.size;
+  let oldInactiveValidators = 0;
+  let newInactiveValidators = 0;
+  let unchangedVoteValidators = 0;
+  let newVoteValidators = 0;
+
+  for (let vIndex = 0; vIndex < voteNextIndices.length; vIndex++) {
+    currentIndex = voteCurrentIndices[vIndex];
+    nextIndex = voteNextIndices[vIndex];
     // There is no need to create a score change if the validator has never voted or both of their
     // votes are for the zero hash (genesis block)
-    if (vote === undefined) {
-      continue;
-    }
-    const {currentRoot, nextRoot} = vote;
-    if (currentRoot === zeroHash && nextRoot === zeroHash) {
+    if (currentIndex === NULL_VOTE_INDEX && nextIndex === NULL_VOTE_INDEX) {
+      oldInactiveValidators++;
       continue;
     }
 
     // IF the validator was not included in the _old_ balances (i.e. it did not exist yet)
     // then say its balance was 0
-    const oldBalance = oldBalances[vIndex] || 0;
+    oldBalance = oldBalances[vIndex] ?? 0;
 
     // If the validator's vote is not known in the _new_ balances, then use a balance of zero.
     //
     // It is possible that there was a vote for an unknown validator if we change our justified
     // state to a new state with a higher epoch that is on a different fork because that fork may have
     // on-boarded fewer validators than the prior fork.
-    const newBalance = newBalances[vIndex] || 0;
+    newBalance = newBalances === oldBalances ? oldBalance : (newBalances[vIndex] ?? 0);
 
-    if (currentRoot !== nextRoot || oldBalance !== newBalance) {
-      // We ignore the vote if it is not known in `indices .
-      // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
-      const currentDeltaIndex = indices.get(currentRoot);
-      if (currentDeltaIndex !== undefined) {
-        if (currentDeltaIndex >= deltas.length) {
+    if (vIndex === equivocatingValidatorIndex) {
+      // this function could be called multiple times but we only want to process slashing validator for 1 time
+      if (currentIndex !== NULL_VOTE_INDEX) {
+        if (currentIndex >= numProtoNodes) {
           throw new ProtoArrayError({
             code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
-            index: currentDeltaIndex,
+            index: currentIndex,
           });
         }
-        deltas[currentDeltaIndex] -= oldBalance;
+        deltas[currentIndex] -= oldBalance;
       }
-      // We ignore the vote if it is not known in `indices .
-      // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
-      const nextDeltaIndex = indices.get(nextRoot);
-      if (nextDeltaIndex !== undefined) {
-        if (nextDeltaIndex >= deltas.length) {
-          throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
-            index: nextDeltaIndex,
-          });
-        }
-        deltas[nextDeltaIndex] += newBalance;
-      }
+      voteCurrentIndices[vIndex] = NULL_VOTE_INDEX;
+      equivocatingIndex++;
+      equivocatingValidatorIndex = equivocatingArray[equivocatingIndex];
+      continue;
     }
-    vote.currentRoot = nextRoot;
+
+    if (oldBalance === 0 && newBalance === 0) {
+      newInactiveValidators++;
+      continue;
+    }
+
+    if (currentIndex !== nextIndex || oldBalance !== newBalance) {
+      // We ignore the vote if it is not known in `indices .
+      // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
+      if (currentIndex !== NULL_VOTE_INDEX) {
+        if (currentIndex >= numProtoNodes) {
+          throw new ProtoArrayError({
+            code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
+            index: currentIndex,
+          });
+        }
+        deltas[currentIndex] -= oldBalance;
+      }
+
+      // We ignore the vote if it is not known in `indices .
+      // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
+      if (nextIndex !== NULL_VOTE_INDEX) {
+        if (nextIndex >= numProtoNodes) {
+          throw new ProtoArrayError({
+            code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
+            index: nextIndex,
+          });
+        }
+        deltas[nextIndex] += newBalance;
+      }
+      voteCurrentIndices[vIndex] = nextIndex;
+      newVoteValidators++;
+    } else {
+      unchangedVoteValidators++;
+    }
+  } // end validator loop
+
+  if (deltas.length !== numProtoNodes) {
+    // deltas array could be growed in the loop, especially if we mistakenly set the [NULL_VOTE_INDEX] to it , just to be safe
+    throw new Error(`deltas length mismatch: expected ${numProtoNodes}, got ${deltas.length}`);
   }
 
-  return deltas;
+  return {
+    deltas,
+    equivocatingValidators,
+    oldInactiveValidators,
+    newInactiveValidators,
+    unchangedVoteValidators,
+    newVoteValidators,
+  };
 }

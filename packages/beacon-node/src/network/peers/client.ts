@@ -4,24 +4,26 @@ export enum ClientKind {
   Teku = "Teku",
   Prysm = "Prysm",
   Lodestar = "Lodestar",
+  Grandine = "Grandine",
   Unknown = "Unknown",
 }
 
-export function clientFromAgentVersion(agentVersion: string): ClientKind {
+/**
+ * Get known client from agent version.
+ * If client is not known, don't return ClientKind.Unknown here.
+ * For metrics it'll have fallback logic to use ClientKind.Unknown
+ * For logs, we want to print out agentVersion instead for debugging purposes.
+ */
+export function getKnownClientFromAgentVersion(agentVersion: string): ClientKind | null {
   const slashIndex = agentVersion.indexOf("/");
   const agent = slashIndex >= 0 ? agentVersion.slice(0, slashIndex) : agentVersion;
-  switch (agent.toLowerCase()) {
-    case "lighthouse":
-      return ClientKind.Lighthouse;
-    case "teku":
-      return ClientKind.Teku;
-    case "prysm":
-      return ClientKind.Prysm;
-    case "nimbus":
-      return ClientKind.Nimbus;
-    case "js-libp2p":
-      return ClientKind.Lodestar;
-    default:
-      return ClientKind.Unknown;
-  }
+  const agentLC = agent.toLowerCase();
+  if (agentLC === "lighthouse") return ClientKind.Lighthouse;
+  if (agentLC === "teku") return ClientKind.Teku;
+  if (agentLC === "prysm") return ClientKind.Prysm;
+  if (agentLC === "nimbus") return ClientKind.Nimbus;
+  if (agentLC === "grandine") return ClientKind.Grandine;
+  if (agentLC === "lodestar" || agentLC === "js-libp2p") return ClientKind.Lodestar;
+
+  return null;
 }

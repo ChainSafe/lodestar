@@ -1,13 +1,12 @@
-import {DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
-import {allForks, phase0, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
   ISignatureSet,
   SignatureSetType,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
   verifySignatureSet,
 } from "../util/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 
 export function verifyVoluntaryExitSignature(
   state: CachedBeaconStateAllForks,
@@ -25,7 +24,7 @@ export function getVoluntaryExitSignatureSet(
 ): ISignatureSet {
   const {epochCtx} = state;
   const slot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = state.config.getDomain(state.slot, DOMAIN_VOLUNTARY_EXIT, slot);
+  const domain = state.config.getDomainForVoluntaryExit(state.slot, slot);
 
   return {
     type: SignatureSetType.single,
@@ -37,7 +36,7 @@ export function getVoluntaryExitSignatureSet(
 
 export function getVoluntaryExitsSignatureSets(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock
+  signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
     getVoluntaryExitSignatureSet(state, voluntaryExit)

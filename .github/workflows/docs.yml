@@ -4,49 +4,70 @@ on:
   push:
     branches:
       - stable
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Ref to deploy, defaults to `unstable`"
+        required: false
+        default: "unstable"
+        type: string
 
 jobs:
   docs:
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'stable' }}
     steps:
-      # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      # Log out the ref being deployed
+      - name: Log Deployment Ref
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Deploying ref: $DEPLOY_REF"
+
+      # Checkout the correct ref being deployed
+      - uses: actions/checkout@v4
         with:
-          node-version: "lts/gallium"
+          ref: ${{ env.DEPLOY_REF }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          check-latest: true
+          cache: yarn
+
       - name: Node.js version
         id: node
-        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
+
       - name: Restore dependencies
-        uses: actions/cache@master
+        uses: actions/cache@v4
         id: cache-deps
         with:
           path: |
             node_modules
             packages/*/node_modules
           key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional && yarn build
+        run: yarn install --frozen-lockfile && yarn build
+
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
-      # </common-build>
 
       - name: Build and collect docs
-        run: yarn build:docs
+        run: yarn docs:build
 
-      - name: Set up Python
-        uses: actions/setup-python@v1
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r docs/requirements.txt
+      - name: Lint built docs
+        run: yarn docs:lint:fix
+
       - name: Build docs
-        run: mkdocs build --site-dir site -v --clean
+        working-directory: docs
+        run: yarn && yarn build
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
+          publish_dir: ./docs/build

@@ -1,28 +1,38 @@
-import {defaultApiOptions, IApiOptions} from "../api/options.js";
-import {defaultChainOptions, IChainOptions} from "../chain/options.js";
-import {defaultDbOptions, IDatabaseOptions} from "../db/options.js";
-import {defaultEth1Options, Eth1Options} from "../eth1/options.js";
-import {defaultMetricsOptions, MetricsOptions} from "../metrics/options.js";
-import {defaultNetworkOptions, INetworkOptions} from "../network/options.js";
-import {defaultSyncOptions, SyncOptions} from "../sync/options.js";
+import {ApiOptions, defaultApiOptions} from "../api/options.js";
+import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IChainOptions, defaultChainOptions} from "../chain/options.js";
+import {ValidatorMonitorOpts, defaultValidatorMonitorOpts} from "../chain/validatorMonitor.js";
+import {DatabaseOptions, defaultDbOptions} from "../db/options.js";
+import {Eth1Options, defaultEth1Options} from "../eth1/options.js";
 import {
-  defaultExecutionEngineOpts,
-  ExecutionEngineOpts,
   ExecutionBuilderOpts,
+  ExecutionEngineOpts,
+  defaultExecutionBuilderHttpOpts,
   defaultExecutionBuilderOpts,
+  defaultExecutionEngineHttpOpts,
+  defaultExecutionEngineOpts,
 } from "../execution/index.js";
+import {MetricsOptions, defaultMetricsOptions} from "../metrics/options.js";
+import {MonitoringOptions, defaultMonitoringOptions} from "../monitoring/options.js";
+import {NetworkOptions, defaultNetworkOptions} from "../network/options.js";
+import {SyncOptions, defaultSyncOptions} from "../sync/options.js";
+
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";
 
+// Re-export to use as default values in CLI args
+export {defaultExecutionEngineHttpOpts, defaultExecutionBuilderHttpOpts, ArchiveMode, DEFAULT_ARCHIVE_MODE};
+
 export interface IBeaconNodeOptions {
-  api: IApiOptions;
+  api: ApiOptions;
   chain: IChainOptions;
-  db: IDatabaseOptions;
+  db: DatabaseOptions;
   eth1: Eth1Options;
   executionEngine: ExecutionEngineOpts;
   executionBuilder: ExecutionBuilderOpts;
   metrics: MetricsOptions;
-  network: INetworkOptions;
+  validatorMonitor: ValidatorMonitorOpts;
+  monitoring: MonitoringOptions;
+  network: NetworkOptions;
   sync: SyncOptions;
 }
 
@@ -34,6 +44,8 @@ export const defaultOptions: IBeaconNodeOptions = {
   executionEngine: defaultExecutionEngineOpts,
   executionBuilder: defaultExecutionBuilderOpts,
   metrics: defaultMetricsOptions,
+  validatorMonitor: defaultValidatorMonitorOpts,
+  monitoring: defaultMonitoringOptions,
   network: defaultNetworkOptions,
   sync: defaultSyncOptions,
 };

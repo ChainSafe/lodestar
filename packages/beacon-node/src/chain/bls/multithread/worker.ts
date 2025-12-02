@@ -1,10 +1,8 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import worker from "worker_threads";
+import worker from "node:worker_threads";
+import {PublicKey} from "@chainsafe/blst";
 import {expose} from "@chainsafe/threads/worker";
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
-import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybeBatch.js";
-import {WorkerData, BlsWorkReq, WorkResult, WorkResultCode, SerializedSet, BlsWorkResult} from "./types.js";
+import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 /**
@@ -15,8 +13,6 @@ import {chunkifyMaximizeChunkSize} from "./utils.js";
  * After observing metrics this number can be reviewed
  */
 const BATCHABLE_MIN_PER_CHUNK = 16;
-
-/* eslint-disable no-console */
 
 // Cloned data from instatiation
 const workerData = worker.workerData as WorkerData;
@@ -30,7 +26,7 @@ expose({
 });
 
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
-  const startNs = process.hrtime.bigint();
+  const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
@@ -78,7 +74,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
           // Re-verify all sigs
           nonBatchableSets.push(...batchableChunk);
         }
-      } catch (e) {
+      } catch (_e) {
         // TODO: Ignore this error expecting that the same error will happen when re-verifying the set individually
         //       It's not ideal but '@chainsafe/blst' may throw errors on some conditions
         batchRetries++;
@@ -97,19 +93,21 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     }
   }
 
+  const [workerEndSec, workerEndNs] = process.hrtime();
+
   return {
     workerId,
     batchRetries,
     batchSigsSuccess,
-    workerStartNs: startNs,
-    workerEndNs: process.hrtime.bigint(),
+    workerStartTime: [startSec, startNs],
+    workerEndTime: [workerEndSec, workerEndNs],
     results,
   };
 }
 
 function deserializeSet(set: SerializedSet): SignatureSetDeserialized {
   return {
-    publicKey: bls.PublicKey.fromBytes(set.publicKey, CoordType.affine),
+    publicKey: PublicKey.fromBytes(set.publicKey),
     message: set.message,
     signature: set.signature,
   };

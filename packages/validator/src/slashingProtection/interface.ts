@@ -1,7 +1,7 @@
-import {BLSPubkey, Root} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {BLSPubkey, Epoch, Root} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {Interchange, InterchangeFormatVersion} from "./interchange/types.js";
-import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types.js";
+import {SlashingProtectionAttestation, SlashingProtectionBlock} from "./types.js";
 
 export interface ISlashingProtection {
   /**
@@ -13,15 +13,16 @@ export interface ISlashingProtection {
    */
   checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void>;
 
-  importInterchange(
-    interchange: Interchange,
-    genesisValidatorsRoot: Uint8Array | Root,
-    logger?: ILogger
-  ): Promise<void>;
+  /**
+   * Check whether a validator as identified by `pubKey` has attested in the specified `epoch`
+   */
+  hasAttestedInEpoch(pubKey: BLSPubkey, epoch: Epoch): Promise<boolean>;
+
+  importInterchange(interchange: Interchange, genesisValidatorsRoot: Uint8Array | Root, logger?: Logger): Promise<void>;
   exportInterchange(
     genesisValidatorsRoot: Uint8Array | Root,
     pubkeys: BLSPubkey[],
     formatVersion: InterchangeFormatVersion,
-    logger?: ILogger
+    logger?: Logger
   ): Promise<Interchange>;
 }

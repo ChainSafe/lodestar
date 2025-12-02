@@ -1,30 +1,46 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IChainConfig, chainConfigTypes, SpecValue, SpecValueTypeName} from "./types.js";
+import {fromHex, toHex} from "@lodestar/utils";
+import {validateBlobSchedule} from "../utils/validateBlobSchedule.js";
+import {
+  BlobSchedule,
+  BlobScheduleEntry,
+  ChainConfig,
+  SpecJson,
+  SpecValue,
+  SpecValueTypeName,
+  chainConfigTypes,
+  isBlobSchedule,
+} from "./types.js";
 
 const MAX_UINT64_JSON = "18446744073709551615";
 
-export function chainConfigToJson(config: IChainConfig): Record<string, string> {
-  const json: Record<string, string> = {};
+export function chainConfigToJson(config: ChainConfig): SpecJson {
+  const json: SpecJson = {};
 
-  for (const key of Object.keys(config) as (keyof IChainConfig)[]) {
-    json[key] = serializeSpecValue(config[key], chainConfigTypes[key]);
+  for (const key of Object.keys(chainConfigTypes) as (keyof ChainConfig)[]) {
+    const value = config[key];
+    if (value !== undefined) {
+      json[key] = serializeSpecValue(value, chainConfigTypes[key]);
+    }
   }
 
   return json;
 }
 
-export function chainConfigFromJson(json: Record<string, unknown>): IChainConfig {
-  const config = {} as IChainConfig;
+export function chainConfigFromJson(json: Record<string, unknown>): ChainConfig {
+  const config = {} as ChainConfig;
 
-  for (const key of Object.keys(json) as (keyof IChainConfig)[]) {
-    config[key] = deserializeSpecValue(json[key], chainConfigTypes[key]) as never;
+  for (const key of Object.keys(chainConfigTypes) as (keyof ChainConfig)[]) {
+    const value = json[key];
+    if (value !== undefined) {
+      config[key] = deserializeSpecValue(json[key], chainConfigTypes[key], key) as never;
+    }
   }
 
   return config;
 }
 
-export function specValuesToJson(spec: Record<string, SpecValue>): Record<string, string> {
-  const json: Record<string, string> = {};
+export function specValuesToJson(spec: Record<string, SpecValue>): SpecJson {
+  const json: SpecJson = {};
 
   for (const key of Object.keys(spec)) {
     json[key] = serializeSpecValue(spec[key], toSpecValueTypeName(spec[key]));
@@ -39,14 +55,18 @@ export function toSpecValueTypeName(value: SpecValue): SpecValueTypeName {
   if (typeof value === "number") return "number";
   if (typeof value === "bigint") return "bigint";
   if (typeof value === "string") return "string";
+  if (isBlobSchedule(value)) return "blob_schedule";
   throw Error(`Unknown value type ${value}`);
 }
 
-export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName): string {
+export function serializeSpecValue(
+  value: SpecValue,
+  typeName: SpecValueTypeName
+): string | Record<keyof BlobScheduleEntry, string>[] {
   switch (typeName) {
     case "number":
       if (typeof value !== "number") {
-        throw Error(`Invalid value ${value} expected number`);
+        throw Error(`Invalid value ${value.toString()} expected number`);
       }
       if (value === Infinity) {
         return MAX_UINT64_JSON;
@@ -55,27 +75,41 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
 
     case "bigint":
       if (typeof value !== "bigint") {
-        throw Error(`Invalid value ${value} expected bigint`);
+        throw Error(`Invalid value ${value.toString()} expected bigint`);
       }
       return value.toString(10);
 
     case "bytes":
       if (!(value instanceof Uint8Array)) {
-        throw Error(`Invalid value ${value} expected Uint8Array`);
+        throw Error(`Invalid value ${value.toString()} expected Uint8Array`);
       }
-      return toHexString(value);
+      return toHex(value);
 
     case "string":
       if (typeof value !== "string") {
-        throw Error(`Invalid value ${value} expected string`);
+        throw Error(`Invalid value ${value.toString()} expected string`);
       }
       return value;
+
+    case "blob_schedule":
+      if (!isBlobSchedule(value)) {
+        throw Error(`Invalid value ${value.toString()} expected BlobSchedule`);
+      }
+
+      return value.map(({EPOCH, MAX_BLOBS_PER_BLOCK}) => ({
+        EPOCH: EPOCH === Infinity ? MAX_UINT64_JSON : EPOCH.toString(10),
+        MAX_BLOBS_PER_BLOCK: MAX_BLOBS_PER_BLOCK === Infinity ? MAX_UINT64_JSON : MAX_BLOBS_PER_BLOCK.toString(10),
+      }));
   }
 }
 
-export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeName): SpecValue {
+export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeName, keyName: string): SpecValue {
+  if (typeName === "blob_schedule") {
+    return deserializeBlobSchedule(valueStr);
+  }
+
   if (typeof valueStr !== "string") {
-    throw Error(`Invalid value ${valueStr} expected string`);
+    throw Error(`Invalid ${keyName} value ${valueStr} expected string`);
   }
 
   switch (typeName) {
@@ -89,9 +123,53 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
       return BigInt(valueStr);
 
     case "bytes":
-      return fromHexString(valueStr);
+      return fromHex(valueStr);
 
     case "string":
       return valueStr;
   }
+}
+
+export function deserializeBlobSchedule(input: unknown): BlobSchedule {
+  if (!Array.isArray(input)) {
+    throw Error(`Invalid BLOB_SCHEDULE value ${input} expected array`);
+  }
+
+  const blobSchedule = input.map((entry, i) => {
+    if (typeof entry !== "object" || entry === null) {
+      throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${entry} expected object`);
+    }
+
+    const out = {} as BlobScheduleEntry;
+
+    for (const key of ["EPOCH", "MAX_BLOBS_PER_BLOCK"] as Array<keyof BlobScheduleEntry>) {
+      const value = entry[key];
+
+      if (value === undefined) {
+        throw Error(`Invalid BLOB_SCHEDULE[${i}] entry ${JSON.stringify(entry)} missing ${key}`);
+      }
+
+      if (typeof value !== "string") {
+        throw Error(`Invalid BLOB_SCHEDULE[${i}].${key} value ${value} expected string`);
+      }
+
+      if (value === MAX_UINT64_JSON) {
+        out[key] = Infinity;
+      } else {
+        const parsed = parseInt(value, 10);
+
+        if (Number.isNaN(parsed)) {
+          throw Error(`Invalid BLOB_SCHEDULE[${i}].${key} value ${value} expected number`);
+        }
+
+        out[key] = parsed;
+      }
+    }
+
+    return out;
+  });
+
+  validateBlobSchedule(blobSchedule);
+
+  return blobSchedule;
 }

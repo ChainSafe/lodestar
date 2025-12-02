@@ -1,4 +1,20 @@
-import {bellatrix, Root, Slot, BLSPubkey} from "@lodestar/types";
+import {ForkPostBellatrix} from "@lodestar/params";
+import {
+  BLSPubkey,
+  Epoch,
+  ExecutionPayloadHeader,
+  Root,
+  SignedBlindedBeaconBlock,
+  SignedBlockContents,
+  Slot,
+  Wei,
+  WithOptionalBytes,
+  bellatrix,
+  deneb,
+  electra,
+} from "@lodestar/types";
+import {ValidatorRegistration} from "./cache.js";
+import {BuilderStatus} from "./http.js";
 
 export interface IExecutionBuilder {
   /**
@@ -6,11 +22,28 @@ export interface IExecutionBuilder {
    * an advance fcU to be issued to the engine port before payload header
    * fetch
    */
-  readonly issueLocalFcUForBlockProduction?: boolean;
-  status: boolean;
-  updateStatus(shouldEnable: boolean): void;
+  readonly issueLocalFcUWithFeeRecipient?: string;
+  status: BuilderStatus;
+  /** Window to inspect missed slots for enabling/disabling builder circuit breaker */
+  faultInspectionWindow: number;
+  /** Number of missed slots allowed in the faultInspectionWindow for builder circuit*/
+  allowedFaults: number;
+
+  updateStatus(status: BuilderStatus): void;
   checkStatus(): Promise<void>;
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
-  getHeader(slot: Slot, parentHash: Root, proposerPubKey: BLSPubkey): Promise<bellatrix.ExecutionPayloadHeader>;
-  submitBlindedBlock(signedBlock: bellatrix.SignedBlindedBeaconBlock): Promise<bellatrix.SignedBeaconBlock>;
+  registerValidator(epoch: Epoch, registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
+  getValidatorRegistration(pubkey: BLSPubkey): ValidatorRegistration | undefined;
+  getHeader(
+    fork: ForkPostBellatrix,
+    slot: Slot,
+    parentHash: Root,
+    proposerPubKey: BLSPubkey
+  ): Promise<{
+    header: ExecutionPayloadHeader;
+    executionPayloadValue: Wei;
+    blobKzgCommitments?: deneb.BlobKzgCommitments;
+    executionRequests?: electra.ExecutionRequests;
+  }>;
+  submitBlindedBlock(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<SignedBlockContents>;
+  submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void>;
 }

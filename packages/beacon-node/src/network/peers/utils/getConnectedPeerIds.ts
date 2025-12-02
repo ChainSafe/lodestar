@@ -1,13 +1,14 @@
-import LibP2p, {Connection} from "libp2p";
-import PeerId from "peer-id";
+import {Connection, PeerId} from "@libp2p/interface";
+import {Libp2p} from "../../interface.js";
+import {getConnectionsMap} from "../../util.js";
 
 /**
  * Return peers with at least one connection in status "open"
  */
-export function getConnectedPeerIds(libp2p: LibP2p): PeerId[] {
+export function getConnectedPeerIds(libp2p: Libp2p): PeerId[] {
   const peerIds: PeerId[] = [];
-  for (const connections of libp2p.connectionManager.connections.values()) {
-    const openConnection = connections.find(isConnectionOpen);
+  for (const connections of getConnectionsMap(libp2p).values()) {
+    const openConnection = connections.value.find(isConnectionOpen);
     if (openConnection) {
       peerIds.push(openConnection.remotePeer);
     }
@@ -18,9 +19,9 @@ export function getConnectedPeerIds(libp2p: LibP2p): PeerId[] {
 /**
  * Efficiently check if there is at least one peer connected
  */
-export function hasSomeConnectedPeer(libp2p: LibP2p): boolean {
-  for (const connections of libp2p.connectionManager.connections.values()) {
-    if (connections.some(isConnectionOpen)) {
+export function hasSomeConnectedPeer(libp2p: Libp2p): boolean {
+  for (const connections of getConnectionsMap(libp2p).values()) {
+    if (connections.value.some(isConnectionOpen)) {
       return true;
     }
   }
@@ -28,5 +29,5 @@ export function hasSomeConnectedPeer(libp2p: LibP2p): boolean {
 }
 
 function isConnectionOpen(connection: Connection): boolean {
-  return connection.stat.status === "open";
+  return connection.status === "open";
 }

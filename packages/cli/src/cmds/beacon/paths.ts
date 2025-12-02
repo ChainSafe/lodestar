@@ -1,20 +1,22 @@
 import path from "node:path";
-import {IGlobalArgs} from "../../options/index.js";
-import {getGlobalPaths, IGlobalPaths} from "../../paths/global.js";
+import {GlobalArgs} from "../../options/index.js";
+import {GlobalPaths, getGlobalPaths} from "../../paths/global.js";
 
-export type BeaconPaths = Partial<{
+export type BeaconPathsPartial = Partial<{
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
   persistInvalidSszObjectsDir: string;
+  persistOrphanedBlocksDir?: string;
 }>;
 
-export interface IBeaconPaths {
+export type BeaconPaths = {
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
   persistInvalidSszObjectsDir: string;
-}
+  persistOrphanedBlocksDir: string;
+};
 
 /**
  * Defines the path structure of the files relevant to the beacon node
@@ -30,10 +32,10 @@ export interface IBeaconPaths {
  * ```
  */
 export function getBeaconPaths(
-  // Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
-  args: BeaconPaths & Pick<IGlobalArgs, "dataDir">,
+  // Using Pick<GlobalArgs, "dataDir"> make changes in GlobalArgs throw a type error here
+  args: BeaconPathsPartial & Pick<GlobalArgs, "dataDir">,
   network: string
-): IGlobalPaths & Required<BeaconPaths> {
+): GlobalPaths & Required<BeaconPathsPartial> {
   // Compute global paths first
   const globalPaths = getGlobalPaths(args, network);
 
@@ -42,6 +44,7 @@ export function getBeaconPaths(
   const dbDir = args.dbDir ?? path.join(beaconDir, "chain-db");
   const persistInvalidSszObjectsDir = args.persistInvalidSszObjectsDir ?? path.join(beaconDir, "invalidSszObjects");
   const peerStoreDir = args.peerStoreDir ?? path.join(beaconDir, "peerstore");
+  const persistOrphanedBlocksDir = args.persistOrphanedBlocksDir ?? path.join(beaconDir, "orphaned_blocks");
 
   return {
     ...globalPaths,
@@ -49,6 +52,7 @@ export function getBeaconPaths(
     dbDir,
     persistInvalidSszObjectsDir,
     peerStoreDir,
+    persistOrphanedBlocksDir,
   };
 }
 

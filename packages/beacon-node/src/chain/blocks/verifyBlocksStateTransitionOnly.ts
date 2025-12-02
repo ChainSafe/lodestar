@@ -1,10 +1,18 @@
-import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
-import {allForks} from "@lodestar/types";
-import {ErrorAborted, sleep} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/index.js";
+import {
+  CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
+  ExecutionPayloadStatus,
+  StateHashTreeRootSource,
+  stateTransition,
+} from "@lodestar/state-transition";
+import {ErrorAborted, Logger} from "@lodestar/utils";
+import {Metrics} from "../../metrics/index.js";
+import {byteArrayEquals} from "../../util/bytes.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {byteArrayEquals} from "../../util/bytes.js";
+import {ValidatorMonitor} from "../validatorMonitor.js";
+import {IBlockInput} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -17,18 +25,23 @@ import {ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
-  blocks: allForks.SignedBeaconBlock[],
-  metrics: IMetrics | null,
+  blocks: IBlockInput[],
+  dataAvailabilityStatuses: DataAvailabilityStatus[],
+  logger: Logger,
+  metrics: Metrics | null,
+  validatorMonitor: ValidatorMonitor | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
-): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]}> {
+): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
   const postStates: CachedBeaconStateAllForks[] = [];
   const proposerBalanceDeltas: number[] = [];
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const block = blocks[i];
+    const block = blocks[i].getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
+    const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
@@ -37,17 +50,27 @@ export async function verifyBlocksStateTransitionOnly(
       preState,
       block,
       {
+        // NOTE: Assume valid for now while sending payload to execution engine in parallel
+        // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
+        executionPayloadStatus: ExecutionPayloadStatus.valid,
+        dataAvailabilityStatus,
         // false because it's verified below with better error typing
         verifyStateRoot: false,
         // if block is trusted don't verify proposer or op signature
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
       },
-      metrics
+      {metrics, validatorMonitor}
     );
 
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+      source: StateHashTreeRootSource.blockTransition,
+    });
+    const stateRoot = postState.hashTreeRoot();
+    hashTreeRootTimer?.();
+
     // Check state root matches
-    if (!byteArrayEquals(block.message.stateRoot, postState.hashTreeRoot())) {
+    if (!byteArrayEquals(block.message.stateRoot, stateRoot)) {
       throw new BlockError(block, {
         code: BlockErrorCode.INVALID_STATE_ROOT,
         root: postState.hashTreeRoot(),
@@ -71,9 +94,21 @@ export async function verifyBlocksStateTransitionOnly(
 
     // this avoids keeping our node busy processing blocks
     if (i < blocks.length - 1) {
-      await sleep(0);
+      await nextEventLoop();
     }
   }
 
-  return {postStates, proposerBalanceDeltas};
+  const verifyStateTime = Date.now();
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
+    const slot = blocks[0].getBlock().message.slot;
+    const recvToValidation = verifyStateTime / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    metrics?.gossipBlock.stateTransition.recvToValidation.observe(recvToValidation);
+    metrics?.gossipBlock.stateTransition.validationTime.observe(validationTime);
+
+    logger.debug("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
+  }
+
+  return {postStates, proposerBalanceDeltas, verifyStateTime};
 }

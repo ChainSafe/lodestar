@@ -1,7 +1,5 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {rejectFirstInvalidResolveAllValid} from "../../../../src/chain/blocks/verifyBlocksSignatures.js";
-
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
 
 describe("chain / blocks / rejectFirstInvalidResolveAllValid", () => {
   it("Reject on first isValid = false", async () => {
@@ -22,7 +20,7 @@ describe("chain / blocks / rejectFirstInvalidResolveAllValid", () => {
     resolves[0](false);
     await tick();
 
-    expect(logStrs).deep.equals(["2_true", "1_false", "invalid_1", "0_false"]);
+    expect(logStrs).toEqual(["2_true", "1_false", "invalid_1", "0_false"]);
   });
 
   it("Resolve when all isValid = true", async () => {
@@ -35,7 +33,7 @@ describe("chain / blocks / rejectFirstInvalidResolveAllValid", () => {
       await tick();
     }
 
-    expect(logStrs).deep.equals(["0_true", "1_true", "2_true", "all_valid"]);
+    expect(logStrs).toEqual(["0_true", "1_true", "2_true", "all_valid"]);
   });
 });
 
@@ -68,7 +66,6 @@ function prepareTest() {
   return {resolves, log, logStrs};
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function resolvablePromise<T>() {
   let resolve: ((value: T) => void) | null = null;
   const promise = new Promise<T>((_resolve) => {

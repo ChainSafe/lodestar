@@ -1,8 +1,8 @@
 import fs from "node:fs";
+import {digest} from "@chainsafe/as-sha256";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {newZeroedArray} from "@lodestar/state-transition";
-import {digest} from "@chainsafe/as-sha256";
 
 // Script to analyze if a raw BLS pubkey bytes are sufficiently even distributed.
 // If so, a shorter slice of the pubkey bytes can be used as key for the pubkey to index map.
@@ -58,7 +58,6 @@ function analyzeBytesFrequencies(pubkeys: string[]): void {
       byte0Freq[byte0] = 1 + (byte0Freq[byte0] ?? 0);
     }
 
-    // eslint-disable-next-line no-console
     console.log(
       `Byte[${i}] frequency distribution`,
       JSON.stringify(
@@ -95,7 +94,6 @@ function analyzeBytesCollisions(pubkeys: string[]): void {
       }
     }
 
-    // eslint-disable-next-line no-console
     console.log(`bytes ${i}, collision rate ${collisions.size / 256 ** i}`);
   }
 }
@@ -112,17 +110,14 @@ async function writePubkeys(): Promise<void> {
 
   const client = getClient({baseUrl}, {config});
 
-  const {data: state} = await client.debug.getStateV2("finalized");
+  const state = (await client.debug.getStateV2({stateId: "finalized"})).value();
 
-  const pubkeys = Array.from(state.validators).map((validator) =>
-    Buffer.from(validator.pubkey as Uint8Array).toString("hex")
-  );
+  const pubkeys = Array.from(state.validators).map((validator) => Buffer.from(validator.pubkey).toString("hex"));
 
   fs.writeFileSync("mainnet_pubkeys.csv", pubkeys.join("\n"));
 }
 
 run().catch((e) => {
-  // eslint-disable-next-line no-console
   console.error(e);
   process.exit(1);
 });

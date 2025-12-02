@@ -1,14 +1,19 @@
+import {afterEach, describe, it} from "vitest";
 import {config} from "@lodestar/config/default";
-import {ILogger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, phase0, Slot, ssz} from "@lodestar/types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {linspace} from "../../../../src/util/numpy.js";
-import {SyncChain, SyncChainFns, ChainTarget} from "../../../../src/sync/range/chain.js";
-import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
+import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
+import {Logger, fromHex} from "@lodestar/utils";
+import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
+import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
+import {Clock} from "../../../../src/util/clock.js";
+import {CustodyConfig} from "../../../../src/util/dataColumns.js";
+import {linspace} from "../../../../src/util/numpy.js";
 import {testLogger} from "../../../utils/logger.js";
-import {getValidPeerId} from "../../../utils/peer.js";
+import {validPeerIdStr} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -24,39 +29,55 @@ describe("sync / range / chain", () => {
       targetEpoch: 16,
     },
     {
-      id: "Simulate sync with a very long range of skipped slots",
+      // due to BATCH_BUFFER_SIZE and MAX_LOOK_AHEAD_EPOCHS, lodestar cannot deal with unlimited skipped slots
+      // having a test with 2 epochs of skipped slots is enough to test the logic
+      // this hasn't happened in any networks as of Aug 2025
+      id: "Simulate sync with 2 epochs of skipped slots",
       startEpoch: 0,
       targetEpoch: 16,
-      skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 10 * SLOTS_PER_EPOCH)),
+      skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 4 * SLOTS_PER_EPOCH)),
     },
-    {
-      id: "Simulate sync with multiple ranges of bad blocks",
-      startEpoch: 0,
-      targetEpoch: 16,
-      badBlocks: new Set(linspace(3 * SLOTS_PER_EPOCH, 10 * SLOTS_PER_EPOCH)),
-    },
+    // As of https://github.com/ChainSafe/lodestar/pull/8150, we abort the batch after a single processing error
+    // {
+    //   id: "Simulate sync with multiple ranges of bad blocks",
+    //   startEpoch: 0,
+    //   targetEpoch: 16,
+    //   badBlocks: new Set(linspace(3 * SLOTS_PER_EPOCH, 10 * SLOTS_PER_EPOCH)),
+    // },
     {
       id: "Simulate sync when right on genesis epoch",
       startEpoch: 0,
       targetEpoch: 0,
     },
     {
-      id: "Simulate sync that must be completed immediatelly",
+      id: "Simulate sync that must be completed immediately",
       startEpoch: 20,
       targetEpoch: 16,
     },
   ];
 
   // Helper variables to trigger errors
-  const peer = getValidPeerId();
+  const peer = validPeerIdStr;
   const logger = testLogger();
   const ACCEPT_BLOCK = Buffer.alloc(96, 0);
   const REJECT_BLOCK = Buffer.alloc(96, 1);
   const zeroBlockBody = ssz.phase0.BeaconBlockBody.defaultValue();
   const interval: NodeJS.Timeout | null = null;
+  const nodeId = fromHex("cdbee32dc3c50e9711d22be5565c7e44ff6108af663b2dc5abd2df573d2fa83f");
+  const custodyConfig = new CustodyConfig({
+    nodeId,
+    config,
+  });
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   const reportPeer: SyncChainFns["reportPeer"] = () => {};
+  const getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"] = (peerId) => {
+    return {
+      peerId,
+      client: "CLIENT_AGENT",
+      custodyColumns: [],
+    };
+  };
+  const pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (_) => {};
 
   afterEach(() => {
     if (interval !== null) clearInterval(interval);
@@ -65,15 +86,16 @@ describe("sync / range / chain", () => {
   for (const {id, startEpoch, targetEpoch, badBlocks, skippedSlots} of testCases) {
     it(id, async () => {
       const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
-        for (const block of blocks) {
+        for (const blockInput of blocks) {
+          const block = blockInput.getBlock();
           if (block.signature === ACCEPT_BLOCK) continue;
           if (block.signature === REJECT_BLOCK) throw Error("REJECT_BLOCK");
         }
       };
 
-      const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
-        const blocks: phase0.SignedBeaconBlock[] = [];
-        for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
+      const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request, _partialDownload) => {
+        const blocks: IBlockInput[] = [];
+        for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
           if (skippedSlots?.has(i)) {
             continue; // Skip
           }
@@ -81,12 +103,21 @@ describe("sync / range / chain", () => {
           // Only reject once to prevent an infinite loop
           const shouldReject = badBlocks?.has(i);
           if (shouldReject) badBlocks?.delete(i);
-          blocks.push({
-            message: generateEmptyBlock(i),
-            signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
-          });
+          blocks.push(
+            BlockInputPreData.createFromBlock({
+              block: {
+                message: generateEmptyBlock(i),
+                signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
+              },
+              blockRootHex: "0x00",
+              forkName: config.getForkName(i),
+              daOutOfRange: false,
+              source: BlockInputSource.byRange,
+              seenTimestampSec: Math.floor(Date.now() / 1000),
+            })
+          );
         }
-        return blocks;
+        return {result: blocks, warnings: null};
       };
 
       const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -94,12 +125,20 @@ describe("sync / range / chain", () => {
 
       await new Promise<void>((resolve, reject) => {
         const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
+        const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
         const initialSync = new SyncChain(
           startEpoch,
           target,
           syncType,
-          logSyncChainFns(logger, {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd}),
-          {config, logger}
+          logSyncChainFns(logger, {
+            processChainSegment,
+            downloadByRange,
+            getConnectedPeerSyncMeta,
+            reportPeer,
+            pruneBlockInputs,
+            onEnd,
+          }),
+          {config, logger, clock, custodyConfig, metrics: null}
         );
 
         const peers = [peer];
@@ -115,17 +154,25 @@ describe("sync / range / chain", () => {
     const targetEpoch = 16;
     const peers = [peer];
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
-    const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peer, request) => {
-      const blocks: phase0.SignedBeaconBlock[] = [];
-      for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
-        blocks.push({
-          message: generateEmptyBlock(i),
-          signature: ACCEPT_BLOCK,
-        });
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request, _partialDownload) => {
+      const blocks: IBlockInput[] = [];
+      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+        blocks.push(
+          BlockInputPreData.createFromBlock({
+            block: {
+              message: generateEmptyBlock(i),
+              signature: ACCEPT_BLOCK,
+            },
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            seenTimestampSec: Math.floor(Date.now() / 1000),
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+          })
+        );
       }
-      return blocks;
+      return {result: blocks, warnings: null};
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -133,12 +180,20 @@ describe("sync / range / chain", () => {
 
     await new Promise<void>((resolve, reject) => {
       const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
       const initialSync = new SyncChain(
         startEpoch,
         target,
         syncType,
-        logSyncChainFns(logger, {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd}),
-        {config, logger}
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadByRange,
+          reportPeer,
+          pruneBlockInputs,
+          getConnectedPeerSyncMeta,
+          onEnd,
+        }),
+        {config, logger, clock, custodyConfig, metrics: null}
       );
 
       // Add peers after some time
@@ -161,19 +216,27 @@ describe("sync / range / chain", () => {
   }
 });
 
-function logSyncChainFns(logger: ILogger, fns: SyncChainFns): SyncChainFns {
+function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
   return {
     processChainSegment(blocks, syncType) {
-      logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.message.slot).join(",")});
+      logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.slot).join(",")});
       return fns.processChainSegment(blocks, syncType);
     },
-    downloadBeaconBlocksByRange(peer, request) {
-      logger.debug("mock downloadBeaconBlocksByRange", request);
-      return fns.downloadBeaconBlocksByRange(peer, request);
+    downloadByRange(peer, request, syncType) {
+      logger.debug("mock downloadBeaconBlocksByRange", request.state.status);
+      return fns.downloadByRange(peer, request, syncType);
+    },
+    getConnectedPeerSyncMeta(peerId) {
+      logger.debug("mock getConnectedPeerSyncMeta", peerId);
+      return fns.getConnectedPeerSyncMeta(peerId);
     },
     reportPeer(peer, action, actionName) {
-      logger.debug("mock reportPeer", {peer: peer.toB58String(), action, actionName});
+      logger.debug("mock reportPeer", {peer: peer.toString(), action, actionName});
       return fns.reportPeer(peer, action, actionName);
+    },
+    pruneBlockInputs(blockInputs) {
+      logger.debug("mock pruneBlockInputs", {blockInputsLength: blockInputs.length});
+      return fns.pruneBlockInputs(blockInputs);
     },
     onEnd(err, target) {
       logger.debug("mock onEnd", {target: target?.slot}, err ?? undefined);

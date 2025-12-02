@@ -1,10 +1,12 @@
-import {phase0, ssz, ValidatorIndex} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
-import {Db, Bucket, Repository} from "@lodestar/db";
+import {ChainForkConfig} from "@lodestar/config";
+import {Db, Repository} from "@lodestar/db";
+import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export class VoluntaryExitRepository extends Repository<ValidatorIndex, phase0.SignedVoluntaryExit> {
-  constructor(config: IChainForkConfig, db: Db) {
-    super(config, db, Bucket.phase0_exit, ssz.phase0.SignedVoluntaryExit);
+  constructor(config: ChainForkConfig, db: Db) {
+    const bucket = Bucket.phase0_exit;
+    super(config, db, bucket, ssz.phase0.SignedVoluntaryExit, getBucketNameByValue(bucket));
   }
 
   getId(value: phase0.SignedVoluntaryExit): ValidatorIndex {

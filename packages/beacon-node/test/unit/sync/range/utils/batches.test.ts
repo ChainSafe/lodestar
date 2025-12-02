@@ -1,18 +1,20 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
-import {Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getValidPeerId} from "../../../../utils/peer.js";
+import {Epoch, Slot} from "@lodestar/types";
 import {Batch, BatchStatus} from "../../../../../src/sync/range/batch.js";
 import {
-  validateBatchesStatus,
   getNextBatchToProcess,
   isSyncChainDone,
   toBeDownloadedStartEpoch,
+  validateBatchesStatus,
 } from "../../../../../src/sync/range/utils/batches.js";
+import {CustodyConfig} from "../../../../../src/util/dataColumns.js";
+import {clock} from "../../../../utils/blocksAndData.js";
+import {validPeerIdStr} from "../../../../utils/peer.js";
 
 describe("sync / range / batches", () => {
-  const peer = getValidPeerId();
+  const peer = validPeerIdStr;
 
   describe("validateBatchesStatus", () => {
     const testCases: {
@@ -81,7 +83,7 @@ describe("sync / range / batches", () => {
         if (valid) {
           validateBatchesStatus(_batches);
         } else {
-          expect(() => validateBatchesStatus(_batches)).to.throw();
+          expect(() => validateBatchesStatus(_batches)).toThrow();
         }
       });
     }
@@ -123,9 +125,9 @@ describe("sync / range / batches", () => {
         const _batches = batches.map(createBatch);
         const nextBatchToProcess = getNextBatchToProcess(_batches);
         if (nextBatchToProcessIndex === undefined) {
-          expect(nextBatchToProcess).to.equal(null);
+          expect(nextBatchToProcess).toBe(null);
         } else {
-          expect(nextBatchToProcess).to.equal(_batches[nextBatchToProcessIndex]);
+          expect(nextBatchToProcess).toBe(_batches[nextBatchToProcessIndex]);
         }
       });
     }
@@ -180,7 +182,7 @@ describe("sync / range / batches", () => {
     for (const {id, batches, latestValidatedEpoch, targetSlot, isDone} of testCases) {
       it(id, () => {
         const _batches = batches.map(([batchStartEpoch, batchStatus]) => createBatch(batchStatus, batchStartEpoch));
-        expect(isSyncChainDone(_batches, latestValidatedEpoch, targetSlot)).to.equal(isDone);
+        expect(isSyncChainDone(_batches, latestValidatedEpoch, targetSlot)).toBe(isDone);
       });
     }
   });
@@ -214,20 +216,20 @@ describe("sync / range / batches", () => {
     for (const {id, batches, startEpoch, result} of testCases) {
       it(id, () => {
         const _batches = batches.map(([batchStartEpoch, batchStatus]) => createBatch(batchStatus, batchStartEpoch));
-        expect(toBeDownloadedStartEpoch(_batches, startEpoch)).to.equal(result);
+        expect(toBeDownloadedStartEpoch(_batches, startEpoch)).toBe(result);
       });
     }
   });
 
   function createBatch(status: BatchStatus, startEpoch = 0): Batch {
-    const batch = new Batch(startEpoch, config);
+    const batch = new Batch(startEpoch, config, clock, new CustodyConfig({config, nodeId: Buffer.alloc(32)}));
 
     if (status === BatchStatus.AwaitingDownload) return batch;
 
     batch.startDownloading(peer);
     if (status === BatchStatus.Downloading) return batch;
 
-    batch.downloadingSuccess([]);
+    batch.downloadingSuccess(peer, []);
     if (status === BatchStatus.AwaitingProcessing) return batch;
 
     batch.startProcessing();

@@ -1,10 +1,10 @@
-import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
-import {Bucket, encodeKey, IDatabaseApiOptions} from "@lodestar/db";
 import {ContainerType, Type} from "@chainsafe/ssz";
+import {DbReqOpts, encodeKey} from "@lodestar/db";
+import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
+import {Bucket, getBucketNameByValue} from "../../buckets.js";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 
 // Only used locally here
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface SlashingProtectionLowerBound {
   minSourceEpoch: Epoch;
   minTargetEpoch: Epoch;
@@ -16,27 +16,29 @@ export interface SlashingProtectionLowerBound {
  */
 export class AttestationLowerBoundRepository {
   protected type: Type<SlashingProtectionLowerBound>;
-  protected db: LodestarValidatorDatabaseController;
-  protected bucket = Bucket.phase0_slashingProtectionAttestationLowerBound;
+  protected bucket = Bucket.slashingProtectionAttestationLowerBound;
 
-  constructor(opts: IDatabaseApiOptions) {
-    this.db = opts.controller;
+  private readonly bucketId = getBucketNameByValue(this.bucket);
+  private readonly dbReqOpts: DbReqOpts = {bucketId: this.bucketId};
+
+  constructor(protected db: LodestarValidatorDatabaseController) {
     this.type = new ContainerType({
       minSourceEpoch: ssz.Epoch,
       minTargetEpoch: ssz.Epoch,
     }); // casing doesn't matter
+    this.dbReqOpts = {bucketId: this.bucketId};
   }
 
   async get(pubkey: BLSPubkey): Promise<SlashingProtectionLowerBound | null> {
-    const att = await this.db.get(this.encodeKey(pubkey));
+    const att = await this.db.get(this.encodeKey(pubkey), this.dbReqOpts);
     return att && this.type.deserialize(att);
   }
 
   async set(pubkey: BLSPubkey, value: SlashingProtectionLowerBound): Promise<void> {
-    await this.db.put(this.encodeKey(pubkey), Buffer.from(this.type.serialize(value)));
+    await this.db.put(this.encodeKey(pubkey), this.type.serialize(value), this.dbReqOpts);
   }
 
   private encodeKey(pubkey: BLSPubkey): Uint8Array {
-    return encodeKey(this.bucket, Buffer.from(pubkey as Uint8Array));
+    return encodeKey(this.bucket, pubkey);
   }
 }

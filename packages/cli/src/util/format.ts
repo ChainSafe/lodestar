@@ -1,6 +1,5 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
-import {fromHexString} from "@chainsafe/ssz";
+import {PublicKey} from "@chainsafe/blst";
+import {fromHex} from "@lodestar/utils";
 
 /**
  * 0x prefix a string if not prefixed already
@@ -37,8 +36,8 @@ export function parseRange(range: string): number[] {
 
   const [from, to] = range.split("..").map((n) => parseInt(n));
 
-  if (isNaN(from)) throw Error(`Invalid range from isNaN '${range}'`);
-  if (isNaN(to)) throw Error(`Invalid range to isNaN '${range}'`);
+  if (Number.isNaN(from)) throw Error(`Invalid range from isNaN '${range}'`);
+  if (Number.isNaN(to)) throw Error(`Invalid range to isNaN '${range}'`);
   if (from > to) throw Error(`Invalid range from > to '${range}'`);
 
   const arr: number[] = [];
@@ -51,20 +50,9 @@ export function parseRange(range: string): number[] {
 
 export function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
-    const pubkeyBytes = fromHexString(pubkeyHex);
-    bls.PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian, true);
+    const pubkeyBytes = fromHex(pubkeyHex);
+    PublicKey.fromBytes(pubkeyBytes, true);
   }
-}
-
-export function isValidHttpUrl(urlStr: string): boolean {
-  let url;
-  try {
-    url = new URL(urlStr);
-  } catch (_) {
-    return false;
-  }
-
-  return url.protocol === "http:" || url.protocol === "https:";
 }
 
 /**
@@ -79,7 +67,7 @@ export function parseBootnodesFile(bootnodesFile: string): string[] {
       const sanitizedEntry = entry.replace(/['",[\]{}.]+/g, "").trim();
 
       if (sanitizedEntry.includes("enr:-")) {
-        const parsedEnr = `enr:-${sanitizedEntry.split("enr:-")[1]}`;
+        const parsedEnr = `enr:-${sanitizedEntry.split("enr:-")[1].split("#")[0].trim()}`;
         enrs.push(parsedEnr);
       }
     }

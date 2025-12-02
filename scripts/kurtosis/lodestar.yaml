@@ -1,0 +1,18 @@
+participants:
+  # Execution layer
+  - el_type: geth
+    el_image: ethereum/client-go:latest
+    count: 2
+  
+  # Consensus layer - Lodestar nodes using local build
+  - cl_type: lodestar
+    cl_image: lodestar:local  # Uses locally built image
+    count: 4
+    validator_count: 8  # 32 validators total (8 per node)
+
+network_params:
+  # Use minimal preset for faster testing
+  preset: minimal
+  
+additional_services:
+  - prometheus_grafana

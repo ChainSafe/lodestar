@@ -1,0 +1,61 @@
+import path from "node:path";
+import {phase0, ssz} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
+import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
+import {getLatestSafeDatastoreKey} from "./db.js";
+import {CPStateDatastore, DatastoreKey} from "./types.js";
+
+const CHECKPOINT_STATES_FOLDER = "checkpoint_states";
+const CHECKPOINT_FILE_NAME_LENGTH = 82;
+
+/**
+ * Implementation of CPStateDatastore using file system, this is beneficial for debugging.
+ */
+export class FileCPStateDatastore implements CPStateDatastore {
+  private readonly folderPath: string;
+
+  constructor(dataDir: string) {
+    // service deployment: `/beacon/checkpoint_states`
+    // docker deployment: `/data/checkpoint_states`
+    this.folderPath = path.join(dataDir, CHECKPOINT_STATES_FOLDER);
+  }
+
+  async init(): Promise<void> {
+    try {
+      await ensureDir(this.folderPath);
+    } catch (_) {
+      // do nothing
+    }
+  }
+
+  async write(cpKey: phase0.Checkpoint, stateBytes: Uint8Array): Promise<DatastoreKey> {
+    const serializedCheckpoint = ssz.phase0.Checkpoint.serialize(cpKey);
+    const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
+    await writeIfNotExist(filePath, stateBytes);
+    return serializedCheckpoint;
+  }
+
+  async remove(serializedCheckpoint: DatastoreKey): Promise<void> {
+    const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
+    await removeFile(filePath);
+  }
+
+  async read(serializedCheckpoint: DatastoreKey): Promise<Uint8Array | null> {
+    const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
+    return readFile(filePath);
+  }
+
+  async readLatestSafe(): Promise<Uint8Array | null> {
+    const allKeys = await this.readKeys();
+    if (allKeys.length === 0) return null;
+
+    return getLatestSafeDatastoreKey(allKeys, this.read.bind(this));
+  }
+
+  async readKeys(): Promise<DatastoreKey[]> {
+    const fileNames = await readFileNames(this.folderPath);
+    return fileNames
+      .filter((fileName) => fileName.startsWith("0x") && fileName.length === CHECKPOINT_FILE_NAME_LENGTH)
+      .map((fileName) => fromHex(fileName));
+  }
+}

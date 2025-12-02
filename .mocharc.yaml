@@ -1,4 +1,0 @@
-extension: ["ts"]
-colors: true
-node-option:
-  - "loader=ts-node/esm"

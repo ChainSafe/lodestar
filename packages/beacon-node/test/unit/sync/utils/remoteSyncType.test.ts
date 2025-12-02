@@ -1,13 +1,13 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
+import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Root, phase0} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {
-  getPeerSyncType,
-  getRangeSyncType,
   PeerSyncType,
   RangeSyncType,
+  getPeerSyncType,
+  getRangeSyncType,
 } from "../../../../src/sync/utils/remoteSyncType.js";
 
 describe("network / peers / remoteSyncType", () => {
@@ -73,7 +73,7 @@ describe("network / peers / remoteSyncType", () => {
         const local = {...status, ...localPartial};
         const remote = {...status, ...remotePartial};
         const forkChoice = getMockForkChoice(blocks || []);
-        expect(getPeerSyncType(local, remote, forkChoice, slotImportTolerance)).to.equal(syncType);
+        expect(getPeerSyncType(local, remote, forkChoice, slotImportTolerance)).toBe(syncType);
       });
     }
   });
@@ -118,7 +118,7 @@ describe("network / peers / remoteSyncType", () => {
         const local = {...status, ...localPartial};
         const remote = {...status, ...remotePartial};
         const forkChoice = getMockForkChoice(blocks || []);
-        expect(getRangeSyncType(local, remote, forkChoice)).to.equal(syncType);
+        expect(getRangeSyncType(local, remote, forkChoice)).toBe(syncType);
       });
     }
   });

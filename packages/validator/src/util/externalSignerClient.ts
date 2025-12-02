@@ -1,19 +1,29 @@
-import fetch from "cross-fetch";
-import {phase0, altair} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkPreBellatrix, ForkSeq} from "@lodestar/params";
+import {blindedOrFullBlockToHeader, computeEpochAtSlot} from "@lodestar/state-transition";
+import {
+  AggregateAndProof,
+  BeaconBlock,
+  BlindedBeaconBlock,
+  Epoch,
+  Root,
+  RootHex,
+  Slot,
+  altair,
+  capella,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
-import {IBeaconConfig} from "@lodestar/config";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {allForks, Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
-import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
+import {fetch, toHex, toRootHex} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
-import {blindedOrFullBlockToHeader} from "./blindedBlock.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 export enum SignableMessageType {
   AGGREGATION_SLOT = "AGGREGATION_SLOT",
   AGGREGATE_AND_PROOF = "AGGREGATE_AND_PROOF",
+  AGGREGATE_AND_PROOF_V2 = "AGGREGATE_AND_PROOF_V2",
   ATTESTATION = "ATTESTATION",
   BLOCK_V2 = "BLOCK_V2",
   DEPOSIT = "DEPOSIT",
@@ -23,6 +33,7 @@ export enum SignableMessageType {
   SYNC_COMMITTEE_SELECTION_PROOF = "SYNC_COMMITTEE_SELECTION_PROOF",
   SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
   VALIDATOR_REGISTRATION = "VALIDATOR_REGISTRATION",
+  BLS_TO_EXECUTION_CHANGE = "BLS_TO_EXECUTION_CHANGE",
 }
 
 const AggregationSlotType = new ContainerType({
@@ -62,19 +73,22 @@ const SyncAggregatorSelectionDataType = new ContainerType(
 export type SignableMessage =
   | {type: SignableMessageType.AGGREGATION_SLOT; data: {slot: Slot}}
   | {type: SignableMessageType.AGGREGATE_AND_PROOF; data: phase0.AggregateAndProof}
+  | {type: SignableMessageType.AGGREGATE_AND_PROOF_V2; data: AggregateAndProof}
   | {type: SignableMessageType.ATTESTATION; data: phase0.AttestationData}
-  | {type: SignableMessageType.BLOCK_V2; data: allForks.FullOrBlindedBeaconBlock}
+  | {type: SignableMessageType.BLOCK_V2; data: BeaconBlock<ForkPreBellatrix> | BlindedBeaconBlock}
   | {type: SignableMessageType.DEPOSIT; data: ValueOf<typeof DepositType>}
   | {type: SignableMessageType.RANDAO_REVEAL; data: {epoch: Epoch}}
   | {type: SignableMessageType.VOLUNTARY_EXIT; data: phase0.VoluntaryExit}
   | {type: SignableMessageType.SYNC_COMMITTEE_MESSAGE; data: ValueOf<typeof SyncCommitteeMessageType>}
   | {type: SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF; data: ValueOf<typeof SyncAggregatorSelectionDataType>}
   | {type: SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF; data: altair.ContributionAndProof}
-  | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1};
+  | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1}
+  | {type: SignableMessageType.BLS_TO_EXECUTION_CHANGE; data: capella.BLSToExecutionChange};
 
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.AGGREGATION_SLOT]: true,
   [SignableMessageType.AGGREGATE_AND_PROOF]: true,
+  [SignableMessageType.AGGREGATE_AND_PROOF_V2]: true,
   [SignableMessageType.ATTESTATION]: true,
   [SignableMessageType.BLOCK_V2]: true,
   [SignableMessageType.DEPOSIT]: false,
@@ -84,6 +98,7 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF]: true,
   [SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF]: true,
   [SignableMessageType.VALIDATOR_REGISTRATION]: false,
+  [SignableMessageType.BLS_TO_EXECUTION_CHANGE]: true,
 };
 
 type Web3SignerSerializedRequest = {
@@ -99,23 +114,27 @@ type Web3SignerSerializedRequest = {
   signingRoot: RootHex;
 };
 
+enum MediaType {
+  json = "application/json",
+}
+
 /**
  * Return public keys from the server.
  */
 export async function externalSignerGetKeys(externalSignerUrl: string): Promise<string[]> {
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/publicKeys`, {
     method: "GET",
-    headers: {"Content-Type": "application/json"},
+    headers: {Accept: MediaType.json},
   });
 
-  return await handlerExternalSignerResponse<string[]>(res);
+  return handleExternalSignerResponse<string[]>(res);
 }
 
 /**
  * Return signature in bytes. Assumption that the pubkey has it's corresponding secret key in the keystore of an external signer.
  */
 export async function externalSignerPostSignature(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   externalSignerUrl: string,
   pubkeyHex: PubkeyHex,
   signingRoot: Root,
@@ -125,27 +144,30 @@ export async function externalSignerPostSignature(
   const requestObj = serializerSignableMessagePayload(config, signableMessage) as Web3SignerSerializedRequest;
 
   requestObj.type = signableMessage.type;
-  requestObj.signingRoot = toHexString(signingRoot);
+  requestObj.signingRoot = toRootHex(signingRoot);
 
   if (requiresForkInfo[signableMessage.type]) {
     const forkInfo = config.getForkInfo(signingSlot);
     requestObj.fork_info = {
       fork: {
-        previous_version: toHexString(forkInfo.prevVersion),
-        current_version: toHexString(forkInfo.version),
+        previous_version: toHex(forkInfo.prevVersion),
+        current_version: toHex(forkInfo.version),
         epoch: String(computeEpochAtSlot(signingSlot)),
       },
-      genesis_validators_root: toHexString(config.genesisValidatorsRoot),
+      genesis_validators_root: toRootHex(config.genesisValidatorsRoot),
     };
   }
 
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/sign/${pubkeyHex}`, {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: {
+      Accept: MediaType.json,
+      "Content-Type": MediaType.json,
+    },
     body: JSON.stringify(requestObj),
   });
 
-  const data = await handlerExternalSignerResponse<{signature: string}>(res);
+  const data = await handleExternalSignerResponse<{signature: string}>(res);
   return data.signature;
 }
 
@@ -155,29 +177,53 @@ export async function externalSignerPostSignature(
 export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean> {
   const res = await fetch(`${remoteUrl}/upcheck`, {
     method: "GET",
-    headers: {"Content-Type": "application/json"},
+    headers: {Accept: MediaType.json},
   });
 
-  const data = await handlerExternalSignerResponse<{status: string}>(res);
+  const data = await handleExternalSignerResponse<{status: string}>(res);
   return data.status === "OK";
 }
 
-async function handlerExternalSignerResponse<T>(res: Response): Promise<T> {
+async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const errBody = await res.text();
-    throw Error(`${errBody}`);
+    throw Error(errBody || res.statusText);
   }
 
-  return JSON.parse(await res.text()) as T;
+  const contentType = res.headers.get("content-type");
+  if (contentType === null) {
+    throw Error("No Content-Type header found in response");
+  }
+
+  const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
+  if (mediaType !== MediaType.json) {
+    throw Error(`Unsupported response media type: ${mediaType}`);
+  }
+
+  try {
+    return (await res.json()) as T;
+  } catch (e) {
+    throw Error(`Invalid json response: ${(e as Error).message}`);
+  }
 }
 
-function serializerSignableMessagePayload(config: IBeaconConfig, payload: SignableMessage): Record<string, unknown> {
+function serializerSignableMessagePayload(config: BeaconConfig, payload: SignableMessage): Record<string, unknown> {
   switch (payload.type) {
     case SignableMessageType.AGGREGATION_SLOT:
       return {aggregation_slot: AggregationSlotType.toJson(payload.data)};
 
     case SignableMessageType.AGGREGATE_AND_PROOF:
       return {aggregate_and_proof: ssz.phase0.AggregateAndProof.toJson(payload.data)};
+
+    case SignableMessageType.AGGREGATE_AND_PROOF_V2: {
+      const fork = config.getForkName(payload.data.aggregate.data.slot);
+      return {
+        aggregate_and_proof: {
+          version: fork.toUpperCase(),
+          data: sszTypesFor(fork).AggregateAndProof.toJson(payload.data),
+        },
+      };
+    }
 
     case SignableMessageType.ATTESTATION:
       return {attestation: ssz.phase0.AttestationData.toJson(payload.data)};
@@ -194,14 +240,14 @@ function serializerSignableMessagePayload(config: IBeaconConfig, payload: Signab
             block_header: ssz.phase0.BeaconBlockHeader.toJson(blindedOrFullBlockToHeader(config, payload.data)),
           },
         };
-      } else {
-        return {
-          beacon_block: {
-            version,
-            block: config.getForkTypes(payload.data.slot).BeaconBlock.toJson(payload.data),
-          },
-        };
       }
+
+      return {
+        beacon_block: {
+          version,
+          block: config.getForkTypes(payload.data.slot).BeaconBlock.toJson(payload.data),
+        },
+      };
     }
 
     case SignableMessageType.DEPOSIT:
@@ -224,5 +270,8 @@ function serializerSignableMessagePayload(config: IBeaconConfig, payload: Signab
 
     case SignableMessageType.VALIDATOR_REGISTRATION:
       return {validator_registration: ssz.bellatrix.ValidatorRegistrationV1.toJson(payload.data)};
+
+    case SignableMessageType.BLS_TO_EXECUTION_CHANGE:
+      return {BLS_TO_EXECUTION_CHANGE: ssz.capella.BLSToExecutionChange.toJson(payload.data)};
   }
 }

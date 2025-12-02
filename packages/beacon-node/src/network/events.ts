@@ -1,27 +1,51 @@
-import {EventEmitter} from "events";
-import PeerId from "peer-id";
-import StrictEventEmitter from "strict-event-emitter-types";
-import {allForks, phase0} from "@lodestar/types";
-import {RequestTypedContainer} from "./reqresp/index.js";
+import {EventEmitter} from "node:events";
+import {PeerId, TopicValidatorResult} from "@libp2p/interface";
+import {CustodyIndex, Status} from "@lodestar/types";
+import {PeerIdStr} from "../util/peerId.js";
+import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
+import {EventDirection} from "../util/workerEvents.js";
+import {PendingGossipsubMessage} from "./processor/types.js";
+import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 
 export enum NetworkEvent {
   /** A relevant peer has connected or has been re-STATUS'd */
   peerConnected = "peer-manager.peer-connected",
+  /** A peer has been disconnected */
   peerDisconnected = "peer-manager.peer-disconnected",
-  gossipStart = "gossip.start",
-  gossipStop = "gossip.stop",
-  gossipHeartbeat = "gossipsub.heartbeat",
   reqRespRequest = "req-resp.request",
-  unknownBlockParent = "unknownBlockParent",
+
+  // Network processor events
+  /** (Network -> App) A gossip message is ready for validation */
+  pendingGossipsubMessage = "gossip.pendingGossipsubMessage",
+  /** (App -> Network) A gossip message has been validated */
+  gossipMessageValidationResult = "gossip.messageValidationResult",
 }
 
-export type NetworkEvents = {
-  [NetworkEvent.peerConnected]: (peer: PeerId, status: phase0.Status) => void;
-  [NetworkEvent.peerDisconnected]: (peer: PeerId) => void;
-  [NetworkEvent.reqRespRequest]: (request: RequestTypedContainer, peer: PeerId) => void;
-  [NetworkEvent.unknownBlockParent]: (signedBlock: allForks.SignedBeaconBlock, peerIdStr: string) => void;
+export type NetworkEventData = {
+  [NetworkEvent.peerConnected]: {
+    peer: PeerIdStr;
+    status: Status;
+    custodyColumns: CustodyIndex[];
+    clientAgent: string;
+  };
+  [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
+  [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId; peerClient: string};
+  [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
+  [NetworkEvent.gossipMessageValidationResult]: {
+    msgId: string;
+    propagationSource: PeerIdStr;
+    acceptance: TopicValidatorResult;
+  };
 };
 
-export type INetworkEventBus = StrictEventEmitter<EventEmitter, NetworkEvents>;
+export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
+  [NetworkEvent.peerConnected]: EventDirection.workerToMain,
+  [NetworkEvent.peerDisconnected]: EventDirection.workerToMain,
+  [NetworkEvent.reqRespRequest]: EventDirection.none, // Only used internally in NetworkCore
+  [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
+  [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
+};
+
+export type INetworkEventBus = StrictEventEmitterSingleArg<NetworkEventData>;
 
 export class NetworkEventBus extends (EventEmitter as {new (): INetworkEventBus}) {}

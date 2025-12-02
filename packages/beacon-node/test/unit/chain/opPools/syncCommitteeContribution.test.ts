@@ -1,49 +1,63 @@
-import {expect} from "chai";
-import {altair, ssz} from "@lodestar/types";
-import {newFilledArray} from "@lodestar/state-transition";
-import type {SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
+import {SecretKey, Signature, fastAggregateVerify} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
+import {config} from "@lodestar/config/default";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {newFilledArray} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {
-  aggregate,
-  replaceIfBetter,
   SyncContributionAndProofPool,
   SyncContributionFast,
+  aggregate,
+  replaceIfBetter,
 } from "../../../../src/chain/opPools/syncContributionAndProofPool.js";
-import {generateContributionAndProof, generateEmptyContribution} from "../../../utils/contributionAndProof.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {EMPTY_SIGNATURE} from "../../../../src/constants/index.js";
+import {getMockedClock} from "../../../mocks/clock.js";
 import {renderBitArray} from "../../../utils/render.js";
+import {VALID_BLS_SIGNATURE_RAND} from "../../../utils/typeGenerator.js";
 
-describe("chain / opPools / SyncContributionAndProofPool", function () {
+describe("chain / opPools / SyncContributionAndProofPool", () => {
   let cache: SyncContributionAndProofPool;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
   const syncCommitteeParticipants = 0;
-  const contributionAndProof: altair.ContributionAndProof = generateContributionAndProof({
-    contribution: {slot, beaconBlockRoot},
-  });
+  const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+  contributionAndProof.contribution.slot = slot;
+  contributionAndProof.contribution.beaconBlockRoot = beaconBlockRoot;
+  contributionAndProof.contribution.signature = VALID_BLS_SIGNATURE_RAND;
+  const clockStub = getMockedClock();
 
   beforeEach(() => {
-    cache = new SyncContributionAndProofPool();
+    vi.spyOn(clockStub, "slotWithPastTolerance").mockReturnValue(slot);
+    cache = new SyncContributionAndProofPool(config, clockStub);
     cache.add(contributionAndProof, syncCommitteeParticipants);
   });
 
   it("should return SyncCommitteeContribution list based on same slot and block root", () => {
-    const newContributionAndProof = generateContributionAndProof({
-      aggregatorIndex: contributionAndProof.aggregatorIndex + 1,
-      contribution: {slot, beaconBlockRoot},
-    });
+    const newContributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+    newContributionAndProof.aggregatorIndex = contributionAndProof.aggregatorIndex + 1;
+    newContributionAndProof.contribution.slot = slot;
+    newContributionAndProof.contribution.beaconBlockRoot = beaconBlockRoot;
+
     cache.add(newContributionAndProof, syncCommitteeParticipants);
     const aggregate = cache.getAggregate(slot, beaconBlockRoot);
-    expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).to.equal(false);
+    expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).toBe(false);
     // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
-    expect(aggregate.syncCommitteeBits.bitLen).to.be.equal(32);
+    expect(aggregate.syncCommitteeBits.bitLen).toBe(512);
+  });
+
+  it("should reject SyncCommitteeContribution of previous slots", () => {
+    const newContributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+    // previous slot
+    newContributionAndProof.contribution.slot = slot - 1;
+    expect(cache.add(newContributionAndProof, syncCommitteeParticipants)).toEqual(InsertOutcome.Late);
+    // but a priority ContributionAndProof should work
+    expect(cache.add(newContributionAndProof, syncCommitteeParticipants, true)).toEqual(InsertOutcome.NewData);
   });
 });
 
-describe("replaceIfBetter", function () {
+describe("replaceIfBetter", () => {
   const numParticipants = 2;
   let bestContribution: SyncContributionFast;
   // const subnetSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
@@ -56,44 +70,32 @@ describe("replaceIfBetter", function () {
   });
 
   it("less participants", () => {
-    const contribution = generateEmptyContribution();
+    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
     contribution.aggregationBits.set(0, true);
-    expect(replaceIfBetter(bestContribution, contribution, numParticipants - 1)).to.be.equal(
-      InsertOutcome.NotBetterThan,
-      "less participant item should not replace the best contribution"
-    );
+    expect(replaceIfBetter(bestContribution, contribution, numParticipants - 1)).toBe(InsertOutcome.NotBetterThan);
   });
 
   it("same participants", () => {
-    const contribution = generateEmptyContribution();
-    expect(replaceIfBetter(bestContribution, contribution, numParticipants)).to.be.equal(
-      InsertOutcome.NotBetterThan,
-      "same participant item should not replace the best contribution"
-    );
+    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
+    expect(replaceIfBetter(bestContribution, contribution, numParticipants)).toBe(InsertOutcome.NotBetterThan);
   });
 
   it("more participants", () => {
-    const contribution = generateEmptyContribution();
+    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
     const numParticipantsNew = numParticipants + 1;
 
-    expect(replaceIfBetter(bestContribution, contribution, numParticipantsNew)).to.be.equal(
-      InsertOutcome.NewData,
-      "more participant item should replace the best contribution"
-    );
-    expect(renderBitArray(bestContribution.syncSubcommitteeBits)).to.be.deep.equal(
-      renderBitArray(contribution.aggregationBits),
-      "incorect subcommittees"
-    );
-    expect(bestContribution.numParticipants).to.be.equal(numParticipantsNew, "incorrect numParticipants");
+    expect(replaceIfBetter(bestContribution, contribution, numParticipantsNew)).toBe(InsertOutcome.NewData);
+    expect(renderBitArray(bestContribution.syncSubcommitteeBits)).toEqual(renderBitArray(contribution.aggregationBits));
+    expect(bestContribution.numParticipants).toBe(numParticipantsNew);
   });
 });
 
-describe("aggregate", function () {
+describe("aggregate", () => {
   const sks: SecretKey[] = [];
   let bestContributionBySubnet: Map<number, SyncContributionFast>;
-  before(async () => {
+  beforeAll(async () => {
     for (let i = 0; i < SYNC_COMMITTEE_SUBNET_COUNT; i++) {
-      sks.push(bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+      sks.push(SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     }
     bestContributionBySubnet = new Map<number, SyncContributionFast>();
   });
@@ -116,19 +118,18 @@ describe("aggregate", function () {
       const expectSyncCommittees = newFilledArray(SYNC_COMMITTEE_SIZE, false);
       for (let subnet = 0; subnet < numSubnet; subnet++) {
         // first participation of each subnet is true
-        expectSyncCommittees[subnet * 8] = true;
+        expectSyncCommittees[subnet * 128] = true;
       }
-      expect(renderBitArray(syncAggregate.syncCommitteeBits)).to.be.deep.equal(
-        renderBitArray(BitArray.fromBoolArray(expectSyncCommittees)),
-        "incorrect sync committees"
+      expect(renderBitArray(syncAggregate.syncCommitteeBits)).toEqual(
+        renderBitArray(BitArray.fromBoolArray(expectSyncCommittees))
       );
       expect(
-        bls.verifyAggregate(
-          testSks.map((sk) => sk.toPublicKey().toBytes()),
+        fastAggregateVerify(
           blockRoot,
-          syncAggregate.syncCommitteeSignature
+          testSks.map((sk) => sk.toPublicKey()),
+          Signature.fromBytes(syncAggregate.syncCommitteeSignature)
         )
-      ).to.be.equal(true, "invalid aggregated signature");
+      ).toBe(true);
     });
   }
 });

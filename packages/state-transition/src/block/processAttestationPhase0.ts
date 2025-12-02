@@ -1,9 +1,8 @@
-import {phase0, ssz} from "@lodestar/types";
-
-import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
-import {computeEpochAtSlot} from "../util/index.js";
-import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../types.js";
+import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Attestation, Slot, electra, phase0, ssz} from "@lodestar/types";
+import {assert, toRootHex} from "@lodestar/utils";
+import {CachedBeaconStateAllForks, CachedBeaconStatePhase0} from "../types.js";
+import {computeEndSlotAtEpoch, computeEpochAtSlot} from "../util/index.js";
 import {isValidIndexedAttestation} from "./index.js";
 
 /**
@@ -22,7 +21,7 @@ export function processAttestationPhase0(
   const slot = state.slot;
   const data = attestation.data;
 
-  validateAttestation(state, attestation);
+  validateAttestation(ForkSeq.phase0, state, attestation);
 
   const pendingAttestation = ssz.phase0.PendingAttestation.toViewDU({
     data: data,
@@ -51,23 +50,18 @@ export function processAttestationPhase0(
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
-  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(attestation), verifySignature)) {
+  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(ForkSeq.phase0, attestation), verifySignature)) {
     throw new Error("Attestation is not valid");
   }
 }
 
-export function validateAttestation(state: CachedBeaconStateAllForks, attestation: phase0.Attestation): void {
+export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllForks, attestation: Attestation): void {
   const {epochCtx} = state;
   const slot = state.slot;
   const data = attestation.data;
   const computedEpoch = computeEpochAtSlot(data.slot);
   const committeeCount = epochCtx.getCommitteeCountPerSlot(computedEpoch);
-  if (!(data.index < committeeCount)) {
-    throw new Error(
-      "Attestation committee index not within current committee count: " +
-        `committeeIndex=${data.index} committeeCount=${committeeCount}`
-    );
-  }
+
   if (!(data.target.epoch === epochCtx.previousShuffling.epoch || data.target.epoch === epochCtx.epoch)) {
     throw new Error(
       "Attestation target epoch not in previous or current epoch: " +
@@ -80,22 +74,85 @@ export function validateAttestation(state: CachedBeaconStateAllForks, attestatio
         `targetEpoch=${data.target.epoch} computedEpoch=${computedEpoch}`
     );
   }
-  if (!(data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && slot <= data.slot + SLOTS_PER_EPOCH)) {
+
+  // post deneb, the attestations are valid till end of next epoch
+  if (!(data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && isTimelyTarget(fork, slot - data.slot))) {
+    const windowStart = data.slot + MIN_ATTESTATION_INCLUSION_DELAY;
+    const windowEnd = fork >= ForkSeq.deneb ? computeEndSlotAtEpoch(computedEpoch + 1) : data.slot + SLOTS_PER_EPOCH;
+
     throw new Error(
-      "Attestation slot not within inclusion window: " +
-        `slot=${data.slot} window=${data.slot + MIN_ATTESTATION_INCLUSION_DELAY}..${data.slot + SLOTS_PER_EPOCH}`
+      `Attestation slot not within inclusion window: slot=${data.slot} window=${windowStart}..${windowEnd}`
     );
   }
 
-  const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
-  if (attestation.aggregationBits.bitLen !== committee.length) {
-    throw new Error(
-      "Attestation aggregation bits length does not match committee length: " +
-        `aggregationBitsLength=${attestation.aggregationBits.bitLen} committeeLength=${committee.length}`
+  if (fork >= ForkSeq.electra) {
+    assert.equal(data.index, 0, `AttestationData.index must be zero: index=${data.index}`);
+    const attestationElectra = attestation as electra.Attestation;
+    const committeeIndices = attestationElectra.committeeBits.getTrueBitIndexes();
+
+    const lastCommitteeIndex = committeeIndices.at(-1);
+    if (lastCommitteeIndex === undefined) {
+      throw Error("Attestation should have at least one committee bit set");
+    }
+
+    if (lastCommitteeIndex >= committeeCount) {
+      throw new Error(
+        `Attestation committee index exceeds committee count: lastCommitteeIndex=${lastCommitteeIndex} numCommittees=${committeeCount}`
+      );
+    }
+
+    const validatorsByCommittee = epochCtx.getBeaconCommittees(data.slot, committeeIndices);
+    const aggregationBitsArray = attestationElectra.aggregationBits.toBoolArray();
+
+    // Total number of attestation participants of every committee specified
+    let committeeOffset = 0;
+    for (const committeeValidators of validatorsByCommittee) {
+      const committeeAggregationBits = aggregationBitsArray.slice(
+        committeeOffset,
+        committeeOffset + committeeValidators.length
+      );
+
+      // Assert aggregation bits in this committee have at least one true bit
+      if (committeeAggregationBits.every((bit) => !bit)) {
+        throw new Error("Every committee in aggregation bits must have at least one attester");
+      }
+
+      committeeOffset += committeeValidators.length;
+    }
+
+    // Bitfield length matches total number of participants
+    assert.equal(
+      attestationElectra.aggregationBits.bitLen,
+      committeeOffset,
+      `Attestation aggregation bits length does not match total number of committee participants aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${committeeOffset}`
     );
+  } else {
+    if (!(data.index < committeeCount)) {
+      throw new Error(
+        "Attestation committee index not within current committee count: " +
+          `committeeIndex=${data.index} committeeCount=${committeeCount}`
+      );
+    }
+
+    const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
+    if (attestation.aggregationBits.bitLen !== committee.length) {
+      throw new Error(
+        "Attestation aggregation bits length does not match committee length: " +
+          `aggregationBitsLength=${attestation.aggregationBits.bitLen} committeeLength=${committee.length}`
+      );
+    }
   }
 }
 
+// Modified https://github.com/ethereum/consensus-specs/pull/3360
+export function isTimelyTarget(fork: ForkSeq, inclusionDistance: Slot): boolean {
+  // post deneb attestation is valid till end of next epoch for target
+  if (fork >= ForkSeq.deneb) {
+    return true;
+  }
+  return inclusionDistance <= SLOTS_PER_EPOCH;
+}
+
 export function checkpointToStr(checkpoint: phase0.Checkpoint): string {
-  return `${toHexString(checkpoint.root)}:${checkpoint.epoch}`;
+  return `${toRootHex(checkpoint.root)}:${checkpoint.epoch}`;
 }

@@ -1,8 +1,3 @@
-/* eslint-disable no-console,
-  @typescript-eslint/explicit-function-return-type,
-  @typescript-eslint/no-var-requires,
-  @typescript-eslint/no-require-imports */
-
 // Script used in .github/workflows/release.yml to get the previous tag
 // to generate a changelog from 'prev_tag' to 'tag'
 // Returns the most recent tag that:
@@ -30,7 +25,9 @@ async function run() {
   const tags = stdout.trim().split("\n");
   for (const tag of tags) {
     if (tag !== CURRENT_TAG && !tag.includes(IGNORE_PATTERN)) {
-      console.log(`::set-output name=prev_tag::${tag}`);
+      const cmd = `echo "prev_tag=${tag}" >> ${process.env.GITHUB_OUTPUT}`;
+      console.log("Execute command on shell", cmd);
+      await promisify(exec)(cmd);
       return;
     }
   }

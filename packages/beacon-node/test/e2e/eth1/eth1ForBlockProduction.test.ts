@@ -1,22 +1,18 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import "mocha";
-import {promisify} from "node:util";
-import {expect} from "chai";
-import leveldown from "leveldown";
-import {sleep} from "@lodestar/utils";
-import {LevelDbController} from "@lodestar/db";
-
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
+import {KeyValue} from "@lodestar/db";
+import {LevelDbController} from "@lodestar/db/controller/level";
+import {phase0, ssz} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
+import {BeaconDb} from "../../../src/db/index.js";
 import {Eth1ForBlockProduction} from "../../../src/eth1/index.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
-import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
-import {testLogger} from "../../utils/logger.js";
-import {BeaconDb} from "../../../src/db/index.js";
-import {generateState} from "../../utils/state.js";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {testLogger} from "../../utils/logger.js";
+import {generateState} from "../../utils/state.js";
+import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
 
 const dbLocation = "./.__testdb";
 
@@ -28,39 +24,29 @@ const pyrmontDepositsDataRoot = [
   "0x61cef7d8a3f7c590a2dc066ae1c95def5ce769b3e9471fdb34f36f7a7246965e",
 ];
 
-describe("eth1 / Eth1Provider", function () {
-  this.timeout("2 min");
-
+// https://github.com/ChainSafe/lodestar/issues/5967
+describe.skip("eth1 / Eth1Provider", () => {
   const controller = new AbortController();
 
   const config = getTestnetConfig();
   const logger = testLogger();
 
   let db: BeaconDb;
-  let dbController: LevelDbController;
-  let interval: NodeJS.Timeout;
 
-  before(async () => {
+  beforeAll(async () => {
     // Nuke DB to make sure it's empty
-    await promisify<string>(leveldown.destroy)(dbLocation);
+    await LevelDbController.destroy(dbLocation);
 
-    dbController = new LevelDbController({name: dbLocation}, {});
-    db = new BeaconDb({
-      config,
-      controller: dbController,
-    });
-
-    await db.start();
+    db = new BeaconDb(config, await LevelDbController.create({name: dbLocation}, {logger}));
   });
 
-  after(async () => {
-    clearInterval(interval);
+  afterAll(async () => {
     controller.abort();
-    await db.stop();
-    await promisify<string>(leveldown.destroy)(dbLocation);
+    await db.close();
+    await LevelDbController.destroy(dbLocation);
   });
 
-  it("Should fetch real Pyrmont eth1 data for block proposing", async function () {
+  it("Should fetch real Pyrmont eth1 data for block proposing", async () => {
     const eth1Options: Eth1Options = {
       enabled: true,
       providerUrls: [getGoerliRpcUrl()],
@@ -79,9 +65,7 @@ describe("eth1 / Eth1Provider", function () {
     });
 
     // Resolves when Eth1ForBlockProduction has fetched both blocks and deposits
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
     const {eth1Datas, deposits} = await (async function resolveWithEth1DataAndDeposits() {
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const eth1Datas = await db.eth1Data.entries();
         const deposits = await db.depositEvent.values();
@@ -94,7 +78,7 @@ describe("eth1 / Eth1Provider", function () {
 
     // Generate mock state to query eth1 data for block proposing
     if (eth1Datas.length === 0) throw Error("No eth1Datas");
-    const {key: maxTimestamp, value: latestEth1Data} = eth1Datas[eth1Datas.length - 1];
+    const {key: maxTimestamp, value: latestEth1Data} = eth1Datas.at(-1) as KeyValue<number, phase0.Eth1DataOrdered>;
 
     const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config;
     // block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start && ...
@@ -126,9 +110,9 @@ describe("eth1 / Eth1Provider", function () {
     const state = createCachedBeaconStateTest(tbState, config);
 
     const result = await eth1ForBlockProduction.getEth1DataAndDeposits(state);
-    expect(result.eth1Data).to.deep.equal(latestEth1Data, "Wrong eth1Data for block production");
-    expect(
-      result.deposits.map((deposit) => toHexString(ssz.phase0.DepositData.hashTreeRoot(deposit.data)))
-    ).to.deep.equal(pyrmontDepositsDataRoot, "Wrong deposits for for block production");
+    expect(result.eth1Data).toEqual(latestEth1Data);
+    expect(result.deposits.map((deposit) => toHexString(ssz.phase0.DepositData.hashTreeRoot(deposit.data)))).toEqual(
+      pyrmontDepositsDataRoot
+    );
   });
 });

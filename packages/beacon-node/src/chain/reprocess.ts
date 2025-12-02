@@ -1,6 +1,6 @@
-import {Slot, RootHex} from "@lodestar/types";
-import {IMetrics} from "../metrics/index.js";
-import {MapDef} from "../util/map.js";
+import {RootHex, Slot} from "@lodestar/types";
+import {MapDef} from "@lodestar/utils";
+import {Metrics} from "../metrics/index.js";
 
 /**
  * To prevent our node from having to reprocess while struggling to sync,
@@ -11,7 +11,7 @@ export const REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC = 2;
 /**
  * Reprocess status for metrics
  */
-enum ReprocessStatus {
+export enum ReprocessStatus {
   /**
    * There are too many attestations that have unknown block root.
    */
@@ -24,7 +24,6 @@ enum ReprocessStatus {
 
 type AwaitingAttestationPromise = {
   resolve: (foundBlock: boolean) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   promise: Promise<boolean>;
   // there are multiple subnet/aggregated attestations waiting for same promise
   awaitingAttestationsCount: number;
@@ -52,7 +51,7 @@ export class ReprocessController {
   private readonly awaitingPromisesByRootBySlot: MapDef<Slot, Map<RootHex, AwaitingAttestationPromise>>;
   private awaitingPromisesCount = 0;
 
-  constructor(private readonly metrics: IMetrics | null) {
+  constructor(private readonly metrics: Metrics | null) {
     this.awaitingPromisesByRootBySlot = new MapDef(() => new Map<RootHex, AwaitingAttestationPromise>());
   }
 
@@ -62,10 +61,10 @@ export class ReprocessController {
    * @returns true if blockFound
    */
   waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean> {
-    this.metrics?.reprocessAttestations.total.inc();
+    this.metrics?.reprocessApiAttestations.total.inc();
 
     if (this.awaitingPromisesCount >= MAXIMUM_QUEUED_ATTESTATIONS) {
-      this.metrics?.reprocessAttestations.reject.inc({reason: ReprocessStatus.reached_limit});
+      this.metrics?.reprocessApiAttestations.reject.inc({reason: ReprocessStatus.reached_limit});
       return Promise.resolve(false);
     }
 
@@ -117,8 +116,8 @@ export class ReprocessController {
       const {resolve, addedTimeMs, awaitingAttestationsCount} = awaitingPromise;
       resolve(true);
       this.awaitingPromisesCount -= awaitingAttestationsCount;
-      this.metrics?.reprocessAttestations.resolve.inc(awaitingAttestationsCount);
-      this.metrics?.reprocessAttestations.waitTimeBeforeResolve.set((Date.now() - addedTimeMs) / 1000);
+      this.metrics?.reprocessApiAttestations.resolve.inc(awaitingAttestationsCount);
+      this.metrics?.reprocessApiAttestations.waitSecBeforeResolve.set((Date.now() - addedTimeMs) / 1000);
     }
 
     // prune
@@ -141,8 +140,11 @@ export class ReprocessController {
         for (const awaitingPromise of awaitingPromisesByRoot.values()) {
           const {resolve, addedTimeMs} = awaitingPromise;
           resolve(false);
-          this.metrics?.reprocessAttestations.waitTimeBeforeReject.set((now - addedTimeMs) / 1000);
-          this.metrics?.reprocessAttestations.reject.inc({reason: ReprocessStatus.expired});
+          this.metrics?.reprocessApiAttestations.waitSecBeforeReject.set(
+            {reason: ReprocessStatus.expired},
+            (now - addedTimeMs) / 1000
+          );
+          this.metrics?.reprocessApiAttestations.reject.inc({reason: ReprocessStatus.expired});
         }
 
         // prune

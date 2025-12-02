@@ -1,15 +1,12 @@
-import {expect} from "chai";
-import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis.js";
+import {describe, expect, it} from "vitest";
 import {Eth1Block} from "../../../../src/eth1/interface.js";
+import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis.js";
 
-describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
+describe("eth1 / utils / optimizeNextBlockDiffForGenesis", () => {
   it("should return optimized block diff to find genesis time", () => {
     const params = {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       MIN_GENESIS_TIME: 1578009600,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_DELAY: 172800,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       SECONDS_PER_ETH1_BLOCK: 14,
     };
     const initialTimeDiff = params.GENESIS_DELAY * 2;
@@ -32,13 +29,12 @@ describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
 
       if (lastFetchedBlock.timestamp > params.MIN_GENESIS_TIME - params.GENESIS_DELAY) {
         break;
-      } else {
-        diffRecord.push({number: lastFetchedBlock.blockNumber, blockDiff});
       }
+      diffRecord.push({number: lastFetchedBlock.blockNumber, blockDiff});
     }
 
     // Make sure the returned diffs converge to genesis time fast
-    expect(diffRecord).to.deep.equal([
+    expect(diffRecord).toEqual([
       {number: 106171, blockDiff: 6171},
       {number: 109256, blockDiff: 3085},
       {number: 110799, blockDiff: 1543},

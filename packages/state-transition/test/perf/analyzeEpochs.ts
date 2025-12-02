@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {NetworkName} from "@lodestar/config/networks.js";
+import {NetworkName} from "@lodestar/config/networks";
 import {phase0, ssz} from "@lodestar/types";
 import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   AttesterFlags,
   beforeProcessEpoch,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   parseAttesterFlags,
   processSlots,
 } from "../../src/index.js";
@@ -77,25 +77,25 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
   const baseUrl = getInfuraBeaconUrl(network);
   // Long timeout to download states
-  const client = getClient({baseUrl, timeoutMs: 5 * 60 * 1000}, {config});
+  const client = getClient({baseUrl, globalInit: {timeoutMs: 5 * 60 * 1000}}, {config});
 
   // Start at epoch 1 since 0 will go and fetch state at slot -1
   const maxEpoch = fromEpoch ?? Math.max(1, ...currCsv.map((row) => row.epoch));
 
-  const {data: header} = await client.beacon.getBlockHeader("head");
-  const currentEpoch = computeEpochAtSlot(header.header.message.slot);
+  const {header} = (await client.beacon.getBlockHeader({blockId: "head"})).value();
+  const currentEpoch = computeEpochAtSlot(header.message.slot);
 
   for (let epoch = maxEpoch; epoch < currentEpoch; epoch++) {
     const stateSlot = computeStartSlotAtEpoch(epoch) - 1;
 
-    const {data: state} = await client.debug.getState(String(stateSlot));
+    const state = (await client.debug.getStateV2({stateId: stateSlot})).value();
 
     const preEpoch = computeEpochAtSlot(state.slot);
     const nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
     const stateTB = ssz.phase0.BeaconState.toViewDU(state as phase0.BeaconState);
     const postState = createCachedBeaconStateTest(stateTB, config);
 
-    const epochProcess = beforeProcessEpoch(postState);
+    const cache = beforeProcessEpoch(postState);
     processSlots(postState, nextEpochSlot);
 
     const validatorCount = state.validators.length;
@@ -114,8 +114,8 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
     const attesterFlagsCount = {...attesterFlagsCountZero};
     const keys = Object.keys(attesterFlagsCountZero) as (keyof typeof attesterFlagsCountZero)[];
-    for (const status of epochProcess.statuses) {
-      const flags = parseAttesterFlags(status.flags);
+    for (const flag of cache.flags) {
+      const flags = parseAttesterFlags(flag);
       for (const key of keys) {
         if (flags[key]) attesterFlagsCount[key]++;
       }
@@ -123,7 +123,6 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
     const {previousEpochAttestations, currentEpochAttestations} = state as phase0.BeaconState;
 
-    // eslint-disable-next-line no-console
     console.log(`Processed epoch ${epoch}`);
     writeToCsv({
       epoch,
@@ -132,10 +131,10 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
       ...validatorChangesCount,
       ...attesterFlagsCount,
 
-      indicesEligibleForActivation: epochProcess.indicesEligibleForActivation.length,
-      indicesEligibleForActivationQueue: epochProcess.indicesEligibleForActivationQueue.length,
-      indicesToEject: epochProcess.indicesToEject.length,
-      indicesToSlash: epochProcess.indicesToSlash.length,
+      indicesEligibleForActivation: cache.indicesEligibleForActivation.length,
+      indicesEligibleForActivationQueue: cache.indicesEligibleForActivationQueue.length,
+      indicesToEject: cache.indicesToEject.length,
+      indicesToSlash: cache.indicesToSlash.length,
 
       previousEpochAttestations: previousEpochAttestations.length,
       currentEpochAttestations: currentEpochAttestations.length,
@@ -143,7 +142,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
       currentEpochAttestationsBits: countAttBits(currentEpochAttestations as phase0.PendingAttestation[]),
     });
 
-    // -- allForks
+    // -- all forks
     // processEffectiveBalanceUpdates: function of effectiveBalance changes
     // processEth1DataReset: free
     // processHistoricalRootsUpdate: free
@@ -152,6 +151,9 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     // processRegistryUpdates: function of registry updates
     // processSlashingsAllForks: function of process.indicesToSlash
     // processSlashingsReset: free
+    // -- electra
+    // processPendingDeposits: -
+    // processPendingConsolidations: -
     // -- altair
     // processInactivityUpdates: -
     // processParticipationFlagUpdates: -
@@ -179,7 +181,6 @@ if (!network) {
 }
 
 analyzeEpochs(network as NetworkName, fromEpoch).catch((e: Error) => {
-  // eslint-disable-next-line no-console
   console.error(e);
   process.exit(1);
 });

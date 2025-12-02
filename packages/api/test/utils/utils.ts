@@ -1,45 +1,39 @@
-import querystring from "querystring";
-import fastify, {FastifyInstance} from "fastify";
-import Sinon from "sinon";
+import {FastifyInstance, fastify} from "fastify";
+import {parse as parseQueryString} from "qs";
+import {MockedObject, vi} from "vitest";
 import {mapValues} from "@lodestar/utils";
+import {Endpoint} from "../../src/utils/index.js";
+import {ApplicationMethods, addSszContentTypeParser} from "../../src/utils/server/index.js";
 
-export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
-  const port = Math.floor(Math.random() * (65535 - 49152)) + 49152;
-  const baseUrl = `http://localhost:${port}`;
-
+export function getTestServer(): {server: FastifyInstance; start: () => Promise<string>} {
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: querystring.parse,
+    querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
 
-  server.addHook("onError", (request, reply, error, done) => {
-    // eslint-disable-next-line no-console
-    console.log(`onError: ${error}`);
+  addSszContentTypeParser(server);
+
+  server.addHook("onError", (_request, _reply, error, done) => {
+    console.log(`onError: ${error.toString()}`);
     done();
   });
 
-  before("start server", async () => {
-    await new Promise((resolve, reject) => {
-      server.listen(port, function (err, address) {
-        if (err !== null && err != undefined) {
+  const start = (): Promise<string> =>
+    new Promise<string>((resolve, reject) => {
+      server.listen({port: 0}, (err, address) => {
+        if (err != null) {
           reject(err);
         } else {
           resolve(address);
         }
       });
     });
-  });
 
-  after("stop server", async () => {
-    await server.close();
-  });
-
-  return {baseUrl, server};
+  return {start, server};
 }
 
-/** Type helper to get a Sinon mock object type with Api */
-export function getMockApi<Api extends Record<string, any>>(
+export function getMockApi<Es extends Record<string, Endpoint>>(
   routeIds: Record<string, any>
-): Sinon.SinonStubbedInstance<Api> & Api {
-  return mapValues(routeIds, () => Sinon.stub()) as Sinon.SinonStubbedInstance<Api> & Api;
+): MockedObject<ApplicationMethods<Es>> & ApplicationMethods<Es> {
+  return mapValues(routeIds, () => vi.fn()) as MockedObject<ApplicationMethods<Es>> & ApplicationMethods<Es>;
 }

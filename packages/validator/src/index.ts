@@ -1,28 +1,22 @@
-export {Validator, ValidatorOptions} from "./validator.js";
-export {
-  ValidatorStore,
-  SignerType,
+export {waitForGenesis} from "./genesis.js";
+export {type Metrics, getMetrics} from "./metrics.js";
+export * from "./repositories/index.js";
+export type {
+  ProposerConfig,
   Signer,
   SignerLocal,
   SignerRemote,
   ValidatorProposerConfig,
-  defaultOptions,
-  ProposerConfig,
 } from "./services/validatorStore.js";
-export {waitForGenesis} from "./genesis.js";
-export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
-// For CLI to read genesisValidatorsRoot
-export {MetaDataRepository} from "./repositories/index.js";
-
+export {MAX_BUILDER_BOOST_FACTOR, SignerType, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
+export * from "./slashingProtection/index.js";
+// Types
+export type {ProcessShutdownCallback} from "./types.js";
 // Remote signer client
 export {
+  SignableMessageType,
   externalSignerGetKeys,
   externalSignerPostSignature,
   externalSignerUpCheck,
 } from "./util/externalSignerClient.js";
-
-// Types
-export {ProcessShutdownCallback} from "./types.js";
-
-export * from "./slashingProtection/index.js";
-export * from "./repositories/index.js";
+export {Validator, type ValidatorOptions} from "./validator.js";

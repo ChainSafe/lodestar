@@ -1,7 +1,8 @@
-import {BLSPubkey, Slot, ssz} from "@lodestar/types";
-import {intToBytes, bytesToInt} from "@lodestar/utils";
-import {Bucket, DB_PREFIX_LENGTH, encodeKey, IDatabaseApiOptions, uintLen} from "@lodestar/db";
 import {ContainerType, Type} from "@chainsafe/ssz";
+import {DB_PREFIX_LENGTH, DbReqOpts, encodeKey, uintLen} from "@lodestar/db";
+import {BLSPubkey, Slot, ssz} from "@lodestar/types";
+import {bytesToInt, intToBytes} from "@lodestar/utils";
+import {Bucket, getBucketNameByValue} from "../../buckets.js";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 import {SlashingProtectionBlock} from "../types.js";
 import {blsPubkeyLen, uniqueVectorArr} from "../utils.js";
@@ -13,15 +14,20 @@ import {blsPubkeyLen, uniqueVectorArr} from "../utils.js";
  */
 export class BlockBySlotRepository {
   protected type: Type<SlashingProtectionBlock>;
-  protected db: LodestarValidatorDatabaseController;
-  protected bucket = Bucket.phase0_slashingProtectionBlockBySlot;
+  protected bucket = Bucket.slashingProtectionBlockBySlot;
 
-  constructor(opts: IDatabaseApiOptions) {
-    this.db = opts.controller;
+  private readonly bucketId = getBucketNameByValue(this.bucket);
+  private readonly dbReqOpts: DbReqOpts = {bucketId: this.bucketId};
+  private readonly minKey: Uint8Array;
+  private readonly maxKey: Uint8Array;
+
+  constructor(protected db: LodestarValidatorDatabaseController) {
     this.type = new ContainerType({
       slot: ssz.Slot,
       signingRoot: ssz.Root,
     }); // casing doesn't matter
+    this.minKey = encodeKey(this.bucket, Buffer.alloc(0));
+    this.maxKey = encodeKey(this.bucket + 1, Buffer.alloc(0));
   }
 
   async getAll(pubkey: BLSPubkey, limit?: number): Promise<SlashingProtectionBlock[]> {
@@ -29,6 +35,7 @@ export class BlockBySlotRepository {
       limit,
       gte: this.encodeKey(pubkey, 0),
       lt: this.encodeKey(pubkey, Number.MAX_SAFE_INTEGER),
+      bucketId: this.bucketId,
     });
     return blocks.map((block) => this.type.deserialize(block));
   }
@@ -39,7 +46,7 @@ export class BlockBySlotRepository {
   }
 
   async get(pubkey: BLSPubkey, slot: Slot): Promise<SlashingProtectionBlock | null> {
-    const block = await this.db.get(this.encodeKey(pubkey, slot));
+    const block = await this.db.get(this.encodeKey(pubkey, slot), this.dbReqOpts);
     return block && this.type.deserialize(block);
   }
 
@@ -47,21 +54,19 @@ export class BlockBySlotRepository {
     await this.db.batchPut(
       blocks.map((block) => ({
         key: this.encodeKey(pubkey, block.slot),
-        value: Buffer.from(this.type.serialize(block)),
-      }))
+        value: this.type.serialize(block),
+      })),
+      this.dbReqOpts
     );
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {
-    const keys = await this.db.keys();
+    const keys = await this.db.keys({gte: this.minKey, lt: this.maxKey, bucketId: this.bucketId});
     return uniqueVectorArr(keys.map((key) => this.decodeKey(key).pubkey));
   }
 
   private encodeKey(pubkey: BLSPubkey, slot: Slot): Uint8Array {
-    return encodeKey(
-      this.bucket,
-      Buffer.concat([Buffer.from(pubkey as Uint8Array), intToBytes(BigInt(slot), uintLen, "be")])
-    );
+    return encodeKey(this.bucket, Buffer.concat([pubkey, intToBytes(BigInt(slot), uintLen, "be")]));
   }
 
   private decodeKey(key: Uint8Array): {pubkey: BLSPubkey; slot: Slot} {

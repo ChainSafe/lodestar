@@ -1,16 +1,18 @@
-import type {TAlgorithm} from "jwt-simple";
 // TODO: fix jwt-simple types
-// eslint-disable-next-line import/default
+
+import type {TAlgorithm} from "jwt-simple";
 import jwt from "jwt-simple";
 
-// eslint-disable-next-line import/no-named-as-default-member
 const {encode, decode} = jwt;
 
-/** jwt token has iat which is issued at unix timestamp, and an optional exp for expiry */
-type JwtClaim = {iat: number; exp?: number};
+/**
+ * jwt token has iat which is issued at unix timestamp, an optional exp for expiry,
+ * an optional id as unique identifier, and an optional clv for client type/version
+ */
+export type JwtClaim = {iat: number; exp?: number; id?: string; clv?: string};
 
 export function encodeJwtToken(
-  claim: Record<string, unknown> & JwtClaim,
+  claim: JwtClaim,
   jwtSecret: Buffer | Uint8Array | string,
   algorithm: TAlgorithm = "HS256"
 ): string {
@@ -18,7 +20,7 @@ export function encodeJwtToken(
     claim,
     // Note: This type casting is required as even though jwt-simple accepts a buffer as a
     // secret types definitions exposed by @types/jwt-simple only takes a string
-    (jwtSecret as unknown) as string,
+    jwtSecret as unknown as string,
     algorithm
   );
   return token;
@@ -29,6 +31,6 @@ export function decodeJwtToken(
   jwtSecret: Buffer | Uint8Array | string,
   algorithm: TAlgorithm = "HS256"
 ): JwtClaim {
-  const claim = decode(token, (jwtSecret as never) as string, false, algorithm) as JwtClaim;
+  const claim = decode(token, jwtSecret as never as string, false, algorithm) as JwtClaim;
   return claim;
 }

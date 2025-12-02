@@ -1,0 +1,29 @@
+import {Message} from "@libp2p/interface";
+import {ForkName} from "@lodestar/params";
+import {Slot, SlotOptionalRoot} from "@lodestar/types";
+import {PeerIdStr} from "../../util/peerId.js";
+import {GossipTopic, GossipType} from "../gossip/index.js";
+
+export type GossipAttestationsWork = {
+  messages: PendingGossipsubMessage[];
+};
+
+export type PendingGossipsubMessage = {
+  topic: GossipTopic;
+  msg: Message;
+  // only available for beacon_attestation and aggregate_and_proof
+  msgSlot?: Slot;
+  msgId: string;
+  propagationSource: PeerIdStr;
+  clientAgent: string;
+  clientVersion: string;
+  seenTimestampSec: number;
+  startProcessUnixSec: number | null;
+  // specific properties for IndexedGossipQueueMinSize, for beacon_attestation topic only
+  indexed?: string;
+  queueAddedMs?: number;
+};
+
+export type ExtractSlotRootFns = {
+  [K in GossipType]?: (data: Uint8Array, forkName: ForkName) => SlotOptionalRoot | null;
+};

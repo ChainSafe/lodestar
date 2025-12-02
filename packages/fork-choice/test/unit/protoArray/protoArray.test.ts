@@ -1,7 +1,7 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-
-import {ProtoArray, ExecutionStatus} from "../../../src/index.js";
+import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
 
 describe("ProtoArray", () => {
   it("finalized descendant", () => {
@@ -30,7 +30,10 @@ describe("ProtoArray", () => {
         unrealizedFinalizedEpoch: genesisEpoch,
         unrealizedFinalizedRoot: stateRoot,
 
+        timeliness: false,
+
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       genesisSlot
     );
@@ -53,7 +56,10 @@ describe("ProtoArray", () => {
         unrealizedFinalizedEpoch: genesisEpoch,
         unrealizedFinalizedRoot: stateRoot,
 
+        timeliness: false,
+
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       genesisSlot + 1
     );
@@ -76,7 +82,10 @@ describe("ProtoArray", () => {
         unrealizedFinalizedEpoch: genesisEpoch,
         unrealizedFinalizedRoot: stateRoot,
 
+        timeliness: false,
+
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       genesisSlot + 1
     );
@@ -107,7 +116,7 @@ describe("ProtoArray", () => {
     ];
 
     for (const [ancestorRoot, descendantRoot, isDescendant] of assertions) {
-      expect(fc.isDescendant(ancestorRoot, descendantRoot)).to.equal(
+      expect(fc.isDescendant(ancestorRoot, descendantRoot)).toBeWithMessage(
         isDescendant,
         `${descendantRoot} must be ${isDescendant ? "descendant" : "not descendant"} of ${ancestorRoot}`
       );

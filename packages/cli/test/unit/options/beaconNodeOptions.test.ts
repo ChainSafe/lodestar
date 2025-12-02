@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import {expect} from "chai";
-import {IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {describe, expect, it} from "vitest";
+import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
+import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
 describe("options / beaconNodeOptions", () => {
@@ -15,20 +15,36 @@ describe("options / beaconNodeOptions", () => {
       rest: true,
       "rest.address": "127.0.0.1",
       "rest.port": 7654,
+      "rest.headerLimit": 16384,
       "rest.bodyLimit": 30e6,
+      "rest.stacktraces": true,
 
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
+      "chain.persistProducedBlocks": true,
       "chain.persistInvalidSszObjects": true,
-      "chain.proposerBoostEnabled": false,
+      "chain.proposerBoost": false,
+      "chain.proposerBoostReorg": false,
       "chain.disableImportExecutionFcU": false,
+      "chain.preaggregateSlotDistance": 1,
+      "chain.attDataCacheSlotDistance": 2,
       "chain.computeUnrealized": true,
-      "chain.countUnrealizedFull": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
+      "chain.archiveStateEpochFrequency": 1024,
+      "chain.minSameMessageSignatureSetsToBatch": 32,
+      "chain.maxShufflingCacheEpochs": 100,
+      "chain.archiveDataEpochs": 10000,
+      "chain.nHistoricalStates": true,
+      "chain.nHistoricalStatesFileDataStore": true,
+      "chain.maxBlockStates": 100,
+      "chain.maxCPStateEpochsInMemory": 100,
+      "chain.maxCPStateEpochsOnDisk": 1000,
+      "chain.archiveMode": ArchiveMode.Frequency,
+      emitPayloadAttributes: false,
 
       eth1: true,
       "eth1.providerUrl": "http://my.node:8545",
@@ -42,23 +58,36 @@ describe("options / beaconNodeOptions", () => {
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
       "execution.retryDelay": 2000,
-      "execution.retryAttempts": 1,
+      "execution.retries": 1,
 
       builder: false,
-      "builder.urls": ["http://localhost:8661"],
+      "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
+      "builder.faultInspectionWindow": 32,
+      "builder.allowedFaults": 8,
 
       metrics: true,
       "metrics.port": 8765,
       "metrics.address": "0.0.0.0",
 
+      "monitoring.endpoint": "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
+      "monitoring.interval": 60000,
+      "monitoring.initialDelay": 30000,
+      "monitoring.requestTimeout": 10000,
+      "monitoring.collectSystemStats": true,
+
       discv5: true,
       listenAddress: "127.0.0.1",
       port: 9001,
       discoveryPort: 9002,
-      bootnodes: ["enr:-somedata"],
+      bootnodes: [
+        "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
+      ],
       targetPeers: 25,
       subscribeAllSubnets: true,
+      slotsToSubscribeBeforeAggregatorDuty: 1,
+      disablePeerScoring: true,
+      mdns: false,
       "network.maxPeers": 30,
       "network.connectToDiscv5Bootnodes": true,
       "network.discv5FirstQueryDelayMs": 1000,
@@ -68,11 +97,21 @@ describe("options / beaconNodeOptions", () => {
       "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
       "network.allowPublishToZeroPeers": true,
+      "network.gossipsubD": 4,
+      "network.gossipsubDLow": 2,
+      "network.gossipsubDHigh": 6,
+      "network.gossipsubAwaitHandler": true,
+      "network.rateLimitMultiplier": 1,
+      "network.maxGossipTopicConcurrency": 64,
+      "network.useWorker": true,
+      "network.maxYoungGenerationSizeMb": 152,
+      "network.targetGroupPeers": 12,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
       "sync.backfillBatchSize": 64,
-    } as IBeaconNodeArgs;
+      "sync.disableRangeSync": false,
+    } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
@@ -83,22 +122,38 @@ describe("options / beaconNodeOptions", () => {
           enabled: true,
           address: "127.0.0.1",
           port: 7654,
+          headerLimit: 16384,
           bodyLimit: 30e6,
+          stacktraces: true,
         },
       },
       chain: {
         blsVerifyAllMultiThread: true,
         blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
+        persistProducedBlocks: true,
         persistInvalidSszObjects: true,
-        proposerBoostEnabled: false,
+        proposerBoost: false,
+        proposerBoostReorg: false,
         disableImportExecutionFcU: false,
+        preaggregateSlotDistance: 1,
+        attDataCacheSlotDistance: 2,
         computeUnrealized: true,
-        countUnrealizedFull: true,
         safeSlotsToImportOptimistically: 256,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
+        archiveStateEpochFrequency: 1024,
+        emitPayloadAttributes: false,
+        minSameMessageSignatureSetsToBatch: 32,
+        maxShufflingCacheEpochs: 100,
+        archiveDataEpochs: 10000,
+        archiveMode: ArchiveMode.Frequency,
+        nHistoricalStates: true,
+        nHistoricalStatesFileDataStore: true,
+        maxBlockStates: 100,
+        maxCPStateEpochsInMemory: 100,
+        maxCPStateEpochsOnDisk: 1000,
       },
       eth1: {
         enabled: true,
@@ -111,48 +166,71 @@ describe("options / beaconNodeOptions", () => {
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
-        retryAttempts: 1,
+        retries: 1,
         retryDelay: 2000,
         timeout: 12000,
       },
       executionBuilder: {
         enabled: false,
-        urls: ["http://localhost:8661"],
+        url: "http://localhost:8661",
         timeout: 12000,
+        faultInspectionWindow: 32,
+        allowedFaults: 8,
       },
       metrics: {
         enabled: true,
         port: 8765,
         address: "0.0.0.0",
       },
+      monitoring: {
+        endpoint: "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
+        interval: 60000,
+        initialDelay: 30000,
+        requestTimeout: 10000,
+        collectSystemStats: true,
+      },
       network: {
         discv5: {
-          enabled: true,
-          bindAddr: "/ip4/127.0.0.1/udp/9002",
-          bootEnrs: ["enr:-somedata"],
+          config: {},
+          bindAddrs: {
+            ip4: "/ip4/127.0.0.1/udp/9002",
+          },
+          bootEnrs: [
+            "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
+          ],
         },
         maxPeers: 30,
         targetPeers: 25,
         localMultiaddrs: ["/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
+        slotsToSubscribeBeforeAggregatorDuty: 1,
+        disablePeerScoring: true,
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
-        requestCountPeerLimit: 5,
-        blockCountTotalLimit: 1000,
-        blockCountPeerLimit: 500,
-        rateTrackerTimeoutMs: 60000,
         dontSendGossipAttestationsToForkchoice: true,
         allowPublishToZeroPeers: true,
+        gossipsubD: 4,
+        gossipsubDLow: 2,
+        gossipsubDHigh: 6,
+        gossipsubAwaitHandler: true,
+        mdns: false,
+        rateLimitMultiplier: 1,
+        maxGossipTopicConcurrency: 64,
+        useWorker: true,
+        maxYoungGenerationSizeMb: 152,
+        targetGroupPeers: 12,
       },
       sync: {
         isSingleNode: true,
+        slotImportTolerance: 32,
         disableProcessAsChainSegment: true,
         backfillBatchSize: 64,
+        disableRangeSync: false,
       },
     };
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    expect(options).to.deep.equal(expectedOptions);
+    expect(options).toEqual(expectedOptions);
   });
 
   it("Should use execution endpoint & jwt for eth1", () => {
@@ -164,8 +242,8 @@ describe("options / beaconNodeOptions", () => {
     const beaconNodeArgsPartial = {
       eth1: true,
       "execution.urls": ["http://my.node:8551"],
-      "jwt-secret": jwtSecretFile,
-    } as IBeaconNodeArgs;
+      jwtSecret: jwtSecretFile,
+    } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       eth1: {
@@ -176,6 +254,6 @@ describe("options / beaconNodeOptions", () => {
     };
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    expect(options.eth1).to.deep.equal(expectedOptions.eth1);
+    expect(options.eth1).toEqual(expectedOptions.eth1);
   });
 });

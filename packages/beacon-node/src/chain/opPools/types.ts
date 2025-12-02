@@ -11,6 +11,10 @@ export enum InsertOutcome {
   AlreadyKnown = "AlreadyKnown",
   /** Not existing in the pool but it's too old to add. No changes were made. */
   Old = "Old",
+  /** The pool has reached its limit. No changes were made. */
+  ReachLimit = "ReachLimit",
+  /** Messages don't bring any value, for example attestations come to the pool at > AGGREGATE_DUE_BPS of slot. No changes were made */
+  Late = "Late",
   /** The data is know, and the new participants have been added to the aggregated signature */
   Aggregated = "Aggregated",
   /** The data is not better than the existing data*/

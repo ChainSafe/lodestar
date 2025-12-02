@@ -1,4 +1,5 @@
 import {JsonPath} from "@chainsafe/ssz";
+import {fromHex, toHex} from "@lodestar/utils";
 
 /**
  * Serialize proof path to JSON.
@@ -17,9 +18,8 @@ export function querySerializeProofPathsArr(paths: JsonPath[]): string[] {
 export function queryParseProofPathsArr(pathStrs: string | string[]): JsonPath[] {
   if (Array.isArray(pathStrs)) {
     return pathStrs.map((pathStr) => queryParseProofPaths(pathStr));
-  } else {
-    return [queryParseProofPaths(pathStrs) as JsonPath];
   }
+  return [queryParseProofPaths(pathStrs)];
 }
 
 /**
@@ -49,7 +49,7 @@ export type U64Str = string;
 
 export function fromU64Str(u64Str: U64Str): number {
   const u64 = parseInt(u64Str, 10);
-  if (!isFinite(u64)) {
+  if (!Number.isFinite(u64)) {
     throw Error(`Invalid uin64 ${u64Str}`);
   }
   return u64;
@@ -65,4 +65,56 @@ export function fromU64StrOpt(u64Str: U64Str | undefined): U64 | undefined {
 
 export function toU64StrOpt(u64: U64 | undefined): U64Str | undefined {
   return u64 !== undefined ? toU64Str(u64) : undefined;
+}
+
+export function toValidatorIdsStr(ids?: (string | number)[]): string[] | undefined {
+  return ids?.map((id) => (typeof id === "string" ? id : toU64Str(id)));
+}
+
+export function fromValidatorIdsStr(ids?: string[]): (string | number)[] | undefined {
+  return ids?.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id)));
+}
+
+const GRAFFITI_HEX_LENGTH = 66;
+
+export function toGraffitiHex(utf8?: string): string | undefined {
+  if (utf8 === undefined) {
+    return undefined;
+  }
+
+  const hex = toHex(new TextEncoder().encode(utf8));
+
+  if (hex.length > GRAFFITI_HEX_LENGTH) {
+    // remove characters from the end if hex string is too long
+    return hex.slice(0, GRAFFITI_HEX_LENGTH);
+  }
+
+  if (hex.length < GRAFFITI_HEX_LENGTH) {
+    // right-pad with zeros if hex string is too short
+    return hex.padEnd(GRAFFITI_HEX_LENGTH, "0");
+  }
+
+  return hex;
+}
+
+export function fromGraffitiHex(hex?: string): string | undefined {
+  if (hex === undefined) {
+    return undefined;
+  }
+  try {
+    return new TextDecoder("utf8").decode(fromHex(hex));
+  } catch (_e) {
+    // allow malformed graffiti hex string
+    return hex;
+  }
+}
+
+export function toBoolean(value: string): boolean {
+  value = value.toLowerCase();
+
+  if (value !== "true" && value !== "false") {
+    throw Error(`Invalid boolean ${value}`);
+  }
+
+  return value === "true";
 }

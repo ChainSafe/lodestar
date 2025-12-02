@@ -10,14 +10,14 @@ export interface IMinMaxSurround {
   insertAttestation(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void>;
 }
 
-export interface IDistanceEntry {
+export type DistanceEntry = {
   source: Epoch;
   distance: Epoch;
-}
+};
 
 export type IDistanceStore = {
   [P in "minSpan" | "maxSpan"]: {
     get(pubKey: BLSPubkey, epoch: Epoch): Promise<Epoch | null>;
-    setBatch(pubKey: BLSPubkey, values: IDistanceEntry[]): Promise<void>;
+    setBatch(pubKey: BLSPubkey, values: DistanceEntry[]): Promise<void>;
   };
 };

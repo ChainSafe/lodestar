@@ -1,22 +1,19 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
-import {retry, RetryOptions} from "../../src/retry.js";
-
-chai.use(chaiAsPromised);
+import {describe, expect, it} from "vitest";
+import {RetryOptions, retry} from "../../src/retry.js";
 
 describe("retry", () => {
-  interface ITestCase {
+  type TestCase = {
     id: string;
     fn: (attempt: number) => Promise<any>;
     opts?: RetryOptions;
     result: any | Error;
-  }
+  };
 
   const sampleError = Error("SAMPLE ERROR");
   const sampleResult = "SAMPLE RESULT";
   const retries = 3;
 
-  const testCases: ITestCase[] = [
+  const testCases: TestCase[] = [
     {
       id: "Reject",
       fn: () => Promise.reject(sampleError),
@@ -31,7 +28,8 @@ describe("retry", () => {
       id: "Succeed at the last attempt",
       fn: async (attempt) => {
         if (attempt < retries) throw sampleError;
-        else return sampleResult;
+
+        return sampleResult;
       },
       opts: {retries},
       result: sampleResult,
@@ -41,9 +39,9 @@ describe("retry", () => {
   for (const {id, fn, opts, result} of testCases) {
     it(id, async () => {
       if (result instanceof Error) {
-        await expect(retry(fn, opts)).to.be.rejectedWith(result);
+        await expect(retry(fn, opts)).rejects.toThrow(result);
       } else {
-        expect(await retry(fn, opts)).to.deep.equal(result);
+        expect(await retry(fn, opts)).toEqual(result);
       }
     });
   }

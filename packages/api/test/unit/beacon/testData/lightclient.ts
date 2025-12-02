@@ -1,67 +1,51 @@
-import {ssz} from "@lodestar/types";
-import {ProofType} from "@chainsafe/persistent-merkle-tree";
 import {toHexString} from "@chainsafe/ssz";
-import {Api} from "../../../../src/beacon/routes/lightclient.js";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {Endpoints} from "../../../../src/beacon/routes/lightclient.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const root = Uint8Array.from(Buffer.alloc(32, 1));
+const root = new Uint8Array(32).fill(1);
 
-const lightClientUpdate = ssz.altair.LightClientUpdate.defaultValue();
+const lightClientUpdate = ssz.electra.LightClientUpdate.defaultValue();
 const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
-const header = ssz.phase0.BeaconBlockHeader.defaultValue();
+const header = ssz.deneb.LightClientHeader.defaultValue();
+const signatureSlot = ssz.Slot.defaultValue();
 
-export const testData: GenericServerTestCases<Api> = {
-  getStateProof: {
-    args: [
-      "head",
-      [
-        // ["validator", 0, "balance"],
-        ["finalized_checkpoint", 0, "root", 12000],
-      ],
-    ],
-    res: {
-      data: {
-        type: ProofType.treeOffset,
-        offsets: [1, 2, 3],
-        leaves: [root, root, root, root],
-      },
-    },
-    /* eslint-disable quotes */
-    query: {
-      paths: [
-        // '["validator",0,"balance"]',
-        '["finalized_checkpoint",0,"root",12000]',
-      ],
-    },
-    /* eslint-enable quotes */
+export const testData: GenericServerTestCases<Endpoints> = {
+  getLightClientUpdatesByRange: {
+    args: {startPeriod: 1, count: 2},
+    res: {data: [lightClientUpdate, lightClientUpdate], meta: {versions: [ForkName.electra, ForkName.electra]}},
   },
-  getUpdates: {
-    args: [1, 2],
-    res: {data: [lightClientUpdate]},
+  getLightClientOptimisticUpdate: {
+    args: undefined,
+    res: {data: {syncAggregate, attestedHeader: header, signatureSlot}, meta: {version: ForkName.electra}},
   },
-  getOptimisticUpdate: {
-    args: [],
-    res: {data: {syncAggregate, attestedHeader: header}},
-  },
-  getFinalityUpdate: {
-    args: [],
+  getLightClientFinalityUpdate: {
+    args: undefined,
     res: {
       data: {
         syncAggregate,
         attestedHeader: header,
         finalizedHeader: lightClientUpdate.finalizedHeader,
         finalityBranch: lightClientUpdate.finalityBranch,
+        signatureSlot: lightClientUpdate.attestedHeader.beacon.slot + 1,
       },
+      meta: {version: ForkName.electra},
     },
   },
-  getBootstrap: {
-    args: [toHexString(root)],
+  getLightClientBootstrap: {
+    args: {blockRoot: toHexString(root)},
     res: {
       data: {
         header,
         currentSyncCommittee: lightClientUpdate.nextSyncCommittee,
-        currentSyncCommitteeBranch: [root, root, root, root, root], // Vector(Root, 5)
+        currentSyncCommitteeBranch: [root, root, root, root, root, root], // Vector(Root, 6)
       },
+      meta: {version: ForkName.electra},
     },
+  },
+  getLightClientCommitteeRoot: {
+    args: {startPeriod: 1, count: 2},
+    res: {data: [new Uint8Array(32), new Uint8Array(32).fill(1)]},
   },
 };

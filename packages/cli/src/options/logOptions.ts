@@ -1,18 +1,23 @@
-import {logFormats, LogLevels} from "@lodestar/utils";
-import {ICliCommandOptions} from "../util/command.js";
-import {
-  ILogArgs,
-  LOG_DAILY_ROTATE_DEFAULT,
-  LOG_FILE_DISABLE_KEYWORD,
-  LOG_FILE_LEVEL_DEFAULT,
-  LOG_LEVEL_DEFAULT,
-} from "../util/logger.js";
+import {LogLevel, logFormats} from "@lodestar/logger";
+import {CliCommandOptions, LogLevels} from "@lodestar/utils";
+import {LOG_FILE_DISABLE_KEYWORD} from "../util/logger.js";
 
-export const logOptions: ICliCommandOptions<ILogArgs> = {
+export type LogArgs = {
+  logLevel: LogLevel;
+  logFile?: string;
+  logFileLevel: LogLevel;
+  logFileDailyRotate: number;
+  logFormatGenesisTime?: number;
+  logPrefix?: string;
+  logFormat?: string;
+  logLevelModule?: string[];
+};
+
+export const logOptions: CliCommandOptions<LogArgs> = {
   logLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level for emittings logs to terminal",
-    default: LOG_LEVEL_DEFAULT,
+    description: "Logging verbosity level for emitting logs to terminal",
+    default: LogLevel.info,
     type: "string",
   },
 
@@ -23,15 +28,15 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
 
   logFileLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level for emittings logs to file",
-    default: LOG_FILE_LEVEL_DEFAULT,
+    description: "Logging verbosity level for emitting logs to file",
+    default: LogLevel.debug,
     type: "string",
   },
 
   logFileDailyRotate: {
     description:
-      "Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation",
-    default: LOG_DAILY_ROTATE_DEFAULT,
+      "Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation",
+    default: 5,
     type: "number",
   },
 
@@ -60,6 +65,6 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
     description: "Set log level for a specific module by name: 'chain=debug' or 'network=debug,chain=debug'",
     type: "array",
     string: true,
-    coerce: (args: string[]) => args.map((item) => item.split(",")).flat(1),
+    coerce: (args: string[]) => args.flatMap((item) => item.split(",")),
   },
 };

@@ -1,76 +1,229 @@
-import {bellatrix, Slot, Root, BLSPubkey, ssz} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
-import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
-
+import {WireFormat} from "@lodestar/api";
+import {ApiClient as BuilderApi, getClient} from "@lodestar/api/builder";
+import {ChainForkConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/logger";
+import {ForkPostBellatrix, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {parseExecutionPayloadAndBlobsBundle, reconstructSignedBlockContents} from "@lodestar/state-transition";
+import {
+  BLSPubkey,
+  Epoch,
+  ExecutionPayloadHeader,
+  Root,
+  SignedBlindedBeaconBlock,
+  SignedBlockContents,
+  Slot,
+  Wei,
+  WithOptionalBytes,
+  bellatrix,
+  deneb,
+  electra,
+} from "@lodestar/types";
+import {toPrintableUrl} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
+import {ValidatorRegistration, ValidatorRegistrationCache} from "./cache.js";
 import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
   enabled: boolean;
-  urls: string[];
+  url: string;
   timeout?: number;
+  faultInspectionWindow?: number;
+  allowedFaults?: number;
+
   // Only required for merge-mock runs, no need to expose it to cli
-  issueLocalFcUForBlockProduction?: boolean;
+  issueLocalFcUWithFeeRecipient?: string;
+  // Add User-Agent header to all requests
+  userAgent?: string;
 };
 
 export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   enabled: false,
-  urls: ["http://localhost:8661"],
+  url: "http://localhost:8661",
   timeout: 12000,
 };
 
+export enum BuilderStatus {
+  /**
+   * Builder is enabled and operational
+   */
+  enabled = "enabled",
+  /**
+   * Builder is disabled due to failed status check
+   */
+  disabled = "disabled",
+  /**
+   * Circuit breaker condition that is triggered when the node determines the chain is unhealthy.
+   * When the circuit breaker is fired, proposers **MUST** not utilize the external builder
+   * network and exclusively build locally.
+   */
+  circuitBreaker = "circuit_breaker",
+}
+
+/**
+ * Expected error if builder does not provide a bid. Most of the time, this
+ * is due to `min-bid` setting on the mev-boost side but in rare cases could
+ * also happen if there are no bids from any of the connected relayers.
+ */
+export class NoBidReceived extends Error {
+  constructor() {
+    super("No bid received");
+  }
+}
+
+/**
+ * Additional duration to account for potential event loop lag which causes
+ * builder blocks to be rejected even though the response was sent in time.
+ */
+const EVENT_LOOP_LAG_BUFFER = 250;
+
+/**
+ * Duration given to the builder to provide a `SignedBuilderBid` before the deadline
+ * is reached, aborting the external builder flow in favor of the local build process.
+ */
+const BUILDER_PROPOSAL_DELAY_TOLERANCE = 1000 + EVENT_LOOP_LAG_BUFFER;
+
 export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly api: BuilderApi;
-  readonly issueLocalFcUForBlockProduction?: boolean;
+  readonly config: ChainForkConfig;
+  readonly registrations: ValidatorRegistrationCache;
+  readonly issueLocalFcUWithFeeRecipient?: string;
   // Builder needs to be explicity enabled using updateStatus
-  status = false;
+  status = BuilderStatus.disabled;
+  faultInspectionWindow: number;
+  allowedFaults: number;
 
-  constructor(opts: ExecutionBuilderHttpOpts, config: IChainForkConfig) {
-    const baseUrl = opts.urls[0];
+  /**
+   * Determine if SSZ is supported by requesting an SSZ encoded response in the `getHeader` request.
+   * The builder responding with a SSZ serialized `SignedBuilderBid` indicates support to handle the
+   * `SignedBlindedBeaconBlock` as SSZ serialized bytes instead of JSON when calling `submitBlindedBlock`.
+   */
+  private sszSupported = false;
+
+  constructor(
+    opts: ExecutionBuilderHttpOpts,
+    config: ChainForkConfig,
+    metrics: Metrics | null = null,
+    logger?: Logger
+  ) {
+    const baseUrl = opts.url;
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
-    this.api = getClient({baseUrl, timeoutMs: opts.timeout}, {config});
-    this.issueLocalFcUForBlockProduction = opts.issueLocalFcUForBlockProduction;
+    this.api = getClient(
+      {
+        baseUrl,
+        globalInit: {
+          timeoutMs: opts.timeout,
+          headers: opts.userAgent ? {"User-Agent": opts.userAgent} : undefined,
+        },
+      },
+      {config, metrics: metrics?.builderHttpClient, logger}
+    );
+    logger?.info("External builder", {url: toPrintableUrl(baseUrl)});
+    this.config = config;
+    this.registrations = new ValidatorRegistrationCache();
+    this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
+
+    /**
+     * Beacon clients select randomized values from the following ranges when initializing
+     * the circuit breaker (so at boot time and once for each unique boot).
+     *
+     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 4
+     * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
+     *
+     */
+    this.faultInspectionWindow = Math.max(
+      opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
+      SLOTS_PER_EPOCH
+    );
+    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/4
+    this.allowedFaults = Math.min(
+      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 4),
+      Math.floor(this.faultInspectionWindow / 4)
+    );
   }
 
-  updateStatus(shouldEnable: boolean): void {
-    this.status = shouldEnable;
+  updateStatus(status: BuilderStatus): void {
+    this.status = status;
   }
 
   async checkStatus(): Promise<void> {
     try {
-      await this.api.status();
+      (await this.api.status()).assertOk();
     } catch (e) {
-      // Disable if the status was enabled
-      this.status = false;
+      if (this.status === BuilderStatus.enabled) {
+        // Disable if the status was enabled
+        this.status = BuilderStatus.disabled;
+      }
       throw e;
     }
   }
 
-  async registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
-    return this.api.registerValidator(registrations);
-  }
+  async registerValidator(epoch: Epoch, registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
+    (await this.api.registerValidator({registrations})).assertOk();
 
-  async getHeader(slot: Slot, parentHash: Root, proposerPubKey: BLSPubkey): Promise<bellatrix.ExecutionPayloadHeader> {
-    const {data: signedBid} = await this.api.getHeader(slot, parentHash, proposerPubKey);
-    const executionPayloadHeader = signedBid.message.header;
-    return executionPayloadHeader;
-  }
-
-  async submitBlindedBlock(signedBlock: bellatrix.SignedBlindedBeaconBlock): Promise<bellatrix.SignedBeaconBlock> {
-    const {data: executionPayload} = await this.api.submitBlindedBlock(signedBlock);
-    const expectedTransactionsRoot = signedBlock.message.body.executionPayloadHeader.transactionsRoot;
-    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);
-    if (!byteArrayEquals(expectedTransactionsRoot, actualTransactionsRoot)) {
-      throw Error(
-        `Invald transactionsRoot of the builder payload, expected=${toHexString(
-          expectedTransactionsRoot
-        )}, actual=${toHexString(actualTransactionsRoot)}`
-      );
+    for (const registration of registrations) {
+      this.registrations.add(epoch, registration.message);
     }
-    const fullySignedBlock: bellatrix.SignedBeaconBlock = {
-      ...signedBlock,
-      message: {...signedBlock.message, body: {...signedBlock.message.body, executionPayload}},
-    };
-    return fullySignedBlock;
+    this.registrations.prune(epoch);
+  }
+
+  getValidatorRegistration(pubkey: BLSPubkey): ValidatorRegistration | undefined {
+    return this.registrations.get(pubkey);
+  }
+
+  async getHeader(
+    _fork: ForkPostBellatrix,
+    slot: Slot,
+    parentHash: Root,
+    proposerPubkey: BLSPubkey
+  ): Promise<{
+    header: ExecutionPayloadHeader;
+    executionPayloadValue: Wei;
+    blobKzgCommitments?: deneb.BlobKzgCommitments;
+    executionRequests?: electra.ExecutionRequests;
+  }> {
+    const res = await this.api.getHeader(
+      {slot, parentHash, proposerPubkey},
+      {timeoutMs: BUILDER_PROPOSAL_DELAY_TOLERANCE}
+    );
+    const signedBuilderBid = res.value();
+
+    if (!signedBuilderBid) {
+      throw new NoBidReceived();
+    }
+
+    this.sszSupported = res.wireFormat() === WireFormat.ssz;
+
+    const {header, value: executionPayloadValue} = signedBuilderBid.message;
+    const {blobKzgCommitments} = signedBuilderBid.message as deneb.BuilderBid;
+    const {executionRequests} = signedBuilderBid.message as electra.BuilderBid;
+    return {header, executionPayloadValue, blobKzgCommitments, executionRequests};
+  }
+
+  async submitBlindedBlock(
+    signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>
+  ): Promise<SignedBlockContents> {
+    const res = await this.api.submitBlindedBlock(
+      {signedBlindedBlock},
+      {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
+    );
+
+    const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(res.value());
+
+    // for the sake of timely proposals we can skip matching the payload with payloadHeader
+    // if the roots (transactions, withdrawals) don't match, this will likely lead to a block with
+    // invalid signature, but there is no recourse to this anyway so lets just proceed and will
+    // probably need diagonis if this block turns out to be invalid because of some bug
+    //
+    const fork = this.config.getForkName(signedBlindedBlock.data.message.slot);
+    return reconstructSignedBlockContents(fork, signedBlindedBlock.data, executionPayload, blobsBundle);
+  }
+
+  async submitBlindedBlockNoResponse(signedBlindedBlock: WithOptionalBytes<SignedBlindedBeaconBlock>): Promise<void> {
+    (
+      await this.api.submitBlindedBlockV2(
+        {signedBlindedBlock},
+        {retries: 2, requestWireFormat: this.sszSupported ? WireFormat.ssz : WireFormat.json}
+      )
+    ).assertOk();
   }
 }

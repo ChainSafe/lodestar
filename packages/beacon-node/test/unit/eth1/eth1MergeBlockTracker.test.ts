@@ -1,36 +1,36 @@
-import {expect} from "chai";
-import {IChainConfig} from "@lodestar/config";
-import {sleep} from "@lodestar/utils";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {IEth1Provider} from "../../../src/index.js";
+import {ChainConfig} from "@lodestar/config";
+import {sleep} from "@lodestar/utils";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {Eth1MergeBlockTracker, StatusCode, toPowBlock} from "../../../src/eth1/eth1MergeBlockTracker.js";
-import {EthJsonRpcBlockRaw} from "../../../src/eth1/interface.js";
+import {Eth1ProviderState, EthJsonRpcBlockRaw} from "../../../src/eth1/interface.js";
+import {IEth1Provider} from "../../../src/index.js";
 import {testLogger} from "../../utils/logger.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 describe("eth1 / Eth1MergeBlockTracker", () => {
   const logger = testLogger();
 
   const terminalTotalDifficulty = 1000;
-  let config: IChainConfig;
+  let config: ChainConfig;
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
-  afterEach(() => controller.abort());
   beforeEach(() => {
-    config = ({
+    controller = new AbortController();
+
+    config = {
       // Set time units to 0 to make the test as fast as possible
       SECONDS_PER_ETH1_BLOCK: 0,
-      SECONDS_PER_SLOT: 0,
+      SLOT_DURATION_MS: 0,
       // Hardcode TTD to a low value
       TERMINAL_TOTAL_DIFFICULTY: BigInt(terminalTotalDifficulty),
       TERMINAL_BLOCK_HASH: ZERO_HASH,
-    } as Partial<IChainConfig>) as IChainConfig;
+    } as Partial<ChainConfig> as ChainConfig;
   });
 
+  afterEach(() => controller.abort());
+
   it("Should find terminal pow block through TERMINAL_BLOCK_HASH", async () => {
-    config.TERMINAL_BLOCK_HASH = Buffer.alloc(1, 32);
+    config.TERMINAL_BLOCK_HASH = Buffer.alloc(32, 1);
     const block: EthJsonRpcBlockRaw = {
       number: toHex(10),
       hash: toRootHex(11),
@@ -57,6 +57,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       validateContract: async (): Promise<any> => {
         throw Error("Not implemented");
       },
+      getState: () => Eth1ProviderState.ONLINE,
     };
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
@@ -66,7 +67,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         signal: controller.signal,
         metrics: null,
       },
-      eth1Provider as IEth1Provider
+      eth1Provider
     );
     eth1MergeBlockTracker.startPollingMergeBlock();
 
@@ -77,13 +78,10 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"].code).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"].code).toBe(StatusCode.FOUND);
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
-      terminalPowBlock,
-      "Wrong found terminal pow block"
-    );
+    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).toEqual(terminalPowBlock);
   });
 
   it("Should find terminal pow block polling future 'latest' blocks", async () => {
@@ -117,9 +115,8 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         if (blockNumber === "latest") {
           if (latestBlockPointer >= blocks.length) {
             throw Error("Fetched too many blocks");
-          } else {
-            return blocks[latestBlockPointer++];
           }
+          return blocks[latestBlockPointer++];
         }
         return blocks[blockNumber];
       },
@@ -133,9 +130,10 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       validateContract: async (): Promise<any> => {
         throw Error("Not implemented");
       },
+      getState: () => Eth1ProviderState.ONLINE,
     };
 
-    await runFindMergeBlockTest(eth1Provider, blocks[blocks.length - 1]);
+    await runFindMergeBlockTest(eth1Provider, blocks.at(-1) as EthJsonRpcBlockRaw);
   });
 
   it("Should find terminal pow block fetching past blocks", async () => {
@@ -205,7 +203,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       getBlockNumber: async () => 0,
       getBlockByNumber: async (blockNumber) => {
         // Always return the same block with totalDifficulty > TTD and unknown parent
-        if (blockNumber === "latest") return blocks[blocks.length - 1];
+        if (blockNumber === "latest") return blocks.at(-1) as EthJsonRpcBlockRaw;
         return blocks[blockNumber];
       },
       getBlockByHash: async (blockHashHex) => blocksByHash.get(blockHashHex) ?? null,
@@ -216,6 +214,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       validateContract: async (): Promise<any> => {
         throw Error("Not implemented");
       },
+      getState: () => Eth1ProviderState.ONLINE,
     };
   }
 
@@ -230,7 +229,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         signal: controller.signal,
         metrics: null,
       },
-      eth1Provider as IEth1Provider
+      eth1Provider
     );
     eth1MergeBlockTracker.startPollingMergeBlock();
 
@@ -241,13 +240,10 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"].code).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"].code).toBe(StatusCode.FOUND);
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
-      toPowBlock(expectedMergeBlock),
-      "Wrong found terminal pow block"
-    );
+    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).toEqual(toPowBlock(expectedMergeBlock));
   }
 });
 

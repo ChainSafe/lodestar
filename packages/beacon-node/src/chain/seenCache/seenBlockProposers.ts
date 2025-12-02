@@ -1,6 +1,6 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
-import {MapDef} from "../../util/map.js";
+import {MapDef} from "@lodestar/utils";
 
 /**
  * Keeps a cache to filter block proposals from the same validator in the same slot.

@@ -1,203 +1,298 @@
-import {allForks, ssz, StringType} from "@lodestar/types";
-import {ContainerType} from "@chainsafe/ssz";
+import {ContainerType, OptionalType, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {StringType, fulu, ssz, stringType} from "@lodestar/types";
 import {
   ArrayOf,
-  ContainerData,
-  reqEmpty,
-  jsonType,
-  ReturnTypes,
-  RoutesData,
-  Schema,
-  ReqSerializers,
-  ReqEmpty,
-  sameType,
-} from "../../utils/index.js";
+  EmptyArgs,
+  EmptyMeta,
+  EmptyMetaCodec,
+  EmptyRequest,
+  EmptyRequestCodec,
+  EmptyResponseCodec,
+  EmptyResponseData,
+  JsonOnlyResponseCodec,
+} from "../../utils/codecs.js";
+import {HttpStatusCode} from "../../utils/httpStatusCode.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {WireFormat} from "../../utils/wireFormat.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
+export const NetworkIdentityType = new ContainerType(
+  {
+    /** Cryptographic hash of a peer’s public key. [Read more](https://docs.libp2p.io/concepts/peer-id/) */
+    peerId: stringType,
+    /** Ethereum node record. [Read more](https://eips.ethereum.org/EIPS/eip-778) */
+    enr: stringType,
+    p2pAddresses: ArrayOf(stringType),
+    discoveryAddresses: ArrayOf(stringType),
+    // TODO Fulu: replace with `ssz.fulu.Metadata` once `custody_group_count` is more widely supported
+    /** Based on Ethereum Consensus [Metadata object](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata) */
+    metadata: ssz.altair.Metadata,
+  },
+  {jsonCase: "eth2"}
+);
 
-export type NetworkIdentity = {
-  /** Cryptographic hash of a peer’s public key. [Read more](https://docs.libp2p.io/concepts/peer-id/) */
-  peerId: string;
-  /** Ethereum node record. [Read more](https://eips.ethereum.org/EIPS/eip-778) */
-  enr: string;
-  p2pAddresses: string[];
-  discoveryAddresses: string[];
-  /** Based on Ethereum Consensus [Metadata object](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata) */
-  metadata: allForks.Metadata;
+export const PeerCountType = new ContainerType(
+  {
+    disconnected: ssz.UintNum64,
+    connecting: ssz.UintNum64,
+    connected: ssz.UintNum64,
+    disconnecting: ssz.UintNum64,
+  },
+  {jsonCase: "eth2"}
+);
+
+export const SyncingStatusType = new ContainerType(
+  {
+    /** Head slot node is trying to reach */
+    headSlot: ssz.Slot,
+    /** How many slots node needs to process to reach head. 0 if synced. */
+    syncDistance: ssz.Slot,
+    /** Set to true if the node is syncing, false if the node is synced. */
+    isSyncing: ssz.Boolean,
+    /** Set to true if the node is optimistically tracking head. */
+    isOptimistic: ssz.Boolean,
+    /** Set to true if the connected el client is offline */
+    elOffline: ssz.Boolean,
+  },
+  {jsonCase: "eth2"}
+);
+
+export type NetworkIdentity = ValueOf<typeof NetworkIdentityType> & {
+  metadata: Partial<fulu.Metadata>;
 };
 
 export type PeerState = "disconnected" | "connecting" | "connected" | "disconnecting";
 export type PeerDirection = "inbound" | "outbound";
 
-export type NodePeer = {
-  peerId: string;
-  enr: string;
-  lastSeenP2pAddress: string;
-  state: PeerState;
-  // the spec does not specify direction for a disconnected peer, lodestar uses null in that case
-  direction: PeerDirection | null;
-};
+export const NodePeerType = new ContainerType(
+  {
+    peerId: stringType,
+    enr: new OptionalType(stringType),
+    lastSeenP2pAddress: stringType,
+    state: new StringType<PeerState>(),
+    // the spec does not specify direction for a disconnected peer, lodestar uses null in that case
+    direction: new OptionalType(new StringType<PeerDirection>()),
+  },
+  {jsonCase: "eth2"}
+);
+export const NodePeersType = ArrayOf(NodePeerType);
 
-export type PeerCount = {
-  disconnected: number;
-  connecting: number;
-  connected: number;
-  disconnecting: number;
-};
+export type NodePeer = ValueOf<typeof NodePeerType>;
+export type NodePeers = ValueOf<typeof NodePeersType>;
+
+export type PeersMeta = {count: number};
+
+export type PeerCount = ValueOf<typeof PeerCountType>;
 
 export type FilterGetPeers = {
   state?: PeerState[];
   direction?: PeerDirection[];
 };
 
-export type SyncingStatus = {
-  /** Head slot node is trying to reach */
-  headSlot: string;
-  /** How many slots node needs to process to reach head. 0 if synced. */
-  syncDistance: string;
-  /** Set to true if the node is syncing, false if the node is synced. */
-  isSyncing: boolean;
-  /** Set to true if the node is optimistically tracking head. */
-  isOptimistic: boolean;
-};
+export type SyncingStatus = ValueOf<typeof SyncingStatusType>;
 
 export enum NodeHealth {
-  READY = 200,
-  SYNCING = 206,
-  NOT_INITIALIZED_OR_ISSUES = 503,
+  READY = HttpStatusCode.OK,
+  SYNCING = HttpStatusCode.PARTIAL_CONTENT,
+  NOT_INITIALIZED_OR_ISSUES = HttpStatusCode.SERVICE_UNAVAILABLE,
 }
 
 /**
  * Read information about the beacon node.
  */
-export type Api = {
+export type Endpoints = {
   /**
    * Get node network identity
    * Retrieves data about the node's network presence
    */
-  getNetworkIdentity(): Promise<{data: NetworkIdentity}>;
+  getNetworkIdentity: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    NetworkIdentity,
+    EmptyMeta
+  >;
 
   /**
    * Get node network peers
    * Retrieves data about the node's network peers. By default this returns all peers. Multiple query params are combined using AND conditions
-   * @param state
-   * @param direction
    */
-  getPeers(filters?: FilterGetPeers): Promise<{data: NodePeer[]; meta: {count: number}}>;
+  getPeers: Endpoint<
+    "GET",
+    FilterGetPeers,
+    {query: {state?: PeerState[]; direction?: PeerDirection[]}},
+    NodePeers,
+    PeersMeta
+  >;
 
   /**
    * Get peer
    * Retrieves data about the given peer
-   * @param peerId
    */
-  getPeer(peerId: string): Promise<{data: NodePeer}>;
+  getPeer: Endpoint<
+    // ⏎
+    "GET",
+    {peerId: string},
+    {params: {peer_id: string}},
+    NodePeer,
+    EmptyMeta
+  >;
 
   /**
    * Get peer count
    * Retrieves number of known peers.
    */
-  getPeerCount(): Promise<{data: PeerCount}>;
+  getPeerCount: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    PeerCount,
+    EmptyMeta
+  >;
 
   /**
    * Get version string of the running beacon node.
    * Requests that the beacon node identify information about its implementation in a format similar to a [HTTP User-Agent](https://tools.ietf.org/html/rfc7231#section-5.5.3) field.
    */
-  getNodeVersion(): Promise<{data: {version: string}}>;
+  getNodeVersion: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    {version: string},
+    EmptyMeta
+  >;
 
   /**
    * Get node syncing status
    * Requests the beacon node to describe if it's currently syncing or not, and if it is, what block it is up to.
    */
-  getSyncingStatus(): Promise<{data: SyncingStatus}>;
+  getSyncingStatus: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    SyncingStatus,
+    EmptyMeta
+  >;
 
   /**
    * Get health check
    * Returns node health status in http status codes. Useful for load balancers.
-   *
-   * NOTE: This route does not return any value
    */
-  getHealth(): Promise<NodeHealth>;
+  getHealth: Endpoint<
+    // ⏎
+    "GET",
+    {syncingStatus?: number},
+    {query: {syncing_status?: number}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 };
 
-export const routesData: RoutesData<Api> = {
-  getNetworkIdentity: {url: "/eth/v1/node/identity", method: "GET"},
-  getPeers: {url: "/eth/v1/node/peers", method: "GET"},
-  getPeer: {url: "/eth/v1/node/peers/{peer_id}", method: "GET"},
-  getPeerCount: {url: "/eth/v1/node/peer_count", method: "GET"},
-  getNodeVersion: {url: "/eth/v1/node/version", method: "GET"},
-  getSyncingStatus: {url: "/eth/v1/node/syncing", method: "GET"},
-  getHealth: {url: "/eth/v1/node/health", method: "GET"},
-};
-
-/* eslint-disable @typescript-eslint/naming-convention */
-
-export type ReqTypes = {
-  getNetworkIdentity: ReqEmpty;
-  getPeers: {query: {state?: PeerState[]; direction?: PeerDirection[]}};
-  getPeer: {params: {peer_id: string}};
-  getPeerCount: ReqEmpty;
-  getNodeVersion: ReqEmpty;
-  getSyncingStatus: ReqEmpty;
-  getHealth: ReqEmpty;
-};
-
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
-    getNetworkIdentity: reqEmpty,
-
+    getNetworkIdentity: {
+      url: "/eth/v1/node/identity",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        onlySupport: WireFormat.json,
+        // TODO Fulu: clean this up
+        data: {
+          ...JsonOnlyResponseCodec.data,
+          toJson: (data) => {
+            const json = NetworkIdentityType.toJson(data);
+            const {custodyGroupCount} = data.metadata;
+            (json as {metadata: {custody_group_count: string | undefined}}).metadata.custody_group_count =
+              custodyGroupCount !== undefined ? String(custodyGroupCount) : undefined;
+            return json;
+          },
+          fromJson: (json) => {
+            const data = NetworkIdentityType.fromJson(json);
+            const {
+              metadata: {custody_group_count},
+            } = json as {metadata: {custody_group_count: string | undefined}};
+            (data.metadata as Partial<fulu.Metadata>).custodyGroupCount =
+              custody_group_count !== undefined ? parseInt(custody_group_count) : undefined;
+            return data;
+          },
+        },
+        meta: EmptyMetaCodec,
+      },
+    },
     getPeers: {
-      writeReq: (filters) => ({query: filters || {}}),
-      parseReq: ({query}) => [query],
-      schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
+      url: "/eth/v1/node/peers",
+      method: "GET",
+      req: {
+        writeReq: ({state, direction}) => ({query: {state, direction}}),
+        parseReq: ({query}) => ({state: query.state, direction: query.direction}),
+        schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
+      },
+      resp: {
+        data: NodePeersType,
+        meta: {
+          toJson: (d) => d,
+          fromJson: (d) => ({count: (d as PeersMeta).count}),
+          toHeadersObject: () => ({}),
+          fromHeaders: () => ({}) as PeersMeta,
+        },
+        transform: {
+          toResponse: (data, meta) => ({data, meta}),
+          fromResponse: (resp) => resp as {data: NodePeer[]; meta: PeersMeta},
+        },
+        onlySupport: WireFormat.json,
+      },
     },
     getPeer: {
-      writeReq: (peer_id) => ({params: {peer_id}}),
-      parseReq: ({params}) => [params.peer_id],
-      schema: {params: {peer_id: Schema.StringRequired}},
+      url: "/eth/v1/node/peers/{peer_id}",
+      method: "GET",
+      req: {
+        writeReq: ({peerId}) => ({params: {peer_id: peerId}}),
+        parseReq: ({params}) => ({peerId: params.peer_id}),
+        schema: {params: {peer_id: Schema.StringRequired}},
+      },
+      resp: {
+        data: NodePeerType,
+        meta: EmptyMetaCodec,
+        onlySupport: WireFormat.json,
+      },
     },
-
-    getPeerCount: reqEmpty,
-    getNodeVersion: reqEmpty,
-    getSyncingStatus: reqEmpty,
-    getHealth: reqEmpty,
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  const stringType = new StringType();
-  const NetworkIdentity = new ContainerType(
-    {
-      peerId: stringType,
-      enr: stringType,
-      p2pAddresses: ArrayOf(stringType),
-      discoveryAddresses: ArrayOf(stringType),
-      metadata: ssz.altair.Metadata,
+    getPeerCount: {
+      url: "/eth/v1/node/peer_count",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: PeerCountType,
+        meta: EmptyMetaCodec,
+      },
     },
-    {jsonCase: "eth2"}
-  );
-
-  const PeerCount = new ContainerType(
-    {
-      disconnected: ssz.UintNum64,
-      connecting: ssz.UintNum64,
-      connected: ssz.UintNum64,
-      disconnecting: ssz.UintNum64,
+    getNodeVersion: {
+      url: "/eth/v1/node/version",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
     },
-    {jsonCase: "eth2"}
-  );
-
-  return {
-    //
-    // TODO: Consider just converting the JSON case without custom types
-    //
-    getNetworkIdentity: ContainerData(NetworkIdentity),
-    // All these types don't contain any BigInt nor Buffer instances.
-    // Use jsonType() to translate the casing in a generic way.
-    getPeers: jsonType("snake"),
-    getPeer: jsonType("snake"),
-    getPeerCount: ContainerData(PeerCount),
-    getNodeVersion: jsonType("snake"),
-    getSyncingStatus: jsonType("snake"),
-    getHealth: sameType(),
+    getSyncingStatus: {
+      url: "/eth/v1/node/syncing",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: SyncingStatusType,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getHealth: {
+      url: "/eth/v1/node/health",
+      method: "GET",
+      req: {
+        writeReq: ({syncingStatus}) => ({query: {syncing_status: syncingStatus}}),
+        parseReq: ({query}) => ({syncingStatus: query.syncing_status}),
+        schema: {query: {syncing_status: Schema.Uint}},
+      },
+      resp: EmptyResponseCodec,
+    },
   };
 }

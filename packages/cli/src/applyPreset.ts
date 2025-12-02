@@ -1,4 +1,11 @@
 // MUST import this file first before anything and not import any Lodestar code.
+
+import {setHasher} from "@chainsafe/persistent-merkle-tree";
+import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
+
+// Without setting this first, persistent-merkle-tree will use noble instead
+setHasher(hashtreeHasher);
+
 //
 // ## Rationale
 //
@@ -8,23 +15,36 @@
 // However this prevents dynamic configuration changes which is exactly what the CLI required before.
 // - The dev command can't apply the minimal preset dynamically
 // - `--network gnosis` can't apply a different preset dynamically
+// - `--network chiado` can't apply a different preset dynamically
 //
 // Running this file allows us to keep a static export strategy while NOT requiring users to
 // set LODESTAR_PRESET manually every time.
 
+// IMPORTANT: only import Lodestar code here which does not import any other Lodestar libraries
+import {PresetName, presetFromJson, setActivePreset} from "@lodestar/params/setPreset";
+import {readFile} from "./util/file.js";
+
 const network = valueOfArg("network");
 const preset = valueOfArg("preset");
+const presetFile = valueOfArg("presetFile");
 
 // Apply preset flag if present
 if (preset) {
   process.env.LODESTAR_PRESET = preset;
 }
 
+// If ENV is set overrides, network (otherwise can not override network --dev in mainnet mode)
+else if (process.env.LODESTAR_PRESET) {
+  // break
+}
+
 // Translate network to preset
 else if (network) {
   if (network === "dev") {
     process.env.LODESTAR_PRESET = "minimal";
-  } else if (network === "gnosis") {
+    // the kzg library has hardcoded the mainnet value, do not use presets
+    setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
+  } else if (network === "gnosis" || network === "chiado") {
     process.env.LODESTAR_PRESET = "gnosis";
   }
 }
@@ -33,6 +53,14 @@ else if (network) {
 else if (process.argv[2] === "dev") {
   process.env.LODESTAR_PRESET = "minimal";
   process.env.LODESTAR_NETWORK = "dev";
+  // the kzg library has hardcoded the mainnet value, do not use presets
+  setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
+}
+
+if (presetFile) {
+  // Override the active preset with custom values from file
+  // Do not modify the preset to use as a base by passing null
+  setActivePreset(null, presetFromJson(readFile(presetFile) ?? {}));
 }
 
 /**
@@ -62,6 +90,3 @@ function valueOfArg(argName: string): string | null {
 
   return null;
 }
-
-// Add empty export to make this a module
-export {};

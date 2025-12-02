@@ -1,9 +1,15 @@
+global:
+  scrape_interval: 5s
+  scrape_timeout: 5s
+
+# Tags (values starting with #) have to be replaced in the Dockerfile with sed
+# Modified datasource to work with a network_mode: host
 scrape_configs:
-  - job_name: Lodestar
-    scrape_interval: 20s
-    scrape_timeout: 20s
+  - job_name: beacon
     metrics_path: /metrics
     static_configs:
-      # This tag is to be replaced in the Dockerfile with sed
-      # Modified datasource to work with a network_mode: host
-      - targets: ["#BEACON_URL", "#VC_URL"]
+      - targets: ["#BEACON_URL"]
+  - job_name: validator
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["#VC_URL"]

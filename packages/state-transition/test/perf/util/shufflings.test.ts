@@ -1,12 +1,12 @@
-import {itBench} from "@dapplion/benchmark";
-import {Epoch} from "@lodestar/types";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
+import {Epoch} from "@lodestar/types";
 import {
-  computeEpochAtSlot,
   CachedBeaconStateAllForks,
+  computeEpochAtSlot,
   computeEpochShuffling,
-  getNextSyncCommittee,
   computeProposers,
+  getNextSyncCommittee,
   getSeed,
 } from "../../../src/index.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
@@ -15,38 +15,36 @@ describe("epoch shufflings", () => {
   let state: CachedBeaconStateAllForks;
   let nextEpoch: Epoch;
 
-  before(function () {
-    this.timeout(60 * 1000);
+  beforeAll(() => {
     state = generatePerfTestCachedStatePhase0();
     nextEpoch = computeEpochAtSlot(state.slot) + 1;
 
     // Sanity check to ensure numValidators doesn't go stale
     if (state.validators.length !== numValidators) throw Error("constant numValidators is wrong");
-  });
+  }, 60 * 1000);
 
-  itBench({
+  bench({
     id: `computeProposers - vc ${numValidators}`,
     fn: () => {
-      const epochSeed = getSeed(state, state.epochCtx.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-      computeProposers(epochSeed, state.epochCtx.nextShuffling, state.epochCtx.effectiveBalanceIncrements);
+      const epochSeed = getSeed(state, state.epochCtx.epoch, DOMAIN_BEACON_PROPOSER);
+      const fork = state.config.getForkSeq(state.slot);
+      computeProposers(fork, epochSeed, state.epochCtx.currentShuffling, state.epochCtx.effectiveBalanceIncrements);
     },
   });
 
-  itBench({
+  bench({
     id: `computeEpochShuffling - vc ${numValidators}`,
     fn: () => {
-      computeEpochShuffling(state, state.epochCtx.nextShuffling.activeIndices, nextEpoch);
+      const {nextActiveIndices} = state.epochCtx;
+      computeEpochShuffling(state, nextActiveIndices, nextEpoch);
     },
   });
 
-  itBench({
+  bench({
     id: `getNextSyncCommittee - vc ${numValidators}`,
     fn: () => {
-      getNextSyncCommittee(
-        state,
-        state.epochCtx.nextShuffling.activeIndices,
-        state.epochCtx.effectiveBalanceIncrements
-      );
+      const fork = state.config.getForkSeq(state.slot);
+      getNextSyncCommittee(fork, state, state.epochCtx.nextActiveIndices, state.epochCtx.effectiveBalanceIncrements);
     },
   });
 });

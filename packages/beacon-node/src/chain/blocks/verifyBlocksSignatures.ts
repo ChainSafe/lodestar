@@ -1,6 +1,8 @@
 import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
-import {allForks} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {SignedBeaconBlock} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
 import {ImportBlockOpts} from "./types.js";
@@ -14,11 +16,14 @@ import {ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksSignatures(
   bls: IBlsVerifier,
+  logger: Logger,
+  metrics: Metrics | null,
   preState0: CachedBeaconStateAllForks,
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: SignedBeaconBlock[],
   opts: ImportBlockOpts
-): Promise<void> {
+): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
   // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
@@ -32,14 +37,16 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(preState0, block, {skipProposerSignature: opts.validProposerSignature})
+          getBlockSignatureSets(preState0, block, {
+            skipProposerSignature: opts.validProposerSignature,
+          })
         );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
-    // segments it will block the event loop for 1400 ms, which is too much. This sleep will allow the event loop to
+    // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to
     // yield, which will cause one block's state transition to run. However, the tradeoff is okay and doesn't slow sync
     if ((i + 1) % 8 === 0) {
-      await sleep(0);
+      await nextEventLoop();
     }
   }
 
@@ -48,6 +55,24 @@ export async function verifyBlocksSignatures(
   if (!res.allValid) {
     throw new BlockError(blocks[res.index], {code: BlockErrorCode.INVALID_SIGNATURE, state: preState0});
   }
+
+  const verifySignaturesTime = Date.now();
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
+    const recvToValidation = verifySignaturesTime / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    metrics?.gossipBlock.signatureVerification.recvToValidation.observe(recvToValidation);
+    metrics?.gossipBlock.signatureVerification.validationTime.observe(validationTime);
+
+    logger.debug("Verified block signatures", {
+      slot: blocks[0].message.slot,
+      recvToValLatency,
+      recvToValidation,
+      validationTime,
+    });
+  }
+
+  return {verifySignaturesTime};
 }
 
 type AllValidRes = {allValid: true} | {allValid: false; index: number};

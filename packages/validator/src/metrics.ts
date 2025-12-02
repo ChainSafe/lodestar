@@ -1,64 +1,15 @@
+import {routes} from "@lodestar/api";
+import {MetricsRegisterExtra} from "@lodestar/utils";
+
 export enum MessageSource {
   forward = "forward",
   publish = "publish",
 }
 
-type LabelsGeneric = Record<string, string | undefined>;
-type CollectFn<Labels extends LabelsGeneric> = (metric: Gauge<Labels>) => void;
-
-interface Gauge<Labels extends LabelsGeneric = never> {
-  // Sorry for this mess, `prom-client` API choices are not great
-  // If the function signature was `inc(value: number, labels?: Labels)`, this would be simpler
-  inc(value?: number): void;
-  inc(labels: Labels, value?: number): void;
-  inc(arg1?: Labels | number, arg2?: number): void;
-
-  dec(value?: number): void;
-  dec(labels: Labels, value?: number): void;
-  dec(arg1?: Labels | number, arg2?: number): void;
-
-  set(value: number): void;
-  set(labels: Labels, value: number): void;
-  set(arg1?: Labels | number, arg2?: number): void;
-
-  addCollect(collectFn: CollectFn<Labels>): void;
-}
-
-interface Histogram<Labels extends LabelsGeneric = never> {
-  startTimer(): () => number;
-
-  observe(value: number): void;
-  observe(labels: Labels, values: number): void;
-  observe(arg1: Labels | number, arg2?: number): void;
-
-  reset(): void;
-}
-
-interface AvgMinMax<Labels extends LabelsGeneric = never> {
-  set(values: number[]): void;
-  set(labels: Labels, values: number[]): void;
-  set(arg1?: Labels | number[], arg2?: number[]): void;
-}
-
-type GaugeConfig<Labels extends LabelsGeneric> = {
-  name: string;
-  help: string;
-  labelNames?: keyof Labels extends string ? (keyof Labels)[] : undefined;
-};
-
-type HistogramConfig<Labels extends LabelsGeneric> = {
-  name: string;
-  help: string;
-  labelNames?: (keyof Labels)[];
-  buckets?: number[];
-};
-
-type AvgMinMaxConfig<Labels extends LabelsGeneric> = GaugeConfig<Labels>;
-
-export interface MetricsRegister {
-  gauge<T extends LabelsGeneric>(config: GaugeConfig<T>): Gauge<T>;
-  histogram<T extends LabelsGeneric>(config: HistogramConfig<T>): Histogram<T>;
-  avgMinMax<T extends LabelsGeneric>(config: AvgMinMaxConfig<T>): AvgMinMax<T>;
+export enum BeaconHealth {
+  READY = 0,
+  SYNCING = 1,
+  ERROR = 2,
 }
 
 export type Metrics = ReturnType<typeof getMetrics>;
@@ -68,15 +19,14 @@ export type LodestarGitData = {
   version: string;
   /** "4f816b16dfde718e2d74f95f2c8292596138c248" */
   commit: string;
-  /** "goerli" */
+  /** "holesky" */
   network: string;
 };
 
 /**
- * A collection of metrics used throughout the Gossipsub behaviour.
+ * A collection of metrics used by the validator client
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) {
+export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitData) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
   // Track version, same as https://github.com/ChainSafe/lodestar/blob/6df28de64f12ea90b341b219229a47c8a25c9343/packages/lodestar/src/metrics/metrics/lodestar.ts#L17
@@ -84,64 +34,73 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     .gauge<LodestarGitData>({
       name: "lodestar_version",
       help: "Lodestar version",
-      labelNames: Object.keys(gitData) as (keyof LodestarGitData)[],
+      labelNames: Object.keys(gitData) as [keyof LodestarGitData],
     })
     .set(gitData, 1);
 
   return {
+    defaultConfiguration: register.gauge<{
+      builderSelection: routes.validator.BuilderSelection;
+      broadcastValidation: routes.beacon.BroadcastValidation;
+    }>({
+      name: "vc_default_configuration",
+      help: "Default validator configuration",
+      labelNames: ["builderSelection", "broadcastValidation"],
+    }),
+
     // Attestation journey:
-    // - Wait for block or 1/3, call prepare attestation
+    // - Wait for block or ATTESTATION_DUE_BPS, call prepare attestation
     // - Get attestation, sign, call publish
-    // - Wait 2/3, call prepare aggregate
+    // - Wait AGGREGATE_DUE_BPS, call prepare aggregate
     // - Get aggregate, sign, call publish
 
     attesterStepCallProduceAttestation: register.histogram({
       name: "vc_attester_step_call_produce_attestation_seconds",
-      help: "Time between 1/3 of slot and call produce attestation",
-      // Attester flow can start early if block is imported before 1/3 of the slot
+      help: "Time between ATTESTATION_DUE_BPS of slot and call produce attestation",
+      // Attester flow can start early if block is imported before ATTESTATION_DUE_BPS of the slot
       // This measure is critical so we need very good resolution around the 0 second mark
       buckets: [-3, -1, 0, 1, 2, 3, 6, 12],
     }),
     attesterStepCallPublishAttestation: register.histogram({
       name: "vc_attester_step_call_publish_attestation_seconds",
-      help: "Time between 1/3 of slot and call publish attestation",
+      help: "Time between ATTESTATION_DUE_BPS of slot and call publish attestation",
       buckets: [-3, -1, 0, 1, 2, 3, 6, 12],
     }),
 
     attesterStepCallProduceAggregate: register.histogram({
       name: "vc_attester_step_call_produce_aggregate_seconds",
-      help: "Time between 2/3 of slot and call produce aggregate",
-      // Aggregate production starts at 2/3 the earliest.
+      help: "Time between AGGREGATE_DUE_BPS of slot and call produce aggregate",
+      // Aggregate production starts at AGGREGATE_DUE_BPS the earliest.
       // Track values close to 0 (expected) in greater resolution, values over 12 overflow into the next slot.
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     attesterStepCallPublishAggregate: register.histogram({
       name: "vc_attester_step_call_publish_aggregate_seconds",
-      help: "Time between 2/3 of slot and call publish aggregate",
+      help: "Time between AGGREGATE_DUE_BPS of slot and call publish aggregate",
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
 
     syncCommitteeStepCallProduceMessage: register.histogram({
       name: "vc_sync_committee_step_call_produce_message_seconds",
-      help: "Time between 1/3 of slot and call produce message",
-      // Max wait time is 1 / 3 of slot
+      help: "Time between SYNC_MESSAGE_DUE_BPS of slot and call produce message",
+      // Max wait time is SYNC_MESSAGE_DUE_BPS of slot
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     syncCommitteeStepCallPublishMessage: register.histogram({
       name: "vc_sync_committee_step_call_publish_message_seconds",
-      help: "Time between 1/3 of slot and call publish message",
+      help: "Time between SYNC_MESSAGE_DUE_BPS of slot and call publish message",
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
 
     syncCommitteeStepCallProduceAggregate: register.histogram({
       name: "vc_sync_committee_step_call_produce_aggregate_seconds",
-      help: "Time between 2/3 of slot and call produce aggregate",
-      // Min wait time is 2 / 3 of slot
+      help: "Time between CONTRIBUTION_DUE_BPS of slot and call produce aggregate",
+      // Min wait time is CONTRIBUTION_DUE_BPS of slot
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     syncCommitteeStepCallPublishAggregate: register.histogram({
       name: "vc_sync_committee_step_call_publish_aggregate_seconds",
-      help: "Time between 2/3 of slot and call publish aggregate",
+      help: "Time between CONTRIBUTION_DUE_BPS of slot and call publish aggregate",
       buckets: [0.5, 1, 2, 3, 6, 12],
     }),
 
@@ -169,6 +128,12 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       help: "Total published aggregates",
     }),
 
+    numParticipantsInAggregate: register.histogram({
+      name: "vc_attestation_service_participants_in_aggregate_total",
+      help: "Number of attestations in the published AggregatedAttestation",
+      buckets: [1, 25, 50, 100, 250, 400, 500, 600],
+    }),
+
     attestaterError: register.gauge<{error: "produce" | "sign" | "publish"}>({
       name: "vc_attestation_service_errors",
       help: "Total errors in AttestationService",
@@ -189,7 +154,15 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     attesterDutiesReorg: register.gauge({
       name: "vc_attestation_duties_reorg_total",
-      help: "Total count of instances the attester duties dependant root changed",
+      help: "Total count of instances the attester duties dependent root changed",
+    }),
+
+    attesterDutiesNextSlot: register.gauge({
+      // Metric is used by Rocket Pool dashboard (18391) to determine seconds until next attestation.
+      // It works without requiring any modification to the dashboard as the metric name is the
+      // same as Lighthouse uses for this.
+      name: "vc_attestation_duty_slot",
+      help: "Slot of next scheduled attestation duty",
     }),
 
     // BlockProposingService
@@ -219,7 +192,12 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     proposerDutiesReorg: register.gauge({
       name: "vc_proposer_duties_reorg_total",
-      help: "Total count of instances the proposer duties dependant root changed",
+      help: "Total count of instances the proposer duties dependent root changed",
+    }),
+
+    newProposalDutiesDetected: register.gauge({
+      name: "vc_new_proposal_duties_detected_total",
+      help: "Total count of times new proposal duties were detected",
     }),
 
     // IndicesService
@@ -260,14 +238,14 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     syncCommitteeDutiesReorg: register.gauge({
       name: "vc_sync_committee_duties_reorg_total",
-      help: "Total count of instances the sync committee duties dependant root changed",
+      help: "Total count of instances the sync committee duties dependent root changed",
     }),
 
     // ValidatorStore
 
     signers: register.gauge({
       name: "vc_signers_count",
-      help: "Total count of instances the sync committee duties dependant root changed",
+      help: "Total count of instances the sync committee duties dependent root changed",
     }),
 
     localSignTime: register.histogram({
@@ -306,26 +284,51 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     // REST API client
 
+    beaconHealth: register.gauge({
+      name: "vc_beacon_health",
+      help: `Current health status of the beacon(s) the validator is connected to. ${renderEnumNumeric(BeaconHealth)}`,
+    }),
+
     restApiClient: {
       requestTime: register.histogram<{routeId: string}>({
         name: "vc_rest_api_client_request_time_seconds",
         help: "Histogram of REST API client request time by routeId",
         labelNames: ["routeId"],
         // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
-        buckets: [0.01, 0.1, 1, 5],
+        buckets: [0.01, 0.1, 1, 2, 5],
       }),
 
-      requestErrors: register.gauge<{routeId: string}>({
+      streamTime: register.histogram<{routeId: string}>({
+        name: "vc_rest_api_client_stream_time_seconds",
+        help: "Histogram of REST API client streaming time by routeId",
+        labelNames: ["routeId"],
+        // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
+        buckets: [0.01, 0.1, 1, 2, 5],
+      }),
+
+      requestErrors: register.gauge<{routeId: string; baseUrl: string}>({
         name: "vc_rest_api_client_request_errors_total",
         help: "Total count of errors on REST API client requests by routeId",
-        labelNames: ["routeId"],
+        labelNames: ["routeId", "baseUrl"],
+      }),
+
+      requestToFallbacks: register.gauge<{routeId: string; baseUrl: string}>({
+        name: "vc_rest_api_client_request_to_fallbacks_total",
+        help: "Total count of requests to fallback URLs on REST API by routeId",
+        labelNames: ["routeId", "baseUrl"],
+      }),
+
+      urlsScore: register.gauge<{urlIndex: number; baseUrl: string}>({
+        name: "vc_rest_api_client_urls_score",
+        help: "Current score of REST API URLs by url index",
+        labelNames: ["urlIndex", "baseUrl"],
       }),
     },
 
     keymanagerApiRest: {
       responseTime: register.histogram<{operationId: string}>({
         name: "vc_keymanager_api_rest_response_time_seconds",
-        help: "REST API time to fullfill a request by operationId",
+        help: "REST API time to fulfill a request by operationId",
         labelNames: ["operationId"],
         // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
         buckets: [0.01, 0.1, 1],
@@ -357,24 +360,33 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     db: {
       dbReadReq: register.gauge<{bucket: string}>({
-        name: "validator_db_read_req_total",
+        name: "vc_db_read_req_total",
         help: "Total count of db read requests, may read 0 or more items",
         labelNames: ["bucket"],
       }),
       dbReadItems: register.gauge<{bucket: string}>({
-        name: "validator_db_read_items_total",
+        name: "vc_db_read_items_total",
         help: "Total count of db read items, item = key | value | entry",
         labelNames: ["bucket"],
       }),
       dbWriteReq: register.gauge<{bucket: string}>({
-        name: "validator_db_write_req_total",
+        name: "vc_db_write_req_total",
         help: "Total count of db write requests, may write 0 or more items",
         labelNames: ["bucket"],
       }),
       dbWriteItems: register.gauge<{bucket: string}>({
-        name: "validator_db_write_items_total",
+        name: "vc_db_write_items_total",
         help: "Total count of db write items",
         labelNames: ["bucket"],
+      }),
+      dbSizeTotal: register.gauge({
+        name: "vc_db_size_bytes_total",
+        help: "Approximate number of bytes of file system space used by db",
+      }),
+      dbApproximateSizeTime: register.histogram({
+        name: "vc_db_approximate_size_time_seconds",
+        help: "Time to approximate db size in seconds",
+        buckets: [0.0001, 0.001, 0.01, 0.1, 1],
       }),
     },
 
@@ -390,4 +402,16 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       }),
     },
   };
+}
+
+export function renderEnumNumeric(obj: Record<string, unknown>): string {
+  const out: string[] = [];
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === "number") {
+      out.push(`${key}=${value}`);
+    }
+  }
+
+  return out.join(", ");
 }

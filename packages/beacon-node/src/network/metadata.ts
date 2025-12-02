@@ -1,33 +1,36 @@
-import {ENR} from "@chainsafe/discv5";
-import {BitArray, toHexString} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
-import {altair, Epoch, phase0, ssz} from "@lodestar/types";
-import {IBeaconConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
-import {IBeaconChain} from "../chain/index.js";
+import {BitArray} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, fulu, phase0, ssz} from "@lodestar/types";
+import {Logger, toHex} from "@lodestar/utils";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
-import {getCurrentAndNextFork} from "./forks.js";
+import {serializeCgc} from "../util/metadata.js";
+import {getCurrentAndNextForkBoundary} from "./forks.js";
+import {NetworkConfig} from "./networkConfig.js";
 
 export enum ENRKey {
   tcp = "tcp",
   eth2 = "eth2",
   attnets = "attnets",
   syncnets = "syncnets",
+  cgc = "cgc",
+  nfd = "nfd",
 }
 export enum SubnetType {
   attnets = "attnets",
   syncnets = "syncnets",
 }
 
-export interface IMetadataOpts {
-  metadata?: altair.Metadata;
-}
+export type MetadataOpts = {
+  metadata?: fulu.Metadata;
+};
 
-export interface IMetadataModules {
-  config: IBeaconConfig;
-  chain: IBeaconChain;
-  logger: ILogger;
-}
+export type MetadataModules = {
+  networkConfig: NetworkConfig;
+  logger: Logger;
+  onSetValue: (key: string, value: Uint8Array) => void;
+};
 
 /**
  * Implementation of Ethereum Consensus p2p MetaData.
@@ -35,34 +38,37 @@ export interface IMetadataModules {
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata
  */
 export class MetadataController {
-  private enr?: ENR;
-  private config: IBeaconConfig;
-  private chain: IBeaconChain;
-  private _metadata: altair.Metadata;
-  private logger: ILogger;
+  private onSetValue: (key: string, value: Uint8Array) => void;
+  private networkConfig: NetworkConfig;
+  private logger: Logger;
+  private _metadata: fulu.Metadata;
 
-  constructor(opts: IMetadataOpts, modules: IMetadataModules) {
-    this.config = modules.config;
-    this.chain = modules.chain;
+  constructor(opts: MetadataOpts, modules: MetadataModules) {
+    this.networkConfig = modules.networkConfig;
     this.logger = modules.logger;
-    this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
+    this.onSetValue = modules.onSetValue;
+    this._metadata = opts.metadata ?? {
+      ...ssz.fulu.Metadata.defaultValue(),
+      custodyGroupCount: modules.networkConfig.custodyConfig.targetCustodyGroupCount,
+    };
   }
 
-  start(enr: ENR | undefined, currentFork: ForkName): void {
-    this.enr = enr;
-    if (this.enr) {
-      // updateEth2Field() MUST be called with clock epoch
-      this.updateEth2Field(this.chain.clock.currentEpoch);
+  upstreamValues(currentEpoch: Epoch): void {
+    // updateEth2Field() MUST be called with clock epoch
+    this.updateEth2Field(currentEpoch);
 
-      this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
-      // Any fork after altair included
+    this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
 
-      if (currentFork !== ForkName.phase0) {
-        // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
-        // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
-        this.enr.set(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
-      }
+    const config = this.networkConfig.config;
+
+    if (config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.altair) {
+      // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
+      // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
+      this.onSetValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(this._metadata.syncnets));
     }
+
+    // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
+    this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.custodyGroupCount));
   }
 
   get seqNumber(): bigint {
@@ -74,9 +80,8 @@ export class MetadataController {
   }
 
   set syncnets(syncnets: BitArray) {
-    if (this.enr) {
-      this.enr.set(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
-    }
+    this.onSetValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
+    this._metadata.seqNumber++;
     this._metadata.syncnets = syncnets;
   }
 
@@ -85,15 +90,27 @@ export class MetadataController {
   }
 
   set attnets(attnets: BitArray) {
-    if (this.enr) {
-      this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
-    }
+    this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
     this._metadata.seqNumber++;
     this._metadata.attnets = attnets;
   }
 
+  get custodyGroupCount(): number {
+    return this._metadata.custodyGroupCount;
+  }
+
+  set custodyGroupCount(custodyGroupCount: number) {
+    if (custodyGroupCount === this._metadata.custodyGroupCount) {
+      return;
+    }
+    this.onSetValue(ENRKey.cgc, serializeCgc(custodyGroupCount));
+    this.logger.debug("Updated cgc field in ENR", {custodyGroupCount});
+    this._metadata.seqNumber++;
+    this._metadata.custodyGroupCount = custodyGroupCount;
+  }
+
   /** Consumers that need the phase0.Metadata type can just ignore the .syncnets property */
-  get json(): altair.Metadata {
+  get json(): fulu.Metadata {
     return this._metadata;
   }
 
@@ -103,29 +120,45 @@ export class MetadataController {
    *   - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not
    *     necessarily the epoch to which the node is sync)
    *   - genesis_validators_root is the static Root found in state.genesis_validators_root
+   *   - epoch of fork boundary is used to get blob parameters of current Blob Parameter Only (BPO) fork
    *
    * 1. MUST be called on start to populate ENR
    * 2. Network MUST call this method on fork transition.
    *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
-  updateEth2Field(epoch: Epoch): void {
-    if (this.enr) {
-      const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
-      this.logger.verbose(`Updated ENR.eth2: ${toHexString(enrForkId)}`);
-      this.enr.set(ENRKey.eth2, enrForkId);
-    }
+  updateEth2Field(epoch: Epoch): phase0.ENRForkID {
+    const config = this.networkConfig.config;
+    const enrForkId = getENRForkID(config, epoch);
+    const {forkDigest, nextForkVersion, nextForkEpoch} = enrForkId;
+    this.onSetValue(ENRKey.eth2, ssz.phase0.ENRForkID.serialize(enrForkId));
+    this.logger.debug("Updated eth2 field in ENR", {
+      forkDigest: toHex(forkDigest),
+      nextForkVersion: toHex(nextForkVersion),
+      nextForkEpoch,
+    });
+
+    const nextForkDigest =
+      nextForkEpoch !== FAR_FUTURE_EPOCH
+        ? config.forkBoundary2ForkDigest(config.getForkBoundaryAtEpoch(nextForkEpoch))
+        : ssz.ForkDigest.defaultValue();
+    this.onSetValue(ENRKey.nfd, nextForkDigest);
+    this.logger.debug("Updated nfd field in ENR", {nextForkDigest: toHex(nextForkDigest)});
+
+    return enrForkId;
   }
 }
 
-export function getENRForkID(config: IBeaconConfig, clockEpoch: Epoch): phase0.ENRForkID {
-  const {currentFork, nextFork} = getCurrentAndNextFork(config, clockEpoch);
+export function getENRForkID(config: BeaconConfig, clockEpoch: Epoch): phase0.ENRForkID {
+  const {currentBoundary, nextBoundary} = getCurrentAndNextForkBoundary(config, clockEpoch);
 
   return {
     // Current fork digest
-    forkDigest: config.forkName2ForkDigest(currentFork.name),
-    // next planned fork versin
-    nextForkVersion: nextFork ? nextFork.version : currentFork.version,
-    // next fork epoch
-    nextForkEpoch: nextFork ? nextFork.epoch : FAR_FUTURE_EPOCH,
+    forkDigest: config.forkBoundary2ForkDigest(currentBoundary),
+    // Next planned fork version
+    nextForkVersion: nextBoundary
+      ? config.forks[nextBoundary.fork].version
+      : config.forks[currentBoundary.fork].version,
+    // Next fork epoch
+    nextForkEpoch: nextBoundary ? nextBoundary.epoch : FAR_FUTURE_EPOCH,
   };
 }

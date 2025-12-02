@@ -1,16 +1,19 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {YargsError, ICliCommand, getPubkeyHexFromKeystore} from "../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
-import {IGlobalArgs} from "../../options/index.js";
-import {validatorOptions, IValidatorCliArgs} from "./options.js";
+import {GlobalArgs} from "../../options/index.js";
+import {YargsError, getPubkeyHexFromKeystore} from "../../util/index.js";
+import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
+import {IValidatorCliArgs, validatorOptions} from "./options.js";
 import {getAccountPaths} from "./paths.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./signers/importExternalKeystores.js";
-import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 
-/* eslint-disable no-console */
+type ValidatorImportArgs = Pick<IValidatorCliArgs, "importKeystores" | "importKeystoresPassword">;
 
-export const importCmd: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
+const {importKeystores, importKeystoresPassword} = validatorOptions;
+
+export const importCmd: CliCommand<ValidatorImportArgs, IValidatorCliArgs & GlobalArgs> = {
   command: "import",
 
   describe:
@@ -21,7 +24,7 @@ Ethereum Foundation utility.",
 
   examples: [
     {
-      command: "validator import --network goerli --keystores $HOME/eth2.0-deposit-cli/validator_keys",
+      command: "validator import --network hoodi --importKeystores $HOME/staking-deposit-cli/validator_keys",
       description: "Import validator keystores generated with the Ethereum Foundation Staking Launchpad",
     },
   ],
@@ -29,12 +32,11 @@ Ethereum Foundation utility.",
   // Note: re-uses `--importKeystores` and `--importKeystoresPassword` from root validator command options
 
   options: {
-    ...validatorOptions,
-
     importKeystores: {
-      ...validatorOptions.importKeystores,
+      ...importKeystores,
       requiresArg: true,
     },
+    importKeystoresPassword,
   },
 
   handler: async (args) => {

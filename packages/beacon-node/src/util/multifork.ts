@@ -1,27 +1,14 @@
-import {IChainForkConfig} from "@lodestar/config";
-import {allForks, Slot} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkAll, ForkPostAltair} from "@lodestar/params";
+import {SSZTypesFor, Slot} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
+import {getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
 /**
  * Slot	uint64
  */
 const SLOT_BYTE_COUNT = 8;
-/**
- * 4 + 96 = 100
- * ```
- * class SignedBeaconBlock(Container):
- *   message: BeaconBlock [offset - 4 bytes]
- *   signature: BLSSignature [fixed - 96 bytes]
- *
- * class BeaconBlock(Container):
- *   slot: Slot [fixed - 8 bytes]
- *   proposer_index: ValidatorIndex
- *   parent_root: Root
- *   state_root: Root
- *   body: BeaconBlockBody
- * ```
- */
-const SLOT_BYTES_POSITION_IN_BLOCK = 100;
+
 /**
  * 8 + 32 = 40
  * ```
@@ -35,21 +22,48 @@ const SLOT_BYTES_POSITION_IN_BLOCK = 100;
 const SLOT_BYTES_POSITION_IN_STATE = 40;
 
 export function getSignedBlockTypeFromBytes(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   bytes: Buffer | Uint8Array
-): allForks.AllForksSSZTypes["SignedBeaconBlock"] {
-  const slot = getSlotFromBytes(bytes);
+): SSZTypesFor<ForkAll, "SignedBeaconBlock"> {
+  const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
+  if (slot === null) {
+    throw Error("getSignedBlockTypeFromBytes: invalid bytes");
+  }
+
   return config.getForkTypes(slot).SignedBeaconBlock;
 }
 
-export function getSlotFromBytes(bytes: Buffer | Uint8Array): Slot {
-  return bytesToInt(bytes.subarray(SLOT_BYTES_POSITION_IN_BLOCK, SLOT_BYTES_POSITION_IN_BLOCK + SLOT_BYTE_COUNT));
+export function getStateTypeFromBytes(
+  config: ChainForkConfig,
+  bytes: Buffer | Uint8Array
+): SSZTypesFor<ForkAll, "BeaconState"> {
+  const slot = getStateSlotFromBytes(bytes);
+  return config.getForkTypes(slot).BeaconState;
 }
 
-export function getStateTypeFromBytes(
-  config: IChainForkConfig,
+export function getStateSlotFromBytes(bytes: Uint8Array): Slot {
+  return bytesToInt(bytes.subarray(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
+}
+
+/**
+ * First field in update is beacon, first field in beacon is slot
+ *
+ * header = {
+ *  beacon: {
+ *   slot
+ *   ...
+ *  }
+ *  ...
+ * }
+ *   ...
+ */
+const SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER = 0;
+export function getLightClientHeaderTypeFromBytes(
+  config: ChainForkConfig,
   bytes: Buffer | Uint8Array
-): allForks.AllForksSSZTypes["BeaconState"] {
-  const slot = bytesToInt(bytes.subarray(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
-  return config.getForkTypes(slot).BeaconState;
+): SSZTypesFor<ForkPostAltair, "LightClientHeader"> {
+  const slot = bytesToInt(
+    bytes.subarray(SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER, SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER + SLOT_BYTE_COUNT)
+  );
+  return config.getPostAltairForkTypes(slot).LightClientHeader;
 }

@@ -1,6 +1,8 @@
-import {IExecutionEngine, PayloadIdCache} from "./interface.js";
+import {ExecutionEngineState, IExecutionEngine, PayloadIdCache} from "./interface.js";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
+  state = ExecutionEngineState.OFFLINE;
+
   readonly payloadIdCache = new PayloadIdCache();
 
   async notifyNewPayload(): Promise<never> {
@@ -14,7 +16,20 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
   async getPayload(): Promise<never> {
     throw Error("Execution engine disabled");
   }
-  async exchangeTransitionConfigurationV1(): Promise<never> {
+
+  async getBlobsBundle(): Promise<never> {
+    throw Error("Execution engine disabled");
+  }
+
+  getPayloadBodiesByHash(): Promise<never> {
+    throw Error("Execution engine disabled");
+  }
+
+  getPayloadBodiesByRange(): Promise<never> {
+    throw Error("Execution engine disabled");
+  }
+
+  getBlobs(): Promise<never> {
     throw Error("Execution engine disabled");
   }
 }

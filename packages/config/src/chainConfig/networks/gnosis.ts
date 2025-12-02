@@ -1,27 +1,38 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
-import {IChainConfig} from "../types.js";
-import {chainConfig as mainnet} from "../presets/mainnet.js";
+import {fromHex as b} from "@lodestar/utils";
+import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
-/* eslint-disable max-len */
+// Gnosis beacon chain config:
+// https://github.com/gnosischain/configs/blob/main/mainnet/config.yaml
 
-export const gnosisChainConfig: IChainConfig = {
+export const gnosisChainConfig: ChainConfig = {
   ...mainnet,
 
   // NOTE: Only add diff values
   PRESET_BASE: PresetName.gnosis,
   CONFIG_NAME: "gnosis",
 
+  // Transition
+  TERMINAL_TOTAL_DIFFICULTY: BigInt("8626000000000000000000058750000000000000000000"),
+
+  // Time parameters
   SECONDS_PER_SLOT: 5,
+  SLOT_DURATION_MS: 5000,
   SECONDS_PER_ETH1_BLOCK: 6,
   ETH1_FOLLOW_DISTANCE: 1024,
   CHURN_LIMIT_QUOTIENT: 4096,
 
-  // Ethereum Goerli testnet
+  // Validator cycle
+  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 2,
+
+  // Deposit contract
   DEPOSIT_CHAIN_ID: 100,
   DEPOSIT_NETWORK_ID: 100,
   DEPOSIT_CONTRACT_ADDRESS: b("0x0b98057ea310f4d31f2a452b414647007d1645d9"),
+
+  // Networking
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 16384,
 
   // Dec 8, 2021, 13:00 UTC
   MIN_GENESIS_TIME: 1638968400,
@@ -34,8 +45,34 @@ export const gnosisChainConfig: IChainConfig = {
   ALTAIR_FORK_EPOCH: 512,
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x02000064"),
-  BELLATRIX_FORK_EPOCH: Infinity,
-  // Sharding
-  SHARDING_FORK_VERSION: b("0x03000064"),
-  SHARDING_FORK_EPOCH: Infinity,
+  BELLATRIX_FORK_EPOCH: 385536,
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x03000064"),
+  CAPELLA_FORK_EPOCH: 648704, // 2023-08-01T11:34:20.000Z
+  // Deneb
+  DENEB_FORK_VERSION: b("0x04000064"),
+  DENEB_FORK_EPOCH: 889856, // 2024-03-11T18:30:20.000Z
+  // Electra
+  ELECTRA_FORK_VERSION: b("0x05000064"),
+  ELECTRA_FORK_EPOCH: 1337856, // 2025-04-30T14:03:40.000Z
+  // Fulu
+  FULU_FORK_VERSION: b("0x06000064"),
+  FULU_FORK_EPOCH: Infinity,
+  // Gloas
+  GLOAS_FORK_VERSION: b("0x07000064"),
+  GLOAS_FORK_EPOCH: Infinity,
+
+  // Deneb
+  MAX_BLOBS_PER_BLOCK: 2,
+
+  // Electra
+  // 2**6 * 10**9 (= 64,000,000,000)
+  MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 64000000000,
+  BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: 2,
+  MAX_BLOBS_PER_BLOCK_ELECTRA: 2,
+  // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
+  MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 256,
+
+  // Blob Scheduling
+  BLOB_SCHEDULE: [],
 };

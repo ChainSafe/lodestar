@@ -1,12 +1,7 @@
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 import {uncompress} from "snappyjs";
 import {loadYaml} from "@lodestar/utils";
-
-/* eslint-disable
-  @typescript-eslint/explicit-module-boundary-types,
-  @typescript-eslint/explicit-function-return-type
-*/
 
 export type ValidTestCaseData = {
   root: string;
@@ -18,9 +13,9 @@ export function parseSszValidTestcase(dirpath: string, metaFilename: string): Va
   // The root is stored in meta.yml as:
   //   root: 0xDEADBEEF
   const metaStr = fs.readFileSync(path.join(dirpath, metaFilename), "utf8");
-  const meta = loadYaml(metaStr) as {root: string};
+  const meta: {root: string} = loadYaml(metaStr);
   if (typeof meta.root !== "string") {
-    throw Error(`meta.root not a string: ${meta.root}\n${fs}`);
+    throw Error(`meta.root not a string: ${meta.root}\n${metaStr}`);
   }
 
   // The serialized value is stored in serialized.ssz_snappy

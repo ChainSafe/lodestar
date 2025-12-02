@@ -1,11 +1,17 @@
-import {IBeaconConfig} from "@lodestar/config";
-import {Epoch} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {ProtoBlock} from "@lodestar/fork-choice";
-import {ErrorAborted, ILogger, sleep, prettyBytes} from "@lodestar/utils";
+import {BeaconConfig} from "@lodestar/config";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, isBellatrixCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  isExecutionCachedStateType,
+  isMergeTransitionComplete,
+} from "@lodestar/state-transition";
+import {Epoch} from "@lodestar/types";
+import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
+import {ExecutionEngineState} from "../execution/index.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconSync, SyncState} from "../sync/index.js";
 import {prettyTimeDiffSec} from "../util/time.js";
@@ -18,8 +24,8 @@ type NodeNotifierModules = {
   network: INetwork;
   chain: IBeaconChain;
   sync: IBeaconSync;
-  config: IBeaconConfig;
-  logger: ILogger;
+  config: BeaconConfig;
+  logger: Logger;
   signal: AbortSignal;
 };
 
@@ -33,14 +39,16 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
   const tdTimeSeries = new TimeSeries({maxPoints: 50});
 
   const SLOTS_PER_SYNC_COMMITTEE_PERIOD = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-  let hasLowPeerCount = false; // Only log once
+  let hasLowPeerCount = false;
+  let isFirstTime = true;
 
   try {
     while (!signal.aborted) {
-      const connectedPeerCount = network.getConnectedPeers().length;
+      const connectedPeerCount = network.getConnectedPeerCount();
 
       if (connectedPeerCount <= WARN_PEER_COUNT) {
-        if (!hasLowPeerCount) {
+        // Only log once and prevent peer count warning on startup
+        if (!hasLowPeerCount && !isFirstTime) {
           logger.warn("Low peer count", {peers: connectedPeerCount});
           hasLowPeerCount = true;
         }
@@ -51,6 +59,14 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const clockSlot = chain.clock.currentSlot;
       const clockEpoch = computeEpochAtSlot(clockSlot);
 
+      if (clockEpoch >= config.BELLATRIX_FORK_EPOCH && computeStartSlotAtEpoch(clockEpoch) === clockSlot) {
+        if (chain.executionEngine.state === ExecutionEngineState.OFFLINE) {
+          logger.warn("Execution client is offline");
+        } else if (chain.executionEngine.state === ExecutionEngineState.AUTH_FAILED) {
+          logger.error("Execution client authentication failed. Verify if the JWT secret matches on both clients");
+        }
+      }
+
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
@@ -59,12 +75,17 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       headSlotTimeSeries.addPoint(headSlot, Math.floor(Date.now() / 1000));
 
       const peersRow = `peers: ${connectedPeerCount}`;
-      const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
-      const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
+      const clockSlotRow = `slot: ${clockSlot}`;
 
       // Give info about empty slots if head < clock
       const skippedSlots = clockSlot - headInfo.slot;
-      const clockSlotRow = `slot: ${clockSlot}` + (skippedSlots > 0 ? ` (skipped ${skippedSlots})` : "");
+      // headDiffInfo to have space suffix if its a non empty string
+      const headDiffInfo =
+        skippedSlots > 0 ? (skippedSlots > 1000 ? `${headInfo.slot} ` : `(slot -${skippedSlots}) `) : "";
+      const headRow = `head: ${headDiffInfo}${prettyBytes(headInfo.blockRoot)}`;
+
+      const executionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
+      const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
 
       // Log in TD progress in separate line to not clutter regular status update.
       // This line will only exist between BELLATRIX_FORK_EPOCH and TTD, a window of some days / weeks max.
@@ -76,21 +97,19 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         const timestampTDD = tdTimeSeries.computeY0Point();
         // It is possible to get ttd estimate with an error at imminent merge
         const secToTTD = Math.max(Math.floor(timestampTDD - Date.now() / 1000), 0);
-        const timeLeft = isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
+        const timeLeft = Number.isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
 
         logger.info(`TTD in ${timeLeft} current TD ${tdProgress.td} / ${tdProgress.ttd}`);
       }
-
-      const executionInfo = getExecutionInfo(config, clockEpoch, headState, headInfo);
 
       let nodeState: string[];
       switch (sync.state) {
         case SyncState.SyncingFinalized:
         case SyncState.SyncingHead: {
-          const slotsPerSecond = headSlotTimeSeries.computeLinearSpeed();
+          const slotsPerSecond = Math.max(headSlotTimeSeries.computeLinearSpeed(), 0);
           const distance = Math.max(clockSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
-          const timeLeft = isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";
+          const timeLeft = Number.isFinite(secondsLeft) ? prettyTimeDiffSec(secondsLeft) : "?";
           // Syncing - time left - speed - head - finalized - clock - peers
           nodeState = [
             "Syncing",
@@ -120,52 +139,68 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
       // Log important chain time-based events
       // Log sync committee change
-      if (clockEpoch > config.ALTAIR_FORK_EPOCH) {
-        if (clockSlot % SLOTS_PER_SYNC_COMMITTEE_PERIOD === 0) {
-          const period = Math.floor(clockEpoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
-          logger.info(`New sync committee period ${period}`);
-        }
+      if (clockEpoch > config.ALTAIR_FORK_EPOCH && clockSlot % SLOTS_PER_SYNC_COMMITTEE_PERIOD === 0) {
+        const period = Math.floor(clockEpoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+        logger.info(`New sync committee period ${period}`);
       }
 
       // Log halfway through each slot
-      await sleep(timeToNextHalfSlot(config, chain), signal);
+      await sleep(timeToNextHalfSlot(config, chain, isFirstTime), signal);
+      isFirstTime = false;
     }
   } catch (e) {
     if (e instanceof ErrorAborted) {
       return; // Ok
-    } else {
-      logger.error("Node notifier error", {}, e as Error);
     }
+    logger.error("Node notifier error", {}, e as Error);
   }
 }
 
-function timeToNextHalfSlot(config: IBeaconConfig, chain: IBeaconChain): number {
-  const msPerSlot = config.SECONDS_PER_SLOT * 1000;
+function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTime: boolean): number {
+  const msPerSlot = config.SLOT_DURATION_MS;
+  const msPerHalfSlot = msPerSlot / 2;
   const msFromGenesis = Date.now() - chain.genesisTime * 1000;
-  const msToNextSlot = msPerSlot - (msFromGenesis % msPerSlot);
-  return msToNextSlot > msPerSlot / 2 ? msToNextSlot - msPerSlot / 2 : msToNextSlot + msPerSlot / 2;
+  const msToNextSlot =
+    msFromGenesis < 0
+      ? // For future genesis time, calculate time left in the slot
+        -msFromGenesis % msPerSlot
+      : // For past genesis time, calculate time until the next slot
+        msPerSlot - (msFromGenesis % msPerSlot);
+  if (isFirstTime) {
+    // at the 1st time we may miss middle of the current clock slot
+    return msToNextSlot > msPerHalfSlot ? msToNextSlot - msPerHalfSlot : msToNextSlot + msPerHalfSlot;
+  }
+  // after the 1st time always wait until middle of next clock slot
+  return msToNextSlot + msPerHalfSlot;
 }
 
-function getExecutionInfo(
-  config: IBeaconConfig,
+function getHeadExecutionInfo(
+  config: BeaconConfig,
   clockEpoch: Epoch,
   headState: CachedBeaconStateAllForks,
   headInfo: ProtoBlock
 ): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
     return [];
-  } else {
-    const executionStatusStr = headInfo.executionStatus.toLowerCase();
-
-    // Add execution status to notifier only if head is on/post bellatrix
-    if (isBellatrixCachedStateType(headState)) {
-      if (isMergeTransitionComplete(headState)) {
-        return [`execution: ${executionStatusStr}(${prettyBytes(headInfo.executionPayloadBlockHash ?? "empty")})`];
-      } else {
-        return [`execution: ${executionStatusStr}`];
-      }
-    } else {
-      return [];
-    }
   }
+
+  const executionStatusStr = headInfo.executionStatus.toLowerCase();
+
+  // Add execution status to notifier only if head is on/post bellatrix
+  if (isExecutionCachedStateType(headState)) {
+    if (isMergeTransitionComplete(headState)) {
+      const executionPayloadHashInfo =
+        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
+      const executionPayloadNumberInfo =
+        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
+      return [
+        `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
+          executionPayloadHashInfo
+        )})`,
+      ];
+    }
+    return [`exec-block: ${executionStatusStr}`];
+  }
+
+  return [];
 }

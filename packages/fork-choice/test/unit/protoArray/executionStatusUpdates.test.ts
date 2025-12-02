@@ -1,10 +1,11 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {
-  ProtoBlock,
-  ProtoArray,
+  BlockExtraMeta,
   ExecutionStatus,
   MaybeValidExecutionStatus,
-  BlockExecution,
+  ProtoArray,
+  ProtoBlock,
 } from "../../../src/index.js";
 import {LVHExecErrorCode} from "../../../src/protoArray/errors.js";
 
@@ -79,9 +80,20 @@ function setupForkChoice(): ProtoArray {
   );
 
   for (const block of blocks) {
-    const executionData = (block.executionStatus === ExecutionStatus.PreMerge
-      ? {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}
-      : {executionPayloadBlockHash: block.root, executionStatus: block.executionStatus}) as BlockExecution;
+    const executionData = (
+      block.executionStatus === ExecutionStatus.PreMerge
+        ? {
+            executionPayloadBlockHash: null,
+            executionStatus: ExecutionStatus.PreMerge,
+            dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+          }
+        : {
+            executionPayloadBlockHash: block.root,
+            executionPayloadNumber: block.slot,
+            executionStatus: block.executionStatus,
+            dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+          }
+    ) as BlockExtraMeta;
     fc.onBlock(
       {
         slot: block.slot,
@@ -99,6 +111,8 @@ function setupForkChoice(): ProtoArray {
         unrealizedJustifiedRoot: "-",
         unrealizedFinalizedEpoch: 0,
         unrealizedFinalizedRoot: "-",
+
+        timeliness: false,
 
         ...executionData,
       },
@@ -129,7 +143,7 @@ describe("executionStatus / normal updates", () => {
    */
   const preValidation = collectProtoarrayValidationStatus(fc);
   it("preValidation forkchoice setup should be correct", () => {
-    expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
+    expect(preValidation).toEqual(expectedPreValidationFC);
   });
 
   /**
@@ -143,14 +157,14 @@ describe("executionStatus / normal updates", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "2C",
-      invalidateFromBlockHash: "3C",
+      invalidateFromParentBlockRoot: "3C",
     },
     3
   );
 
   const invalidate3CValidate2CForkChoice = collectProtoarrayValidationStatus(fc);
   it("correcly invalidate 3C and validate 2C only", () => {
-    expect(invalidate3CValidate2CForkChoice).to.be.deep.equal(
+    expect(invalidate3CValidate2CForkChoice).toEqual(
       toFcTestCase([
         ["0", "1A", "3B", ExecutionStatus.PreMerge],
         ["1A", "2B", "3B", ExecutionStatus.Syncing],
@@ -180,7 +194,7 @@ describe("executionStatus / normal updates", () => {
   );
   const validate3B2B1A = collectProtoarrayValidationStatus(fc);
   it("Validate 3B, 2B, 1A", () => {
-    expect(validate3B2B1A).to.be.deep.equal(
+    expect(validate3B2B1A).toEqual(
       toFcTestCase([
         ["0", "1A", "3B", ExecutionStatus.PreMerge],
         ["1A", "2B", "3B", ExecutionStatus.Valid],
@@ -206,13 +220,13 @@ describe("executionStatus / normal updates", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "1A",
-      invalidateFromBlockHash: "3A",
+      invalidateFromParentBlockRoot: "3A",
     },
     3
   );
   const invalidate3A2A = collectProtoarrayValidationStatus(fc);
   it("Invalidate 3A, 2A with 2A loosing its bestChild, bestDescendant", () => {
-    expect(invalidate3A2A).to.be.deep.equal(
+    expect(invalidate3A2A).toEqual(
       toFcTestCase([
         ["0", "1A", "3B", ExecutionStatus.PreMerge],
         ["1A", "2B", "3B", ExecutionStatus.Valid],
@@ -239,7 +253,7 @@ describe("executionStatus / invalidate all postmerge chain", () => {
    */
   const preValidation = collectProtoarrayValidationStatus(fc);
   it("preValidation forkchoice setup should be correct", () => {
-    expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
+    expect(preValidation).toEqual(expectedPreValidationFC);
   });
 
   /**
@@ -253,13 +267,13 @@ describe("executionStatus / invalidate all postmerge chain", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      invalidateFromBlockHash: "3B",
+      invalidateFromParentBlockRoot: "3B",
     },
     3
   );
   const postMergeInvalidated = collectProtoarrayValidationStatus(fc);
   it("all post merge blocks should be invalidated except Cs", () => {
-    expect(postMergeInvalidated).to.be.deep.equal(
+    expect(postMergeInvalidated).toEqual(
       toFcTestCase([
         ["0", undefined, undefined, ExecutionStatus.PreMerge],
         ["1A", undefined, undefined, ExecutionStatus.Invalid],
@@ -275,7 +289,7 @@ describe("executionStatus / invalidate all postmerge chain", () => {
 
   const fcHead = fc.findHead("0", 3);
   it("pre merge block should be the FC head", () => {
-    expect(fcHead).to.be.equal("0");
+    expect(fcHead).toBe("0");
   });
 });
 
@@ -291,7 +305,7 @@ describe("executionStatus / poision forkchoice if we invalidate previous valid",
    */
   const preValidation = collectProtoarrayValidationStatus(fc);
   it("preValidation forkchoice setup should be correct", () => {
-    expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
+    expect(preValidation).toEqual(expectedPreValidationFC);
   });
 
   /**
@@ -310,7 +324,7 @@ describe("executionStatus / poision forkchoice if we invalidate previous valid",
   );
   const validate3B2B1A = collectProtoarrayValidationStatus(fc);
   it("Validate 3B, 2B, 1A", () => {
-    expect(validate3B2B1A).to.be.deep.equal(
+    expect(validate3B2B1A).toEqual(
       toFcTestCase([
         ["0", "1A", "3B", ExecutionStatus.PreMerge],
         ["1A", "2B", "3B", ExecutionStatus.Valid],
@@ -330,14 +344,14 @@ describe("executionStatus / poision forkchoice if we invalidate previous valid",
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          invalidateFromBlockHash: "3A",
+          invalidateFromParentBlockRoot: "3A",
         },
         3
       )
-    ).to.throw(Error);
+    ).toThrow(Error);
 
-    expect(fc.lvhError).to.be.deep.equal({lvhCode: LVHExecErrorCode.ValidToInvalid, blockRoot: "1A", execHash: "1A"});
-    expect(() => fc.findHead("0", 3)).to.throw(Error);
+    expect(fc.lvhError).toEqual({lvhCode: LVHExecErrorCode.ValidToInvalid, blockRoot: "1A", execHash: "1A"});
+    expect(() => fc.findHead("0", 3)).toThrow(Error);
   });
 });
 
@@ -353,7 +367,7 @@ describe("executionStatus / poision forkchoice if we validate previous invalid",
    */
   const preValidation = collectProtoarrayValidationStatus(fc);
   it("preValidation forkchoice setup should be correct", () => {
-    expect(preValidation).to.be.deep.equal(expectedPreValidationFC);
+    expect(preValidation).toEqual(expectedPreValidationFC);
   });
 
   /**
@@ -367,13 +381,13 @@ describe("executionStatus / poision forkchoice if we validate previous invalid",
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      invalidateFromBlockHash: "3B",
+      invalidateFromParentBlockRoot: "3B",
     },
     3
   );
   const validate3B2B1A = collectProtoarrayValidationStatus(fc);
   it("Inalidate 3B, 2B, 1A", () => {
-    expect(validate3B2B1A).to.be.deep.equal(
+    expect(validate3B2B1A).toEqual(
       toFcTestCase([
         ["0", undefined, undefined, ExecutionStatus.PreMerge],
         ["1A", undefined, undefined, ExecutionStatus.Invalid],
@@ -396,10 +410,10 @@ describe("executionStatus / poision forkchoice if we validate previous invalid",
         },
         3
       )
-    ).to.throw(Error);
+    ).toThrow(Error);
 
-    expect(fc.lvhError).to.be.deep.equal({lvhCode: LVHExecErrorCode.InvalidToValid, blockRoot: "2A", execHash: "2A"});
-    expect(() => fc.findHead("0", 3)).to.throw(Error);
+    expect(fc.lvhError).toEqual({lvhCode: LVHExecErrorCode.InvalidToValid, blockRoot: "2A", execHash: "2A"});
+    expect(() => fc.findHead("0", 3)).toThrow(Error);
   });
 });
 

@@ -1,37 +1,39 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import {allForks} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {JobItemQueue} from "../../util/queue/index.js";
-import {IMetrics} from "../../metrics/metrics.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {BlockProcessOpts} from "../options.js";
+import {SignedBeaconBlock} from "@lodestar/types";
+import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
+import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
-import {verifyBlocksInEpoch} from "./verifyBlock.js";
+import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
+import {BlockProcessOpts} from "../options.js";
+import {IBlockInput} from "./blockInput/types.js";
 import {importBlock} from "./importBlock.js";
-import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {assertLinearChainSegment} from "./utils/chainSegment.js";
+import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
-export {ImportBlockOpts} from "./types.js";
+import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
 
-const QUEUE_MAX_LENGHT = 256;
+export {AttestationImportOpt, type ImportBlockOpts} from "./types.js";
+
+const QUEUE_MAX_LENGTH = 256;
 
 /**
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[IBlockInput[], ImportBlockOpts], void>;
 
-  constructor(chain: BeaconChain, metrics: IMetrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[allForks.SignedBeaconBlock[], ImportBlockOpts], void>(
+  constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
+    this.jobQueue = new JobItemQueue<[IBlockInput[], ImportBlockOpts], void>(
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
-      {maxLength: QUEUE_MAX_LENGHT, signal},
+      {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.blockProcessorQueue ?? undefined
     );
   }
 
-  async processBlocksJob(job: allForks.SignedBeaconBlock[], opts: ImportBlockOpts = {}): Promise<void> {
+  async processBlocksJob(job: IBlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
     await this.jobQueue.push(job, opts);
   }
 }
@@ -48,12 +50,14 @@ export class BlockProcessor {
  */
 export async function processBlocks(
   this: BeaconChain,
-  blocks: allForks.SignedBeaconBlock[],
+  blocks: IBlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
     return; // TODO: or throw?
-  } else if (blocks.length > 1) {
+  }
+
+  if (blocks.length > 1) {
     assertLinearChainSegment(this.config, blocks);
   }
 
@@ -68,18 +72,14 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, proposerBalanceDeltas, segmentExecStatus} = await verifyBlocksInEpoch.call(
-      this,
-      parentBlock,
-      relevantBlocks,
-      opts
-    );
+    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus} =
+      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
     if (segmentExecStatus.execAborted !== null) {
-      if (segmentExecStatus.invalidSegmentLHV !== undefined) {
-        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLHV);
+      if (segmentExecStatus.invalidSegmentLVH !== undefined) {
+        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
       }
       throw segmentExecStatus.execAborted.execError;
     }
@@ -87,10 +87,12 @@ export async function processBlocks(
     const {executionStatuses} = segmentExecStatus;
     const fullyVerifiedBlocks = relevantBlocks.map(
       (block, i): FullyVerifiedBlock => ({
-        block,
+        blockInput: block,
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
+        // start supporting optimistic syncing/processing
+        dataAvailabilityStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
@@ -103,15 +105,19 @@ export async function processBlocks(
       await importBlock.call(this, fullyVerifiedBlock, opts);
     }
   } catch (e) {
+    if (isErrorAborted(e) || isQueueErrorAborted(e) || isBlockErrorAborted(e)) {
+      return; // Ignore
+    }
+
     // above functions should only throw BlockError
-    const err = getBlockError(e, blocks[0]);
+    const err = getBlockError(e, blocks[0].getBlock());
 
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock
     if (!(err instanceof BlockError)) {
-      this.logger.error("Non BlockError received", {}, err);
+      this.logger.debug("Non BlockError received", {}, err);
     } else if (!opts.disableOnBlockError) {
-      this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
+      this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
 
       if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
         const {signedBlock} = err;
@@ -124,28 +130,50 @@ export async function processBlocks(
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
         const {preState, postState} = err.type;
-        const forkTypes = this.config.getForkTypes(blockSlot);
-        const invalidRoot = toHex(postState.hashTreeRoot());
-
-        const suffix = `slot_${blockSlot}_invalid_state_root_${invalidRoot}`;
-        this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, suffix);
-        this.persistInvalidSszView(preState, `${suffix}_preState`);
-        this.persistInvalidSszView(postState, `${suffix}_postState`);
+        const preRoot = preState.hashTreeRoot();
+        const postRoot = postState.hashTreeRoot();
+        this.persistInvalidStateRoot(preState, postState, signedBlock).catch((e) => {
+          this.logger.error(
+            "Error persisting invalid state root objects",
+            {slot: blockSlot, preStateRoot: toRootHex(preRoot), postStateRoot: toRootHex(postRoot)},
+            e
+          );
+        });
       }
+    }
+
+    // Clean db if we don't have blocks in forkchoice but already persisted them to db
+    //
+    // NOTE: this function is awaited to ensure that DB size remains constant, otherwise an attacker may bloat the
+    // disk with big malicious payloads. Our sequential block importer will wait for this promise before importing
+    // another block. The removal call error is not propagated since that would halt the chain.
+    //
+    // LOG: Because the error is not propagated and there's a risk of db bloat, the error is logged at warn level
+    // to alert the user of potential db bloat. This error _should_ never happen user must act and report to us
+    if (opts.eagerPersistBlock) {
+      await removeEagerlyPersistedBlockInputs.call(this, blocks).catch((e) => {
+        this.logger.warn(
+          "Error pruning eagerly imported block inputs, DB may grow in size if this error happens frequently",
+          {slot: blocks.map((block) => block.getBlock().message.slot).join(",")},
+          e
+        );
+      });
     }
 
     throw err;
   }
 }
 
-function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockError {
+function getBlockError(e: unknown, block: SignedBeaconBlock): BlockError {
   if (e instanceof BlockError) {
     return e;
-  } else if (e instanceof Error) {
-    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
+  }
+
+  if (e instanceof Error) {
+    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e});
     blockError.stack = e.stack;
     return blockError;
-  } else {
-    return new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
   }
+
+  return new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
 }

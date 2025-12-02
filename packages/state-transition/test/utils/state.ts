@@ -1,4 +1,6 @@
-import {config as minimalConfig} from "@lodestar/config/default";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
+import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {config, config as minimalConfig} from "@lodestar/config/default";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
@@ -7,22 +9,16 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {config} from "@lodestar/config/default";
-
-import {createIBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {EpochCacheOpts} from "../../src/cache/epochCache.js";
+import {BeaconStateCache} from "../../src/cache/stateCache.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
-import {newZeroedBigIntArray} from "../../src/util/index.js";
-
 import {
+  BeaconStateAllForks,
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
-  BeaconStateAllForks,
   createCachedBeaconState,
-  PubkeyIndexMap,
 } from "../../src/index.js";
-import {BeaconStateCache} from "../../src/cache/stateCache.js";
-import {EpochContextOpts} from "../../src/cache/epochContext.js";
-import {generateEmptyBlock} from "./block.js";
+import {newZeroedArray} from "../../src/util/index.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -50,7 +46,7 @@ export function generateState(opts?: TestBeaconState): BeaconStatePhase0 {
       proposerIndex: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      bodyRoot: ssz.phase0.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),
+      bodyRoot: ssz.phase0.BeaconBlockBody.hashTreeRoot(ssz.phase0.BeaconBlockBody.defaultValue()),
     },
     blockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     stateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
@@ -65,7 +61,7 @@ export function generateState(opts?: TestBeaconState): BeaconStatePhase0 {
     validators: [],
     balances: [],
     randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: newZeroedBigIntArray(EPOCHS_PER_SLASHINGS_VECTOR),
+    slashings: newZeroedArray(EPOCHS_PER_SLASHINGS_VECTOR),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
     justificationBits: ssz.phase0.JustificationBits.defaultValue(),
@@ -86,12 +82,12 @@ export function generateState(opts?: TestBeaconState): BeaconStatePhase0 {
 }
 
 export function generateCachedState(
-  config: IChainForkConfig = minimalConfig,
+  config: ChainForkConfig = minimalConfig,
   opts: TestBeaconState = {}
 ): CachedBeaconStateAllForks {
   const state = generateState(opts);
   return createCachedBeaconState(state, {
-    config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -100,13 +96,13 @@ export function generateCachedState(
 
 export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
   state: T,
-  configCustom: IChainForkConfig = config,
-  opts?: EpochContextOpts
+  configCustom: ChainForkConfig = config,
+  opts?: EpochCacheOpts
 ): T & BeaconStateCache {
   return createCachedBeaconState<T>(
     state,
     {
-      config: createIBeaconConfig(configCustom, state.genesisValidatorsRoot),
+      config: createBeaconConfig(configCustom, state.genesisValidatorsRoot),
       // This is a test state, there's no need to have a global shared cache of keys
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],

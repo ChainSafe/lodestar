@@ -1,26 +1,25 @@
+import {ChainForkConfig} from "@lodestar/config";
+import {ZERO_HASH} from "@lodestar/params";
 import {
-  blockToHeader,
-  computeEpochAtSlot,
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {phase0, allForks, ssz} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {Logger, toHex, toRootHex} from "@lodestar/utils";
+import {GENESIS_SLOT} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";
-import {IMetrics} from "../metrics/index.js";
 import {Eth1Options} from "../eth1/options.js";
+import {Metrics} from "../metrics/index.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
-import {IGenesisResult} from "./genesis/interface.js";
+import {GenesisResult} from "./genesis/interface.js";
 
 export async function persistGenesisResult(
   db: IBeaconDb,
-  genesisResult: IGenesisResult,
-  genesisBlock: allForks.SignedBeaconBlock
+  genesisResult: GenesisResult,
+  genesisBlock: SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
     db.stateArchive.add(genesisResult.state),
@@ -35,26 +34,40 @@ export async function persistGenesisResult(
 }
 
 export async function persistAnchorState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
-  anchorState: BeaconStateAllForks
+  anchorState: BeaconStateAllForks,
+  anchorStateBytes: Uint8Array
 ): Promise<void> {
   if (anchorState.slot === GENESIS_SLOT) {
     const genesisBlock = createGenesisBlock(config, anchorState);
+    const blockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(genesisBlock.message);
+
+    const latestBlockHeader = ssz.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
+
+    if (ssz.Root.equals(latestBlockHeader.stateRoot, ZERO_HASH)) {
+      latestBlockHeader.stateRoot = anchorState.hashTreeRoot();
+    }
+
+    const latestBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(latestBlockHeader);
+
+    if (Buffer.compare(blockRoot, latestBlockRoot) !== 0) {
+      throw Error(
+        `Genesis block root ${toRootHex(blockRoot)} does not match genesis state latest block root ${toRootHex(latestBlockRoot)}`
+      );
+    }
+
     await Promise.all([
       db.blockArchive.add(genesisBlock),
       db.block.add(genesisBlock),
-      db.stateArchive.add(anchorState),
+      db.stateArchive.putBinary(anchorState.slot, anchorStateBytes),
     ]);
   } else {
-    await db.stateArchive.add(anchorState);
+    await db.stateArchive.putBinary(anchorState.slot, anchorStateBytes);
   }
 }
 
-export function createGenesisBlock(
-  config: IChainForkConfig,
-  genesisState: BeaconStateAllForks
-): allForks.SignedBeaconBlock {
+export function createGenesisBlock(config: ChainForkConfig, genesisState: BeaconStateAllForks): SignedBeaconBlock {
   const types = config.getForkTypes(GENESIS_SLOT);
   const genesisBlock = types.SignedBeaconBlock.defaultValue();
   const stateRoot = genesisState.hashTreeRoot();
@@ -72,9 +85,9 @@ export async function initStateFromEth1({
   opts,
   signal,
 }: {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   db: IBeaconDb;
-  logger: ILogger;
+  logger: Logger;
   opts: Eth1Options;
   signal: AbortSignal;
 }): Promise<CachedBeaconStateAllForks> {
@@ -86,7 +99,7 @@ export async function initStateFromEth1({
 
   const builder = new GenesisBuilder({
     config,
-    eth1Provider: new Eth1Provider(config, opts, signal),
+    eth1Provider: new Eth1Provider(config, {...opts, logger}, signal),
     logger,
     signal,
     pendingStatus:
@@ -105,8 +118,8 @@ export async function initStateFromEth1({
     const blockRoot = types.BeaconBlock.hashTreeRoot(genesisBlock.message);
 
     logger.info("Initializing genesis state", {
-      stateRoot: toHexString(stateRoot),
-      blockRoot: toHexString(blockRoot),
+      stateRoot: toRootHex(stateRoot),
+      blockRoot: toRootHex(blockRoot),
       validatorCount: genesisResult.state.validators.length,
     });
 
@@ -136,9 +149,9 @@ export async function initStateFromEth1({
  * Restore the latest beacon state from db
  */
 export async function initStateFromDb(
-  config: IChainForkConfig,
+  _config: ChainForkConfig,
   db: IBeaconDb,
-  logger: ILogger
+  logger: Logger
 ): Promise<BeaconStateAllForks> {
   const state = await db.stateArchive.lastValue();
   if (!state) {
@@ -148,7 +161,7 @@ export async function initStateFromDb(
   logger.info("Initializing beacon state from db", {
     slot: state.slot,
     epoch: computeEpochAtSlot(state.slot),
-    stateRoot: toHexString(state.hashTreeRoot()),
+    stateRoot: toRootHex(state.hashTreeRoot()),
   });
 
   return state;
@@ -157,74 +170,52 @@ export async function initStateFromDb(
 /**
  * Initialize and persist an anchor state (either weak subjectivity or genesis)
  */
-export async function initStateFromAnchorState(
-  config: IChainForkConfig,
+export async function checkAndPersistAnchorState(
+  config: ChainForkConfig,
   db: IBeaconDb,
-  logger: ILogger,
+  logger: Logger,
   anchorState: BeaconStateAllForks,
+  anchorStateBytes: Uint8Array,
   {
     isWithinWeakSubjectivityPeriod,
     isCheckpointState,
   }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean}
-): Promise<BeaconStateAllForks> {
+): Promise<void> {
+  const expectedFork = config.getForkInfo(computeStartSlotAtEpoch(anchorState.fork.epoch));
+  const expectedForkVersion = toHex(expectedFork.version);
+  const stateFork = toHex(anchorState.fork.currentVersion);
+  if (stateFork !== expectedForkVersion) {
+    throw Error(
+      `State current fork version ${stateFork} not equal to current config ${expectedForkVersion}. Maybe caused by importing a state from a different network`
+    );
+  }
+
   const stateInfo = isCheckpointState ? "checkpoint" : "db";
   if (isWithinWeakSubjectivityPeriod) {
     logger.info(`Initializing beacon from a valid ${stateInfo} state`, {
       slot: anchorState.slot,
       epoch: computeEpochAtSlot(anchorState.slot),
-      stateRoot: toHexString(anchorState.hashTreeRoot()),
+      stateRoot: toRootHex(anchorState.hashTreeRoot()),
       isWithinWeakSubjectivityPeriod,
     });
   } else {
     logger.warn(`Initializing from a stale ${stateInfo} state vulnerable to long range attacks`, {
       slot: anchorState.slot,
       epoch: computeEpochAtSlot(anchorState.slot),
-      stateRoot: toHexString(anchorState.hashTreeRoot()),
+      stateRoot: toRootHex(anchorState.hashTreeRoot()),
       isWithinWeakSubjectivityPeriod,
     });
     logger.warn("Checkpoint sync recommended, please use --help to see checkpoint sync options");
   }
 
-  await persistAnchorState(config, db, anchorState);
-
-  return anchorState;
+  if (isCheckpointState || anchorState.slot === GENESIS_SLOT) {
+    await persistAnchorState(config, db, anchorState, anchorStateBytes);
+  }
 }
 
-export function initBeaconMetrics(metrics: IMetrics, state: BeaconStateAllForks): void {
+export function initBeaconMetrics(metrics: Metrics, state: BeaconStateAllForks): void {
   metrics.headSlot.set(state.slot);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
   metrics.finalizedEpoch.set(state.finalizedCheckpoint.epoch);
-}
-
-export function computeAnchorCheckpoint(
-  config: IChainForkConfig,
-  anchorState: BeaconStateAllForks
-): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
-  let blockHeader;
-  let root;
-  const blockTypes = config.getForkTypes(anchorState.latestBlockHeader.slot);
-
-  if (anchorState.latestBlockHeader.slot === GENESIS_SLOT) {
-    const block = blockTypes.BeaconBlock.defaultValue();
-    block.stateRoot = anchorState.hashTreeRoot();
-    blockHeader = blockToHeader(config, block);
-    root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
-  } else {
-    blockHeader = ssz.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
-    if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-      blockHeader.stateRoot = anchorState.hashTreeRoot();
-    }
-    root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
-  }
-
-  return {
-    checkpoint: {
-      root,
-      // the checkpoint epoch = computeEpochAtSlot(anchorState.slot) + 1 if slot is not at epoch boundary
-      // this is similar to a process_slots() call
-      epoch: Math.ceil(anchorState.slot / SLOTS_PER_EPOCH),
-    },
-    blockHeader,
-  };
 }

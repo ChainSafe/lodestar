@@ -1,7 +1,11 @@
-import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
-import {ProtoBlock, MaybeValidExecutionStatus, LVHExecResponse} from "../protoArray/interface.js";
+import {
+  CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
+  EffectiveBalanceIncrements,
+} from "@lodestar/state-transition";
+import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
+import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
+import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
@@ -19,13 +23,54 @@ export type CheckpointHexWithBalance = {
   balances: EffectiveBalanceIncrements;
 };
 
+export type CheckpointHexWithTotalBalance = CheckpointHexWithBalance & {
+  totalBalance: number;
+};
+
 export enum EpochDifference {
   current = 0,
   previous = 1,
 }
 
+export enum AncestorStatus {
+  CommonAncestor,
+  Descendant,
+  NoCommonAncenstor,
+  BlockUnknown,
+}
+
+export type AncestorResult =
+  | {code: AncestorStatus.CommonAncestor; depth: number}
+  | {code: AncestorStatus.Descendant}
+  | {code: AncestorStatus.NoCommonAncenstor}
+  | {code: AncestorStatus.BlockUnknown};
+
+// Reason for not proposer boost reorging
+export enum NotReorgedReason {
+  HeadBlockIsTimely = "headBlockIsTimely",
+  ParentBlockNotAvailable = "parentBlockNotAvailable",
+  ProposerBoostReorgDisabled = "proposerBoostReorgDisabled",
+  NotShufflingStable = "notShufflingStable",
+  NotFFGCompetitive = "notFFGCompetitive",
+  ChainLongUnfinality = "chainLongUnfinality",
+  ParentBlockDistanceMoreThanOneSlot = "parentBlockDistanceMoreThanOneSlot",
+  ReorgMoreThanOneSlot = "reorgMoreThanOneSlot",
+  ProposerBoostNotWornOff = "proposerBoostNotWornOff",
+  HeadBlockNotWeak = "headBlockNotWeak",
+  ParentBlockNotStrong = "parentBlockNotStrong",
+  NotProposingOnTime = "notProposingOnTime",
+  NotProposerOfNextSlot = "notProposerOfNextSlot",
+  HeadBlockNotAvailable = "headBlockNotAvailable", // Should not happen because head block should be in cache
+  Unknown = "unknown", // A placeholder in case reason is not provided
+}
+
+export type ShouldOverrideForkChoiceUpdateResult =
+  | {shouldOverrideFcu: true; parentBlock: ProtoBlock}
+  | {shouldOverrideFcu: false; reason: NotReorgedReason};
+
 export interface IForkChoice {
   irrecoverableError?: Error;
+
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
@@ -48,11 +93,29 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
-  updateHead(): ProtoBlock;
+  updateAndGetHead(mode: UpdateAndGetHeadOpt): {
+    head: ProtoBlock;
+    isHeadTimely?: boolean;
+    notReorgedReason?: NotReorgedReason;
+  };
+  /**
+   * This is called during block import when proposerBoostReorg is enabled
+   * fcu call in `importBlock()` will be suppressed if this returns true. It is also
+   * called by `predictProposerHead()` during `prepareNextSlot()`.
+   */
+  shouldOverrideForkChoiceUpdate(
+    blockRoot: RootHex,
+    secFromSlot: number,
+    currentSlot: Slot
+  ): ShouldOverrideForkChoiceUpdateResult;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
   getHeads(): ProtoBlock[];
+  /**
+   * Retrieve all nodes for the debug API.
+   */
+  getAllNodes(): ProtoNode[];
   getFinalizedCheckpoint(): CheckpointWithHex;
   getJustifiedCheckpoint(): CheckpointWithHex;
   /**
@@ -72,12 +135,13 @@ export interface IForkChoice {
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
    */
   onBlock(
-    block: allForks.BeaconBlock,
+    block: BeaconBlock,
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus
-  ): void;
+    executionStatus: MaybeValidExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
+  ): ProtoBlock;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *
@@ -96,8 +160,15 @@ export interface IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string): void;
-  getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
+  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void;
+  /**
+   * Register attester slashing in order not to consider their votes in `getHead`
+   *
+   * ## Specification
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
+   */
+  onAttesterSlashing(slashing: AttesterSlashing): void;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
@@ -112,6 +183,11 @@ export interface IForkChoice {
    */
   hasBlock(blockRoot: Root): boolean;
   hasBlockHex(blockRoot: RootHex): boolean;
+  /**
+   * Same to hasBlock, but without checking if the block is a descendant of the finalized root.
+   */
+  hasBlockUnsafe(blockRoot: Root): boolean;
+  hasBlockHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
@@ -120,10 +196,7 @@ export interface IForkChoice {
   getBlockHex(blockRoot: RootHex): ProtoBlock | null;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
-  /**
-   * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
-   */
-  isDescendantOfFinalized(blockRoot: RootHex): boolean;
+  getFinalizedCheckpointSlot(): Slot;
   /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
@@ -145,7 +218,12 @@ export interface IForkChoice {
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  /**
+   * Returns both ancestor and non-ancestor blocks in a single traversal.
+   */
+  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
+  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
   /**
    * Returns all ProtoBlock known to fork-choice. Must not mutated the returned array
    */
@@ -156,8 +234,8 @@ export interface IForkChoice {
   forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock>;
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
-  /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
-  getCommonAncestorDistance(prevBlock: ProtoBlock, newBlock: ProtoBlock): number | null;
+  /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
+  getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
   /**
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
    */
@@ -174,20 +252,4 @@ export type PowBlockHex = {
   blockHash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
-};
-
-export type LatestMessage = {
-  epoch: Epoch;
-  root: RootHex;
-};
-
-/**
- * Used for queuing attestations from the current slot. Only contains the minimum necessary
- * information about the attestation.
- */
-export type QueuedAttestation = {
-  slot: Slot;
-  attestingIndices: ValidatorIndex[];
-  blockRoot: RootHex;
-  targetEpoch: Epoch;
 };

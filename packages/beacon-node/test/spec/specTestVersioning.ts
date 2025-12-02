@@ -1,5 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import {DownloadTestsOptions} from "@lodestar/spec-test-util/downloadTests";
 
 // WARNING! Don't move or rename this file !!!
 //
@@ -10,10 +11,20 @@ import {fileURLToPath} from "node:url";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const SPEC_TEST_REPO_URL = "https://github.com/ethereum/consensus-spec-tests";
-export const SPEC_TEST_VERSION = "v1.2.0-rc.3";
-// Target directory is the host package root: 'packages/*/spec-tests'
-export const SPEC_TEST_LOCATION = path.join(__dirname, "../../spec-tests");
+export const ethereumConsensusSpecsTests: DownloadTestsOptions = {
+  specVersion: "v1.6.0-beta.2",
+  // Target directory is the host package root: 'packages/*/spec-tests'
+  outputDir: path.join(__dirname, "../../spec-tests"),
+  specTestsRepoUrl: "https://github.com/ethereum/consensus-specs",
+  testsToDownload: ["general", "mainnet", "minimal"],
+};
+
+export const blsSpecTests: DownloadTestsOptions = {
+  specVersion: "v0.1.1",
+  // Target directory is the host package root: 'packages/*/spec-tests-bls'
+  outputDir: path.join(__dirname, "../../spec-tests-bls"),
+  specTestsRepoUrl: "https://github.com/ethereum/bls12-381-tests",
+  testsToDownload: ["bls_tests_yaml"],
+};

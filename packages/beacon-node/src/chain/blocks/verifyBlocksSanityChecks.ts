@@ -1,10 +1,12 @@
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {allForks, Slot} from "@lodestar/types";
-import {toHexString} from "@lodestar/utils";
-import {IBeaconClock} from "../clock/interface.js";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {RootHex, Slot} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
+import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {IChainOptions} from "../options.js";
+import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -20,29 +22,54 @@ import {ImportBlockOpts} from "./types.js";
  *   - Not already known
  */
 export function verifyBlocksSanityChecks(
-  chain: {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig},
-  blocks: allForks.SignedBeaconBlock[],
+  chain: {
+    forkChoice: IForkChoice;
+    clock: IClock;
+    config: ChainForkConfig;
+    opts: IChainOptions;
+    blacklistedBlocks: Map<RootHex, Slot | null>;
+  },
+  blocks: IBlockInput[],
   opts: ImportBlockOpts
-): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
+): {
+  relevantBlocks: IBlockInput[];
+  parentSlots: Slot[];
+  parentBlock: ProtoBlock | null;
+} {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
-  const relevantBlocks: allForks.SignedBeaconBlock[] = [];
+  const relevantBlocks: IBlockInput[] = [];
   const parentSlots: Slot[] = [];
   let parentBlock: ProtoBlock | null = null;
 
-  for (const block of blocks) {
+  for (const blockInput of blocks) {
+    const block = blockInput.getBlock();
     const blockSlot = block.message.slot;
+    const blockHash = toRootHex(chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+
+    if (chain.blacklistedBlocks.has(blockHash)) {
+      // Blacklisting blocks via CLI flag only requires to set the block hash
+      if (chain.blacklistedBlocks.get(blockHash) === null) {
+        // Set actual slot observed when processing the block
+        chain.blacklistedBlocks.set(blockHash, blockSlot);
+      }
+      throw new BlockError(block, {code: BlockErrorCode.BLACKLISTED_BLOCK});
+    }
+
+    if (chain.blacklistedBlocks.has(toRootHex(block.message.parentRoot))) {
+      chain.blacklistedBlocks.set(blockHash, blockSlot);
+      throw new BlockError(block, {code: BlockErrorCode.BLACKLISTED_BLOCK});
+    }
 
     // Not genesis block
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
     if (blockSlot === 0) {
       if (opts.ignoreIfKnown) {
         continue;
-      } else {
-        throw new BlockError(block, {code: BlockErrorCode.GENESIS_BLOCK});
       }
+      throw new BlockError(block, {code: BlockErrorCode.GENESIS_BLOCK});
     }
 
     // Not finalized slot
@@ -51,25 +78,24 @@ export function verifyBlocksSanityChecks(
     if (blockSlot <= finalizedSlot) {
       if (opts.ignoreIfFinalized) {
         continue;
-      } else {
-        throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
       }
+      throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
     }
 
+    const relevantLastBlock = relevantBlocks.at(-1);
     let parentBlockSlot: Slot;
 
-    if (relevantBlocks.length > 0) {
-      parentBlockSlot = relevantBlocks[relevantBlocks.length - 1].message.slot;
+    if (relevantLastBlock) {
+      parentBlockSlot = relevantLastBlock.getBlock().message.slot;
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
-      const parentRoot = toHexString(block.message.parentRoot);
+      const parentRoot = toRootHex(block.message.parentRoot);
       parentBlock = chain.forkChoice.getBlockHex(parentRoot);
       if (!parentBlock) {
         throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
-      } else {
-        // Parent is known to the fork-choice
-        parentBlockSlot = parentBlock.slot;
       }
+      // Parent is known to the fork-choice
+      parentBlockSlot = parentBlock.slot;
     }
 
     // Block not in the future, also checks for infinity
@@ -80,19 +106,16 @@ export function verifyBlocksSanityChecks(
 
     // Not already known
     // IGNORE if `partiallyVerifiedBlock.ignoreIfKnown`
-    const blockHash = toHexString(
-      chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
-    );
     if (chain.forkChoice.hasBlockHex(blockHash)) {
       if (opts.ignoreIfKnown) {
         continue;
-      } else {
-        throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockHash});
       }
+
+      throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockHash});
     }
 
     // Block is relevant
-    relevantBlocks.push(block);
+    relevantBlocks.push(blockInput);
     parentSlots.push(parentBlockSlot);
   }
 

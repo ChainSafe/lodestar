@@ -1,13 +1,19 @@
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {ApiClient, routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
-import {Api, routes} from "@lodestar/api";
-import {extendError} from "@lodestar/utils";
-import {IClock, differenceHex, ILoggerVc} from "../util/index.js";
-import {PubkeyHex} from "../types.js";
+import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
+import {PubkeyHex} from "../types.js";
+import {IClock, LoggerVc, differenceHex} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
 
+/** This polls block duties 1s before the next epoch */
+// TODO: change to 8333 (5/6 of slot) to do it 2s before the next epoch
+// once we have some improvement on epoch transition time
+// see https://github.com/ChainSafe/lodestar/issues/5792#issuecomment-1647457442
+// TODO GLOAS: re-evaluate timing
+const BLOCK_DUTIES_LOOKAHEAD_BPS = 9167;
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
 // Re-declaring to not have to depend on `lodestar-params` just for this 0
@@ -25,9 +31,10 @@ export class BlockDutiesService {
   private readonly proposers = new Map<Epoch, BlockDutyAtEpoch>();
 
   constructor(
-    private readonly logger: ILoggerVc,
-    private readonly api: Api,
-    clock: IClock,
+    private readonly config: ChainForkConfig,
+    private readonly logger: LoggerVc,
+    private readonly api: ApiClient,
+    private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly metrics: Metrics | null,
     notifyBlockProductionFn: NotifyBlockProductionFn
@@ -60,7 +67,7 @@ export class BlockDutiesService {
     if (dutyAtEpoch) {
       for (const proposer of dutyAtEpoch.data) {
         if (proposer.slot === slot) {
-          publicKeys.set(toHexString(proposer.pubkey), proposer.pubkey);
+          publicKeys.set(toPubkeyHex(proposer.pubkey), proposer.pubkey);
         }
       }
     }
@@ -71,12 +78,12 @@ export class BlockDutiesService {
   removeDutiesForKey(pubkey: PubkeyHex): void {
     for (const blockDutyAtEpoch of this.proposers.values()) {
       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
-        return toHexString(proposer.pubkey) !== pubkey;
+        return toPubkeyHex(proposer.pubkey) !== pubkey;
       });
     }
   }
 
-  private runBlockDutiesTask = async (slot: Slot): Promise<void> => {
+  private runBlockDutiesTask = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     try {
       if (slot < 0) {
         // Before genesis, fetch the genesis duties but don't notify block production
@@ -85,7 +92,7 @@ export class BlockDutiesService {
           await this.pollBeaconProposers(GENESIS_EPOCH);
         }
       } else {
-        await this.pollBeaconProposersAndNotify(slot);
+        await this.pollBeaconProposersAndNotify(slot, signal);
       }
     } catch (e) {
       this.logger.error("Error on pollBeaconProposers", {}, e as Error);
@@ -110,7 +117,7 @@ export class BlockDutiesService {
    *
    * This sounds great, but is it safe? Firstly, the additional notification will only contain block
    * producers that were not included in the first notification. This should be safety enough.
-   * However, we also have the slashing protection as a second line of defence. These two factors
+   * However, we also have the slashing protection as a second line of defense. These two factors
    * provide an acceptable level of safety.
    *
    * It's important to note that since there is a 0-epoch look-ahead (i.e., no look-ahead) for block
@@ -118,8 +125,19 @@ export class BlockDutiesService {
    * through the slow path every time. I.e., the proposal will only happen after we've been able to
    * download and process the duties from the BN. This means it is very important to ensure this
    * function is as fast as possible.
+   *   - Starting from Jul 2023, we poll proposers 1s before the next epoch thanks to PrepareNextSlotScheduler
+   * usually finishes in 3s.
    */
-  private async pollBeaconProposersAndNotify(currentSlot: Slot): Promise<void> {
+  private async pollBeaconProposersAndNotify(currentSlot: Slot, signal: AbortSignal): Promise<void> {
+    const nextEpoch = computeEpochAtSlot(currentSlot) + 1;
+    const isLastSlotEpoch = computeStartSlotAtEpoch(nextEpoch) === currentSlot + 1;
+    if (isLastSlotEpoch) {
+      // no need to await for other steps, just poll proposers for next epoch
+      this.pollBeaconProposersNextEpoch(currentSlot, nextEpoch, signal).catch((e) => {
+        this.logger.error("Error on pollBeaconProposersNextEpoch", {}, e);
+      });
+    }
+
     // Notify the block proposal service for any proposals that we have in our cache.
     const initialBlockProposers = this.getblockProposersAtSlot(currentSlot);
     if (initialBlockProposers.length > 0) {
@@ -142,8 +160,22 @@ export class BlockDutiesService {
     if (additionalBlockProducers.length > 0) {
       this.notifyBlockProductionFn(currentSlot, additionalBlockProducers);
       this.logger.debug("Detected new block proposer", {currentSlot});
-      this.metrics?.proposerDutiesReorg.inc();
+      this.metrics?.newProposalDutiesDetected.inc();
     }
+  }
+
+  /**
+   * This is to avoid some delay on the first slot of the epoch when validators have proposal duties.
+   * See https://github.com/ChainSafe/lodestar/issues/5792
+   */
+  private async pollBeaconProposersNextEpoch(currentSlot: Slot, nextEpoch: Epoch, signal: AbortSignal): Promise<void> {
+    const nextSlot = currentSlot + 1;
+    const lookAheadMs =
+      this.config.SLOT_DURATION_MS - this.config.getSlotComponentDurationMs(BLOCK_DUTIES_LOOKAHEAD_BPS);
+    await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
+    this.logger.debug("Polling proposers for next epoch", {nextEpoch, nextSlot});
+    // Poll proposers for the next epoch
+    await this.pollBeaconProposers(nextEpoch);
   }
 
   private async pollBeaconProposers(epoch: Epoch): Promise<void> {
@@ -152,12 +184,11 @@ export class BlockDutiesService {
       return;
     }
 
-    const proposerDuties = await this.api.validator.getProposerDuties(epoch).catch((e: Error) => {
-      throw extendError(e, "Error on getProposerDuties");
-    });
-    const {dependentRoot} = proposerDuties;
-    const relevantDuties = proposerDuties.data.filter((duty) => {
-      const pubkeyHex = toHexString(duty.pubkey);
+    const res = await this.api.validator.getProposerDuties({epoch});
+    const proposerDuties = res.value();
+    const {dependentRoot} = res.meta();
+    const relevantDuties = proposerDuties.filter((duty) => {
+      const pubkeyHex = toPubkeyHex(duty.pubkey);
       return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isDoppelgangerSafe(pubkeyHex);
     });
 

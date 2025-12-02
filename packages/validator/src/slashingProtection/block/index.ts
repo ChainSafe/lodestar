@@ -1,8 +1,8 @@
 import {BLSPubkey} from "@lodestar/types";
-import {isEqualNonZeroRoot} from "../utils.js";
 import {SlashingProtectionBlock} from "../types.js";
-import {InvalidBlockError, InvalidBlockErrorCode} from "./errors.js";
+import {isEqualNonZeroRoot} from "../utils.js";
 import {BlockBySlotRepository} from "./blockBySlotRepository.js";
+import {InvalidBlockError, InvalidBlockErrorCode} from "./errors.js";
 export {BlockBySlotRepository, InvalidBlockError, InvalidBlockErrorCode};
 
 enum SafeStatus {
@@ -24,7 +24,7 @@ export class SlashingProtectionBlockService {
   async checkAndInsertBlockProposal(pubkey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
     const safeStatus = await this.checkBlockProposal(pubkey, block);
 
-    if (safeStatus != SafeStatus.SAME_DATA) {
+    if (safeStatus !== SafeStatus.SAME_DATA) {
       await this.insertBlockProposal(pubkey, block);
     }
 
@@ -41,13 +41,13 @@ export class SlashingProtectionBlockService {
       // Interchange format allows for blocks without signing_root, then assume root is equal
       if (isEqualNonZeroRoot(sameSlotBlock.signingRoot, block.signingRoot)) {
         return SafeStatus.SAME_DATA;
-      } else {
-        throw new InvalidBlockError({
-          code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL,
-          block,
-          block2: sameSlotBlock,
-        });
       }
+
+      throw new InvalidBlockError({
+        code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL,
+        block,
+        block2: sameSlotBlock,
+      });
     }
 
     // Refuse to sign any block with slot <= min(b.slot for b in data.signed_blocks if b.pubkey == proposer_pubkey),
@@ -89,6 +89,6 @@ export class SlashingProtectionBlockService {
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {
-    return await this.blockBySlot.listPubkeys();
+    return this.blockBySlot.listPubkeys();
   }
 }

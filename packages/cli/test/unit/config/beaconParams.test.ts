@@ -1,22 +1,21 @@
 import fs from "node:fs";
-import {expect} from "chai";
 import yaml from "js-yaml";
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {getTestdirPath} from "../../utils.js";
 import {getBeaconParams} from "../../../src/config/index.js";
+import {getTestdirPath} from "../../utils.js";
 
 describe("config / beaconParams", () => {
   const GENESIS_FORK_VERSION_MAINNET = "0x00000000";
-  const GENESIS_FORK_VERSION_GOERLI = "0x00001020";
+  const GENESIS_FORK_VERSION_HOLESKY = "0x01017000";
   const GENESIS_FORK_VERSION_FILE = "0x00009902";
   const GENESIS_FORK_VERSION_CLI = "0x00009903";
-  const networkName = "goerli";
+  const networkName = "holesky";
   const paramsFilepath = getTestdirPath("./test-config.yaml");
 
   const testCases: {
     id: string;
     kwargs: Parameters<typeof getBeaconParams>[0];
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     GENESIS_FORK_VERSION: string;
   }[] = [
     {
@@ -24,7 +23,6 @@ describe("config / beaconParams", () => {
       kwargs: {
         additionalParamsCli: {},
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_MAINNET,
     },
     {
@@ -33,8 +31,7 @@ describe("config / beaconParams", () => {
         network: networkName,
         additionalParamsCli: {},
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_GOERLI,
+      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_HOLESKY,
     },
     {
       id: "Params from network & file > returns file",
@@ -43,7 +40,6 @@ describe("config / beaconParams", () => {
         paramsFile: paramsFilepath,
         additionalParamsCli: {},
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_FILE,
     },
     {
@@ -51,27 +47,22 @@ describe("config / beaconParams", () => {
       kwargs: {
         network: networkName,
         paramsFile: paramsFilepath,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         additionalParamsCli: {GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_CLI},
       },
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_CLI,
     },
   ];
 
-  before("Write config file", () => {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
+  beforeAll(() => {
     fs.writeFileSync(paramsFilepath, yaml.dump({GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_FILE}));
   });
 
-  after("Remove config file", () => {
+  afterAll(() => {
     if (fs.existsSync(paramsFilepath)) fs.unlinkSync(paramsFilepath);
   });
 
-  for (const {id, kwargs, GENESIS_FORK_VERSION} of testCases) {
-    it(id, () => {
-      const params = getBeaconParams(kwargs);
-      expect(toHexString(params.GENESIS_FORK_VERSION)).to.equal(GENESIS_FORK_VERSION);
-    });
-  }
+  it.each(testCases)("$id", ({kwargs, GENESIS_FORK_VERSION}) => {
+    const params = getBeaconParams(kwargs);
+    expect(toHexString(params.GENESIS_FORK_VERSION)).toBe(GENESIS_FORK_VERSION);
+  });
 });

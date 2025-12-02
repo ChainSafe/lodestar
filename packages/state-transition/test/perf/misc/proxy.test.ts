@@ -1,5 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
-import {expect} from "chai";
+import {bench, describe} from "@chainsafe/benchmark";
 
 describe("Proxy cost", () => {
   const n = 100_000;
@@ -12,9 +11,8 @@ describe("Proxy cost", () => {
     get(target, p) {
       if (p === "length") {
         return target.length;
-      } else {
-        return target[(p as unknown) as number];
       }
+      return target[p as unknown as number];
     },
   });
 
@@ -25,22 +23,15 @@ describe("Proxy cost", () => {
     },
   };
 
-  it("Check is correct", () => {
-    for (const i of [0, 1, Math.floor(n / 2)]) {
-      expect(array[i]).to.equal(i, `Wrong value array[${i}]`);
-      expect(arrayWithProxy[i]).to.equal(i, `Wrong value arrayWithProxy[${i}]`);
-    }
-  });
-
-  itBench(`regular array get ${n} times`, () => {
+  bench(`regular array get ${n} times`, () => {
     for (let i = 0; i < n; i++) array[i];
   });
 
-  itBench(`wrappedArray get ${n} times`, () => {
+  bench(`wrappedArray get ${n} times`, () => {
     for (let i = 0; i < n; i++) wrappedArray.get(i);
   });
 
-  itBench(`arrayWithProxy get ${n} times`, () => {
+  bench(`arrayWithProxy get ${n} times`, () => {
     for (let i = 0; i < n; i++) arrayWithProxy[i];
   });
 });

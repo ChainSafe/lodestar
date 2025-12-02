@@ -1,13 +1,14 @@
-import {sleep} from "@lodestar/utils";
+import {callInNextEventLoop, nextEventLoop} from "../../util/eventLoop.js";
 import {LinkedList} from "../array.js";
 import {QueueError, QueueErrorCode} from "./errors.js";
-import {defaultQueueOpts, IQueueMetrics, JobQueueOpts, QueueType} from "./options.js";
+import {JobQueueOpts, QueueMetrics, QueueType, defaultQueueOpts} from "./options.js";
 
 /**
  * JobQueue that stores arguments in the job array instead of closures.
  * Supports a single itemProcessor, for arbitrary functions use the JobFnQueue
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+// biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
 export class JobItemQueue<Args extends any[], R> {
   private readonly opts: Required<JobQueueOpts>;
   /**
@@ -20,22 +21,29 @@ export class JobItemQueue<Args extends any[], R> {
     resolve: (result: R | PromiseLike<R>) => void;
     reject: (error?: Error) => void;
   }> = new LinkedList();
-  private readonly metrics?: IQueueMetrics;
+  private readonly metrics?: QueueMetrics;
   private runningJobs = 0;
   private lastYield = 0;
 
   constructor(
     private readonly itemProcessor: (...args: Args) => Promise<R>,
     opts: JobQueueOpts,
-    metrics?: IQueueMetrics
+    metrics?: QueueMetrics
   ) {
     this.opts = {...defaultQueueOpts, ...opts};
     this.opts.signal.addEventListener("abort", this.abortAllJobs, {once: true});
 
     if (metrics) {
       this.metrics = metrics;
-      metrics.length.addCollect(() => metrics.length.set(this.jobs.length));
+      metrics.length.addCollect(() => {
+        metrics.length.set(this.jobs.length);
+        metrics.concurrency.set(this.runningJobs);
+      });
     }
+  }
+
+  get jobLen(): number {
+    return this.jobs.length;
   }
 
   push(...args: Args): Promise<R> {
@@ -56,8 +64,10 @@ export class JobItemQueue<Args extends any[], R> {
 
     return new Promise<R>((resolve, reject) => {
       this.jobs.push({args, resolve, reject, addedTimeMs: Date.now()});
-      if (this.runningJobs < this.opts.maxConcurrency) {
-        setTimeout(this.runJob, 0);
+      if (this.jobs.length === 1 && this.opts.noYieldIfOneItem) {
+        void this.runJob();
+      } else if (this.runningJobs < this.opts.maxConcurrency) {
+        callInNextEventLoop(this.runJob);
       }
     });
   }
@@ -84,7 +94,7 @@ export class JobItemQueue<Args extends any[], R> {
     this.runningJobs++;
 
     // If the job, metrics or any code below throws: the job will reject never going stale.
-    // Only downside is the the job promise may be resolved twice, but that's not an issue
+    // Only downside is the job promise may be resolved twice, but that's not an issue
     try {
       const timer = this.metrics?.jobTime.startTimer();
       this.metrics?.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
@@ -97,7 +107,7 @@ export class JobItemQueue<Args extends any[], R> {
       // Yield to the macro queue
       if (Date.now() - this.lastYield > this.opts.yieldEveryMs) {
         this.lastYield = Date.now();
-        await sleep(0);
+        await nextEventLoop();
       }
     } catch (e) {
       job.reject(e as Error);

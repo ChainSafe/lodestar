@@ -2,13 +2,13 @@ import {fromHexString} from "@chainsafe/ssz";
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 
-export interface IValidatorGeneratorOpts {
+export type ValidatorGeneratorOpts = {
   activation?: number;
   exit?: number;
   withdrawableEpoch?: number;
   slashed?: boolean;
   balance?: number;
-}
+};
 
 /**
  * Generates a single fake validator, for tests purposes only.
@@ -17,7 +17,7 @@ export interface IValidatorGeneratorOpts {
  * @param {boolean} slashed
  * @returns {Validator}
  */
-export function generateValidator(opts: IValidatorGeneratorOpts = {}): phase0.Validator {
+export function generateValidator(opts: ValidatorGeneratorOpts = {}): phase0.Validator {
   const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
   const activationEpoch = opts.activation !== undefined || opts.activation === 0 ? opts.activation : FAR_FUTURE_EPOCH;
   return {
@@ -40,6 +40,6 @@ export function generateValidator(opts: IValidatorGeneratorOpts = {}): phase0.Va
  * @param {number} n
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: IValidatorGeneratorOpts): phase0.Validator[] {
+export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): phase0.Validator[] {
   return Array.from({length: n}, () => generateValidator(opts));
 }

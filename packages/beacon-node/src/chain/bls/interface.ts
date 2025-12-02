@@ -1,3 +1,4 @@
+import {PublicKey} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
 
 export type VerifySignatureOpts = {
@@ -15,6 +16,10 @@ export type VerifySignatureOpts = {
    * Ignore the batchable option if this is true.
    */
   verifyOnMainThread?: boolean;
+  /**
+   * Some signature sets are more important than others, and should be verified first.
+   */
+  priority?: boolean;
 };
 
 export interface IBlsVerifier {
@@ -41,6 +46,23 @@ export interface IBlsVerifier {
    */
   verifySignatureSets(sets: ISignatureSet[], opts?: VerifySignatureOpts): Promise<boolean>;
 
+  /**
+   * Similar to verifySignatureSets but:
+   *   - all signatures have the same message
+   *   - return an array of boolean, each element indicates whether the corresponding signature set is valid
+   *   - only support `batchable` option
+   */
+  verifySignatureSetsSameMessage(
+    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    messsage: Uint8Array,
+    opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
+  ): Promise<boolean[]>;
+
   /** For multithread pool awaits terminating all workers */
   close(): Promise<void>;
+
+  /**
+   * Returns true if BLS worker pool is ready to accept more work jobs.
+   */
+  canAcceptWork(): boolean;
 }

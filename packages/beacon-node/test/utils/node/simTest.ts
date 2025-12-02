@@ -1,23 +1,22 @@
+import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   CachedBeaconStateAllForks,
   beforeProcessEpoch,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {allForks, Epoch, Slot} from "@lodestar/types";
+import {BeaconBlock, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {ILogger, mapValues} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
-import {BeaconNode} from "../../../src/index.js";
+import {Logger, mapValues} from "@lodestar/utils";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
-import {linspace} from "../../../src/util/numpy.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
+import {BeaconNode} from "../../../src/index.js";
+import {linspace} from "../../../src/util/numpy.js";
 
-/* eslint-disable no-console */
-
-export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void {
+export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   let lastSeenEpoch = 0;
 
   const attestationsPerBlock = new Map<Slot, number>();
@@ -32,8 +31,8 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     // Check if there was a proposed block and how many attestations it includes
     const block = await bn.chain.getCanonicalBlockAtSlot(head.slot);
     if (block) {
-      const bits = sumAttestationBits(block.message);
-      const inclDelay = avgInclusionDelay(block.message);
+      const bits = sumAttestationBits(block.block.message);
+      const inclDelay = avgInclusionDelay(block.block.message);
       attestationsPerBlock.set(slot, bits);
       inclusionDelayPerBlock.set(slot, inclDelay);
       logger.info("> Block attestations", {slot, bits, inclDelay});
@@ -43,13 +42,14 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
   function logParticipation(state: CachedBeaconStateAllForks): void {
     // Compute participation (takes 5ms with 64 validators)
     // Need a CachedBeaconStateAllForks where (state.slot + 1) % SLOTS_EPOCH == 0
-    const epochProcess = beforeProcessEpoch(state);
+    const epochTransitionCache = beforeProcessEpoch(state);
     const epoch = computeEpochAtSlot(state.slot);
 
     const prevParticipation =
-      epochProcess.prevEpochUnslashedStake.targetStakeByIncrement / epochProcess.totalActiveStakeByIncrement;
+      epochTransitionCache.prevEpochUnslashedStake.targetStakeByIncrement /
+      epochTransitionCache.totalActiveStakeByIncrement;
     const currParticipation =
-      epochProcess.currEpochUnslashedTargetStakeByIncrement / epochProcess.totalActiveStakeByIncrement;
+      epochTransitionCache.currEpochUnslashedTargetStakeByIncrement / epochTransitionCache.totalActiveStakeByIncrement;
     prevParticipationPerEpoch.set(epoch - 1, prevParticipation);
     currParticipationPerEpoch.set(epoch, currParticipation);
     logger.info("> Participation", {
@@ -65,18 +65,22 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     lastSeenEpoch = checkpoint.epoch;
 
     // Recover the pre-epoch transition state, use any random caller for regen
-    const checkpointState = await bn.chain.regen.getCheckpointState(checkpoint, RegenCaller.onForkChoiceFinalized);
+    const checkpointState = await bn.chain.regen.getCheckpointState(
+      checkpoint,
+      {dontTransferCache: true},
+      RegenCaller.onForkChoiceFinalized
+    );
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.stateRoots.get(lastSlot % SLOTS_PER_HISTORICAL_ROOT);
     const lastState = await bn.chain.regen.getState(toHexString(lastStateRoot), RegenCaller.onForkChoiceFinalized);
     logParticipation(lastState);
   }
 
-  bn.chain.emitter.on(ChainEvent.head, onHead);
+  bn.chain.emitter.on(routes.events.EventType.head, onHead);
   bn.chain.emitter.on(ChainEvent.checkpoint, onCheckpoint);
 
   return function stop() {
-    bn.chain.emitter.off(ChainEvent.head, onHead);
+    bn.chain.emitter.off(routes.events.EventType.head, onHead);
     bn.chain.emitter.off(ChainEvent.checkpoint, onCheckpoint);
 
     // Write report
@@ -87,14 +91,14 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
   };
 }
 
-function sumAttestationBits(block: allForks.BeaconBlock): number {
+function sumAttestationBits(block: BeaconBlock): number {
   return Array.from(block.body.attestations).reduce(
     (total, att) => total + att.aggregationBits.getTrueBitIndexes().length,
     0
   );
 }
 
-function avgInclusionDelay(block: allForks.BeaconBlock): number {
+function avgInclusionDelay(block: BeaconBlock): number {
   const inclDelay = Array.from(block.body.attestations).map((att) => block.slot - att.data.slot);
   return avg(inclDelay);
 }
@@ -106,7 +110,7 @@ function avg(arr: number[]): number {
 /**
  * Print a table grid of (Y) epoch / (X) slot_per_epoch
  */
-function printEpochSlotGrid<T>(map: Map<Slot, T>, config: IBeaconConfig, title: string): void {
+function printEpochSlotGrid<T>(map: Map<Slot, T>, _config: BeaconConfig, title: string): void {
   const lastSlot = Array.from(map.keys())[map.size - 1];
   const lastEpoch = computeEpochAtSlot(lastSlot);
   const rowsByEpochBySlot = linspace(0, lastEpoch).map((epoch) => {
@@ -126,7 +130,7 @@ function printEpochGrid(maps: Record<string, Map<Epoch, number>>, title: string)
     return epoch > max ? epoch : max;
   }, 0);
   const epochGrid = linspace(0, lastEpoch).map((epoch) =>
-    mapValues(maps, (val, key) => formatValue(maps[key].get(epoch)))
+    mapValues(maps, (_val, key) => formatValue(maps[key].get(epoch)))
   );
   console.log(renderTitle(title));
   console.table(epochGrid);

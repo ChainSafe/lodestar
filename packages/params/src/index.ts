@@ -1,19 +1,19 @@
 import {PresetName} from "./presetName.js";
-import {preset as mainnet} from "./presets/mainnet/index.js";
-import {preset as minimal} from "./presets/minimal/index.js";
-import {preset as gnosis} from "./presets/gnosis/index.js";
 import {presetStatus} from "./presetStatus.js";
-import {userSelectedPreset} from "./setPreset.js";
+import {gnosisPreset} from "./presets/gnosis.js";
+import {mainnetPreset} from "./presets/mainnet.js";
+import {minimalPreset} from "./presets/minimal.js";
+import {userOverrides, userSelectedPreset} from "./setPreset.js";
 
-export * from "./interface/index.js";
-export {ForkName, ForkSeq} from "./forkName.js";
+export * from "./forkName.js";
 export {presetToJson} from "./json.js";
+export type {BeaconPreset} from "./types.js";
 export {PresetName};
 
 const presets = {
-  [PresetName.mainnet]: mainnet,
-  [PresetName.minimal]: minimal,
-  [PresetName.gnosis]: gnosis,
+  [PresetName.mainnet]: mainnetPreset,
+  [PresetName.minimal]: minimalPreset,
+  [PresetName.gnosis]: gnosisPreset,
 };
 
 // Once this file is imported, freeze the preset so calling setActivePreset() will throw an error
@@ -28,8 +28,10 @@ presetStatus.frozen = true;
  * The active preset can be manually overridden with `setActivePreset`
  */
 export const ACTIVE_PRESET =
-  userSelectedPreset || PresetName[process?.env?.LODESTAR_PRESET as PresetName] || PresetName.mainnet;
-export const activePreset = presets[ACTIVE_PRESET];
+  userSelectedPreset ??
+  (typeof process !== "undefined" ? PresetName[process?.env?.LODESTAR_PRESET as PresetName] : undefined) ??
+  PresetName.mainnet;
+export const activePreset = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports
@@ -41,7 +43,6 @@ export const {
   HYSTERESIS_QUOTIENT,
   HYSTERESIS_DOWNWARD_MULTIPLIER,
   HYSTERESIS_UPWARD_MULTIPLIER,
-  SAFE_SLOTS_TO_UPDATE_JUSTIFIED,
   MIN_DEPOSIT_AMOUNT,
   MAX_EFFECTIVE_BALANCE,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -83,7 +84,41 @@ export const {
   MAX_TRANSACTIONS_PER_PAYLOAD,
   BYTES_PER_LOGS_BLOOM,
   MAX_EXTRA_DATA_BYTES,
-} = presets[ACTIVE_PRESET];
+
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
+
+  FIELD_ELEMENTS_PER_BLOB,
+  MAX_BLOB_COMMITMENTS_PER_BLOCK,
+  KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
+
+  MAX_EFFECTIVE_BALANCE_ELECTRA,
+  MIN_ACTIVATION_BALANCE,
+  PENDING_DEPOSITS_LIMIT,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
+  PENDING_CONSOLIDATIONS_LIMIT,
+  MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+
+  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_ATTESTATIONS_ELECTRA,
+  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+  MAX_PENDING_DEPOSITS_PER_EPOCH,
+  WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
+
+  NUMBER_OF_COLUMNS,
+  CELLS_PER_EXT_BLOB,
+  FIELD_ELEMENTS_PER_CELL,
+  FIELD_ELEMENTS_PER_EXT_BLOB,
+  KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
+
+  PTC_SIZE,
+  MAX_PAYLOAD_ATTESTATIONS,
+  BUILDER_PENDING_WITHDRAWALS_LIMIT,
+} = activePreset;
 
 ////////////
 // Constants
@@ -99,11 +134,15 @@ export const FAR_FUTURE_EPOCH = Infinity;
 export const BASE_REWARDS_PER_EPOCH = 4;
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const JUSTIFICATION_BITS_LENGTH = 4;
+export const ZERO_HASH = Buffer.alloc(32, 0);
+export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 
 // Withdrawal prefixes
-
-export const BLS_WITHDRAWAL_PREFIX = Uint8Array.from([0]);
-export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = Uint8Array.from([1]);
+// Since the prefixes are just 1 byte, we define and use them as number
+export const BLS_WITHDRAWAL_PREFIX = 0x00;
+export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 0x01;
+export const COMPOUNDING_WITHDRAWAL_PREFIX = 0x02;
+export const BUILDER_WITHDRAWAL_PREFIX = 0x03;
 
 // Domain types
 
@@ -117,8 +156,11 @@ export const DOMAIN_AGGREGATE_AND_PROOF = Uint8Array.from([6, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
+export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
+export const DOMAIN_BEACON_BUILDER = Uint8Array.from([27, 0, 0, 0]);
+export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 
-// Application specfic domains
+// Application specific domains
 
 /**
  * `DOMAIN_APPLICATION_MASK` reserves the rest of the bitspace in `DomainType` for application
@@ -151,18 +193,23 @@ export const PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_W
 // phase0 validator
 
 export const TARGET_AGGREGATORS_PER_COMMITTEE = 16;
-export const RANDOM_SUBNETS_PER_VALIDATOR = 1;
-export const EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION = 256;
+
+// phase0 networking
+
+export const NODE_ID_BITS = 256;
+export const MAX_CONCURRENT_REQUESTS = 2;
+
 /** Rationale: https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#why-are-there-attestation_subnet_count-attestation-subnets */
 export const ATTESTATION_SUBNET_COUNT = 64;
+export const ATTESTATION_SUBNET_EXTRA_BITS = 0;
+export const ATTESTATION_SUBNET_PREFIX_BITS =
+  Math.ceil(Math.log2(ATTESTATION_SUBNET_COUNT)) + ATTESTATION_SUBNET_EXTRA_BITS;
 
 // altair validator
 
 export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 16;
 export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-
-export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
 
 // Lightclient pre-computed
 /**
@@ -178,6 +225,34 @@ export const FINALIZED_ROOT_GINDEX = 105;
  */
 export const FINALIZED_ROOT_DEPTH = 6;
 export const FINALIZED_ROOT_INDEX = 41;
+
+/**
+ * ```ts
+ * types.ssz.capella.BeaconBlockBody.getPathInfo(['executionPayload']).gindex
+ * ```
+ */
+export const BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX = 25;
+/**
+ * ```ts
+ * Math.floor(Math.log2(EXECUTION_PAYLOAD_GINDEX))
+ * ```
+ */
+export const BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH = 4;
+export const BLOCK_BODY_EXECUTION_PAYLOAD_INDEX = 9;
+
+/**
+ * ```ts
+ * config.types.altair.BeaconState.getPathGindex(["currentSyncCommittee"])
+ * ```
+ */
+export const CURRENT_SYNC_COMMITTEE_GINDEX = 54;
+/**
+ * ```ts
+ * Math.floor(Math.log2(CURRENT_SYNC_COMMITTEE_GINDEX))
+ * ```
+ */
+export const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
+export const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 /**
  * ```ts
  * config.types.altair.BeaconState.getPathGindex(["nextSyncCommittee"])
@@ -191,9 +266,51 @@ export const NEXT_SYNC_COMMITTEE_GINDEX = 55;
  */
 export const NEXT_SYNC_COMMITTEE_DEPTH = 5;
 export const NEXT_SYNC_COMMITTEE_INDEX = 23;
+export const MAX_REQUEST_LIGHT_CLIENT_UPDATES = 128;
+export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
 
 /**
  * Optimistic sync
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
+/** @deprecated */
 export const INTERVALS_PER_SLOT = 3;
+export const BASIS_POINTS = 10000;
+
+// EIP-4844: Crypto const
+export const BYTES_PER_FIELD_ELEMENT = 32;
+export const BLOB_TX_TYPE = 0x03;
+export const VERSIONED_HASH_VERSION_KZG = 0x01;
+
+// ssz.deneb.BeaconBlockBody.getPathInfo(['blobKzgCommitments',0]).gindex
+export const KZG_COMMITMENT_GINDEX0 = 221184;
+export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_COMMITMENT_INCLUSION_PROOF_DEPTH;
+
+// ssz.deneb.BlobSidecars.elementType.fixedSize
+export const BLOB_SIDECAR_FIXED_SIZE = 131928;
+
+// Electra Misc
+export const UNSET_DEPOSIT_REQUESTS_START_INDEX = 2n ** 64n - 1n;
+export const FULL_EXIT_REQUEST_AMOUNT = 0;
+export const FINALIZED_ROOT_GINDEX_ELECTRA = 169;
+export const FINALIZED_ROOT_DEPTH_ELECTRA = 7;
+export const FINALIZED_ROOT_INDEX_ELECTRA = 41;
+export const CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA = 86;
+export const CURRENT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
+export const CURRENT_SYNC_COMMITTEE_INDEX_ELECTRA = 22;
+export const NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA = 87;
+export const NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA = 6;
+export const NEXT_SYNC_COMMITTEE_INDEX_ELECTRA = 23;
+export const DEPOSIT_REQUEST_TYPE = 0x00;
+export const WITHDRAWAL_REQUEST_TYPE = 0x01;
+export const CONSOLIDATION_REQUEST_TYPE = 0x02;
+
+export const BYTES_PER_CELL = FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT;
+
+// ssz.fulu.BeaconBlockBody.getPathInfo(['blobKzgCommitments']).gindex
+export const KZG_COMMITMENTS_GINDEX = 27;
+export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
+
+// Gloas Misc
+export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
+export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;

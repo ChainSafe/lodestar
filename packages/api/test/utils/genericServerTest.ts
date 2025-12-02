@@ -1,76 +1,73 @@
-import {expect} from "chai";
-import {IChainForkConfig} from "@lodestar/config";
-import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils/index.js";
-import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
-import {ServerRoutes} from "../../src/utils/server/genericJsonServer.js";
-import {registerRoute} from "../../src/utils/server/registerRoute.js";
+import {FastifyInstance} from "fastify";
+import {MockInstance, afterAll, beforeAll, describe, expect, it} from "vitest";
+import {ChainForkConfig} from "@lodestar/config";
+import {ApiClientMethods, ApiRequestInit, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
+import {Endpoint} from "../../src/utils/index.js";
+import {ApplicationMethods, ApplicationResponse, FastifyRoutes} from "../../src/utils/server/index.js";
+import {WireFormat} from "../../src/utils/wireFormat.js";
 import {getMockApi, getTestServer} from "./utils.js";
 
-type IgnoreVoid<T> = T extends void ? undefined : T;
-
-export type GenericServerTestCases<Api extends Record<string, RouteGeneric>> = {
-  [K in keyof Api]: {
-    args: Parameters<Api[K]>;
-    res: IgnoreVoid<Resolves<Api[K]>>;
-    query?: FetchOpts["query"];
+export type GenericServerTestCases<Es extends Record<string, Endpoint>> = {
+  [K in keyof Es]: {
+    args: Es[K]["args"];
+    res: ApplicationResponse<Es[K]>;
   };
 };
 
-export function runGenericServerTest<
-  Api extends Record<string, RouteGeneric>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
->(
-  config: IChainForkConfig,
-  getClient: (config: IChainForkConfig, https: IHttpClient) => Api,
-  getRoutes: (config: IChainForkConfig, api: Api) => ServerRoutes<Api, ReqTypes>,
-  testCases: GenericServerTestCases<Api>
+export function runGenericServerTest<Es extends Record<string, Endpoint>>(
+  config: ChainForkConfig,
+  getClient: (config: ChainForkConfig, http: IHttpClient) => ApiClientMethods<Es>,
+  getRoutes: (config: ChainForkConfig, methods: ApplicationMethods<Es>) => FastifyRoutes<Es>,
+  testCases: GenericServerTestCases<Es>
 ): void {
-  const mockApi = getMockApi<Api>(testCases);
-  const {baseUrl, server} = getTestServer();
+  const mockApi = getMockApi<Es>(testCases);
+  let server: FastifyInstance;
 
-  const httpClient = new HttpClientSpy({baseUrl});
-  const client = getClient(config, httpClient);
+  let client: ApiClientMethods<Es>;
+  let httpClient: HttpClient;
 
-  for (const route of Object.values(getRoutes(config, mockApi))) {
-    registerRoute(server, route);
-  }
+  beforeAll(async () => {
+    const res = getTestServer();
+    server = res.server;
 
-  for (const key of Object.keys(testCases)) {
-    const routeId = key as keyof Api;
-    const testCase = testCases[routeId];
+    for (const route of Object.values(getRoutes(config, mockApi))) {
+      server.route(route);
+    }
 
-    it(routeId as string, async () => {
-      // Register mock data for this route
-      mockApi[routeId].resolves(testCases[routeId].res as any);
+    const baseUrl = await res.start();
+    httpClient = new HttpClient({baseUrl});
+    client = getClient(config, httpClient);
+  });
 
-      // Do the call
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const res = await (client[routeId] as RouteGeneric)(...(testCase.args as any[]));
+  afterAll(async () => {
+    if (server !== undefined) await server.close();
+  });
 
-      // Use spy to assert argument serialization
-      if (testCase.query) {
-        expect(httpClient.opts?.query).to.deep.equal(testCase.query, "Wrong fetch opts.query");
-      }
+  describe("run generic server tests", () => {
+    describe.each(Object.keys(testCases))("%s", (key) => {
+      it.each(Object.values(WireFormat))("%s", async (format) => {
+        const wireFormat = format as WireFormat;
+        const localInit: ApiRequestInit = {
+          requestWireFormat: wireFormat,
+          responseWireFormat: wireFormat,
+        };
+        const routeId = key as keyof Es;
+        const testCase = testCases[routeId];
 
-      // Assert server handler called with correct args
-      expect(mockApi[routeId].callCount).to.equal(1, `mockApi[${routeId as string}] must be called once`);
-      expect(mockApi[routeId].getCall(0).args).to.deep.equal(testCase.args, `mockApi[${routeId as string}] wrong args`);
+        // Register mock data for this route
+        (mockApi[routeId] as MockInstance).mockResolvedValue(testCases[routeId].res);
 
-      // Assert returned value is correct
-      expect(res).to.deep.equal(testCase.res, "Wrong returned value");
+        // Do the call
+        const res = await client[routeId](testCase.args ?? localInit, localInit);
+
+        // Assert server handler called with correct args
+        expect(mockApi[routeId]).toHaveBeenCalledTimes(1);
+        expect(mockApi[routeId]).toHaveBeenCalledWith(testCase.args, expect.any(Object));
+
+        // Assert returned value and metadata is correct
+        expect(res.value()).toEqual(testCase.res?.data);
+        expect(res.meta()).toEqual(testCase.res?.meta);
+      });
     });
-  }
-}
-
-class HttpClientSpy extends HttpClient {
-  opts: FetchOpts | null = null;
-
-  async json<T>(opts: FetchOpts): Promise<T> {
-    this.opts = opts;
-    return super.json(opts);
-  }
-  async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
-    this.opts = opts;
-    return super.arrayBuffer(opts);
-  }
+  });
 }

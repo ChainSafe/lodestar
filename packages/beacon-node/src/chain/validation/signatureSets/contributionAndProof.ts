@@ -1,11 +1,11 @@
 import {DOMAIN_CONTRIBUTION_AND_PROOF} from "@lodestar/params";
-import {altair, ssz} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
-  computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
+  computeSigningRoot,
 } from "@lodestar/state-transition";
+import {altair, ssz} from "@lodestar/types";
 
 export function getContributionAndProofSignatureSet(
   state: CachedBeaconStateAllForks,

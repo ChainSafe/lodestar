@@ -15,6 +15,7 @@ The causes for a release are varied, however here are several common ones:
 - To include a major bug-fix, optimization, or feature.
 - To include a series of small changes which have shown to improve performance, usability, etc.
 - If significant or risky PRs are waiting to merge and we wish to try and isolate those changes to a future release. I.e., to leave a "clean slate" for future PRs to apply to.
+- An external team or entity needs a specific feature that the team has agreed to publish.
 
 To start a new release, one of the Lodestar developers will communicate this via the Lodestar chat channel and seek consensus from the other developers.
 
@@ -23,12 +24,13 @@ To start a new release, one of the Lodestar developers will communicate this via
 #### All-in-one script (for example version `v1.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
+  - NOTE: In some rare circumstances, the team may select a commit from `stable`. This may happen if a tight deadline needs to be met and `unstable` can't be stabilized in time. We should avoid doing this unless absolutely necessary as merge conflicts and unintended consequences of cherry-picking commits may arise.
 - `yarn release:create-rc 1.1.0 9fceb02`
   - Must be run locally from a write-access account capable of triggering CI.
-  - This script may alternatively be run on the the checked out `HEAD`:
+  - This script may alternatively be run on the checked out `HEAD`:
     - `git checkout 9fceb02`
     - `yarn release:create-rc 1.1.0`
-- Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
+- Open draft PR from `rc/v1.1.0` to `stable` with title `chore: v1.1.0 release`.
 
 #### Manual steps (for example version `v1.1.0`, commit `9fceb02`):
 
@@ -40,7 +42,7 @@ To start a new release, one of the Lodestar developers will communicate this via
 - Commit changes
   - `git commit -am "v1.1.0"`
   - `git push origin rc/v1.1.0`
-- Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
+- Open draft PR from `rc/v1.1.0` to `stable` with title `chore: v1.1.0 release`.
 
 ### 2. Tag release candidate
 
@@ -51,7 +53,7 @@ Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Gi
 - The team selects a commit from `rc/v1.1.0` as a commit to tag and publish.
 - `yarn release:tag-rc 1.1.0 8ab7cef`
   - Must be run locally from a write-access account capable of triggering CI.
-  - This script may alternatively be run on the the checked out `HEAD`:
+  - This script may alternatively be run on the checked out `HEAD`:
     - `git checkout 8ab7cef`
     - `yarn release:tag-rc 1.1.0`
 
@@ -67,20 +69,20 @@ Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Gi
 
 Once a release candidate is created, the Lodestar team begins a testing period.
 
-If there is a bug discovered during the testing period which significantly impacts performance, security, or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed, maybe back-ported to `unstable` and we publish and promote the new commit to `rc.x+1`. The 3 day testing period will reset.
+If there is a bug discovered during the testing period which significantly impacts performance, security, or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed to `unstable` first, then cherrypicked into the `rc/v1.1.0` branch. Then we publish and promote the new commit to `rc.x+1`. The 3-day testing period will reset.
 
 For example: After 3-5 days of testing, is performance equal to or better than latest stable?
 
 - **Yes**: Continue to the next release step
-- **No**: If it a small issue fixable quickly (hot-fix)?
-  - **Yes**: push fixes to branch, go to step 2, incrementing the rc version
-  - **No**: abort the release. Close the `v1.1.0 release` PR, delete the branch, and start the whole release process over.
+- **No**: If it a small issue fixable quickly (hotfix)?
+  - **Yes**: Merge fix(es) to `unstable`, push the fix(es) to `rc/v1.1.0` branch, go to step 2, incrementing the rc version
+  - **No**: abort the release. Close the `chore: v1.1.0 release` PR, delete the branch, and start the whole release process over.
 
 ### 4. Merge release candidate
 
 - Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
-- Approving the `v1.1.0 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
-- Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
+- Approving the `chore: v1.1.0 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
+- Merge `chore: v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
 - Merge stable `stable` into `unstable` **with merge commit** strategy. Due to branch protections in `unstable` must open a PR. If there are conflicts, those must be resolved manually. Gitflow may cause changes that conflict between stable and unstable, for example due to a hotfix that is backported. If that happens, disable branch protections in unstable, merge locally fixing conflicts, run lint + tests, push, and re-enable branch protections.
 
 ### 5. Tag stable release
@@ -92,6 +94,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 - `git checkout stable`
 - `yarn release:tag-stable 1.1.0`
   - Must be run locally from a write-access account capable of triggering CI.
+
 #### Manual steps (for example version `v1.1.0`):
 
 - Check out the new stable
@@ -103,15 +106,118 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 ### 6. Announce
 
 - Double check that Github release is correct
-- Publish to Social Media
+- Follow [Publish to Social Media](#publish-to-social-media) steps
 
-## Hot-fix release
+## Hotfix release
 
-If a stable version requires an immediate hot-fix before the next release, a hot-fix release is started.
+If a stable version requires an immediate fix before the next release, a hotfix release is started.
 
-The same process for a stable release is used, with the two differences.
+A similar process for a stable release is used, with the three differences.
+
 - The candidate commit must be chosen from the `stable` branch instead of the `unstable` branch.
 - Depending on the severity of the bug being fixed, the testing window may be decreased.
+- All hotfixes are committed with an `unstable` first strategy rather than directly on the RC branch itself. Hotfixes are always merged to `unstable` first, then cherry-picked into hotfix release candidates.
+
+### 1. Create hotfix release candidate from `stable` branch
+
+#### All-in-one script (for example version `v1.1.1`, stable commit `8eb8dce`):
+
+- Select the latest commit from `stable` as the "hotfix release candidate" for a new hotfix version release.
+- `git fetch origin stable`
+- `git checkout stable`
+- `yarn release:create-rc 1.1.1`
+  - Must be run locally from a write-access account capable of triggering CI.
+- Switch to the hotfix release branch and cherrypick the inclusion(s) from the `unstable` branch to the hotfix release.
+  - `git checkout rc/v1.1.1`
+  - `git cherry-pick {commit}`
+- Open draft PR from `rc/v1.1.1` to `stable` with the title `chore: v1.1.1 release`.
+
+#### Manual steps (for example version `v1.1.1`, commit `8eb8dce`):
+
+- Select the latest commit from `stable` as the "hotfix release candidate" for a new hotfix release.
+- Checkout `stable` branch
+  - `git checkout stable`
+- Create a new release branch `rc/v1.1.1` at commit `8eb8dce`
+  - `git checkout -b rc/v1.1.1 8eb8dce`
+- Set monorepo version to `v.1.1.1`.
+  - `lerna version v1.1.1 --no-git-tag-version --force-publish --yes`
+- Commit changes
+  - `git commit -am "v1.1.1"`
+  - `git push origin rc/v1.1.1`
+    Open draft PR from `rc/v1.1.1` to `stable` with the title `chore: v1.1.1 release`.
+
+### 2. Tag release candidate
+
+Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Github releases.
+
+#### All-in-one script (for example version `v1.1.1`, commit `f3df9f8`):
+
+- Select the latest commit from `rc/v1.1.1` to tag and publish.
+- `yarn release:tag-rc 1.1.1`
+  - Must be run locally from a write-access account capable of triggering CI.
+
+#### Manual steps (for example version `v1.1.1`, commit `f3df9f8`):
+
+- Tag latest commit as `v1.1.1-rc.0` with an annotated tag, and push the tag.
+  - `git tag -am "v1.1.1-rc.0" v1.1.1-rc.0`
+  - `git push origin v1.1.1-rc.0`
+
+### 3. Test hotfix release candidate
+
+Once a hotfix release candidate is created, the Lodestar team may begin a modified hotfix testing period consisting of a quick sanity check or longer if required.
+
+If the hotfix does not address the purpose of the hotfix release, or there is another bug discovered during this modified hotfix testing period which significantly impacts performance, security, or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await an additional fix by the team. The fix will be committed to `unstable` first, then cherrypicked into the `rc/v1.1.1` hotfix branch. Then we publish and promote the new commit to `rc.x+1`. The modified hotfix testing period will reset.
+
+For example: After modified hotfix testing period, is the original bug resolved? Is performance equal to or better than latest stable?
+
+- **Yes**: Continue to the next release step
+- **No**: If it a small issue fixable quickly with another hotfix?
+  - **Yes**: Merge fix(es) to `unstable`, push the fix(es) to `rc/v1.1.1` hotfix branch, go to step 2, incrementing the rc version
+  - **No**: Abort the release. Close the `chore: v1.1.v release` PR, delete the branch, and start the whole release process over.
+
+### 4. Merge hotfix release candidate
+
+- Ensure step 3 testing is successful and there is sufficient consensus to release `v1.1.1`.
+- Approving the `chore: v1.1.1 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
+- Merge `chore: v1.1.1 release` PR to stable **with "merge commit"** strategy to preserve all history.
+- Merge `stable` into `unstable` **with merge commit** strategy. Due to branch protections in `unstable` must open a PR. If there are conflicts, those must be resolved manually. Gitflow may cause changes that conflict between stable and unstable, for example due to a hotfix that is backported. If that happens, disable branch protections in unstable, merge locally fixing conflicts, run lint + tests, push, and re-enable branch protections. See "Backporting merge conflicts from stable to unstable".
+
+Pull the latest commits on both `stable` and `unstable` branches:
+
+- `git checkout stable && git pull origin stable`
+- `git checkout unstable && git pull origin unstable`
+
+Merge `stable` into `unstable`, resolving conflicts:
+
+- `git checkout unstable && git merge stable`
+- Resolve conflicts
+- Sanity check locally before pushing by using: `git diff origin/unstable unstable`
+- Disable `unstable` branch protection
+- `git push`
+- Enable `unstable` branch protection
+
+### 5. Tag stable hotfix release
+
+Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Github releases.
+
+#### All-in-one script (for example version `v1.1.1`):
+
+- `git checkout stable`
+- `yarn release:tag-stable 1.1.1`
+  - Must be run locally from a write-access account capable of triggering CI.
+
+#### Manual steps (for example version `v1.1.1`):
+
+- Check out the new stable
+  - `git checkout stable`
+- Tag it as `v1.1.1` with an annotated tag, push commit and tag.
+  - `git tag -am "v1.1.1" v1.1.1`
+  - `git push origin v1.1.1`
+
+### 6. Announce
+
+- Double check that Github release is correct
+- Follow [Publish to Social Media](#publish-to-social-media) steps
 
 ## Dev release
 
@@ -185,13 +291,14 @@ Have someone else review the release notes and then edit the release.
 
 The release should be announced on the following social channels:
 
-- Email: with Mailchimp.
-- Discord: Use the #lodestar-announcements channel. Tag @everyone and ensure it is published to all downstream channels.
-- Twitter: Short and sweet in a single tweet with twitter.com/lodestar_eth
-- Reddit: TODO: get Lodestar account.
+- Discord: Use the #lodestar-announcements channel. Ensure it is published to all downstream channels
+- Twitter: Short and sweet in a single tweet or thread with twitter.com/lodestar_eth
+- Blog post (if necessary): To outline specific changes that require additional context for users
 
 # Release Manager Checklist
+
 This section is to guide the Release Manager tasked with the next version release to ensure all items have been completed.
+
 - Start thread on communication channels for new release
 - Confirm consensus on `unstable` release candidate commit
 - Complete Step 1: Create release candidate
@@ -200,14 +307,13 @@ This section is to guide the Release Manager tasked with the next version releas
 - If there are `rc.x` hot fixes, push to branch and increment the `rc.x` version.
 - Team members conduct Release Candidate Metrics Review
 - A Lodestar team member must mark the release candidate as safe, after personally reviewing and / or testing it
+- Backup `stable` and `unstable` branches locally for restoration in case of accidental use of the incorrect merge method
 - Temporarily enable "Allow merge commits" under the Lodestar repository settings
 - Release Manager can now complete Step 4: Merge release candidate.
 - Disable "Allow merge commits" under the Lodestar repository settings
 - Complete Step 5: Tag stable release
 - Double check that Github release is correct and inform the Project Manager of completion
-- Update lodestar_dockerhub_tag in production repository
-- Deploy new stable release to `stable` group of servers
-- Confirm attestations and monitor for any issues
+- Project Manager to follow up with Devops updating both `bn` and `vc` stable servers
 
 ## Alternatives considered
 
@@ -220,7 +326,7 @@ Historical context and reasons against valid alternatives to help future discuss
 
 Lodestar used `master` as the single target for feature branches.
 
-![lodestar-release](docs/images/lodestar-releases.png)
+![lodestar-release](docs/static/images/lodestar-releases.png)
 
 - Main branch = `master`
 - Features merged to `master`
@@ -229,7 +335,7 @@ Lodestar used `master` as the single target for feature branches.
 - QA is done on `v1.1.x` branch
 - Fixes on rc are done on `v1.1.x`, then re-tag
 - Once released final `v1.1.0` tag is on a branch that is never merged
-- Hot-fixes are either cherry-picked from `master` or done on the `v1.1.x` branch, never merged
+- Hotfixes are either cherry-picked from `master` or done on the `v1.1.x` branch, never merged
 
 However, this had some issues:
 

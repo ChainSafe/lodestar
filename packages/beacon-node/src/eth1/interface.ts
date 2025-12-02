@@ -1,6 +1,6 @@
-import {IBeaconConfig} from "@lodestar/config";
-import {phase0, Root, RootHex} from "@lodestar/types";
+import {BeaconConfig} from "@lodestar/config";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {Root, RootHex, phase0} from "@lodestar/types";
 
 export type EthJsonRpcBlockRaw = {
   /** the block number. null when its pending block. `"0x1b4"` */
@@ -29,6 +29,14 @@ export interface IEth1Provider {
   getBlocksByNumber(fromBlock: number, toBlock: number): Promise<EthJsonRpcBlockRaw[]>;
   getDepositEvents(fromBlock: number, toBlock: number): Promise<phase0.DepositEvent[]>;
   validateContract(): Promise<void>;
+  getState(): Eth1ProviderState;
+}
+
+export enum Eth1ProviderState {
+  ONLINE = "ONLINE",
+  OFFLINE = "OFFLINE",
+  ERROR = "ERROR",
+  AUTH_FAILED = "AUTH_FAILED",
 }
 
 export type Eth1DataAndDeposits = {
@@ -54,6 +62,13 @@ export interface IEth1ForBlockProduction {
    * - head state not isMergeTransitionComplete
    */
   startPollingMergeBlock(): void;
+
+  isPollingEth1Data(): boolean;
+
+  /**
+   * Should stop polling eth1Data after a Electra block is finalized AND deposit_requests_start_index is reached
+   */
+  stopPollingEth1Data(): void;
 }
 
 /** Different Eth1Block from phase0.Eth1Block with blockHash */
@@ -91,18 +106,18 @@ export type TDProgress =
     }
   | {ttdHit: true};
 
-export interface IBatchDepositEvents {
+export type BatchDepositEvents = {
   depositEvents: phase0.DepositEvent[];
   blockNumber: number;
-}
+};
 
-export interface IEth1Streamer {
-  getDepositsStream(fromBlock: number): AsyncGenerator<IBatchDepositEvents>;
+export type Eth1Streamer = {
+  getDepositsStream(fromBlock: number): AsyncGenerator<BatchDepositEvents>;
   getDepositsAndBlockStreamForGenesis(fromBlock: number): AsyncGenerator<[phase0.DepositEvent[], phase0.Eth1Block]>;
-}
+};
 
 export type IEth1StreamParams = Pick<
-  IBeaconConfig,
+  BeaconConfig,
   "ETH1_FOLLOW_DISTANCE" | "MIN_GENESIS_TIME" | "GENESIS_DELAY" | "SECONDS_PER_ETH1_BLOCK"
 > & {
   maxBlocksPerPoll: number;
@@ -110,7 +125,7 @@ export type IEth1StreamParams = Pick<
 
 export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};
 
-export interface IRpcPayload<P = IJson[]> {
+export interface RpcPayload<P = IJson[]> {
   method: string;
   params: P;
 }

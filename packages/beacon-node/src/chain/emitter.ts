@@ -1,10 +1,11 @@
-import {EventEmitter} from "events";
-import StrictEventEmitter from "strict-event-emitter-types";
-
+import {EventEmitter} from "node:events";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
-import {phase0, Epoch, Slot, allForks, altair} from "@lodestar/types";
-import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {RootHex, deneb, fulu, phase0} from "@lodestar/types";
+import {PeerIdStr} from "../util/peerId.js";
+import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -12,24 +13,9 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
  * Chain events can be broken into several categories:
  * - Clock: the chain's clock is updated
  * - Fork Choice: the chain's fork choice is updated
- * - Processing: the chain processes attestations and blocks, either successfully or with an error
  * - Checkpointing: the chain processes epoch boundaries
  */
 export enum ChainEvent {
-  /**
-   * This event signals that the chain has successfully processed a valid attestation.
-   *
-   * This event is guaranteed to be emitted after every attestation fed to the chain has successfully been passed to the fork choice.
-   */
-  attestation = "attestation",
-  /** The node has received a valid sync committee SignedContributionAndProof (from P2P or API) */
-  contributionAndProof = "contribution_and_proof",
-  /**
-   * This event signals that the chain has successfully processed a valid block.
-   *
-   * This event is guaranteed to be emitted after every block fed to the chain has successfully passed the state transition.
-   */
-  block = "block",
   /**
    * This event signals that the chain has processed (or reprocessed) a checkpoint.
    *
@@ -37,42 +23,6 @@ export enum ChainEvent {
    * This event is guaranteed to be called after _any_ checkpoint is processed, including skip-slot checkpoints, checkpoints that are formed as a result of processing blocks, etc.
    */
   checkpoint = "checkpoint",
-  /**
-   * This event signals that the chain has processed (or reprocessed) a checkpoint state with an updated justified checkpoint.
-   *
-   * This event is a derivative of the `checkpoint` event. Eg: in cases where the `checkpoint` state has an updated justified checkpoint, this event is triggered.
-   */
-  justified = "justified",
-  /**
-   * This event signals that the chain has processed (or reprocessed) a checkpoint state with an updated finalized checkpoint.
-   *
-   * This event is a derivative of the `checkpoint` event. Eg: in cases where the `checkpoint` state has an updated finalized checkpoint, this event is triggered.
-   */
-  finalized = "finalized",
-  /**
-   * This event signals the start of a new slot, and that subsequent calls to `clock.currentSlot` will equal `slot`.
-   *
-   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT` seconds.
-   */
-  clockSlot = "clock:slot",
-  /**
-   * This event signals the start of a new epoch, and that subsequent calls to `clock.currentEpoch` will return `epoch`.
-   *
-   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT * SLOTS_PER_EPOCH` seconds.
-   */
-  clockEpoch = "clock:epoch",
-  /**
-   * This event signals that the fork choice has been updated to a new head.
-   *
-   * This event is guaranteed to be emitted after every sucessfully processed block, if that block updates the head.
-   */
-  head = "forkChoice:head",
-  /**
-   * This event signals that the fork choice has been updated to a new head that is not a descendant of the previous head.
-   *
-   * This event is guaranteed to be emitted after every sucessfully processed block, if that block results results in a reorg.
-   */
-  forkChoiceReorg = "forkChoice:reorg",
   /**
    * This event signals that the fork choice store has been updated.
    *
@@ -86,37 +36,70 @@ export enum ChainEvent {
    */
   forkChoiceFinalized = "forkChoice:finalized",
   /**
-   * A new lightclient optimistic header update is available to be broadcasted to connected light-clients
+   * This event signals that dependent services (e.g. custody sampling) should update to account for the new target group count.
    */
-  lightclientOptimisticUpdate = "lightclient:header_update",
+  updateTargetCustodyGroupCount = "updateTargetCustodyGroupCount",
   /**
-   * A new lightclient finalized header update is available to be broadcasted to connected light-clients
+   * This event signals that data columns have been fetched from the execution engine
+   * and are ready to be published.
    */
-  lightclientFinalizedUpdate = "lightclient:finalized_update",
+  publishDataColumns = "publishDataColumns",
+  /**
+   * This event signals that blobs have been fetched from the execution engine
+   * and are ready to be published.
+   */
+  publishBlobSidecars = "publishBlobSidecars",
+  /**
+   * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
+   */
+  updateStatus = "updateStatus",
+  /**
+   * Trigger a BlockInputSync for blocks where the parentRoot is not known to fork choice
+   */
+  unknownParent = "unknownParent",
+  /**
+   * Trigger BlockInputSync for objects that correspond to a block that is not known to fork choice
+   */
+  unknownBlockRoot = "unknownBlockRoot",
+  /**
+   * Trigger BlockInputSync for blocks that are partially received via gossip but are not complete by time the
+   * cut-off window passes for waiting on gossip
+   */
+  incompleteBlockInput = "incompleteBlockInput",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
+export type ReorgEventData = routes.events.EventData[routes.events.EventType.chainReorg];
 
-export interface IChainEvents {
-  [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
-  [ChainEvent.contributionAndProof]: (contributionAndProof: altair.SignedContributionAndProof) => void;
-  [ChainEvent.block]: (signedBlock: allForks.SignedBeaconBlock, postState: CachedBeaconStateAllForks) => void;
+// API events are emitted through the same ChainEventEmitter for re-use internally
+type ApiEvents = {[K in routes.events.EventType]: (data: routes.events.EventData[K]) => void};
 
+export type ChainEventData = {
+  [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+};
+
+export type IChainEvents = ApiEvents & {
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
-  [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
-  [ChainEvent.finalized]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
 
-  [ChainEvent.clockSlot]: (slot: Slot) => void;
-  [ChainEvent.clockEpoch]: (epoch: Epoch) => void;
-
-  [ChainEvent.head]: (data: HeadEventData) => void;
-  [ChainEvent.forkChoiceReorg]: (head: ProtoBlock, oldHead: ProtoBlock, depth: number) => void;
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
-  [ChainEvent.lightclientOptimisticUpdate]: (optimisticUpdate: routes.events.LightclientOptimisticHeaderUpdate) => void;
-  [ChainEvent.lightclientFinalizedUpdate]: (finalizedUpdate: routes.events.LightclientFinalizedUpdate) => void;
-}
+  [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
+
+  [ChainEvent.publishDataColumns]: (sidecars: fulu.DataColumnSidecar[]) => void;
+
+  [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
+
+  [ChainEvent.updateStatus]: () => void;
+
+  // Sync events that are chain->chain. Initiated from network requests but do not cross the network
+  // barrier so are considered ChainEvent(s).
+  [ChainEvent.unknownParent]: (data: ChainEventData[ChainEvent.unknownParent]) => void;
+  [ChainEvent.unknownBlockRoot]: (data: ChainEventData[ChainEvent.unknownBlockRoot]) => void;
+  [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
+};
 
 /**
  * Emits important chain events that occur during normal chain operation.

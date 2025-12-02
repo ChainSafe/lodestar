@@ -1,13 +1,10 @@
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  computeDomain,
-  ZERO_HASH,
-} from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {SecretKey} from "@chainsafe/blst";
+import {BitArray} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_AGGREGATE_AND_PROOF,
+  DOMAIN_APPLICATION_BUILDER,
   DOMAIN_BEACON_ATTESTER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
@@ -15,33 +12,45 @@ import {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
-  DOMAIN_VOLUNTARY_EXIT,
-  DOMAIN_APPLICATION_BUILDER,
+  ForkSeq,
 } from "@lodestar/params";
-import type {SecretKey} from "@chainsafe/bls/types";
 import {
-  allForks,
-  altair,
-  bellatrix,
+  ZERO_HASH,
+  blindedOrFullBlockHashTreeRoot,
+  computeDomain,
+  computeEpochAtSlot,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+} from "@lodestar/state-transition";
+import {
+  AggregateAndProof,
+  Attestation,
   BLSPubkey,
   BLSSignature,
+  BeaconBlock,
+  BlindedBeaconBlock,
   Epoch,
-  phase0,
   Root,
+  SignedAggregateAndProof,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
+  SingleAttestation,
   Slot,
-  ssz,
   ValidatorIndex,
+  altair,
+  bellatrix,
+  phase0,
+  ssz,
 } from "@lodestar/types";
-import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
+import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {Metrics} from "../metrics.js";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
-import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
-import {Metrics} from "../metrics.js";
-import {blindedOrFullBlockHashTreeRoot} from "../util/blindedBlock.js";
+import {SignableMessage, SignableMessageType, externalSignerPostSignature} from "../util/externalSignerClient.js";
 import {isValidatePubkeyHex} from "../util/format.js";
-import {IndicesService} from "./indices.js";
+import {LoggerVc} from "../util/logger.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
+import {IndicesService} from "./indices.js";
 
 type BLSPubkeyMaybeHex = BLSPubkey | PubkeyHex;
 type Eth1Address = string;
@@ -63,12 +72,13 @@ export type SignerRemote = {
 };
 
 type DefaultProposerConfig = {
-  graffiti: string;
+  graffiti?: string;
   strictFeeRecipientCheck: boolean;
   feeRecipient: Eth1Address;
   builder: {
-    enabled: boolean;
     gasLimit: number;
+    selection: routes.validator.BuilderSelection;
+    boostFactor: bigint;
   };
 };
 
@@ -77,14 +87,23 @@ export type ProposerConfig = {
   strictFeeRecipientCheck?: boolean;
   feeRecipient?: Eth1Address;
   builder?: {
-    enabled?: boolean;
     gasLimit?: number;
+    selection?: routes.validator.BuilderSelection;
+    boostFactor?: bigint;
   };
 };
 
 export type ValidatorProposerConfig = {
   proposerConfig: {[index: PubkeyHex]: ProposerConfig};
   defaultConfig: ProposerConfig;
+};
+
+export type ValidatorStoreModules = {
+  config: BeaconConfig;
+  slashingProtection: ISlashingProtection;
+  indicesService: IndicesService;
+  doppelgangerService: DoppelgangerService | null;
+  metrics: Metrics | null;
 };
 
 /**
@@ -112,46 +131,76 @@ type ValidatorData = ProposerConfig & {
 
 export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
-  defaultGasLimit: 30_000_000,
+  defaultGasLimit: 60_000_000,
+  builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
+  builderAliasSelection: routes.validator.BuilderSelection.Default,
+  builderBoostFactor: BigInt(100),
+  // spec asks for gossip validation by default
+  broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+  // should request fetching the locally produced block in blinded format
+  blindedLocal: false,
 };
+
+export const MAX_BUILDER_BOOST_FACTOR = 2n ** 64n - 1n;
 
 /**
  * Service that sets up and handles validator attester duties.
  */
 export class ValidatorStore {
+  private readonly config: BeaconConfig;
+  private readonly slashingProtection: ISlashingProtection;
+  private readonly indicesService: IndicesService;
+  private readonly doppelgangerService: DoppelgangerService | null;
+  private readonly metrics: Metrics | null;
+
   private readonly validators = new Map<PubkeyHex, ValidatorData>();
   /** Initially true because there are no validators */
   private pubkeysToDiscover: PubkeyHex[] = [];
   private readonly defaultProposerConfig: DefaultProposerConfig;
 
-  constructor(
-    private readonly config: IBeaconConfig,
-    private readonly slashingProtection: ISlashingProtection,
-    private readonly indicesService: IndicesService,
-    private readonly doppelgangerService: DoppelgangerService | null,
-    private readonly metrics: Metrics | null,
-    initialSigners: Signer[],
-    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {}, proposerConfig: {}},
-    private readonly genesisValidatorRoot: Root
-  ) {
+  constructor(modules: ValidatorStoreModules, valProposerConfig: ValidatorProposerConfig) {
+    const {config, slashingProtection, indicesService, doppelgangerService, metrics} = modules;
+    this.config = config;
+    this.slashingProtection = slashingProtection;
+    this.indicesService = indicesService;
+    this.doppelgangerService = doppelgangerService;
+    this.metrics = metrics;
+
     const defaultConfig = valProposerConfig.defaultConfig;
+    const builderBoostFactor = defaultConfig.builder?.boostFactor ?? defaultOptions.builderBoostFactor;
+    if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for defaultConfig`);
+    }
+
     this.defaultProposerConfig = {
-      graffiti: defaultConfig.graffiti ?? "",
+      graffiti: defaultConfig.graffiti,
       strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
       feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
       builder: {
-        enabled: defaultConfig.builder?.enabled ?? false,
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
+        selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
+        boostFactor: builderBoostFactor,
       },
     };
-
-    for (const signer of initialSigners) {
-      this.addSigner(signer, valProposerConfig);
-    }
 
     if (metrics) {
       metrics.signers.addCollect(() => metrics.signers.set(this.validators.size));
     }
+  }
+
+  /**
+   * Create a validator store with initial signers
+   */
+  static async init(
+    modules: ValidatorStoreModules,
+    initialSigners: Signer[],
+    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {}, proposerConfig: {}}
+  ): Promise<ValidatorStore> {
+    const validatorStore = new ValidatorStore(modules, valProposerConfig);
+
+    await Promise.all(initialSigners.map((signer) => validatorStore.addSigner(signer, valProposerConfig)));
+
+    return validatorStore;
   }
 
   /** Return all known indices from the validatorStore pubkeys */
@@ -198,15 +247,61 @@ export class ValidatorStore {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
     // This should directly modify data in the map
-    delete validatorData["feeRecipient"];
+    delete validatorData.feeRecipient;
   }
 
-  getGraffiti(pubkeyHex: PubkeyHex): string {
-    return this.validators.get(pubkeyHex)?.graffiti ?? this.defaultProposerConfig.graffiti;
+  getGraffiti(pubkeyHex: PubkeyHex): string | undefined {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData.graffiti ?? this.defaultProposerConfig.graffiti;
   }
 
-  isBuilderEnabled(pubkeyHex: PubkeyHex): boolean {
-    return (this.validators.get(pubkeyHex)?.builder || {}).enabled ?? this.defaultProposerConfig?.builder.enabled;
+  setGraffiti(pubkeyHex: PubkeyHex, graffiti: string): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    validatorData.graffiti = graffiti;
+  }
+
+  deleteGraffiti(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    delete validatorData.graffiti;
+  }
+
+  getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
+    const selection =
+      this.validators.get(pubkeyHex)?.builder?.selection ?? this.defaultProposerConfig.builder.selection;
+
+    let boostFactor: bigint;
+    switch (selection) {
+      case routes.validator.BuilderSelection.Default:
+        // Default value slightly favors local block to improve censorship resistance of Ethereum
+        // The people have spoken and so it shall be https://x.com/lodestar_eth/status/1772679499928191044
+        boostFactor = BigInt(90);
+        break;
+
+      case routes.validator.BuilderSelection.MaxProfit:
+        boostFactor =
+          this.validators.get(pubkeyHex)?.builder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
+        break;
+
+      case routes.validator.BuilderSelection.BuilderAlways:
+      case routes.validator.BuilderSelection.BuilderOnly:
+        boostFactor = MAX_BUILDER_BOOST_FACTOR;
+        break;
+
+      case routes.validator.BuilderSelection.ExecutionAlways:
+      case routes.validator.BuilderSelection.ExecutionOnly:
+        boostFactor = BigInt(0);
+    }
+
+    return {selection, boostFactor};
   }
 
   strictFeeRecipientCheck(pubkeyHex: PubkeyHex): boolean {
@@ -239,6 +334,34 @@ export class ValidatorStore {
     delete validatorData.builder?.gasLimit;
   }
 
+  getBuilderBoostFactor(pubkeyHex: PubkeyHex): bigint {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData?.builder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
+  }
+
+  setBuilderBoostFactor(pubkeyHex: PubkeyHex, boostFactor: bigint): void {
+    if (boostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw Error(`Invalid builderBoostFactor=${boostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+    }
+
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    validatorData.builder = {...validatorData.builder, boostFactor};
+  }
+
+  deleteBuilderBoostFactor(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    delete validatorData.builder?.boostFactor;
+  }
+
   /** Return true if `index` is active part of this validator client */
   hasValidatorIndex(index: ValidatorIndex): boolean {
     return this.indicesService.index2pubkey.has(index);
@@ -258,26 +381,32 @@ export class ValidatorStore {
       graffiti !== undefined ||
       strictFeeRecipientCheck !== undefined ||
       feeRecipient !== undefined ||
-      builder?.enabled !== undefined ||
-      builder?.gasLimit !== undefined
+      builder?.gasLimit !== undefined ||
+      builder?.selection !== undefined ||
+      builder?.boostFactor !== undefined
     ) {
       proposerConfig = {graffiti, strictFeeRecipientCheck, feeRecipient, builder};
     }
     return proposerConfig;
   }
 
-  addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): void {
+  async addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): Promise<void> {
     const pubkey = getSignerPubkeyHex(signer);
-    const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
+    const proposerConfig = valProposerConfig?.proposerConfig?.[pubkey];
+    const builderBoostFactor = proposerConfig?.builder?.boostFactor;
+    if (builderBoostFactor !== undefined && builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for pubkey=${pubkey}`);
+    }
 
     if (!this.validators.has(pubkey)) {
+      // Doppelganger registration must be done before adding validator to signers
+      await this.doppelgangerService?.registerValidator(pubkey);
+
       this.pubkeysToDiscover.push(pubkey);
       this.validators.set(pubkey, {
         signer,
         ...proposerConfig,
       });
-
-      this.doppelgangerService?.registerValidator(pubkey);
     }
   }
 
@@ -304,11 +433,22 @@ export class ValidatorStore {
     return this.validators.has(pubkeyHex);
   }
 
+  getRemoteSignerPubkeys(signerUrl: string): PubkeyHex[] {
+    const pubkeysHex = [];
+    for (const {signer} of this.validators.values()) {
+      if (signer.type === SignerType.Remote && signer.url === signerUrl) {
+        pubkeysHex.push(signer.pubkey);
+      }
+    }
+    return pubkeysHex;
+  }
+
   async signBlock(
     pubkey: BLSPubkey,
-    blindedOrFull: allForks.FullOrBlindedBeaconBlock,
-    currentSlot: Slot
-  ): Promise<allForks.FullOrBlindedSignedBeaconBlock> {
+    blindedOrFull: BeaconBlock | BlindedBeaconBlock,
+    currentSlot: Slot,
+    logger?: LoggerVc
+  ): Promise<SignedBeaconBlock | SignedBlindedBeaconBlock> {
     // Make sure the block slot is not higher than the current slot to avoid potential attacks.
     if (blindedOrFull.slot > currentSlot) {
       throw Error(`Not signing block with slot ${blindedOrFull.slot} greater than current slot ${currentSlot}`);
@@ -323,8 +463,14 @@ export class ValidatorStore {
     // Don't use `computeSigningRoot()` here to compute the objectRoot in typesafe function blindedOrFullBlockHashTreeRoot()
     const signingRoot = ssz.phase0.SigningData.hashTreeRoot({objectRoot: blockRoot, domain});
 
+    logger?.debug("Signing the block proposal", {
+      slot: signingSlot,
+      blockRoot: toRootHex(blockRoot),
+      signingRoot: toRootHex(signingRoot),
+    });
+
     try {
-      await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: blindedOrFull.slot, signingRoot});
+      await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: signingSlot, signingRoot});
     } catch (e) {
       this.metrics?.slashingProtectionBlockError.inc();
       throw e;
@@ -338,7 +484,7 @@ export class ValidatorStore {
     return {
       message: blindedOrFull,
       signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
-    } as allForks.FullOrBlindedSignedBeaconBlock;
+    } as SignedBeaconBlock | SignedBlindedBeaconBlock;
   }
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
@@ -352,14 +498,14 @@ export class ValidatorStore {
       data: {epoch},
     };
 
-    return await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
+    return this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
   }
 
   async signAttestation(
     duty: routes.validator.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
-  ): Promise<phase0.Attestation> {
+  ): Promise<SingleAttestation> {
     // Make sure the target epoch is not higher than the current epoch to avoid potential attacks.
     if (attestationData.target.epoch > currentEpoch) {
       throw Error(
@@ -391,21 +537,30 @@ export class ValidatorStore {
       data: attestationData,
     };
 
+    if (this.config.getForkSeq(signingSlot) >= ForkSeq.electra) {
+      return {
+        committeeIndex: duty.committeeIndex,
+        attesterIndex: duty.validatorIndex,
+        data: attestationData,
+        signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+      };
+    }
+
     return {
       aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
       data: attestationData,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
-    };
+    } as phase0.Attestation;
   }
 
   async signAggregateAndProof(
     duty: routes.validator.AttesterDuty,
     selectionProof: BLSSignature,
-    aggregate: phase0.Attestation
-  ): Promise<phase0.SignedAggregateAndProof> {
+    aggregate: Attestation
+  ): Promise<SignedAggregateAndProof> {
     this.validateAttestationDuty(duty, aggregate.data);
 
-    const aggregateAndProof: phase0.AggregateAndProof = {
+    const aggregateAndProof: AggregateAndProof = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
       selectionProof,
@@ -413,10 +568,13 @@ export class ValidatorStore {
 
     const signingSlot = aggregate.data.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_AGGREGATE_AND_PROOF);
-    const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
+    const isPostElectra = this.config.getForkSeq(signingSlot) >= ForkSeq.electra;
+    const signingRoot = isPostElectra
+      ? computeSigningRoot(ssz.electra.AggregateAndProof, aggregateAndProof, domain)
+      : computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
 
     const signableMessage: SignableMessage = {
-      type: SignableMessageType.AGGREGATE_AND_PROOF,
+      type: isPostElectra ? SignableMessageType.AGGREGATE_AND_PROOF_V2 : SignableMessageType.AGGREGATE_AND_PROOF,
       data: aggregateAndProof,
     };
 
@@ -484,7 +642,7 @@ export class ValidatorStore {
       data: {slot},
     };
 
-    return await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
+    return this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
   }
 
   async signSyncCommitteeSelectionProof(
@@ -506,7 +664,7 @@ export class ValidatorStore {
       data: {slot, subcommitteeIndex},
     };
 
-    return await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
+    return this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
   }
 
   async signVoluntaryExit(
@@ -515,7 +673,7 @@ export class ValidatorStore {
     exitEpoch: Epoch
   ): Promise<phase0.SignedVoluntaryExit> {
     const signingSlot = computeStartSlotAtEpoch(exitEpoch);
-    const domain = this.config.getDomain(signingSlot, DOMAIN_VOLUNTARY_EXIT);
+    const domain = this.config.getDomainForVoluntaryExit(signingSlot);
 
     const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex};
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
@@ -541,11 +699,11 @@ export class ValidatorStore {
     regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
     _slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
-    const pubkey = typeof pubkeyMaybeHex === "string" ? fromHexString(pubkeyMaybeHex) : pubkeyMaybeHex;
-    const feeRecipient = fromHexString(regAttributes.feeRecipient);
+    const pubkey = typeof pubkeyMaybeHex === "string" ? fromHex(pubkeyMaybeHex) : pubkeyMaybeHex;
+    const feeRecipient = fromHex(regAttributes.feeRecipient);
     const {gasLimit} = regAttributes;
 
-    const validatorRegistation: bellatrix.ValidatorRegistrationV1 = {
+    const validatorRegistration: bellatrix.ValidatorRegistrationV1 = {
       feeRecipient,
       gasLimit,
       timestamp: Math.floor(Date.now() / 1000),
@@ -554,15 +712,15 @@ export class ValidatorStore {
 
     const signingSlot = 0;
     const domain = computeDomain(DOMAIN_APPLICATION_BUILDER, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
-    const signingRoot = computeSigningRoot(ssz.bellatrix.ValidatorRegistrationV1, validatorRegistation, domain);
+    const signingRoot = computeSigningRoot(ssz.bellatrix.ValidatorRegistrationV1, validatorRegistration, domain);
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.VALIDATOR_REGISTRATION,
-      data: validatorRegistation,
+      data: validatorRegistration,
     };
 
     return {
-      message: validatorRegistation,
+      message: validatorRegistration,
       signature: await this.getSignature(pubkeyMaybeHex, signingRoot, signingSlot, signableMessage),
     };
   }
@@ -572,22 +730,21 @@ export class ValidatorStore {
     regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
     slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
-    const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toHexString(pubkeyMaybeHex);
+    const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toPubkeyHex(pubkeyMaybeHex);
     const {feeRecipient, gasLimit} = regAttributes;
     const regFullKey = `${feeRecipient}-${gasLimit}`;
     const validatorData = this.validators.get(pubkeyHex);
     const builderData = validatorData?.builderData;
     if (builderData?.regFullKey === regFullKey) {
       return builderData.validatorRegistration;
-    } else {
-      const validatorRegistration = await this.signValidatorRegistration(pubkeyMaybeHex, regAttributes, slot);
-      // If pubkeyHex was actually registered, then update the regData
-      if (validatorData !== undefined) {
-        validatorData.builderData = {validatorRegistration, regFullKey};
-        this.validators.set(pubkeyHex, validatorData);
-      }
-      return validatorRegistration;
     }
+    const validatorRegistration = await this.signValidatorRegistration(pubkeyMaybeHex, regAttributes, slot);
+    // If pubkeyHex was actually registered, then update the regData
+    if (validatorData !== undefined) {
+      validatorData.builderData = {validatorRegistration, regFullKey};
+      this.validators.set(pubkeyHex, validatorData);
+    }
+    return validatorRegistration;
   }
 
   private async getSignature(
@@ -596,8 +753,8 @@ export class ValidatorStore {
     signingSlot: Slot,
     signableMessage: SignableMessage
   ): Promise<BLSSignature> {
-    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
+    // TODO: Refactor indexing to not have to run toHex() on the pubkey every time
+    const pubkeyHex = typeof pubkey === "string" ? pubkey : toPubkeyHex(pubkey);
 
     const signer = this.validators.get(pubkeyHex)?.signer;
     if (!signer) {
@@ -623,7 +780,7 @@ export class ValidatorStore {
             signingSlot,
             signableMessage
           );
-          return fromHexString(signatureHex);
+          return fromHex(signatureHex);
         } catch (e) {
           this.metrics?.remoteSignErrors.inc();
           throw e;
@@ -634,30 +791,25 @@ export class ValidatorStore {
     }
   }
 
-  private getSignerAndPubkeyHex(pubkey: BLSPubkeyMaybeHex): [Signer, string] {
-    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
-    const signer = this.validators.get(pubkeyHex)?.signer;
-    if (!signer) {
-      throw Error(`Validator pubkey ${pubkeyHex} not known`);
-    }
-    return [signer, pubkeyHex];
-  }
-
   /** Prevent signing bad data sent by the Beacon node */
   private validateAttestationDuty(duty: routes.validator.AttesterDuty, data: phase0.AttestationData): void {
     if (duty.slot !== data.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
-    if (duty.committeeIndex != data.index) {
+
+    const isPostElectra = this.config.getForkSeq(data.slot) >= ForkSeq.electra;
+    if (!isPostElectra && duty.committeeIndex !== data.index) {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
     }
+    if (isPostElectra && data.index !== 0) {
+      throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
+    }
   }
 
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
-    const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
+    const pubkeyHex = typeof pubKey === "string" ? pubKey : toPubkeyHex(pubKey);
     if (!this.isDoppelgangerSafe(pubkeyHex)) {
       throw new Error(`Doppelganger state for key ${pubkeyHex} is not safe`);
     }
@@ -667,7 +819,7 @@ export class ValidatorStore {
 function getSignerPubkeyHex(signer: Signer): PubkeyHex {
   switch (signer.type) {
     case SignerType.Local:
-      return toHexString(signer.secretKey.toPublicKey().toBytes());
+      return toPubkeyHex(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
       if (!isValidatePubkeyHex(signer.pubkey)) {

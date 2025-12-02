@@ -1,22 +1,31 @@
-import {ssz, allForks} from "@lodestar/types";
-import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {CachedBeaconStateBellatrix} from "../types.js";
-import {getRandaoMix} from "../util/index.js";
-import {ExecutionEngine} from "../util/executionEngine.js";
-import {isExecutionPayload, isMergeTransitionComplete} from "../util/bellatrix.js";
+import {byteArrayEquals} from "@chainsafe/ssz";
+import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
+import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
+import {toHex, toRootHex} from "@lodestar/utils";
+import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
+import {
+  executionPayloadToPayloadHeader,
+  getFullOrBlindedPayloadFromBody,
+  isMergeTransitionComplete,
+} from "../util/execution.js";
+import {computeEpochAtSlot, computeTimeAtSlot, getRandaoMix} from "../util/index.js";
+import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
-  state: CachedBeaconStateBellatrix,
-  payload: allForks.FullOrBlindedExecutionPayload,
-  executionEngine: ExecutionEngine | null
+  fork: ForkSeq,
+  state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
+  body: BeaconBlockBody | BlindedBeaconBlockBody,
+  externalData: Omit<BlockExternalData, "dataAvailabilityStatus">
 ): void {
+  const payload = getFullOrBlindedPayloadFromBody(body);
+  const forkName = ForkName[ForkSeq[fork] as ForkName];
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
   // with respect to the previous execution payload header
   if (isMergeTransitionComplete(state)) {
     const {latestExecutionPayloadHeader} = state;
     if (!byteArrayEquals(payload.parentHash, latestExecutionPayloadHeader.blockHash)) {
       throw Error(
-        `Invalid execution payload parentHash ${toHexString(payload.parentHash)} latest blockHash ${toHexString(
+        `Invalid execution payload parentHash ${toRootHex(payload.parentHash)} latest blockHash ${toRootHex(
           latestExecutionPayloadHeader.blockHash
         )}`
       );
@@ -26,9 +35,7 @@ export function processExecutionPayload(
   // Verify random
   const expectedRandom = getRandaoMix(state, state.epochCtx.epoch);
   if (!byteArrayEquals(payload.prevRandao, expectedRandom)) {
-    throw Error(
-      `Invalid execution payload random ${toHexString(payload.prevRandao)} expected=${toHexString(expectedRandom)}`
-    );
+    throw Error(`Invalid execution payload random ${toHex(payload.prevRandao)} expected=${toHex(expectedRandom)}`);
   }
 
   // Verify timestamp
@@ -36,9 +43,17 @@ export function processExecutionPayload(
   // Note: inlined function in if statement
   // def compute_timestamp_at_slot(state: BeaconState, slot: Slot) -> uint64:
   //   slots_since_genesis = slot - GENESIS_SLOT
-  //   return uint64(state.genesis_time + slots_since_genesis * SECONDS_PER_SLOT)
-  if (payload.timestamp !== state.genesisTime + state.slot * state.config.SECONDS_PER_SLOT) {
+  //   return uint64(state.genesis_time + slots_since_genesis * SLOT_DURATION_MS / 1000)
+  if (payload.timestamp !== computeTimeAtSlot(state.config, state.slot, state.genesisTime)) {
     throw Error(`Invalid timestamp ${payload.timestamp} genesisTime=${state.genesisTime} slot=${state.slot}`);
+  }
+
+  if (isForkPostDeneb(forkName)) {
+    const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(computeEpochAtSlot(state.slot));
+    const blobKzgCommitmentsLen = (body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
+    if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+      throw Error(`blobKzgCommitmentsLen of ${blobKzgCommitmentsLen} exceeds limit=${maxBlobsPerBlock}`);
+    }
   }
 
   // Verify the execution payload is valid
@@ -46,29 +61,24 @@ export function processExecutionPayload(
   // if executionEngine is null, executionEngine.onPayload MUST be called after running processBlock to get the
   // correct randao mix. Since executionEngine will be an async call in most cases it is called afterwards to keep
   // the state transition sync
-  if (isExecutionPayload(payload) && executionEngine && !executionEngine.notifyNewPayload(payload)) {
-    throw Error("Invalid execution payload");
+  //
+  // Equivalent to `assert executionEngine.notifyNewPayload(payload)`
+  if (isExecutionPayload(payload)) {
+    switch (externalData.executionPayloadStatus) {
+      case ExecutionPayloadStatus.preMerge:
+        throw Error("executionPayloadStatus preMerge");
+      case ExecutionPayloadStatus.invalid:
+        throw Error("Invalid execution payload");
+      case ExecutionPayloadStatus.valid:
+        break; // ok
+    }
   }
 
-  const transactionsRoot = isExecutionPayload(payload)
-    ? ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions)
-    : payload.transactionsRoot;
+  const payloadHeader = isExecutionPayload(payload) ? executionPayloadToPayloadHeader(fork, payload) : payload;
 
-  // Cache execution payload header
-  state.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU({
-    parentHash: payload.parentHash,
-    feeRecipient: payload.feeRecipient,
-    stateRoot: payload.stateRoot,
-    receiptsRoot: payload.receiptsRoot,
-    logsBloom: payload.logsBloom,
-    prevRandao: payload.prevRandao,
-    blockNumber: payload.blockNumber,
-    gasLimit: payload.gasLimit,
-    gasUsed: payload.gasUsed,
-    timestamp: payload.timestamp,
-    extraData: payload.extraData,
-    baseFeePerGas: payload.baseFeePerGas,
-    blockHash: payload.blockHash,
-    transactionsRoot,
-  });
+  // TODO Deneb: Types are not happy by default. Since it's a generic type going through ViewDU
+  // transformation then into all forks compatible probably some weird intersection incompatibility happens
+  state.latestExecutionPayloadHeader = state.config
+    .getPostBellatrixForkTypes(state.slot)
+    .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;
 }

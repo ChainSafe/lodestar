@@ -1,39 +1,39 @@
-import sinon, {SinonStubbedInstance} from "sinon";
-import {expect} from "chai";
-
+import {beforeEach, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
-import {ForkChoice, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {toHex} from "@lodestar/utils";
-import {IChainForkConfig} from "@lodestar/config";
-import {allForks, Slot, ssz} from "@lodestar/types";
-import {verifyBlocksSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
+import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {toHex, toRootHex} from "@lodestar/utils";
+import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/index.js";
+import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
+import {IChainOptions} from "../../../../src/chain/options.js";
+import {ClockStopped} from "../../../mocks/clock.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
-import {IBeaconClock} from "../../../../src/chain/index.js";
-import {ClockStopped} from "../../../utils/mocks/clock.js";
 
-describe("chain / blocks / verifyBlocksSanityChecks", function () {
-  let forkChoice: SinonStubbedInstance<ForkChoice>;
+describe("chain / blocks / verifyBlocksSanityChecks", () => {
+  let forkChoice: MockedBeaconChain["forkChoice"];
   let clock: ClockStopped;
-  let modules: {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig};
-  let block: allForks.SignedBeaconBlock;
+  let modules: Parameters<typeof verifyBlocksImportSanityChecks>[0];
+  let block: SignedBeaconBlock;
   const currentSlot = 1;
 
   beforeEach(() => {
     block = ssz.phase0.SignedBeaconBlock.defaultValue();
     block.message.slot = currentSlot;
 
-    forkChoice = sinon.createStubInstance(ForkChoice);
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
+    forkChoice = getMockedBeaconChain().forkChoice;
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
     clock = new ClockStopped(currentSlot);
-    modules = {config, forkChoice, clock} as {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig};
+    modules = {config, forkChoice, clock, opts: {} as IChainOptions, blacklistedBlocks: new Map()};
     // On first call, parentRoot is known
-    forkChoice.getBlockHex.returns({} as ProtoBlock);
+    forkChoice.getBlockHex.mockReturnValue({} as ProtoBlock);
   });
 
   it("PARENT_UNKNOWN", () => {
-    forkChoice.getBlockHex.returns(null);
+    forkChoice.getBlockHex.mockReturnValue(null);
     expectThrowsLodestarError(() => verifyBlocksSanityChecks(modules, [block], {}), BlockErrorCode.PARENT_UNKNOWN);
   });
 
@@ -43,12 +43,12 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
   });
 
   it("ALREADY_KNOWN", () => {
-    forkChoice.hasBlockHex.returns(true);
+    forkChoice.hasBlockHex.mockReturnValue(true);
     expectThrowsLodestarError(() => verifyBlocksSanityChecks(modules, [block], {}), BlockErrorCode.ALREADY_KNOWN);
   });
 
   it("WOULD_REVERT_FINALIZED_SLOT", () => {
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 5, root: Buffer.alloc(32), rootHex: ""});
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 5, root: Buffer.alloc(32), rootHex: ""});
     expectThrowsLodestarError(
       () => verifyBlocksSanityChecks(modules, [block], {}),
       BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT
@@ -58,6 +58,11 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
   it("FUTURE_SLOT", () => {
     block.message.slot = currentSlot + 1;
     expectThrowsLodestarError(() => verifyBlocksSanityChecks(modules, [block], {}), BlockErrorCode.FUTURE_SLOT);
+  });
+
+  it("BLACKLISTED_BLOCK", () => {
+    modules.blacklistedBlocks.set(toRootHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)), null);
+    expectThrowsLodestarError(() => verifyBlocksSanityChecks(modules, [block], {}), BlockErrorCode.BLACKLISTED_BLOCK);
   });
 
   it("[OK, OK]", () => {
@@ -72,9 +77,9 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
 
     const {relevantBlocks, parentSlots} = verifyBlocksSanityChecks(modules, blocksToProcess, {ignoreIfKnown: true});
 
-    expect(relevantBlocks).to.deep.equal([blocks[1], blocks[2]], "Wrong relevantBlocks");
+    expect(relevantBlocks).toEqual([blocks[1], blocks[2]]);
     // Also check parentSlots
-    expect(parentSlots).to.deep.equal(slots([blocks[0], blocks[1]]), "Wrong parentSlots");
+    expect(parentSlots).toEqual(slots([blocks[0], blocks[1]]));
   });
 
   it("[ALREADY_KNOWN, OK, OK]", () => {
@@ -92,7 +97,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
       ignoreIfKnown: true,
     });
 
-    expectBlocks(relevantBlocks, [blocks[2], blocks[3]], blocks, "Wrong relevantBlocks");
+    expectBlocks(relevantBlocks, [blocks[2], blocks[3]], blocks);
   });
 
   it("[WOULD_REVERT_FINALIZED_SLOT, OK, OK]", () => {
@@ -112,12 +117,45 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
       ignoreIfFinalized: true,
     });
 
-    expectBlocks(relevantBlocks, [blocks[2], blocks[3]], blocks, "Wrong relevantBlocks");
+    expectBlocks(relevantBlocks, [blocks[2], blocks[3]], blocks);
   });
 });
 
-function getValidChain(count: number, initialSlot = 0): allForks.SignedBeaconBlock[] {
-  const blocks: allForks.SignedBeaconBlock[] = [];
+/**
+ * Wrap verifyBlocksSanityChecks to deal with SignedBeaconBlock instead of BlockImport
+ */
+function verifyBlocksSanityChecks(
+  modules: Parameters<typeof verifyBlocksImportSanityChecks>[0],
+  blocks: SignedBeaconBlock[],
+  opts: Parameters<typeof verifyBlocksImportSanityChecks>[2]
+): {relevantBlocks: SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
+  const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
+    modules,
+    blocks.map((block) => {
+      const blockRootHex = toHex(
+        modules.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+      );
+      const forkName = modules.config.getForkName(block.message.slot);
+      return BlockInputPreData.createFromBlock({
+        block,
+        blockRootHex,
+        forkName,
+        daOutOfRange: true,
+        source: BlockInputSource.byRange,
+        seenTimestampSec: Math.floor(Date.now() / 1000),
+      });
+    }),
+    opts
+  );
+  return {
+    relevantBlocks: relevantBlocks.map((blockInput) => blockInput.getBlock()),
+    parentSlots,
+    parentBlock,
+  };
+}
+
+function getValidChain(count: number, initialSlot = 0): SignedBeaconBlock[] {
+  const blocks: SignedBeaconBlock[] = [];
 
   for (let i = 0; i < count; i++) {
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -134,14 +172,14 @@ function getValidChain(count: number, initialSlot = 0): allForks.SignedBeaconBlo
   return blocks;
 }
 
-function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch = 0): IForkChoice {
+function getForkChoice(knownBlocks: SignedBeaconBlock[], finalizedEpoch = 0): IForkChoice {
   const blocks = new Map<string, ProtoBlock>();
   for (const block of knownBlocks) {
     const protoBlock = toProtoBlock(block);
     blocks.set(protoBlock.blockRoot, protoBlock);
   }
 
-  return ({
+  return {
     getBlockHex(blockRoot) {
       return blocks.get(blockRoot) ?? null;
     },
@@ -151,32 +189,31 @@ function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch
     getFinalizedCheckpoint() {
       return {epoch: finalizedEpoch, root: Buffer.alloc(32), rootHex: ""};
     },
-  } as Partial<IForkChoice>) as IForkChoice;
+  } as Partial<IForkChoice> as IForkChoice;
 }
 
-function toProtoBlock(block: allForks.SignedBeaconBlock): ProtoBlock {
-  return ({
+function toProtoBlock(block: SignedBeaconBlock): ProtoBlock {
+  return {
     slot: block.message.slot,
-    blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot((block as allForks.SignedBeaconBlock).message)),
+    blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
     parentRoot: toHex(block.message.parentRoot),
     stateRoot: toHex(block.message.stateRoot),
-  } as Partial<ProtoBlock>) as ProtoBlock;
+  } as Partial<ProtoBlock> as ProtoBlock;
 }
 
-function slots(blocks: allForks.SignedBeaconBlock[]): Slot[] {
+function slots(blocks: SignedBeaconBlock[]): Slot[] {
   return blocks.map((block) => block.message.slot);
 }
 
 /** Since blocks have no meaning compare the indexes against `allBlocks` */
 function expectBlocks(
-  expectedBlocks: allForks.SignedBeaconBlock[],
-  actualBlocks: allForks.SignedBeaconBlock[],
-  allBlocks: allForks.SignedBeaconBlock[],
-  message: string
+  expectedBlocks: SignedBeaconBlock[],
+  actualBlocks: SignedBeaconBlock[],
+  allBlocks: SignedBeaconBlock[]
 ): void {
-  function indexOfBlocks(blocks: allForks.SignedBeaconBlock[]): number[] {
+  function indexOfBlocks(blocks: SignedBeaconBlock[]): number[] {
     return blocks.map((block) => allBlocks.indexOf(block));
   }
 
-  expect(indexOfBlocks(actualBlocks)).to.deep.equal(indexOfBlocks(expectedBlocks), `${message} - of block indexes`);
+  expect(indexOfBlocks(actualBlocks)).toEqual(indexOfBlocks(expectedBlocks));
 }

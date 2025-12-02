@@ -1,15 +1,16 @@
-import {expect} from "chai";
+import {generateKeyPair} from "@libp2p/crypto/keys";
+import {describe, expect, it} from "vitest";
+import {readPrivateKey, writePrivateKey} from "../../../src/config/index.js";
 import {getTestdirPath} from "../../utils.js";
-import {createPeerId, writePeerId, readPeerId} from "../../../src/config/index.js";
 
 describe("config / peerId", () => {
   const peerIdFilepath = getTestdirPath("./test-peer-id.json");
 
   it("create, write and read PeerId", async () => {
-    const peerId = await createPeerId();
-    writePeerId(peerIdFilepath, peerId);
-    const peerIdRead = await readPeerId(peerIdFilepath);
+    const privateKey = await generateKeyPair("secp256k1");
+    writePrivateKey(peerIdFilepath, privateKey);
+    const pkRead = readPrivateKey(peerIdFilepath);
 
-    expect(peerIdRead.toB58String()).to.equal(peerId.toB58String());
+    expect(pkRead.toString()).toBe(privateKey.toString());
   });
 });

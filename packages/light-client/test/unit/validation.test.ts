@@ -1,9 +1,8 @@
-import {expect} from "chai";
-import bls, {init} from "@chainsafe/bls/switchable";
+import {beforeAll, describe, expect, it, vi} from "vitest";
+import bls from "@chainsafe/bls";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {altair, ssz} from "@lodestar/types";
+import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {createIBeaconConfig} from "@lodestar/config";
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_GINDEX,
@@ -11,31 +10,25 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {assertValidLightClientUpdate} from "../../src/validation.js";
+import {altair, ssz} from "@lodestar/types";
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
+import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";
-import {isNode} from "../../src/utils/utils.js";
 
-describe("validation", function () {
+describe("validation", () => {
   // In browser test this process is taking more time than default 2000ms
   // specially on the CI
-  this.timeout(15000);
+  vi.setConfig({testTimeout: 15000});
 
   const genValiRoot = Buffer.alloc(32, 9);
-  const config = createIBeaconConfig(chainConfig, genValiRoot);
+  const config = createBeaconConfig(chainConfig, genValiRoot);
 
   let update: altair.LightClientUpdate;
   let snapshot: LightClientSnapshotFast;
 
-  before("prepare bls", async () => {
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await init(isNode ? "blst-native" : "herumi");
-  });
-
-  before("prepare data", function () {
+  beforeAll(() => {
     // Update slot must > snapshot slot
-    // updatePeriod must == snapshotPeriod + 1
+    // attestedHeaderSlot must == updateHeaderSlot + 1
     const snapshotHeaderSlot = 1;
     const updateHeaderSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
     const attestedHeaderSlot = updateHeaderSlot + 1;
@@ -60,13 +53,13 @@ describe("validation", function () {
 
     // finalized header must have stateRoot to finalizedState
     const finalizedHeader = defaultBeaconBlockHeader(updateHeaderSlot);
-    finalizedHeader.stateRoot = finalizedState.hashTreeRoot();
+    finalizedHeader.beacon.stateRoot = finalizedState.hashTreeRoot();
 
     // attestedState must have `finalizedHeader` as finalizedCheckpoint
     const attestedState = ssz.altair.BeaconState.defaultViewDU();
     attestedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
       epoch: 0,
-      root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
+      root: ssz.altair.LightClientHeader.hashTreeRoot(finalizedHeader),
     });
 
     // attested state must contain next sync committees
@@ -74,13 +67,12 @@ describe("validation", function () {
 
     // attestedHeader must have stateRoot to attestedState
     const attestedHeader = defaultBeaconBlockHeader(attestedHeaderSlot);
-    attestedHeader.stateRoot = attestedState.hashTreeRoot();
+    attestedHeader.beacon.stateRoot = attestedState.hashTreeRoot();
 
     // Creates proofs for nextSyncCommitteeBranch and finalityBranch rooted in attested state
     const nextSyncCommitteeBranch = new Tree(attestedState.node).getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
     const finalityBranch = new Tree(attestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
-    const forkVersion = ssz.Bytes4.defaultValue();
     const signingRoot = getSyncAggregateSigningRoot(config, attestedHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 
@@ -96,7 +88,7 @@ describe("validation", function () {
       finalizedHeader,
       finalityBranch,
       syncAggregate,
-      forkVersion,
+      signatureSlot: updateHeaderSlot,
     };
 
     snapshot = {
@@ -107,6 +99,6 @@ describe("validation", function () {
   });
 
   it("should validate valid update", () => {
-    expect(() => assertValidLightClientUpdate(config, snapshot.nextSyncCommittee, update)).to.not.throw();
+    expect(() => assertValidLightClientUpdate(config, snapshot.nextSyncCommittee, update)).not.toThrow();
   });
 });

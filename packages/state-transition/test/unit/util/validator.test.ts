@@ -1,16 +1,13 @@
-import {assert, expect} from "chai";
-
+import {beforeEach, describe, expect, it} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
-
 import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../src/util/index.js";
-
 import {randBetween} from "../../utils/misc.js";
-import {generateValidator} from "../../utils/validator.js";
 import {generateState} from "../../utils/state.js";
+import {generateValidator} from "../../utils/validator.js";
 
 describe("getActiveValidatorIndices", () => {
   it("empty list of validators should return no indices (empty list)", () => {
-    assert.deepEqual(getActiveValidatorIndices(generateState(), randBetween(0, 4)), []);
+    expect(getActiveValidatorIndices(generateState(), randBetween(0, 4))).toStrictEqual(new Uint32Array([]));
   });
   it("list of cloned validators should return all or none", () => {
     const state = generateState();
@@ -20,10 +17,10 @@ describe("getActiveValidatorIndices", () => {
       Array.from({length: 10}, () => generateValidator({activation: activationEpoch, exit: exitEpoch}))
     );
 
-    const allActiveIndices = state.validators.getAllReadonlyValues().map((_, i) => i);
-    const allInactiveIndices: any = [];
-    assert.deepEqual(getActiveValidatorIndices(state, activationEpoch), allActiveIndices);
-    assert.deepEqual(getActiveValidatorIndices(state, exitEpoch), allInactiveIndices);
+    const allActiveIndices = new Uint32Array(state.validators.getAllReadonlyValues().map((_, i) => i));
+    const allInactiveIndices: any = new Uint32Array([]);
+    expect(getActiveValidatorIndices(state, activationEpoch)).toStrictEqual(allActiveIndices);
+    expect(getActiveValidatorIndices(state, exitEpoch)).toStrictEqual(allInactiveIndices);
   });
 });
 
@@ -41,7 +38,7 @@ describe("isActiveValidator", () => {
     it(`should be ${testValue.expected ? "" : "not "}active`, () => {
       const v: phase0.Validator = generateValidator(testValue.validatorOpts);
       const result: boolean = isActiveValidator(v, testValue.epoch);
-      expect(result).to.be.equal(testValue.expected);
+      expect(result).toBe(testValue.expected);
     });
   }
 });
@@ -49,7 +46,7 @@ describe("isActiveValidator", () => {
 describe("isSlashableValidator", () => {
   let validator: phase0.Validator;
 
-  beforeEach(function () {
+  beforeEach(() => {
     validator = generateValidator();
   });
 
@@ -57,28 +54,31 @@ describe("isSlashableValidator", () => {
     validator.activationEpoch = 0;
     validator.withdrawableEpoch = Infinity;
     validator.slashed = false;
-    assert(isSlashableValidator(validator, 0), "unslashed validator should be slashable");
+    expect(isSlashableValidator(validator, 0)).toBeWithMessage(true, "unslashed validator should be slashable");
     validator.slashed = true;
-    assert(!isSlashableValidator(validator, 0), "slashed validator should not be slashable");
+    expect(!isSlashableValidator(validator, 0)).toBeWithMessage(true, "slashed validator should not be slashable");
   });
   it("should check validator.activationEpoch", () => {
     validator.activationEpoch = 10;
     validator.withdrawableEpoch = Infinity;
-    assert(
-      !isSlashableValidator(validator, validator.activationEpoch - 1),
+    expect(!isSlashableValidator(validator, validator.activationEpoch - 1)).toBeWithMessage(
+      true,
       "unactivated validator should not be slashable"
     );
-    assert(isSlashableValidator(validator, validator.activationEpoch), "activated validator should be slashable");
+    expect(isSlashableValidator(validator, validator.activationEpoch)).toBeWithMessage(
+      true,
+      "activated validator should be slashable"
+    );
   });
   it("should check validator.withdrawableEpoch", () => {
     validator.activationEpoch = 0;
     validator.withdrawableEpoch = 10;
-    assert(
-      isSlashableValidator(validator, validator.withdrawableEpoch - 1),
+    expect(isSlashableValidator(validator, validator.withdrawableEpoch - 1)).toBeWithMessage(
+      true,
       "nonwithdrawable validator should be slashable"
     );
-    assert(
-      !isSlashableValidator(validator, validator.withdrawableEpoch),
+    expect(!isSlashableValidator(validator, validator.withdrawableEpoch)).toBeWithMessage(
+      true,
       "withdrawable validator should not be slashable"
     );
   });

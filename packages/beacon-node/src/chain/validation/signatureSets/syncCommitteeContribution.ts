@@ -1,7 +1,7 @@
-import type {PublicKey} from "@chainsafe/bls/types";
-import {altair, ssz} from "@lodestar/types";
+import {PublicKey} from "@chainsafe/blst";
 import {DOMAIN_SYNC_COMMITTEE} from "@lodestar/params";
-import {CachedBeaconStateAltair, computeSigningRoot, ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {CachedBeaconStateAltair, ISignatureSet, SignatureSetType, computeSigningRoot} from "@lodestar/state-transition";
+import {altair, ssz} from "@lodestar/types";
 
 export function getSyncCommitteeContributionSignatureSet(
   state: CachedBeaconStateAltair,

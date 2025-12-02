@@ -1,5 +1,5 @@
 scrape_configs:
-  - job_name: Lodestar
+  - job_name: beacon
     scrape_interval: 5s
     metrics_path: /metrics
     static_configs:

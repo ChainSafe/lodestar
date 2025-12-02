@@ -1,12 +1,11 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
-import {phase0} from "@lodestar/types";
-import {generateAttestationData} from "../../utils/attestation.js";
+import {IndexedAttestation, ssz} from "@lodestar/types";
+import {isValidIndexedAttestation} from "../../../src/block/isValidIndexedAttestation.js";
 import {EMPTY_SIGNATURE} from "../../../src/index.js";
 import {generateCachedState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
-import {isValidIndexedAttestation} from "../../../src/block/isValidIndexedAttestation.js";
 
 describe("validate indexed attestation", () => {
   const state = generateCachedState(config, {
@@ -36,16 +35,16 @@ describe("validate indexed attestation", () => {
     },
   ];
 
-  for (const testValue of testValues) {
-    it(testValue.name, function () {
-      const attestationData = generateAttestationData(0, 1);
+  it.each(testValues)("$name", ({indices, expectedValue}) => {
+    const attestationData = ssz.phase0.AttestationData.defaultValue();
+    attestationData.source.epoch = 0;
+    attestationData.target.epoch = 1;
 
-      const indexedAttestation: phase0.IndexedAttestation = {
-        attestingIndices: testValue.indices,
-        data: attestationData,
-        signature: EMPTY_SIGNATURE,
-      };
-      expect(isValidIndexedAttestation(state, indexedAttestation, false)).to.be.equal(testValue.expectedValue);
-    });
-  }
+    const indexedAttestation: IndexedAttestation = {
+      attestingIndices: indices,
+      data: attestationData,
+      signature: EMPTY_SIGNATURE,
+    };
+    expect(isValidIndexedAttestation(state, indexedAttestation, false)).toBe(expectedValue);
+  });
 });

@@ -1,22 +1,36 @@
-import {expect} from "chai";
-import {sleep} from "@lodestar/utils";
+import {FastifyInstance} from "fastify";
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
-import {Api, routesData, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
+import {sleep} from "@lodestar/utils";
 import {getClient} from "../../../../src/beacon/client/events.js";
+import {BeaconEvent, Endpoints, EventType, getDefinitions} from "../../../../src/beacon/routes/events.js";
 import {getRoutes} from "../../../../src/beacon/server/events.js";
-import {registerRoute} from "../../../../src/utils/server/registerRoute.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {eventTestData} from "../testData/events.js";
 
 describe("beacon / events", () => {
-  const {baseUrl, server} = getTestServer();
-  const mockApi = getMockApi<Api>(routesData);
-  for (const route of Object.values(getRoutes(config, mockApi))) {
-    registerRoute(server, route);
-  }
+  const mockApi = getMockApi<Endpoints>(getDefinitions(config));
+  let server: FastifyInstance;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    const res = getTestServer();
+    server = res.server;
+    for (const route of Object.values(getRoutes(config, mockApi))) {
+      server.route(route);
+    }
+
+    baseUrl = await res.start();
+  });
+
+  afterAll(async () => {
+    if (server !== undefined) await server.close();
+  });
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   it("Receive events", async () => {
@@ -38,26 +52,30 @@ describe("beacon / events", () => {
     const eventsReceived: BeaconEvent[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      mockApi.eventstream.callsFake(async (topics, signal, onEvent) => {
+      mockApi.eventstream.mockImplementation(async ({topics, onEvent}) => {
         try {
-          expect(topics).to.deep.equal(topicsToRequest, "Wrong received topics");
+          expect(topics).toEqual(topicsToRequest);
           for (const event of eventsToSend) {
             onEvent(event);
             await sleep(5);
           }
         } catch (e) {
-          reject(e as Error);
+          reject(e);
         }
       });
 
       // Capture them on the client
       const client = getClient(config, baseUrl);
-      client.eventstream(topicsToRequest, controller.signal, (event) => {
-        eventsReceived.push(event);
-        if (eventsReceived.length >= eventsToSend.length) resolve();
+      void client.eventstream({
+        topics: topicsToRequest,
+        signal: controller.signal,
+        onEvent: (event) => {
+          eventsReceived.push(event);
+          if (eventsReceived.length >= eventsToSend.length) resolve();
+        },
       });
     });
 
-    expect(eventsReceived).to.deep.equal(eventsToSend, "Wrong received events");
+    expect(eventsReceived).toEqual(eventsToSend);
   });
 });

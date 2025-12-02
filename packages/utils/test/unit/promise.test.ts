@@ -1,36 +1,72 @@
-import {expect} from "chai";
-import sinon from "sinon";
-import {callFnWhenAwait} from "../../src/promise.js";
+/* Causing this error on usage of expect.any(Number)  */
+import {describe, expect, it} from "vitest";
+import {PromiseFulfilledResult, PromiseRejectedResult, wrapPromise} from "../../src/promise.js";
 
-describe("callFnWhenAwait util", function () {
-  const sandbox = sinon.createSandbox();
-  beforeEach(() => {
-    sandbox.useFakeTimers();
-  });
+describe("promise", () => {
+  describe("wrapPromise", () => {
+    const timeoutMs = 100;
+    // TODO: Debug how promise is resolved quicker than the timeout
+    const promiseDurationMin = timeoutMs - 1;
+    // Add some margin for execution
+    const promiseDurationMax = timeoutMs + 20;
 
-  afterEach(() => {
-    sandbox.restore();
-  });
+    it("should have initial status to pending", async () => {
+      const result = wrapPromise(Promise.resolve("my value"));
+      expect(result.status).toBe("pending");
+    });
 
-  it("should call function while awaing for promise", async () => {
-    const p = new Promise<string>((resolve) => setTimeout(() => resolve("done"), 5 * 1000));
-    const stub = sandbox.stub();
-    const result = await Promise.all([callFnWhenAwait(p, stub, 2 * 1000), sandbox.clock.tickAsync(5000)]);
-    expect(result[0]).to.be.equal("done");
-    expect(stub.calledTwice).to.equal(true);
-    await sandbox.clock.tickAsync(5000);
-    expect(stub.calledTwice).to.equal(true);
-  });
+    it("should resolve to value for a resolved promise", async () => {
+      const promise = Promise.resolve("my value");
+      const result = wrapPromise(promise);
 
-  it("should throw error", async () => {
-    const stub = sandbox.stub();
-    const p = new Promise<string>((_, reject) => setTimeout(() => reject(new Error("done")), 5 * 1000));
-    try {
-      await Promise.all([callFnWhenAwait(p, stub, 2 * 1000), sandbox.clock.tickAsync(5000)]);
-      expect.fail("should throw error here");
-    } catch (e) {
-      expect((e as Error).message).to.be.equal("done");
-      expect(stub.calledTwice).to.equal(true);
-    }
+      await expect(promise).resolves.toBe("my value");
+      expect(result).toEqual({
+        value: "my value",
+        status: "fulfilled",
+        promise,
+        durationMs: expect.any(Number),
+      });
+    });
+
+    it("should throw error for rejected promise", async () => {
+      const promise = Promise.reject("test error");
+      const result = wrapPromise(promise);
+
+      await expect(promise).rejects.toThrow("test error");
+      await expect(result.promise).rejects.toThrow("test error");
+      expect(result).toEqual({
+        reason: "test error",
+        status: "rejected",
+        promise,
+        durationMs: expect.any(Number),
+      });
+    });
+
+    it("should have correct durationMs attribute for promise which is resolved", async () => {
+      const promise = new Promise((resolve) => {
+        setTimeout(() => {
+          resolve("Resolved Value");
+        }, timeoutMs);
+      });
+      const result = wrapPromise(promise);
+
+      await expect(promise).resolves.toBe("Resolved Value");
+      expect((result as PromiseFulfilledResult<string>).durationMs).toBeGreaterThanOrEqual(promiseDurationMin);
+      expect((result as PromiseFulfilledResult<string>).durationMs).toBeLessThanOrEqual(promiseDurationMax);
+    });
+
+    it("should have correct durationMs attribute for promise which is rejected", async () => {
+      const promise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject("Rejected Error");
+        }, timeoutMs);
+      });
+      const result = wrapPromise(promise);
+
+      await expect(promise).rejects.toThrow("Rejected Error");
+      await expect(result.promise).rejects.toThrow("Rejected Error");
+      expect((result as PromiseRejectedResult<string>).durationMs).toBeGreaterThanOrEqual(promiseDurationMin);
+      expect((result as PromiseRejectedResult<string>).durationMs).toBeLessThanOrEqual(promiseDurationMax);
+    });
   });
 });

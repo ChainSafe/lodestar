@@ -1,46 +1,64 @@
-import {expect} from "chai";
-import {ssz} from "@lodestar/types";
+import {FastifyInstance} from "fastify";
+import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {config} from "@lodestar/config/default";
-import {Api, ReqTypes, routesData} from "../../../../src/beacon/routes/debug.js";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {getClient} from "../../../../src/beacon/client/debug.js";
+import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/debug.js";
 import {getRoutes} from "../../../../src/beacon/server/debug.js";
+import {HttpClient} from "../../../../src/utils/client/httpClient.js";
+import {AnyEndpoint} from "../../../../src/utils/codecs.js";
+import {FastifyRoute} from "../../../../src/utils/server/index.js";
+import {WireFormat} from "../../../../src/utils/wireFormat.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
-import {registerRoute} from "../../../../src/utils/server/registerRoute.js";
-import {HttpClient} from "../../../../src/utils/client/httpClient.js";
 import {testData} from "../testData/debug.js";
 
-describe("beacon / debug", function () {
+describe("beacon / debug", () => {
   // Extend timeout since states are very big
-  this.timeout(30 * 1000);
+  vi.setConfig({testTimeout: 30_000});
 
-  describe("Run generic server test", () => {
-    runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
-  });
+  const config = createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0});
+
+  runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);
 
   // Get state by SSZ
 
-  describe("getState() in SSZ format", () => {
-    const {baseUrl, server} = getTestServer();
-    const mockApi = getMockApi<Api>(routesData);
-    for (const route of Object.values(getRoutes(config, mockApi))) {
-      registerRoute(server, route);
-    }
+  describe("get state in SSZ format", () => {
+    const mockApi = getMockApi<Endpoints>(getDefinitions(config));
+    let baseUrl: string;
+    let server: FastifyInstance;
 
-    for (const method of ["getState" as const, "getStateV2" as const]) {
-      it(method, async () => {
-        const state = ssz.phase0.BeaconState.defaultValue();
-        const stateSerialized = ssz.phase0.BeaconState.serialize(state);
-        mockApi[method].resolves(stateSerialized);
+    beforeAll(async () => {
+      const res = getTestServer();
+      server = res.server;
+      for (const route of Object.values(getRoutes(config, mockApi))) {
+        server.route(route as FastifyRoute<AnyEndpoint>);
+      }
+      baseUrl = await res.start();
+    });
 
-        const httpClient = new HttpClient({baseUrl});
-        const client = getClient(config, httpClient);
+    afterAll(async () => {
+      if (server !== undefined) await server.close();
+    });
 
-        const res = await client[method]("head", "ssz");
-
-        expect(toHexString(res)).to.equal(toHexString(stateSerialized), "returned state value is not equal");
+    it("getStateV2", async () => {
+      const state = ssz.electra.BeaconState.defaultValue();
+      const stateSerialized = ssz.electra.BeaconState.serialize(state);
+      mockApi.getStateV2.mockResolvedValue({
+        data: stateSerialized,
+        meta: {version: ForkName.electra, executionOptimistic: false, finalized: false},
       });
-    }
+
+      const httpClient = new HttpClient({baseUrl});
+      const client = getClient(config, httpClient);
+
+      const res = await client.getStateV2({stateId: "head"}, {responseWireFormat: WireFormat.ssz});
+
+      expect(res.ok).toBe(true);
+      expect(res.wireFormat()).toBe(WireFormat.ssz);
+      expect(toHexString(res.ssz())).toBe(toHexString(stateSerialized));
+    });
   });
 });

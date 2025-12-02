@@ -1,26 +1,31 @@
-import {IChainForkConfig} from "@lodestar/config";
-import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events.js";
-import {ServerRoutes} from "../../utils/server/index.js";
+import {ChainForkConfig} from "@lodestar/config";
+import {ApiError, ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
+import {Endpoints, eventTypes, getDefinitions, getEventSerdes} from "../routes/events.js";
 
-export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api, ReqTypes> {
-  const eventSerdes = getEventSerdes();
+export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
+  const eventSerdes = getEventSerdes(config);
+  const serverRoutes = createFastifyRoutes(getDefinitions(config), methods);
 
   return {
     // Non-JSON route. Server Sent Events (SSE)
     eventstream: {
-      url: routesData.eventstream.url,
-      method: routesData.eventstream.method,
-      id: "eventstream",
-
+      ...serverRoutes.eventstream,
       handler: async (req, res) => {
+        const validTopics = new Set(Object.values(eventTypes));
+        for (const topic of req.query.topics) {
+          if (!validTopics.has(topic)) {
+            throw new ApiError(400, `Invalid topic: ${topic}`);
+          }
+        }
+
         const controller = new AbortController();
 
         try {
-          // Add injected headers from other pluggins. This is required for fastify-cors for example
+          // Add injected headers from other plugins. This is required for fastify-cors for example
           // From: https://github.com/NodeFactoryIo/fastify-sse-v2/blob/b1686a979fbf655fb9936c0560294a0c094734d4/src/plugin.ts
-          Object.entries(res.getHeaders()).forEach(([key, value]) => {
+          for (const [key, value] of Object.entries(res.getHeaders())) {
             if (value !== undefined) res.raw.setHeader(key, value);
-          });
+          }
 
           res.raw.setHeader("Content-Type", "text/event-stream");
           res.raw.setHeader("Cache-Control", "no-cache,no-transform");
@@ -33,38 +38,31 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
           res.raw.setHeader("X-Accel-Buffering", "no");
 
           await new Promise<void>((resolve, reject) => {
-            api.eventstream(req.query.topics, controller.signal, (event) => {
-              try {
-                const data = eventSerdes.toJson(event);
-                res.raw.write(serializeSSEEvent({event: event.type, data}));
-              } catch (e) {
-                reject(e as Error);
-              }
+            void methods.eventstream({
+              topics: req.query.topics,
+              signal: controller.signal,
+              onEvent: (event) => {
+                try {
+                  const data = eventSerdes.toJson(event);
+                  res.raw.write(serializeSSEEvent({event: event.type, data}));
+                } catch (e) {
+                  reject(e);
+                }
+              },
             });
 
             // The stream will never end by the server unless the node is stopped.
             // In that case the BeaconNode class will call server.close() and end this connection.
 
             // The client may disconnect and we need to clean the subscriptions.
-            req.raw.once("close", () => resolve());
-            req.raw.once("end", () => resolve());
-            req.raw.once("error", (err) => reject(err));
+            req.socket.once("close", () => resolve());
+            req.socket.once("end", () => resolve());
           });
 
           // api.eventstream will never stop, so no need to ever call `res.raw.end();`
         } finally {
           controller.abort();
         }
-      },
-
-      // TODO: Bundle this in /routes/events?
-      schema: {
-        querystring: {
-          type: "object",
-          properties: {
-            topics: {type: "array", items: {type: "string"}},
-          },
-        },
       },
     },
   };

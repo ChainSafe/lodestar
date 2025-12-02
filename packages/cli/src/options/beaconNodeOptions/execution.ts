@@ -1,67 +1,91 @@
 import fs from "node:fs";
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
+import {IBeaconNodeOptions, defaultExecutionEngineHttpOpts} from "@lodestar/beacon-node";
+import {CliCommandOptions} from "@lodestar/utils";
+import {extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {
   "execution.urls": string[];
-  "execution.timeout": number;
-  "execution.retryAttempts": number;
+  "execution.timeout"?: number;
+  "execution.retries": number;
   "execution.retryDelay": number;
-  "jwt-secret"?: string;
+  "execution.engineMock"?: boolean;
+  jwtSecret?: string;
+  jwtId?: string;
 };
 
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
+  if (args["execution.engineMock"]) {
+    return {
+      mode: "mock",
+      genesisBlockHash: "",
+    };
+  }
+
   return {
     urls: args["execution.urls"],
     timeout: args["execution.timeout"],
-    retryAttempts: args["execution.retryAttempts"],
+    retries: args["execution.retries"],
     retryDelay: args["execution.retryDelay"],
     /**
      * jwtSecret is parsed as hex instead of bytes because the merge with defaults
      * in beaconOptions messes up the bytes array as as index => value object
      */
-    jwtSecretHex: args["jwt-secret"]
-      ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
-      : undefined,
+    jwtSecretHex: args.jwtSecret ? extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()) : undefined,
+    jwtId: args.jwtId,
   };
 }
 
-export const options: ICliCommandOptions<ExecutionEngineArgs> = {
+export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.urls": {
     description: "Urls to execution client engine API",
+    default: defaultExecutionEngineHttpOpts.urls.join(","),
     type: "array",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.urls.join(" ") : "",
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.flatMap((item) => item.split(",")),
     group: "execution",
   },
 
   "execution.timeout": {
-    description: "Timeout in miliseconds for execution engine API HTTP client",
+    description: "Timeout in milliseconds for execution engine API HTTP client",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.timeout) : "",
+    defaultDescription: String(defaultExecutionEngineHttpOpts.timeout),
     group: "execution",
   },
 
-  "execution.retryAttempts": {
-    description: "Number of retry attempts when calling execution engine API",
+  "execution.retries": {
+    alias: ["execution.retryAttempts"],
+    description: "Number of retries when calling execution engine API",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryAttempts) : "1",
+    default: defaultExecutionEngineHttpOpts.retries,
     group: "execution",
   },
 
   "execution.retryDelay": {
     description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
+    default: defaultExecutionEngineHttpOpts.retryDelay,
     group: "execution",
   },
 
-  "jwt-secret": {
+  "execution.engineMock": {
+    description: "Set the execution engine to mock mode (development only)",
+    type: "boolean",
+    hidden: false,
+    group: "execution",
+  },
+
+  jwtSecret: {
     description:
       "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
+    type: "string",
+    group: "execution",
+  },
+
+  jwtId: {
+    description:
+      "An optional identifier to be set in the id field of the claims included in jwt tokens used for authentication with EL client's rpc server hosting engine apis",
     type: "string",
     group: "execution",
   },

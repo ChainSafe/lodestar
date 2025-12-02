@@ -1,8 +1,8 @@
-import {expect} from "chai";
-import {allForks, ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
+import {expect} from "vitest";
+import {ForkAll, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {SSZTypesFor, ssz} from "@lodestar/types";
 
 /** Compare each field in BeaconState to help debug failed test easier. */
 export function expectEqualBeaconState(
@@ -14,10 +14,9 @@ export function expectEqualBeaconState(
   const expected = expectedView.toValue();
   const actual = actualView.toValue();
 
-  const stateType = ssz[fork].BeaconState as allForks.AllForksSSZTypes["BeaconState"];
+  const stateType = ssz[fork].BeaconState as SSZTypesFor<ForkAll, "BeaconState">;
   if (!stateType.equals(actual, expected)) {
-    expect(stateType.toJson(actual)).to.deep.equal(stateType.toJson(expected));
-    throw Error("Wrong state");
+    expect(stateType.toJson(actual)).toEqualWithMessage(stateType.toJson(expected), "Wrong state");
   }
 }
 

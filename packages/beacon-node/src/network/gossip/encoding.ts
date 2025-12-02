@@ -1,42 +1,58 @@
+import {Message} from "@libp2p/interface";
+// snappyjs is better for compression for smaller payloads
 import {compress, uncompress} from "snappyjs";
-import {RPC} from "libp2p-gossipsub/src/message/rpc";
-import {GossipsubMessage} from "libp2p-gossipsub/src/types";
+import xxhashFactory from "xxhash-wasm";
 import {digest} from "@chainsafe/as-sha256";
-import {intToBytes} from "@lodestar/utils";
+import {RPC} from "@chainsafe/libp2p-gossipsub/message";
+import {DataTransform} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
+import {intToBytes} from "@lodestar/utils";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
-import {GossipTopicCache} from "./topic.js";
+import {Eth2GossipsubMetrics} from "./metrics.js";
+import {GossipTopicCache, getGossipSSZType} from "./topic.js";
+
+// Load WASM
+const xxhash = await xxhashFactory();
+
+// Use salt to prevent msgId from being mined for collisions
+const h64Seed = BigInt(Math.floor(Math.random() * 1e9));
+
+// Shared buffer to convert msgId to string
+const sharedMsgIdBuf = Buffer.alloc(20);
 
 /**
  * The function used to generate a gossipsub message id
  * We use the first 8 bytes of SHA256(data) for content addressing
  */
-export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
+export function fastMsgIdFn(rpcMsg: RPC.Message): string {
   if (rpcMsg.data) {
-    return Buffer.from(digest(rpcMsg.data)).subarray(0, 8).toString("hex");
-  } else {
-    return "0000000000000000";
+    return xxhash.h64Raw(rpcMsg.data, h64Seed).toString(16);
   }
+  return "0000000000000000";
+}
+
+export function msgIdToStrFn(msgId: Uint8Array): string {
+  // this is the same logic to `toHex(msgId)` with better performance
+  sharedMsgIdBuf.set(msgId);
+  return `0x${sharedMsgIdBuf.toString("hex")}`;
 }
 
 /**
  * Only valid msgId. Messages that fail to snappy_decompress() are not tracked
  */
-export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessage): Uint8Array {
+export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8Array {
   const topic = gossipTopicCache.getTopic(msg.topic);
 
   let vec: Uint8Array[];
 
-  switch (topic.fork) {
+  if (topic.boundary.fork === ForkName.phase0) {
     // message id for phase0.
     // ```
     // SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + snappy_decompress(message.data))[:20]
     // ```
-    case ForkName.phase0:
-      vec = [MESSAGE_DOMAIN_VALID_SNAPPY, msg.data];
-      break;
-
-    // message id for altair.
+    vec = [MESSAGE_DOMAIN_VALID_SNAPPY, msg.data];
+  } else {
+    // message id for altair and subsequent future forks.
     // ```
     // SHA256(
     //   MESSAGE_DOMAIN_VALID_SNAPPY +
@@ -46,18 +62,18 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessag
     // )[:20]
     // ```
     // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.7/specs/altair/p2p-interface.md#topics-and-messages
-    case ForkName.altair:
-    case ForkName.bellatrix: {
-      vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
-      break;
-    }
+    vec = [MESSAGE_DOMAIN_VALID_SNAPPY, intToBytes(msg.topic.length, 8), Buffer.from(msg.topic), msg.data];
   }
 
-  return Buffer.from(digest(Buffer.concat(vec))).subarray(0, 20);
+  return digest(Buffer.concat(vec)).subarray(0, 20);
 }
 
-export class DataTransformSnappy {
-  constructor(private readonly maxSizePerMessage: number) {}
+export class DataTransformSnappy implements DataTransform {
+  constructor(
+    private readonly gossipTopicCache: GossipTopicCache,
+    private readonly maxSizePerMessage: number,
+    private readonly metrics: Eth2GossipsubMetrics | null
+  ) {}
 
   /**
    * Takes the data published by peers on a topic and transforms the data.
@@ -66,16 +82,34 @@ export class DataTransformSnappy {
    * - `outboundTransform()`: compress snappy payload
    */
   inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
-    // No need to parse topic, everything is snappy compressed
-    return uncompress(data, this.maxSizePerMessage);
+    const uncompressedData = uncompress(data, this.maxSizePerMessage);
+
+    // check uncompressed data length before we extract beacon block root, slot or
+    // attestation data at later steps
+    const uncompressedDataLength = uncompressedData.length;
+    const topic = this.gossipTopicCache.getTopic(topicStr);
+    const sszType = getGossipSSZType(topic);
+    this.metrics?.dataTransform.inbound.inc({type: topic.type});
+
+    if (uncompressedDataLength < sszType.minSize) {
+      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${sszType.minSize}`);
+    }
+    if (uncompressedDataLength > sszType.maxSize) {
+      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${sszType.maxSize}`);
+    }
+
+    return uncompressedData;
   }
+
   /**
    * Takes the data to be published (a topic and associated data) transforms the data. The
    * transformed data will then be used to create a `RawGossipsubMessage` to be sent to peers.
    */
   outboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
+    const topic = this.gossipTopicCache.getTopic(topicStr);
+    this.metrics?.dataTransform.outbound.inc({type: topic.type});
     if (data.length > this.maxSizePerMessage) {
-      throw Error(`ssz_snappy encoded data length ${length} > ${this.maxSizePerMessage}`);
+      throw Error(`ssz_snappy encoded data length ${data.length} > ${this.maxSizePerMessage}`);
     }
     // No need to parse topic, everything is snappy compressed
     return compress(data);

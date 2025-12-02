@@ -1,11 +1,12 @@
-import {itBench} from "@dapplion/benchmark";
-import {ssz} from "@lodestar/types";
+import {bench, describe} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
-import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochProcess} from "../../../src/index.js";
+import {ForkSeq} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
-import {numValidators} from "../util.js";
-import {StateEpoch} from "../types.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache, beforeProcessEpoch} from "../../../src/index.js";
 import {createCachedBeaconStateTest} from "../../utils/state.js";
+import {StateEpoch} from "../types.js";
+import {numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to $VALIDATOR_COUNT, to iterate over all balances. Then cost is proportional to the amount
 // of validators whose effectiveBalance changed. Worst case is a massive network leak or a big slashing event which
@@ -25,17 +26,19 @@ describe("phase0 processEffectiveBalanceUpdates", () => {
     {id: "worstcase 0.5", changeRatio: 0.5},
   ];
 
-  // Provide flat `epochProcess.balances` + flat `epochProcess.validators`
+  // Provide flat `cache.balances` + flat `cache.validators`
   // which will it update validators tree
 
   for (const {id, changeRatio} of testCases) {
-    itBench<StateEpoch, StateEpoch>({
+    bench<StateEpoch, StateEpoch>({
       id: `phase0 processEffectiveBalanceUpdates - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       minRuns: 5, // Worst case is very slow
       before: () => getEffectiveBalanceTestData(vc, changeRatio),
-      beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => processEffectiveBalanceUpdates(state, epochProcess),
+      beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
+      fn: ({state, cache}) => {
+        processEffectiveBalanceUpdates(ForkSeq.phase0, state, cache);
+      },
     });
   }
 });
@@ -48,7 +51,7 @@ function getEffectiveBalanceTestData(
   changeRatio: number
 ): {
   state: CachedBeaconStateAllForks;
-  epochProcess: EpochProcess;
+  cache: EpochTransitionCache;
 } {
   const stateTree = ssz.phase0.BeaconState.defaultViewDU();
   stateTree.slot = 1;
@@ -75,11 +78,11 @@ function getEffectiveBalanceTestData(
   stateTree.commit();
 
   const cachedBeaconState = createCachedBeaconStateTest(stateTree, config, {skipSyncPubkeys: true});
-  const epochProcess = beforeProcessEpoch(cachedBeaconState);
-  epochProcess.balances = balances;
+  const cache = beforeProcessEpoch(cachedBeaconState);
+  cache.balances = balances;
 
   return {
     state: cachedBeaconState,
-    epochProcess: epochProcess,
+    cache: cache,
   };
 }

@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 
 describe("misc / throw vs return", () => {
   const count = 10000;
@@ -13,7 +13,10 @@ describe("misc / throw vs return", () => {
   }
 
   class ErrorStatus extends Error implements Status {
-    constructor(readonly code: string, readonly value: number) {
+    constructor(
+      readonly code: string,
+      readonly value: number
+    ) {
       super(code);
     }
   }
@@ -22,7 +25,7 @@ describe("misc / throw vs return", () => {
     throw new ErrorStatus("OK", i);
   }
 
-  itBench({
+  bench({
     id: `Return object ${count} times`,
     noThreshold: true,
     runsFactor: count,
@@ -34,7 +37,7 @@ describe("misc / throw vs return", () => {
     },
   });
 
-  itBench({
+  bench({
     id: `Throw Error ${count} times`,
     noThreshold: true,
     runsFactor: count,

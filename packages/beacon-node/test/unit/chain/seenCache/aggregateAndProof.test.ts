@@ -1,12 +1,12 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {
   AggregationInfo,
-  insertDesc,
   SeenAggregatedAttestations,
+  insertDesc,
 } from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
-describe("SeenAggregatedAttestations.isKnown", function () {
+describe("SeenAggregatedAttestations.isKnown", () => {
   const testCases: {
     id: string;
     seenAttestingBits: number[];
@@ -49,6 +49,7 @@ describe("SeenAggregatedAttestations.isKnown", function () {
       const aggregationBits = new BitArray(new Uint8Array(seenAttestingBits), 8);
       cache.add(
         targetEpoch,
+        0,
         attDataRoot,
         {aggregationBits, trueBitCount: aggregationBits.getTrueBitIndexes().length},
         false
@@ -56,13 +57,13 @@ describe("SeenAggregatedAttestations.isKnown", function () {
       for (const {bits, isKnown} of checkAttestingBits) {
         // expect(cache.participantsKnown(subsetContribution)).to.equal(isKnown);
         const toCheckAggBits = new BitArray(new Uint8Array(bits), 8);
-        expect(cache.isKnown(targetEpoch, attDataRoot, toCheckAggBits)).to.be.equal(isKnown);
+        expect(cache.isKnown(targetEpoch, 0, attDataRoot, toCheckAggBits)).toBe(isKnown);
       }
     });
   }
 });
 
-describe("insertDesc", function () {
+describe("insertDesc", () => {
   const testCases: {
     id: string;
     arr: number[][];
@@ -102,7 +103,7 @@ describe("insertDesc", function () {
       const seenAggregationInfoArr = arr.map(toAggregationBits);
 
       insertDesc(seenAggregationInfoArr, toAggregationBits(bits));
-      expect(seenAggregationInfoArr).to.be.deep.equal(result.map(toAggregationBits));
+      expect(seenAggregationInfoArr).toEqual(result.map(toAggregationBits));
     });
   }
 });

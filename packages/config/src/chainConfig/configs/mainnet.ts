@@ -1,0 +1,197 @@
+import {PresetName} from "@lodestar/params";
+import {fromHex as b} from "@lodestar/utils";
+import {ChainConfig} from "../types.js";
+
+// Mainnet config
+// https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml
+
+export const chainConfig: ChainConfig = {
+  // Extends the mainnet preset
+  PRESET_BASE: PresetName.mainnet,
+  CONFIG_NAME: "mainnet",
+
+  // Transition
+  // Estimated: Sept 15, 2022
+  TERMINAL_TOTAL_DIFFICULTY: BigInt("58750000000000000000000"),
+  TERMINAL_BLOCK_HASH: b("0x0000000000000000000000000000000000000000000000000000000000000000"),
+  TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: Infinity,
+
+  // Genesis
+  // ---------------------------------------------------------------
+  // `2**14` (= 16,384)
+  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 16384,
+  // Dec 1, 2020, 12pm UTC
+  MIN_GENESIS_TIME: 1606824000,
+  // Mainnet initial fork version, recommend altering for testnets
+  GENESIS_FORK_VERSION: b("0x00000000"),
+  // 604800 seconds (7 days)
+  GENESIS_DELAY: 604800,
+
+  // Forking
+  // ---------------------------------------------------------------
+  // Some forks are disabled for now:
+  //  - These may be re-assigned to another fork-version later
+  //  - Temporarily set to max uint64 value: 2**64 - 1
+
+  // Altair
+  ALTAIR_FORK_VERSION: b("0x01000000"),
+  ALTAIR_FORK_EPOCH: 74240, // Oct 27, 2021, 10:56:23am UTC
+  // Bellatrix
+  BELLATRIX_FORK_VERSION: b("0x02000000"),
+  BELLATRIX_FORK_EPOCH: 144896, // Sept 6, 2022, 11:34:47am UTC
+
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x03000000"),
+  CAPELLA_FORK_EPOCH: 194048, // April 12 (epoch: 194048    slot: 6209536    UTC: 4/12/2023, 10:27:35 PM)
+
+  // Deneb
+  DENEB_FORK_VERSION: b("0x04000000"),
+  DENEB_FORK_EPOCH: 269568, // March 13, 2024, 01:55:35pm UTC
+
+  // ELECTRA
+  ELECTRA_FORK_VERSION: b("0x05000000"),
+  ELECTRA_FORK_EPOCH: 364032, // May 7, 2025, 10:05:11am UTC
+
+  // FULU
+  FULU_FORK_VERSION: b("0x06000000"),
+  FULU_FORK_EPOCH: 411392, // December 3, 2025, 09:49:11pm UTC
+
+  // GLOAS
+  GLOAS_FORK_VERSION: b("0x07000000"),
+  GLOAS_FORK_EPOCH: Infinity,
+
+  // Time parameters
+  // ---------------------------------------------------------------
+  // 12 seconds (DEPRECATED)
+  SECONDS_PER_SLOT: 12,
+  // 12000 milliseconds, 12 seconds
+  SLOT_DURATION_MS: 12000,
+  // 14 (estimate from Eth1 mainnet)
+  SECONDS_PER_ETH1_BLOCK: 14,
+  // 2**8 (= 256) epochs ~27 hours
+  MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
+  // 2**8 (= 256) epochs ~27 hours
+  SHARD_COMMITTEE_PERIOD: 256,
+  // 2**11 (= 2,048) Eth1 blocks ~8 hours
+  ETH1_FOLLOW_DISTANCE: 2048,
+  // 1667 basis points, ~17% of SLOT_DURATION_MS
+  PROPOSER_REORG_CUTOFF_BPS: 1667,
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS: 6667,
+
+  // Altair
+  // 3333 basis points, ~33% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS: 3333,
+  // 6667 basis points, ~67% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS: 6667,
+
+  // 25% of SLOT_DURATION_MS
+  ATTESTATION_DUE_BPS_GLOAS: 2500,
+  // 50% of SLOT_DURATION_MS
+  AGGREGATE_DUE_BPS_GLOAS: 5000,
+  // 25% of SLOT_DURATION_MS
+  SYNC_MESSAGE_DUE_BPS_GLOAS: 2500,
+  // 50% of SLOT_DURATION_MS
+  CONTRIBUTION_DUE_BPS_GLOAS: 5000,
+  // 75% of SLOT_DURATION_MS
+  PAYLOAD_ATTESTATION_DUE_BPS: 7500,
+
+  // Validator cycle
+  // ---------------------------------------------------------------
+  // 2**2 (= 4)
+  INACTIVITY_SCORE_BIAS: 4,
+  // 2**4 (= 16)
+  INACTIVITY_SCORE_RECOVERY_RATE: 16,
+  // 2**4 * 10**9 (= 16,000,000,000) Gwei
+  EJECTION_BALANCE: 16000000000,
+  // 2**2 (= 4)
+  MIN_PER_EPOCH_CHURN_LIMIT: 4,
+  // 2**3 (= 8)
+  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 8,
+  // 2**16 (= 65,536)
+  CHURN_LIMIT_QUOTIENT: 65536,
+
+  // Fork choice
+  // ---------------------------------------------------------------
+  // 40%
+  PROPOSER_SCORE_BOOST: 40,
+  REORG_HEAD_WEIGHT_THRESHOLD: 20,
+  REORG_PARENT_WEIGHT_THRESHOLD: 160,
+  REORG_MAX_EPOCHS_SINCE_FINALIZATION: 2,
+
+  // Deposit contract
+  // ---------------------------------------------------------------
+  // Ethereum PoW Mainnet
+  DEPOSIT_CHAIN_ID: 1,
+  DEPOSIT_NETWORK_ID: 1,
+  DEPOSIT_CONTRACT_ADDRESS: b("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
+
+  // Networking
+  // ---------------------------------------------------------------
+  // 10 * 2**20 (= 10,485,760) bytes, 10 MiB
+  MAX_PAYLOAD_SIZE: 10485760,
+  // 2**10 (= 1,024) blocks
+  MAX_REQUEST_BLOCKS: 1024,
+  // 2**8 (= 256) epochs
+  EPOCHS_PER_SUBNET_SUBSCRIPTION: 256,
+  // MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2 (= 33,024) epochs
+  MIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024,
+  // 2**5 (= 32) slots
+  ATTESTATION_PROPAGATION_SLOT_RANGE: 32,
+  // 500ms
+  MAXIMUM_GOSSIP_CLOCK_DISPARITY: 500,
+  MESSAGE_DOMAIN_INVALID_SNAPPY: b("0x00000000"),
+  MESSAGE_DOMAIN_VALID_SNAPPY: b("0x01000000"),
+  // 2 subnets per node
+  SUBNETS_PER_NODE: 2,
+
+  // Deneb
+  // 2**7 (= 128)
+  MAX_REQUEST_BLOCKS_DENEB: 128,
+  // `2**12` (= 4096 epochs, ~18 days)
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
+  BLOB_SIDECAR_SUBNET_COUNT: 6,
+  MAX_BLOBS_PER_BLOCK: 6,
+  // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
+  MAX_REQUEST_BLOB_SIDECARS: 768,
+
+  // Electra
+  // 2**8 * 10**9 (= 256,000,000,000)
+  MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 256000000000,
+  // 2**7 * 10**9 (= 128,000,000,000)
+  MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000,
+  BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: 9,
+  MAX_BLOBS_PER_BLOCK_ELECTRA: 9,
+  // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
+  MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
+
+  // Fulu
+  NUMBER_OF_CUSTODY_GROUPS: 128,
+  DATA_COLUMN_SIDECAR_SUBNET_COUNT: 128,
+  MAX_REQUEST_DATA_COLUMN_SIDECARS: 16384,
+  SAMPLES_PER_SLOT: 8,
+  CUSTODY_REQUIREMENT: 4,
+  VALIDATOR_CUSTODY_REQUIREMENT: 8,
+  BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000,
+  // `2**12` (= 4096 epochs, ~18 days)
+  MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
+
+  // Gloas
+  // 2**7 (= 128) payloads
+  MAX_REQUEST_PAYLOADS: 128,
+
+  // Blob Scheduling
+  // ---------------------------------------------------------------
+  BLOB_SCHEDULE: [
+    {
+      EPOCH: 412672, // December 9, 2025, 02:21:11pm UTC
+      MAX_BLOBS_PER_BLOCK: 15,
+    },
+    {
+      EPOCH: 419072, // January 7, 2026, 01:01:11am UTC
+      MAX_BLOBS_PER_BLOCK: 21,
+    },
+  ],
+};

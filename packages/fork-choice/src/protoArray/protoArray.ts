@@ -1,16 +1,15 @@
-import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {GENESIS_EPOCH} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
-
-import {ForkChoiceOpts} from "../forkChoice/forkChoice.js";
-import {ProtoBlock, ProtoNode, HEX_ZERO_HASH, ExecutionStatus, LVHExecResponse} from "./interface.js";
-import {ProtoArrayError, ProtoArrayErrorCode, LVHExecError, LVHExecErrorCode} from "./errors.js";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
+import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
+import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
+import {ExecutionStatus, HEX_ZERO_HASH, LVHExecResponse, ProtoBlock, ProtoNode} from "./interface.js";
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
 
-const ZERO_HASH_HEX = toHexString(Buffer.alloc(32, 0));
+const ZERO_HASH_HEX = toRootHex(Buffer.alloc(32, 0));
 
 export class ProtoArray {
   // Do not attempt to prune the tree unless it has at least this many nodes.
@@ -25,43 +24,35 @@ export class ProtoArray {
   lvhError?: LVHExecError;
 
   private previousProposerBoost: ProposerBoost | null = null;
-  private countUnrealizedFull = false;
 
-  constructor(
-    {
-      pruneThreshold,
-      justifiedEpoch,
-      justifiedRoot,
-      finalizedEpoch,
-      finalizedRoot,
-    }: {
-      pruneThreshold: number;
-      justifiedEpoch: Epoch;
-      justifiedRoot: RootHex;
-      finalizedEpoch: Epoch;
-      finalizedRoot: RootHex;
-    },
-    opts?: ForkChoiceOpts
-  ) {
+  constructor({
+    pruneThreshold,
+    justifiedEpoch,
+    justifiedRoot,
+    finalizedEpoch,
+    finalizedRoot,
+  }: {
+    pruneThreshold: number;
+    justifiedEpoch: Epoch;
+    justifiedRoot: RootHex;
+    finalizedEpoch: Epoch;
+    finalizedRoot: RootHex;
+  }) {
     this.pruneThreshold = pruneThreshold;
     this.justifiedEpoch = justifiedEpoch;
     this.justifiedRoot = justifiedRoot;
     this.finalizedEpoch = finalizedEpoch;
     this.finalizedRoot = finalizedRoot;
-    this.countUnrealizedFull = opts?.countUnrealizedFull ?? false;
   }
 
-  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot, opts?: ForkChoiceOpts): ProtoArray {
-    const protoArray = new ProtoArray(
-      {
-        pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
-        justifiedEpoch: block.justifiedEpoch,
-        justifiedRoot: block.justifiedRoot,
-        finalizedEpoch: block.finalizedEpoch,
-        finalizedRoot: block.finalizedRoot,
-      },
-      opts
-    );
+  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot): ProtoArray {
+    const protoArray = new ProtoArray({
+      pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
+      justifiedEpoch: block.justifiedEpoch,
+      justifiedRoot: block.justifiedRoot,
+      finalizedEpoch: block.finalizedEpoch,
+      finalizedRoot: block.finalizedRoot,
+    });
     protoArray.onBlock(
       {
         ...block,
@@ -156,12 +147,6 @@ export class ProtoArray {
           ? -node.weight
           : deltas[nodeIndex] + currentBoost - previousBoost;
 
-      if (nodeDelta === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
-          index: nodeIndex,
-        });
-      }
       // Apply the delta to the node
       node.weight += nodeDelta;
 
@@ -230,29 +215,24 @@ export class ProtoArray {
       bestDescendant: undefined,
     };
 
-    let nodeIndex = this.nodes.length;
+    const nodeIndex = this.nodes.length;
 
     this.indices.set(node.blockRoot, nodeIndex);
     this.nodes.push(node);
 
-    let parentIndex = node.parent;
     // If this node is valid, lets propagate the valid status up the chain
     // and throw error if we counter invalid, as this breaks consensus
-    if (node.executionStatus === ExecutionStatus.Valid && parentIndex !== undefined) {
-      this.propagateValidExecutionStatusByIndex(parentIndex);
-    }
+    if (node.parent !== undefined) {
+      this.maybeUpdateBestChildAndDescendant(node.parent, nodeIndex, currentSlot);
 
-    let n: ProtoNode | undefined = node;
-    while (parentIndex !== undefined) {
-      this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot);
-      nodeIndex = parentIndex;
-      n = this.getNodeByIndex(nodeIndex);
-      parentIndex = n?.parent;
+      if (node.executionStatus === ExecutionStatus.Valid) {
+        this.propagateValidExecutionStatusByIndex(node.parent);
+      }
     }
   }
 
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant branch
+   * Optimistic sync validate till validated latest hash, invalidate any descendant branch
    * if invalidate till hash provided. If consensus fails, this will invalidate entire
    * forkChoice which will throw on any call to findHead
    */
@@ -298,33 +278,34 @@ export class ProtoArray {
       // Mark chain ii) as Invalid if LVH is found and non null, else only invalidate invalid_payload
       // if its in fcU.
       //
-      const {invalidateFromBlockHash, latestValidExecHash} = execResponse;
-      const invalidateFromIndex = this.indices.get(invalidateFromBlockHash);
-      if (invalidateFromIndex === undefined) {
-        throw Error(`Unable to find invalidateFromBlockHash=${invalidateFromBlockHash} in forkChoice`);
+      const {invalidateFromParentBlockRoot, latestValidExecHash} = execResponse;
+      const invalidateFromParentIndex = this.indices.get(invalidateFromParentBlockRoot);
+      if (invalidateFromParentIndex === undefined) {
+        throw Error(`Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} in forkChoice`);
       }
       const latestValidHashIndex =
-        latestValidExecHash !== null ? this.getNodeIndexFromLVH(latestValidExecHash, invalidateFromIndex) : null;
+        latestValidExecHash !== null ? this.getNodeIndexFromLVH(latestValidExecHash, invalidateFromParentIndex) : null;
       if (latestValidHashIndex === null) {
         /**
-         *  If the LVH is null or not found, represented with latestValidHashIndex=undefined,
-         *   then just invalidate the invalid_payload and bug out.
+         * The LVH (latest valid hash) is null or not found.
          *
-         *   Ideally in not found scenario we should invalidate the entire chain upwards, but
-         *   it is possible (and observed in the testnets) that the EL was
+         * The spec gives an allowance for the EL being able to return a nullish LVH if it could not
+         * "determine" one. There are two interpretations:
          *
-         *     i) buggy: that the LVH was not really the parent of the invalid block, but on
-         *        some side chain
-         *     ii) lazy: that invalidation was result of simple check and the EL just
-         *         responded with a bogus LVH
+         * - "the LVH is unknown" - simply throw and move on. We can't determine which chain to invalidate
+         *   since we don't know which ancestor is valid.
          *
-         *   So we will just invalidate the current payload and let future responses take care
-         *   to be as robust as possible.
+         * - "the LVH doesn't exist" - this means that the entire ancestor chain is invalid, and should
+         *   be marked as such.
+         *
+         * The more robust approach is to treat nullish LVH as "the LVH is unknown" rather than
+         * "the LVH doesn't exist". The alternative means that we will poison a valid chain when the
+         * EL is lazy (or buggy) with its LVH response.
          */
-        this.invalidateNodeByIndex(invalidateFromIndex);
-      } else {
-        this.propagateInValidExecutionStatusByIndex(invalidateFromIndex, latestValidHashIndex, currentSlot);
+        throw Error(`Unable to find latestValidExecHash=${latestValidExecHash} in the forkchoice`);
       }
+
+      this.propagateInValidExecutionStatusByIndex(invalidateFromParentIndex, latestValidHashIndex, currentSlot);
     }
   }
 
@@ -352,12 +333,12 @@ export class ProtoArray {
    */
 
   private propagateInValidExecutionStatusByIndex(
-    invalidateFromIndex: number,
+    invalidateFromParentIndex: number,
     latestValidHashIndex: number,
     currentSlot: Slot
   ): void {
-    // Pass 1: mark invalidateFromIndex and its parents invalid
-    let invalidateIndex: number | undefined = invalidateFromIndex;
+    // Pass 1: mark invalidateFromParentIndex and its parents invalid
+    let invalidateIndex: number | undefined = invalidateFromParentIndex;
     while (invalidateIndex !== undefined && invalidateIndex > latestValidHashIndex) {
       const invalidNode = this.invalidateNodeByIndex(invalidateIndex);
       invalidateIndex = invalidNode.parent;
@@ -368,7 +349,7 @@ export class ProtoArray {
       const node = this.getNodeFromIndex(nodeIndex);
       const parent = node.parent !== undefined ? this.getNodeByIndex(node.parent) : undefined;
       // Only invalidate if this is post merge, and either parent is invalid or the
-      // concensus has failed
+      // consensus has failed
       if (parent?.executionStatus === ExecutionStatus.Invalid) {
         // check and flip node status to invalid
         this.invalidateNodeByIndex(nodeIndex);
@@ -387,8 +368,8 @@ export class ProtoArray {
     });
   }
 
-  private getNodeIndexFromLVH(latestValidExecHash: RootHex, ancestorOfIndex: number): number | null {
-    let nodeIndex = this.nodes[ancestorOfIndex].parent;
+  private getNodeIndexFromLVH(latestValidExecHash: RootHex, ancestorFromIndex: number): number | null {
+    let nodeIndex: number | undefined = ancestorFromIndex;
     while (nodeIndex !== undefined && nodeIndex >= 0) {
       const node = this.getNodeFromIndex(nodeIndex);
       if (
@@ -449,7 +430,9 @@ export class ProtoArray {
         code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
         ...this.lvhError,
       });
-    } else if (validNode.executionStatus === ExecutionStatus.Syncing) {
+    }
+
+    if (validNode.executionStatus === ExecutionStatus.Syncing) {
       validNode.executionStatus = ExecutionStatus.Valid;
     }
     return validNode;
@@ -742,29 +725,93 @@ export class ProtoArray {
       return false;
     }
     const currentEpoch = computeEpochAtSlot(currentSlot);
-    const previousEpoch = currentEpoch - 1;
 
     // If block is from a previous epoch, filter using unrealized justification & finalization information
     // If block is from the current epoch, filter using the head state's justification & finalization information
     const isFromPrevEpoch = computeEpochAtSlot(node.slot) < currentEpoch;
-    const nodeJustifiedEpoch = isFromPrevEpoch ? node.unrealizedJustifiedEpoch : node.justifiedEpoch;
-    const nodeJustifiedRoot = isFromPrevEpoch ? node.unrealizedJustifiedRoot : node.justifiedRoot;
-    const nodeFinalizedEpoch = isFromPrevEpoch ? node.unrealizedFinalizedEpoch : node.finalizedEpoch;
-    const nodeFinalizedRoot = isFromPrevEpoch ? node.unrealizedFinalizedRoot : node.finalizedRoot;
+    const votingSourceEpoch = isFromPrevEpoch ? node.unrealizedJustifiedEpoch : node.justifiedEpoch;
 
-    // If previous epoch is justified, pull up all tips to at least the previous epoch
-    if (this.countUnrealizedFull && currentEpoch > GENESIS_EPOCH && this.justifiedEpoch === previousEpoch) {
-      return node.unrealizedJustifiedEpoch >= previousEpoch;
-      // If previous epoch is not justified, pull up only tips from past epochs up to the current epoch
-    } else {
-      const correctJustified =
-        (nodeJustifiedEpoch === this.justifiedEpoch && nodeJustifiedRoot === this.justifiedRoot) ||
-        this.justifiedEpoch === 0;
-      const correctFinalized =
-        (nodeFinalizedEpoch === this.finalizedEpoch && nodeFinalizedRoot === this.finalizedRoot) ||
-        this.finalizedEpoch === 0;
-      return correctJustified && correctFinalized;
+    // The voting source should be at the same height as the store's justified checkpoint or
+    // not more than two epochs ago
+    const correctJustified =
+      this.justifiedEpoch === GENESIS_EPOCH ||
+      votingSourceEpoch === this.justifiedEpoch ||
+      votingSourceEpoch + 2 >= currentEpoch;
+
+    const correctFinalized = this.finalizedEpoch === 0 || this.isFinalizedRootOrDescendant(node);
+    return correctJustified && correctFinalized;
+  }
+
+  /**
+   * Return `true` if `node` is equal to or a descendant of the finalized node.
+   * This function helps improve performance of nodeIsViableForHead a lot by avoiding
+   * the loop inside `getAncestors`.
+   */
+  isFinalizedRootOrDescendant(node: ProtoNode): boolean {
+    // The finalized and justified checkpoints represent a list of known
+    // ancestors of `node` that are likely to coincide with the store's
+    // finalized checkpoint.
+    if (
+      (node.finalizedEpoch === this.finalizedEpoch && node.finalizedRoot === this.finalizedRoot) ||
+      (node.justifiedEpoch === this.finalizedEpoch && node.justifiedRoot === this.finalizedRoot) ||
+      (node.unrealizedFinalizedEpoch === this.finalizedEpoch && node.unrealizedFinalizedRoot === this.finalizedRoot) ||
+      (node.unrealizedJustifiedEpoch === this.finalizedEpoch && node.unrealizedJustifiedRoot === this.finalizedRoot)
+    ) {
+      return true;
     }
+
+    const finalizedSlot = computeStartSlotAtEpoch(this.finalizedEpoch);
+    return this.finalizedEpoch === 0 || this.finalizedRoot === this.getAncestorOrNull(node.blockRoot, finalizedSlot);
+  }
+
+  /**
+   * Same to getAncestor but it may return null instead of throwing error
+   */
+  getAncestorOrNull(blockRoot: RootHex, ancestorSlot: Slot): RootHex | null {
+    try {
+      return this.getAncestor(blockRoot, ancestorSlot);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Returns the block root of an ancestor of `blockRoot` at the given `slot`.
+   * (Note: `slot` refers to the block that is *returned*, not the one that is supplied.)
+   *
+   * NOTE: May be expensive: potentially walks through the entire fork of head to finalized block
+   *
+   * ### Specification
+   *
+   * Equivalent to:
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_ancestor
+   */
+  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex {
+    const block = this.getBlock(blockRoot);
+    if (!block) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+        root: blockRoot,
+      });
+    }
+
+    if (block.slot > ancestorSlot) {
+      // Search for a slot that is lte the target slot.
+      // We check for lower slots to account for skip slots.
+      for (const node of this.iterateAncestorNodes(blockRoot)) {
+        if (node.slot <= ancestorSlot) {
+          return node.blockRoot;
+        }
+      }
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR,
+        descendantRoot: blockRoot,
+        ancestorSlot,
+      });
+    }
+    // Root is older or equal than queried slot, thus a skip slot. Return most recent root prior to slot.
+    return blockRoot;
   }
 
   /**
@@ -855,6 +902,44 @@ export class ProtoArray {
     return result;
   }
 
+  /**
+   * Returns both ancestor and non-ancestor nodes in a single traversal.
+   */
+  getAllAncestorAndNonAncestorNodes(blockRoot: RootHex): {ancestors: ProtoNode[]; nonAncestors: ProtoNode[]} {
+    const startIndex = this.indices.get(blockRoot);
+    if (startIndex === undefined) {
+      return {ancestors: [], nonAncestors: []};
+    }
+
+    let node = this.nodes[startIndex];
+    if (node === undefined) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+        index: startIndex,
+      });
+    }
+
+    const ancestors: ProtoNode[] = [];
+    const nonAncestors: ProtoNode[] = [];
+
+    let nodeIndex = startIndex;
+    while (node.parent !== undefined) {
+      ancestors.push(node);
+
+      const parentIndex = node.parent;
+      node = this.getNodeFromIndex(parentIndex);
+
+      // Nodes between nodeIndex and parentIndex are non-ancestor nodes
+      nonAncestors.push(...this.getNodesBetween(nodeIndex, parentIndex));
+      nodeIndex = parentIndex;
+    }
+
+    ancestors.push(node);
+    nonAncestors.push(...this.getNodesBetween(nodeIndex, 0));
+
+    return {ancestors, nonAncestors};
+  }
+
   hasBlock(blockRoot: RootHex): boolean {
     return this.indices.has(blockRoot);
   }
@@ -917,7 +1002,6 @@ export class ProtoArray {
    * Returns a common ancestor for nodeA or nodeB or null if there's none
    */
   getCommonAncestor(nodeA: ProtoNode, nodeB: ProtoNode): ProtoNode | null {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       // If nodeA is higher than nodeB walk up nodeA tree
       if (nodeA.slot > nodeB.slot) {

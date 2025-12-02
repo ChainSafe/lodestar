@@ -1,62 +1,88 @@
-import {Level} from "level";
-// eslint-disable-next-line import/no-extraneous-dependencies
-import type {ClassicLevel} from "classic-level";
-import {DbReqOpts, IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "./interface.js";
-import {ILevelDbControllerMetrics} from "./metrics.js";
+import {ClassicLevel} from "classic-level";
+import {Logger} from "@lodestar/utils";
+import {DatabaseController, DatabaseOptions, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
+import {LevelDbControllerMetrics} from "./metrics.js";
 
 enum Status {
   started = "started",
-  stopped = "stopped",
+  closed = "closed",
 }
 
-type LevelNodeJS = ClassicLevel<Uint8Array, Uint8Array>;
-
-export interface ILevelDBOptions extends IDatabaseOptions {
-  db?: Level<Uint8Array, Uint8Array>;
+export interface LevelDBOptions extends DatabaseOptions {
+  db?: ClassicLevel<Uint8Array, Uint8Array>;
 }
 
 export type LevelDbControllerModules = {
-  metrics?: ILevelDbControllerMetrics | null;
+  logger: Logger;
+  metrics?: LevelDbControllerMetrics | null;
 };
 
 const BUCKET_ID_UNKNOWN = "unknown";
 
+/** Time between capturing metric for db size, every few minutes is sufficient */
+const DB_SIZE_METRIC_INTERVAL_MS = 5 * 60 * 1000;
+
 /**
  * The LevelDB implementation of DB
  */
-export class LevelDbController implements IDatabaseController<Uint8Array, Uint8Array> {
-  private status = Status.stopped;
-  private db: Level<Uint8Array, Uint8Array>;
+export class LevelDbController implements DatabaseController<Uint8Array, Uint8Array> {
+  private status = Status.started;
 
-  private readonly opts: ILevelDBOptions;
-  private metrics: ILevelDbControllerMetrics | null;
+  private dbSizeMetricInterval?: NodeJS.Timeout;
 
-  constructor(opts: ILevelDBOptions, {metrics}: LevelDbControllerModules) {
-    this.opts = opts;
+  constructor(
+    private readonly logger: Logger,
+    private readonly db: ClassicLevel<Uint8Array, Uint8Array>,
+    private metrics: LevelDbControllerMetrics | null
+  ) {
     this.metrics = metrics ?? null;
-    this.db = opts.db || new Level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
+
+    if (this.metrics) {
+      this.collectDbSizeMetric();
+    }
   }
 
-  async start(): Promise<void> {
-    if (this.status === Status.started) return;
-    this.status = Status.started;
+  static async create(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules): Promise<LevelDbController> {
+    const db =
+      opts.db ||
+      new ClassicLevel(opts.name || "beaconchain", {
+        keyEncoding: "binary",
+        valueEncoding: "binary",
+        multithreading: true,
+      });
 
-    await this.db.open();
+    try {
+      await db.open();
+    } catch (e) {
+      if ((e as LevelDbError).cause?.code === "LEVEL_LOCKED") {
+        throw new Error("Database already in use by another process");
+      }
+      throw e;
+    }
+
+    return new LevelDbController(logger, db, metrics ?? null);
   }
 
-  async stop(): Promise<void> {
-    if (this.status === Status.stopped) return;
-    this.status = Status.stopped;
+  async close(): Promise<void> {
+    if (this.status === Status.closed) return;
+    this.status = Status.closed;
+
+    if (this.dbSizeMetricInterval) {
+      clearInterval(this.dbSizeMetricInterval);
+    }
 
     await this.db.close();
   }
 
   /** To inject metrics after CLI initialization */
-  setMetrics(metrics: ILevelDbControllerMetrics): void {
+  setMetrics(metrics: LevelDbControllerMetrics): void {
     if (this.metrics !== null) {
       throw Error("metrics can only be set once");
-    } else {
-      this.metrics = metrics;
+    }
+
+    this.metrics = metrics;
+    if (this.status === Status.started) {
+      this.collectDbSizeMetric();
     }
   }
 
@@ -77,6 +103,18 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     }
   }
 
+  /**
+   * Return the multiple items in the order of the given keys
+   * Will return `null` for the keys which does not exists
+   *
+   * https://github.com/Level/abstract-level?tab=readme-ov-file#dbgetmanykeys-options
+   */
+  async getMany(keys: Uint8Array[], opts?: DbReqOpts): Promise<(Uint8Array | undefined)[]> {
+    this.metrics?.dbReadReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbReadItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
+    return await this.db.getMany(keys);
+  }
+
   put(key: Uint8Array, value: Uint8Array, opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
@@ -91,7 +129,7 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     return this.db.del(key);
   }
 
-  batchPut(items: IKeyValue<Uint8Array, Uint8Array>[], opts?: DbReqOpts): Promise<void> {
+  batchPut(items: KeyValue<Uint8Array, Uint8Array>[], opts?: DbReqOpts): Promise<void> {
     this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, items.length);
 
@@ -105,15 +143,15 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     return this.db.batch(keys.map((key) => ({type: "del", key: key})));
   }
 
-  keysStream(opts: IFilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
+  keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
     return this.metricsIterator(this.db.keys(opts), (key) => key, opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
-  valuesStream(opts: IFilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
+  valuesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {
     return this.metricsIterator(this.db.values(opts), (value) => value, opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
-  entriesStream(opts: IFilterOptions<Uint8Array> = {}): AsyncIterable<IKeyValue<Uint8Array, Uint8Array>> {
+  entriesStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<KeyValue<Uint8Array, Uint8Array>> {
     return this.metricsIterator(
       this.db.iterator(opts),
       (entry) => ({key: entry[0], value: entry[1]}),
@@ -121,15 +159,15 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     );
   }
 
-  keys(opts: IFilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+  keys(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
     return this.metricsAll(this.db.keys(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
-  values(opts: IFilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
+  values(opts: FilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
     return this.metricsAll(this.db.values(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
-  async entries(opts: IFilterOptions<Uint8Array> = {}): Promise<IKeyValue<Uint8Array, Uint8Array>[]> {
+  async entries(opts: FilterOptions<Uint8Array> = {}): Promise<KeyValue<Uint8Array, Uint8Array>[]> {
     const entries = await this.metricsAll(this.db.iterator(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
     return entries.map((entry) => ({key: entry[0], value: entry[1]}));
   }
@@ -139,21 +177,21 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
    * The result might not include recently written data.
    */
   approximateSize(start: Uint8Array, end: Uint8Array): Promise<number> {
-    return (this.db as LevelNodeJS).approximateSize(start, end);
+    return this.db.approximateSize(start, end);
   }
 
   /**
    * Manually trigger a database compaction in the range [start..end].
    */
   compactRange(start: Uint8Array, end: Uint8Array): Promise<void> {
-    return (this.db as LevelNodeJS).compactRange(start, end);
+    return this.db.compactRange(start, end);
   }
 
   /** Capture metrics for db.iterator, db.keys, db.values .all() calls */
   private async metricsAll<T>(promise: Promise<T[]>, bucket: string): Promise<T[]> {
-    this.metrics?.dbWriteReq.inc({bucket}, 1);
+    this.metrics?.dbReadReq.inc({bucket}, 1);
     const items = await promise;
-    this.metrics?.dbWriteItems.inc({bucket}, items.length);
+    this.metrics?.dbReadItems.inc({bucket}, items.length);
     return items;
   }
 
@@ -163,7 +201,7 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     getValue: (item: T) => K,
     bucket: string
   ): AsyncIterable<K> {
-    this.metrics?.dbWriteReq.inc({bucket}, 1);
+    this.metrics?.dbReadReq.inc({bucket}, 1);
 
     let itemsRead = 0;
 
@@ -174,9 +212,35 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
       yield getValue(item);
     }
 
-    this.metrics?.dbWriteItems.inc({bucket}, itemsRead);
+    this.metrics?.dbReadItems.inc({bucket}, itemsRead);
+  }
+
+  /** Start interval to capture metric for db size */
+  private collectDbSizeMetric(): void {
+    this.dbSizeMetric();
+    this.dbSizeMetricInterval = setInterval(this.dbSizeMetric.bind(this), DB_SIZE_METRIC_INTERVAL_MS);
+  }
+
+  /** Capture metric for db size */
+  private dbSizeMetric(): void {
+    const timer = this.metrics?.dbApproximateSizeTime.startTimer();
+    const minKey = Buffer.from([0x00]);
+    const maxKey = Buffer.from([0xff]);
+
+    this.approximateSize(minKey, maxKey)
+      .then((dbSize) => {
+        this.metrics?.dbSizeTotal.set(dbSize);
+      })
+      .catch((e) => {
+        this.logger.debug("Error approximating db size", {}, e);
+      })
+      .finally(timer);
+  }
+
+  static async destroy(location: string): Promise<void> {
+    return ClassicLevel.destroy(location);
   }
 }
 
 /** From https://www.npmjs.com/package/level */
-type LevelDbError = {code: "LEVEL_NOT_FOUND"};
+type LevelDbError = {code: "LEVEL_NOT_FOUND"; cause?: {code: "LEVEL_LOCKED"}};

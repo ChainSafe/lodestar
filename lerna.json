@@ -3,12 +3,13 @@
     "packages/*"
   ],
   "npmClient": "yarn",
-  "useWorkspaces": true,
-  "version": "1.0.0",
-  "stream": "true",
+  "useNx": true,
+  "version": "1.37.0",
+  "stream": true,
   "command": {
     "version": {
       "message": "chore(release): %s"
     }
-  }
+  },
+  "$schema": "node_modules/lerna/schemas/lerna-schema.json"
 }

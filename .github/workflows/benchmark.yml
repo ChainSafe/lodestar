@@ -1,8 +1,11 @@
 name: Benchmark
 
-# only one can tun at a time.
 # Actions access a common cache entry and may corrupt it.
-concurrency: cd-benchmark-${{ github.ref }}
+concurrency:
+  # If PR, cancel prev commits. head_ref = source branch name on pull_request, null if push
+  # if push, default to github.run_id so retries of the same commit do not overwrite each other
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 on:
   push:
@@ -14,10 +17,11 @@ on:
     branches:
       - stable
       - unstable
+  workflow_dispatch:
 
 jobs:
   run:
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     # Skip for dependabot PRs, secrets are not made available and will fail
     # Don't run on forks. Forks don't have access to the S3 credentials and the workflow will fail
     if: |
@@ -26,15 +30,17 @@ jobs:
 
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "lts/gallium"
+          node-version: 22
+          check-latest: true
+          cache: yarn
       - name: Node.js version
         id: node
-        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
-        uses: actions/cache@master
+        uses: actions/cache@v4
         id: cache-deps
         with:
           path: |
@@ -43,7 +49,7 @@ jobs:
           key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional && yarn build
+        run: yarn install --frozen-lockfile && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
@@ -51,7 +57,7 @@ jobs:
 
       # Restore performance downloaded states
       - name: Restore performance state cache
-        uses: actions/cache@master
+        uses: actions/cache@v4
         with:
           path: packages/state-transition/test-cache
           key: perf-states-${{ hashFiles('packages/state-transition/test/perf/params.ts') }}

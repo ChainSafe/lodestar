@@ -1,11 +1,11 @@
 import {DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF} from "@lodestar/params";
-import {altair, ssz} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
-  computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
+  computeSigningRoot,
 } from "@lodestar/state-transition";
+import {altair, ssz} from "@lodestar/types";
 
 export function getSyncCommitteeSelectionProofSignatureSet(
   state: CachedBeaconStateAllForks,

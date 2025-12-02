@@ -1,3 +1,4 @@
-export {Eth2Gossipsub} from "./gossipsub.js";
-export {getGossipHandlers} from "./handlers/index.js";
+export {getGossipHandlers} from "../processor/gossipHandlers.js";
+export * from "./gossipsub.js";
 export * from "./interface.js";
+export {getCoreTopicsAtFork} from "./topic.js";

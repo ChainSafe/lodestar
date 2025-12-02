@@ -1,16 +1,11 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
-import {withTimeout} from "../../src/timeout.js";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
+import {withTimeout} from "../../src/timeout.js";
 
-chai.use(chaiAsPromised);
-
-describe("withTimeout", function () {
+describe("withTimeout", () => {
   const data = "DATA";
   const shortTimeoutMs = 10;
-  // Sleep for longer than the current test timeout.
-  // If the abort signal doesn't work mocha will throw a timeout error
-  const longTimeoutMs = 2 * this.timeout();
+  const longTimeoutMs = 5000;
 
   const pendingTimeouts: NodeJS.Timeout[] = [];
 
@@ -32,47 +27,59 @@ describe("withTimeout", function () {
     return returnValue;
   }
 
-  it("Should resolve timeout", async function () {
+  it("Should resolve timeout", async () => {
     const res = await withTimeout(() => pause(shortTimeoutMs, data), longTimeoutMs);
-    expect(res).to.equal(data);
+    expect(res).toBe(data);
   });
 
-  it("Should resolve timeout with not triggered signal", async function () {
+  it("Should resolve timeout with not triggered signal", async () => {
     const controller = new AbortController();
 
     const res = await withTimeout(() => pause(shortTimeoutMs, data), longTimeoutMs, controller.signal);
-    expect(res).to.equal(data);
+    expect(res).toBe(data);
   });
 
-  it("Should abort timeout with triggered signal", async function () {
+  it("Should abort timeout with triggered signal", async () => {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), shortTimeoutMs);
 
-    await expect(withTimeout(() => pause(longTimeoutMs, data), longTimeoutMs, controller.signal)).to.rejectedWith(
+    await expect(withTimeout(() => pause(longTimeoutMs, data), longTimeoutMs, controller.signal)).rejects.toThrow(
       ErrorAborted
     );
   });
 
-  it("Should timeout with no signal", async function () {
-    await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs)).to.rejectedWith(TimeoutError);
+  it("Should timeout with no signal", async () => {
+    await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs)).rejects.toThrow(TimeoutError);
   });
 
-  it("Should timeout with not triggered signal", async function () {
+  it("Should timeout with not triggered signal", async () => {
     const controller = new AbortController();
 
-    await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs, controller.signal)).to.rejectedWith(
+    await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs, controller.signal)).rejects.toThrow(
       TimeoutError
     );
   });
 
-  it("Should abort timeout with already aborted signal", async function () {
+  it("Should abort timeout with already aborted signal", async () => {
     const controller = new AbortController();
 
     controller.abort();
-    expect(controller.signal.aborted, "Signal should already be aborted").to.equal(true);
+    // "Signal should already be aborted"
+    expect(controller.signal.aborted).toBe(true);
 
-    await expect(withTimeout(() => pause(shortTimeoutMs, data), shortTimeoutMs, controller.signal)).to.rejectedWith(
+    await expect(withTimeout(() => pause(shortTimeoutMs, data), shortTimeoutMs, controller.signal)).rejects.toThrow(
       ErrorAborted
     );
+  });
+
+  it("Should immediately reject if signal is already aborted without executing asyncFn", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const asyncFnSpy = vi.fn(() => pause(shortTimeoutMs, data));
+
+    await expect(withTimeout(asyncFnSpy, longTimeoutMs, controller.signal)).rejects.toThrow(ErrorAborted);
+
+    expect(asyncFnSpy).not.toHaveBeenCalled();
   });
 });

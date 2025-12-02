@@ -1,18 +1,23 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
-import {InputType} from "@lodestar/spec-test-util";
-import {toHexString} from "@lodestar/utils";
+import {
+  aggregateVerify as BLSAggregateVerify,
+  fastAggregateVerify as BLSFastAggregateVerify,
+  PublicKey,
+  SecretKey,
+  Signature,
+  verify as _verify,
+  aggregateSerializedPublicKeys,
+  aggregateSignatures,
+} from "@chainsafe/blst";
 import {fromHexString} from "@chainsafe/ssz";
+import {InputType} from "@lodestar/spec-test-util";
 import {TestRunnerFn} from "../utils/types.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 const testFnByType: Record<string, (data: any) => any> = {
   aggregate,
-  aggregate_verify,
-  eth_aggregate_pubkeys,
-  eth_fast_aggregate_verify,
-  fast_aggregate_verify,
+  aggregate_verify: aggregateVerify,
+  eth_aggregate_pubkeys: ethAggregatePubkeys,
+  eth_fast_aggregate_verify: ethFastAggregateVerify,
+  fast_aggregate_verify: fastAggregateVerify,
   sign,
   verify,
 };
@@ -22,7 +27,7 @@ const G2_POINT_AT_INFINITY =
 const G1_POINT_AT_INFINITY =
   "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
-export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (fork, testName) => {
+export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (_fork, testName) => {
   return {
     testFunction: ({data}) => {
       const testFn = testFnByType[testName];
@@ -36,19 +41,20 @@ export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (fork, testName
         const {message} = e as Error;
         if (message.includes("BLST_ERROR") || message === "EMPTY_AGGREGATE_ARRAY" || message === "ZERO_SECRET_KEY") {
           return null;
-        } else {
-          throw e;
         }
+        throw e;
       }
     },
     options: {
       inputTypes: {data: InputType.YAML},
       getExpected: (testCase) => testCase.data.output,
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/general/index.test.ts
     },
   };
 };
 
 type BlsTestCase = {
+  meta?: any;
   data: {
     input: unknown;
     output: unknown;
@@ -61,10 +67,14 @@ type BlsTestCase = {
  * output: BLS Signature -- expected output, single BLS signature or empty.
  * ```
  */
-function aggregate(input: string[]): string {
-  const pks = input.map((pkHex) => bls.Signature.fromHex(pkHex));
-  const agg = bls.Signature.aggregate(pks);
-  return agg.toHex();
+function aggregate(input: string[]): string | null {
+  try {
+    const pks = input.map((pkHex) => Signature.fromHex(pkHex));
+    const agg = aggregateSignatures(pks);
+    return agg.toHex();
+  } catch (_e) {
+    return null;
+  }
 }
 
 /**
@@ -76,9 +86,17 @@ function aggregate(input: string[]): string {
  * output: bool  --  true (VALID) or false (INVALID)
  * ```
  */
-function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
+function aggregateVerify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
   const {pubkeys, messages, signature} = input;
-  return bls.verifyMultiple(pubkeys.map(fromHexString), messages.map(fromHexString), fromHexString(signature));
+  try {
+    return BLSAggregateVerify(
+      messages.map(fromHexString),
+      pubkeys.map((pk) => PublicKey.fromHex(pk)),
+      Signature.fromHex(signature)
+    );
+  } catch (_e) {
+    return false;
+  }
 }
 
 /**
@@ -87,14 +105,17 @@ function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signatu
  * output: BLS Signature -- expected output, single BLS signature or empty.
  * ```
  */
-function eth_aggregate_pubkeys(input: string[]): string | null {
+function ethAggregatePubkeys(input: string[]): string | null {
   // Don't add this checks in the source as beacon nodes check the pubkeys for inf when onboarding
   for (const pk of input) {
     if (pk === G1_POINT_AT_INFINITY) return null;
   }
 
-  const agg = bls.aggregatePublicKeys(input.map((hex) => fromHexString(hex)));
-  return toHexString(agg);
+  try {
+    return aggregateSerializedPublicKeys(input.map((hex) => fromHexString(hex))).toHex();
+  } catch (_e) {
+    return null;
+  }
 }
 
 /**
@@ -106,7 +127,7 @@ function eth_aggregate_pubkeys(input: string[]): string | null {
  * output: bool  --  true (VALID) or false (INVALID)
  * ```
  */
-function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean {
+function ethFastAggregateVerify(input: {pubkeys: string[]; message: string; signature: string}): boolean {
   const {pubkeys, message, signature} = input;
 
   if (pubkeys.length === 0 && signature === G2_POINT_AT_INFINITY) {
@@ -118,11 +139,15 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
     if (pk === G1_POINT_AT_INFINITY) return false;
   }
 
-  return bls.verifyAggregate(
-    pubkeys.map((hex) => fromHexString(hex)),
-    fromHexString(message),
-    fromHexString(signature)
-  );
+  try {
+    return BLSFastAggregateVerify(
+      fromHexString(message),
+      pubkeys.map((hex) => PublicKey.fromHex(hex)),
+      Signature.fromHex(signature)
+    );
+  } catch (_e) {
+    return false;
+  }
 }
 
 /**
@@ -134,14 +159,15 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
  * output: bool  --  true (VALID) or false (INVALID)
  * ```
  */
-function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
+function fastAggregateVerify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
   const {pubkeys, message, signature} = input;
   try {
-    return bls.Signature.fromBytes(fromHexString(signature), undefined, true).verifyAggregate(
-      pubkeys.map((hex) => bls.PublicKey.fromBytes(fromHexString(hex), CoordType.jacobian, true)),
-      fromHexString(message)
+    return BLSFastAggregateVerify(
+      fromHexString(message),
+      pubkeys.map((hex) => PublicKey.fromHex(hex, true)),
+      Signature.fromHex(signature, true)
     );
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -154,8 +180,11 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
  */
 function sign(input: {privkey: string; message: string}): string | null {
   const {privkey, message} = input;
-  const signature = bls.sign(fromHexString(privkey), fromHexString(message));
-  return toHexString(signature);
+  try {
+    return SecretKey.fromHex(privkey).sign(fromHexString(message)).toHex();
+  } catch (_e) {
+    return null;
+  }
 }
 
 /**
@@ -167,5 +196,9 @@ function sign(input: {privkey: string; message: string}): string | null {
  */
 function verify(input: {pubkey: string; message: string; signature: string}): boolean {
   const {pubkey, message, signature} = input;
-  return bls.verify(fromHexString(pubkey), fromHexString(message), fromHexString(signature));
+  try {
+    return _verify(fromHexString(message), PublicKey.fromHex(pubkey), Signature.fromHex(signature));
+  } catch (_e) {
+    return false;
+  }
 }

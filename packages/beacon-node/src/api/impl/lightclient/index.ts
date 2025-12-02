@@ -1,64 +1,64 @@
 import {routes} from "@lodestar/api";
-import {fromHexString} from "@chainsafe/ssz";
-import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
+import {ApplicationMethods} from "@lodestar/api/server";
+import {MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {fromHex} from "@lodestar/utils";
+import {assertLightClientServer} from "../../../node/utils/lightclient.js";
 import {ApiModules} from "../types.js";
-import {resolveStateId} from "../beacon/state/utils.js";
-import {IApiOptions} from "../../options.js";
-
 // TODO: Import from lightclient/server package
 
-export function getLightclientApi(
-  opts: IApiOptions,
-  {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
-): routes.lightclient.Api {
-  // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
-  // We want some some sort of resistance against this DoS vector.
-  const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
-
+export function getLightclientApi({
+  chain,
+  config,
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.lightclient.Endpoints> {
   return {
-    async getStateProof(stateId, jsonPaths) {
-      const state = await resolveStateId(config, chain, db, stateId);
+    async getLightClientUpdatesByRange({startPeriod, count}) {
+      const lightClientServer = chain.lightClientServer;
+      assertLightClientServer(lightClientServer);
 
-      // Commit any changes before computing the state root. In normal cases the state should have no changes here
-      state.commit();
-      const stateNode = state.node;
-      const tree = new Tree(stateNode);
-
-      const gindexes = state.type.tree_createProofGindexes(stateNode, jsonPaths);
-      // TODO: Is it necessary to de-duplicate?
-      //       It's not a problem if we overcount gindexes
-      const gindicesSet = new Set(gindexes);
-
-      if (gindicesSet.size > maxGindicesInProof) {
-        throw new Error("Requested proof is too large.");
-      }
-
+      const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
+      const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
+      const updates = await Promise.all(periods.map((period) => lightClientServer.getUpdate(period)));
       return {
-        data: tree.getProof({
-          type: ProofType.treeOffset,
-          gindices: Array.from(gindicesSet),
-        }),
+        data: updates,
+        meta: {versions: updates.map((update) => config.getForkName(update.attestedHeader.beacon.slot))},
       };
     },
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    async getUpdates(start_period, count) {
-      const periods = Array.from({length: count}, (_ignored, i) => i + start_period);
-      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdates(period)));
-      return {data: updates};
+    async getLightClientOptimisticUpdate() {
+      assertLightClientServer(chain.lightClientServer);
+
+      const update = chain.lightClientServer.getOptimisticUpdate();
+      if (update === null) {
+        throw Error("No optimistic update available");
+      }
+      return {data: update, meta: {version: config.getForkName(update.attestedHeader.beacon.slot)}};
     },
 
-    async getOptimisticUpdate() {
-      return {data: await chain.lightClientServer.getOptimisticUpdate()};
+    async getLightClientFinalityUpdate() {
+      assertLightClientServer(chain.lightClientServer);
+
+      const update = chain.lightClientServer.getFinalityUpdate();
+      if (update === null) {
+        throw Error("No finality update available");
+      }
+      return {data: update, meta: {version: config.getForkName(update.attestedHeader.beacon.slot)}};
     },
 
-    async getFinalityUpdate() {
-      return {data: await chain.lightClientServer.getFinalityUpdate()};
+    async getLightClientBootstrap({blockRoot}) {
+      assertLightClientServer(chain.lightClientServer);
+
+      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHex(blockRoot));
+      return {data: bootstrapProof, meta: {version: config.getForkName(bootstrapProof.header.beacon.slot)}};
     },
 
-    async getBootstrap(blockRoot) {
-      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHexString(blockRoot));
-      return {data: bootstrapProof};
+    async getLightClientCommitteeRoot({startPeriod, count}) {
+      const lightClientServer = chain.lightClientServer;
+      assertLightClientServer(lightClientServer);
+
+      const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, count);
+      const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
+      const committeeHashes = await Promise.all(periods.map((period) => lightClientServer.getCommitteeRoot(period)));
+      return {data: committeeHashes};
     },
   };
 }

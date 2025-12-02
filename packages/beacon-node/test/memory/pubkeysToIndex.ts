@@ -52,7 +52,6 @@ function testRunnerMemoryBpi(testCases: {getInstance: (bytes: number) => unknown
       sampleEvery: 5,
     });
 
-    // eslint-disable-next-line no-console
     console.log(`${id.padEnd(longestId)} - ${bpi.toFixed(1)} bytes / instance`);
   }
 }

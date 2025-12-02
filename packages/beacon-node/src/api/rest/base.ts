@@ -1,11 +1,11 @@
-import querystring from "querystring";
-import fastify, {FastifyError, FastifyInstance} from "fastify";
-import fastifyCors from "fastify-cors";
-import bearerAuthPlugin from "fastify-bearer-auth";
-import {RouteConfig} from "@lodestar/api/beacon/server";
-import {ErrorAborted, ILogger} from "@lodestar/utils";
-import {IGauge, IHistogram} from "../../metrics/index.js";
-import {ApiError, NodeIsSyncing} from "../impl/errors.js";
+import bearerAuthPlugin from "@fastify/bearer-auth";
+import {fastifyCors} from "@fastify/cors";
+import {FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
+import {parse as parseQueryString} from "qs";
+import {addSszContentTypeParser} from "@lodestar/api/server";
+import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
+import {isLocalhostIP} from "../../util/ip.js";
+import {ApiError, FailureList, IndexedError, NodeIsSyncing} from "../impl/errors.js";
 import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";
 
 export type RestApiServerOpts = {
@@ -13,50 +13,115 @@ export type RestApiServerOpts = {
   cors?: string;
   address?: string;
   bearerToken?: string;
+  headerLimit?: number;
   bodyLimit?: number;
+  stacktraces?: boolean;
+  swaggerUI?: boolean;
 };
 
 export type RestApiServerModules = {
-  logger: ILogger;
+  logger: Logger;
   metrics: RestApiServerMetrics | null;
 };
 
 export type RestApiServerMetrics = SocketMetrics & {
-  requests: IGauge<"operationId">;
-  responseTime: IHistogram<"operationId">;
-  errors: IGauge<"operationId">;
+  requests: Gauge<{operationId: string}>;
+  responseTime: Histogram<{operationId: string}>;
+  errors: Gauge<{operationId: string}>;
 };
+
+/**
+ * Error response body format as defined in beacon-api spec
+ *
+ * See https://github.com/ethereum/beacon-APIs/blob/v3.1.0/types/http.yaml
+ */
+type ErrorResponse = {
+  code: number;
+  message: string;
+  stacktraces?: string[];
+};
+
+type IndexedErrorResponse = ErrorResponse & {
+  failures?: FailureList;
+};
+
+/**
+ * Error code used by Fastify if media type is not supported (415)
+ */
+const INVALID_MEDIA_TYPE_CODE = errorCodes.FST_ERR_CTP_INVALID_MEDIA_TYPE().code;
+
+/**
+ * Error code used by Fastify if JSON schema validation failed
+ */
+const SCHEMA_VALIDATION_ERROR_CODE = errorCodes.FST_ERR_VALIDATION().code;
 
 /**
  * REST API powered by `fastify` server.
  */
 export class RestApiServer {
   protected readonly server: FastifyInstance;
-  protected readonly logger: ILogger;
+  protected readonly logger: Logger;
   private readonly activeSockets: HttpActiveSocketsTracker;
 
-  constructor(private readonly opts: RestApiServerOpts, modules: RestApiServerModules) {
+  constructor(
+    protected readonly opts: RestApiServerOpts,
+    modules: RestApiServerModules
+  ) {
     // Apply opts defaults
     const {logger, metrics} = modules;
 
     const server = fastify({
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
-      querystringParser: querystring.parse,
+      querystringParser: (str) =>
+        parseQueryString(str, {
+          // Array as comma-separated values must be supported to be OpenAPI spec compliant
+          comma: true,
+          // Drop support for array query strings like `id[0]=1&id[1]=2&id[2]=3` as those are not required to
+          // be OpenAPI spec compliant and results are inconsistent, see https://github.com/ljharb/qs/issues/331.
+          // The schema validation will catch this and throw an error as parsed query string results in an object.
+          parseArrays: false,
+        }),
       bodyLimit: opts.bodyLimit,
+      http: {maxHeaderSize: opts.headerLimit},
     });
+
+    addSszContentTypeParser(server);
 
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 
     // To parse our ApiError -> statusCode
-    server.setErrorHandler((err, req, res) => {
-      if ((err as FastifyError).validation) {
-        void res.status(400).send((err as FastifyError).validation);
+    server.setErrorHandler((err, _req, res) => {
+      const stacktraces = opts.stacktraces ? err.stack?.split("\n") : undefined;
+      if (err.validation) {
+        const {instancePath, message} = err.validation[0];
+        const payload: ErrorResponse = {
+          code: 400,
+          message: `${instancePath.substring(instancePath.lastIndexOf("/") + 1)} ${message}`,
+          stacktraces,
+        };
+        void res.status(400).send(payload);
+      } else if (err instanceof IndexedError) {
+        const payload: IndexedErrorResponse = {
+          code: err.statusCode,
+          message: err.message,
+          failures: err.failures,
+          stacktraces,
+        };
+        void res.status(err.statusCode).send(payload);
       } else {
         // Convert our custom ApiError into status code
         const statusCode = err instanceof ApiError ? err.statusCode : 500;
-        void res.status(statusCode).send(err);
+        const payload: ErrorResponse = {code: statusCode, message: err.message, stacktraces};
+        void res.status(statusCode).send(payload);
       }
+    });
+
+    server.setNotFoundHandler((req, res) => {
+      const message = `Route ${req.raw.method}:${req.raw.url} not found`;
+      this.logger.warn(message);
+      const payload: ErrorResponse = {code: 404, message};
+      void res.code(404).send(payload);
     });
 
     if (opts.cors) {
@@ -69,26 +134,36 @@ export class RestApiServer {
 
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
-    server.addHook("onRequest", async (req, res) => {
-      const {operationId} = res.context.config as RouteConfig;
+    server.addHook("onRequest", async (req, _res) => {
+      const operationId = getOperationId(req);
       this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
     });
 
-    // Log after response
-    server.addHook("onResponse", async (req, res) => {
-      const {operationId} = res.context.config as RouteConfig;
-      this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
-      metrics?.responseTime.observe({operationId}, res.getResponseTime() / 1000);
+    server.addHook("preHandler", async (req, _res) => {
+      const operationId = getOperationId(req);
+      this.logger.debug(`Exec ${req.id} ${req.ip} ${operationId}`);
     });
 
-    server.addHook("onError", async (req, res, err) => {
-      // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
+    // Log after response
+    server.addHook("onResponse", async (req, res) => {
+      const operationId = getOperationId(req);
+      this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
+      metrics?.responseTime.observe({operationId}, res.elapsedTime / 1000);
+    });
+
+    server.addHook("onError", async (req, _res, err) => {
+      // Don't log ErrorAborted errors, they happen on node shutdown and are not useful
       // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
       if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
 
-      const {operationId} = res.context.config as RouteConfig;
-      this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
+      const operationId = getOperationId(req);
+
+      if (err instanceof ApiError || [INVALID_MEDIA_TYPE_CODE, SCHEMA_VALIDATION_ERROR_CODE].includes(err.code)) {
+        this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
+      } else {
+        this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
+      }
       metrics?.errors.inc({operationId});
     });
 
@@ -101,8 +176,13 @@ export class RestApiServer {
    */
   async listen(): Promise<void> {
     try {
-      const address = await this.server.listen(this.opts.port, this.opts.address);
-      this.logger.info("Started REST api server", {address});
+      const host = this.opts.address;
+      await this.server.listen({port: this.opts.port, host});
+      const {address, port} = this.server.addresses()[0];
+      this.logger.info("Started REST API server", {address: `http://${address}:${port}`});
+      if (!host || !isLocalhostIP(host)) {
+        this.logger.warn("REST API server is exposed, ensure untrusted traffic cannot reach this API");
+      }
     } catch (e) {
       this.logger.error("Error starting REST api server", this.opts, e as Error);
       throw e;
@@ -115,16 +195,22 @@ export class RestApiServer {
   async close(): Promise<void> {
     // In NodeJS land calling close() only causes new connections to be rejected.
     // Existing connections can prevent .close() from resolving for potentially forever.
-    // In Lodestar case when the BeaconNode wants to close we will just abruptly terminate
-    // all existing connections for a fast shutdown.
+    // In Lodestar case when the BeaconNode wants to close we will attempt to gracefully
+    // close all existing connections but forcefully terminate after timeout for a fast shutdown.
     // Inspired by https://github.com/gajus/http-terminator/
-    this.activeSockets.destroyAll();
+    await this.activeSockets.terminate();
 
     await this.server.close();
+
+    this.logger.debug("REST API server closed");
   }
 
   /** For child classes to override */
   protected shouldIgnoreError(_err: Error): boolean {
     return false;
   }
+}
+
+function getOperationId(req: FastifyRequest): string {
+  return req.routeOptions.schema?.operationId ?? "unknown";
 }

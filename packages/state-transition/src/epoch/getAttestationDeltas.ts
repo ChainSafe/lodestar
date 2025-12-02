@@ -1,4 +1,3 @@
-import {bigIntSqrt, bnToNum} from "@lodestar/utils";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -6,10 +5,11 @@ import {
   MIN_EPOCHS_TO_INACTIVITY_PENALTY,
   PROPOSER_REWARD_QUOTIENT,
 } from "@lodestar/params";
+import {bigIntSqrt, bnToNum} from "@lodestar/utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../constants/index.js";
-import {newZeroedArray} from "../util/index.js";
-import {EpochProcess, CachedBeaconStatePhase0} from "../types.js";
+import {CachedBeaconStatePhase0, EpochTransitionCache} from "../types.js";
 import {hasMarkers} from "../util/attesterStatus.js";
+import {newZeroedArray} from "../util/index.js";
 
 /**
  * Redefine constants in attesterStatus to improve performance
@@ -24,7 +24,7 @@ const FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_
 const FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
 const FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
 
-interface IRewardPenaltyItem {
+type RewardPenaltyItem = {
   baseReward: number;
   proposerReward: number;
   maxAttesterReward: number;
@@ -33,7 +33,7 @@ interface IRewardPenaltyItem {
   headReward: number;
   basePenalty: number;
   finalityDelayPenalty: number;
-}
+};
 
 /**
  * Return attestation reward/penalty deltas for each validator.
@@ -48,24 +48,28 @@ interface IRewardPenaltyItem {
  *   - unslashed:          100%
  *   - eligibleAttester:   98%
  */
-export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProcess: EpochProcess): [number[], number[]] {
-  const validatorCount = epochProcess.statuses.length;
+export function getAttestationDeltas(
+  state: CachedBeaconStatePhase0,
+  cache: EpochTransitionCache
+): [number[], number[]] {
+  const {flags, proposerIndices, inclusionDelays} = cache;
+  const validatorCount = flags.length;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
-  // no need this as we make sure it in EpochProcess
-  // let totalBalance = bigIntMax(epochProcess.totalActiveStake, increment);
-  const totalBalance = epochProcess.totalActiveStakeByIncrement;
+  // no need this as we make sure it in EpochTransitionCache
+  // let totalBalance = bigIntMax(epochTransitionCache.totalActiveStake, increment);
+  const totalBalance = cache.totalActiveStakeByIncrement;
   const totalBalanceInGwei = BigInt(totalBalance) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
   // increment is factored out from balance totals to avoid overflow
-  const prevEpochSourceStakeByIncrement = epochProcess.prevEpochUnslashedStake.sourceStakeByIncrement;
-  const prevEpochTargetStakeByIncrement = epochProcess.prevEpochUnslashedStake.targetStakeByIncrement;
-  const prevEpochHeadStakeByIncrement = epochProcess.prevEpochUnslashedStake.headStakeByIncrement;
+  const prevEpochSourceStakeByIncrement = cache.prevEpochUnslashedStake.sourceStakeByIncrement;
+  const prevEpochTargetStakeByIncrement = cache.prevEpochUnslashedStake.targetStakeByIncrement;
+  const prevEpochHeadStakeByIncrement = cache.prevEpochUnslashedStake.headStakeByIncrement;
 
   // sqrt first, before factoring out the increment for later usage
   const balanceSqRoot = bnToNum(bigIntSqrt(totalBalanceInGwei));
-  const finalityDelay = epochProcess.prevEpoch - state.finalizedCheckpoint.epoch;
+  const finalityDelay = cache.prevEpoch - state.finalizedCheckpoint.epoch;
 
   const BASE_REWARDS_PER_EPOCH = BASE_REWARDS_PER_EPOCH_CONST;
   const proposerRewardQuotient = PROPOSER_REWARD_QUOTIENT;
@@ -73,13 +77,12 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
 
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32, 31, 30
-  const rewardPnaltyItemCache = new Map<number, IRewardPenaltyItem>();
-  const {statuses} = epochProcess;
+  const rewardPnaltyItemCache = new Map<number, RewardPenaltyItem>();
   const {effectiveBalanceIncrements} = state.epochCtx;
-  for (let i = 0; i < statuses.length; i++) {
+  for (let i = 0; i < flags.length; i++) {
+    const flag = flags[i];
     const effectiveBalanceIncrement = effectiveBalanceIncrements[i];
     const effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
-    const status = statuses[i];
 
     let rewardItem = rewardPnaltyItemCache.get(effectiveBalanceIncrement);
     if (!rewardItem) {
@@ -118,14 +121,14 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
     } = rewardItem;
 
     // inclusion speed bonus
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
-      rewards[status.proposerIndex] += proposerReward;
-      rewards[i] += Math.floor(maxAttesterReward / status.inclusionDelay);
+    if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
+      rewards[proposerIndices[i]] += proposerReward;
+      rewards[i] += Math.floor(maxAttesterReward / inclusionDelays[i]);
     }
 
-    if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
+    if (hasMarkers(flag, FLAG_ELIGIBLE_ATTESTER)) {
       // expected FFG source
-      if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
+      if (hasMarkers(flag, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
         // justification-participation reward
         rewards[i] += sourceCheckpointReward;
       } else {
@@ -134,7 +137,7 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
       }
 
       // expected FFG target
-      if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+      if (hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
         // boundary-attestation reward
         rewards[i] += targetCheckpointReward;
       } else {
@@ -143,7 +146,7 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
       }
 
       // expected head
-      if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED)) {
+      if (hasMarkers(flag, FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED)) {
         // canonical-participation reward
         rewards[i] += headReward;
       } else {
@@ -155,7 +158,7 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
       if (isInInactivityLeak) {
         penalties[i] += basePenalty;
 
-        if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+        if (!hasMarkers(flag, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
           penalties[i] += finalityDelayPenalty;
         }
       }

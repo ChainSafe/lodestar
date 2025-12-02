@@ -1,17 +1,18 @@
-import {ICliCommand, ICliCommandOptions} from "../../util/index.js";
-import {IGlobalArgs} from "../../options/index.js";
-import {beaconOptions, IBeaconArgs} from "./options.js";
+import {CliCommand, CliCommandOptions} from "@lodestar/utils";
+import {GlobalArgs} from "../../options/index.js";
 import {beaconHandler} from "./handler.js";
+import {BeaconArgs, beaconOptions} from "./options.js";
 
-export const beacon: ICliCommand<IBeaconArgs, IGlobalArgs> = {
+export const beacon: CliCommand<BeaconArgs, GlobalArgs> = {
   command: "beacon",
   describe: "Run a beacon chain node",
+  docsFolder: "run/beacon-management",
   examples: [
     {
-      command: "beacon --network goerli",
-      description: "Run a beacon chain node and connect to the goerli testnet",
+      command: "beacon --network hoodi",
+      description: "Run a beacon chain node and connect to the hoodi testnet",
     },
   ],
-  options: beaconOptions as ICliCommandOptions<IBeaconArgs>,
+  options: beaconOptions as CliCommandOptions<BeaconArgs>,
   handler: beaconHandler,
 };

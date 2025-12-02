@@ -1,9 +1,8 @@
-import bls from "@chainsafe/bls/switchable";
+import bls from "@chainsafe/bls";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
-import {hash, Tree} from "@chainsafe/persistent-merkle-tree";
+import {Tree, hasher} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
@@ -12,23 +11,21 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {altair, phase0, Slot, ssz, SyncPeriod} from "@lodestar/types";
+import {LightClientBootstrap, Slot, SyncPeriod, altair, phase0, ssz} from "@lodestar/types";
 import {SyncCommitteeFast} from "../../src/types.js";
 import {computeSigningRoot} from "../../src/utils/domain.js";
-import {getLcLoggerConsole} from "../../src/utils/logger.js";
+import {getConsoleLogger} from "../../src/utils/logger.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 /**
  * To enable debug logs run with
  * ```
- * DEBUG=true mocha ...
+ * DEBUG=true vitest ...
  * ```
  */
-export const testLogger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
+export const testLogger = getConsoleLogger({logDebug: Boolean(process.env.DEBUG)});
 
 export const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
 export const SOME_HASH = Buffer.alloc(32, 0xaa);
@@ -43,16 +40,16 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
 }
 
 export function getSyncAggregateSigningRoot(
-  config: IBeaconConfig,
-  syncAttestedBlockHeader: phase0.BeaconBlockHeader
+  config: BeaconConfig,
+  syncAttestedBlockHeader: altair.LightClientHeader
 ): Uint8Array {
-  const domain = config.getDomain(syncAttestedBlockHeader.slot, DOMAIN_SYNC_COMMITTEE);
-  return computeSigningRoot(ssz.phase0.BeaconBlockHeader, syncAttestedBlockHeader, domain);
+  const domain = config.getDomain(syncAttestedBlockHeader.beacon.slot, DOMAIN_SYNC_COMMITTEE);
+  return computeSigningRoot(ssz.altair.LightClientHeader, syncAttestedBlockHeader, domain);
 }
 
-export function defaultBeaconBlockHeader(slot: Slot): phase0.BeaconBlockHeader {
-  const header = ssz.phase0.BeaconBlockHeader.defaultValue();
-  header.slot = slot;
+export function defaultBeaconBlockHeader(slot: Slot): altair.LightClientHeader {
+  const header = ssz.altair.LightClientHeader.defaultValue();
+  header.beacon.slot = slot;
   return header;
 }
 
@@ -60,7 +57,7 @@ export type SyncCommitteeKeys = {
   pks: PublicKey[];
   syncCommittee: altair.SyncCommittee;
   syncCommitteeFast: SyncCommitteeFast;
-  signHeader(config: IBeaconConfig, header: phase0.BeaconBlockHeader): altair.SyncAggregate;
+  signHeader(config: BeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate;
   signAndAggregate(message: Uint8Array): altair.SyncAggregate;
 };
 
@@ -89,7 +86,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     };
   }
 
-  function signHeader(config: IBeaconConfig, header: phase0.BeaconBlockHeader): altair.SyncAggregate {
+  function signHeader(config: BeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate {
     return signAndAggregate(getSyncAggregateSigningRoot(config, header));
   }
 
@@ -111,7 +108,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
 /**
  * Creates LightClientUpdate that passes `assertValidLightClientUpdate` function, from mock data
  */
-export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeriod): altair.LightClientUpdate {
+export function computeLightclientUpdate(config: BeaconConfig, period: SyncPeriod): altair.LightClientUpdate {
   const updateSlot = period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
 
   const committee = getInteropSyncCommittee(period);
@@ -123,12 +120,12 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 
   // finalized header must have stateRoot to finalizedState
   const finalizedHeader = defaultBeaconBlockHeader(updateSlot);
-  finalizedHeader.stateRoot = finalizedState.hashTreeRoot();
+  finalizedHeader.beacon.stateRoot = finalizedState.hashTreeRoot();
 
   const attestedState = ssz.altair.BeaconState.defaultViewDU();
   attestedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
     epoch: 0,
-    root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
+    root: ssz.altair.LightClientHeader.hashTreeRoot(finalizedHeader),
   });
 
   // attested state must contain next sync committees
@@ -136,13 +133,12 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 
   // attestedHeader must have stateRoot to attestedState
   const attestedHeader = defaultBeaconBlockHeader(updateSlot);
-  attestedHeader.stateRoot = attestedState.hashTreeRoot();
+  attestedHeader.beacon.stateRoot = attestedState.hashTreeRoot();
 
   // Creates proofs for nextSyncCommitteeBranch and finalityBranch rooted in attested state
   const nextSyncCommitteeBranch = new Tree(attestedState.node).getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
   const finalityBranch = new Tree(attestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
-  const forkVersion = ssz.Bytes4.defaultValue();
   const syncAggregate = committee.signHeader(config, attestedHeader);
 
   return {
@@ -152,17 +148,15 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
     finalizedHeader,
     finalityBranch,
     syncAggregate,
-    forkVersion,
+    signatureSlot: attestedHeader.beacon.slot + 1,
   };
 }
 
 /**
- * Creates a LightclientSnapshotWithProof that passes validation
+ * Creates a LightClientBootstrap that passes validation
  */
-export function computeLightClientSnapshot(
-  period: SyncPeriod
-): {
-  snapshot: routes.lightclient.LightclientSnapshotWithProof;
+export function computeLightClientSnapshot(period: SyncPeriod): {
+  snapshot: LightClientBootstrap;
   checkpointRoot: Uint8Array;
 } {
   const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;
@@ -173,12 +167,14 @@ export function computeLightClientSnapshot(
     CURRENT_SYNC_COMMITTEE_INDEX
   );
 
-  const header: phase0.BeaconBlockHeader = {
-    slot: period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
-    proposerIndex: 0,
-    parentRoot: SOME_HASH,
-    stateRoot: headerStateRoot,
-    bodyRoot: SOME_HASH,
+  const header: altair.LightClientHeader = {
+    beacon: {
+      slot: period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
+      proposerIndex: 0,
+      parentRoot: SOME_HASH,
+      stateRoot: headerStateRoot,
+      bodyRoot: SOME_HASH,
+    },
   };
 
   return {
@@ -187,7 +183,7 @@ export function computeLightClientSnapshot(
       currentSyncCommittee,
       currentSyncCommitteeBranch,
     },
-    checkpointRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
+    checkpointRoot: ssz.altair.LightClientHeader.hashTreeRoot(header),
   };
 }
 
@@ -239,9 +235,9 @@ export function computeMerkleBranch(
   for (let i = 0; i < depth; i++) {
     proof[i] = Buffer.alloc(32, i);
     if (Math.floor(index / 2 ** i) % 2) {
-      value = hash(proof[i], value);
+      value = hasher.digest64(proof[i], value);
     } else {
-      value = hash(value, proof[i]);
+      value = hasher.digest64(value, proof[i]);
     }
   }
   return {root: value, proof};
@@ -249,19 +245,21 @@ export function computeMerkleBranch(
 
 export function committeeUpdateToLatestHeadUpdate(
   committeeUpdate: altair.LightClientUpdate
-): routes.lightclient.LightclientOptimisticHeaderUpdate {
+): altair.LightClientOptimisticUpdate {
   return {
     attestedHeader: committeeUpdate.attestedHeader,
     syncAggregate: {
       syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
       syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,
     },
+    signatureSlot: committeeUpdate.attestedHeader.beacon.slot + 1,
   };
 }
 
 export function committeeUpdateToLatestFinalizedHeadUpdate(
-  committeeUpdate: altair.LightClientUpdate
-): routes.lightclient.LightclientFinalizedUpdate {
+  committeeUpdate: altair.LightClientUpdate,
+  signatureSlot: Slot
+): altair.LightClientFinalityUpdate {
   return {
     attestedHeader: committeeUpdate.attestedHeader,
     finalizedHeader: committeeUpdate.finalizedHeader,
@@ -270,11 +268,12 @@ export function committeeUpdateToLatestFinalizedHeadUpdate(
       syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
       syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,
     },
+    signatureSlot,
   };
 }
 
 export function lastInMap<T>(map: Map<unknown, T>): T {
   if (map.size === 0) throw Error("Empty map");
   const values = Array.from(map.values());
-  return values[values.length - 1];
+  return values.at(-1) as T;
 }

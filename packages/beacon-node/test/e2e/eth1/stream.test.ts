@@ -1,16 +1,16 @@
-import "mocha";
-import {expect} from "chai";
-import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
-import {getDepositsStream, getDepositsAndBlockStreamForGenesis} from "../../../src/eth1/stream.js";
-import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
-import {getGoerliRpcUrl} from "../../testParams.js";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {Eth1Options} from "../../../src/eth1/options.js";
+import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
+import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../../src/eth1/stream.js";
+import {getGoerliRpcUrl} from "../../testParams.js";
+import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
 
-describe("Eth1 streams", function () {
-  this.timeout("2 min");
-
+// https://github.com/ChainSafe/lodestar/issues/5967
+describe.skip("Eth1 streams", () => {
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   const config = getTestnetConfig();
@@ -30,7 +30,7 @@ describe("Eth1 streams", function () {
   const depositsToFetch = 1000;
   const eth1Params = {...config, maxBlocksPerPoll};
 
-  it(`Should fetch ${depositsToFetch} deposits with getDepositsStream`, async function () {
+  it(`Should fetch ${depositsToFetch} deposits with getDepositsStream`, async () => {
     const depositsStream = getDepositsStream(
       medallaTestnetConfig.blockWithDepositActivity,
       getEth1Provider(),
@@ -46,10 +46,10 @@ describe("Eth1 streams", function () {
       }
     }
 
-    expect(depositCount).to.be.greaterThan(depositsToFetch, "Not enough deposits were fetched");
+    expect(depositCount).toBeGreaterThan(depositsToFetch);
   });
 
-  it(`Should fetch ${depositsToFetch} deposits with getDepositsAndBlockStreamForGenesis`, async function () {
+  it(`Should fetch ${depositsToFetch} deposits with getDepositsAndBlockStreamForGenesis`, async () => {
     const stream = getDepositsAndBlockStreamForGenesis(
       medallaTestnetConfig.blockWithDepositActivity,
       getEth1Provider(),
@@ -65,6 +65,6 @@ describe("Eth1 streams", function () {
       }
     }
 
-    expect(depositCount).to.be.greaterThan(depositsToFetch, "Not enough deposits were fetched");
+    expect(depositCount).toBeGreaterThan(depositsToFetch);
   });
 });

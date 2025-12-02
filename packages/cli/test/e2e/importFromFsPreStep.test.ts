@@ -1,28 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
-import rimraf from "rimraf";
-import {expect} from "chai";
-import {testFilesDir} from "../utils.js";
-import {describeCliTest, execCli} from "../utils/childprocRunner.js";
-import {getAfterEachCallbacks} from "../utils/runUtils.js";
+import {rimraf} from "rimraf";
+import {beforeAll, describe, expect, it, onTestFinished, vi} from "vitest";
+import {execCliCommand, getKeystoresStr} from "@lodestar/test-utils";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
-import {expectKeys, getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
-import {getKeystoresStr} from "../utils/keystores.js";
+import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
+import {testFilesDir} from "../utils.js";
 
-/* eslint-disable no-console */
+describe("import from fs then validate", () => {
+  vi.setConfig({testTimeout: 30_000});
 
-describeCliTest("import from fs then validate", function ({spawnCli}) {
   const dataDir = path.join(testFilesDir, "import-then-validate-test");
   const importFromDir = path.join(dataDir, "eth2.0_deposit_out");
   const passphraseFilepath = path.join(importFromDir, "password.text");
 
-  before("Clean dataDir", () => {
+  beforeAll(() => {
     rimraf.sync(dataDir);
     rimraf.sync(importFromDir);
   });
-
-  const afterEachCallbacks = getAfterEachCallbacks();
-  const itKeymanagerStep = getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, dataDir});
 
   const passphrase = "AAAAAAAA0000000000";
   const keyCount = 2;
@@ -39,8 +34,7 @@ describeCliTest("import from fs then validate", function ({spawnCli}) {
       fs.writeFileSync(path.join(importFromDir, `keystore_${i}.json`), keystoresStr[i]);
     }
 
-    const stdout = await execCli([
-      // ⏎
+    const stdout = await execCliCommand("packages/cli/bin/lodestar.js", [
       "validator import",
       `--dataDir ${dataDir}`,
       `--importKeystores ${importFromDir}`,
@@ -48,26 +42,27 @@ describeCliTest("import from fs then validate", function ({spawnCli}) {
     ]);
 
     for (let i = 0; i < keyCount; i++) {
-      expect(stdout).includes(pubkeys[i], `stdout should include imported pubkey[${i}]`);
+      expect(stdout).toContain(pubkeys[i]);
     }
   });
 
-  it("run 'validator list' and check pubkeys are imported", async function () {
+  it("run 'validator list' and check pubkeys are imported", async () => {
     fs.mkdirSync(path.join(dataDir, "keystores"), {recursive: true});
     fs.mkdirSync(path.join(dataDir, "secrets"), {recursive: true});
 
-    const stdout = await execCli([
-      // ⏎
-      "validator list",
-      `--dataDir ${dataDir}`,
-    ]);
+    const stdout = await execCliCommand("packages/cli/bin/lodestar.js", ["validator list", `--dataDir ${dataDir}`]);
 
     for (let i = 0; i < keyCount; i++) {
-      expect(stdout).includes(pubkeys[i], `stdout should include imported pubkey[${i}]`);
+      expect(stdout).toContain(pubkeys[i]);
     }
   });
 
-  itKeymanagerStep("run 'validator' check keys are loaded", async function (keymanagerClient) {
+  it("run 'validator' check keys are loaded", async () => {
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
+    onTestFinished(async () => {
+      await stopValidator();
+    });
+
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys response data");
   });
 });

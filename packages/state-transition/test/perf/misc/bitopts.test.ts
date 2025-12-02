@@ -1,11 +1,8 @@
+import {bench, describe} from "@chainsafe/benchmark";
 import {FLAG_PREV_SOURCE_ATTESTER, FLAG_UNSLASHED} from "../../../src/index.js";
-import {profilerLogger} from "../../utils/logger.js";
 
-describe.skip("bit opts", function () {
-  this.timeout(0);
-  const logger = profilerLogger();
-
-  it("Benchmark bitshift", () => {
+describe.skip("bit opts", () => {
+  bench("Benchmark bitshift", () => {
     const validators = 200_000; // Prater validators
     const orOptsPerRun = 5; // in getAttestationDeltas()
     const opsRun = 1e8; // Big number to benchmark
@@ -16,6 +13,6 @@ describe.skip("bit opts", function () {
     }
     const to = process.hrtime.bigint();
     const diffMs = Number(to - from) / 1e6;
-    logger.info(`Time spent on OR in getAttestationDeltas: ${diffMs * ((orOptsPerRun * validators) / opsRun)} ms`);
+    console.log(`Time spent on OR in getAttestationDeltas: ${diffMs * ((orOptsPerRun * validators) / opsRun)} ms`);
   });
 });

@@ -7,19 +7,21 @@ import * as chain from "./chain.js";
 import * as eth1 from "./eth1.js";
 import * as execution from "./execution.js";
 import * as metrics from "./metrics.js";
+import * as monitoring from "./monitoring.js";
 import * as network from "./network.js";
 import * as sync from "./sync.js";
 
-export type IBeaconNodeArgs = api.IApiArgs &
-  chain.IChainArgs &
-  eth1.IEth1Args &
+export type BeaconNodeArgs = api.ApiArgs &
+  chain.ChainArgs &
+  eth1.Eth1Args &
   execution.ExecutionEngineArgs &
   builder.ExecutionBuilderArgs &
-  metrics.IMetricsArgs &
-  network.INetworkArgs &
-  sync.ISyncArgs;
+  metrics.MetricsArgs &
+  monitoring.MonitoringArgs &
+  network.NetworkArgs &
+  sync.SyncArgs;
 
-export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
+export function parseBeaconNodeArgs(args: BeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
   // Remove undefined values to allow deepmerge to inject default values downstream
   return removeUndefinedRecursive({
     api: api.parseArgs(args),
@@ -29,6 +31,7 @@ export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBe
     executionEngine: execution.parseArgs(args),
     executionBuilder: builder.parseArgs(args),
     metrics: metrics.parseArgs(args),
+    monitoring: monitoring.parseArgs(args),
     network: network.parseArgs(args),
     sync: sync.parseArgs(args),
   });
@@ -41,6 +44,7 @@ export const beaconNodeOptions = {
   ...execution.options,
   ...builder.options,
   ...metrics.options,
+  ...monitoring.options,
   ...network.options,
   ...sync.options,
 };

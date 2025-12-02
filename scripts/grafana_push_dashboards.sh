@@ -4,11 +4,11 @@
 #
 # USAGE:
 #
-# API_URL=http://localhost:3000 API_USERPASS=admin:admin ./grafana_push_dashboards.sh dashboards/*.json
+# source .secrets.env && scripts/grafana_push_dashboards.sh dashboards/lodestar_*.json
 #
 # - Accepts a single file, a file glob, or multiple combinations of both
-# - Set API_URL to the root Grafana API url: API_URL=https://yourgrafana.server
-# - Set API_USERPASS to `$user:$password`: API_USERPASS=admin:admin
+# - Set GRAFANA_URL to the root Grafana API url: GRAFANA_URL=https://yourgrafana.server
+# - Set GRAFANA_API_KEY to an authorized token
 
 if [ $# -eq 0 ]; then
   echo "No arguments supplied"
@@ -35,9 +35,9 @@ for fileglob in "${@:1}"; do
     curl -X POST \
       -H "Accept: application/json" \
       -H "Content-Type: application/json" \
-      -u $API_USERPASS \
+      -H "Authorization: Bearer $GRAFANA_API_KEY" \
       -d @$filename \
-      ${API_URL}/api/dashboards/import
+      ${GRAFANA_URL}/api/dashboards/import
   done
 done
 

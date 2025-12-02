@@ -1,7 +1,11 @@
-import {Bytes32, phase0, ssz, TimeSeconds} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
-import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/state-transition";
-import {createEmptyEpochContextImmutableData} from "@lodestar/state-transition";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, GENESIS_SLOT} from "@lodestar/params";
+import {
+  BeaconStateAllForks,
+  createEmptyEpochCacheImmutableData,
+  initializeBeaconStateFromEth1,
+} from "@lodestar/state-transition";
+import {Bytes32, TimeSeconds, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
 export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
@@ -15,10 +19,12 @@ export type InteropStateOpts = {
   genesisTime?: number;
   eth1BlockHash?: Bytes32;
   eth1Timestamp?: TimeSeconds;
+  withEth1Credentials?: boolean;
 };
 
+// TODO: (@matthewkeil) - Only used by initDevState.  Consider combining into that function
 export function getInteropState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   {
     genesisTime = Math.floor(Date.now() / 1000),
     eth1BlockHash = INTEROP_BLOCK_HASH,
@@ -27,7 +33,12 @@ export function getInteropState(
   deposits: phase0.Deposit[],
   fullDepositDataRootList?: DepositTree
 ): BeaconStateAllForks {
-  const latestPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
+  const fork = config.getForkName(GENESIS_SLOT);
+  const executionPayloadHeaderType =
+    fork !== ForkName.phase0 && fork !== ForkName.altair
+      ? sszTypesFor(fork).ExecutionPayloadHeader
+      : ssz.bellatrix.ExecutionPayloadHeader;
+  const latestPayloadHeader = executionPayloadHeaderType.defaultViewDU();
   // TODO: when having different test options, consider modifying these values
   latestPayloadHeader.blockHash = eth1BlockHash;
   latestPayloadHeader.timestamp = eth1Timestamp;
@@ -36,7 +47,7 @@ export function getInteropState(
   latestPayloadHeader.baseFeePerGas = GENESIS_BASE_FEE_PER_GAS;
   const state = initializeBeaconStateFromEth1(
     config,
-    createEmptyEpochContextImmutableData(config, {genesisValidatorsRoot: Buffer.alloc(32, 0)}),
+    createEmptyEpochCacheImmutableData(config, {genesisValidatorsRoot: Buffer.alloc(32, 0)}),
     eth1BlockHash,
     eth1Timestamp,
     deposits,

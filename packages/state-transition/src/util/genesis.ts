@@ -1,24 +1,26 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
+  ForkSeq,
   GENESIS_EPOCH,
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
+  UNSET_DEPOSIT_REQUESTS_START_INDEX,
 } from "@lodestar/params";
-import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
-
-import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
-import {createCachedBeaconState} from "../cache/stateCache.js";
-import {EpochContextImmutableData} from "../cache/epochContext.js";
+import {Bytes32, Root, TimeSeconds, phase0, ssz} from "@lodestar/types";
 import {processDeposit} from "../block/processDeposit.js";
-import {computeEpochAtSlot} from "./epoch.js";
-import {getActiveValidatorIndices} from "./validator.js";
-import {getTemporaryBlockHeader} from "./blockRoot.js";
+import {EpochCacheImmutableData} from "../cache/epochCache.js";
+import {createCachedBeaconState} from "../cache/stateCache.js";
+import {increaseBalance} from "../index.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {newFilledArray} from "./array.js";
+import {getTemporaryBlockHeader} from "./blockRoot.js";
+import {computeEpochAtSlot} from "./epoch.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
+import {getActiveValidatorIndices, getMaxEffectiveBalance} from "./validator.js";
 
 type DepositDataRootListType = ListCompositeType<typeof ssz.Root>;
 type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;
@@ -30,7 +32,7 @@ type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;
  * @param config
  * @param state
  */
-export function isValidGenesisState(config: IChainForkConfig, state: BeaconStateAllForks): boolean {
+export function isValidGenesisState(config: ChainForkConfig, state: BeaconStateAllForks): boolean {
   return state.genesisTime >= config.MIN_GENESIS_TIME && isValidGenesisValidators(config, state);
 }
 
@@ -39,7 +41,7 @@ export function isValidGenesisState(config: IChainForkConfig, state: BeaconState
  * @param config
  * @param state
  */
-export function isValidGenesisValidators(config: IChainForkConfig, state: BeaconStateAllForks): boolean {
+export function isValidGenesisValidators(config: ChainForkConfig, state: BeaconStateAllForks): boolean {
   return (
     getActiveValidatorIndices(state, computeEpochAtSlot(GENESIS_SLOT)).length >=
     config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT
@@ -52,7 +54,7 @@ export function isValidGenesisValidators(config: IChainForkConfig, state: Beacon
  * SLOW CODE - 🐢
  */
 export function getGenesisBeaconState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   genesisEth1Data: phase0.Eth1Data,
   latestBlockHeader: phase0.BeaconBlockHeader
 ): BeaconStateAllForks {
@@ -93,7 +95,7 @@ export function getGenesisBeaconState(
 
 /**
  * Apply eth1 block hash to state.
- * @param config IChainForkConfig
+ * @param config ChainForkConfig
  * @param state BeaconState
  * @param eth1BlockHash eth1 block hash
  */
@@ -108,11 +110,7 @@ export function applyEth1BlockHash(state: CachedBeaconStateAllForks, eth1BlockHa
  * @param state BeaconState
  * @param eth1Timestamp eth1 block timestamp
  */
-export function applyTimestamp(
-  config: IChainForkConfig,
-  state: CachedBeaconStateAllForks,
-  eth1Timestamp: number
-): void {
+export function applyTimestamp(config: ChainForkConfig, state: CachedBeaconStateAllForks, eth1Timestamp: number): void {
   state.genesisTime = eth1Timestamp + config.GENESIS_DELAY;
 }
 
@@ -123,18 +121,19 @@ export function applyTimestamp(
  *
  * SLOW CODE - 🐢
  *
- * @param config IChainForkConfig
+ * @param config ChainForkConfig
  * @param state BeaconState
  * @param newDeposits new deposits
  * @param fullDepositDataRootList full list of deposit data root from index 0
  * @returns active validator indices
  */
 export function applyDeposits(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   state: CachedBeaconStateAllForks,
   newDeposits: phase0.Deposit[],
   fullDepositDataRootList?: DepositDataRootViewDU
 ): {activatedValidatorCount: number} {
+  const fork = config.getForkSeq(state.slot);
   const depositDataRootList: Root[] = [];
 
   const fullDepositDataRootArr = fullDepositDataRootList ? fullDepositDataRootList.getAllReadonlyValues() : null;
@@ -167,6 +166,21 @@ export function applyDeposits(
     processDeposit(fork, state, deposit);
   }
 
+  // Process deposit balance updates
+  if (fork >= ForkSeq.electra) {
+    const stateElectra = state as CachedBeaconStateElectra;
+    stateElectra.commit();
+    for (const {pubkey, amount} of stateElectra.pendingDeposits.getAllReadonly()) {
+      const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
+      if (validatorIndex === null) {
+        // Should not happen if the gensis state is correct
+        continue;
+      }
+      increaseBalance(state, validatorIndex, amount);
+    }
+    stateElectra.pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+  }
+
   // Process activations
   const {epochCtx} = state;
   const balancesArr = state.balances.getAll();
@@ -183,12 +197,15 @@ export function applyDeposits(
     }
 
     const balance = balancesArr[i];
-    const effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+    const effectiveBalance = Math.min(
+      balance - (balance % EFFECTIVE_BALANCE_INCREMENT),
+      getMaxEffectiveBalance(validator.withdrawalCredentials)
+    );
 
     validator.effectiveBalance = effectiveBalance;
     epochCtx.effectiveBalanceIncrementsSet(i, effectiveBalance);
 
-    if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
+    if (validator.effectiveBalance >= MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;
       validator.activationEpoch = GENESIS_EPOCH;
       activatedValidatorCount++;
@@ -208,13 +225,18 @@ export function applyDeposits(
  * SLOW CODE - 🐢
  */
 export function initializeBeaconStateFromEth1(
-  config: IChainForkConfig,
-  immutableData: EpochContextImmutableData,
+  config: ChainForkConfig,
+  immutableData: EpochCacheImmutableData,
   eth1BlockHash: Bytes32,
   eth1Timestamp: TimeSeconds,
   deposits: phase0.Deposit[],
   fullDepositDataRootList?: DepositDataRootViewDU,
-  executionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU()
+  executionPayloadHeader?: CompositeViewDU<
+    | typeof ssz.bellatrix.ExecutionPayloadHeader
+    | typeof ssz.capella.ExecutionPayloadHeader
+    | typeof ssz.deneb.ExecutionPayloadHeader
+    | typeof ssz.electra.ExecutionPayloadHeader
+  >
 ): CachedBeaconStateAllForks {
   const stateView = getGenesisBeaconState(
     // CachedBeaconcState is used for convinience only, we return BeaconStateAllForks anyway
@@ -223,6 +245,8 @@ export function initializeBeaconStateFromEth1(
     ssz.phase0.Eth1Data.defaultValue(),
     getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
   );
+
+  const fork = config.getForkSeq(GENESIS_SLOT);
 
   // We need a CachedBeaconState to run processDeposit() which uses various caches.
   // However at this point the state's syncCommittees are not known.
@@ -244,8 +268,9 @@ export function initializeBeaconStateFromEth1(
   state.commit();
   const activeValidatorIndices = getActiveValidatorIndices(state, computeEpochAtSlot(GENESIS_SLOT));
 
-  if (GENESIS_SLOT >= config.ALTAIR_FORK_EPOCH) {
+  if (fork >= ForkSeq.altair) {
     const {syncCommittee} = getNextSyncCommittee(
+      fork,
       state,
       activeValidatorIndices,
       state.epochCtx.effectiveBalanceIncrements
@@ -257,11 +282,56 @@ export function initializeBeaconStateFromEth1(
     stateAltair.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
   }
 
-  if (GENESIS_SLOT >= config.BELLATRIX_FORK_EPOCH) {
+  if (fork >= ForkSeq.bellatrix) {
     const stateBellatrix = state as CompositeViewDU<typeof ssz.bellatrix.BeaconState>;
     stateBellatrix.fork.previousVersion = config.BELLATRIX_FORK_VERSION;
     stateBellatrix.fork.currentVersion = config.BELLATRIX_FORK_VERSION;
-    stateBellatrix.latestExecutionPayloadHeader = executionPayloadHeader;
+    stateBellatrix.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.bellatrix.ExecutionPayloadHeader>) ??
+      ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
+  }
+
+  if (fork >= ForkSeq.capella) {
+    const stateCapella = state as CompositeViewDU<typeof ssz.capella.BeaconState>;
+    stateCapella.fork.previousVersion = config.CAPELLA_FORK_VERSION;
+    stateCapella.fork.currentVersion = config.CAPELLA_FORK_VERSION;
+    stateCapella.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.capella.ExecutionPayloadHeader>) ??
+      ssz.capella.ExecutionPayloadHeader.defaultViewDU();
+  }
+
+  if (fork >= ForkSeq.deneb) {
+    const stateDeneb = state as CompositeViewDU<typeof ssz.deneb.BeaconState>;
+    stateDeneb.fork.previousVersion = config.DENEB_FORK_VERSION;
+    stateDeneb.fork.currentVersion = config.DENEB_FORK_VERSION;
+    stateDeneb.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.deneb.ExecutionPayloadHeader>) ??
+      ssz.deneb.ExecutionPayloadHeader.defaultViewDU();
+  }
+
+  if (fork >= ForkSeq.electra) {
+    const stateElectra = state as CompositeViewDU<typeof ssz.electra.BeaconState>;
+    stateElectra.fork.previousVersion = config.ELECTRA_FORK_VERSION;
+    stateElectra.fork.currentVersion = config.ELECTRA_FORK_VERSION;
+    stateElectra.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
+      ssz.electra.ExecutionPayloadHeader.defaultViewDU();
+    stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
+  }
+
+  if (fork >= ForkSeq.fulu) {
+    const stateFulu = state as CompositeViewDU<typeof ssz.fulu.BeaconState>;
+    stateFulu.fork.previousVersion = config.FULU_FORK_VERSION;
+    stateFulu.fork.currentVersion = config.FULU_FORK_VERSION;
+    stateFulu.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.fulu.ExecutionPayloadHeader>) ??
+      ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
+    stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
+    stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
   }
 
   state.commit();

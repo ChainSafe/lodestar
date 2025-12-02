@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
+import {routes} from "@lodestar/api";
 import {parseProposerConfig} from "../../../src/util/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -13,8 +13,9 @@ const testValue = {
       strictFeeRecipientCheck: true,
       feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       builder: {
-        enabled: true,
-        gasLimit: 30000000,
+        gasLimit: 60000000,
+        selection: undefined,
+        boostFactor: undefined,
       },
     },
     "0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d": {
@@ -22,8 +23,9 @@ const testValue = {
       strictFeeRecipientCheck: undefined,
       feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       builder: {
-        enabled: true,
         gasLimit: 35000000,
+        selection: routes.validator.BuilderSelection.BuilderAlways,
+        boostFactor: 18446744073709551616n,
       },
     },
   },
@@ -32,20 +34,21 @@ const testValue = {
     strictFeeRecipientCheck: true,
     feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
     builder: {
-      enabled: true,
-      gasLimit: 30000000,
+      gasLimit: 60000000,
+      selection: routes.validator.BuilderSelection.MaxProfit,
+      boostFactor: BigInt(50),
     },
   },
 };
 
 describe("validator / valid Proposer", () => {
   it("parse Valid proposer", () => {
-    expect(parseProposerConfig(path.join(__dirname, "./proposerConfigs/validData.yaml"))).to.be.deep.equal(testValue);
+    expect(parseProposerConfig(path.join(__dirname, "./proposerConfigs/validData.yaml"))).toEqual(testValue);
   });
 });
 
 describe("validator / invalid Proposer", () => {
   it("should throw error", () => {
-    expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/invalidData.yaml"))).to.throw();
+    expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/invalidData.yaml"))).toThrow();
   });
 });

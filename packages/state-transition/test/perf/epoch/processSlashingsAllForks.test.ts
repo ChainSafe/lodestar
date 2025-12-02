@@ -1,13 +1,14 @@
-import {itBench} from "@dapplion/benchmark";
-import {
-  beforeProcessEpoch,
-  CachedBeaconStatePhase0,
-  CachedBeaconStateAllForks,
-  EpochProcess,
-} from "../../../src/index.js";
+import {bench, describe} from "@chainsafe/benchmark";
+import {MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {processSlashings} from "../../../src/epoch/processSlashings.js";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStatePhase0,
+  EpochTransitionCache,
+  beforeProcessEpoch,
+} from "../../../src/index.js";
 import {StateEpoch} from "../types.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 
 // PERF: Cost 'proportional' to only validators that are slashed. For mainnet conditions:
 // - indicesToSlash: max len is 8704. But it's very unlikely since it would require all validators on the same
@@ -24,17 +25,19 @@ describe("phase0 processSlashings", () => {
     {id: "worstcase", indicesToSlashLen: 8704},
   ];
 
-  // Provide flat `epochProcess.balances` + flat `epochProcess.validators`
+  // Provide flat `cache.balances` + flat `cache.validators`
   // which will it update validators tree
 
   for (const {id, indicesToSlashLen} of testCases) {
-    itBench<StateEpoch, StateEpoch>({
+    bench<StateEpoch, StateEpoch>({
       id: `phase0 processSlashings - ${vc} ${id}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       minRuns: 5, // Worst case is very slow
       before: () => getProcessSlashingsTestData(indicesToSlashLen),
-      beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => processSlashings(state as CachedBeaconStatePhase0, epochProcess),
+      beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
+      fn: ({state, cache}) => {
+        processSlashings(state as CachedBeaconStatePhase0, cache, false);
+      },
     });
   }
 });
@@ -42,20 +45,23 @@ describe("phase0 processSlashings", () => {
 /**
  * Create a state that causes `changeRatio` fraction (0,1) of validators to change their effective balance.
  */
-function getProcessSlashingsTestData(
-  indicesToSlashLen: number
-): {
+function getProcessSlashingsTestData(indicesToSlashLen: number): {
   state: CachedBeaconStateAllForks;
-  epochProcess: EpochProcess;
+  cache: EpochTransitionCache;
 } {
   const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const epochProcess = beforeProcessEpoch(state);
+  const cache = beforeProcessEpoch(state);
+  state.slashings.set(0, indicesToSlashLen * MAX_EFFECTIVE_BALANCE);
+  for (let i = 1; i < state.slashings.length; i++) {
+    state.slashings.set(i, MAX_EFFECTIVE_BALANCE);
+  }
+  state.commit();
 
-  epochProcess.indicesToSlash = linspace(indicesToSlashLen);
+  cache.indicesToSlash = linspace(indicesToSlashLen);
 
   return {
     state,
-    epochProcess,
+    cache,
   };
 }
 

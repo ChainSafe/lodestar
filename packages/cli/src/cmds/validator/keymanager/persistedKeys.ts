@@ -1,19 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
-import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {Signer, SignerType, ProposerConfig} from "@lodestar/validator";
 import {DeletionStatus, ImportStatus, PubkeyHex, SignerDefinition} from "@lodestar/api/keymanager";
+import {ProposerConfig} from "@lodestar/validator";
 import {
   getPubkeyHexFromKeystore,
   readPassphraseFile,
+  readProposerConfigDir,
   rmdirSyncMaybe,
   unlinkSyncMaybe,
   writeFile600Perm,
-  readProposerConfigDir,
 } from "../../../util/index.js";
 import {lockFilepath} from "../../../util/lockfile.js";
-import {IPersistedKeysBackend} from "./interface.js";
+import {IPersistedKeysBackend, LocalKeystoreDefinition} from "./interface.js";
 
 export {ImportStatus, DeletionStatus};
 
@@ -22,11 +21,6 @@ type PathArgs = {
   secretsDir: string;
   remoteKeysDir: string;
   proposerDir: string;
-};
-
-export type LocalKeystoreDefinition = {
-  keystorePath: string;
-  password: string;
 };
 
 /**
@@ -59,7 +53,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     if (proposerConfig !== null) {
       // if proposerConfig is not empty write or update the json to file
       const {proposerDirPath} = this.getValidatorPaths(pubkeyHex);
-      fs.writeFileSync(proposerDirPath, JSON.stringify(proposerConfig));
+      writeFile600Perm(proposerDirPath, JSON.stringify(proposerConfig));
     } else {
       this.deleteProposerConfig(pubkeyHex);
     }
@@ -146,7 +140,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
       lockFilepath(keystoreFilepath);
     }
 
-    fs.writeFileSync(keystoreFilepath, keystoreStr);
+    writeFile600Perm(keystoreFilepath, keystoreStr);
     writeFile600Perm(passphraseFilepath, password);
 
     return true;
@@ -225,9 +219,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     };
   }
 
-  private getValidatorPaths(
-    pubkey: PubkeyHex
-  ): {
+  private getValidatorPaths(pubkey: PubkeyHex): {
     dirpath: string;
     keystoreFilepath: string;
     passphraseFilepath: string;
@@ -244,50 +236,6 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
       proposerDirPath: path.join(this.paths.proposerDir, pubkey),
     };
   }
-}
-
-export async function decryptKeystoreDefinitions(
-  keystoreDefinitions: LocalKeystoreDefinition[],
-  opts: {force?: boolean}
-): Promise<Signer[]> {
-  const signers: Signer[] = [];
-
-  for (const {keystorePath, password} of keystoreDefinitions) {
-    try {
-      lockFilepath(keystorePath);
-    } catch (e) {
-      if (opts.force) {
-        // Ignore error, maybe log?
-      } else {
-        throw e;
-      }
-    }
-
-    const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
-
-    // PPS: OOM error issue while decripting validators in parallel
-    // https://github.com/ChainSafe/lodestar/issues/4166
-    //
-    // Below call has been serialized as a hotfix for now as even for 10 vals
-    // it causes 2.5GB memory hog, which doesn't go down even when the promise
-    // resolves and all validators have been decrypted.
-    //
-    // return await Promise.all(validators.map(async (validator) =>
-    //  validator.votingKeypair(this.secretsDir)));
-    //
-    // The new serialized decryption takes full 5 minutes to decrypt 100 validators
-    // on a 100% single core engagement! This needs to be invesigated deeply and
-    // fixed most prefered to the above `Promise.all(...)` flow
-    //
-    const secretKeyBytes = await keystore.decrypt(password);
-
-    signers.push({
-      type: SignerType.Local,
-      secretKey: bls.SecretKey.fromBytes(secretKeyBytes),
-    });
-  }
-
-  return signers;
 }
 
 /**
@@ -316,5 +264,5 @@ export function writeRemoteSignerDefinition(filepath: string, remoteSigner: Sign
     url: remoteSigner.url,
     readonly: false,
   };
-  fs.writeFileSync(filepath, JSON.stringify(remoteSignerJson));
+  writeFile600Perm(filepath, JSON.stringify(remoteSignerJson));
 }

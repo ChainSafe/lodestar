@@ -1,32 +1,29 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
-
+import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
-
-import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
-
+import {Logger} from "@lodestar/logger";
+import {ForkName} from "@lodestar/params";
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
-
-chai.use(chaiAsPromised);
+import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+import {IExecutionEngine, PayloadAttributes, initializeExecutionEngine} from "../../../src/execution/index.js";
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
-  after(async () => {
+  afterAll(async () => {
     while (afterCallbacks.length > 0) {
       const callback = afterCallbacks.pop();
       if (callback) await callback();
     }
   });
 
-  let executionEngine: ExecutionEngineHttp;
+  let executionEngine: IExecutionEngine;
   let returnValue: unknown = {};
   let reqJsonRpcPayload: unknown = {};
   let baseUrl: string;
   let errorResponsesBeforeSuccess = 0;
   let controller: AbortController;
 
-  before("Prepare server", async () => {
+  beforeAll(async () => {
     controller = new AbortController();
     const server = fastify({logger: false});
 
@@ -35,10 +32,10 @@ describe("ExecutionEngine / http ", () => {
         reqJsonRpcPayload = req.body;
         delete (reqJsonRpcPayload as {id?: number}).id;
         return returnValue;
-      } else {
-        --errorResponsesBeforeSuccess;
-        throw Error(`Will succeed after ${errorResponsesBeforeSuccess} more attempts`);
       }
+
+      --errorResponsesBeforeSuccess;
+      throw Error(`Will succeed after ${errorResponsesBeforeSuccess} more attempts`);
     });
 
     afterCallbacks.push(async () => {
@@ -46,20 +43,21 @@ describe("ExecutionEngine / http ", () => {
       await server.close();
     });
 
-    baseUrl = await server.listen(0);
+    baseUrl = await server.listen({port: 0});
 
-    executionEngine = new ExecutionEngineHttp(
+    executionEngine = initializeExecutionEngine(
       {
+        mode: "http",
         urls: [baseUrl],
-        retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
+        retries: defaultExecutionEngineHttpOpts.retries,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
       },
-      {signal: controller.signal}
+      {signal: controller.signal, logger: console as unknown as Logger}
     );
   });
 
-  describe("notifyForkchoiceUpdate", async function () {
-    it("notifyForkchoiceUpdate no retry when no pay load attributes", async function () {
+  describe("notifyForkchoiceUpdate", () => {
+    it("notifyForkchoiceUpdate no retry when no pay load attributes", async () => {
       errorResponsesBeforeSuccess = 2;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
@@ -73,32 +71,28 @@ describe("ExecutionEngine / http ", () => {
         result: {payloadStatus: {status: "VALID", latestValidHash: null, validationError: null}, payloadId: "0x"},
       };
 
-      expect(errorResponsesBeforeSuccess).to.be.equal(2, "errorResponsesBeforeSuccess should be 2 before request");
+      expect(errorResponsesBeforeSuccess).toBe(2);
       try {
         await executionEngine.notifyForkchoiceUpdate(
+          ForkName.bellatrix,
           forkChoiceHeadData.headBlockHash,
           forkChoiceHeadData.safeBlockHash,
           forkChoiceHeadData.finalizedBlockHash
         );
       } catch (err) {
-        expect(err).to.be.instanceOf(Error);
+        expect(err).toBeInstanceOf(Error);
       }
-      expect(errorResponsesBeforeSuccess).to.be.equal(
-        1,
-        "errorResponsesBeforeSuccess no retry should be decremented once"
-      );
+      expect(errorResponsesBeforeSuccess).toBe(1);
     });
 
-    it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
-      this.timeout("10 min");
-
-      errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retryAttempts - 1;
+    it("notifyForkchoiceUpdate with retry when pay load attributes", async () => {
+      errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retries - 1;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
       };
-      const payloadAttributes = {
+      const payloadAttributes: PayloadAttributes = {
         timestamp: 1647036763,
         prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
         suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
@@ -125,22 +119,17 @@ describe("ExecutionEngine / http ", () => {
         },
       };
 
-      expect(errorResponsesBeforeSuccess).to.not.be.equal(
-        0,
-        "errorResponsesBeforeSuccess should not be zero before request"
-      );
+      expect(errorResponsesBeforeSuccess).not.toBe(0);
       await executionEngine.notifyForkchoiceUpdate(
+        ForkName.bellatrix,
         forkChoiceHeadData.headBlockHash,
         forkChoiceHeadData.safeBlockHash,
         forkChoiceHeadData.finalizedBlockHash,
         payloadAttributes
       );
 
-      expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
-      expect(errorResponsesBeforeSuccess).to.be.equal(
-        0,
-        "errorResponsesBeforeSuccess should be zero after request with retries"
-      );
+      expect(reqJsonRpcPayload).toEqual(request);
+      expect(errorResponsesBeforeSuccess).toBe(0);
     });
   });
 });

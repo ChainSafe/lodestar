@@ -1,6 +1,8 @@
-import {IChainForkConfig} from "@lodestar/config";
-import {Bucket, IDatabaseController, Repository} from "@lodestar/db";
-import {phase0, ssz} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {DatabaseController, Repository} from "@lodestar/db";
+import {LightClientHeader, ssz} from "@lodestar/types";
+import {getLightClientHeaderTypeFromBytes} from "../../util/multifork.js";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
  * Block headers by block root. Until finality includes all headers seen by this node. After finality,
@@ -8,8 +10,23 @@ import {phase0, ssz} from "@lodestar/types";
  *
  * Used to prepare light client updates
  */
-export class CheckpointHeaderRepository extends Repository<Uint8Array, phase0.BeaconBlockHeader> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>) {
-    super(config, db, Bucket.lightClient_checkpointHeader, ssz.phase0.BeaconBlockHeader);
+export class CheckpointHeaderRepository extends Repository<Uint8Array, LightClientHeader> {
+  constructor(config: ChainForkConfig, db: DatabaseController<Uint8Array, Uint8Array>) {
+    // Pick some type but won't be used
+    const bucket = Bucket.lightClient_checkpointHeader;
+    super(config, db, bucket, ssz.altair.LightClientHeader, getBucketNameByValue(bucket));
+  }
+
+  // Overrides for multi-fork
+  encodeValue(value: LightClientHeader): Uint8Array {
+    return this.config.getPostAltairForkTypes(value.beacon.slot).LightClientHeader.serialize(value);
+  }
+
+  decodeValue(data: Uint8Array): LightClientHeader {
+    return getLightClientHeaderTypeFromBytes(this.config, data).deserialize(data);
+  }
+
+  getId(value: LightClientHeader): Uint8Array {
+    return this.config.getPostAltairForkTypes(value.beacon.slot).LightClientHeader.hashTreeRoot(value);
   }
 }

@@ -1,28 +1,26 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+import {execFile} from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import stream from "node:stream";
+import {pipeline} from "node:stream/promises";
+import {ReadableStream as NodeReadableStream} from "node:stream/web";
 import {promisify} from "node:util";
-import rimraf from "rimraf";
-import axios from "axios";
-import tar from "tar";
-import retry from "async-retry";
+import {rimraf} from "rimraf";
+import {fetch, retry} from "@lodestar/utils";
 
-export type TestToDownload = "general" | "mainnet" | "minimal";
-export const defaultTestsToDownload: TestToDownload[] = ["general", "mainnet", "minimal"];
-export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
+export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-specs";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 const logEmpty = (): void => {};
 
-export interface IDownloadTestsOptions {
+export type DownloadTestsOptions = {
   specVersion: string;
   outputDir: string;
-  specTestsRepoUrl?: string;
-  testsToDownload?: TestToDownload[];
-}
+  /** Root Github URL `https://github.com/ethereum/consensus-specs` */
+  specTestsRepoUrl: string;
+  /** Release files names to download without prefix `["general", "mainnet", "minimal"]` */
+  testsToDownload: string[];
+};
 
-export interface IDownloadGenericTestsOptions<TestNames extends string> {
+export interface DownloadGenericTestsOptions<TestNames extends string> {
   specVersion: string;
   outputDir: string;
   specTestsRepoUrl: string;
@@ -32,19 +30,8 @@ export interface IDownloadGenericTestsOptions<TestNames extends string> {
 /**
  * Download spec tests
  */
-export async function downloadTests(
-  {specVersion, specTestsRepoUrl, outputDir, testsToDownload}: IDownloadTestsOptions,
-  log: (msg: string) => void = logEmpty
-): Promise<void> {
-  await downloadGenericSpecTests(
-    {
-      specVersion,
-      outputDir,
-      specTestsRepoUrl: specTestsRepoUrl ?? defaultSpecTestsRepoUrl,
-      testsToDownload: testsToDownload ?? defaultTestsToDownload,
-    },
-    log
-  );
+export async function downloadTests(opts: DownloadTestsOptions, log: (msg: string) => void = logEmpty): Promise<void> {
+  await downloadGenericSpecTests(opts, log);
 }
 
 /**
@@ -52,7 +39,7 @@ export async function downloadTests(
  * Used by spec tests and SlashingProtectionInterchangeTest
  */
 export async function downloadGenericSpecTests<TestNames extends string>(
-  {specVersion, specTestsRepoUrl, outputDir, testsToDownload}: IDownloadGenericTestsOptions<TestNames>,
+  {specVersion, specTestsRepoUrl, outputDir, testsToDownload}: DownloadGenericTestsOptions<TestNames>,
   log: (msg: string) => void = logEmpty
 ): Promise<void> {
   log(`outputDir = ${outputDir}`);
@@ -63,9 +50,8 @@ export async function downloadGenericSpecTests<TestNames extends string>(
 
   if (existingVersion === specVersion) {
     return log(`version ${specVersion} already downloaded`);
-  } else {
-    log(`Downloading new version ${specVersion}`);
   }
+  log(`Downloading new version ${specVersion}`);
 
   if (fs.existsSync(outputDir)) {
     log(`Cleaning existing version ${existingVersion} at ${outputDir}`);
@@ -77,24 +63,34 @@ export async function downloadGenericSpecTests<TestNames extends string>(
   await Promise.all(
     testsToDownload.map(async (test) => {
       const url = `${specTestsRepoUrl ?? defaultSpecTestsRepoUrl}/releases/download/${specVersion}/${test}.tar.gz`;
+      const tarball = path.join(outputDir, `${test}.tar.gz`);
 
       await retry(
-        // async (bail) => {
         async () => {
-          const {data, headers} = await axios({
-            method: "get",
-            url,
-            responseType: "stream",
-            timeout: 30 * 60 * 1000,
-          });
+          const res = await fetch(url, {signal: AbortSignal.timeout(30 * 60 * 1000)});
 
-          const totalSize = headers["content-length"];
+          if (!res.ok) {
+            throw new Error(`Failed to download file from ${url}: ${res.status} ${res.statusText}`);
+          }
+
+          if (!res.body) {
+            throw new Error("Response body is null");
+          }
+
+          const totalSize = res.headers.get("content-length");
           log(`Downloading ${url} - ${totalSize} bytes`);
 
-          // extract tar into output directory
-          await promisify(stream.pipeline)(data, tar.x({cwd: outputDir}));
+          // stream download to local .tar.gz file
+          await pipeline(res.body as unknown as NodeReadableStream, fs.createWriteStream(tarball));
+          log(`Downloaded ${url} - ${fs.statSync(tarball).size} bytes`);
 
-          log(`Downloaded  ${url}`);
+          // extract tar into output directory
+          await promisify(execFile)("tar", ["-xzf", tarball, "-C", outputDir, "--exclude=._*", "--exclude=*/._*"], {
+            maxBuffer: 1000 * 1024 * 1024, // 1 GB
+          });
+          log(`Extracted ${tarball} to ${outputDir}`);
+
+          fs.unlinkSync(tarball);
         },
         {
           retries: 3,

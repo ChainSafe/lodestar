@@ -1,60 +1,140 @@
-import {expect} from "chai";
-import {ForkName} from "@lodestar/params";
-import {GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/network/gossip/index.js";
+import {describe, expect, it} from "vitest";
+import {createBeaconConfig} from "@lodestar/config";
+import {config as chainConfig} from "@lodestar/config/default";
+import {ForkName, GENESIS_EPOCH, ZERO_HASH} from "@lodestar/params";
+import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
-import {config} from "../../../utils/config.js";
 
-describe("network / gossip / topic", function () {
+describe("network / gossip / topic", () => {
+  const config = createBeaconConfig(chainConfig, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
   const testCases: {[K in GossipType]: {topic: GossipTopicMap[K]; topicStr: string}[]} = {
     [GossipType.beacon_block]: [
       {
-        topic: {type: GossipType.beacon_block, fork: ForkName.phase0, encoding},
-        topicStr: "/eth2/18ae4ccb/beacon_block/ssz_snappy",
+        topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, encoding},
+        topicStr: "/eth2/f5a5fd42/beacon_block/ssz_snappy",
+      },
+    ],
+    [GossipType.blob_sidecar]: [
+      {
+        topic: {
+          type: GossipType.blob_sidecar,
+          subnet: 1,
+          boundary: {fork: ForkName.deneb, epoch: config.DENEB_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/d6e497b8/blob_sidecar_1/ssz_snappy",
+      },
+    ],
+    [GossipType.data_column_sidecar]: [
+      {
+        topic: {
+          type: GossipType.data_column_sidecar,
+          subnet: 1,
+          boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/4ba67af9/data_column_sidecar_1/ssz_snappy",
       },
     ],
     [GossipType.beacon_aggregate_and_proof]: [
       {
-        topic: {type: GossipType.beacon_aggregate_and_proof, fork: ForkName.phase0, encoding},
-        topicStr: "/eth2/18ae4ccb/beacon_aggregate_and_proof/ssz_snappy",
+        topic: {
+          type: GossipType.beacon_aggregate_and_proof,
+          boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/f5a5fd42/beacon_aggregate_and_proof/ssz_snappy",
       },
     ],
     [GossipType.beacon_attestation]: [
       {
-        topic: {type: GossipType.beacon_attestation, fork: ForkName.phase0, subnet: 5, encoding},
-        topicStr: "/eth2/18ae4ccb/beacon_attestation_5/ssz_snappy",
+        topic: {
+          type: GossipType.beacon_attestation,
+          boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
+          subnet: 5,
+          encoding,
+        },
+        topicStr: "/eth2/f5a5fd42/beacon_attestation_5/ssz_snappy",
       },
     ],
     [GossipType.voluntary_exit]: [
       {
-        topic: {type: GossipType.voluntary_exit, fork: ForkName.phase0, encoding},
-        topicStr: "/eth2/18ae4ccb/voluntary_exit/ssz_snappy",
+        topic: {type: GossipType.voluntary_exit, boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, encoding},
+        topicStr: "/eth2/f5a5fd42/voluntary_exit/ssz_snappy",
+      },
+    ],
+    [GossipType.bls_to_execution_change]: [
+      {
+        topic: {
+          type: GossipType.bls_to_execution_change,
+          boundary: {fork: ForkName.capella, epoch: config.CAPELLA_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/e7b4bb67/bls_to_execution_change/ssz_snappy",
       },
     ],
     [GossipType.proposer_slashing]: [
       {
-        topic: {type: GossipType.proposer_slashing, fork: ForkName.phase0, encoding},
-        topicStr: "/eth2/18ae4ccb/proposer_slashing/ssz_snappy",
+        topic: {
+          type: GossipType.proposer_slashing,
+          boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/f5a5fd42/proposer_slashing/ssz_snappy",
       },
     ],
     [GossipType.attester_slashing]: [
       {
-        topic: {type: GossipType.attester_slashing, fork: ForkName.phase0, encoding},
-        topicStr: "/eth2/18ae4ccb/attester_slashing/ssz_snappy",
+        topic: {
+          type: GossipType.attester_slashing,
+          boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/f5a5fd42/attester_slashing/ssz_snappy",
       },
     ],
     [GossipType.sync_committee_contribution_and_proof]: [
       {
-        topic: {type: GossipType.sync_committee_contribution_and_proof, fork: ForkName.altair, encoding},
-        topicStr: "/eth2/8e04f66f/sync_committee_contribution_and_proof/ssz_snappy",
+        topic: {
+          type: GossipType.sync_committee_contribution_and_proof,
+          boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/16abab34/sync_committee_contribution_and_proof/ssz_snappy",
       },
     ],
     [GossipType.sync_committee]: [
       {
-        topic: {type: GossipType.sync_committee, fork: ForkName.altair, subnet: 5, encoding},
-        topicStr: "/eth2/8e04f66f/sync_committee_5/ssz_snappy",
+        topic: {
+          type: GossipType.sync_committee,
+          boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
+          subnet: 5,
+          encoding,
+        },
+        topicStr: "/eth2/16abab34/sync_committee_5/ssz_snappy",
+      },
+    ],
+    [GossipType.light_client_finality_update]: [
+      {
+        topic: {
+          type: GossipType.light_client_finality_update,
+          boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/16abab34/light_client_finality_update/ssz_snappy",
+      },
+    ],
+    [GossipType.light_client_optimistic_update]: [
+      {
+        topic: {
+          type: GossipType.light_client_optimistic_update,
+          boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/16abab34/light_client_optimistic_update/ssz_snappy",
       },
     ],
   };
@@ -63,14 +143,14 @@ describe("network / gossip / topic", function () {
     if (topics.length === 0) throw Error("Must have a least 1 testCase for each GossipType");
 
     for (const {topic, topicStr} of topics) {
-      it(`should encode gossip topic ${topic.type} ${topic.fork} ${topic.encoding}`, async () => {
+      it(`should encode gossip topic ${topic.type} ${topic.boundary.fork} ${topic.encoding}`, async () => {
         const topicStrRes = stringifyGossipTopic(config, topic);
-        expect(topicStrRes).to.equal(topicStr);
+        expect(topicStrRes).toBe(topicStr);
       });
 
       it(`should decode gossip topic ${topicStr}`, async () => {
         const outputTopic = parseGossipTopic(config, topicStr);
-        expect(outputTopic).to.deep.equal(topic);
+        expect(outputTopic).toEqual(topic);
       });
     }
   }
@@ -81,18 +161,19 @@ describe("network / gossip / topic", function () {
     // invalid fork digest
     "/eth2/ffffffff/beacon_attestation_5/ssz_snappy",
     // invalid gossip type
-    "/eth2/18ae4ccb/beacon_attestation_foo/ssz_snappy",
+    "/eth2/f5a5fd42/beacon_attestation_foo/ssz_snappy",
     // invalid gossip type
-    "/eth2/18ae4ccb/something_different/ssz_snappy",
-    "/eth2/18ae4ccb/beacon_attestation/ssz_snappy",
-    "/eth2/18ae4ccb/beacon_attestation_/ssz_snappy",
-    "/eth2/18ae4ccb/beacon_attestation_PP/ssz_snappy",
+    "/eth2/f5a5fd42/something_different/ssz_snappy",
+    "/eth2/f5a5fd42/beacon_attestation/ssz_snappy",
+    "/eth2/f5a5fd42/beacon_attestation_/ssz_snappy",
+    "/eth2/f5a5fd42/beacon_attestation_PP/ssz_snappy",
     // invalid encoding
-    "/eth2/18ae4ccb/beacon_attestation_5/ssz_supersnappy",
+    "/eth2/f5a5fd42/beacon_attestation_5/ssz_supersnappy",
   ];
   for (const topicStr of badTopicStrings) {
     it(`should fail to decode invalid gossip topic string ${topicStr}`, async () => {
-      expect(() => parseGossipTopic(config, topicStr), topicStr).to.throw();
+      // topicStr
+      expect(() => parseGossipTopic(config, topicStr)).toThrow();
     });
   }
 });

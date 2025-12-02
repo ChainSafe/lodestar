@@ -1,18 +1,18 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
+import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
-import {phase0, ssz} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {generateState} from "../../../utils/state.js";
-import {filterBy} from "../../../utils/db.js";
+import {phase0, ssz} from "@lodestar/types";
 import {
+  Eth1DataGetter,
   getEth1VotesToConsider,
   pickEth1Vote,
   votingPeriodStartTime,
-  Eth1DataGetter,
 } from "../../../../src/eth1/utils/eth1Vote.js";
+import {filterBy} from "../../../utils/db.js";
+import {generateState} from "../../../utils/state.js";
 
-describe("eth1 / util / eth1Vote", function () {
+describe("eth1 / util / eth1Vote", () => {
   function generateEth1Vote(i: number): phase0.Eth1Data {
     return {
       blockHash: Buffer.alloc(32, i),
@@ -21,7 +21,7 @@ describe("eth1 / util / eth1Vote", function () {
     };
   }
 
-  describe("pickEth1Vote", function () {
+  describe("pickEth1Vote", () => {
     // Function array to scope votes in each test case defintion
     const testCases: (() => {
       id: string;
@@ -82,20 +82,20 @@ describe("eth1 / util / eth1Vote", function () {
 
     for (const testCase of testCases) {
       const {id, eth1DataVotesInState, votesToConsider, expectedEth1Vote} = testCase();
-      it(id, async function () {
+      it(id, async () => {
         const state = generateState({slot: 5, eth1DataVotes: eth1DataVotesInState});
         const eth1Vote = pickEth1Vote(state, votesToConsider);
-        expect(ssz.phase0.Eth1Data.toJson(eth1Vote)).to.deep.equal(ssz.phase0.Eth1Data.toJson(expectedEth1Vote));
+        expect(ssz.phase0.Eth1Data.toJson(eth1Vote)).toEqual(ssz.phase0.Eth1Data.toJson(expectedEth1Vote));
       });
     }
   });
 
-  describe("getEth1VotesToConsider", function () {
+  describe("getEth1VotesToConsider", () => {
     // Function array to scope votes in each test case defintion
     const testCases: (() => {
       id: string;
       state: BeaconStateAllForks;
-      eth1Datas: IEth1DataWithTimestamp[];
+      eth1Datas: Eth1DataWithTimestamp[];
       expectedVotesToConsider: phase0.Eth1Data[];
     })[] = [
       () => {
@@ -127,13 +127,13 @@ describe("eth1 / util / eth1Vote", function () {
 
     for (const testCase of testCases) {
       const {id, state, eth1Datas, expectedVotesToConsider} = testCase();
-      it(`get votesToConsider: ${id}`, async function () {
+      it(`get votesToConsider: ${id}`, async () => {
         const eth1DataGetter: Eth1DataGetter = async ({timestampRange}) =>
           filterBy(eth1Datas, timestampRange, (eth1Data) => eth1Data.timestamp);
 
         const votesToConsider = await getEth1VotesToConsider(config, state, eth1DataGetter);
 
-        expect(votesToConsider.map((eth1Data) => ssz.phase0.Eth1Data.toJson(eth1Data))).to.deep.equal(
+        expect(votesToConsider.map((eth1Data) => ssz.phase0.Eth1Data.toJson(eth1Data))).toEqual(
           expectedVotesToConsider.map((eth1Data) => ssz.phase0.Eth1Data.toJson(eth1Data))
         );
       });
@@ -141,7 +141,7 @@ describe("eth1 / util / eth1Vote", function () {
   });
 });
 
-interface IEth1DataWithTimestamp extends phase0.Eth1Data {
+interface Eth1DataWithTimestamp extends phase0.Eth1Data {
   timestamp: number;
 }
 
@@ -149,7 +149,7 @@ interface IEth1DataWithTimestamp extends phase0.Eth1Data {
  * Util: Fill partial eth1DataBlock with mock data
  * @param eth1DataBlock
  */
-function getEth1DataBlock(eth1DataBlock: Partial<IEth1DataWithTimestamp>): IEth1DataWithTimestamp {
+function getEth1DataBlock(eth1DataBlock: Partial<Eth1DataWithTimestamp>): Eth1DataWithTimestamp {
   return {
     blockHash: Buffer.alloc(32),
     depositRoot: Buffer.alloc(32),
@@ -164,7 +164,7 @@ function getEth1DataBlock(eth1DataBlock: Partial<IEth1DataWithTimestamp>): IEth1
  * @param config
  * @param state
  */
-function getTimestampInRange(config: IChainForkConfig, state: BeaconStateAllForks): number {
+function getTimestampInRange(config: ChainForkConfig, state: BeaconStateAllForks): number {
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config;
   const periodStart = votingPeriodStartTime(config, state);
   return periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;

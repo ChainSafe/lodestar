@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {expect} from "chai";
+import {DeeplyAllowMatchers, expect} from "vitest";
 import {apiTokenFileName} from "../../src/cmds/validator/keymanager/server.js";
 import {recursiveLookup} from "../../src/util/index.js";
 
@@ -17,47 +17,18 @@ export function findApiToken(dirpath: string): string {
 }
 
 export function expectDeepEquals<T>(a: T, b: T, message: string): void {
-  expect(a).deep.equals(b, message);
+  expect(a).toEqualWithMessage(b, message);
 }
-
-export type DoneCb = (err?: Error) => void;
 
 /**
- * Extends Mocha it() to allow BOTH:
- * - Resolve / reject callback promise to end test
- * - Use done() to end test early
+ * Similar to `expectDeepEquals` but only checks presence of all elements in array, irrespective of their order.
  */
-export function itDone(itName: string, cb: (this: Mocha.Context, done: DoneCb) => Promise<void>): void {
-  it(itName, function () {
-    return new Promise<void>((resolve, reject) => {
-      function done(err?: Error): void {
-        if (err) reject(err);
-        else resolve();
-      }
-      cb.bind(this)(done).then(resolve, reject);
-    });
-  });
-}
-
-export type AfterEachCallback = () => Promise<void> | void;
-
-export function getAfterEachCallbacks(): AfterEachCallback[] {
-  const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-
-  afterEach(async () => {
-    const errs: Error[] = [];
-    for (const cb of afterEachCallbacks) {
-      try {
-        await cb();
-      } catch (e) {
-        errs.push(e as Error);
-      }
-    }
-    afterEachCallbacks.length = 0; // Reset array
-    if (errs.length > 0) {
-      throw errs[0];
-    }
-  });
-
-  return afterEachCallbacks;
+export function expectDeepEqualsUnordered<T>(
+  a: DeeplyAllowMatchers<T>[],
+  b: DeeplyAllowMatchers<T>[],
+  message: string
+): void {
+  expect(a).toEqualWithMessage(expect.arrayContaining(b), message);
+  expect(b).toEqualWithMessage(expect.arrayContaining(a), message);
+  expect(a).toHaveLength(b.length);
 }

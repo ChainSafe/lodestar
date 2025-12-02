@@ -1,0 +1,85 @@
+import {PeerId} from "@libp2p/interface";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {config} from "@lodestar/config/default";
+import {getEmptyLogger} from "@lodestar/logger/empty";
+import {LodestarError, fromHex} from "@lodestar/utils";
+import {Protocol, RespStatus} from "../../../src/index.js";
+import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
+import {handleRequest} from "../../../src/response/index.js";
+import {sszSnappyPing} from "../../fixtures/messages.js";
+import {pingProtocol} from "../../fixtures/protocols.js";
+import {expectRejectedWithLodestarError} from "../../utils/errors.js";
+import {MockLibP2pStream, expectEqualByteChunks} from "../../utils/index.js";
+import {getValidPeerId} from "../../utils/peer.js";
+
+const testCases: {
+  id: string;
+  protocol: Protocol;
+  requestChunks: Uint8Array[];
+  expectedResponseChunks: Uint8Array[];
+  expectedError?: LodestarError<any>;
+}[] = [
+  {
+    id: "Yield two chunks, then throw",
+    protocol: pingProtocol(async function* () {
+      const payload = sszSnappyPing.binaryPayload;
+      const epoch = config.forks[payload.fork].epoch;
+      const boundary = config.getForkBoundaryAtEpoch(epoch);
+      yield {...payload, boundary};
+      yield {...payload, boundary};
+      throw new LodestarError({code: "TEST_ERROR"});
+    }),
+    requestChunks: sszSnappyPing.chunks, // Request Ping: BigInt(1)
+    expectedError: new LodestarError({code: "TEST_ERROR"}),
+    expectedResponseChunks: [
+      // Chunk 0 - success, Ping, BigInt(1)
+      Buffer.from([RespStatus.SUCCESS]),
+      ...sszSnappyPing.chunks.map((c) => c.subarray()),
+      // Chunk 1 - success, Ping, BigInt(1)
+      Buffer.from([RespStatus.SUCCESS]),
+      ...sszSnappyPing.chunks.map((c) => c.subarray()),
+      // Chunk 2 - error, with errorMessage
+      Buffer.from([RespStatus.SERVER_ERROR]),
+      Buffer.from(fromHex("0x0a")),
+      Buffer.from(fromHex("0xff060000734e61507059010e000049b97aaf544553545f4552524f52")),
+    ],
+  },
+];
+
+describe("response / handleRequest", () => {
+  const logger = getEmptyLogger();
+  let controller: AbortController;
+  let peerId: PeerId;
+
+  beforeEach(() => {
+    controller = new AbortController();
+    peerId = getValidPeerId();
+  });
+
+  afterEach(() => controller.abort());
+
+  it.each(testCases)("$id", async ({requestChunks, protocol, expectedResponseChunks, expectedError}) => {
+    const stream = new MockLibP2pStream(requestChunks as any);
+    const rateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
+
+    const resultPromise = handleRequest({
+      logger,
+      metrics: null,
+      protocol,
+      protocolID: protocol.method,
+      stream,
+      peerId,
+      signal: controller.signal,
+      rateLimiter,
+    });
+
+    // Make sure the test error-ed with expected error, otherwise it's hard to debug with responseChunks
+    if (expectedError) {
+      await expectRejectedWithLodestarError(resultPromise, expectedError);
+    } else {
+      await expect(resultPromise).resolves.toBeUndefined();
+    }
+
+    expectEqualByteChunks(stream.resultChunks, expectedResponseChunks, "Wrong response chunks");
+  });
+});

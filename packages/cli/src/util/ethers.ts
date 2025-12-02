@@ -23,13 +23,13 @@ export async function getEthersSigner({
     const keystoreJson = fs.readFileSync(keystorePath, "utf8");
     const wallet = await ethers.Wallet.fromEncryptedJson(keystoreJson, keystorePassword);
     const eth1Provider = rpcUrl
-      ? new ethers.providers.JsonRpcProvider(rpcUrl)
-      : new ethers.providers.InfuraProvider({name: "deposit", chainId});
+      ? new ethers.JsonRpcProvider(rpcUrl)
+      : new ethers.InfuraProvider({name: "deposit", chainId});
     return wallet.connect(eth1Provider);
   }
 
   if (rpcUrl) {
-    const signer = new ethers.providers.JsonRpcProvider(rpcUrl).getSigner();
+    const signer = await new ethers.JsonRpcProvider(rpcUrl).getSigner();
     if (rpcPassword) {
       await signer.unlock(rpcPassword);
     }
@@ -37,7 +37,7 @@ export async function getEthersSigner({
   }
 
   if (ipcPath) {
-    return new ethers.providers.IpcProvider(ipcPath).getSigner();
+    return new ethers.IpcSocketProvider(ipcPath).getSigner();
   }
 
   throw Error("Must supply either keystorePath, rpcUrl, or ipcPath");

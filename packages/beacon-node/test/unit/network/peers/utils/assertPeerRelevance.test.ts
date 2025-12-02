@@ -1,8 +1,7 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
+import {ForkName} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {MockBeaconChain} from "../../../../utils/mocks/chain/chain.js";
-import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
-import {IBeaconClock} from "../../../../../src/chain/clock/index.js";
+import {IrrelevantPeerCode, assertPeerRelevance} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
 
 describe("network / peers / utils / assertPeerRelevance", () => {
   const correctForkDigest = Buffer.alloc(4, 0);
@@ -15,6 +14,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
     remote: phase0.Status;
     currentSlot?: number;
     irrelevantType: ReturnType<typeof assertPeerRelevance>;
+    forkName?: ForkName;
   }[] = [
     {
       id: "Reject incompatible forks",
@@ -41,17 +41,6 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headSlot: 100, // Too far from current slot (= 0)
       },
       irrelevantType: {code: IrrelevantPeerCode.DIFFERENT_CLOCKS, slotDiff: 100},
-    },
-    {
-      id: "Reject non zeroed genesis",
-      remote: {
-        forkDigest: correctForkDigest,
-        finalizedRoot: differedRoot, // non zero root
-        finalizedEpoch: 0, // at genesis
-        headRoot: ZERO_HASH,
-        headSlot: 0,
-      },
-      irrelevantType: {code: IrrelevantPeerCode.GENESIS_NONZERO, root: differedRoot},
     },
     {
       id: "Accept a finalized epoch equal to ours, with same root",
@@ -88,25 +77,33 @@ describe("network / peers / utils / assertPeerRelevance", () => {
       currentSlot: -50,
       irrelevantType: null,
     },
+    {
+      id: "No earliestAvailableSlot post fulu",
+      remote: {
+        forkDigest: correctForkDigest,
+        finalizedRoot: ZERO_HASH,
+        finalizedEpoch: 0,
+        headRoot: ZERO_HASH,
+        headSlot: 0,
+      },
+      forkName: ForkName.fulu,
+      irrelevantType: {code: IrrelevantPeerCode.NO_EARLIEST_AVAILABLE_SLOT},
+    },
   ];
 
-  for (const {id, remote, currentSlot, irrelevantType} of testCases) {
+  for (const {id, remote, currentSlot, irrelevantType, forkName} of testCases) {
     it(id, async () => {
-      // Partial instance with only the methods needed for the test
-      const chain = ({
-        getStatus: () => ({
-          forkDigest: correctForkDigest,
-          finalizedRoot: ZERO_HASH,
-          finalizedEpoch: 0,
-          headRoot: ZERO_HASH,
-          headSlot: 0,
-        }),
-        clock: {
-          currentSlot: currentSlot ?? 0,
-        } as Partial<IBeaconClock>,
-      } as Partial<MockBeaconChain>) as MockBeaconChain;
+      const local = {
+        forkDigest: correctForkDigest,
+        finalizedRoot: ZERO_HASH,
+        finalizedEpoch: 0,
+        headRoot: ZERO_HASH,
+        headSlot: 0,
+      };
 
-      expect(assertPeerRelevance(remote, chain)).to.deep.equal(irrelevantType);
+      expect(assertPeerRelevance(forkName ?? ForkName.electra, remote, local, currentSlot ?? 0)).toEqual(
+        irrelevantType
+      );
     });
   }
 });

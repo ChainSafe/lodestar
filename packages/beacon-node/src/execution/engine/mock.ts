@@ -1,21 +1,48 @@
 import crypto from "node:crypto";
-import {bellatrix, RootHex} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
-import {BYTES_PER_LOGS_BLOOM} from "@lodestar/params";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {
-  ExecutePayloadStatus,
-  ExecutePayloadResponse,
-  IExecutionEngine,
-  PayloadId,
-  PayloadAttributes,
-  PayloadIdCache,
-  TransitionConfigurationV1,
-} from "./interface.js";
+  BLOB_TX_TYPE,
+  BYTES_PER_FIELD_ELEMENT,
+  FIELD_ELEMENTS_PER_BLOB,
+  ForkName,
+  ForkPostBellatrix,
+  ForkPostCapella,
+  ForkSeq,
+} from "@lodestar/params";
+import {ExecutionPayload, RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {quantityToNum} from "../../eth1/provider/utils.js";
+import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {kzg} from "../../util/kzg.js";
+import {ClientCode, ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
+import {
+  BlobsBundleRpc,
+  EngineApiRpcParamTypes,
+  EngineApiRpcReturnTypes,
+  ExecutionPayloadBodyRpc,
+  ExecutionPayloadRpc,
+  ExecutionRequestsRpc,
+  PayloadStatus,
+  deserializePayloadAttributes,
+  serializeBlobsBundle,
+  serializeExecutionPayload,
+  serializeExecutionRequests,
+} from "./types.js";
+import {JsonRpcBackend} from "./utils.js";
+
 const INTEROP_GAS_LIMIT = 30e6;
+const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
 
 export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;
+  eth1BlockHash?: string;
+  onlyPredefinedResponses?: boolean;
+  capellaForkTimestamp?: number;
+  denebForkTimestamp?: number;
+  electraForkTimestamp?: number;
+  fuluForkTimestamp?: number;
+  gloasForkTimestamp?: number;
 };
 
 type ExecutionBlock = {
@@ -25,10 +52,18 @@ type ExecutionBlock = {
   blockNumber: number;
 };
 
+const TX_TYPE_EIP1559 = 2;
+
+type PreparedPayload = {
+  executionPayload: ExecutionPayloadRpc;
+  blobsBundle: BlobsBundleRpc;
+  executionRequests: ExecutionRequestsRpc;
+};
+
 /**
  * Mock ExecutionEngine for fast prototyping and unit testing
  */
-export class ExecutionEngineMock implements IExecutionEngine {
+export class ExecutionEngineMockBackend implements JsonRpcBackend {
   // Public state to check if notifyForkchoiceUpdate() is called properly
   headBlockHash = ZERO_HASH_HEX;
   safeBlockHash = ZERO_HASH_HEX;
@@ -38,25 +73,107 @@ export class ExecutionEngineMock implements IExecutionEngine {
   /** Known valid blocks, both pre-merge and post-merge */
   private readonly validBlocks = new Map<RootHex, ExecutionBlock>();
   /** Preparing payloads to be retrieved via engine_getPayloadV1 */
-  private readonly preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
+  private readonly preparingPayloads = new Map<number, PreparedPayload>();
+  private readonly payloadsForDeletion = new Map<number, number>();
+
+  private readonly predefinedPayloadStatuses = new Map<RootHex, PayloadStatus>();
 
   private payloadId = 0;
 
-  constructor(opts: ExecutionEngineMockOpts) {
+  readonly handlers: {
+    [K in keyof EngineApiRpcParamTypes]: (...args: EngineApiRpcParamTypes[K]) => EngineApiRpcReturnTypes[K];
+  };
+
+  constructor(private readonly opts: ExecutionEngineMockOpts) {
     this.validBlocks.set(opts.genesisBlockHash, {
       parentHash: ZERO_HASH_HEX,
       blockHash: ZERO_HASH_HEX,
       timestamp: 0,
       blockNumber: 0,
     });
+
+    const eth1BlockHash = opts.eth1BlockHash ?? toRootHex(INTEROP_BLOCK_HASH);
+
+    this.validBlocks.set(eth1BlockHash, {
+      parentHash: ZERO_HASH_HEX,
+      blockHash: eth1BlockHash,
+      timestamp: 0,
+      blockNumber: 1,
+    });
+
+    this.handlers = {
+      engine_newPayloadV1: this.notifyNewPayload.bind(this),
+      engine_newPayloadV2: this.notifyNewPayload.bind(this),
+      engine_newPayloadV3: this.notifyNewPayload.bind(this),
+      engine_newPayloadV4: this.notifyNewPayload.bind(this),
+      engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
+      engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
+      engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
+      engine_getPayloadV1: this.getPayloadV1.bind(this),
+      engine_getPayloadV2: this.getPayloadV5.bind(this),
+      engine_getPayloadV3: this.getPayloadV5.bind(this),
+      engine_getPayloadV4: this.getPayloadV5.bind(this),
+      engine_getPayloadV5: this.getPayloadV5.bind(this),
+      engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
+      engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
+      engine_getClientVersionV1: this.getClientVersionV1.bind(this),
+      engine_getBlobsV1: this.getBlobs.bind(this),
+      engine_getBlobsV2: this.getBlobsV2.bind(this),
+    };
+  }
+
+  private getPayloadBodiesByHash(
+    _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
+  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV1"] {
+    return [] as ExecutionPayloadBodyRpc[];
+  }
+
+  private getPayloadBodiesByRange(
+    _start: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][0],
+    _count: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][1]
+  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByRangeV1"] {
+    return [] as ExecutionPayloadBodyRpc[];
+  }
+
+  /**
+   * Mock manipulator to add more known blocks to this mock.
+   */
+  addPowBlock(powBlock: bellatrix.PowBlock): void {
+    this.validBlocks.set(toHex(powBlock.blockHash), {
+      parentHash: toHex(powBlock.parentHash),
+      blockHash: toHex(powBlock.blockHash),
+      timestamp: 0,
+      blockNumber: 0,
+    });
+  }
+
+  /**
+   * Mock manipulator to add predefined responses before execution engine client calls
+   */
+  addPredefinedPayloadStatus(blockHash: RootHex, payloadStatus: PayloadStatus): void {
+    this.predefinedPayloadStatuses.set(blockHash, payloadStatus);
   }
 
   /**
    * `engine_newPayloadV1`
    */
-  async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
-    const blockHash = toHex(executionPayload.blockHash);
-    const parentHash = toHex(executionPayload.parentHash);
+  private notifyNewPayload(
+    executionPayloadRpc: EngineApiRpcParamTypes["engine_newPayloadV1"][0],
+    // add versionedHashes validation later if required
+    _versionedHashes?: EngineApiRpcParamTypes["engine_newPayloadV3"][1]
+  ): EngineApiRpcReturnTypes["engine_newPayloadV1"] {
+    const blockHash = executionPayloadRpc.blockHash;
+    const parentHash = executionPayloadRpc.parentHash;
+
+    // For optimistic sync spec tests, allow to define responses ahead of time
+    const predefinedResponse = this.predefinedPayloadStatuses.get(blockHash);
+    if (predefinedResponse) {
+      return predefinedResponse;
+    }
+
+    if (this.opts.onlyPredefinedResponses) {
+      throw Error(`No predefined response for blockHash ${blockHash}`);
+    }
 
     // 1. Client software MUST validate blockHash value as being equivalent to Keccak256(RLP(ExecutionBlockHeader)),
     //    where ExecutionBlockHeader is the execution layer block header (the former PoW block header structure).
@@ -79,7 +196,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
     if (!this.validBlocks.has(parentHash)) {
       // if requisite data for the payload's acceptance or validation is missing
       // return {status: SYNCING, latestValidHash: null, validationError: null}
-      return {status: ExecutePayloadStatus.SYNCING, latestValidHash: null, validationError: null};
+      return {status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null};
     }
 
     // 4. Client software MAY NOT validate the payload if the payload doesn't belong to the canonical chain.
@@ -91,25 +208,38 @@ export class ExecutionEngineMock implements IExecutionEngine {
     this.validBlocks.set(blockHash, {
       parentHash,
       blockHash,
-      timestamp: executionPayload.timestamp,
-      blockNumber: executionPayload.blockNumber,
+      timestamp: quantityToNum(executionPayloadRpc.timestamp),
+      blockNumber: quantityToNum(executionPayloadRpc.blockNumber),
     });
 
     // IF the payload has been fully validated while processing the call
     // RETURN payload status from the Payload validation process
     // If validation succeeds, the response MUST contain {status: VALID, latestValidHash: payload.blockHash}
-    return {status: ExecutePayloadStatus.VALID, latestValidHash: blockHash, validationError: null};
+    return {status: ExecutionPayloadStatus.VALID, latestValidHash: blockHash, validationError: null};
   }
 
   /**
    * `engine_forkchoiceUpdatedV1`
    */
-  async notifyForkchoiceUpdate(
-    headBlockHash: RootHex,
-    safeBlockHash: RootHex,
-    finalizedBlockHash: RootHex,
-    payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId | null> {
+  private notifyForkchoiceUpdate(
+    forkChoiceData: EngineApiRpcParamTypes["engine_forkchoiceUpdatedV1"][0],
+    payloadAttributesRpc: EngineApiRpcParamTypes["engine_forkchoiceUpdatedV1"][1]
+  ): EngineApiRpcReturnTypes["engine_forkchoiceUpdatedV1"] {
+    const {headBlockHash, safeBlockHash, finalizedBlockHash} = forkChoiceData;
+
+    // For optimistic sync spec tests, allow to define responses ahead of time
+    const predefinedResponse = this.predefinedPayloadStatuses.get(headBlockHash);
+    if (predefinedResponse) {
+      return {
+        payloadStatus: predefinedResponse,
+        payloadId: null,
+      };
+    }
+
+    if (this.opts.onlyPredefinedResponses) {
+      throw Error(`No predefined response for headBlockHash ${headBlockHash}`);
+    }
+
     // 1. Client software MAY initiate a sync process if forkchoiceState.headBlockHash references an unknown payload or
     //    a payload that can't be validated because data that are requisite for the validation is missing. The sync
     //    process is specified in the Sync section.
@@ -141,9 +271,10 @@ export class ExecutionEngineMock implements IExecutionEngine {
       // IF references an unknown payload or a payload that can't be validated because requisite data is missing
       // RETURN {payloadStatus: {status: SYNCING, latestValidHash: null, validationError: null}, payloadId: null}
       //
-      // > TODO: Implement
-
-      throw Error(`Unknown headBlock ${headBlockHash}`);
+      return {
+        payloadStatus: {status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null},
+        payloadId: null,
+      };
     }
 
     // 5. Client software MUST update its forkchoice state if payloads referenced by forkchoiceState.headBlockHash and
@@ -161,7 +292,9 @@ export class ExecutionEngineMock implements IExecutionEngine {
     //
     // > N/A: Mock does not track the chain dag
 
-    if (payloadAttributes) {
+    if (payloadAttributesRpc) {
+      const payloadAttributes = deserializePayloadAttributes(payloadAttributesRpc);
+
       // 7. Client software MUST ensure that payloadAttributes.timestamp is greater than timestamp of a block referenced
       //    by forkchoiceState.headBlockHash. If this condition isn't held client software MUST respond with
       //   `-38003: Invalid payload attributes` and MUST NOT begin a payload build process.
@@ -174,34 +307,93 @@ export class ExecutionEngineMock implements IExecutionEngine {
       //    identified via buildProcessId value if payloadAttributes is not null and the forkchoice state has been
       //    updated successfully. The build process is specified in the Payload building section.
       const payloadId = this.payloadId++;
+
+      // Generate empty payload first to be correct with respect to fork
+      const fork = this.timestampToFork(payloadAttributes.timestamp);
+      const executionPayload = ssz[fork].ExecutionPayload.defaultValue();
+
+      // Make executionPayload valid
+      executionPayload.parentHash = fromHex(headBlockHash);
+      executionPayload.feeRecipient = fromHex(payloadAttributes.suggestedFeeRecipient);
+      executionPayload.prevRandao = payloadAttributes.prevRandao;
+      executionPayload.blockNumber = headBlock.blockNumber + 1;
+      executionPayload.gasLimit = INTEROP_GAS_LIMIT;
+      executionPayload.gasUsed = Math.floor(0.5 * INTEROP_GAS_LIMIT);
+      executionPayload.timestamp = payloadAttributes.timestamp;
+      executionPayload.blockHash = crypto.randomBytes(32);
+      executionPayload.transactions = [];
+
+      // Between 0 and 4 transactions for all forks
+      const eip1559TxCount = Math.round(4 * Math.random());
+      for (let i = 0; i < eip1559TxCount; i++) {
+        const tx = crypto.randomBytes(512);
+        tx[0] = TX_TYPE_EIP1559;
+        executionPayload.transactions.push(tx);
+      }
+
+      const commitments: deneb.KZGCommitment[] = [];
+      const blobs: deneb.Blob[] = [];
+      const proofs: deneb.KZGProof[] = [];
+
+      if (ForkSeq[fork] >= ForkSeq.fulu) {
+        // if post fulu, add between 0 and 3 data column transactions based on slot with BlobsBundleV2
+        const fuluTxCount = executionPayload.blockNumber % 4;
+        for (let i = 0; i < fuluTxCount; i++) {
+          const blob = generateRandomBlob();
+          const commitment = kzg.blobToKzgCommitment(blob);
+          const {proofs: cellProofs} = kzg.computeCellsAndKzgProofs(blob);
+          executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+          commitments.push(commitment);
+          blobs.push(blob);
+          proofs.push(...cellProofs);
+        }
+      } else if (ForkSeq[fork] >= ForkSeq.deneb && ForkSeq[fork] < ForkSeq.fulu) {
+        // if post deneb, add between 0 and 2 blob transactions
+        const denebTxCount = executionPayload.blockNumber % 3;
+        for (let i = 0; i < denebTxCount; i++) {
+          const blob = generateRandomBlob();
+          const commitment = kzg.blobToKzgCommitment(blob);
+          const proof = kzg.computeBlobKzgProof(blob, commitment);
+          executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+          commitments.push(commitment);
+          blobs.push(blob);
+          proofs.push(proof);
+        }
+      }
+
+      if (ForkSeq[fork] >= ForkSeq.capella) {
+        (executionPayload as ExecutionPayload<ForkPostCapella>).withdrawals = ssz.capella.Withdrawals.defaultValue();
+      }
+
       this.preparingPayloads.set(payloadId, {
-        parentHash: fromHex(headBlockHash),
-        feeRecipient: fromHex(payloadAttributes.suggestedFeeRecipient),
-        stateRoot: crypto.randomBytes(32),
-        receiptsRoot: crypto.randomBytes(32),
-        logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
-        prevRandao: payloadAttributes.prevRandao,
-        blockNumber: headBlock.blockNumber + 1,
-        gasLimit: INTEROP_GAS_LIMIT,
-        gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
-        timestamp: payloadAttributes.timestamp,
-        extraData: ZERO_HASH,
-        baseFeePerGas: BigInt(0),
-        blockHash: crypto.randomBytes(32),
-        transactions: [crypto.randomBytes(512)],
+        executionPayload: serializeExecutionPayload(fork, executionPayload),
+        blobsBundle: serializeBlobsBundle({
+          commitments,
+          blobs,
+          proofs,
+        }),
+        executionRequests: serializeExecutionRequests({
+          deposits: ssz.electra.DepositRequests.defaultValue(),
+          withdrawals: ssz.electra.WithdrawalRequests.defaultValue(),
+          consolidations: ssz.electra.ConsolidationRequests.defaultValue(),
+        }),
       });
 
       // IF the payload is deemed VALID and the build process has begun
       // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: buildProcessId}
-      return String(payloadId as number);
+      return {
+        payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+        payloadId: String(payloadId as number),
+      };
     }
 
     // Don't start build process
-    else {
-      // IF the payload is deemed VALID and a build process hasn't been started
-      // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
-      return null;
-    }
+    // IF the payload is deemed VALID and a build process hasn't been started
+    // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
+    return {
+      payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
+      payloadId: null,
+    };
   }
 
   /**
@@ -211,7 +403,15 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
+  private getPayloadV1(
+    payloadId: EngineApiRpcParamTypes["engine_getPayloadV1"][0]
+  ): EngineApiRpcReturnTypes["engine_getPayloadV1"] {
+    return this.getPayloadV5(payloadId).executionPayload;
+  }
+
+  private getPayloadV5(
+    payloadId: EngineApiRpcParamTypes["engine_getPayloadV5"][0]
+  ): EngineApiRpcReturnTypes["engine_getPayloadV5"] {
     // 1. Given the payloadId client software MUST return the most recent version of the payload that is available in
     //    the corresponding build process at the time of receiving the call.
     const payloadIdNbr = Number(payloadId);
@@ -224,27 +424,70 @@ export class ExecutionEngineMock implements IExecutionEngine {
     }
 
     // 3. Client software MAY stop the corresponding build process after serving this call.
-    this.preparingPayloads.delete(payloadIdNbr);
+    // Do after a while to allow getBlobsBundle()
+    const now = Date.now();
+    for (const [oldPayloadId, addedTimestampMs] of this.payloadsForDeletion.entries()) {
+      if (addedTimestampMs < now - PRUNE_PAYLOAD_ID_AFTER_MS) {
+        this.preparingPayloads.delete(oldPayloadId);
+        this.payloadsForDeletion.delete(oldPayloadId);
+      }
+    }
+    this.payloadsForDeletion.set(payloadIdNbr, now);
 
-    return payload;
+    return {
+      executionPayload: payload.executionPayload,
+      blockValue: String(1e9),
+      blobsBundle: payload.blobsBundle,
+      executionRequests: payload.executionRequests,
+    };
   }
 
-  async exchangeTransitionConfigurationV1(
-    transitionConfiguration: TransitionConfigurationV1
-  ): Promise<TransitionConfigurationV1> {
-    // echo same configuration from consensus, which will be considered valid
-    return transitionConfiguration;
+  private getClientVersionV1(
+    _clientVersion: EngineApiRpcParamTypes["engine_getClientVersionV1"][0]
+  ): EngineApiRpcReturnTypes["engine_getClientVersionV1"] {
+    return [{code: ClientCode.XX, name: "mock", version: "", commit: ""}];
   }
 
-  /**
-   * Non-spec method just to add more known blocks to this mock.
-   */
-  addPowBlock(powBlock: bellatrix.PowBlock): void {
-    this.validBlocks.set(toHex(powBlock.blockHash), {
-      parentHash: toHex(powBlock.parentHash),
-      blockHash: toHex(powBlock.blockHash),
-      timestamp: 0,
-      blockNumber: 0,
-    });
+  private getBlobs(
+    versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV1"][0]
+  ): EngineApiRpcReturnTypes["engine_getBlobsV1"] {
+    return versionedHashes.map((_vh) => null);
   }
+
+  private getBlobsV2(
+    _versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV2"][0]
+  ): EngineApiRpcReturnTypes["engine_getBlobsV2"] {
+    return null;
+  }
+
+  private timestampToFork(timestamp: number): ForkPostBellatrix {
+    if (timestamp >= (this.opts.gloasForkTimestamp ?? Infinity)) return ForkName.gloas;
+    if (timestamp >= (this.opts.fuluForkTimestamp ?? Infinity)) return ForkName.fulu;
+    if (timestamp >= (this.opts.electraForkTimestamp ?? Infinity)) return ForkName.electra;
+    if (timestamp >= (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
+    if (timestamp >= (this.opts.capellaForkTimestamp ?? Infinity)) return ForkName.capella;
+    return ForkName.bellatrix;
+  }
+}
+
+function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {
+  // Just use versionedHash as the transaction encoding to mock newPayloadV3 verification
+  // prefixed with BLOB_TX_TYPE
+  const transaction = new Uint8Array(33);
+  const versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
+  transaction[0] = BLOB_TX_TYPE;
+  transaction.set(versionedHash, 1);
+  return transaction;
+}
+
+/**
+ * Generate random blob of sequential integers such that each element is < BLS_MODULUS
+ */
+function generateRandomBlob(): deneb.Blob {
+  const blob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT);
+  const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
+  for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
+    dv.setUint32(i * BYTES_PER_FIELD_ELEMENT, i);
+  }
+  return blob;
 }

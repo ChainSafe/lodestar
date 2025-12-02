@@ -1,4 +1,4 @@
-import {Epoch, Version, Root, DomainType, phase0, ssz} from "@lodestar/types";
+import {DomainType, Epoch, Root, Version, phase0, ssz} from "@lodestar/types";
 
 // Only used by processDeposit +  lightclient
 /**

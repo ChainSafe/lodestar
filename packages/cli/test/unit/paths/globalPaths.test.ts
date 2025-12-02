@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {getGlobalPaths} from "../../../src/paths/global.js";
 
 describe("paths / global", () => {
@@ -20,9 +20,9 @@ describe("paths / global", () => {
     },
     {
       id: "Network paths",
-      args: {network: "goerli"},
+      args: {network: "holesky"},
       globalPaths: {
-        dataDir: "/my-root-dir/lodestar/goerli",
+        dataDir: "/my-root-dir/lodestar/holesky",
       },
     },
     {
@@ -36,7 +36,7 @@ describe("paths / global", () => {
 
   for (const {id, args, globalPaths} of testCases) {
     it(id, () => {
-      expect(getGlobalPaths(args, args.network ?? network)).to.deep.equal(globalPaths);
+      expect(getGlobalPaths(args, args.network ?? network)).toEqual(globalPaths);
     });
   }
 });

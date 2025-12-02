@@ -1,10 +1,13 @@
-import {CachedBeaconStateAllForks, stateTransition} from "@lodestar/state-transition";
-import {allForks, Root} from "@lodestar/types";
+import {
+  CachedBeaconStateAllForks,
+  DataAvailabilityStatus,
+  ExecutionPayloadStatus,
+  StateHashTreeRootSource,
+  stateTransition,
+} from "@lodestar/state-transition";
+import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
-import {IMetrics} from "../../metrics/index.js";
-import {BlockType, AssembledBlockType} from "./produceBlockBody.js";
-
-export {BlockType, AssembledBlockType};
+import {Metrics} from "../../metrics/index.js";
 
 /**
  * Instead of running fastStateTransition(), only need to process block since
@@ -12,22 +15,41 @@ export {BlockType, AssembledBlockType};
  * epoch transition which happen at slot % 32 === 0)
  */
 export function computeNewStateRoot(
-  metrics: IMetrics | null,
+  metrics: Metrics | null,
   state: CachedBeaconStateAllForks,
-  block: allForks.FullOrBlindedBeaconBlock
-): Root {
+  block: BeaconBlock | BlindedBeaconBlock
+): {newStateRoot: Root; proposerReward: Gwei} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
-  const blockEmptySig = {message: block, signature: ZERO_HASH} as allForks.FullOrBlindedSignedBeaconBlock;
+  const blockEmptySig = {message: block, signature: ZERO_HASH};
 
   const postState = stateTransition(
     state,
     blockEmptySig,
-    // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
-    // verifyProposer: false   | as the block signature is zero-ed
-    // verifySignatures: false | since the data to assemble the block is trusted
-    {verifyStateRoot: false, verifyProposer: false, verifySignatures: false},
-    metrics
+    {
+      // ExecutionPayloadStatus.valid: Assume payload valid, it has been produced by a trusted EL
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      // DataAvailabilityStatus.available: Assume the blobs to be available, have just been produced by trusted EL
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
+      // verifyStateRoot: false  | the root in the block is zero-ed, it's being computed here
+      verifyStateRoot: false,
+      // verifyProposer: false   | as the block signature is zero-ed
+      verifyProposer: false,
+      // verifySignatures: false | since the data to assemble the block is trusted
+      verifySignatures: false,
+      // Preserve cache in source state, since the resulting state is not added to the state cache
+      dontTransferCache: true,
+    },
+    {metrics}
   );
 
-  return postState.hashTreeRoot();
+  const {attestations, syncAggregate, slashing} = postState.proposerRewards;
+  const proposerReward = BigInt(attestations + syncAggregate + slashing);
+
+  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+    source: StateHashTreeRootSource.computeNewStateRoot,
+  });
+  const newStateRoot = postState.hashTreeRoot();
+  hashTreeRootTimer?.();
+
+  return {newStateRoot, proposerReward};
 }

@@ -1,38 +1,44 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {SeenSyncCommitteeMessages, SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
-import {generateContributionAndProof} from "../../../utils/contributionAndProof.js";
+import {ssz} from "@lodestar/types";
+import {SeenContributionAndProof, SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
 
 const NUM_SLOTS_IN_CACHE = 3;
 
-describe("chain / seenCache / SeenSyncCommittee caches", function () {
+describe("chain / seenCache / SeenSyncCommittee caches", () => {
   describe("SeenSyncCommitteeMessages", () => {
     const slot = 10;
     const subnet = 2;
     const validatorIndex = 100;
+    const rootHex = "0x1234";
 
     it("should find a sync committee based on same slot and validator index", () => {
       const cache = new SeenSyncCommitteeMessages();
 
-      expect(cache.isKnown(slot, subnet, validatorIndex)).to.equal(false, "Should not know before adding");
-      cache.add(slot, subnet, validatorIndex);
-      expect(cache.isKnown(slot, subnet, validatorIndex)).to.equal(true, "Should know before adding");
+      // "Should not know before adding"
+      expect(cache.get(slot, subnet, validatorIndex)).toBeNull();
+      cache.add(slot, subnet, validatorIndex, rootHex);
+      expect(cache.get(slot, subnet, validatorIndex)).toBe(rootHex);
 
-      expect(cache.isKnown(slot + 1, subnet, validatorIndex)).to.equal(false, "Should not know a diff slot");
-      expect(cache.isKnown(slot, subnet + 1, validatorIndex)).to.equal(false, "Should not know a diff subnet");
-      expect(cache.isKnown(slot, subnet, validatorIndex + 1)).to.equal(false, "Should not know a diff index");
+      // "Should not know a diff slot"
+      expect(cache.get(slot + 1, subnet, validatorIndex)).toBeNull();
+      // "Should not know a diff subnet"
+      expect(cache.get(slot, subnet + 1, validatorIndex)).toBeNull();
+      // "Should not know a diff index"
+      expect(cache.get(slot, subnet, validatorIndex + 1)).toBeNull();
     });
 
     it("should prune", () => {
       const cache = new SeenSyncCommitteeMessages();
 
       for (let i = 0; i < NUM_SLOTS_IN_CACHE; i++) {
-        cache.add(slot, subnet, validatorIndex);
+        cache.add(slot + i, subnet, validatorIndex, rootHex);
       }
 
-      expect(cache.isKnown(slot, subnet, validatorIndex)).to.equal(true, "Should know before prune");
+      expect(cache.get(slot, subnet, validatorIndex)).toBe(rootHex);
       cache.prune(99);
-      expect(cache.isKnown(slot, subnet, validatorIndex)).to.equal(false, "Should not know after prune");
+      // "Should not know after prune"
+      expect(cache.get(slot, subnet, validatorIndex)).toBeNull();
     });
   });
 
@@ -42,59 +48,40 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
     const aggregatorIndex = 100;
 
     it("should find a sync committee based on same slot and validator index", () => {
+      const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+      contributionAndProof.aggregatorIndex = aggregatorIndex;
+      contributionAndProof.contribution.slot = slot;
+      contributionAndProof.contribution.subcommitteeIndex = subcommitteeIndex;
+
       const cache = new SeenContributionAndProof(null);
 
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
-        false,
-        "Should not know before adding"
-      );
-      cache.add(generateContributionAndProof({aggregatorIndex, contribution: {slot, subcommitteeIndex}}), 0);
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
-        true,
-        "Should know before adding"
-      );
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).toBe(false);
+      cache.add(contributionAndProof, 0);
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).toBe(true);
 
-      expect(cache.isAggregatorKnown(slot + 1, subcommitteeIndex, aggregatorIndex)).to.equal(
-        false,
-        "Should not know a diff slot"
-      );
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex + 1, aggregatorIndex)).to.equal(
-        false,
-        "Should not know a diff subnet"
-      );
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex + 1)).to.equal(
-        false,
-        "Should not know a diff index"
-      );
+      expect(cache.isAggregatorKnown(slot + 1, subcommitteeIndex, aggregatorIndex)).toBe(false);
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex + 1, aggregatorIndex)).toBe(false);
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex + 1)).toBe(false);
     });
 
     it("should prune", () => {
       const cache = new SeenContributionAndProof(null);
-      const contributionAndProof = generateContributionAndProof({
-        aggregatorIndex,
-        contribution: {slot, subcommitteeIndex},
-      });
+      const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+      contributionAndProof.aggregatorIndex = aggregatorIndex;
+      contributionAndProof.contribution.slot = slot;
+      contributionAndProof.contribution.subcommitteeIndex = subcommitteeIndex;
 
       for (let i = 0; i < NUM_SLOTS_IN_CACHE; i++) {
         cache.add(contributionAndProof, 0);
       }
 
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
-        true,
-        "Should know before prune"
-      );
-      expect(cache.participantsKnown(contributionAndProof.contribution)).to.equal(true, "Should know participants");
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).toBe(true);
+      expect(cache.participantsKnown(contributionAndProof.contribution)).toBe(true);
 
       cache.prune(99);
 
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
-        false,
-        "Should not know after prune"
-      );
-      expect(cache.participantsKnown(contributionAndProof.contribution)).to.equal(
-        false,
-        "Should not know participants"
-      );
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).toBe(false);
+      expect(cache.participantsKnown(contributionAndProof.contribution)).toBe(false);
     });
 
     const testCases: {
@@ -134,10 +121,12 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
       it(id, () => {
         const cache = new SeenContributionAndProof(null);
         const aggregationBits = new BitArray(new Uint8Array(seenAttestingBits), 8);
-        const contributionAndProof = generateContributionAndProof({
-          aggregatorIndex,
-          contribution: {slot, subcommitteeIndex, aggregationBits},
-        });
+        const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+        contributionAndProof.aggregatorIndex = aggregatorIndex;
+        contributionAndProof.contribution.slot = slot;
+        contributionAndProof.contribution.subcommitteeIndex = subcommitteeIndex;
+        contributionAndProof.contribution.aggregationBits = aggregationBits;
+
         cache.add(contributionAndProof, aggregationBits.getTrueBitIndexes().length);
 
         for (const {bits, isKnown} of checkAttestingBits) {
@@ -145,7 +134,7 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
             ...contributionAndProof.contribution,
             aggregationBits: new BitArray(new Uint8Array(bits), 8),
           };
-          expect(cache.participantsKnown(subsetContribution)).to.equal(isKnown);
+          expect(cache.participantsKnown(subsetContribution)).toBe(isKnown);
         }
       });
     }

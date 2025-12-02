@@ -1,10 +1,10 @@
-import {Options} from "yargs";
-import {IChainConfig, chainConfigTypes} from "@lodestar/config";
+import {ChainConfig, chainConfigTypes} from "@lodestar/config";
+import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {IBeaconParamsUnparsed} from "../config/types.js";
-import {ObjectKeys, ICliCommandOptions} from "../util/index.js";
+import {ObjectKeys} from "../util/index.js";
 
 // No options are statically declared
-// If an arbitraty key notation is used, it removes typesafety on most of this CLI arg parsing code.
+// If an arbitrary key notation is used, it removes type safety on most of this CLI arg parsing code.
 // Params will be parsed from an args object assuming to contain the required keys
 
 export type ITerminalPowArgs = {
@@ -25,18 +25,18 @@ export function parseBeaconParamsArgs(args: Record<string, string | number>): IB
 }
 
 const paramsOptionsByName = ObjectKeys(chainConfigTypes).reduce(
-  (options: Record<string, Options>, key): Record<string, Options> => ({
-    ...options,
-    [getArgKey(key)]: {
+  (options: Record<string, CliOptionDefinition>, key): Record<string, CliOptionDefinition> => {
+    options[getArgKey(key)] = {
       hidden: true,
       type: "string",
       group: "params",
-    },
-  }),
+    };
+    return options;
+  },
   {}
 );
 
-const terminalArgsToParamsMap: {[K in keyof ITerminalPowArgs]: keyof IChainConfig} = {
+const terminalArgsToParamsMap: {[K in keyof ITerminalPowArgs]: keyof ChainConfig} = {
   "terminal-total-difficulty-override": "TERMINAL_TOTAL_DIFFICULTY",
   "terminal-block-hash-override": "TERMINAL_BLOCK_HASH",
   "terminal-block-hash-epoch-override": "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH",
@@ -52,7 +52,7 @@ export function parseTerminalPowArgs(args: ITerminalPowArgs): IBeaconParamsUnpar
   return parsedArgs;
 }
 
-export const paramsOptions: ICliCommandOptions<IParamsArgs> = {
+export const paramsOptions: CliCommandOptions<IParamsArgs> = {
   ...paramsOptionsByName,
 
   "terminal-total-difficulty-override": {

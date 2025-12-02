@@ -1,19 +1,19 @@
-import {Options} from "yargs";
-import {ICliCommandOptions} from "../../util/index.js";
-import {beaconOptions, IBeaconArgs} from "../beacon/options.js";
+import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";
+import {BeaconArgs, beaconOptions} from "../beacon/options.js";
 import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;
-  genesisValidators?: number;
+  genesisValidators: number;
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
+  dumpTestnetFiles?: string;
 };
 
-const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
+const devOwnOptions: CliCommandOptions<IDevOwnArgs> = {
   genesisEth1Hash: {
     description: "If present it will create genesis with this eth1 hash.",
     type: "string",
@@ -47,6 +47,12 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     type: "boolean",
     group: "dev",
   },
+
+  dumpTestnetFiles: {
+    description: "Dump testnet files and exit",
+    type: "string",
+    group: "dev",
+  },
 };
 
 /**
@@ -56,7 +62,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
  * - and have api enabled by default (as it's used by validator)
  * Note: use beaconNodeOptions and globalOptions to make sure option key is correct
  */
-const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNodeOptions, Options>> = {
+const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNodeOptions, CliOptionDefinition>> = {
   // Custom paths different than regular beacon, validator paths
   // network="dev" will store all data in separate dir than other networks
   network: {
@@ -74,24 +80,22 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     defaultDescription: undefined,
     default: true,
   },
-  "network.maxPeers": {
-    ...beaconNodeOptions["network.maxPeers"],
-    defaultDescription: undefined,
-    default: 1,
-  },
-  targetPeers: {
-    ...beaconNodeOptions["targetPeers"],
-    defaultDescription: undefined,
-    default: 1,
-  },
   eth1: {
-    ...beaconNodeOptions["eth1"],
+    ...beaconNodeOptions.eth1,
     defaultDescription: undefined,
     default: false,
   },
   rest: {
-    ...beaconNodeOptions["rest"],
+    ...beaconNodeOptions.rest,
     defaultDescription: undefined,
+    default: true,
+  },
+  "rest.stacktraces": {
+    ...beaconNodeOptions["rest.stacktraces"],
+    default: true,
+  },
+  "rest.swaggerUI": {
+    ...beaconNodeOptions["rest.swaggerUI"],
     default: true,
   },
 };
@@ -103,4 +107,4 @@ export const devOptions = {
   ...devOwnOptions,
 };
 
-export type IDevArgs = IBeaconArgs & IValidatorCliArgs & IDevOwnArgs;
+export type IDevArgs = BeaconArgs & IValidatorCliArgs & IDevOwnArgs;

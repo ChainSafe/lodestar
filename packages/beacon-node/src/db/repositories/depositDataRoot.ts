@@ -1,8 +1,9 @@
 import {ByteVectorType, CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {Db, KeyValue, Repository} from "@lodestar/db";
 import {Root, ssz} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
 import {bytesToInt} from "@lodestar/utils";
-import {Db, Bucket, Repository, IKeyValue} from "@lodestar/db";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 // TODO: Review where is best to put this type
 export type DepositTree = CompositeViewDU<ListCompositeType<ByteVectorType>>;
@@ -10,17 +11,17 @@ export type DepositTree = CompositeViewDU<ListCompositeType<ByteVectorType>>;
 export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: DepositTree;
 
-  constructor(config: IChainForkConfig, db: Db) {
-    super(config, db, Bucket.index_depositDataRoot, ssz.Root);
+  constructor(config: ChainForkConfig, db: Db) {
+    const bucket = Bucket.index_depositDataRoot;
+    super(config, db, bucket, ssz.Root, getBucketNameByValue(bucket));
   }
 
   decodeKey(data: Buffer): number {
-    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
+    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
   // depositDataRoots stored by depositData index
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getId(value: Root): number {
+  getId(_value: Root): number {
     throw new Error("Unable to create depositIndex from root");
   }
 
@@ -29,7 +30,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     await this.depositRootTreeSet(index, value);
   }
 
-  async batchPut(items: IKeyValue<number, Root>[]): Promise<void> {
+  async batchPut(items: KeyValue<number, Root>[]): Promise<void> {
     await super.batchPut(items);
     for (const {key, value} of items) {
       await this.depositRootTreeSet(key, value);
@@ -68,7 +69,9 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     // TODO: Review and fix properly
     if (index > depositRootTree.length) {
       throw Error(`Error setting depositRootTree index ${index} > length ${depositRootTree.length}`);
-    } else if (index === depositRootTree.length) {
+    }
+
+    if (index === depositRootTree.length) {
       depositRootTree.push(value);
     } else {
       depositRootTree.set(index, value);

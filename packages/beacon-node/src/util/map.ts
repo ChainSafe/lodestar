@@ -1,75 +1,77 @@
-export class MapDef<K, V> extends Map<K, V> {
-  constructor(private readonly getDefault: () => V) {
-    super();
-  }
-
-  getOrDefault(key: K): V {
-    let value = super.get(key);
-    if (value === undefined) {
-      value = this.getDefault();
-      this.set(key, value);
-    }
-    return value;
-  }
-}
+import {OrderedSet} from "./set.js";
 
 /**
- * 2 dimensions Es6 Map
+ * An implementation of Map that support getting first/last key and value.
  */
-export class Map2d<K1, K2, V> {
-  readonly map = new Map<K1, Map<K2, V>>();
+export class OrderedMap<K, V> {
+  private _set: OrderedSet<K>;
+  private map: Map<K, V>;
 
-  get(k1: K1, k2: K2): V | undefined {
-    return this.map.get(k1)?.get(k2);
+  constructor() {
+    this._set = new OrderedSet<K>();
+    this.map = new Map<K, V>();
   }
 
-  set(k1: K1, k2: K2, v: V): void {
-    let map2 = this.map.get(k1);
-    if (!map2) {
-      map2 = new Map<K2, V>();
-      this.map.set(k1, map2);
+  get(key: K): V | undefined {
+    return this.map.get(key);
+  }
+
+  set(key: K, value: V): this {
+    this._set.add(key);
+    this.map.set(key, value);
+    return this;
+  }
+
+  delete(key: K, searchFromHead: boolean): boolean {
+    if (this.map.has(key)) {
+      this._set.delete(key, searchFromHead);
+      return this.map.delete(key);
     }
-    map2.set(k2, v);
-  }
-}
-
-/**
- * 2 dimensions Es6 Map + regular array
- */
-export class Map2dArr<K1, V> {
-  readonly map = new Map<K1, V[]>();
-
-  get(k1: K1, idx: number): V | undefined {
-    return this.map.get(k1)?.[idx];
+    return false;
   }
 
-  set(k1: K1, idx: number, v: V): void {
-    let arr = this.map.get(k1);
-    if (!arr) {
-      arr = [];
-      this.map.set(k1, arr);
-    }
-    arr[idx] = v;
+  keys(): IterableIterator<K> {
+    return this._set.values();
   }
-}
 
-/**
- * Prune an arbitrary set removing the first keys to have a set.size === maxItems.
- * Returns the count of deleted items.
- */
-export function pruneSetToMax<T>(set: Set<T> | Map<T, unknown>, maxItems: number): number {
-  let itemsToDelete = set.size - maxItems;
-  const deletedItems = Math.max(0, itemsToDelete);
+  lastKey(): K | null {
+    return this._set.last();
+  }
 
-  if (itemsToDelete > 0) {
-    for (const key of set.keys()) {
-      set.delete(key);
-      itemsToDelete--;
-      if (itemsToDelete <= 0) {
-        break;
+  firstKey(): K | null {
+    return this._set.first();
+  }
+
+  values(): IterableIterator<V> {
+    const _self = this;
+    return (function* generateValues() {
+      for (const key of _self.keys()) {
+        yield _self.get(key) as V;
       }
-    }
+    })();
   }
 
-  return deletedItems;
+  lastValue(): V | null {
+    const lastKey = this._set.last();
+    if (lastKey === null) {
+      return null;
+    }
+    return this.get(lastKey) as V;
+  }
+
+  firstValue(): V | null {
+    const firstKey = this._set.first();
+    if (firstKey === null) {
+      return null;
+    }
+    return this.get(firstKey) as V;
+  }
+
+  size(): number {
+    return this._set.size;
+  }
+
+  has(key: K): boolean {
+    return this.map.has(key);
+  }
 }

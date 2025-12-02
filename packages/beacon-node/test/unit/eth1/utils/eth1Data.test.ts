@@ -1,23 +1,19 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
-import pick from "lodash/pick.js";
+import {describe, expect, it} from "vitest";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {iteratorFromArray} from "../../../utils/interator.js";
-import {
-  getEth1DataForBlocks,
-  getDepositsByBlockNumber,
-  getDepositRootByDepositCount,
-} from "../../../../src/eth1/utils/eth1Data.js";
-import {Eth1Block} from "../../../../src/eth1/interface.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {Eth1Block} from "../../../../src/eth1/interface.js";
+import {
+  getDepositRootByDepositCount,
+  getDepositsByBlockNumber,
+  getEth1DataForBlocks,
+} from "../../../../src/eth1/utils/eth1Data.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {iteratorFromArray} from "../../../utils/interator.js";
 
-chai.use(chaiAsPromised);
-
-describe("eth1 / util / getEth1DataForBlocks", function () {
-  interface ITestCase {
+describe("eth1 / util / getEth1DataForBlocks", () => {
+  type TestCase = {
     id: string;
     blocks: Eth1Block[];
     deposits: phase0.DepositEvent[];
@@ -25,9 +21,9 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
     lastProcessedDepositBlockNumber: number;
     expectedEth1Data?: Partial<phase0.Eth1Data & Eth1Block>[];
     error?: Eth1ErrorCode;
-  }
+  };
 
-  const testCases: (() => ITestCase)[] = [
+  const testCases: (() => TestCase)[] = [
     () => {
       // Result must contain all blocks from eth1Blocks, with backfilled eth1Data
       const expectedEth1Data = [
@@ -45,11 +41,11 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
       const deposits: phase0.DepositEvent[] = expectedEth1Data.map(({blockNumber, depositCount}) =>
         getMockDeposit({blockNumber, index: depositCount - 1})
       );
-      const lastProcessedDepositBlockNumber = expectedEth1Data[expectedEth1Data.length - 1].blockNumber;
+      const lastProcessedDepositBlockNumber = expectedEth1Data.at(-1)?.blockNumber as number;
 
       // Pre-fill the depositTree with roots for all deposits
       const depositRootTree = ssz.phase0.DepositDataRootList.toViewDU(
-        Array.from({length: deposits[deposits.length - 1].index + 1}, (_, i) => Buffer.alloc(32, i))
+        Array.from({length: (deposits.at(-1)?.index as number) + 1}, (_, i) => Buffer.alloc(32, i))
       );
 
       return {
@@ -97,16 +93,9 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
   ];
 
   for (const testCase of testCases) {
-    const {
-      id,
-      blocks,
-      deposits,
-      depositRootTree,
-      lastProcessedDepositBlockNumber,
-      expectedEth1Data,
-      error,
-    } = testCase();
-    it(id, async function () {
+    const {id, blocks, deposits, depositRootTree, lastProcessedDepositBlockNumber, expectedEth1Data, error} =
+      testCase();
+    it(id, async () => {
       const eth1DatasPromise = getEth1DataForBlocks(
         blocks,
         // Simulate a descending stream reading from DB
@@ -117,9 +106,9 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
 
       if (expectedEth1Data) {
         const eth1Datas = await eth1DatasPromise;
-        const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
-        expect(eth1DatasPartial).to.deep.equal(expectedEth1Data);
-      } else if (error) {
+        const eth1DatasPartial = eth1Datas.map(({blockNumber, depositCount}) => ({blockNumber, depositCount}));
+        expect(eth1DatasPartial).toEqual(expectedEth1Data);
+      } else if (error != null) {
         await expectRejectedWithLodestarError(eth1DatasPromise, error);
       } else {
         throw Error("Test case must have 'expectedEth1Data' or 'error'");
@@ -128,16 +117,16 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
   }
 });
 
-describe("eth1 / util / getDepositsByBlockNumber", function () {
-  interface ITestCase {
+describe("eth1 / util / getDepositsByBlockNumber", () => {
+  type TestCase = {
     id: string;
     fromBlock: number;
     toBlock: number;
     deposits: phase0.DepositEvent[];
     expectedResult: phase0.DepositEvent[];
-  }
+  };
 
-  const testCases: (() => ITestCase)[] = [
+  const testCases: (() => TestCase)[] = [
     () => {
       const deposit0 = getMockDeposit({blockNumber: 0, index: 0});
       return {
@@ -192,24 +181,24 @@ describe("eth1 / util / getDepositsByBlockNumber", function () {
 
   for (const testCase of testCases) {
     const {id, fromBlock, toBlock, deposits, expectedResult} = testCase();
-    it(id, async function () {
+    it(id, async () => {
       const result = await getDepositsByBlockNumber(
         fromBlock,
         toBlock, // Simulate a descending stream reading from DB
         iteratorFromArray(deposits.reverse())
       );
-      expect(result).to.deep.equal(expectedResult);
+      expect(result).toEqual(expectedResult);
     });
   }
 });
 
-describe("eth1 / util / getDepositRootByDepositCount", function () {
-  interface ITestCase {
+describe("eth1 / util / getDepositRootByDepositCount", () => {
+  type TestCase = {
     id: string;
     depositCounts: number[];
     depositRootTree: DepositTree;
     expectedMap: Map<number, Root>;
-  }
+  };
 
   const fullRootMap = new Map<number, Root>();
   const fullDepositRootTree = ssz.phase0.DepositDataRootList.defaultViewDU();
@@ -218,7 +207,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
     fullRootMap.set(fullDepositRootTree.length, fullDepositRootTree.hashTreeRoot());
   }
 
-  const testCases: (() => ITestCase)[] = [
+  const testCases: (() => TestCase)[] = [
     () => {
       return {
         id: "Roots are computed correctly, all values match",
@@ -254,9 +243,9 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
 
   for (const testCase of testCases) {
     const {id, depositCounts, depositRootTree, expectedMap} = testCase();
-    it(id, function () {
+    it(id, () => {
       const map = getDepositRootByDepositCount(depositCounts, depositRootTree);
-      expect(renderDepositRootByDepositCount(map)).to.deep.equal(renderDepositRootByDepositCount(expectedMap));
+      expect(renderDepositRootByDepositCount(map)).toEqual(renderDepositRootByDepositCount(expectedMap));
     });
   }
 });

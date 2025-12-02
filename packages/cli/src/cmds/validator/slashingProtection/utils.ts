@@ -1,42 +1,38 @@
-import {Root} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
-import {fromHex} from "@lodestar/utils";
-import {genesisData, NetworkName} from "@lodestar/config/networks";
-import {SlashingProtection, MetaDataRepository} from "@lodestar/validator";
-import {IDatabaseApiOptions, LevelDbController} from "@lodestar/db";
-import {YargsError} from "../../../util/index.js";
-import {IGlobalArgs} from "../../../options/index.js";
-import {getValidatorPaths} from "../paths.js";
+import {NetworkName, genesisData} from "@lodestar/config/networks";
+import {LevelDbController} from "@lodestar/db/controller/level";
+import {Root} from "@lodestar/types";
+import {Logger, fromHex} from "@lodestar/utils";
+import {MetaDataRepository, SlashingProtection} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
+import {GlobalArgs} from "../../../options/index.js";
+import {getValidatorPaths} from "../paths.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
 /**
  * Returns a new SlashingProtection object instance based on global args.
  */
-export function getSlashingProtection(
-  args: IGlobalArgs,
-  network: string
-): {slashingProtection: SlashingProtection; metadata: MetaDataRepository} {
+export async function getSlashingProtection(
+  args: GlobalArgs,
+  network: string,
+  logger: Logger
+): Promise<{slashingProtection: SlashingProtection; metadata: MetaDataRepository}> {
   const validatorPaths = getValidatorPaths(args, network);
   const dbPath = validatorPaths.validatorsDbDir;
-  const {config} = getBeaconConfigFromArgs(args);
 
-  const dbOpts: IDatabaseApiOptions = {
-    config,
-    controller: new LevelDbController({name: dbPath}, {}),
-  };
+  const db = await LevelDbController.create({name: dbPath}, {logger});
 
   return {
-    slashingProtection: new SlashingProtection(dbOpts),
-    metadata: new MetaDataRepository(dbOpts),
+    slashingProtection: new SlashingProtection(db),
+    metadata: new MetaDataRepository(db),
   };
 }
 
 /**
  * Returns genesisValidatorsRoot from validator API client.
  */
-export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProtectionArgs): Promise<Root> {
-  const server = args.server;
+export async function getGenesisValidatorsRoot(args: GlobalArgs & ISlashingProtectionArgs): Promise<Root> {
+  const server = args.beaconNodes[0];
 
   const networkGenesis = genesisData[args.network as NetworkName];
   if (networkGenesis !== undefined) {
@@ -47,13 +43,14 @@ export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProt
   const api = getClient({baseUrl: server}, {config});
   const genesis = await api.beacon.getGenesis();
 
-  if (genesis !== undefined) {
-    return genesis.data.genesisValidatorsRoot;
-  } else {
+  try {
+    genesis.assertOk();
+  } catch (e) {
     if (args.force) {
       return Buffer.alloc(32, 0);
-    } else {
-      throw new YargsError(`Can't get genesisValidatorsRoot from Beacon node at ${server}`);
     }
+    throw e;
   }
+
+  return genesis.value().genesisValidatorsRoot;
 }

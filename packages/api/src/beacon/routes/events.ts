@@ -1,21 +1,52 @@
-import {Epoch, phase0, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@lodestar/types";
-import {ContainerType, Type, VectorCompositeType} from "@chainsafe/ssz";
-import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
-import {RouteDef, TypeJson} from "../../utils/index.js";
+import {ContainerType, ListBasicType, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK} from "@lodestar/params";
+import {
+  Attestation,
+  AttesterSlashing,
+  Epoch,
+  LightClientFinalityUpdate,
+  LightClientOptimisticUpdate,
+  RootHex,
+  SSEPayloadAttributes,
+  Slot,
+  StringType,
+  UintNum64,
+  altair,
+  capella,
+  electra,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
+import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
+import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {VersionType} from "../../utils/metadata.js";
 
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
+const stringType = new StringType();
+export const blobSidecarSSE = new ContainerType(
+  {
+    blockRoot: stringType,
+    index: ssz.BlobIndex,
+    slot: ssz.Slot,
+    kzgCommitment: stringType,
+    versionedHash: stringType,
+  },
+  {typeName: "BlobSidecarSSE", jsonCase: "eth2"}
+);
+type BlobSidecarSSE = ValueOf<typeof blobSidecarSSE>;
 
-export type LightclientOptimisticHeaderUpdate = {
-  syncAggregate: altair.SyncAggregate;
-  attestedHeader: phase0.BeaconBlockHeader;
-};
-
-export type LightclientFinalizedUpdate = {
-  attestedHeader: phase0.BeaconBlockHeader;
-  finalizedHeader: phase0.BeaconBlockHeader;
-  finalityBranch: Uint8Array[];
-  syncAggregate: altair.SyncAggregate;
-};
+export const dataColumnSidecarSSE = new ContainerType(
+  {
+    blockRoot: stringType,
+    index: ssz.ColumnIndex,
+    slot: ssz.Slot,
+    kzgCommitments: new ListBasicType(stringType, MAX_BLOB_COMMITMENTS_PER_BLOCK),
+  },
+  {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
+);
+type DataColumnSidecarSSE = ValueOf<typeof dataColumnSidecarSSE>;
 
 export enum EventType {
   /**
@@ -25,12 +56,22 @@ export enum EventType {
    * Both dependent roots use the genesis block root in the case of underflow.
    */
   head = "head",
-  /** The node has received a valid block (from P2P or API) */
+  /** The node has received a block (from P2P or API) that is successfully imported on the fork-choice `on_block` handler */
   block = "block",
+  /** The node has received a block (from P2P or API) that passes validation rules of the `beacon_block` topic */
+  blockGossip = "block_gossip",
   /** The node has received a valid attestation (from P2P or API) */
   attestation = "attestation",
+  /** The node has received a valid SingleAttestation (from P2P or API) */
+  singleAttestation = "single_attestation",
   /** The node has received a valid voluntary exit (from P2P or API) */
   voluntaryExit = "voluntary_exit",
+  /** The node has received a valid proposer slashing (from P2P or API) */
+  proposerSlashing = "proposer_slashing",
+  /** The node has received a valid attester slashing (from P2P or API) */
+  attesterSlashing = "attester_slashing",
+  /** The node has received a valid blsToExecutionChange (from P2P or API) */
+  blsToExecutionChange = "bls_to_execution_change",
   /** Finalized checkpoint has been updated */
   finalizedCheckpoint = "finalized_checkpoint",
   /** The node has reorganized its chain */
@@ -38,10 +79,36 @@ export enum EventType {
   /** The node has received a valid sync committee SignedContributionAndProof (from P2P or API) */
   contributionAndProof = "contribution_and_proof",
   /** New or better optimistic header update available */
-  lightclientOptimisticUpdate = "light_client_optimistic_update",
-  /** New or better finalized update available */
-  lightclientFinalizedUpdate = "light_client_finalized_update",
+  lightClientOptimisticUpdate = "light_client_optimistic_update",
+  /** New or better finality update available */
+  lightClientFinalityUpdate = "light_client_finality_update",
+  /** Payload attributes for block proposal */
+  payloadAttributes = "payload_attributes",
+  /** The node has received a valid BlobSidecar (from P2P or API) */
+  blobSidecar = "blob_sidecar",
+  /** The node has received a valid DataColumnSidecar (from P2P or API) */
+  dataColumnSidecar = "data_column_sidecar",
 }
+
+export const eventTypes: {[K in EventType]: K} = {
+  [EventType.head]: EventType.head,
+  [EventType.block]: EventType.block,
+  [EventType.blockGossip]: EventType.blockGossip,
+  [EventType.attestation]: EventType.attestation,
+  [EventType.singleAttestation]: EventType.singleAttestation,
+  [EventType.voluntaryExit]: EventType.voluntaryExit,
+  [EventType.proposerSlashing]: EventType.proposerSlashing,
+  [EventType.attesterSlashing]: EventType.attesterSlashing,
+  [EventType.blsToExecutionChange]: EventType.blsToExecutionChange,
+  [EventType.finalizedCheckpoint]: EventType.finalizedCheckpoint,
+  [EventType.chainReorg]: EventType.chainReorg,
+  [EventType.contributionAndProof]: EventType.contributionAndProof,
+  [EventType.lightClientOptimisticUpdate]: EventType.lightClientOptimisticUpdate,
+  [EventType.lightClientFinalityUpdate]: EventType.lightClientFinalityUpdate,
+  [EventType.payloadAttributes]: EventType.payloadAttributes,
+  [EventType.blobSidecar]: EventType.blobSidecar,
+  [EventType.dataColumnSidecar]: EventType.dataColumnSidecar,
+};
 
 export type EventData = {
   [EventType.head]: {
@@ -58,8 +125,16 @@ export type EventData = {
     block: RootHex;
     executionOptimistic: boolean;
   };
-  [EventType.attestation]: phase0.Attestation;
+  [EventType.blockGossip]: {
+    slot: Slot;
+    block: RootHex;
+  };
+  [EventType.attestation]: Attestation;
+  [EventType.singleAttestation]: electra.SingleAttestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
+  [EventType.proposerSlashing]: phase0.ProposerSlashing;
+  [EventType.attesterSlashing]: AttesterSlashing;
+  [EventType.blsToExecutionChange]: capella.SignedBLSToExecutionChange;
   [EventType.finalizedCheckpoint]: {
     block: RootHex;
     state: RootHex;
@@ -77,40 +152,82 @@ export type EventData = {
     executionOptimistic: boolean;
   };
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
-  [EventType.lightclientOptimisticUpdate]: LightclientOptimisticHeaderUpdate;
-  [EventType.lightclientFinalizedUpdate]: LightclientFinalizedUpdate;
+  [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: LightClientOptimisticUpdate};
+  [EventType.lightClientFinalityUpdate]: {version: ForkName; data: LightClientFinalityUpdate};
+  [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
+  [EventType.blobSidecar]: BlobSidecarSSE;
+  [EventType.dataColumnSidecar]: DataColumnSidecarSSE;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
 
-export type Api = {
+type EventstreamArgs = {
+  /** Event types to subscribe to */
+  topics: EventType[];
+  signal: AbortSignal;
+  onEvent: (event: BeaconEvent) => void;
+  onError?: (err: Error) => void;
+  onClose?: () => void;
+};
+
+export type Endpoints = {
   /**
    * Subscribe to beacon node events
    * Provides endpoint to subscribe to beacon node Server-Sent-Events stream.
    * Consumers should use [eventsource](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-eventsource-interface)
    * implementation to listen on those events.
    *
-   * @param topics Event types to subscribe to
-   * @returns Opened SSE stream.
+   * Returns if SSE stream has been opened.
    */
-  eventstream(topics: EventType[], signal: AbortSignal, onEvent: (event: BeaconEvent) => void): void;
+  eventstream: Endpoint<
+    // ⏎
+    "GET",
+    EventstreamArgs,
+    {query: {topics: EventType[]}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 };
 
-export const routesData: {[K in keyof Api]: RouteDef} = {
-  eventstream: {url: "/eth/v1/events", method: "GET"},
-};
-
-export type ReqTypes = {
-  eventstream: {
-    query: {topics: EventType[]};
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    eventstream: {
+      url: "/eth/v1/events",
+      method: "GET",
+      req: {
+        writeReq: ({topics}) => ({query: {topics}}),
+        parseReq: ({query}) => ({topics: query.topics}) as EventstreamArgs,
+        schema: {
+          query: {topics: Schema.StringArrayRequired},
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
   };
+}
+
+export type TypeJson<T> = {
+  toJson: (data: T) => unknown; // server
+  fromJson: (data: unknown) => T; // client
 };
 
-// It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
-// The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
+export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
+  const WithVersion = <T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> => {
+    return {
+      toJson: ({data, version}) => ({
+        data: getType(version).toJson(data),
+        version,
+      }),
+      fromJson: (val) => {
+        const {version} = VersionType.fromJson(val);
+        return {
+          data: getType(version).fromJson((val as {data: unknown}).data),
+          version,
+        };
+      },
+    };
+  };
 
-export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
-  const stringType = new StringType();
   return {
     [EventType.head]: new ContainerType(
       {
@@ -133,9 +250,38 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
       },
       {jsonCase: "eth2"}
     ),
+    [EventType.blockGossip]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        block: stringType,
+      },
+      {jsonCase: "eth2"}
+    ),
 
-    [EventType.attestation]: ssz.phase0.Attestation,
+    [EventType.attestation]: {
+      toJson: (attestation) => {
+        const fork = config.getForkName(attestation.data.slot);
+        return sszTypesFor(fork).Attestation.toJson(attestation);
+      },
+      fromJson: (attestation) => {
+        const fork = config.getForkName((attestation as Attestation).data.slot);
+        return sszTypesFor(fork).Attestation.fromJson(attestation);
+      },
+    },
+    [EventType.singleAttestation]: ssz.electra.SingleAttestation,
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
+    [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
+    [EventType.attesterSlashing]: {
+      toJson: (attesterSlashing) => {
+        const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
+        return sszTypesFor(fork).AttesterSlashing.toJson(attesterSlashing);
+      },
+      fromJson: (attesterSlashing) => {
+        const fork = config.getForkName(Number((attesterSlashing as AttesterSlashing).attestation1.data.slot));
+        return sszTypesFor(fork).AttesterSlashing.fromJson(attesterSlashing);
+      },
+    },
+    [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,
 
     [EventType.finalizedCheckpoint]: new ContainerType(
       {
@@ -162,29 +308,21 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
     ),
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
+    [EventType.payloadAttributes]: WithVersion((fork) => getPostBellatrixForkTypes(fork).SSEPayloadAttributes),
+    [EventType.blobSidecar]: blobSidecarSSE,
+    [EventType.dataColumnSidecar]: dataColumnSidecarSSE,
 
-    [EventType.lightclientOptimisticUpdate]: new ContainerType(
-      {
-        syncAggregate: ssz.altair.SyncAggregate,
-        attestedHeader: ssz.phase0.BeaconBlockHeader,
-      },
-      {jsonCase: "eth2"}
+    [EventType.lightClientOptimisticUpdate]: WithVersion(
+      (fork) => getPostAltairForkTypes(fork).LightClientOptimisticUpdate
     ),
-    [EventType.lightclientFinalizedUpdate]: new ContainerType(
-      {
-        attestedHeader: ssz.phase0.BeaconBlockHeader,
-        finalizedHeader: ssz.phase0.BeaconBlockHeader,
-        finalityBranch: new VectorCompositeType(ssz.Bytes32, FINALIZED_ROOT_DEPTH),
-        syncAggregate: ssz.altair.SyncAggregate,
-      },
-      {jsonCase: "eth2"}
+    [EventType.lightClientFinalityUpdate]: WithVersion(
+      (fork) => getPostAltairForkTypes(fork).LightClientFinalityUpdate
     ),
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getEventSerdes() {
-  const typeByEvent = getTypeByEvent();
+export function getEventSerdes(config: ChainForkConfig) {
+  const typeByEvent = getTypeByEvent(config);
 
   return {
     toJson: (event: BeaconEvent): unknown => {

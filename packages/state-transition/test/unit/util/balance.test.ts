@@ -1,17 +1,14 @@
-import {assert, expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {config as minimalConfig} from "@lodestar/config/default";
-
 import {EFFECTIVE_BALANCE_INCREMENT} from "@lodestar/params";
 import {ValidatorIndex} from "@lodestar/types";
-
-import {increaseBalance, decreaseBalance, getTotalBalance, isActiveValidator} from "../../../src/util/index.js";
-import {getEffectiveBalanceIncrementsZeroed, getEffectiveBalanceIncrementsZeroInactive} from "../../../src/index.js";
-
-import {generateValidators} from "../../utils/validator.js";
+import {getEffectiveBalanceIncrementsZeroInactive, getEffectiveBalanceIncrementsZeroed} from "../../../src/index.js";
+import {decreaseBalance, getTotalBalance, increaseBalance, isActiveValidator} from "../../../src/util/index.js";
 import {generateCachedState, generateState} from "../../utils/state.js";
+import {generateValidators} from "../../utils/validator.js";
 
 describe("getTotalBalance", () => {
-  it("should return correct balances", () => {
+  it("should return correct balances - 500 validators", () => {
     const num = 500;
     const validatorBalance = 1e12;
     const validators = generateValidators(num);
@@ -23,10 +20,10 @@ describe("getTotalBalance", () => {
 
     const result = getTotalBalance(state, validatorIndices);
     const expected = BigInt(num * validatorBalance);
-    assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
+    expect(result).toEqual(expected);
   });
 
-  it("should return correct balances", () => {
+  it("should return correct balances - 5 validators", () => {
     const num = 5;
     const validators = generateValidators(num);
     const balances = Array.from({length: num}, () => 0);
@@ -34,8 +31,8 @@ describe("getTotalBalance", () => {
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
-    const expected = EFFECTIVE_BALANCE_INCREMENT;
-    assert(result === BigInt(expected), `Expected: ${expected} :: Result: ${result}`);
+    const expected = BigInt(EFFECTIVE_BALANCE_INCREMENT);
+    expect(result).toEqual(expected);
   });
 });
 
@@ -43,12 +40,12 @@ describe("increaseBalance", () => {
   it("should add to a validators balance", () => {
     const state = generateCachedState();
     state.balances.push(0);
-    expect(state.balances.get(0)).to.be.equal(0);
+    expect(state.balances.get(0)).toBe(0);
 
     const delta = 5;
     for (let i = 1; i < 10; i++) {
       increaseBalance(state, 0, delta);
-      expect(state.balances.get(0)).to.be.equal(delta * i);
+      expect(state.balances.get(0)).toBe(delta * i);
     }
   });
 });
@@ -62,7 +59,7 @@ describe("decreaseBalance", () => {
     const delta = 5;
     for (let i = 1; i < 10; i++) {
       decreaseBalance(state, 0, delta);
-      expect(state.balances.get(0)).to.be.equal(initial - delta * i);
+      expect(state.balances.get(0)).toBe(initial - delta * i);
     }
   });
 
@@ -72,7 +69,7 @@ describe("decreaseBalance", () => {
     state.balances.push(initial);
     const delta = 11;
     decreaseBalance(state, 0, delta);
-    expect(state.balances.get(0)).to.be.equal(0);
+    expect(state.balances.get(0)).toBe(0);
   });
 });
 
@@ -99,9 +96,6 @@ describe("getEffectiveBalanceIncrementsZeroInactive", () => {
         : 0;
     }
 
-    expect(getEffectiveBalanceIncrementsZeroInactive(justifiedState)).to.be.deep.equal(
-      effectiveBalances,
-      "wrong effectiveBalances"
-    );
+    expect(getEffectiveBalanceIncrementsZeroInactive(justifiedState)).toEqual(effectiveBalances);
   });
 });

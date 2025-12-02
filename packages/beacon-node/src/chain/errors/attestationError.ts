@@ -1,5 +1,5 @@
-import {CommitteeIndex, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
+import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum AttestationErrorCode {
@@ -66,11 +66,6 @@ export enum AttestationErrorCode {
    */
   INVALID_SIGNATURE = "ATTESTATION_ERROR_INVALID_SIGNATURE",
   /**
-   * There is no committee for the slot and committee index of this attestation
-   * and the attestation should not have been produced.
-   */
-  NO_COMMITTEE_FOR_SLOT_AND_INDEX = "ATTESTATION_ERROR_NO_COMMITTEE_FOR_SLOT_AND_INDEX",
-  /**
    * The unaggregated attestation doesn't have only one aggregation bit set.
    */
   NOT_EXACTLY_ONE_AGGREGATION_BIT_SET = "ATTESTATION_ERROR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET",
@@ -115,9 +110,9 @@ export enum AttestationErrorCode {
    */
   COMMITTEE_INDEX_OUT_OF_RANGE = "ATTESTATION_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
   /**
-   * Missing attestation head state
+   * Missing state to verify attestation
    */
-  MISSING_ATTESTATION_HEAD_STATE = "ATTESTATION_ERROR_MISSING_ATTESTATION_HEAD_STATE",
+  MISSING_STATE_TO_VERIFY_ATTESTATION = "ATTESTATION_ERROR_MISSING_STATE_TO_VERIFY_ATTESTATION",
   /**
    * Invalid aggregator.
    */
@@ -126,6 +121,24 @@ export enum AttestationErrorCode {
    * Invalid attestation indexes: not sorted or unique
    */
   INVALID_INDEXED_ATTESTATION = "ATTESTATION_ERROR_INVALID_INDEXED_ATTESTATION",
+  /**
+   * Invalid ssz bytes.
+   */
+  INVALID_SERIALIZED_BYTES = "ATTESTATION_ERROR_INVALID_SERIALIZED_BYTES",
+  /** Too many skipped slots. */
+  TOO_MANY_SKIPPED_SLOTS = "ATTESTATION_ERROR_TOO_MANY_SKIPPED_SLOTS",
+  /**
+   * Electra: The aggregated attestation does not have exactly one committee bit set.
+   */
+  NOT_EXACTLY_ONE_COMMITTEE_BIT_SET = "ATTESTATION_ERROR_NOT_EXACTLY_ONE_COMMITTEE_BIT_SET",
+  /**
+   * Electra: Invalid attestationData index: is non-zero
+   */
+  NON_ZERO_ATTESTATION_DATA_INDEX = "ATTESTATION_ERROR_NON_ZERO_ATTESTATION_DATA_INDEX",
+  /**
+   * Electra: Attester not in committee
+   */
+  ATTESTER_NOT_IN_COMMITTEE = "ATTESTATION_ERROR_ATTESTER_NOT_IN_COMMITTEE",
 }
 
 export type AttestationErrorType =
@@ -144,11 +157,10 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT}
   | {code: AttestationErrorCode.UNKNOWN_TARGET_ROOT; root: Uint8Array}
   | {code: AttestationErrorCode.INVALID_SIGNATURE}
-  | {code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX; slot: Slot; index: CommitteeIndex}
   | {code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET}
   | {code: AttestationErrorCode.PRIOR_ATTESTATION_KNOWN; validatorIndex: ValidatorIndex; epoch: Epoch}
   | {code: AttestationErrorCode.FUTURE_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
-  | {code: AttestationErrorCode.PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
+  | {code: AttestationErrorCode.PAST_EPOCH; attestationEpoch: Epoch; previousEpoch: Epoch}
   | {code: AttestationErrorCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
   | {code: AttestationErrorCode.INVALID_SUBNET_ID; received: number; expected: number}
   | {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS}
@@ -156,17 +168,22 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.INVALID_TARGET_ROOT; targetRoot: RootHex; expected: string | null}
   | {code: AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK}
   | {code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE; index: number}
-  | {code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE; error: Error}
+  | {code: AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION; error: Error}
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
-  | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION};
+  | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION}
+  | {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES}
+  | {code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS; headBlockSlot: Slot; attestationSlot: Slot}
+  | {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET}
+  | {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX}
+  | {code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {
     const type = this.type;
     switch (type.code) {
       case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
-        return {code: type.code, root: toHexString(type.root)};
-      case AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE:
+        return {code: type.code, root: toRootHex(type.root)};
+      case AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION:
         // TODO: The stack trace gets lost here
         return {code: type.code, error: type.error.message};
 

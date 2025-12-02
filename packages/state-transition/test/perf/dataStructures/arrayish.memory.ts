@@ -1,5 +1,3 @@
-import {MutableVector} from "@chainsafe/persistent-ts";
-
 const refs: any[] = [];
 const xs: number[] = [];
 const arrayBuffersArr: number[] = [];
@@ -23,7 +21,6 @@ const size = 100;
 const testType = TestType.Set;
 
 let arrayNumGlobal: number[] | null = null;
-let mutableVectorGlobal: MutableVector<number> | null = null;
 
 for (let i = 0; i < 1e8; i++) {
   switch (testType as TestType) {
@@ -62,49 +59,6 @@ for (let i = 0; i < 1e8; i++) {
       const arrNew = [...arrayNumGlobal];
       arrNew[Math.floor(size / 2)] = i;
       refs.push(arrNew);
-      break;
-    }
-
-    // size | 100    | 1000   | 10000  |
-    // ---- | ------ | ------ | ------ |
-    // rssM | 1817.4 | 15518. | 154335 |
-    case TestType.MutableVector: {
-      const items = createArray(size);
-      const mutableVector = MutableVector.from(items);
-      refs.push(mutableVector);
-      break;
-    }
-
-    // size | 100    | 1000   |
-    // ---- | ------ | ------ |
-    // rssM | 58.68  | 55.89  |
-    case TestType.MutableVectorClone: {
-      if (!mutableVectorGlobal) {
-        const items = createArray(size);
-        mutableVectorGlobal = MutableVector.from(items);
-      }
-      refs.push(mutableVectorGlobal.clone());
-      break;
-    }
-
-    // Grid of size / changes, all values = rssM in bytes
-    //       | 100    | 1000   | 10000  |
-    // ----- | ------ | ------ | ------ |
-    // 1     | 793.45 | 801.53 | 1137.9 |
-    // 10    | 803.98 | 802.36 | 1144.9 |
-    // 100   | 1573.2 | 1826.4 | 2172.0 |
-    // 1000  | -      | 11250. | 11886. |
-    // 10000 | -      | -      | 111365 |
-    case TestType.MutableVectorCloneAndMutate: {
-      if (!mutableVectorGlobal) {
-        const items = createArray(size);
-        mutableVectorGlobal = MutableVector.from(items);
-      }
-      const newArr = mutableVectorGlobal.clone();
-      for (let j = 0; j < 10000; j++) {
-        newArr.set(j, i);
-      }
-      refs.push(newArr);
       break;
     }
 
@@ -156,17 +110,8 @@ for (let i = 0; i < 1e8; i++) {
     const heapUsedM = linearRegression(xs, heapUsed).m;
     const rssM = linearRegression(xs, rss).m;
 
-    // eslint-disable-next-line no-console
     console.log(i, {arrayBuffersM, externalM, heapTotalM, heapUsedM, rssM});
   }
-}
-
-function createArray(n: number): number[] {
-  const items: number[] = [];
-  for (let i = 0; i < n; i++) {
-    items.push(i);
-  }
-  return items;
 }
 
 /**

@@ -1,11 +1,8 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {fromHexString as b} from "@chainsafe/ssz";
-import {IChainConfig} from "../types.js";
-import {chainConfig as mainnet} from "../presets/mainnet.js";
+import {fromHex as b} from "@lodestar/utils";
+import {chainConfig as mainnet} from "../configs/mainnet.js";
+import {ChainConfig} from "../types.js";
 
-/* eslint-disable max-len */
-
-export const mainnetChainConfig: IChainConfig = {
+export const mainnetChainConfig: ChainConfig = {
   ...mainnet,
 
   CONFIG_NAME: "mainnet",

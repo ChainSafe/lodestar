@@ -1,6 +1,6 @@
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {NetworkName} from "@lodestar/config/networks.js";
+import {NetworkName} from "@lodestar/config/networks";
 
 // To populate packages/light-client/src/networks.ts
 //
@@ -8,18 +8,16 @@ import {NetworkName} from "@lodestar/config/networks.js";
 // INFURA_ETH2_CREDENTIALS=<user>:<secret> ./node_modules/.bin/ts-node test/getGenesisData.ts
 // ```
 
-/* eslint-disable no-console */
-
-const networksInInfura: NetworkName[] = ["mainnet", "goerli"];
+const networksInInfura: NetworkName[] = ["mainnet" /*"goerli"*/];
 
 async function getGenesisData(): Promise<void> {
   for (const network of networksInInfura) {
     const baseUrl = getInfuraBeaconUrl(network);
     const api = getClient({baseUrl}, {config});
-    const {data: genesis} = await api.beacon.getGenesis();
+    const {genesisTime, genesisValidatorsRoot} = (await api.beacon.getGenesis()).value();
     console.log(network, {
-      genesisTime: Number(genesis.genesisTime),
-      genesisValidatorsRoot: "0x" + Buffer.from(genesis.genesisValidatorsRoot as Uint8Array).toString("hex"),
+      genesisTime,
+      genesisValidatorsRoot: "0x" + Buffer.from(genesisValidatorsRoot).toString("hex"),
     });
   }
 }

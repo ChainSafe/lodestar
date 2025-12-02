@@ -1,37 +1,41 @@
+import {ChainForkConfig} from "@lodestar/config";
+import {
+  ExecutionStatus,
+  IForkChoice,
+  LVHInvalidResponse,
+  LVHValidResponse,
+  MaybeValidExecutionStatus,
+  ProtoBlock,
+  assertValidTerminalPowBlock,
+} from "@lodestar/fork-choice";
+import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  isBellatrixStateType,
-  isBellatrixBlockBodyType,
-  isMergeTransitionBlock as isMergeTransitionBlockFn,
+  isExecutionBlockBodyType,
   isExecutionEnabled,
+  isExecutionStateType,
+  isMergeTransitionBlock as isMergeTransitionBlockFn,
 } from "@lodestar/state-transition";
-import {bellatrix, allForks, Slot} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
-import {
-  IForkChoice,
-  assertValidTerminalPowBlock,
-  ProtoBlock,
-  ExecutionStatus,
-  MaybeValidExecutionStatus,
-  LVHValidResponse,
-  LVHInvalidResponse,
-} from "@lodestar/fork-choice";
-import {IChainForkConfig} from "@lodestar/config";
-import {ErrorAborted, ILogger} from "@lodestar/utils";
-import {IExecutionEngine} from "../../execution/engine/index.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {IBeaconClock} from "../clock/index.js";
-import {BlockProcessOpts} from "../options.js";
-import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
+import {Slot, bellatrix, electra} from "@lodestar/types";
+import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
+import {Metrics} from "../../metrics/metrics.js";
+import {IClock} from "../../util/clock.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {BlockProcessOpts} from "../options.js";
+import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
+import {IBlockInput} from "./blockInput/types.js";
+import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
-  clock: IBeaconClock;
-  logger: ILogger;
+  clock: IClock;
+  logger: Logger;
+  metrics: Metrics | null;
   forkChoice: IForkChoice;
-  config: IChainForkConfig;
+  config: ChainForkConfig;
 };
 
 type ExecAbortType = {blockIndex: number; execError: BlockError};
@@ -39,9 +43,10 @@ export type SegmentExecStatus =
   | {
       execAborted: null;
       executionStatuses: MaybeValidExecutionStatus[];
+      executionTime: number;
       mergeBlockFound: bellatrix.BeaconBlock | null;
     }
-  | {execAborted: ExecAbortType; invalidSegmentLHV?: LVHInvalidResponse; mergeBlockFound: null};
+  | {execAborted: ExecAbortType; invalidSegmentLVH?: LVHInvalidResponse; mergeBlockFound: null};
 
 type VerifyExecutionErrorResponse =
   | {executionStatus: ExecutionStatus.Invalid; lvhResponse: LVHInvalidResponse; execError: BlockError}
@@ -56,29 +61,31 @@ type VerifyBlockExecutionResponse =
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
  *
- * Since the EL client must be aware of each parent, all payloads must be submited in sequence.
+ * Since the EL client must be aware of each parent, all payloads must be submitted in sequence.
  */
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[],
+  blockInputs: IBlockInput[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
-  opts: BlockProcessOpts
+  opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
   const executionStatuses: MaybeValidExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const lastBlock = blockInputs.at(-1);
 
   // Error in the same way as verifyBlocksSanityChecks if empty blocks
-  if (blocks.length === 0) {
+  if (!lastBlock) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
   // For a block with SYNCING status (called optimistic block), it's okay to import with
   // SYNCING status as EL could switch into syncing
   //
-  // 1. On intial startup/restart
-  // 2. When some reorg might have occured and EL doesn't has a parent root
+  // 1. On initial startup/restart
+  // 2. When some reorg might have occurred and EL doesn't has a parent root
   //    (observed on devnets)
   // 3. Because of some unavailable (and potentially invalid) root but there is no way
   //    of knowing if this is invalid/unavailable. For unavailable block, some proposer
@@ -131,18 +138,17 @@ export async function verifyBlocksExecutionPayload(
   //
   //
   // For this segment of blocks:
-  //   We are optimistically safe with respec to this entire block segment if:
+  //   We are optimistically safe with respect to this entire block segment if:
   //    - all the blocks are way behind the current slot
   //    - or we have already imported a post-merge parent of first block of this chain in forkchoice
-  const lastBlock = blocks[blocks.length - 1];
-
   const currentSlot = chain.clock.currentSlot;
+  const safeSlotsToImportOptimistically = opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
   let isOptimisticallySafe =
     parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
-    lastBlock.message.slot + opts.safeSlotsToImportOptimistically < currentSlot;
+    lastBlock.slot + safeSlotsToImportOptimistically < currentSlot;
 
-  for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
-    const block = blocks[blockIndex];
+  for (let blockIndex = 0; blockIndex < blockInputs.length; blockIndex++) {
+    const blockInput = blockInputs[blockIndex];
     // If blocks are invalid in consensus the main promise could resolve before this loop ends.
     // In that case stop sending blocks to execution engine
     if (signal.aborted) {
@@ -150,7 +156,7 @@ export async function verifyBlocksExecutionPayload(
     }
     const verifyResponse = await verifyBlockExecutionPayload(
       chain,
-      block,
+      blockInput,
       preState0,
       opts,
       isOptimisticallySafe,
@@ -159,7 +165,7 @@ export async function verifyBlocksExecutionPayload(
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
-      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blocks);
+      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs);
     }
 
     // If we are here then its because executionStatus is one of MaybeValidExecutionStatus
@@ -172,14 +178,15 @@ export async function verifyBlocksExecutionPayload(
     }
     executionStatuses.push(executionStatus);
 
+    const blockBody = blockInput.getBlock().message.body;
     const isMergeTransitionBlock =
       // If the merge block is found, stop the search as the isMergeTransitionBlockFn condition
-      // will still evalute to true for the following blocks leading to errors (while syncing)
+      // will still evaluate to true for the following blocks leading to errors (while syncing)
       // as the preState0 still belongs to the pre state of the first block on segment
       mergeBlockFound === null &&
-      isBellatrixStateType(preState0) &&
-      isBellatrixBlockBodyType(block.message.body) &&
-      isMergeTransitionBlockFn(preState0, block.message.body);
+      isExecutionStateType(preState0) &&
+      isExecutionBlockBodyType(blockBody) &&
+      isMergeTransitionBlockFn(preState0, blockBody);
 
     // If this is a merge transition block, check to ensure if it references
     // a valid terminal PoW block.
@@ -195,11 +202,9 @@ export async function verifyBlocksExecutionPayload(
     //     deal it with the external services like eth1 tracker here than
     //     in import block
     if (isMergeTransitionBlock) {
-      const mergeBlock = block.message as bellatrix.BeaconBlock;
-      const mergeBlockHash = toHexString(
-        chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock)
-      );
-      const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
+      const mergeBlock = blockInput.getBlock().message as bellatrix.BeaconBlock;
+      const mergeBlockHash = toRootHex(chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
+      const powBlockRootHex = toRootHex(mergeBlock.body.executionPayload.parentHash);
       const powBlock = await chain.eth1.getPowBlock(powBlockRootHex).catch((error) => {
         // Lets just warn the user here, errors if any will be reported on
         // `assertValidTerminalPowBlock` checks
@@ -236,9 +241,30 @@ export async function verifyBlocksExecutionPayload(
     }
   }
 
+  const executionTime = Date.now();
+  if (
+    blockInputs.length === 1 &&
+    opts.seenTimestampSec !== undefined &&
+    executionStatuses[0] === ExecutionStatus.Valid
+  ) {
+    const recvToValidation = executionTime / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    chain.metrics?.gossipBlock.executionPayload.recvToValidation.observe(recvToValidation);
+    chain.metrics?.gossipBlock.executionPayload.validationTime.observe(validationTime);
+
+    chain.logger.debug("Verified execution payload", {
+      slot: blockInputs[0].slot,
+      recvToValLatency,
+      recvToValidation,
+      validationTime,
+    });
+  }
+
   return {
     execAborted: null,
     executionStatuses,
+    executionTime,
     mergeBlockFound,
   };
 }
@@ -248,16 +274,17 @@ export async function verifyBlocksExecutionPayload(
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
-  block: allForks.SignedBeaconBlock,
+  blockInput: IBlockInput,
   preState0: CachedBeaconStateAllForks,
   opts: BlockProcessOpts,
   isOptimisticallySafe: boolean,
   currentSlot: Slot
 ): Promise<VerifyBlockExecutionResponse> {
+  const block = blockInput.getBlock();
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
-    isBellatrixStateType(preState0) &&
-    isBellatrixBlockBodyType(block.message.body) &&
+    isExecutionStateType(preState0) &&
+    isExecutionBlockBodyType(block.message.body) &&
     // Safe to use with a state previous to block's preState. isMergeComplete can only transition from false to true.
     // - If preState0 is after merge block: condition is true, and will always be true
     // - If preState0 is before merge block: the block could lie but then state transition function will throw above
@@ -273,21 +300,39 @@ export async function verifyBlockExecutionPayload(
   }
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
-  const execResult = await chain.executionEngine.notifyNewPayload(executionPayloadEnabled);
+  const fork = blockInput.forkName;
+  const versionedHashes =
+    isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput) ? blockInput.getVersionedHashes() : undefined;
+  const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
+  const executionRequests =
+    ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
+
+  const logCtx = {slot: blockInput.slot, executionBlock: executionPayloadEnabled.blockNumber};
+  chain.logger.debug("Call engine api newPayload", logCtx);
+  const execResult = await chain.executionEngine.notifyNewPayload(
+    fork,
+    executionPayloadEnabled,
+    versionedHashes,
+    parentBlockRoot,
+    executionRequests
+  );
+  chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
+
+  chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
   switch (execResult.status) {
-    case ExecutePayloadStatus.VALID: {
+    case ExecutionPayloadStatus.VALID: {
       const executionStatus: ExecutionStatus.Valid = ExecutionStatus.Valid;
       const lvhResponse = {executionStatus, latestValidExecHash: execResult.latestValidHash};
       return {executionStatus, lvhResponse, execError: null};
     }
 
-    case ExecutePayloadStatus.INVALID: {
+    case ExecutionPayloadStatus.INVALID: {
       const executionStatus: ExecutionStatus.Invalid = ExecutionStatus.Invalid;
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateFromBlockHash: toHexString(block.message.parentRoot),
+        invalidateFromParentBlockRoot: blockInput.parentRootHex,
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -298,15 +343,17 @@ export async function verifyBlockExecutionPayload(
     }
 
     // Accepted and Syncing have the same treatment, as final validation of block is pending
-    case ExecutePayloadStatus.ACCEPTED:
-    case ExecutePayloadStatus.SYNCING: {
+    case ExecutionPayloadStatus.ACCEPTED:
+    case ExecutionPayloadStatus.SYNCING: {
       // Check if the entire segment was deemed safe or, this block specifically itself if not in
       // the safeSlotsToImportOptimistically window of current slot, then we can import else
       // we need to throw and not import his block
-      if (!isOptimisticallySafe && block.message.slot + opts.safeSlotsToImportOptimistically >= currentSlot) {
+      const safeSlotsToImportOptimistically =
+        opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
+      if (!isOptimisticallySafe && blockInput.slot + safeSlotsToImportOptimistically >= currentSlot) {
         const execError = new BlockError(block, {
           code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-          execStatus: ExecutePayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
+          execStatus: ExecutionPayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
           errorMessage: `not safe to import ${execResult.status} payload within ${opts.safeSlotsToImportOptimistically} of currentSlot`,
         });
         return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
@@ -321,7 +368,7 @@ export async function verifyBlockExecutionPayload(
     // There can be other reasons for which EL failed some of the observed ones are
     // 1. Connection refused / can't connect to EL port
     // 2. EL Internal Error
-    // 3. Geth sometimes gives invalid merkel root error which means invalid
+    // 3. Geth sometimes gives invalid merkle root error which means invalid
     //    but expects it to be handled in CL as of now. But we should log as warning
     //    and give it as optimistic treatment and expect any other non-geth CL<>EL
     //    combination to reject the invalid block and propose a block.
@@ -332,9 +379,9 @@ export async function verifyBlockExecutionPayload(
     // back. But for now, lets assume other mechanisms like unknown parent block of a future
     // child block will cause it to replay
 
-    case ExecutePayloadStatus.INVALID_BLOCK_HASH:
-    case ExecutePayloadStatus.ELERROR:
-    case ExecutePayloadStatus.UNAVAILABLE: {
+    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
+    case ExecutionPayloadStatus.ELERROR:
+    case ExecutionPayloadStatus.UNAVAILABLE: {
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
         execStatus: execResult.status,
@@ -348,10 +395,10 @@ export async function verifyBlockExecutionPayload(
 function getSegmentErrorResponse(
   {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[]
+  blocks: IBlockInput[]
 ): SegmentExecStatus {
   const {executionStatus, lvhResponse, execError} = verifyResponse;
-  let invalidSegmentLHV: LVHInvalidResponse | undefined = undefined;
+  let invalidSegmentLVH: LVHInvalidResponse | undefined = undefined;
 
   if (
     executionStatus === ExecutionStatus.Invalid &&
@@ -360,9 +407,9 @@ function getSegmentErrorResponse(
   ) {
     let lvhFound = false;
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
-      const block = blocks[mayBeLVHIndex];
+      const block = blocks[mayBeLVHIndex].getBlock();
       if (
-        toHexString((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
+        toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
         lvhResponse.latestValidExecHash
       ) {
         lvhFound = true;
@@ -373,19 +420,19 @@ function getSegmentErrorResponse(
     // If there is no valid in the segment then we have to propagate invalid response
     // in forkchoice as well if
     //  - if the parentBlock is also not the lvh
-    //  - and parentBlock is not pre merhe
+    //  - and parentBlock is not pre merge
     if (
       !lvhFound &&
       parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
       parentBlock.executionPayloadBlockHash !== lvhResponse.latestValidExecHash
     ) {
-      invalidSegmentLHV = {
+      invalidSegmentLVH = {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,
-        invalidateFromBlockHash: parentBlock.blockRoot,
+        invalidateFromParentBlockRoot: parentBlock.blockRoot,
       };
     }
   }
   const execAborted = {blockIndex, execError};
-  return {execAborted, invalidSegmentLHV} as SegmentExecStatus;
+  return {execAborted, invalidSegmentLVH} as SegmentExecStatus;
 }

@@ -1,5 +1,6 @@
-import {expect} from "chai";
-import {ProtoArray, ExecutionStatus} from "../../../src/index.js";
+import {describe, expect, it} from "vitest";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [
@@ -40,7 +41,10 @@ describe("getCommonAncestor", () => {
       unrealizedFinalizedEpoch: 0,
       unrealizedFinalizedRoot: "-",
 
+      timeliness: false,
+
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     },
     0
   );
@@ -63,7 +67,10 @@ describe("getCommonAncestor", () => {
         unrealizedFinalizedEpoch: 0,
         unrealizedFinalizedRoot: "-",
 
+        timeliness: false,
+
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       block.slot
     );
@@ -71,9 +78,13 @@ describe("getCommonAncestor", () => {
 
   for (const {nodeA, nodeB, ancestor} of testCases) {
     it(`${nodeA} & ${nodeB} -> ${ancestor}`, () => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      // biome-ignore lint/style/noNonNullAssertion: We know the node can not be null here
       const ancestorNode = fc.getCommonAncestor(fc.getNode(nodeA)!, fc.getNode(nodeB)!);
-      expect(ancestorNode && ancestorNode.blockRoot).to.equal(ancestor);
+      if (ancestor) {
+        expect(ancestorNode?.blockRoot).toBe(ancestor);
+      } else {
+        expect(ancestorNode).toBeNull();
+      }
     });
   }
 
@@ -81,7 +92,7 @@ describe("getCommonAncestor", () => {
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
     deltas,
-    proposerBoost: {root: blocks[blocks.length - 1].root, score: 34},
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,
@@ -93,7 +104,7 @@ describe("getCommonAncestor", () => {
   const deltasNew = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
     deltas: deltasNew,
-    proposerBoost: {root: blocks[blocks.length - 1].root, score: 34},
+    proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,
@@ -104,5 +115,5 @@ describe("getCommonAncestor", () => {
 
   // multiple calls to applyScoreChanges don't keep on adding boosts to weight over
   // and over again, and applyScoreChanges can be safely called after onAttestations
-  expect(weightsAfterCall1).to.deep.equal(weightsAfterCall2);
+  expect(weightsAfterCall1).toEqual(weightsAfterCall2);
 });

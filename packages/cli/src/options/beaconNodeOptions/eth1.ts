@@ -1,19 +1,22 @@
 import fs from "node:fs";
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
+import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
+import {CliCommandOptions} from "@lodestar/utils";
+import {extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
 
-export interface IEth1Args {
-  eth1: boolean;
-  "eth1.providerUrls": string[];
-  "eth1.depositContractDeployBlock": number;
-  "eth1.disableEth1DepositDataTracker": boolean;
-  "eth1.unsafeAllowDepositDataOverwrite": boolean;
-  "eth1.forcedEth1DataVote": string;
-}
+export type Eth1Args = {
+  eth1?: boolean;
+  "eth1.providerUrls"?: string[];
+  "eth1.depositContractDeployBlock"?: number;
+  "eth1.disableEth1DepositDataTracker"?: boolean;
+  "eth1.unsafeAllowDepositDataOverwrite"?: boolean;
+  "eth1.forcedEth1DataVote"?: string;
+};
 
-export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
+export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
   let jwtSecretHex: string | undefined;
+  let jwtId: string | undefined;
+
   let providerUrls = args["eth1.providerUrls"];
 
   // If no providerUrls are explicitly provided, we should pick the execution endpoint
@@ -22,15 +25,15 @@ export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeac
   // jwt auth mechanism.
   if (providerUrls === undefined && args["execution.urls"]) {
     providerUrls = args["execution.urls"];
-    jwtSecretHex = args["jwt-secret"]
-      ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
-      : undefined;
+    jwtSecretHex = args.jwtSecret ? extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()) : undefined;
+    jwtId = args.jwtId;
   }
 
   return {
-    enabled: args["eth1"],
+    enabled: args.eth1,
     providerUrls,
     jwtSecretHex,
+    jwtId,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
     disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
     unsafeAllowDepositDataOverwrite: args["eth1.unsafeAllowDepositDataOverwrite"],
@@ -38,7 +41,7 @@ export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeac
   };
 }
 
-export const options: ICliCommandOptions<IEth1Args> = {
+export const options: CliCommandOptions<Eth1Args> = {
   eth1: {
     description: "Whether to follow the eth1 chain",
     type: "boolean",
@@ -48,9 +51,13 @@ export const options: ICliCommandOptions<IEth1Args> = {
 
   "eth1.providerUrls": {
     description:
-      "Urls to Eth1 node with enabled rpc. If not explicity provided and execution endpoint provided via execution.urls, it will use execution.urls. Otherwise will try connecting on the specified default(s)",
+      "Urls to Eth1 node with enabled rpc. If not explicitly provided and execution endpoint provided via execution.urls, it will use execution.urls. Otherwise will try connecting on the specified default(s)",
+    defaultDescription: defaultOptions.eth1.providerUrls?.join(","),
     type: "array",
-    defaultDescription: defaultOptions.eth1.providerUrls.join(" "),
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.flatMap((item) => item.split(",")),
     group: "eth1",
   },
 

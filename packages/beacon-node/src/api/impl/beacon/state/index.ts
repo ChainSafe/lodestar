@@ -1,71 +1,112 @@
 import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
+import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+  isForkPostElectra,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateElectra,
+  BeaconStateFulu,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   getCurrentEpoch,
+  getRandaoMix,
+  loadState,
 } from "@lodestar/state-transition";
+import {ValidatorIndex, getValidatorStatus} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
-import {ApiModules, IS_OPTIMISTIC_TEMP} from "../../types.js";
+import {ApiModules} from "../../types.js";
+import {assertUniqueItems} from "../../utils.js";
 import {
   filterStateValidatorsByStatus,
+  getStateResponseWithRegen,
   getStateValidatorIndex,
-  getValidatorStatus,
-  resolveStateId,
   toValidatorResponse,
 } from "./utils.js";
 
 export function getBeaconStateApi({
   chain,
   config,
-  db,
-}: Pick<ApiModules, "chain" | "config" | "db">): routes.beacon.state.Api {
-  async function getState(stateId: routes.beacon.StateId): Promise<BeaconStateAllForks> {
-    return await resolveStateId(config, chain, db, stateId);
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.beacon.state.Endpoints> {
+  async function getState(
+    stateId: routes.beacon.StateId
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
+    const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+
+    return {
+      state: state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state,
+      executionOptimistic,
+      finalized,
+    };
   }
 
   return {
-    async getStateRoot(stateId) {
-      const state = await getState(stateId);
+    async getStateRoot({stateId}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
         data: {root: state.hashTreeRoot()},
+        meta: {executionOptimistic, finalized},
       };
     },
 
-    async getStateFork(stateId) {
-      const state = await getState(stateId);
+    async getStateFork({stateId}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
         data: state.fork,
+        meta: {executionOptimistic, finalized},
       };
     },
 
-    async getStateFinalityCheckpoints(stateId) {
-      const state = await getState(stateId);
+    async getStateRandao({stateId, epoch}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      const usedEpoch = epoch ?? stateEpoch;
+
+      if (!(stateEpoch < usedEpoch + EPOCHS_PER_HISTORICAL_VECTOR && usedEpoch <= stateEpoch)) {
+        throw new ApiError(400, "Requested epoch is out of range");
+      }
+
+      const randao = getRandaoMix(state, usedEpoch);
+
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: {randao},
+        meta: {executionOptimistic, finalized},
+      };
+    },
+
+    async getStateFinalityCheckpoints({stateId}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      return {
         data: {
           currentJustified: state.currentJustifiedCheckpoint,
           previousJustified: state.previousJustifiedCheckpoint,
           finalized: state.finalizedCheckpoint,
         },
+        meta: {executionOptimistic, finalized},
       };
     },
 
-    async getStateValidators(stateId, filters) {
-      const state = await resolveStateId(config, chain, db, stateId);
+    async getStateValidators({stateId, validatorIds = [], statuses = []}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
-      if (filters?.id) {
-        for (const id of filters.id) {
-          const validatorIndex = getStateValidatorIndex(id, state, pubkey2index);
-          if (validatorIndex != null) {
+      if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
+        for (const id of validatorIds) {
+          const resp = getStateValidatorIndex(id, state, pubkey2index);
+          if (resp.valid) {
+            const validatorIndex = resp.validatorIndex;
             const validator = validators.getReadonly(validatorIndex);
-            if (filters.status && !filters.status.includes(getValidatorStatus(validator, currentEpoch))) {
+            if (statuses.length && !statuses.includes(getValidatorStatus(validator, currentEpoch))) {
               continue;
             }
             const validatorResponse = toValidatorResponse(
@@ -78,14 +119,18 @@ export function getBeaconStateApi({
           }
         }
         return {
-          executionOptimistic: IS_OPTIMISTIC_TEMP,
           data: validatorResponses,
+          meta: {executionOptimistic, finalized},
         };
-      } else if (filters?.status) {
-        const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2index, currentEpoch);
+      }
+
+      if (statuses.length) {
+        assertUniqueItems(statuses, "Duplicate statuses provided");
+
+        const validatorsByStatus = filterStateValidatorsByStatus(statuses, state, pubkey2index, currentEpoch);
         return {
-          executionOptimistic: IS_OPTIMISTIC_TEMP,
           data: validatorsByStatus,
+          meta: {executionOptimistic, finalized},
         };
       }
 
@@ -98,53 +143,90 @@ export function getBeaconStateApi({
       }
 
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
         data: resp,
+        meta: {executionOptimistic, finalized},
       };
     },
 
-    async getStateValidator(stateId, validatorId) {
-      const state = await resolveStateId(config, chain, db, stateId);
+    async postStateValidators(args, context) {
+      return this.getStateValidators(args, context);
+    },
+
+    async postStateValidatorIdentities({stateId, validatorIds = []}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
-      const validatorIndex = getStateValidatorIndex(validatorId, state, pubkey2index);
-      if (validatorIndex == null) {
-        throw new ApiError(404, "Validator not found");
+      let validatorIdentities: routes.beacon.ValidatorIdentities;
+
+      if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
+        validatorIdentities = [];
+        for (const id of validatorIds) {
+          const resp = getStateValidatorIndex(id, state, pubkey2index);
+          if (resp.valid) {
+            const index = resp.validatorIndex;
+            const {pubkey, activationEpoch} = state.validators.getReadonly(index);
+            validatorIdentities.push({index, pubkey, activationEpoch});
+          }
+        }
+      } else {
+        const validatorsArr = state.validators.getAllReadonlyValues();
+        validatorIdentities = new Array(validatorsArr.length) as routes.beacon.ValidatorIdentities;
+        for (let i = 0; i < validatorsArr.length; i++) {
+          const {pubkey, activationEpoch} = validatorsArr[i];
+          validatorIdentities[i] = {index: i, pubkey, activationEpoch};
+        }
       }
 
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        data: validatorIdentities,
+        meta: {executionOptimistic, finalized},
+      };
+    },
+
+    async getStateValidator({stateId, validatorId}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const {pubkey2index} = chain.getHeadState().epochCtx;
+
+      const resp = getStateValidatorIndex(validatorId, state, pubkey2index);
+      if (!resp.valid) {
+        throw new ApiError(resp.code, resp.reason);
+      }
+
+      const validatorIndex = resp.validatorIndex;
+      return {
         data: toValidatorResponse(
           validatorIndex,
           state.validators.getReadonly(validatorIndex),
           state.balances.get(validatorIndex),
           getCurrentEpoch(state)
         ),
+        meta: {executionOptimistic, finalized},
       };
     },
 
-    async getStateValidatorBalances(stateId, indices) {
-      const state = await resolveStateId(config, chain, db, stateId);
+    async getStateValidatorBalances({stateId, validatorIds = []}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
 
-      if (indices) {
+      if (validatorIds.length) {
+        assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
+
         const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
-        for (const id of indices) {
-          if (typeof id === "number") {
-            if (state.validators.length <= id) {
-              continue;
-            }
-            balances.push({index: id, balance: state.balances.get(id)});
-          } else {
-            const index = headState.epochCtx.pubkey2index.get(id);
-            if (index != null && index <= state.validators.length) {
-              balances.push({index, balance: state.balances.get(index)});
-            }
+        for (const id of validatorIds) {
+          const resp = getStateValidatorIndex(id, state, headState.epochCtx.pubkey2index);
+
+          if (resp.valid) {
+            balances.push({
+              index: resp.validatorIndex,
+              balance: state.balances.get(resp.validatorIndex),
+            });
           }
         }
         return {
-          executionOptimistic: IS_OPTIMISTIC_TEMP,
           data: balances,
+          meta: {executionOptimistic, finalized},
         };
       }
 
@@ -155,42 +237,67 @@ export function getBeaconStateApi({
         resp.push({index: i, balance: balancesArr[i]});
       }
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
         data: resp,
+        meta: {executionOptimistic, finalized},
       };
     },
 
-    async getEpochCommittees(stateId, filters) {
-      const state = await resolveStateId(config, chain, db, stateId);
+    async postStateValidatorBalances(args, context) {
+      return this.getStateValidatorBalances(args, context);
+    },
+
+    async getEpochCommittees({stateId, ...filters}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
 
       const stateCached = state as CachedBeaconStateAltair;
       if (stateCached.epochCtx === undefined) {
         throw new ApiError(400, `No cached state available for stateId: ${stateId}`);
       }
 
-      const shuffling = stateCached.epochCtx.getShufflingAtEpoch(filters?.epoch ?? computeEpochAtSlot(state.slot));
-      const committes = shuffling.committees;
-      const committesFlat = committes.flatMap((slotCommittees, committeeIndex) => {
-        if (filters?.index !== undefined && filters.index !== committeeIndex) {
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      const epoch = filters.epoch ?? stateEpoch;
+      const startSlot = computeStartSlotAtEpoch(epoch);
+      const endSlot = startSlot + SLOTS_PER_EPOCH - 1;
+
+      if (Math.abs(epoch - stateEpoch) > 1) {
+        throw new ApiError(400, `Epoch ${epoch} must be within one epoch of state epoch ${stateEpoch}`);
+      }
+
+      if (filters.slot !== undefined && (filters.slot < startSlot || filters.slot > endSlot)) {
+        throw new ApiError(400, `Slot ${filters.slot} is not in epoch ${epoch}`);
+      }
+
+      const decisionRoot = stateCached.epochCtx.getShufflingDecisionRoot(epoch);
+      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
+      if (!shuffling) {
+        throw new ApiError(
+          500,
+          `No shuffling found to calculate committees for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
+        );
+      }
+      const committees = shuffling.committees;
+      const committeesFlat = committees.flatMap((slotCommittees, slotInEpoch) => {
+        const slot = startSlot + slotInEpoch;
+        if (filters.slot !== undefined && filters.slot !== slot) {
           return [];
         }
-        return slotCommittees.flatMap((committee, slot) => {
-          if (filters?.slot !== undefined && filters.slot !== slot) {
+        return slotCommittees.flatMap((committee, committeeIndex) => {
+          if (filters.index !== undefined && filters.index !== committeeIndex) {
             return [];
           }
           return [
             {
               index: committeeIndex,
               slot,
-              validators: committee,
+              validators: Array.from(committee),
             },
           ];
         });
       });
 
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
-        data: committesFlat,
+        data: committeesFlat,
+        meta: {executionOptimistic, finalized},
       };
     },
 
@@ -198,9 +305,9 @@ export function getBeaconStateApi({
      * Retrieves the sync committees for the given state.
      * @param epoch Fetch sync committees for the given epoch. If not present then the sync committees for the epoch of the state will be obtained.
      */
-    async getEpochSyncCommittees(stateId, epoch) {
+    async getEpochSyncCommittees({stateId, epoch}) {
       // TODO: Should pick a state with the provided epoch too
-      const state = await resolveStateId(config, chain, db, stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
 
       // TODO: If possible compute the syncCommittees in advance of the fork and expose them here.
       // So the validators can prepare and potentially attest the first block. Not critical tho, it's very unlikely
@@ -215,14 +322,84 @@ export function getBeaconStateApi({
       }
 
       const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
+      const validatorIndices = new Array<ValidatorIndex>(...syncCommitteeCache.validatorIndices);
+
+      // Subcommittee assignments of the current sync committee
+      const validatorAggregates: ValidatorIndex[][] = [];
+      for (let i = 0; i < validatorIndices.length; i += SYNC_COMMITTEE_SUBNET_SIZE) {
+        validatorAggregates.push(validatorIndices.slice(i, i + SYNC_COMMITTEE_SUBNET_SIZE));
+      }
 
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
         data: {
-          validators: syncCommitteeCache.validatorIndices,
-          // TODO: This is not used by the validator and will be deprecated soon
-          validatorAggregates: [],
+          validators: validatorIndices,
+          validatorAggregates,
         },
+        meta: {executionOptimistic, finalized},
+      };
+    },
+
+    async getPendingDeposits({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending deposits for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingDeposits} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingDeposits.serialize() : pendingDeposits.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getPendingPartialWithdrawals({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending partial withdrawals for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingPartialWithdrawals} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingPartialWithdrawals.serialize() : pendingPartialWithdrawals.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getPendingConsolidations({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostElectra(fork)) {
+        throw new ApiError(400, `Cannot retrieve pending consolidations for pre-electra state fork=${fork}`);
+      }
+
+      const {pendingConsolidations} = state as BeaconStateElectra;
+
+      return {
+        data: context?.returnBytes ? pendingConsolidations.serialize() : pendingConsolidations.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
+    async getProposerLookahead({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      const fork = config.getForkName(state.slot);
+
+      if (!isForkPostFulu(fork)) {
+        throw new ApiError(400, `Cannot retrieve proposer lookahead for pre-fulu state fork=${fork}`);
+      }
+
+      const {proposerLookahead} = state as BeaconStateFulu;
+
+      return {
+        data: context?.returnBytes ? proposerLookahead.serialize() : proposerLookahead.toValue(),
+        meta: {executionOptimistic, finalized, version: fork},
       };
     },
   };

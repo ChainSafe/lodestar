@@ -1,7 +1,7 @@
-import {CachedBeaconStateAllForks, ISignatureSet, getProposerSignatureSet} from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
-import {allForks, Root, allForks as allForkTypes, ssz, Slot} from "@lodestar/types";
+import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
+import {CachedBeaconStateAllForks, ISignatureSet, getBlockProposerSignatureSet} from "@lodestar/state-transition";
+import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {IBlsVerifier} from "../../chain/bls/index.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 
@@ -10,21 +10,21 @@ export type BackfillBlockHeader = {
   root: Root;
 };
 
-export type BackfillBlock = BackfillBlockHeader & {block: allForks.SignedBeaconBlock};
+export type BackfillBlock = BackfillBlockHeader & {block: SignedBeaconBlock};
 
 export function verifyBlockSequence(
-  config: IBeaconConfig,
-  blocks: allForkTypes.SignedBeaconBlock[],
+  config: BeaconConfig,
+  blocks: SignedBeaconBlock[],
   anchorRoot: Root
 ): {
   nextAnchor: BackfillBlock | null;
-  verifiedBlocks: allForkTypes.SignedBeaconBlock[];
+  verifiedBlocks: SignedBeaconBlock[];
   error?: BackfillSyncErrorCode.NOT_LINEAR;
 } {
   let nextRoot: Root = anchorRoot;
   let nextAnchor: BackfillBlock | null = null;
 
-  const verifiedBlocks: allForkTypes.SignedBeaconBlock[] = [];
+  const verifiedBlocks: SignedBeaconBlock[] = [];
   for (const block of blocks.reverse()) {
     const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     if (!ssz.Root.equals(blockRoot, nextRoot)) {
@@ -34,7 +34,7 @@ export function verifyBlockSequence(
       return {nextAnchor, verifiedBlocks, error: BackfillSyncErrorCode.NOT_LINEAR};
     }
     verifiedBlocks.push(block);
-    nextAnchor = {block, slot: block.message.slot, root: nextRoot};
+    nextAnchor = {block: block, slot: block.message.slot, root: nextRoot};
     nextRoot = block.message.parentRoot;
   }
   return {nextAnchor, verifiedBlocks};
@@ -43,12 +43,12 @@ export function verifyBlockSequence(
 export async function verifyBlockProposerSignature(
   bls: IBlsVerifier,
   state: CachedBeaconStateAllForks,
-  blocks: allForkTypes.SignedBeaconBlock[]
+  blocks: SignedBeaconBlock[]
 ): Promise<void> {
   if (blocks.length === 1 && blocks[0].message.slot === GENESIS_SLOT) return;
   const signatures = blocks.reduce((sigs: ISignatureSet[], block) => {
     // genesis block doesn't have valid signature
-    if (block.message.slot !== GENESIS_SLOT) sigs.push(getProposerSignatureSet(state, block));
+    if (block.message.slot !== GENESIS_SLOT) sigs.push(getBlockProposerSignatureSet(state, block));
     return sigs;
   }, []);
 

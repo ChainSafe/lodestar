@@ -1,13 +1,11 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
 import {
-  compileRouteUrlFormater,
-  toColonNotationPath,
   Token,
   TokenType,
+  compileRouteUrlFormatter,
+  toColonNotationPath,
   urlToTokens,
 } from "../../../src/utils/urlFormat.js";
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 describe("utils / urlFormat", () => {
   const testCases: {
@@ -55,14 +53,14 @@ describe("utils / urlFormat", () => {
 
   for (const {urlTemplate, colonNotation, tokens, cases} of testCases) {
     it(urlTemplate, () => {
-      expect(urlToTokens(urlTemplate)).deep.equal(tokens, "Wrong tokens");
+      expect(urlToTokens(urlTemplate)).toEqual(tokens);
 
-      expect(toColonNotationPath(urlTemplate)).equal(colonNotation, "Wrong colonNotation");
+      expect(toColonNotationPath(urlTemplate)).toBe(colonNotation);
 
-      const utlFormater = compileRouteUrlFormater(urlTemplate);
+      const urlFormatter = compileRouteUrlFormatter(urlTemplate);
 
-      for (const [i, {args, url}] of cases.entries()) {
-        expect(utlFormater(args)).to.equal(url, `wrong case ${i}`);
+      for (const [_, {args, url}] of cases.entries()) {
+        expect(urlFormatter(args)).toBe(url);
       }
     });
   }

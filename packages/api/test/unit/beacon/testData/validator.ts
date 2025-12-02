@@ -1,21 +1,22 @@
 import {ForkName} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
-import {Api} from "../../../../src/beacon/routes/validator.js";
+import {ProducedBlockSource, ssz} from "@lodestar/types";
+import {BuilderSelection, Endpoints} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const ZERO_HASH = Buffer.alloc(32, 0);
-const ZERO_HASH_HEX = "0x" + ZERO_HASH.toString("hex");
-const randaoReveal = Buffer.alloc(96, 1);
-const graffiti = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2";
+const ZERO_HASH = new Uint8Array(32);
+const ZERO_HASH_HEX = "0x" + Buffer.from(ZERO_HASH).toString("hex");
+const randaoReveal = new Uint8Array(96).fill(1);
+const selectionProof = new Uint8Array(96).fill(1);
+const graffiti = "a".repeat(32);
+const feeRecipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
-export const testData: GenericServerTestCases<Api> = {
+export const testData: GenericServerTestCases<Endpoints> = {
   getAttesterDuties: {
-    args: [1000, [1, 2, 3]],
+    args: {epoch: 1000, indices: [1, 2, 3]},
     res: {
-      executionOptimistic: true,
       data: [
         {
-          pubkey: Buffer.alloc(48, 1),
+          pubkey: new Uint8Array(48).fill(1),
           validatorIndex: 2,
           committeeIndex: 3,
           committeeLength: 4,
@@ -24,74 +25,107 @@ export const testData: GenericServerTestCases<Api> = {
           slot: 7,
         },
       ],
-      dependentRoot: ZERO_HASH_HEX,
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
     },
   },
   getProposerDuties: {
-    args: [1000],
+    args: {epoch: 1000},
     res: {
-      executionOptimistic: true,
-      data: [{slot: 1, validatorIndex: 2, pubkey: Buffer.alloc(48, 3)}],
-      dependentRoot: ZERO_HASH_HEX,
+      data: [{slot: 1, validatorIndex: 2, pubkey: new Uint8Array(48).fill(3)}],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
+  getProposerDutiesV2: {
+    args: {epoch: 1000},
+    res: {
+      data: [{slot: 1, validatorIndex: 2, pubkey: new Uint8Array(48).fill(3)}],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
     },
   },
   getSyncCommitteeDuties: {
-    args: [1000, [1, 2, 3]],
+    args: {epoch: 1000, indices: [1, 2, 3]},
     res: {
-      executionOptimistic: true,
-      data: [{pubkey: Buffer.alloc(48, 1), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
+      data: [{pubkey: new Uint8Array(48).fill(1), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
+      meta: {executionOptimistic: true},
     },
   },
-  produceBlock: {
-    args: [32000, randaoReveal, graffiti],
-    res: {data: ssz.phase0.BeaconBlock.defaultValue()},
-  },
-  produceBlockV2: {
-    args: [32000, randaoReveal, graffiti],
-    res: {data: ssz.altair.BeaconBlock.defaultValue(), version: ForkName.altair},
-  },
-  produceBlindedBlock: {
-    args: [32000, randaoReveal, graffiti],
-    res: {data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(), version: ForkName.bellatrix},
+  produceBlockV3: {
+    args: {
+      slot: 32000,
+      randaoReveal,
+      graffiti,
+      skipRandaoVerification: true,
+      builderBoostFactor: 0n,
+      feeRecipient,
+      builderSelection: BuilderSelection.ExecutionAlways,
+      strictFeeRecipientCheck: true,
+      blindedLocal: false,
+    },
+    res: {
+      data: ssz.electra.BlockContents.defaultValue(),
+      meta: {
+        version: ForkName.electra,
+        executionPayloadValue: ssz.Wei.defaultValue(),
+        consensusBlockValue: ssz.Wei.defaultValue(),
+        executionPayloadBlinded: false,
+        executionPayloadSource: ProducedBlockSource.engine,
+      },
+    },
   },
   produceAttestationData: {
-    args: [2, 32000],
+    args: {committeeIndex: 2, slot: 32000},
     res: {data: ssz.phase0.AttestationData.defaultValue()},
   },
   produceSyncCommitteeContribution: {
-    args: [32000, 2, ZERO_HASH],
+    args: {slot: 32000, subcommitteeIndex: 2, beaconBlockRoot: ZERO_HASH},
     res: {data: ssz.altair.SyncCommitteeContribution.defaultValue()},
   },
   getAggregatedAttestation: {
-    args: [ZERO_HASH, 32000],
+    args: {attestationDataRoot: ZERO_HASH, slot: 32000},
     res: {data: ssz.phase0.Attestation.defaultValue()},
   },
+  getAggregatedAttestationV2: {
+    args: {attestationDataRoot: ZERO_HASH, slot: 32000, committeeIndex: 2},
+    res: {data: ssz.electra.Attestation.defaultValue(), meta: {version: ForkName.electra}},
+  },
   publishAggregateAndProofs: {
-    args: [[ssz.phase0.SignedAggregateAndProof.defaultValue()]],
+    args: {signedAggregateAndProofs: [ssz.phase0.SignedAggregateAndProof.defaultValue()]},
+    res: undefined,
+  },
+  publishAggregateAndProofsV2: {
+    args: {signedAggregateAndProofs: [ssz.electra.SignedAggregateAndProof.defaultValue()]},
     res: undefined,
   },
   publishContributionAndProofs: {
-    args: [[ssz.altair.SignedContributionAndProof.defaultValue()]],
+    args: {contributionAndProofs: [ssz.altair.SignedContributionAndProof.defaultValue()]},
     res: undefined,
   },
   prepareBeaconCommitteeSubnet: {
-    args: [[{validatorIndex: 1, committeeIndex: 2, committeesAtSlot: 3, slot: 4, isAggregator: true}]],
+    args: {subscriptions: [{validatorIndex: 1, committeeIndex: 2, committeesAtSlot: 3, slot: 4, isAggregator: true}]},
     res: undefined,
   },
   prepareSyncCommitteeSubnets: {
-    args: [[{validatorIndex: 1, syncCommitteeIndices: [2], untilEpoch: 3}]],
+    args: {subscriptions: [{validatorIndex: 1, syncCommitteeIndices: [2], untilEpoch: 3}]},
     res: undefined,
   },
   prepareBeaconProposer: {
-    args: [[{validatorIndex: "1", feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}]],
+    args: {proposers: [{validatorIndex: 1, feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}]},
     res: undefined,
   },
+  submitBeaconCommitteeSelections: {
+    args: {selections: []},
+    res: {data: [{validatorIndex: 1, slot: 2, selectionProof}]},
+  },
+  submitSyncCommitteeSelections: {
+    args: {selections: []},
+    res: {data: [{validatorIndex: 1, slot: 2, subcommitteeIndex: 3, selectionProof}]},
+  },
   getLiveness: {
-    args: [[0], 0],
+    args: {epoch: 0, indices: [0]},
     res: {data: []},
   },
   registerValidator: {
-    args: [[ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]],
+    args: {registrations: [ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]},
     res: undefined,
   },
 };

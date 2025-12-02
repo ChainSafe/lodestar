@@ -1,4 +1,4 @@
-import {Slot, Epoch, RootHex} from "@lodestar/types";
+import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 
 export enum InvalidBlockCode {
@@ -95,8 +95,4 @@ export type ForkChoiceErrorType =
   | {code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT; error: Error}
   | {code: ForkChoiceErrorCode.AFTER_BLOCK_FAILED; error: Error};
 
-export class ForkChoiceError extends LodestarError<ForkChoiceErrorType> {
-  constructor(type: ForkChoiceErrorType) {
-    super(type);
-  }
-}
+export class ForkChoiceError extends LodestarError<ForkChoiceErrorType> {}

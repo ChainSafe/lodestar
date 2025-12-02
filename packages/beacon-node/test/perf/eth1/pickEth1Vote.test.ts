@@ -1,7 +1,7 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {phase0, ssz} from "@lodestar/types";
+import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
-import {newFilledArray, BeaconStateAllForks} from "@lodestar/state-transition";
+import {BeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
+import {phase0, ssz} from "@lodestar/types";
 import {fastSerializeEth1Data, pickEth1Vote} from "../../../src/eth1/utils/eth1Vote.js";
 
 describe("eth1 / pickEth1Vote", () => {
@@ -38,12 +38,12 @@ describe("eth1 / pickEth1Vote", () => {
     blockHash: Buffer.alloc(32, 0xdd),
   }));
 
-  itBench("pickEth1Vote - no votes", () => {
-    pickEth1Vote((stateNoVotes as unknown) as BeaconStateAllForks, votesToConsider);
+  bench("pickEth1Vote - no votes", () => {
+    pickEth1Vote(stateNoVotes as unknown as BeaconStateAllForks, votesToConsider);
   });
 
-  itBench("pickEth1Vote - max votes", () => {
-    pickEth1Vote((stateMaxVotes as unknown) as BeaconStateAllForks, votesToConsider);
+  bench("pickEth1Vote - max votes", () => {
+    pickEth1Vote(stateMaxVotes as unknown as BeaconStateAllForks, votesToConsider);
   });
 });
 
@@ -66,14 +66,14 @@ describe("eth1 / pickEth1Vote serializers", () => {
   };
   const eth1DataTree = ssz.phase0.Eth1Data.toViewDU(eth1DataValue);
 
-  itBench(`pickEth1Vote - Eth1Data hashTreeRoot value x${ETH1_FOLLOW_DISTANCE_MAINNET}`, () => {
+  bench(`pickEth1Vote - Eth1Data hashTreeRoot value x${ETH1_FOLLOW_DISTANCE_MAINNET}`, () => {
     for (let i = 0; i < ETH1_FOLLOW_DISTANCE_MAINNET; i++) {
       ssz.phase0.Eth1Data.hashTreeRoot(eth1DataValue);
     }
   });
 
   // Create new copies of eth1DataTree to drop the hashing cache
-  itBench({
+  bench({
     id: `pickEth1Vote - Eth1Data hashTreeRoot tree x${ETH1_FOLLOW_DISTANCE_MAINNET}`,
     beforeEach: () =>
       Array.from({length: ETH1_FOLLOW_DISTANCE_MAINNET}, () => ssz.phase0.Eth1Data.toViewDU(eth1DataValue)),
@@ -84,13 +84,13 @@ describe("eth1 / pickEth1Vote serializers", () => {
     },
   });
 
-  itBench(`pickEth1Vote - Eth1Data fastSerialize value x${ETH1_FOLLOW_DISTANCE_MAINNET}`, () => {
+  bench(`pickEth1Vote - Eth1Data fastSerialize value x${ETH1_FOLLOW_DISTANCE_MAINNET}`, () => {
     for (let i = 0; i < ETH1_FOLLOW_DISTANCE_MAINNET; i++) {
       fastSerializeEth1Data(eth1DataValue);
     }
   });
 
-  itBench(`pickEth1Vote - Eth1Data fastSerialize tree x${ETH1_FOLLOW_DISTANCE_MAINNET}`, () => {
+  bench(`pickEth1Vote - Eth1Data fastSerialize tree x${ETH1_FOLLOW_DISTANCE_MAINNET}`, () => {
     for (let i = 0; i < ETH1_FOLLOW_DISTANCE_MAINNET; i++) {
       fastSerializeEth1Data(eth1DataTree);
     }

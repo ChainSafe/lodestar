@@ -1,3 +1,4 @@
+import {BLSPubkey, Epoch} from "@lodestar/types";
 import {ISlashingProtection} from "../../src/index.js";
 
 /**
@@ -9,6 +10,9 @@ export class SlashingProtectionMock implements ISlashingProtection {
   }
   async checkAndInsertAttestation(): Promise<void> {
     //
+  }
+  async hasAttestedInEpoch(_p: BLSPubkey, _e: Epoch): Promise<boolean> {
+    return false;
   }
   async importInterchange(): Promise<void> {
     //

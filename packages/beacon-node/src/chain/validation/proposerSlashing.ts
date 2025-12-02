@@ -1,11 +1,27 @@
-import {phase0} from "@lodestar/types";
 import {assertValidProposerSlashing, getProposerSlashingSignatureSets} from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
-import {ProposerSlashingError, ProposerSlashingErrorCode, GossipAction} from "../errors/index.js";
+import {phase0} from "@lodestar/types";
+import {GossipAction, ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/index.js";
+import {IBeaconChain} from "../index.js";
+
+export async function validateApiProposerSlashing(
+  chain: IBeaconChain,
+  proposerSlashing: phase0.ProposerSlashing
+): Promise<void> {
+  const prioritizeBls = true;
+  return validateProposerSlashing(chain, proposerSlashing, prioritizeBls);
+}
 
 export async function validateGossipProposerSlashing(
   chain: IBeaconChain,
   proposerSlashing: phase0.ProposerSlashing
+): Promise<void> {
+  return validateProposerSlashing(chain, proposerSlashing);
+}
+
+async function validateProposerSlashing(
+  chain: IBeaconChain,
+  proposerSlashing: phase0.ProposerSlashing,
+  prioritizeBls = false
 ): Promise<void> {
   // [IGNORE] The proposer slashing is the first valid proposer slashing received for the proposer with index
   // proposer_slashing.signed_header_1.message.proposer_index.
@@ -29,7 +45,7 @@ export async function validateGossipProposerSlashing(
   }
 
   const signatureSets = getProposerSlashingSignatureSets(state, proposerSlashing);
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
       error: Error("Invalid signature"),

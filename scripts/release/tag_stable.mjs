@@ -1,5 +1,3 @@
-/* eslint-disable import/no-extraneous-dependencies */
-
 import semver from "semver";
 import {
   assertCommitExistsInBranch,
@@ -17,14 +15,6 @@ import {
   syncGitRemote,
   usage,
 } from "./utils.mjs";
-
-/* eslint-disable
-  no-console,
-  @typescript-eslint/explicit-function-return-type,
-  @typescript-eslint/no-unsafe-assignment,
-  @typescript-eslint/no-unsafe-member-access,
-  @typescript-eslint/no-unsafe-call
-*/
 
 usage(`
 Publish a Lodestar stable release.

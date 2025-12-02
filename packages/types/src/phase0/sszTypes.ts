@@ -2,9 +2,9 @@ import {
   BitListType,
   BitVectorType,
   ContainerType,
-  ContainerNodeStructType,
   ListBasicType,
   ListCompositeType,
+  ListUintNum64Type,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
@@ -20,7 +20,6 @@ import {
   MAX_ATTESTER_SLASHINGS,
   MAX_DEPOSITS,
   MAX_PROPOSER_SLASHINGS,
-  MAX_REQUEST_BLOCKS,
   MAX_VALIDATORS_PER_COMMITTEE,
   MAX_VOLUNTARY_EXITS,
   SLOTS_PER_EPOCH,
@@ -28,18 +27,16 @@ import {
   VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import * as primitiveSsz from "../primitive/sszTypes.js";
+import {ValidatorNodeStruct} from "./validator.js";
 
 const {
-  Boolean,
   Bytes32,
   UintNum64,
   UintBn64,
   Slot,
   Epoch,
-  EpochInf,
   CommitteeIndex,
   ValidatorIndex,
-  Gwei,
   Root,
   Version,
   ForkDigest,
@@ -226,29 +223,22 @@ export const HistoricalBatchRoots = new ContainerType(
   {typeName: "HistoricalBatchRoots", jsonCase: "eth2"}
 );
 
-export const ValidatorContainer = new ContainerType(
-  {
-    pubkey: BLSPubkey,
-    withdrawalCredentials: Bytes32,
-    effectiveBalance: UintNum64,
-    slashed: Boolean,
-    activationEligibilityEpoch: EpochInf,
-    activationEpoch: EpochInf,
-    exitEpoch: EpochInf,
-    withdrawableEpoch: EpochInf,
-  },
-  {typeName: "Validator", jsonCase: "eth2"}
-);
-
-export const ValidatorNodeStruct = new ContainerNodeStructType(ValidatorContainer.fields, ValidatorContainer.opts);
 // The main Validator type is the 'ContainerNodeStructType' version
 export const Validator = ValidatorNodeStruct;
 
 // Export as stand-alone for direct tree optimizations
 export const Validators = new ListCompositeType(ValidatorNodeStruct, VALIDATOR_REGISTRY_LIMIT);
-export const Balances = new ListBasicType(UintNum64, VALIDATOR_REGISTRY_LIMIT);
+// this ListUintNum64Type is used to cache Leaf Nodes of BeaconState.balances after epoch transition
+export const Balances = new ListUintNum64Type(VALIDATOR_REGISTRY_LIMIT);
 export const RandaoMixes = new VectorCompositeType(Bytes32, EPOCHS_PER_HISTORICAL_VECTOR);
-export const Slashings = new VectorBasicType(Gwei, EPOCHS_PER_SLASHINGS_VECTOR);
+/**
+ * This is initially a Gwei (BigInt) vector, however since Nov 2023 it's converted to UintNum64 (number) vector in the state transition because:
+ * - state.slashings[nextEpoch % EPOCHS_PER_SLASHINGS_VECTOR] is reset per epoch in processSlashingsReset()
+ * - max slashed validators per epoch is SLOTS_PER_EPOCH * MAX_ATTESTER_SLASHINGS * MAX_VALIDATORS_PER_COMMITTEE which is 32 * 2 * 2048 = 131072 on mainnet
+ * - with that and 32_000_000_000 MAX_EFFECTIVE_BALANCE or 2048_000_000_000 MAX_EFFECTIVE_BALANCE_ELECTRA, it still fits in a number given that Math.floor(Number.MAX_SAFE_INTEGER / 32_000_000_000) = 281474
+ * - we don't need to compute the total slashings from state.slashings, it's handled by totalSlashingsByIncrement in EpochCache
+ */
+export const Slashings = new VectorBasicType(UintNum64, EPOCHS_PER_SLASHINGS_VECTOR);
 export const JustificationBits = new BitVectorType(JUSTIFICATION_BITS_LENGTH);
 
 // Misc dependants
@@ -324,6 +314,8 @@ export const Attestation = new ContainerType(
   },
   {typeName: "Attestation", jsonCase: "eth2"}
 );
+
+export const SingleAttestation = Attestation;
 
 export const AttesterSlashing = new ContainerType(
   {
@@ -508,8 +500,6 @@ export const BeaconBlocksByRangeRequest = new ContainerType(
   },
   {typeName: "BeaconBlocksByRangeRequest", jsonCase: "eth2"}
 );
-
-export const BeaconBlocksByRootRequest = new ListCompositeType(Root, MAX_REQUEST_BLOCKS);
 
 // Api types
 // =========

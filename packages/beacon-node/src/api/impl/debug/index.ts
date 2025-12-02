@@ -1,48 +1,131 @@
 import {routes} from "@lodestar/api";
-import {resolveStateId} from "../beacon/state/utils.js";
+import {ApplicationMethods} from "@lodestar/api/server";
+import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {BeaconState, deneb, fulu, sszTypesFor} from "@lodestar/types";
+import {fromAsync, toRootHex} from "@lodestar/utils";
+import {isOptimisticBlock} from "../../../util/forkChoice.js";
+import {getStateSlotFromBytes} from "../../../util/multifork.js";
+import {getBlockResponse} from "../beacon/blocks/utils.js";
+import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
-import {isOptimsticBlock} from "../../../util/forkChoice.js";
+import {assertUniqueItems} from "../utils.js";
 
-export function getDebugApi({chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">): routes.debug.Api {
+export function getDebugApi({
+  chain,
+  config,
+  db,
+}: Pick<ApiModules, "chain" | "config" | "db">): ApplicationMethods<routes.debug.Endpoints> {
   return {
-    async getDebugChainHeads() {
-      const heads = chain.forkChoice.getHeads();
-      return {
-        data: heads.map((blockSummary) => ({slot: blockSummary.slot, root: blockSummary.blockRoot})),
-      };
-    },
-
     async getDebugChainHeadsV2() {
       const heads = chain.forkChoice.getHeads();
       return {
         data: heads.map((block) => ({
           slot: block.slot,
           root: block.blockRoot,
-          executionOptimistic: isOptimsticBlock(block),
+          executionOptimistic: isOptimisticBlock(block),
         })),
       };
     },
 
-    async getState(stateId: string, format?: routes.debug.StateFormat) {
-      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
-      if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return state.serialize() as any;
-      } else {
-        return {data: state.toValue()};
-      }
+    async getDebugForkChoice() {
+      return {
+        data: {
+          justifiedCheckpoint: chain.forkChoice.getJustifiedCheckpoint(),
+          finalizedCheckpoint: chain.forkChoice.getFinalizedCheckpoint(),
+          forkChoiceNodes: chain.forkChoice.getAllNodes().map((node) => ({
+            slot: node.slot,
+            blockRoot: node.blockRoot,
+            parentRoot: node.parentRoot,
+            justifiedEpoch: node.justifiedEpoch,
+            finalizedEpoch: node.finalizedEpoch,
+            weight: node.weight,
+            validity: (() => {
+              switch (node.executionStatus) {
+                case ExecutionStatus.Valid:
+                  return "valid";
+                case ExecutionStatus.Invalid:
+                  return "invalid";
+                case ExecutionStatus.Syncing:
+                case ExecutionStatus.PreMerge:
+                  return "optimistic";
+              }
+            })(),
+            executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+          })),
+        },
+      };
     },
 
-    async getStateV2(stateId: string, format?: routes.debug.StateFormat) {
-      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
-      if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return state.serialize() as any;
+    async getProtoArrayNodes() {
+      const nodes = chain.forkChoice.getAllNodes().map((node) => ({
+        // if node has executionPayloadNumber, it will overwrite the below default
+        executionPayloadNumber: 0,
+        ...node,
+        executionPayloadBlockHash: node.executionPayloadBlockHash ?? "",
+        parent: String(node.parent),
+        bestChild: String(node.bestChild),
+        bestDescendant: String(node.bestDescendant),
+      }));
+      return {data: nodes};
+    },
+
+    async getStateV2({stateId}, context) {
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      let slot: number, data: Uint8Array | BeaconState;
+      if (state instanceof Uint8Array) {
+        slot = getStateSlotFromBytes(state);
+        data = state;
       } else {
-        return {data: state.toValue(), version: config.getForkName(state.slot)};
+        slot = state.slot;
+        data = context?.returnBytes ? state.serialize() : state.toValue();
       }
+      return {
+        data,
+        meta: {
+          version: config.getForkName(slot),
+          executionOptimistic,
+          finalized,
+        },
+      };
+    },
+
+    async getDebugDataColumnSidecars({blockId, indices}) {
+      assertUniqueItems(indices, "Duplicate indices provided");
+
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const fork = config.getForkName(block.message.slot);
+      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+
+      let dataColumnSidecars: fulu.DataColumnSidecars;
+
+      const blobCount = isForkPostDeneb(fork)
+        ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length
+        : 0;
+
+      if (isForkPostFulu(fork) && blobCount > 0) {
+        dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
+        if (dataColumnSidecars.length === 0) {
+          dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
+        }
+
+        if (dataColumnSidecars.length === 0) {
+          throw Error(
+            `dataColumnSidecars not found in db for slot=${block.message.slot} root=${toRootHex(blockRoot)} blobs=${blobCount}`
+          );
+        }
+      } else {
+        dataColumnSidecars = [];
+      }
+
+      return {
+        data: indices ? dataColumnSidecars.filter(({index}) => indices.includes(index)) : dataColumnSidecars,
+        meta: {
+          executionOptimistic,
+          finalized,
+          version: fork,
+        },
+      };
     },
   };
 }

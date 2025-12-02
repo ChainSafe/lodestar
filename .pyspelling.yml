@@ -1,0 +1,42 @@
+matrix:
+  - name: markdown
+    aspell:
+      lang: en
+      ignore-case: true
+    dictionary:
+      wordlists:
+        - .wordlist.txt
+    pipeline:
+      - pyspelling.filters.url:
+      - pyspelling.filters.markdown:
+          markdown_extensions:
+          - pymdownx.superfences:
+          - pymdownx.highlight:
+          - pymdownx.striphtml:
+          - pymdownx.magiclink:
+      - pyspelling.filters.url:
+      - pyspelling.filters.html:
+          comments: false
+          ignores:
+            - code
+            - pre
+      - pyspelling.filters.context:
+          context_visible_first: true
+          delimiters:
+          # Ignore possessive endings
+          - open: '(?<=\w)''s(?!\w)'
+            close: '\b'
+          # Ignore eth methods (e.g. eth_estimateGas)
+          - open: '(?:\s)eth_(?:\w*)'
+            close: '\s'
+          # Ignore flags in cli.md
+          - open: '--(?:\w*)'
+            close: '[^\w]'
+          # Ignore hex strings
+          - open: '0x[a-fA-F0-9]'
+            close: '[^a-fA-F0-9]'
+    sources:
+      - "docs/**/*.md"
+      - "CONTRIBUTING.md"
+      - "README.md"
+      - "packages/*/README.md"

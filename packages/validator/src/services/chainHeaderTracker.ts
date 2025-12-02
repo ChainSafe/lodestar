@@ -1,8 +1,7 @@
-import {Api, routes} from "@lodestar/api";
-import {ILogger} from "@lodestar/utils";
-import {Slot, Root, RootHex} from "@lodestar/types";
+import {ApiClient, routes} from "@lodestar/api";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {fromHexString} from "@chainsafe/ssz";
+import {Root, RootHex, Slot} from "@lodestar/types";
+import {Logger, fromHex} from "@lodestar/utils";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 
 const {EventType} = routes.events;
@@ -25,14 +24,26 @@ export class ChainHeaderTracker {
   private readonly fns: RunEveryFn[] = [];
 
   constructor(
-    private readonly logger: ILogger,
-    private readonly api: Api,
+    private readonly logger: Logger,
+    private readonly api: ApiClient,
     private readonly emitter: ValidatorEventEmitter
   ) {}
 
   start(signal: AbortSignal): void {
-    this.api.events.eventstream([EventType.head], signal, this.onHeadUpdate);
-    this.logger.verbose("Subscribed to head event");
+    this.logger.verbose("Subscribing to head event");
+    this.api.events
+      .eventstream({
+        topics: [EventType.head],
+        signal,
+        onEvent: this.onHeadUpdate,
+        onError: (e) => {
+          this.logger.error("Failed to receive head event", {}, e);
+        },
+        onClose: () => {
+          this.logger.verbose("Closed stream for head event", {});
+        },
+      })
+      .catch((e) => this.logger.error("Failed to subscribe to head event", {}, e));
   }
 
   getCurrentChainHead(slot: Slot): Root | null {
@@ -52,7 +63,7 @@ export class ChainHeaderTracker {
       const {message} = event;
       const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot} = message;
       this.headBlockSlot = slot;
-      this.headBlockRoot = fromHexString(block);
+      this.headBlockRoot = fromHex(block);
 
       const headEventData = {
         slot: this.headBlockSlot,
@@ -70,7 +81,7 @@ export class ChainHeaderTracker {
       this.logger.verbose("Found new chain head", {
         slot: slot,
         head: block,
-        previouDuty: previousDutyDependentRoot,
+        previousDuty: previousDutyDependentRoot,
         currentDuty: currentDutyDependentRoot,
       });
     }

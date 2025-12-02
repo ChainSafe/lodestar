@@ -1,9 +1,9 @@
-import {itBench} from "@dapplion/benchmark";
-import {TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
+import {bench, describe} from "@chainsafe/benchmark";
 import {BitArray} from "@chainsafe/ssz";
+import {TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
 
-describe("SeenAggregatedAttestations perf test", function () {
+describe("SeenAggregatedAttestations perf test", () => {
   const targetEpoch = 2022;
   const attDataRoot = "0x55e1a1cce2aeb66f85b2285b8cb7aa55dfb67148b5e0067f0692b61ddbd2824b";
   const fullByte = 0b11111111;
@@ -28,7 +28,8 @@ describe("SeenAggregatedAttestations perf test", function () {
   ];
 
   for (const {id, aggregationBits} of testCases) {
-    itBench({
+    const committeeIndex = 0;
+    bench({
       id,
       beforeEach: () => {
         const seenCache = new SeenAggregatedAttestations(null);
@@ -38,13 +39,13 @@ describe("SeenAggregatedAttestations perf test", function () {
             aggregationBits: toAggregationBitsSingleFalse(i),
             trueBitCount: numAttestersInByte * 8 - 1,
           };
-          seenCache.add(targetEpoch, attDataRoot, aggregationInfo, false);
+          seenCache.add(targetEpoch, committeeIndex, attDataRoot, aggregationInfo, false);
         }
 
         return seenCache;
       },
       fn: (seenCache) => {
-        seenCache.isKnown(targetEpoch, attDataRoot, aggregationBits);
+        seenCache.isKnown(targetEpoch, committeeIndex, attDataRoot, aggregationBits);
       },
     });
   }

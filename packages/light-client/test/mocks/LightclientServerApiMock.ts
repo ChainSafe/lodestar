@@ -1,47 +1,91 @@
-import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {JsonPath} from "@chainsafe/ssz";
+import {concat} from "uint8arrays/concat";
+import {digest} from "@chainsafe/as-sha256";
+import {CompactMultiProof, ProofType, createProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
-import {altair, RootHex, SyncPeriod} from "@lodestar/types";
+import {ApplicationMethods} from "@lodestar/api/server";
+import {ForkName} from "@lodestar/params";
+import {RootHex, SyncPeriod, altair} from "@lodestar/types";
+import {notNullish} from "@lodestar/utils";
 import {BeaconStateAltair} from "../utils/types.js";
 
-export class LightclientServerApiMock implements routes.lightclient.Api {
-  readonly states = new Map<RootHex, BeaconStateAltair>();
-  readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
-  readonly snapshots = new Map<RootHex, routes.lightclient.LightclientSnapshotWithProof>();
-  latestHeadUpdate: routes.lightclient.LightclientOptimisticHeaderUpdate | null = null;
-  finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
+type ProofApi = ApplicationMethods<routes.proof.Endpoints>;
 
-  async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {
+export class ProofServerApiMock implements ProofApi {
+  readonly states = new Map<RootHex, BeaconStateAltair>();
+
+  async getStateProof({
+    stateId,
+    descriptor,
+  }: {
+    stateId: string;
+    descriptor: Uint8Array;
+  }): ReturnType<ProofApi["getStateProof"]> {
     const state = this.states.get(stateId);
     if (!state) throw Error(`stateId ${stateId} not available`);
-    return {data: state.createProof(paths)};
+    const proof = createProof(state.node, {type: ProofType.compactMulti, descriptor});
+    return {data: proof as CompactMultiProof, meta: {version: ForkName.bellatrix}};
   }
 
-  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
+  async getBlockProof({blockId}: {blockId: string}): ReturnType<ProofApi["getBlockProof"]> {
+    throw Error(`blockId ${blockId} not available`);
+  }
+}
+
+type LightClientApi = ApplicationMethods<routes.lightclient.Endpoints>;
+
+export class LightclientServerApiMock implements LightClientApi {
+  readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
+  readonly snapshots = new Map<RootHex, altair.LightClientBootstrap>();
+  latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
+  finalized: altair.LightClientFinalityUpdate | null = null;
+
+  async getLightClientUpdatesByRange(args: {
+    startPeriod: SyncPeriod;
+    count: number;
+  }): ReturnType<LightClientApi["getLightClientUpdatesByRange"]> {
     const updates: altair.LightClientUpdate[] = [];
-    for (let period = parseInt(String(from)); period <= parseInt(String(to)); period++) {
+    for (let period = parseInt(String(args.startPeriod)); period <= parseInt(String(args.count)); period++) {
       const update = this.updates.get(period);
       if (update) {
         updates.push(update);
       }
     }
-    return {data: updates};
+    return {data: updates, meta: {versions: Array.from({length: updates.length}, () => ForkName.bellatrix)}};
   }
 
-  async getOptimisticUpdate(): Promise<{data: routes.lightclient.LightclientOptimisticHeaderUpdate}> {
+  async getLightClientOptimisticUpdate(): ReturnType<LightClientApi["getLightClientOptimisticUpdate"]> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
-    return {data: this.latestHeadUpdate};
+    return {data: this.latestHeadUpdate, meta: {version: ForkName.bellatrix}};
   }
 
-  async getFinalityUpdate(): Promise<{data: routes.lightclient.LightclientFinalizedUpdate}> {
+  async getLightClientFinalityUpdate(): ReturnType<LightClientApi["getLightClientFinalityUpdate"]> {
     if (!this.finalized) throw Error("No finalized head update");
-    return {data: this.finalized};
+    return {data: this.finalized, meta: {version: ForkName.bellatrix}};
   }
 
-  async getBootstrap(blockRoot: string): Promise<{data: routes.lightclient.LightclientSnapshotWithProof}> {
+  async getLightClientBootstrap({
+    blockRoot,
+  }: {
+    blockRoot: string;
+  }): ReturnType<LightClientApi["getLightClientBootstrap"]> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
-    return {data: snapshot};
+    return {data: snapshot, meta: {version: ForkName.bellatrix}};
+  }
+
+  async getLightClientCommitteeRoot({
+    startPeriod,
+    count,
+  }: {
+    startPeriod: SyncPeriod;
+    count: number;
+  }): ReturnType<LightClientApi["getLightClientCommitteeRoot"]> {
+    const periods = Array.from({length: count}, (_ignored, i) => i + startPeriod);
+    const committeeHashes = periods
+      .map((period) => this.updates.get(period)?.nextSyncCommittee.pubkeys)
+      .filter(notNullish)
+      .map((pubkeys) => digest(concat(pubkeys)));
+    return {data: committeeHashes};
   }
 }
 

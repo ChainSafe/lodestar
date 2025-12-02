@@ -1,12 +1,18 @@
-import {config} from "@lodestar/config/default";
-import {Api, ReqTypes} from "../../../../src/beacon/routes/beacon/index.js";
+import {describe} from "vitest";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {getClient} from "../../../../src/beacon/client/beacon.js";
+import {Endpoints} from "../../../../src/beacon/routes/beacon/index.js";
 import {getRoutes} from "../../../../src/beacon/server/beacon.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/beacon.js";
 
 describe("beacon / beacon", () => {
-  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
+  runGenericServerTest<Endpoints>(
+    createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}),
+    getClient,
+    getRoutes,
+    testData
+  );
 
   // TODO: Extra tests to implement maybe
 

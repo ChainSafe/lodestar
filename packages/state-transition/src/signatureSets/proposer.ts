@@ -1,26 +1,26 @@
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {allForks, ssz, isBlindedBeaconBlock} from "@lodestar/types";
+import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 
 export function verifyProposerSignature(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.FullOrBlindedSignedBeaconBlock
+  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): boolean {
-  const signatureSet = getProposerSignatureSet(state, signedBlock);
+  const signatureSet = getBlockProposerSignatureSet(state, signedBlock);
   return verifySignatureSet(signatureSet);
 }
 
-export function getProposerSignatureSet(
+export function getBlockProposerSignatureSet(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.FullOrBlindedSignedBeaconBlock
+  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): ISignatureSet {
   const {config, epochCtx} = state;
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
+  const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
 
   const blockType = isBlindedBeaconBlock(signedBlock.message)
-    ? ssz.bellatrix.BlindedBeaconBlock
+    ? config.getPostBellatrixForkTypes(signedBlock.message.slot).BlindedBeaconBlock
     : config.getForkTypes(signedBlock.message.slot).BeaconBlock;
 
   return {
@@ -28,5 +28,35 @@ export function getProposerSignatureSet(
     pubkey: epochCtx.index2pubkey[signedBlock.message.proposerIndex],
     signingRoot: computeSigningRoot(blockType, signedBlock.message, domain),
     signature: signedBlock.signature,
+  };
+}
+
+export function getBlockHeaderProposerSignatureSetByParentStateSlot(
+  parentState: CachedBeaconStateAllForks,
+  signedBlockHeader: phase0.SignedBeaconBlockHeader
+) {
+  return getBlockHeaderProposerSignatureSet(parentState, signedBlockHeader, parentState.slot);
+}
+
+export function getBlockHeaderProposerSignatureSetByHeaderSlot(
+  headState: CachedBeaconStateAllForks,
+  signedBlockHeader: phase0.SignedBeaconBlockHeader
+) {
+  return getBlockHeaderProposerSignatureSet(headState, signedBlockHeader, signedBlockHeader.message.slot);
+}
+
+function getBlockHeaderProposerSignatureSet(
+  state: CachedBeaconStateAllForks,
+  signedBlockHeader: phase0.SignedBeaconBlockHeader,
+  domainSlot: Slot
+): ISignatureSet {
+  const {config, epochCtx} = state;
+  const domain = config.getDomain(domainSlot, DOMAIN_BEACON_PROPOSER, signedBlockHeader.message.slot);
+
+  return {
+    type: SignatureSetType.single,
+    pubkey: epochCtx.index2pubkey[signedBlockHeader.message.proposerIndex],
+    signingRoot: computeSigningRoot(ssz.phase0.BeaconBlockHeader, signedBlockHeader.message, domain),
+    signature: signedBlockHeader.signature,
   };
 }

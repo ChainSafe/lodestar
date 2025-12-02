@@ -1,11 +1,26 @@
-export {EpochContext} from "./cache/epochContext.js";
-export {EpochProcess} from "./cache/epochProcess.js";
-
-export {
-  CachedBeaconStatePhase0,
+export {EpochCache} from "./cache/epochCache.js";
+export type {EpochTransitionCache} from "./cache/epochTransitionCache.js";
+export type {
+  CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
-  CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
+  CachedBeaconStateDeneb,
+  CachedBeaconStateElectra,
+  CachedBeaconStateExecutions,
+  CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
+  CachedBeaconStatePhase0,
 } from "./cache/stateCache.js";
-
-export {BeaconStatePhase0, BeaconStateAltair, BeaconStateBellatrix, BeaconStateAllForks} from "./cache/types.js";
+export type {
+  BeaconStateAllForks,
+  BeaconStateAltair,
+  BeaconStateBellatrix,
+  BeaconStateCapella,
+  BeaconStateDeneb,
+  BeaconStateElectra,
+  BeaconStateExecutions,
+  BeaconStateFulu,
+  BeaconStateGloas,
+  BeaconStatePhase0,
+} from "./cache/types.js";

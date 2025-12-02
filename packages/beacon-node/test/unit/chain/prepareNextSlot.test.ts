@@ -1,162 +1,146 @@
-import {expect} from "chai";
-import sinon, {SinonStubbedInstance} from "sinon";
+import {Mock, MockInstance, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {WinstonLogger} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
-import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
-import {IBeaconChain} from "../../../src/chain/interface.js";
-import {LocalClock} from "../../../src/chain/clock/index.js";
+import {ProtoBlock} from "@lodestar/fork-choice";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
-import {StateRegenerator} from "../../../src/chain/regen/index.js";
-import {SinonStubFn} from "../../utils/types.js";
-import {generateCachedBellatrixState} from "../../utils/state.js";
-import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
-import {ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
-import {IExecutionEngine} from "../../../src/execution/engine/interface.js";
-import {StubbedChainMutable} from "../../utils/stub/index.js";
-
-type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "emitter" | "regen">;
+import {MockedLogger, getMockedLogger} from "../../mocks/loggerMock.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {generateCachedBellatrixState, zeroProtoBlock} from "../../utils/state.js";
 
 describe("PrepareNextSlot scheduler", () => {
-  const sandbox = sinon.createSandbox();
   const abortController = new AbortController();
 
-  let chainStub: StubbedChain;
+  let chainStub: MockedBeaconChain;
   let scheduler: PrepareNextSlotScheduler;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
-  let regenStub: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
-  let loggerStub: SinonStubbedInstance<WinstonLogger> & WinstonLogger;
-  let beaconProposerCacheStub: SinonStubbedInstance<BeaconProposerCache> & BeaconProposerCache;
-  let getForkSeqStub: SinonStubFn<typeof config["getForkSeq"]>;
-  let updateBuilderStatus: SinonStubFn<IBeaconChain["updateBuilderStatus"]>;
-  let executionEngineStub: SinonStubbedInstance<ExecutionEngineHttp> & ExecutionEngineHttp;
+  let forkChoiceStub: MockedBeaconChain["forkChoice"];
+  let regenStub: MockedBeaconChain["regen"];
+  let loggerStub: MockedLogger;
+  let beaconProposerCacheStub: MockedBeaconChain["beaconProposerCache"];
+  let getForkStub: MockInstance<(_: number) => ForkName>;
+  let updateBuilderStatus: MockedBeaconChain["updateBuilderStatus"];
+  let executionEngineStub: MockedBeaconChain["executionEngine"];
+  const emitPayloadAttributes = true;
+  const proposerIndex = 0;
 
   beforeEach(() => {
-    sandbox.useFakeTimers();
-    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
+    vi.useFakeTimers();
+    chainStub = getMockedBeaconChain({clock: "real", genesisTime: 0});
     updateBuilderStatus = chainStub.updateBuilderStatus;
-    const clockStub = sandbox.createStubInstance(LocalClock) as SinonStubbedInstance<LocalClock> & LocalClock;
-    chainStub.clock = clockStub;
-    forkChoiceStub = sandbox.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
-    chainStub.forkChoice = forkChoiceStub;
-    const emitterStub = sandbox.createStubInstance(ChainEventEmitter) as SinonStubbedInstance<ChainEventEmitter> &
-      ChainEventEmitter;
-    chainStub.emitter = emitterStub;
-    regenStub = sandbox.createStubInstance(StateRegenerator) as SinonStubbedInstance<StateRegenerator> &
-      StateRegenerator;
-    chainStub.regen = regenStub;
-    loggerStub = sandbox.createStubInstance(WinstonLogger) as SinonStubbedInstance<WinstonLogger> & WinstonLogger;
-    beaconProposerCacheStub = sandbox.createStubInstance(
-      BeaconProposerCache
-    ) as SinonStubbedInstance<BeaconProposerCache> & BeaconProposerCache;
-    ((chainStub as unknown) as {beaconProposerCache: BeaconProposerCache})[
-      "beaconProposerCache"
-    ] = beaconProposerCacheStub;
-    getForkSeqStub = sandbox.stub(config, "getForkSeq");
-    executionEngineStub = sandbox.createStubInstance(ExecutionEngineHttp) as SinonStubbedInstance<ExecutionEngineHttp> &
-      ExecutionEngineHttp;
-    ((chainStub as unknown) as {executionEngine: IExecutionEngine}).executionEngine = executionEngineStub;
-    ((chainStub as unknown) as {config: IChainForkConfig}).config = (config as unknown) as IChainForkConfig;
+    forkChoiceStub = chainStub.forkChoice;
+    regenStub = chainStub.regen;
+    loggerStub = getMockedLogger();
+    beaconProposerCacheStub = chainStub.beaconProposerCache;
+
+    getForkStub = vi.spyOn(config, "getForkName");
+    executionEngineStub = chainStub.executionEngine;
+    vi.spyOn(chainStub, "opts", "get").mockReturnValue({emitPayloadAttributes} as IChainOptions);
+
     scheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);
+
+    vi.spyOn(regenStub, "getBlockSlotState");
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.clearAllMocks();
+    vi.clearAllTimers();
   });
 
   it("pre bellatrix - should not run due to not last slot of epoch", async () => {
-    getForkSeqStub.returns(ForkSeq.phase0);
+    getForkStub.mockReturnValue(ForkName.phase0);
     await scheduler.prepareForNextSlot(3);
-    expect(chainStub.recomputeForkChoiceHead.called).to.equal(false);
+    expect(chainStub.recomputeForkChoiceHead).not.toHaveBeenCalled();
   });
 
   it("pre bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
-    getForkSeqStub.returns(ForkSeq.phase0);
-    chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
+    getForkStub.mockReturnValue(ForkName.phase0);
+    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
-      sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead.called, "expect updateHead to be called").to.equal(true);
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState not to be called").to.equal(false);
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
   });
 
   it("pre bellatrix - should run regen.getBlockSlotState", async () => {
-    getForkSeqStub.returns(ForkSeq.phase0);
-    chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
-    regenStub.getBlockSlotState.resolves();
+    getForkStub.mockReturnValue(ForkName.phase0);
+    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
+    (regenStub.getBlockSlotState as Mock).mockResolvedValue(undefined);
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
-      sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead.called, "expect updateHead to be called").to.equal(true);
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.equal(true);
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
   });
 
   it("pre bellatrix - should handle regen.getBlockSlotState error", async () => {
-    getForkSeqStub.returns(ForkSeq.phase0);
-    chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
-    regenStub.getBlockSlotState.rejects("Unit test error");
-    expect(loggerStub.error.calledOnce).to.equal(false);
+    getForkStub.mockReturnValue(ForkName.phase0);
+    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
+    regenStub.getBlockSlotState.mockRejectedValue("Unit test error");
+    expect(loggerStub.error).not.toHaveBeenCalled();
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
-      sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead.called, "expect updateHead to be called").to.equal(true);
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.equal(true);
-    expect(loggerStub.error.calledOnce, "expect log error on rejected regen.getBlockSlotState").to.equal(true);
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
+    expect(loggerStub.error).toHaveBeenCalledTimes(1);
   });
 
   it("bellatrix - should skip, headSlot is more than 1 epoch to prepare slot", async () => {
-    getForkSeqStub.returns(ForkSeq.bellatrix);
-    chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
+    getForkStub.mockReturnValue(ForkName.bellatrix);
+    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 2} as ProtoBlock);
     await Promise.all([
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
-      sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead.called, "expect updateHead to be called").to.equal(true);
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState not to be called").to.equal(false);
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
   });
 
   it("bellatrix - should skip, no block proposer", async () => {
-    getForkSeqStub.returns(ForkSeq.bellatrix);
-    chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    getForkStub.mockReturnValue(ForkName.bellatrix);
+    chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     const state = generateCachedBellatrixState();
-    regenStub.getBlockSlotState.resolves(state);
+    regenStub.getBlockSlotState.mockResolvedValue(state);
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
-      sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
-    expect(chainStub.recomputeForkChoiceHead.called, "expect updateHead to be called").to.equal(true);
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.equal(true);
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
   });
 
   it("bellatrix - should prepare payload", async () => {
-    getForkSeqStub.returns(ForkSeq.bellatrix);
-    chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
-    forkChoiceStub.getJustifiedBlock.returns({} as ProtoBlock);
-    forkChoiceStub.getFinalizedBlock.returns({} as ProtoBlock);
-    updateBuilderStatus.returns(void 0);
+    const spy = vi.fn();
+    chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+    getForkStub.mockReturnValue(ForkName.bellatrix);
+    chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    forkChoiceStub.getJustifiedBlock.mockReturnValue({} as ProtoBlock);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
+    updateBuilderStatus.mockReturnValue(void 0);
     const state = generateCachedBellatrixState();
-    regenStub.getBlockSlotState.resolves(state);
-    beaconProposerCacheStub.get.returns("0x fee recipient address");
-    ((executionEngineStub as unknown) as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+    regenStub.getBlockSlotState.mockResolvedValue(state);
+    beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
+    (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
-      sandbox.clock.tickAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
 
-    expect(chainStub.recomputeForkChoiceHead.called, "expect updateHead to be called").to.equal(true);
-    expect(regenStub.getBlockSlotState.called, "expect regen.getBlockSlotState to be called").to.equal(true);
-    expect(updateBuilderStatus.called, "expect updateBuilderStatus to be called").to.be.equal(true);
-    expect(forkChoiceStub.getJustifiedBlock.called, "expect forkChoice.getJustifiedBlock to be called").to.equal(true);
-    expect(forkChoiceStub.getFinalizedBlock.called, "expect forkChoice.getFinalizedBlock to be called").to.equal(true);
-    expect(executionEngineStub.notifyForkchoiceUpdate.calledOnce, "expect CL call notifyForkchoiceUpdate").to.equal(
-      true
-    );
+    expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
+    expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
+    expect(updateBuilderStatus).toHaveBeenCalledOnce();
+    expect(forkChoiceStub.getJustifiedBlock).toHaveBeenCalledOnce();
+    expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledOnce();
+    expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

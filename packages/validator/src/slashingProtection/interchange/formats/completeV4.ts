@@ -1,13 +1,12 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IInterchangeLodestar} from "../types.js";
+import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils.js";
+import {InterchangeLodestar} from "../types.js";
 
 /**
  * A complete record of all blocks and attestations signed by a set of validators
  * Spec from: https://hackmd.io/@sproul/Bk0Y0qdGD
  */
-export interface IInterchangeCompleteV4 {
+export type InterchangeCompleteV4 = {
   metadata: {
     interchange_format: "complete";
     interchange_format_version: "4";
@@ -80,20 +79,20 @@ export interface IInterchangeCompleteV4 {
       signing_root?: string;
     }[];
   }[];
-}
+};
 
 export function serializeInterchangeCompleteV4({
   data,
   genesisValidatorsRoot,
-}: IInterchangeLodestar): IInterchangeCompleteV4 {
+}: InterchangeLodestar): InterchangeCompleteV4 {
   return {
     metadata: {
       interchange_format: "complete",
       interchange_format_version: "4",
-      genesis_validators_root: toHexString(genesisValidatorsRoot),
+      genesis_validators_root: toRootHex(genesisValidatorsRoot),
     },
     data: data.map((validator) => ({
-      pubkey: toHexString(validator.pubkey),
+      pubkey: toPubkeyHex(validator.pubkey),
       signed_blocks: validator.signedBlocks.map((block) => ({
         slot: numToString(block.slot),
         signing_root: toOptionalHexString(block.signingRoot),
@@ -107,11 +106,11 @@ export function serializeInterchangeCompleteV4({
   };
 }
 
-export function parseInterchangeCompleteV4(interchange: IInterchangeCompleteV4): IInterchangeLodestar {
+export function parseInterchangeCompleteV4(interchange: InterchangeCompleteV4): InterchangeLodestar {
   return {
-    genesisValidatorsRoot: fromHexString(interchange.metadata.genesis_validators_root),
+    genesisValidatorsRoot: fromHex(interchange.metadata.genesis_validators_root),
     data: interchange.data.map((validator) => ({
-      pubkey: fromHexString(validator.pubkey),
+      pubkey: fromHex(validator.pubkey),
       signedBlocks: validator.signed_blocks.map((block) => ({
         slot: parseInt(block.slot, 10),
         signingRoot: fromOptionalHexString(block.signing_root),

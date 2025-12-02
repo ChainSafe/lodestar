@@ -1,11 +1,12 @@
-import {PointFormat, Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {BitArray} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
-import {BitArray, toHexString} from "@chainsafe/ssz";
-import {MapDef} from "../../util/map.js";
+import {Root, Slot, SubcommitteeIndex, SubnetID, altair} from "@lodestar/types";
+import {MapDef, toRootHex} from "@lodestar/utils";
+import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
-import {pruneBySlot} from "./utils.js";
+import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 /**
  * SyncCommittee signatures are only useful during a single slot according to our peer's clocks
@@ -26,7 +27,6 @@ type ContributionFast = Omit<altair.SyncCommitteeContribution, "aggregationBits"
 
 /** Hex string of `contribution.beaconBlockRoot` */
 type BlockRootHex = string;
-type Subnet = SubcommitteeIndex;
 
 /**
  * Preaggregate SyncCommitteeMessage into SyncCommitteeContribution
@@ -40,9 +40,15 @@ export class SyncCommitteeMessagePool {
    * */
   private readonly contributionsByRootBySubnetBySlot = new MapDef<
     Slot,
-    MapDef<Subnet, Map<BlockRootHex, ContributionFast>>
-  >(() => new MapDef<Subnet, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
+    MapDef<SubnetID, Map<BlockRootHex, ContributionFast>>
+  >(() => new MapDef<SubnetID, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
   private lowestPermissibleSlot = 0;
+
+  constructor(
+    private readonly config: ChainForkConfig,
+    private readonly clock: IClock,
+    private readonly preaggregateSlotDistance = 0
+  ) {}
 
   /** Returns current count of unique ContributionFast by block root and subnet */
   get size(): number {
@@ -56,14 +62,25 @@ export class SyncCommitteeMessagePool {
   }
 
   // TODO: indexInSubcommittee: number should be indicesInSyncCommittee
-  add(subnet: Subnet, signature: altair.SyncCommitteeMessage, indexInSubcommittee: number): InsertOutcome {
+  add(
+    subnet: SubnetID,
+    signature: altair.SyncCommitteeMessage,
+    indexInSubcommittee: number,
+    priority?: boolean
+  ): InsertOutcome {
     const {slot, beaconBlockRoot} = signature;
-    const rootHex = toHexString(beaconBlockRoot);
+    const fork = this.config.getForkName(slot);
+    const rootHex = toRootHex(beaconBlockRoot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     // Reject if too old.
     if (slot < lowestPermissibleSlot) {
-      throw new OpPoolError({code: OpPoolErrorCode.SLOT_TOO_LOW, slot, lowestPermissibleSlot});
+      return InsertOutcome.Old;
+    }
+
+    // validator gets SyncCommitteeContribution at CONTRIBUTION_DUE_BPS of slot, it's no use to preaggregate later than that time
+    if (!priority && this.clock.msFromSlot(slot) > this.config.getSyncContributionDueMs(fork)) {
+      return InsertOutcome.Late;
     }
 
     // Limit object per slot
@@ -77,18 +94,18 @@ export class SyncCommitteeMessagePool {
     if (contribution) {
       // Aggregate mutating
       return aggregateSignatureInto(contribution, signature, indexInSubcommittee);
-    } else {
-      // Create new aggregate
-      contributionsByRoot.set(rootHex, signatureToAggregate(subnet, signature, indexInSubcommittee));
-      return InsertOutcome.NewData;
     }
+
+    // Create new aggregate
+    contributionsByRoot.set(rootHex, signatureToAggregate(subnet, signature, indexInSubcommittee));
+    return InsertOutcome.NewData;
   }
 
   /**
    * This is for the aggregator to produce ContributionAndProof.
    */
   getContribution(subnet: SubcommitteeIndex, slot: Slot, prevBlockRoot: Root): altair.SyncCommitteeContribution | null {
-    const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toHexString(prevBlockRoot));
+    const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toRootHex(prevBlockRoot));
     if (!contribution) {
       return null;
     }
@@ -96,7 +113,7 @@ export class SyncCommitteeMessagePool {
     return {
       ...contribution,
       aggregationBits: contribution.aggregationBits,
-      signature: contribution.signature.toBytes(PointFormat.compressed),
+      signature: contribution.signature.toBytes(),
     };
   }
 
@@ -106,7 +123,8 @@ export class SyncCommitteeMessagePool {
    */
   prune(clockSlot: Slot): void {
     pruneBySlot(this.contributionsByRootBySubnetBySlot, clockSlot, SLOTS_RETAINED);
-    this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_RETAINED, 0);
+    // by default preaggregateSlotDistance is 0, i.e only accept SyncCommitteeMessage in the same clock slot.
+    this.lowestPermissibleSlot = Math.max(clockSlot - this.preaggregateSlotDistance, 0);
   }
 }
 
@@ -123,9 +141,9 @@ function aggregateSignatureInto(
   }
 
   contribution.aggregationBits.set(indexInSubcommittee, true);
-  contribution.signature = bls.Signature.aggregate([
+  contribution.signature = aggregateSignatures([
     contribution.signature,
-    bls.Signature.fromBytes(signature.signature, undefined, true),
+    signatureFromBytesNoCheck(signature.signature),
   ]);
   return InsertOutcome.Aggregated;
 }
@@ -134,7 +152,7 @@ function aggregateSignatureInto(
  * Format `signature` into an efficient `contribution` to add more signatures in with aggregateSignatureInto()
  */
 function signatureToAggregate(
-  subnet: number,
+  subnet: SubnetID,
   signature: altair.SyncCommitteeMessage,
   indexInSubcommittee: number
 ): ContributionFast {
@@ -146,6 +164,6 @@ function signatureToAggregate(
     beaconBlockRoot: signature.beaconBlockRoot,
     subcommitteeIndex: subnet,
     aggregationBits,
-    signature: bls.Signature.fromBytes(signature.signature, undefined, true),
+    signature: signatureFromBytesNoCheck(signature.signature),
   };
 }

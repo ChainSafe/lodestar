@@ -1,41 +1,42 @@
-import {expect} from "chai";
-import {IChainConfig} from "@lodestar/config";
-import {ssz} from "@lodestar/types";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {TimestampFormatCode} from "@lodestar/utils";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {CompactMultiProof, computeDescriptor} from "@chainsafe/persistent-merkle-tree";
+import {JsonPath, fromHexString, toHexString} from "@chainsafe/ssz";
+import {ApiClient, getClient, routes} from "@lodestar/api";
+import {ChainConfig} from "@lodestar/config";
 import {Lightclient} from "@lodestar/light-client";
+import {LightClientRestTransport} from "@lodestar/light-client/transport";
+import {TimestampFormatCode} from "@lodestar/logger";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
+import {altair, ssz} from "@lodestar/types";
+import {HeadEventData} from "../../../src/chain/index.js";
+import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
-import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
 
-describe("chain / lightclient", function () {
+describe("chain / lightclient", () => {
+  vi.setConfig({testTimeout: 600_000});
+
   /**
    * Max distance between beacon node head and lightclient head
-   * If SECONDS_PER_SLOT === 1, there should be some margin for slow blocks,
+   * If SLOT_DURATION_MS === 1000, there should be some margin for slow blocks,
    * 4 = 4 sec should be good enough.
    */
   const maxLcHeadTrackingDiffSlots = 4;
   const validatorCount = 8;
   const validatorClientCount = 4;
-  const targetSyncCommittee = 3;
+  // Reduced from 3 to 1, so test can complete in 10 epoch vs 27 epoch
+  const targetSyncCommittee = 1;
   /** N sync committee periods + 1 epoch of margin */
   const finalizedEpochToReach = targetSyncCommittee * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
   /** Given 100% participation the fastest epoch to reach finalization is +2 epochs. -1 for margin */
   const targetSlotToReach = computeStartSlotAtEpoch(finalizedEpochToReach + 2) - 1;
   const restPort = 9000;
 
-  const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
-    /* eslint-disable @typescript-eslint/naming-convention */
-    SECONDS_PER_SLOT: 1,
+  const testParams: Pick<ChainConfig, "SLOT_DURATION_MS" | "ALTAIR_FORK_EPOCH"> = {
+    SLOT_DURATION_MS: 1000,
     ALTAIR_FORK_EPOCH: 0,
   };
-
-  // Sometimes the machine may slow down and the lightclient head is too old.
-  // This is a rare event, with maxLcHeadTrackingDiffSlots = 4, SECONDS_PER_SLOT = 1
-  this.retries(2);
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
@@ -45,33 +46,31 @@ describe("chain / lightclient", function () {
     }
   });
 
-  it("Lightclient track head on server configuration", async function () {
-    this.timeout("10 min");
-
+  it("Lightclient track head on server configuration", async () => {
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // also delay to allow bls workers to be transpiled/initialized
-    const genesisSlotsDelay = 16;
-    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+    const genesisSlotsDelay = 7;
+    const genesisTime = Math.floor(Date.now() / 1000) + (genesisSlotsDelay * testParams.SLOT_DURATION_MS) / 1000;
 
     const testLoggerOpts: TestLoggerOpts = {
-      logLevel: LogLevel.info,
+      level: LogLevel.info,
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+        secondsPerSlot: testParams.SLOT_DURATION_MS / 1000,
       },
     };
 
-    const loggerNodeA = testLogger("Node", testLoggerOpts);
-    const loggerLC = testLogger("LC", {...testLoggerOpts, logLevel: LogLevel.debug});
+    const loggerNodeA = testLogger("lightclientNode", testLoggerOpts);
+    const loggerLC = testLogger("LC", {...testLoggerOpts, level: LogLevel.debug});
 
     const bn = await getDevBeaconNode({
       params: testParams,
       options: {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true},
-        api: {rest: {enabled: true, api: ["lightclient"], port: restPort, address: "localhost"}},
+        api: {rest: {enabled: true, api: ["lightclient", "proof"], port: restPort, address: "localhost"}},
         chain: {blsVerifyAllMainThread: true},
       },
       validatorCount: validatorCount * validatorClientCount,
@@ -85,11 +84,12 @@ describe("chain / lightclient", function () {
 
     const {validators} = await getAndInitDevValidators({
       node: bn,
+      logPrefix: "lightclientNode",
       validatorsPerClient: validatorCount,
       validatorClientCount,
       startIndex: 0,
       useRestApi: false,
-      testLoggerOpts: {...testLoggerOpts, logLevel: LogLevel.error},
+      testLoggerOpts: {...testLoggerOpts, level: LogLevel.error},
     });
 
     afterEachCallbacks.push(async () => {
@@ -104,7 +104,7 @@ describe("chain / lightclient", function () {
     //   - If too far behind error the test
     //   - If beacon node reaches the finality slot, resolve test
     const promiseUntilHead = new Promise<HeadEventData>((resolve) => {
-      bn.chain.emitter.on(ChainEvent.head, async (head) => {
+      bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
         // Wait for the second slot so syncCommitteeWitness is available
         if (head.slot > 2) {
           resolve(head);
@@ -113,14 +113,14 @@ describe("chain / lightclient", function () {
     }).then(async (head) => {
       // Initialize lightclient
       loggerLC.info("Initializing lightclient", {slot: head.slot});
-
+      const api = getClient({baseUrl: `http://localhost:${restPort}`}, {config: bn.config});
       const lightclient = await Lightclient.initializeFromCheckpointRoot({
         config: bn.config,
         logger: loggerLC,
-        beaconApiUrl: `http://localhost:${restPort}`,
+        transport: new LightClientRestTransport(api),
         genesisData: {
           genesisTime: bn.chain.genesisTime,
-          genesisValidatorsRoot: bn.chain.genesisValidatorsRoot as Uint8Array,
+          genesisValidatorsRoot: bn.chain.genesisValidatorsRoot,
         },
         checkpointRoot: fromHexString(head.block),
       });
@@ -129,31 +129,32 @@ describe("chain / lightclient", function () {
         lightclient.stop();
       });
 
-      loggerLC.info("Initialized lightclient", {headSlot: lightclient.getHead().slot});
-      lightclient.start();
+      loggerLC.info("Initialized lightclient", {headSlot: lightclient.getHead().beacon.slot});
+      void lightclient.start();
 
       return new Promise<void>((resolve, reject) => {
-        bn.chain.emitter.on(ChainEvent.head, async (head) => {
+        bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
           try {
             // Test fetching proofs
-            const {proof, header} = await lightclient.getHeadStateProof([["latestBlockHeader", "bodyRoot"]]);
-            const stateRootHex = toHexString(header.stateRoot);
-            const lcHeadState = bn.chain.stateCache.get(stateRootHex);
+            const {proof, header} = await getHeadStateProof(lightclient, api, [["latestBlockHeader", "bodyRoot"]]);
+            const stateRootHex = toHexString(header.beacon.stateRoot);
+            const lcHeadState = bn.chain.regen.getStateSync(stateRootHex);
             if (!lcHeadState) {
               throw Error(`LC head state not in cache ${stateRootHex}`);
             }
 
-            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(proof, header.stateRoot as Uint8Array);
-            expect(toHexString(stateLcFromProof.latestBlockHeader.bodyRoot)).to.equal(
-              toHexString(lcHeadState.latestBlockHeader.bodyRoot),
-              `Recovered 'latestBlockHeader.bodyRoot' from state ${stateRootHex} not correct`
+            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(proof, header.beacon.stateRoot);
+            expect(toHexString(stateLcFromProof.latestBlockHeader.bodyRoot)).toBe(
+              toHexString(lcHeadState.latestBlockHeader.bodyRoot)
             );
 
             // Stop test if reached target head slot
-            const lcHeadSlot = lightclient.getHead().slot;
+            const lcHeadSlot = lightclient.getHead().beacon.slot;
             if (head.slot - lcHeadSlot > maxLcHeadTrackingDiffSlots) {
               throw Error(`Lightclient head ${lcHeadSlot} is too far behind the beacon node ${head.slot}`);
-            } else if (head.slot > targetSlotToReach) {
+            }
+
+            if (head.slot > targetSlotToReach) {
               resolve();
             }
           } catch (e) {
@@ -164,7 +165,7 @@ describe("chain / lightclient", function () {
     });
 
     const promiseTillFinalization = new Promise<void>((resolve) => {
-      bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
+      bn.chain.emitter.on(routes.events.EventType.finalizedCheckpoint, (checkpoint) => {
         loggerNodeA.info("Node A emitted finalized checkpoint event", {epoch: checkpoint.epoch});
         if (checkpoint.epoch >= finalizedEpochToReach) {
           resolve();
@@ -179,3 +180,17 @@ describe("chain / lightclient", function () {
     if (!head) throw Error("First beacon node has no head block");
   });
 });
+
+// TODO: Re-incorporate for REST-only light-client
+async function getHeadStateProof(
+  lightclient: Lightclient,
+  api: ApiClient,
+  paths: JsonPath[]
+): Promise<{proof: CompactMultiProof; header: altair.LightClientHeader}> {
+  const header = lightclient.getHead();
+  const stateId = toHexString(header.beacon.stateRoot);
+  const gindices = paths.map((path) => ssz.bellatrix.BeaconState.getPathInfo(path).gindex);
+  const descriptor = computeDescriptor(gindices);
+  const proof = (await api.proof.getStateProof({stateId, descriptor})).value();
+  return {proof, header};
+}

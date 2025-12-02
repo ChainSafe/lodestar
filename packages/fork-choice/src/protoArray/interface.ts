@@ -1,17 +1,21 @@
-import {Epoch, Slot, RootHex} from "@lodestar/types";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison
 export const HEX_ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 /**
- * Simplified 'latest message' with previous message
+ * The null vote index indicates that a validator votes to a non-existent block. This usually happens when
+ * we prune the proto array and the validator's latest message is in the pruned part.
+ * The number of proto nodes will never exceed this value because it represents (0xffffffff / 365 / 24 / 60 / 5), ie > 1634 years of non-finalized network.
  */
-export type VoteTracker = {
-  currentRoot: RootHex;
-  nextRoot: RootHex;
-  nextEpoch: Epoch;
-};
+export const NULL_VOTE_INDEX = 0xffffffff;
+
+/**
+ * A vote index is a non-negative integer from 0 to NULL_VOTE_INDEX inclusive, and it will never be undefined.
+ */
+export type VoteIndex = number;
 
 export enum ExecutionStatus {
   Valid = "Valid",
@@ -27,22 +31,32 @@ export type LVHValidResponse = {
 export type LVHInvalidResponse = {
   executionStatus: ExecutionStatus.Invalid;
   latestValidExecHash: RootHex | null;
-  invalidateFromBlockHash: RootHex;
+  invalidateFromParentBlockRoot: RootHex;
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
 export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
 
-export type BlockExecution =
-  | {executionPayloadBlockHash: RootHex; executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>}
-  | {executionPayloadBlockHash: null; executionStatus: ExecutionStatus.PreMerge};
+export type BlockExtraMeta =
+  | {
+      executionPayloadBlockHash: RootHex;
+      executionPayloadNumber: UintNum64;
+      executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
+      dataAvailabilityStatus: DataAvailabilityStatus;
+    }
+  | {
+      executionPayloadBlockHash: null;
+      executionStatus: ExecutionStatus.PreMerge;
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData;
+    };
+
 /**
  * A block that is to be applied to the fork choice
  *
  * A simplified version of BeaconBlock
  */
 
-export type ProtoBlock = BlockExecution & {
+export type ProtoBlock = BlockExtraMeta & {
   /**
    * The slot is not necessary for ProtoArray,
    * it just exists so external components can easily query the block slot.
@@ -72,6 +86,9 @@ export type ProtoBlock = BlockExecution & {
   unrealizedJustifiedRoot: RootHex;
   unrealizedFinalizedEpoch: Epoch;
   unrealizedFinalizedRoot: RootHex;
+
+  // Indicate whether block arrives in a timely manner ie. before the 4 second mark
+  timeliness: boolean;
 };
 
 /**

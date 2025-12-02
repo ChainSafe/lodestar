@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import fetch from "cross-fetch";
+import {fetch} from "@lodestar/utils";
 import {OpenApiFile, OpenApiJson} from "./parseOpenApiSpec.js";
-
-/* eslint-disable no-console */
 
 export async function fetchOpenApiSpec(openApiFile: OpenApiFile): Promise<OpenApiJson> {
   if (fs.existsSync(openApiFile.filepath)) {
@@ -19,7 +17,13 @@ export async function fetchOpenApiSpec(openApiFile: OpenApiFile): Promise<OpenAp
   const openApiStr = await fetch(openApiFile.url).then((res) => res.text());
 
   // Parse before writting to ensure it's proper JSON
-  const openApiJson = JSON.parse(openApiStr) as OpenApiJson;
+  let openApiJson: OpenApiJson;
+  try {
+    openApiJson = JSON.parse(openApiStr) as OpenApiJson;
+  } catch (e) {
+    console.log(openApiStr);
+    throw e;
+  }
 
   fs.mkdirSync(path.dirname(openApiFile.filepath), {recursive: true});
   fs.writeFileSync(openApiFile.filepath, openApiStr);

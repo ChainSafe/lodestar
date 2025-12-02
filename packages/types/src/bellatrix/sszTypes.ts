@@ -1,18 +1,17 @@
-import {ByteListType, ByteVectorType, ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {ByteListType, ByteVectorType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
 import {
   BYTES_PER_LOGS_BLOOM,
   HISTORICAL_ROOTS_LIMIT,
-  MAX_TRANSACTIONS_PER_PAYLOAD,
   MAX_BYTES_PER_TRANSACTION,
   MAX_EXTRA_DATA_BYTES,
-  SLOTS_PER_HISTORICAL_ROOT,
+  MAX_TRANSACTIONS_PER_PAYLOAD,
 } from "@lodestar/params";
-import {ssz as primitiveSsz} from "../primitive/index.js";
-import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
+import {ssz as phase0Ssz} from "../phase0/index.js";
+import {ssz as primitiveSsz} from "../primitive/index.js";
+import {stringType} from "../utils/stringType.js";
 
 const {
-  Bytes20,
   Bytes32,
   UintNum64,
   Slot,
@@ -21,6 +20,7 @@ const {
   BLSSignature,
   UintBn256: Uint256,
   BLSPubkey,
+  ExecutionAddress,
 } = primitiveSsz;
 
 /**
@@ -37,9 +37,9 @@ export const Transaction = new ByteListType(MAX_BYTES_PER_TRANSACTION);
  */
 export const Transactions = new ListCompositeType(Transaction, MAX_TRANSACTIONS_PER_PAYLOAD);
 
-const executionPayloadFields = {
+export const CommonExecutionPayloadType = new ContainerType({
   parentHash: Root,
-  feeRecipient: Bytes20,
+  feeRecipient: ExecutionAddress,
   stateRoot: Bytes32,
   receiptsRoot: Bytes32,
   logsBloom: new ByteVectorType(BYTES_PER_LOGS_BLOOM),
@@ -51,13 +51,12 @@ const executionPayloadFields = {
   // TODO: if there is perf issue, consider making ByteListType
   extraData: new ByteListType(MAX_EXTRA_DATA_BYTES),
   baseFeePerGas: Uint256,
-  // Extra payload fields
   blockHash: Root,
-};
+});
 
 export const ExecutionPayload = new ContainerType(
   {
-    ...executionPayloadFields,
+    ...CommonExecutionPayloadType.fields,
     transactions: Transactions,
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
@@ -65,7 +64,7 @@ export const ExecutionPayload = new ContainerType(
 
 export const ExecutionPayloadHeader = new ContainerType(
   {
-    ...executionPayloadFields,
+    ...CommonExecutionPayloadType.fields,
     transactionsRoot: Root,
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
@@ -108,18 +107,6 @@ export const PowBlock = new ContainerType(
   {typeName: "PowBlock", jsonCase: "eth2"}
 );
 
-// Re-declare with the new expanded type
-export const HistoricalBlockRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-export const HistoricalStateRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-
-export const HistoricalBatch = new ContainerType(
-  {
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
-  },
-  {typeName: "HistoricalBatch", jsonCase: "eth2"}
-);
-
 // we don't reuse phase0.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
 export const BeaconState = new ContainerType(
@@ -130,8 +117,8 @@ export const BeaconState = new ContainerType(
     fork: phase0Ssz.Fork,
     // History
     latestBlockHeader: phase0Ssz.BeaconBlockHeader,
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
+    blockRoots: phase0Ssz.HistoricalBlockRoots,
+    stateRoots: phase0Ssz.HistoricalStateRoots,
     historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),
     // Eth1
     eth1Data: phase0Ssz.Eth1Data,
@@ -192,7 +179,7 @@ export const SignedBlindedBeaconBlock = new ContainerType(
 
 export const ValidatorRegistrationV1 = new ContainerType(
   {
-    feeRecipient: Bytes20,
+    feeRecipient: ExecutionAddress,
     gasLimit: UintNum64,
     timestamp: UintNum64,
     pubkey: BLSPubkey,
@@ -223,4 +210,29 @@ export const SignedBuilderBid = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
+);
+
+// PayloadAttributes primarily for SSE event
+export const PayloadAttributes = new ContainerType(
+  {timestamp: UintNum64, prevRandao: Bytes32, suggestedFeeRecipient: stringType},
+  {typeName: "PayloadAttributes", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributesCommon = new ContainerType(
+  {
+    proposerIndex: UintNum64,
+    proposalSlot: Slot,
+    parentBlockNumber: UintNum64,
+    parentBlockRoot: Root,
+    parentBlockHash: Root,
+  },
+  {typeName: "SSEPayloadAttributesCommon", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributes = new ContainerType(
+  {
+    ...SSEPayloadAttributesCommon.fields,
+    payloadAttributes: PayloadAttributes,
+  },
+  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );

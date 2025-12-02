@@ -1,18 +1,19 @@
-import {altair, phase0, ssz} from "@lodestar/types";
-import bls from "@chainsafe/bls";
-import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
+import {SecretKey} from "@chainsafe/blst";
+import {Tree, toGindex} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
-import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
+import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {altair, phase0, ssz} from "@lodestar/types";
 import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  ZERO_HASH,
   computeDomain,
   computeEpochAtSlot,
   computeSigningRoot,
-  ZERO_HASH,
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
+  getBlockRoot,
+  getBlockRootAtSlot,
 } from "../../../src/index.js";
-import {getBlockRoot, getBlockRootAtSlot} from "../../../src/index.js";
 
 export type BlockOpts = {
   proposerSlashingLen: number;
@@ -210,7 +211,7 @@ function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0
   depositRootViewDU["dirtyLength"] = true;
 
   for (let i = 0; i < count; i++) {
-    const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+    const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
     const pubkey = sk.toPublicKey().toBytes();
     const depositMessage: phase0.DepositMessage = {pubkey, withdrawalCredentials, amount: 32e9};
     // Sign with disposable keys

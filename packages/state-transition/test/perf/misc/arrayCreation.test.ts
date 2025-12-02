@@ -1,7 +1,6 @@
-import {profilerLogger} from "../../utils/logger.js";
+import {bench, describe} from "@chainsafe/benchmark";
 
-describe.skip("array creation", function () {
-  const logger = profilerLogger();
+describe.skip("array creation", () => {
   const testCases: {id: string; fn: (n: number) => void}[] = [
     {
       id: "Array.from(() => 0)",
@@ -29,7 +28,7 @@ describe.skip("array creation", function () {
   ];
 
   for (const {id, fn} of testCases) {
-    it(id, () => {
+    bench(id, () => {
       const opsRun = 10;
       const elem = 200_000;
 
@@ -39,7 +38,7 @@ describe.skip("array creation", function () {
       }
       const to = process.hrtime.bigint();
       const diffMs = Number(to - from) / 1e6;
-      logger.info(`${id}: ${diffMs / opsRun} ms`);
+      console.log(`${id}: ${diffMs / opsRun} ms`);
     });
   }
 });

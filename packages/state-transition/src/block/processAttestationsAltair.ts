@@ -1,8 +1,6 @@
-import {Epoch, phase0} from "@lodestar/types";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {intSqrt} from "@lodestar/utils";
-
 import {
+  ForkSeq,
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -14,11 +12,14 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {increaseBalance, verifySignatureSet} from "../util/index.js";
-import {CachedBeaconStateAltair} from "../types.js";
-import {RootCache} from "../util/rootCache.js";
+import {Attestation, Epoch, phase0} from "@lodestar/types";
+import {intSqrt} from "@lodestar/utils";
+import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
-import {checkpointToStr, validateAttestation} from "./processAttestationPhase0.js";
+import {CachedBeaconStateAltair} from "../types.js";
+import {increaseBalance, verifySignatureSet} from "../util/index.js";
+import {RootCache} from "../util/rootCache.js";
+import {checkpointToStr, isTimelyTarget, validateAttestation} from "./processAttestationPhase0.js";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
@@ -26,11 +27,14 @@ const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIG
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
+const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 
 export function processAttestationsAltair(
+  fork: ForkSeq,
   state: CachedBeaconStateAltair,
-  attestations: phase0.Attestation[],
-  verifySignature = true
+  attestations: Attestation[],
+  verifySignature = true,
+  metrics?: BeaconStateTransitionMetrics | null
 ): void {
   const {epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;
@@ -40,14 +44,15 @@ export function processAttestationsAltair(
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
+  let newSeenAttesters = 0;
+  let newSeenAttestersEffectiveBalance = 0;
   for (const attestation of attestations) {
     const data = attestation.data;
 
-    validateAttestation(state, attestation);
+    validateAttestation(fork, state, attestation);
 
     // Retrieve the validator indices from the attestation participation bitfield
-    const committeeIndices = epochCtx.getBeaconCommittee(data.slot, data.index);
-    const attestingIndices = attestation.aggregationBits.intersectValues(committeeIndices);
+    const attestingIndices = epochCtx.getAttestingIndices(fork, attestation);
 
     // this check is done last because its the most expensive (if signature verification is toggled on)
     // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature
@@ -62,24 +67,35 @@ export function processAttestationsAltair(
     const inCurrentEpoch = data.target.epoch === currentEpoch;
     const epochParticipation = inCurrentEpoch ? state.currentEpochParticipation : state.previousEpochParticipation;
 
-    const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, epochCtx.epoch, rootCache);
+    const flagsAttestation = getAttestationParticipationStatus(
+      fork,
+      data,
+      stateSlot - data.slot,
+      epochCtx.epoch,
+      rootCache
+    );
 
     // For each participant, update their participation
     // In epoch processing, this participation info is used to calculate balance updates
     let totalBalanceIncrementsWithWeight = 0;
-    for (const index of attestingIndices) {
-      const flags = epochParticipation.get(index);
+    const validators = state.validators;
+    for (const validatorIndex of attestingIndices) {
+      const flags = epochParticipation.get(validatorIndex);
 
       // For normal block, > 90% of attestations belong to current epoch
       // At epoch boundary, 100% of attestations belong to previous epoch
       // so we want to update the participation flag tree in batch
 
       // Note ParticipationFlags type uses option {setBitwiseOR: true}, .set() does a |= operation
-      epochParticipation.set(index, flagsAttestation);
+      epochParticipation.set(validatorIndex, flagsAttestation);
       // epochParticipation.setStatus(index, newStatus);
 
       // Returns flags that are NOT set before (~ bitwise NOT) AND are set after
       const flagsNewSet = ~flags & flagsAttestation;
+      if (flagsNewSet !== 0) {
+        newSeenAttesters++;
+        newSeenAttestersEffectiveBalance += effectiveBalanceIncrements[validatorIndex];
+      }
 
       // Spec:
       // baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
@@ -90,18 +106,18 @@ export function processAttestationsAltair(
       if ((flagsNewSet & TIMELY_HEAD) === TIMELY_HEAD) totalWeight += TIMELY_HEAD_WEIGHT;
 
       if (totalWeight > 0) {
-        totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[index] * totalWeight;
+        totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[validatorIndex] * totalWeight;
       }
 
       // TODO: describe issue. Compute progressive target balances
       // When processing each attestation, increase the cummulative target balance. Only applies post-altair
       if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) {
-        const validator = state.validators.getReadonly(index);
+        const validator = validators.getReadonly(validatorIndex);
         if (!validator.slashed) {
           if (inCurrentEpoch) {
-            epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+            epochCtx.currentTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[validatorIndex];
           } else {
-            epochCtx.previousTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[index];
+            epochCtx.previousTargetUnslashedBalanceIncrements += effectiveBalanceIncrements[validatorIndex];
           }
         }
       }
@@ -113,13 +129,19 @@ export function processAttestationsAltair(
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
   }
 
+  metrics?.newSeenAttestersPerBlock.set(newSeenAttesters);
+  metrics?.newSeenAttestersEffectiveBalancePerBlock.set(newSeenAttestersEffectiveBalance);
+  metrics?.attestationsPerBlock.set(attestations.length);
+
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
+  state.proposerRewards.attestations = proposerReward;
 }
 
 /**
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
  */
 export function getAttestationParticipationStatus(
+  fork: ForkSeq,
   data: phase0.AttestationData,
   inclusionDelay: number,
   currentEpoch: Epoch,
@@ -150,8 +172,8 @@ export function getAttestationParticipationStatus(
     isMatchingTarget && byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
 
   let flags = 0;
-  if (isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH)) flags |= TIMELY_SOURCE;
-  if (isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH) flags |= TIMELY_TARGET;
+  if (isMatchingSource && inclusionDelay <= SLOTS_PER_EPOCH_SQRT) flags |= TIMELY_SOURCE;
+  if (isMatchingTarget && isTimelyTarget(fork, inclusionDelay)) flags |= TIMELY_TARGET;
   if (isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY) flags |= TIMELY_HEAD;
 
   return flags;

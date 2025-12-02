@@ -1,23 +1,21 @@
-import {expect} from "chai";
-import {config} from "@lodestar/config/default";
+import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
+import {config} from "@lodestar/config/default";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
+  EpochDifference,
+  ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
-  ProtoBlock,
   ProtoArray,
-  ExecutionStatus,
-  EpochDifference,
+  ProtoBlock,
 } from "../../../src/index.js";
+import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
-const rootStateBytePrefix = 0xaa;
-const rootBlockBytePrefix = 0xbb;
-
-describe("Forkchoice", function () {
+describe("Forkchoice", () => {
   const genesisSlot = 0;
   const genesisEpoch = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -25,6 +23,7 @@ describe("Forkchoice", function () {
   const finalizedRoot = getBlockRoot(genesisSlot);
   const parentRoot = toHex(Buffer.alloc(32, 0xff));
   let protoArr: ProtoArray;
+  const validatorCount = 100;
 
   beforeEach(() => {
     protoArr = ProtoArray.initialize(
@@ -41,6 +40,7 @@ describe("Forkchoice", function () {
 
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
     );
@@ -50,19 +50,17 @@ describe("Forkchoice", function () {
     currentSlot: genesisSlot + 1,
     justified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-      balances: new Uint8Array([32]),
-    },
-    bestJustified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-      balances: new Uint8Array([32]),
+      balances: new Uint16Array([32]),
+      totalBalance: 32,
     },
     unrealizedJustified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-      balances: new Uint8Array([32]),
+      balances: new Uint16Array([32]),
     },
     finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-    justifiedBalancesGetter: () => new Uint8Array([32]),
+    justifiedBalancesGetter: () => new Uint16Array([32]),
+    equivocatingIndices: new Set(),
   };
 
   const getParentBlockRoot = (slot: number, skippedSlots: number[] = []): RootHex => {
@@ -103,6 +101,9 @@ describe("Forkchoice", function () {
 
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
+
+      timeliness: false,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     };
   };
 
@@ -115,19 +116,51 @@ describe("Forkchoice", function () {
     }
   };
 
-  it("getAllAncestorBlocks", function () {
+  it("getAllAncestorBlocks", () => {
     // Add block that is a finalized descendant.
     const block = getBlock(genesisSlot + 1);
     protoArr.onBlock(block, block.slot);
-    const forkchoice = new ForkChoice(config, fcStore, protoArr);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
     const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1));
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
-    expect(summaries.length).to.be.equals(1, "should not return the finalized block");
-    expect(summaries[0]).to.be.deep.include(block, "the block summary is not correct");
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toEqual({...block, bestChild: undefined, bestDescendant: undefined, parent: 0, weight: 0});
   });
 
-  before("Assert SLOTS_PER_EPOCH", () => {
-    expect(SLOTS_PER_EPOCH).equals(32, "Unexpected SLOTS_PER_EPOCH value");
+  it("getAllAncestorAndNonAncestorBlocks equals getAllAncestorBlocks + getAllNonAncestorBlocks", () => {
+    // Create a simple chain: 0 -> 1 -> 2 -> 3
+    populateProtoArray(genesisSlot + 3);
+
+    // Create a fork by adding block 10 with parent at genesis
+    const forkBlock = {
+      ...getBlock(genesisSlot + 10),
+      parentRoot: finalizedRoot, // Connect directly to genesis
+    };
+    protoArr.onBlock(forkBlock, forkBlock.slot);
+
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
+
+    // Test with a block from the canonical chain
+    const canonicalBlockRoot = getBlockRoot(genesisSlot + 3);
+    const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlockRoot);
+    const canonicalNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(canonicalBlockRoot);
+    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot);
+
+    expect(canonicalCombined.ancestors).toEqual(canonicalAncestorBlocks);
+    expect(canonicalCombined.nonAncestors).toEqual(canonicalNonAncestorBlocks);
+
+    // Test with a block from the fork chain
+    const forkBlockRoot = getBlockRoot(genesisSlot + 10);
+    const forkAncestorBlocks = forkchoice.getAllAncestorBlocks(forkBlockRoot);
+    const forkNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(forkBlockRoot);
+    const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot);
+
+    expect(forkCombined.ancestors).toEqual(forkAncestorBlocks);
+    expect(forkCombined.nonAncestors).toEqual(forkNonAncestorBlocks);
+  });
+
+  beforeAll(() => {
+    expect(SLOTS_PER_EPOCH).toBe(32);
   });
 
   const dependentRootTestCases: {atSlot: Slot; pivotSlot: Slot; epoch: EpochDifference; skipped: Slot[]}[] = [
@@ -157,7 +190,7 @@ describe("Forkchoice", function () {
   for (const {atSlot, pivotSlot, epoch, skipped} of dependentRootTestCases) {
     it(`getDependentRoot epoch ${epoch} atSlot ${atSlot} skipped ${JSON.stringify(skipped)}`, () => {
       populateProtoArray(atSlot, skipped);
-      const forkchoice = new ForkChoice(config, fcStore, protoArr);
+      const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
       const blockRoot = getBlockRoot(atSlot);
       const block = forkchoice.getBlockHex(blockRoot);
@@ -165,29 +198,12 @@ describe("Forkchoice", function () {
 
       const expectedDependentRoot = getBlockRoot(pivotSlot);
 
-      expect(forkchoice.getDependentRoot(block, epoch)).to.be.equal(
-        expectedDependentRoot,
-        "incorrect attester dependent root"
-      );
+      expect(forkchoice.getDependentRoot(block, epoch)).toBe(expectedDependentRoot);
     });
   }
 
   // TODO: more unit tests for other apis
 });
-
-function getStateRoot(slot: number): RootHex {
-  const root = Buffer.alloc(32, 0x00);
-  root[0] = rootStateBytePrefix;
-  root[31] = slot;
-  return toHex(root);
-}
-
-function getBlockRoot(slot: number): RootHex {
-  const root = Buffer.alloc(32, 0x00);
-  root[0] = rootBlockBytePrefix;
-  root[31] = slot;
-  return toHex(root);
-}
 
 function range(from: number, toInclusive: number): number[] {
   const arr: number[] = [];

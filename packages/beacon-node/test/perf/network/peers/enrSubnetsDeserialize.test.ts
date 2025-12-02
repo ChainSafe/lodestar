@@ -1,44 +1,44 @@
-import {itBench} from "@dapplion/benchmark";
-import {expect} from "chai";
-import {SYNC_COMMITTEE_SUBNET_COUNT, ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
+import assert from "node:assert";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {deserializeEnrSubnets} from "../../../../src/network/peers/utils/enrSubnetsDeserialize.js";
 
 /**
  * Ideally we want to sleep between requests to test the prune.
- * But adding sinon mock timer here make it impossible to benchmark.
+ * But adding mock timer here make it impossible to benchmark.
  */
 describe("network / peers / deserializeEnrSubnets", () => {
   const attnets = Buffer.from("feffb7f7fdfffefd", "hex");
   const syncnets = Buffer.from("04", "hex");
 
-  before("Validate constants", () => {
-    expect(ATTESTATION_SUBNET_COUNT).to.equal(64, "ATTESTATION_SUBNET_COUNT changed");
-    expect(SYNC_COMMITTEE_SUBNET_COUNT).to.equal(4, "SYNC_COMMITTEE_SUBNET_COUNT changed");
+  beforeAll(() => {
+    assert.equal(ATTESTATION_SUBNET_COUNT, 64, "ATTESTATION_SUBNET_COUNT changed");
+    assert.equal(SYNC_COMMITTEE_SUBNET_COUNT, 4, "SYNC_COMMITTEE_SUBNET_COUNT changed");
   });
 
-  itBench({
+  bench({
     id: "enrSubnets - fastDeserialize 64 bits",
     fn: () => {
       deserializeEnrSubnets(attnets, ATTESTATION_SUBNET_COUNT);
     },
   });
 
-  itBench({
+  bench({
     id: "enrSubnets - ssz BitVector 64 bits",
     fn: () => {
       ssz.phase0.AttestationSubnets.deserialize(attnets);
     },
   });
 
-  itBench({
+  bench({
     id: "enrSubnets - fastDeserialize 4 bits",
     fn: () => {
       deserializeEnrSubnets(syncnets, SYNC_COMMITTEE_SUBNET_COUNT);
     },
   });
 
-  itBench({
+  bench({
     id: "enrSubnets - ssz BitVector 4 bits",
     fn: () => {
       ssz.altair.SyncSubnets.deserialize(syncnets);

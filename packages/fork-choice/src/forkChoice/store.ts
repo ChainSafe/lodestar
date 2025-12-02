@@ -1,12 +1,12 @@
-import {EffectiveBalanceIncrements, CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {phase0, Slot, RootHex} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
-import {CheckpointHexWithBalance} from "./interface.js";
+import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
+import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
+import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interface.js";
 
 /**
  * Stores checkpoints in a hybrid format:
  * - Original checkpoint for fast consumption in Lodestar's side
- * - Root in string hex for fast comparisions inside the fork-choice
+ * - Root in string hex for fast comparisons inside the fork-choice
  */
 export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 
@@ -37,53 +37,56 @@ export type JustifiedBalancesGetter = (
  */
 export interface IForkChoiceStore {
   currentSlot: Slot;
-  justified: CheckpointHexWithBalance;
-  bestJustified: CheckpointHexWithBalance;
+  get justified(): CheckpointHexWithTotalBalance;
+  set justified(justified: CheckpointHexWithBalance);
   unrealizedJustified: CheckpointHexWithBalance;
   finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
+  equivocatingIndices: Set<ValidatorIndex>;
 }
-
-/* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/member-ordering */
 
 /**
  * IForkChoiceStore implementer which emits forkChoice events on updated justified and finalized checkpoints.
  */
 export class ForkChoiceStore implements IForkChoiceStore {
-  private _justified: CheckpointHexWithBalance;
-  bestJustified: CheckpointHexWithBalance;
+  private _justified: CheckpointHexWithTotalBalance;
   unrealizedJustified: CheckpointHexWithBalance;
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
+  equivocatingIndices = new Set<ValidatorIndex>();
+  justifiedBalancesGetter: JustifiedBalancesGetter;
+  currentSlot: Slot;
 
   constructor(
-    public currentSlot: Slot,
+    currentSlot: Slot,
     justifiedCheckpoint: phase0.Checkpoint,
     finalizedCheckpoint: phase0.Checkpoint,
     justifiedBalances: EffectiveBalanceIncrements,
-    public justifiedBalancesGetter: JustifiedBalancesGetter,
+    justifiedBalancesGetter: JustifiedBalancesGetter,
     private readonly events?: {
       onJustified: (cp: CheckpointWithHex) => void;
       onFinalized: (cp: CheckpointWithHex) => void;
     }
   ) {
-    const justified: CheckpointHexWithBalance = {
+    this.justifiedBalancesGetter = justifiedBalancesGetter;
+    this.currentSlot = currentSlot;
+    const justified = {
       checkpoint: toCheckpointWithHex(justifiedCheckpoint),
       balances: justifiedBalances,
+      totalBalance: computeTotalBalance(justifiedBalances),
     };
     this._justified = justified;
-    this.bestJustified = justified;
     this.unrealizedJustified = justified;
     this._finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
     this.unrealizedFinalizedCheckpoint = this._finalizedCheckpoint;
   }
 
-  get justified(): CheckpointHexWithBalance {
+  get justified(): CheckpointHexWithTotalBalance {
     return this._justified;
   }
   set justified(justified: CheckpointHexWithBalance) {
-    this._justified = justified;
+    this._justified = {...justified, totalBalance: computeTotalBalance(justified.balances)};
     this.events?.onJustified(justified.checkpoint);
   }
 
@@ -104,10 +107,18 @@ export function toCheckpointWithHex(checkpoint: phase0.Checkpoint): CheckpointWi
   return {
     epoch: checkpoint.epoch,
     root,
-    rootHex: toHexString(root),
+    rootHex: toRootHex(root),
   };
 }
 
 export function equalCheckpointWithHex(a: CheckpointWithHex, b: CheckpointWithHex): boolean {
   return a.epoch === b.epoch && a.rootHex === b.rootHex;
+}
+
+export function computeTotalBalance(balances: EffectiveBalanceIncrements): number {
+  let totalBalance = 0;
+  for (let i = 0; i < balances.length; i++) {
+    totalBalance += balances[i];
+  }
+  return totalBalance;
 }

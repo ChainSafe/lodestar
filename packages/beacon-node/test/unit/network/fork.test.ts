@@ -1,18 +1,28 @@
-import {expect} from "chai";
+import {describe, expect, it} from "vitest";
+import {BeaconConfig, ForkInfo} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {IBeaconConfig, IForkInfo} from "@lodestar/config";
-import {getCurrentAndNextFork, getActiveForks} from "../../../src/network/forks.js";
+import {getCurrentAndNextForkBoundary} from "../../../src/network/forks.js";
 
 function getForkConfig({
   phase0,
   altair,
   bellatrix,
+  capella,
+  deneb,
+  electra,
+  fulu,
+  gloas,
 }: {
   phase0: number;
   altair: number;
   bellatrix: number;
-}): IBeaconConfig {
-  const forks: Record<ForkName, IForkInfo> = {
+  capella: number;
+  deneb: number;
+  electra: number;
+  fulu: number;
+  gloas: number;
+}): BeaconConfig {
+  const forks: Record<ForkName, ForkInfo> = {
     phase0: {
       name: ForkName.phase0,
       seq: ForkSeq.phase0,
@@ -37,10 +47,55 @@ function getForkConfig({
       prevVersion: Buffer.from([0, 0, 0, 1]),
       prevForkName: ForkName.altair,
     },
+    capella: {
+      name: ForkName.capella,
+      seq: ForkSeq.capella,
+      epoch: capella,
+      version: Buffer.from([0, 0, 0, 3]),
+      prevVersion: Buffer.from([0, 0, 0, 2]),
+      prevForkName: ForkName.bellatrix,
+    },
+    deneb: {
+      name: ForkName.deneb,
+      seq: ForkSeq.deneb,
+      epoch: deneb,
+      version: Buffer.from([0, 0, 0, 4]),
+      prevVersion: Buffer.from([0, 0, 0, 3]),
+      prevForkName: ForkName.capella,
+    },
+    electra: {
+      name: ForkName.electra,
+      seq: ForkSeq.electra,
+      epoch: electra,
+      version: Buffer.from([0, 0, 0, 5]),
+      prevVersion: Buffer.from([0, 0, 0, 4]),
+      prevForkName: ForkName.deneb,
+    },
+    fulu: {
+      name: ForkName.fulu,
+      seq: ForkSeq.fulu,
+      epoch: fulu,
+      version: Buffer.from([0, 0, 0, 6]),
+      prevVersion: Buffer.from([0, 0, 0, 5]),
+      prevForkName: ForkName.electra,
+    },
+    gloas: {
+      name: ForkName.gloas,
+      seq: ForkSeq.gloas,
+      epoch: gloas,
+      version: Buffer.from([0, 0, 0, 7]),
+      prevVersion: Buffer.from([0, 0, 0, 6]),
+      prevForkName: ForkName.fulu,
+    },
   };
   const forksAscendingEpochOrder = Object.values(forks);
   const forksDescendingEpochOrder = Object.values(forks).reverse();
-  return {forks, forksAscendingEpochOrder, forksDescendingEpochOrder} as IBeaconConfig;
+  return {
+    forks,
+    forksAscendingEpochOrder,
+    forksDescendingEpochOrder,
+    forkBoundariesAscendingEpochOrder: forksAscendingEpochOrder.map(({name, epoch}) => ({fork: name, epoch})),
+  } as BeaconConfig;
 }
 
 const testScenarios = [
@@ -48,6 +103,7 @@ const testScenarios = [
     phase0: 0,
     altair: 0,
     bellatrix: Infinity,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "altair", nextFork: undefined, activeForks: ["altair"]},
       {epoch: 0, currentFork: "altair", nextFork: undefined, activeForks: ["altair"]},
@@ -58,6 +114,7 @@ const testScenarios = [
     phase0: 0,
     altair: 0,
     bellatrix: 0,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
       {epoch: 0, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
@@ -68,6 +125,7 @@ const testScenarios = [
     phase0: 0,
     altair: 1,
     bellatrix: 1,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "phase0", nextFork: "bellatrix", activeForks: ["phase0", "bellatrix"]},
       {epoch: 2, currentFork: "bellatrix", nextFork: undefined, activeForks: ["phase0", "bellatrix"]},
@@ -79,6 +137,7 @@ const testScenarios = [
     phase0: 0,
     altair: 1,
     bellatrix: 2,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0", "altair"]},
       {epoch: 0, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0", "altair", "bellatrix"]},
@@ -93,6 +152,7 @@ const testScenarios = [
     phase0: 0,
     altair: 5,
     bellatrix: 10,
+    capella: Infinity,
     testCases: [
       {epoch: -1, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0"]},
       {epoch: 3, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0", "altair"]},
@@ -106,22 +166,28 @@ const testScenarios = [
 ];
 
 for (const testScenario of testScenarios) {
-  const {phase0, altair, bellatrix, testCases} = testScenario;
+  const {phase0, altair, bellatrix, capella, testCases} = testScenario;
+  const deneb = Infinity;
+  const electra = Infinity;
+  const fulu = Infinity;
+  const gloas = Infinity;
 
-  describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix}`, () => {
-    const forkConfig = getForkConfig({phase0, altair, bellatrix});
+  describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix} capella: ${capella}`, () => {
+    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas});
     const forks = forkConfig.forks;
     for (const testCase of testCases) {
       const {epoch, currentFork, nextFork, activeForks} = testCase;
       it(` on epoch ${epoch} should return ${JSON.stringify({
         currentFork,
         nextFork,
-      })}, getActiveForks: ${activeForks}`, () => {
-        expect(getCurrentAndNextFork(forkConfig, epoch)).to.deep.equal({
-          currentFork: forks[currentFork as ForkName],
-          nextFork: (nextFork && forks[nextFork as ForkName]) ?? undefined,
+      })}, activeForks: ${activeForks.join(",")}`, () => {
+        const currentForkInfo = forks[currentFork as ForkName];
+        const nextForkInfo = (nextFork && forks[nextFork as ForkName]) ?? undefined;
+
+        expect(getCurrentAndNextForkBoundary(forkConfig, epoch)).toEqual({
+          currentBoundary: {fork: currentForkInfo.name, epoch: currentForkInfo.epoch},
+          nextBoundary: nextForkInfo ? {fork: nextForkInfo.name, epoch: nextForkInfo.epoch} : undefined,
         });
-        expect(getActiveForks(forkConfig, epoch)).to.deep.equal(activeForks);
       });
     }
   });

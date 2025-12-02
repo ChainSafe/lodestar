@@ -72,7 +72,7 @@ export function intersectUint8Arrays(aUA: Uint8Array, bUA: Uint8Array): Intersec
   // subset = MUST subset MAYBE equal
   if (!someExcludes && !someSuperset && someSubset) return IntersectResult.Subset;
   // intersect = any other condition
-  else return IntersectResult.Intersect;
+  return IntersectResult.Intersect;
 }
 
 /**
