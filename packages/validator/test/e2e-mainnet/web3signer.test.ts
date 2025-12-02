@@ -1,7 +1,7 @@
 import {fetch} from "cross-fetch";
 import tmp from "tmp";
-import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
-import bls from "@chainsafe/bls";
+import {beforeAll, describe, expect, it, vi} from "vitest";
+import {SecretKey} from "@chainsafe/blst";
 import {getClient, routes} from "@lodestar/api";
 import {ImportStatus, getClient as getKeymanagerClient} from "@lodestar/api/keymanager";
 import {createBeaconConfig} from "@lodestar/config";
@@ -74,7 +74,7 @@ describe("web3signer signature test", () => {
 
   beforeAll(async () => {
     // Start container
-    const secretKey = bls.SecretKey.fromBytes(fromHex(secKey));
+    const secretKey = SecretKey.fromBytes(fromHex(secKey));
 
     // http://localhost:9000/api/v1/eth2/sign/0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47
     validatorStoreRemote = await getValidatorStore({type: SignerType.Remote, url: web3signerUrl, pubkey});
