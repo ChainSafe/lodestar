@@ -1,5 +1,5 @@
 import path from "node:path";
-import {afterAll, beforeAll, describe, it, onTestFinished, vi} from "vitest";
+import {beforeAll, describe, it, onTestFinished, vi} from "vitest";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
@@ -28,12 +28,6 @@ describe("voluntaryExit using remote signer", () => {
       ),
       password: password,
     });
-  });
-
-  afterAll(async () => {
-    if (externalSigner) {
-      await externalSigner.container.stop();
-    }
   });
 
   it("Perform a voluntary exit", async () => {
