@@ -78,8 +78,6 @@ const onDiscovered = (enr: ENR): void => {
     subject.next(enr.toObject());
   }
 };
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore wtf?
 discv5.addListener("discovered", onDiscovered);
 
 // Discv5 will now begin accepting request/responses
@@ -96,8 +94,6 @@ const module: Discv5WorkerApi = {
     return discv5.kadValues().map((enr: ENR) => enr.toObject());
   },
   async discoverKadValues(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore wtf?
     discv5.kadValues().map(onDiscovered);
   },
   async findRandomNode(): Promise<ENRData[]> {
