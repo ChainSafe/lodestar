@@ -1,4 +1,5 @@
 import childProcess from "node:child_process";
+import {randomUUID} from "node:crypto";
 import {vi} from "vitest";
 
 /* eslint-disable no-console */
@@ -17,9 +18,19 @@ export function runDockerContainer(
   console.log(`Pulling docker image ${dockerhubImageTag}...`);
   childProcess.execSync(`docker pull ${dockerhubImageTag}`);
 
+  const containerName = `test-${randomUUID()}`;
+
   // docker run container
   console.log(`Running docker container ${dockerhubImageTag}...`);
-  const proc = childProcess.spawn("docker", ["run", ...dockerRunArgs, dockerhubImageTag, ...commandArgs]);
+  const proc = childProcess.spawn("docker", [
+    "run",
+    "--rm",
+    "--name",
+    containerName,
+    ...dockerRunArgs,
+    dockerhubImageTag,
+    ...commandArgs,
+  ]);
 
   if (opts?.pipeToProcess) {
     proc.stdout.on("data", (chunk) => {
@@ -47,8 +58,13 @@ export function runDockerContainer(
   });
 
   return () => {
-    if (proc) {
-      console.log("Attempting to kill");
+    console.log("Attempting to stop container");
+    try {
+      childProcess.execSync(`docker stop ${containerName}`);
+    } catch {
+      // Ignore if already stopped
+    }
+    if (proc && !proc.killed) {
       proc.kill("SIGKILL");
       try {
         childProcess.execSync(`pkill -P ${proc.pid}`);

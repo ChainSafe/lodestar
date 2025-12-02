@@ -51,7 +51,6 @@ export async function startExternalSigner({
     web3signerImage,
     [
       // |
-      "--rm",
       `--publish=${port}:9000`,
       `--volume=${configDirPathHost}:${configDirPathContainer}`,
     ],
