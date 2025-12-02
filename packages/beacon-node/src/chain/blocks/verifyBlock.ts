@@ -90,19 +90,28 @@ export async function verifyBlocksInEpoch(
     throw Error(`preState at slot ${preState0.slot} must be dialed to block epoch ${block0Epoch}`);
   }
 
-  // Store indexed attestations for each block to avoid recomputing them during import
-  const indexedAttestationsByBlock: IndexedAttestation[][] = [];
-
-  for (const [i, block] of blocks.entries()) {
-    const fork = this.config.getForkSeq(block.message.slot);
-    indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) =>
-      preState0.epochCtx.getIndexedAttestation(fork, attestation)
-    );
-  }
-
   const abortController = new AbortController();
 
   try {
+    // Start execution payload verification first (async I/O to EL client)
+    const executionPayloadPromise =
+      opts.skipVerifyExecutionPayload !== true
+        ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, abortController.signal, opts)
+        : Promise.resolve({
+            execAborted: null,
+            executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
+            mergeBlockFound: null,
+          } as SegmentExecStatus);
+
+    // Store indexed attestations for each block to avoid recomputing them during import
+    const indexedAttestationsByBlock: IndexedAttestation[][] = [];
+    for (const [i, block] of blocks.entries()) {
+      const fork = this.config.getForkSeq(block.message.slot);
+      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) =>
+        preState0.epochCtx.getIndexedAttestation(fork, attestation)
+      );
+    }
+
     // batch all I/O operations to reduce overhead
     const [
       segmentExecStatus,
@@ -110,14 +119,7 @@ export async function verifyBlocksInEpoch(
       {postStates, proposerBalanceDeltas, verifyStateTime},
       {verifySignaturesTime},
     ] = await Promise.all([
-      // Execution payloads
-      opts.skipVerifyExecutionPayload !== true
-        ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, abortController.signal, opts)
-        : Promise.resolve({
-            execAborted: null,
-            executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
-            mergeBlockFound: null,
-          } as SegmentExecStatus),
+      executionPayloadPromise,
 
       // data availability for the blobs
       verifyBlocksDataAvailability(blockInputs, abortController.signal),
