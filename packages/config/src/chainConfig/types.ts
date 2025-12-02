@@ -188,6 +188,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   SHARD_COMMITTEE_PERIOD: "number",
   ETH1_FOLLOW_DISTANCE: "number",
 
+  PROPOSER_REORG_CUTOFF_BPS: "number",
   ATTESTATION_DUE_BPS: "number",
   AGGREGATE_DUE_BPS: "number",
   // Altair
@@ -203,7 +204,6 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   INCLUSION_LIST_SUBMISSION_DUE_BPS: "number",
   PROPOSER_INCLUSION_LIST_CUTOFF_BPS: "number",
   VIEW_FREEZE_CUTOFF_BPS: "number",
-  PROPOSER_REORG_CUTOFF_BPS: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",
