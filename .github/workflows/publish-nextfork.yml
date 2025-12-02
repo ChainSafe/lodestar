@@ -15,7 +15,7 @@ env:
 jobs:
   npm:
     name: Publish to NPM Registry
-    runs-on: buildjet-4vcpu-ubuntu-04
+    runs-on: buildjet-4vcpu-ubuntu-2404
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
