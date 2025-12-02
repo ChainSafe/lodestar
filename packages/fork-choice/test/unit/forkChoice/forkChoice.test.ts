@@ -26,6 +26,7 @@ describe("Forkchoice", () => {
   const finalizedRoot = getBlockRoot(genesisSlot);
   const parentRoot = toHex(Buffer.alloc(32, 0xff));
   let protoArr: ProtoArray;
+  const validatorCount = 100;
 
   beforeEach(() => {
     protoArr = ProtoArray.initialize(
@@ -126,7 +127,7 @@ describe("Forkchoice", () => {
     // Add block that is a finalized descendant.
     const block = getBlock(genesisSlot + 1);
     protoArr.onBlock(block, block.slot);
-    const forkchoice = new ForkChoice(config, fcStore, protoArr, null);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
     const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1));
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries).toHaveLength(1);
@@ -144,7 +145,7 @@ describe("Forkchoice", () => {
     };
     protoArr.onBlock(forkBlock, forkBlock.slot);
 
-    const forkchoice = new ForkChoice(config, fcStore, protoArr, null);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
     // Test with a block from the canonical chain
     const canonicalBlockRoot = getBlockRoot(genesisSlot + 3);
@@ -196,7 +197,7 @@ describe("Forkchoice", () => {
   for (const {atSlot, pivotSlot, epoch, skipped} of dependentRootTestCases) {
     it(`getDependentRoot epoch ${epoch} atSlot ${atSlot} skipped ${JSON.stringify(skipped)}`, () => {
       populateProtoArray(atSlot, skipped);
-      const forkchoice = new ForkChoice(config, fcStore, protoArr, null);
+      const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
       const blockRoot = getBlockRoot(atSlot);
       const block = forkchoice.getBlockHex(blockRoot);

@@ -36,7 +36,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {assert, toRootHex} from "@lodestar/utils";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {sszDeserializeSingleAttestation} from "../../network/gossip/topic.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {
@@ -570,8 +569,8 @@ async function validateAttestationNoSignatureCheck(
  * Note: We do not queue future attestations for later processing
  */
 export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, attestationSlot: Slot): void {
-  // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-  const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC);
+  // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY
+  const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000);
   if (attestationSlot > latestPermissibleSlot) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.FUTURE_SLOT,
@@ -586,9 +585,9 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   // see: https://github.com/ethereum/consensus-specs/pull/3360
   if (ForkSeq[fork] < ForkSeq.deneb) {
     const earliestPermissibleSlot = Math.max(
-      // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-      // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
-      chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
+      // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY
+      chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000) -
+        chain.config.ATTESTATION_PROPAGATION_SLOT_RANGE,
       0
     );
 
@@ -614,7 +613,7 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
 
     // lower bound for previous epoch is same as epoch of earliestPermissibleSlot
     const currentEpochWithPastTolerance = computeEpochAtSlot(
-      chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC)
+      chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000)
     );
 
     const earliestPermissiblePreviousEpoch = Math.max(currentEpochWithPastTolerance - 1, 0);

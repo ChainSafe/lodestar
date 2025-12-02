@@ -60,7 +60,19 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
         );
       }
 
-      fnPromises.push(this.db.dataColumnSidecar.putMany(blockRoot, dataColumnSidecars));
+      const binaryPuts = [];
+      const nonbinaryPuts = [];
+      for (const dataColumnSidecar of dataColumnSidecars) {
+        // skip reserializing column if we already have it
+        const serialized = this.serializedCache.get(dataColumnSidecar);
+        if (serialized) {
+          binaryPuts.push({key: dataColumnSidecar.index, value: serialized});
+        } else {
+          nonbinaryPuts.push(dataColumnSidecar);
+        }
+      }
+      fnPromises.push(this.db.dataColumnSidecar.putManyBinary(blockRoot, binaryPuts));
+      fnPromises.push(this.db.dataColumnSidecar.putMany(blockRoot, nonbinaryPuts));
       this.logger.debug("Persisted dataColumnSidecars to hot DB", {
         slot: block.message.slot,
         root: blockRootHex,

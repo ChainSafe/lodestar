@@ -18,6 +18,7 @@ export const gnosisChainConfig: ChainConfig = {
 
   // Time parameters
   SECONDS_PER_SLOT: 5,
+  SLOT_DURATION_MS: 5000,
   SECONDS_PER_ETH1_BLOCK: 6,
   ETH1_FOLLOW_DISTANCE: 1024,
   CHURN_LIMIT_QUOTIENT: 4096,

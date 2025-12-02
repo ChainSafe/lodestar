@@ -6,6 +6,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -94,6 +95,9 @@ export async function importBlock(
   if (!opts.eagerPersistBlock) {
     await writeBlockInputToDb.call(this, [blockInput]);
   }
+
+  // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
+  this.serializedCache.clear();
 
   // 2. Import block to fork choice
 
@@ -391,7 +395,7 @@ export async function importBlock(
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
      * zero block hash (pre TTD)
      */
-    const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine

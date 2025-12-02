@@ -99,9 +99,16 @@ export type ChainConfig = {
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
 
   // Networking
+  MAX_PAYLOAD_SIZE: number;
   MAX_REQUEST_BLOCKS: number;
-  MAX_REQUEST_BLOCKS_DENEB: number;
+  EPOCHS_PER_SUBNET_SUBSCRIPTION: number;
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: number;
+  ATTESTATION_PROPAGATION_SLOT_RANGE: number;
+  MAXIMUM_GOSSIP_CLOCK_DISPARITY: number;
+  MESSAGE_DOMAIN_INVALID_SNAPPY: Uint8Array;
+  MESSAGE_DOMAIN_VALID_SNAPPY: Uint8Array;
+  SUBNETS_PER_NODE: number;
+  MAX_REQUEST_BLOCKS_DENEB: number;
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: number;
   BLOB_SIDECAR_SUBNET_COUNT: number;
@@ -119,6 +126,9 @@ export type ChainConfig = {
   CUSTODY_REQUIREMENT: number;
   VALIDATOR_CUSTODY_REQUIREMENT: number;
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: number;
+
+  // Gloas
+  MAX_REQUEST_PAYLOADS: number;
 
   // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
@@ -217,9 +227,16 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   DEPOSIT_CONTRACT_ADDRESS: "bytes",
 
   // Networking
+  MAX_PAYLOAD_SIZE: "number",
   MAX_REQUEST_BLOCKS: "number",
-  MAX_REQUEST_BLOCKS_DENEB: "number",
+  EPOCHS_PER_SUBNET_SUBSCRIPTION: "number",
   MIN_EPOCHS_FOR_BLOCK_REQUESTS: "number",
+  ATTESTATION_PROPAGATION_SLOT_RANGE: "number",
+  MAXIMUM_GOSSIP_CLOCK_DISPARITY: "number",
+  MESSAGE_DOMAIN_INVALID_SNAPPY: "bytes",
+  MESSAGE_DOMAIN_VALID_SNAPPY: "bytes",
+  SUBNETS_PER_NODE: "number",
+  MAX_REQUEST_BLOCKS_DENEB: "number",
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: "number",
   BLOB_SIDECAR_SUBNET_COUNT: "number",
@@ -242,6 +259,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MAX_REQUEST_INCLUSION_LIST: "number",
   MAX_BYTES_PER_INCLUSION_LIST: "number",
   INCLUSION_LIST_COMMITTEE_SIZE: "number",
+
+  // Gloas
+  MAX_REQUEST_PAYLOADS: "number",
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",

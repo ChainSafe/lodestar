@@ -143,6 +143,7 @@ describe("network / peers / PeerManager", () => {
     networkEventBus.emit(NetworkEvent.reqRespRequest, {
       request: {method: ReqRespMethod.Ping, body: seqNumber},
       peer: peerId1,
+      peerClient: "Unknown",
     });
 
     expect(reqResp.sendMetadata).toHaveBeenCalledOnce();
@@ -156,6 +157,7 @@ describe("network / peers / PeerManager", () => {
     networkEventBus.emit(NetworkEvent.reqRespRequest, {
       request: {method: ReqRespMethod.Ping, body: seqNumber},
       peer: peerId1,
+      peerClient: "Unknown",
     });
 
     expect(reqResp.sendMetadata).not.toHaveBeenCalledOnce();
@@ -181,6 +183,7 @@ describe("network / peers / PeerManager", () => {
     networkEventBus.emit(NetworkEvent.reqRespRequest, {
       request: {method: ReqRespMethod.Status, body: remoteStatus},
       peer: peerId1,
+      peerClient: "Unknown",
     });
 
     await peerConnectedPromise;

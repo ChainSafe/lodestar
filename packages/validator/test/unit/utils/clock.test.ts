@@ -80,6 +80,72 @@ describe("util / Clock", () => {
     expect(onEpoch).toHaveBeenNthCalledWith(2, 1, expect.any(AbortSignal));
   });
 
+  it("Should skip slots when tasks take longer than one slot to run", async () => {
+    const genesisTime = Math.floor(Date.now() / 1000) - config.SLOT_DURATION_MS / 2000;
+    const clock = new Clock(config, logger, {genesisTime, skipSlots: true});
+
+    const slotsCalled: number[] = [];
+    const onSlot = vi.fn().mockImplementation(async (slot: number) => {
+      slotsCalled.push(slot);
+      // First task takes longer than a slot
+      if (slot === 0) {
+        await new Promise((resolve) => setTimeout(resolve, config.SLOT_DURATION_MS + 100));
+      }
+    });
+
+    clock.runEverySlot(onSlot);
+    clock.start(controller.signal);
+
+    // Must run once immediately
+    expect(onSlot).toHaveBeenCalledOnce();
+    expect(onSlot).toHaveBeenNthCalledWith(1, 0, expect.any(AbortSignal));
+    expect(slotsCalled).toEqual([0]);
+
+    // Advance time to slot 2
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS * 2 + 200);
+
+    // Slot 1 should be skipped and we should be on slot 2
+    expect(onSlot).toHaveBeenCalledTimes(2);
+    expect(onSlot).toHaveBeenNthCalledWith(2, 2, expect.any(AbortSignal));
+    expect(slotsCalled).toEqual([0, 2]);
+  });
+
+  it("Should not skip slots when option is disabled", async () => {
+    const genesisTime = Math.floor(Date.now() / 1000) - config.SLOT_DURATION_MS / 2000;
+    const clock = new Clock(config, logger, {genesisTime, skipSlots: false});
+
+    const slotsCalled: number[] = [];
+    const onSlot = vi.fn().mockImplementation(async (slot: number) => {
+      slotsCalled.push(slot);
+      // First task takes longer than a slot
+      if (slot === 0) {
+        await new Promise((resolve) => setTimeout(resolve, config.SLOT_DURATION_MS + 100));
+      }
+    });
+
+    clock.runEverySlot(onSlot);
+    clock.start(controller.signal);
+
+    // Must run once immediately
+    expect(onSlot).toHaveBeenCalledOnce();
+    expect(slotsCalled).toEqual([0]);
+
+    // Should trigger slot 1 even though slot 0 is still running
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
+    expect(onSlot).toHaveBeenCalledTimes(2);
+    expect(slotsCalled).toEqual([0, 1]);
+
+    // Should trigger slot 2
+    await vi.advanceTimersByTimeAsync(config.SLOT_DURATION_MS);
+    expect(onSlot).toHaveBeenCalledTimes(3);
+    expect(slotsCalled).toEqual([0, 1, 2]);
+
+    // All slots should be called without skipping
+    expect(onSlot).toHaveBeenNthCalledWith(1, 0, expect.any(AbortSignal));
+    expect(onSlot).toHaveBeenNthCalledWith(2, 1, expect.any(AbortSignal));
+    expect(onSlot).toHaveBeenNthCalledWith(3, 2, expect.any(AbortSignal));
+  });
+
   describe("getCurrentSlot", () => {
     const testConfig = {SLOT_DURATION_MS: 12 * 1000} as BeaconConfig;
     const genesisTime = Math.floor(new Date("2021-01-01").getTime() / 1000);

@@ -35,9 +35,9 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     [ReqRespMethod.Goodbye]: notImplemented(ReqRespMethod.Goodbye),
     [ReqRespMethod.Ping]: notImplemented(ReqRespMethod.Ping),
     [ReqRespMethod.Metadata]: notImplemented(ReqRespMethod.Metadata),
-    [ReqRespMethod.BeaconBlocksByRange]: (req) => {
+    [ReqRespMethod.BeaconBlocksByRange]: (req, peerId, peerClient) => {
       const body = ssz.phase0.BeaconBlocksByRangeRequest.deserialize(req.data);
-      return onBeaconBlocksByRange(body, chain, db);
+      return onBeaconBlocksByRange(body, chain, db, peerId, peerClient);
     },
     [ReqRespMethod.BeaconBlocksByRoot]: (req) => {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
@@ -53,13 +53,13 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       const body = ssz.deneb.BlobSidecarsByRangeRequest.deserialize(req.data);
       return onBlobSidecarsByRange(body, chain, db);
     },
-    [ReqRespMethod.DataColumnSidecarsByRange]: (req) => {
+    [ReqRespMethod.DataColumnSidecarsByRange]: (req, peerId, peerClient) => {
       const body = ssz.fulu.DataColumnSidecarsByRangeRequest.deserialize(req.data);
-      return onDataColumnSidecarsByRange(body, chain, db);
+      return onDataColumnSidecarsByRange(body, chain, db, peerId, peerClient);
     },
-    [ReqRespMethod.DataColumnSidecarsByRoot]: (req) => {
+    [ReqRespMethod.DataColumnSidecarsByRoot]: (req, peerId, peerClient) => {
       const body = DataColumnSidecarsByRootRequestType(chain.config).deserialize(req.data);
-      return onDataColumnSidecarsByRoot(body, chain, db);
+      return onDataColumnSidecarsByRoot(body, chain, db, peerId, peerClient);
     },
 
     [ReqRespMethod.LightClientBootstrap]: (req) => {

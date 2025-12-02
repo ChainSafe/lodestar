@@ -126,6 +126,7 @@ const forkChoiceTest =
             metrics: null,
             validatorMonitor: null,
             anchorState,
+            isAnchorStateFinalized: true,
             eth1,
             executionEngine,
             executionBuilder: undefined,
@@ -226,6 +227,7 @@ const forkChoiceTest =
                   }
 
                   await validateBlockDataColumnSidecars(
+                    chain,
                     slot,
                     blockRoot,
                     (signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments

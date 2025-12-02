@@ -35,6 +35,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
     },
   },
+  getProposerDutiesV2: {
+    args: {epoch: 1000},
+    res: {
+      data: [{slot: 1, validatorIndex: 2, pubkey: new Uint8Array(48).fill(3)}],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
   getSyncCommitteeDuties: {
     args: {epoch: 1000, indices: [1, 2, 3]},
     res: {

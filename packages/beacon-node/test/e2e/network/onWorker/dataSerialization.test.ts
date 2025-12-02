@@ -48,7 +48,10 @@ describe("data serialization through worker boundary", () => {
       id: 0,
       item: {data: bytes, boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}},
     },
-    [ReqRespBridgeEvent.incomingRequest]: {id: 0, callArgs: {method, req: {data: bytes, version: 1}, peerId}},
+    [ReqRespBridgeEvent.incomingRequest]: {
+      id: 0,
+      callArgs: {method, req: {data: bytes, version: 1}, peerId, peerClient: "Unknown"},
+    },
     [ReqRespBridgeEvent.incomingResponse]: {
       type: IteratorEventType.next,
       id: 0,
@@ -76,6 +79,7 @@ describe("data serialization through worker boundary", () => {
     [NetworkEvent.reqRespRequest]: {
       request: {method: ReqRespMethod.Status, body: statusZero},
       peer: getValidPeerId(),
+      peerClient: "Unknown",
     },
     [NetworkEvent.pendingGossipsubMessage]: {
       topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}},
@@ -87,6 +91,8 @@ describe("data serialization through worker boundary", () => {
       msgSlot: 1000,
       msgId: ZERO_HASH_HEX,
       propagationSource: peerId,
+      clientAgent: "Unknown",
+      clientVersion: "NA",
       seenTimestampSec: 1600000000,
       startProcessUnixSec: 1600000000,
     },

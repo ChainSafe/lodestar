@@ -1,6 +1,7 @@
 import {WireFormat, defaultInit} from "@lodestar/api";
 import {CliCommandOptions} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
+import {coerceCors, enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
 import {ensure0xPrefix} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
@@ -59,6 +60,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     "http.requestWireFormat"?: string;
     "http.responseWireFormat"?: string;
+
+    "clock.skipSlots"?: boolean;
 
     "externalSigner.url"?: string;
     "externalSigner.pubkeys"?: string[];
@@ -128,9 +131,10 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
   },
   "keymanager.cors": {
     type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for key manager API",
+    description: `Configures the Access-Control-Allow-Origin CORS header for key manager API. Use '${enabledAllBashFriendly}' to allow all origins`,
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
     group: "keymanager",
+    coerce: coerceCors,
   },
   "keymanager.headerLimit": {
     hidden: true,
@@ -327,6 +331,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description: `Preferred wire format for HTTP responses from beacon node. Can be one of \`${WireFormat.json}\` or \`${WireFormat.ssz}\``,
     defaultDescription: `${defaultInit.responseWireFormat}`,
     group: "http",
+  },
+
+  "clock.skipSlots": {
+    hidden: true,
+    description: "Skip slots when tasks take more than one slot to run",
+    type: "boolean",
   },
 
   // External signer

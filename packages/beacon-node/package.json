@@ -11,55 +11,67 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.34.1",
+  "version": "1.37.0",
   "type": "module",
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./api": {
       "bun": "./src/api/index.ts",
+      "types": "./lib/api/index.d.ts",
       "import": "./lib/api/index.js"
     },
     "./chain": {
       "bun": "./src/chain/index.ts",
+      "types": "./lib/chain/index.d.ts",
       "import": "./lib/chain/index.js"
     },
     "./constants": {
       "bun": "./src/constants/index.ts",
+      "types": "./lib/constants/index.d.ts",
       "import": "./lib/constants/index.js"
     },
     "./db": {
       "bun": "./src/db/index.ts",
+      "types": "./lib/db/index.d.ts",
       "import": "./lib/db/index.js"
     },
     "./eth1": {
       "bun": "./src/eth1/index.ts",
+      "types": "./lib/eth1/index.d.ts",
       "import": "./lib/eth1/index.js"
     },
     "./metrics": {
       "bun": "./src/metrics/index.ts",
+      "types": "./lib/metrics/index.d.ts",
       "import": "./lib/metrics/index.js"
     },
     "./monitoring": {
       "bun": "./src/monitoring/index.ts",
+      "types": "./lib/monitoring/index.d.ts",
       "import": "./lib/monitoring/index.js"
     },
     "./network": {
       "bun": "./src/network/index.ts",
+      "types": "./lib/network/index.d.ts",
       "import": "./lib/network/index.js"
     },
     "./node": {
       "bun": "./src/node/index.ts",
+      "types": "./lib/node/index.d.ts",
       "import": "./lib/node/index.js"
     },
     "./sync": {
       "bun": "./src/sync/index.ts",
+      "types": "./lib/sync/index.d.ts",
       "import": "./lib/sync/index.js"
     },
     "./util": {
       "bun": "./src/util/index.ts",
+      "types": "./lib/util/index.d.ts",
       "import": "./lib/util/index.js"
     }
   },
@@ -67,18 +79,12 @@
     "#prometheus-gc-stats-wrapper": {
       "bun": "./src/bun-wrappers/prometheus-gc-stats.ts",
       "default": "@chainsafe/prometheus-gc-stats"
+    },
+    "#datastore-wrapper": {
+      "bun": "./src/network/peers/datastore_bun.ts",
+      "default": "datastore-level"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "./lib/index.d.ts",
   "files": [
     "src",
     "lib",
@@ -119,7 +125,7 @@
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.2.2",
     "@chainsafe/threads": "^1.11.3",
-    "@crate-crypto/node-eth-kzg": "0.8.0",
+    "@crate-crypto/node-eth-kzg": "0.9.1",
     "@ethersproject/abi": "^5.7.0",
     "@fastify/bearer-auth": "^10.0.1",
     "@fastify/cors": "^10.0.1",
@@ -134,21 +140,22 @@
     "@libp2p/peer-id": "^5.1.0",
     "@libp2p/prometheus-metrics": "^4.3.15",
     "@libp2p/tcp": "^10.1.8",
-    "@lodestar/api": "^1.34.1",
-    "@lodestar/config": "^1.34.1",
-    "@lodestar/db": "^1.34.1",
-    "@lodestar/fork-choice": "^1.34.1",
-    "@lodestar/light-client": "^1.34.1",
-    "@lodestar/logger": "^1.34.1",
-    "@lodestar/params": "^1.34.1",
-    "@lodestar/reqresp": "^1.34.1",
-    "@lodestar/state-transition": "^1.34.1",
-    "@lodestar/types": "^1.34.1",
-    "@lodestar/utils": "^1.34.1",
-    "@lodestar/validator": "^1.34.1",
+    "@lodestar/api": "^1.37.0",
+    "@lodestar/config": "^1.37.0",
+    "@lodestar/db": "^1.37.0",
+    "@lodestar/fork-choice": "^1.37.0",
+    "@lodestar/light-client": "^1.37.0",
+    "@lodestar/logger": "^1.37.0",
+    "@lodestar/params": "^1.37.0",
+    "@lodestar/reqresp": "^1.37.0",
+    "@lodestar/state-transition": "^1.37.0",
+    "@lodestar/types": "^1.37.0",
+    "@lodestar/utils": "^1.37.0",
+    "@lodestar/validator": "^1.37.0",
     "@multiformats/multiaddr": "^12.1.3",
     "datastore-core": "^10.0.2",
     "datastore-fs": "^10.0.6",
+    "datastore-level": "^11.0.3",
     "deepmerge": "^4.3.1",
     "fastify": "^5.2.1",
     "interface-datastore": "^8.3.0",

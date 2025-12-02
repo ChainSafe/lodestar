@@ -173,7 +173,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
     await expect(
-      validateBlockDataColumnSidecars(slot, blockRoot, kzgCommitments.length, columnSidecars)
+      validateBlockDataColumnSidecars(null, slot, blockRoot, kzgCommitments.length, columnSidecars)
     ).resolves.toBeUndefined();
   });
 
@@ -209,7 +209,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    await expect(validateBlockDataColumnSidecars(slot, blockRoot, 0, columnSidecars)).rejects.toThrow(
+    await expect(validateBlockDataColumnSidecars(chain, slot, blockRoot, 0, columnSidecars)).rejects.toThrow(
       "Block has no blob commitments but data column sidecars were provided"
     );
   });

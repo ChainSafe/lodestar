@@ -14,6 +14,7 @@ import {
   ForkPreGloas,
   ForkSeq,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
   forkPostAltair,
   highestFork,
@@ -51,6 +52,7 @@ import {IBeaconDb} from "../../db/index.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";
 import {Metrics} from "../../metrics/index.js";
 import {byteArrayEquals} from "../../util/bytes.js";
+import {IClock} from "../../util/clock.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
 import {
@@ -86,6 +88,7 @@ export type SyncAttestedData = {
 
 type LightClientServerModules = {
   config: ChainForkConfig;
+  clock: IClock;
   db: IBeaconDb;
   metrics: Metrics | null;
   emitter: ChainEventEmitter;
@@ -201,6 +204,7 @@ export class LightClientServer {
   private readonly metrics: Metrics | null;
   private readonly emitter: ChainEventEmitter;
   private readonly logger: Logger;
+  private readonly clock: IClock;
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependentRootHex>>(() => new Set());
   private storedCurrentSyncCommittee = false;
 
@@ -221,8 +225,9 @@ export class LightClientServer {
     private readonly opts: LightClientServerOpts,
     modules: LightClientServerModules
   ) {
-    const {config, db, metrics, emitter, logger} = modules;
+    const {config, clock, db, metrics, emitter, logger} = modules;
     this.config = config;
+    this.clock = clock;
     this.db = db;
     this.metrics = metrics;
     this.emitter = emitter;
@@ -533,12 +538,19 @@ export class LightClientServer {
     // Fork of LightClientOptimisticUpdate and LightClientFinalityUpdate is based off on attested header's fork
     const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
 
-    // Emit update
-    // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
-    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
-      version: attestedFork,
-      data: headerUpdate,
-    });
+    // Check if node is syncing / too far behind to avoid emitting stale light client updates
+    const isStaleLightClientUpdate = this.clock.currentSlot - signatureSlot > SLOTS_PER_EPOCH;
+
+    if (!isStaleLightClientUpdate) {
+      // Emit update
+      // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
+      this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
+        version: attestedFork,
+        data: headerUpdate,
+      });
+    } else {
+      this.metrics?.lightclientServer.staleLightClientUpdates.inc();
+    }
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
@@ -569,11 +581,13 @@ export class LightClientServer {
         };
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
 
-        // Note: Ignores gossip rule to always emit finality_update with higher finalized_header.slot, for simplicity
-        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
-          version: attestedFork,
-          data: this.finalized,
-        });
+        if (!isStaleLightClientUpdate) {
+          // Note: Ignores gossip rule to always emit finality_update with higher finalized_header.slot, for simplicity
+          this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
+            version: attestedFork,
+            data: this.finalized,
+          });
+        }
       }
     }
 

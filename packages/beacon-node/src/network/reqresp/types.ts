@@ -175,6 +175,7 @@ export type IncomingRequestArgs = {
   method: ReqRespMethod;
   req: ReqRespRequest;
   peerId: string;
+  peerClient: string;
 };
 
 export type GetReqRespHandlerFn = (method: ReqRespMethod) => ProtocolHandler;

@@ -102,7 +102,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     expect(returnedBlocks).toHaveLength(req.count);
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
-      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock.data, blocks[i])).toBe(true);
+      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).toBe(true);
     }
   });
 

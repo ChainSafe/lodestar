@@ -6,7 +6,6 @@ import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
-import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
@@ -90,6 +89,13 @@ export class Eth2Gossipsub extends GossipSub {
     const gossipTopicCache = new GossipTopicCache(config);
 
     const scoreParams = computeGossipPeerScoreParams({config, eth2Context: modules.eth2Context});
+    let metrics: Eth2GossipsubMetrics | null = null;
+    if (metricsRegister) {
+      metrics = createEth2GossipsubMetrics(metricsRegister);
+      metrics.gossipMesh.peersByType.addCollect(() =>
+        this.onScrapeLodestarMetrics(metrics as Eth2GossipsubMetrics, networkConfig)
+      );
+    }
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -117,15 +123,7 @@ export class Eth2Gossipsub extends GossipSub {
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       msgIdToStrFn: msgIdToStrFn,
-      // Use the bellatrix max size if the merge is configured. pre-merge using this size
-      // could only be an issue on outgoing payloads, its highly unlikely we will send out
-      // a chunk bigger than GOSSIP_MAX_SIZE pre merge even on mainnet network.
-      //
-      // TODO: figure out a way to dynamically transition to the size
-      dataTransform: new DataTransformSnappy(
-        gossipTopicCache,
-        Number.isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
-      ),
+      dataTransform: new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, metrics),
       metricsRegister: metricsRegister as MetricsRegister | null,
       metricsTopicStrToLabel: metricsRegister
         ? getMetricsTopicStrToLabel(networkConfig, {disableLightClientServer: opts.disableLightClientServer ?? false})
@@ -149,11 +147,6 @@ export class Eth2Gossipsub extends GossipSub {
     this.peersData = peersData;
     this.events = events;
     this.gossipTopicCache = gossipTopicCache;
-
-    if (metricsRegister) {
-      const metrics = createEth2GossipsubMetrics(metricsRegister);
-      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
-    }
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
@@ -305,6 +298,10 @@ export class Eth2Gossipsub extends GossipSub {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
+    const peerIdStr = propagationSource.toString();
+    const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
+    const clientVersion = this.peersData.getAgentVersion(peerIdStr);
+
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
@@ -314,7 +311,9 @@ export class Eth2Gossipsub extends GossipSub {
         msg,
         msgId,
         // Hot path, use cached .toString() version
-        propagationSource: propagationSource.toString(),
+        propagationSource: peerIdStr,
+        clientVersion,
+        clientAgent,
         seenTimestampSec,
         startProcessUnixSec: null,
       });

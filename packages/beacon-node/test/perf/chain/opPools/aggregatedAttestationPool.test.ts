@@ -131,7 +131,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         inclusionListEquivocators: new InclusionListEquivocatorStore(),
         unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
       };
-      forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, null);
+      forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, originalState.validators.length, null);
     },
     5 * 60 * 1000
   );

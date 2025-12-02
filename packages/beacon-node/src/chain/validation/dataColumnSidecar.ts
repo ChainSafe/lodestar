@@ -1,10 +1,15 @@
-import {ChainConfig} from "@lodestar/config";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   KZG_COMMITMENTS_SUBTREE_INDEX,
   NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
-import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockHeaderProposerSignatureSetByHeaderSlot,
+  getBlockHeaderProposerSignatureSetByParentStateSlot,
+} from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -27,15 +32,16 @@ export async function validateGossipDataColumnSidecar(
   metrics: Metrics | null
 ): Promise<void> {
   const blockHeader = dataColumnSidecar.signedBlockHeader.message;
+  const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
-  verifyDataColumnSidecar(dataColumnSidecar);
+  verifyDataColumnSidecar(chain.config, dataColumnSidecar);
 
   // 2) [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_data_column_sidecar(sidecar.index) == subnet_id
   if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_SUBNET,
-      columnIdx: dataColumnSidecar.index,
+      columnIndex: dataColumnSidecar.index,
       gossipSubnet: gossipSubnet,
     });
   }
@@ -82,6 +88,7 @@ export async function validateGossipDataColumnSidecar(
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
       code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
       parentRoot,
+      slot: blockHeader.slot,
     });
   }
 
@@ -104,6 +111,7 @@ export async function validateGossipDataColumnSidecar(
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
         code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
         parentRoot,
+        slot: blockHeader.slot,
       });
     });
 
@@ -124,16 +132,28 @@ export async function validateGossipDataColumnSidecar(
   }
 
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
-  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, dataColumnSidecar.signedBlockHeader);
-  // Don't batch so verification is not delayed
-  if (
-    !(await chain.bls.verifySignatureSets([signatureSet], {
-      verifyOnMainThread: blockHeader.slot > chain.forkChoice.getHead().slot,
-    }))
-  ) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
-    });
+  const signature = dataColumnSidecar.signedBlockHeader.signature;
+  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
+    const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+      blockState,
+      dataColumnSidecar.signedBlockHeader
+    );
+
+    if (
+      !(await chain.bls.verifySignatureSets([signatureSet], {
+        // verify on main thread so that we only need to verify block proposer signature once per block
+        verifyOnMainThread: true,
+      }))
+    ) {
+      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+        code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        blockRoot: blockRootHex,
+        index: dataColumnSidecar.index,
+        slot: blockHeader.slot,
+      });
+    }
+
+    chain.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
   }
 
   // 9) [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
@@ -152,7 +172,7 @@ export async function validateGossipDataColumnSidecar(
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
       slot: dataColumnSidecar.signedBlockHeader.message.slot,
-      columnIdx: dataColumnSidecar.index,
+      columnIndex: dataColumnSidecar.index,
     });
   }
 
@@ -169,7 +189,7 @@ export async function validateGossipDataColumnSidecar(
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF,
       slot: blockHeader.slot,
-      columnIdx: dataColumnSidecar.index,
+      columnIndex: dataColumnSidecar.index,
     });
   } finally {
     kzgProofTimer?.();
@@ -184,12 +204,12 @@ export async function validateGossipDataColumnSidecar(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
-function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): void {
+function verifyDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: fulu.DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_INDEX,
       slot: dataColumnSidecar.signedBlockHeader.message.slot,
-      columnIdx: dataColumnSidecar.index,
+      columnIndex: dataColumnSidecar.index,
     });
   }
 
@@ -197,7 +217,20 @@ function verifyDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): voi
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.NO_COMMITMENTS,
       slot: dataColumnSidecar.signedBlockHeader.message.slot,
-      columnIdx: dataColumnSidecar.index,
+      columnIndex: dataColumnSidecar.index,
+    });
+  }
+
+  const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
+  const maxBlobsPerBlock = config.getMaxBlobsPerBlock(epoch);
+
+  if (dataColumnSidecar.kzgCommitments.length > maxBlobsPerBlock) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.TOO_MANY_KZG_COMMITMENTS,
+      slot: dataColumnSidecar.signedBlockHeader.message.slot,
+      columnIndex: dataColumnSidecar.index,
+      count: dataColumnSidecar.kzgCommitments.length,
+      limit: maxBlobsPerBlock,
     });
   }
 
@@ -254,8 +287,12 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
  * Validate a subset of data column sidecars in a block
  *
  * Requires the block to be known to the node
+ *
+ * NOTE: chain is optional to skip signature verification. Helpful for testing purposes and so that can control whether
+ * signature gets checked depending on the reqresp method that is being checked
  */
 export async function validateBlockDataColumnSidecars(
+  chain: IBeaconChain | null,
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
@@ -276,21 +313,46 @@ export async function validateBlockDataColumnSidecars(
       "Block has no blob commitments but data column sidecars were provided"
     );
   }
-
   // Hash the first sidecar block header and compare the rest via (cheaper) equality
-  const firstSidecarBlockHeader = dataColumnSidecars[0].signedBlockHeader.message;
+  const firstSidecarSignedBlockHeader = dataColumnSidecars[0].signedBlockHeader;
+  const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
   if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
     throw new DataColumnSidecarValidationError(
       {
         code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
         slot: blockSlot,
-        columnIdx: 0,
+        columnIndex: 0,
         expected: toRootHex(blockRoot),
         actual: toRootHex(firstBlockRoot),
       },
       "DataColumnSidecar doesn't match corresponding block"
     );
+  }
+
+  if (chain !== null) {
+    const rootHex = toRootHex(blockRoot);
+    const slot = firstSidecarSignedBlockHeader.message.slot;
+    const signature = firstSidecarSignedBlockHeader.signature;
+    if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, rootHex, signature)) {
+      const headState = await chain.getHeadState();
+      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
+
+      if (
+        !(await chain.bls.verifySignatureSets([signatureSet], {
+          verifyOnMainThread: true,
+        }))
+      ) {
+        throw new DataColumnSidecarValidationError({
+          code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+          blockRoot: rootHex,
+          slot: blockSlot,
+          index: dataColumnSidecars[0].index,
+        });
+      }
+
+      chain.seenBlockInputCache.markVerifiedProposerSignature(slot, rootHex, signature);
+    }
   }
 
   const commitments: Uint8Array[] = [];
@@ -300,33 +362,55 @@ export async function validateBlockDataColumnSidecars(
   for (let i = 0; i < dataColumnSidecars.length; i++) {
     const columnSidecar = dataColumnSidecars[i];
 
+    if (
+      i !== 0 &&
+      !ssz.phase0.SignedBeaconBlockHeader.equals(firstSidecarSignedBlockHeader, columnSidecar.signedBlockHeader)
+    ) {
+      throw new DataColumnSidecarValidationError({
+        code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
+        slot: blockSlot,
+        expected: toRootHex(blockRoot),
+        actual: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message)),
+      });
+    }
+
     if (columnSidecar.index >= NUMBER_OF_COLUMNS) {
       throw new DataColumnSidecarValidationError(
         {
           code: DataColumnSidecarErrorCode.INVALID_INDEX,
           slot: blockSlot,
-          columnIdx: columnSidecar.index,
+          columnIndex: columnSidecar.index,
         },
         "DataColumnSidecar has invalid index"
       );
     }
 
-    if (columnSidecar.kzgCommitments.length !== blockBlobCount) {
+    if (columnSidecar.column.length !== blockBlobCount) {
+      throw new DataColumnSidecarValidationError({
+        code: DataColumnSidecarErrorCode.INCORRECT_CELL_COUNT,
+        slot: blockSlot,
+        columnIndex: columnSidecar.index,
+        expected: blockBlobCount,
+        actual: columnSidecar.column.length,
+      });
+    }
+
+    if (columnSidecar.column.length !== columnSidecar.kzgCommitments.length) {
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
         slot: blockSlot,
-        columnIdx: columnSidecar.index,
-        expected: blockBlobCount,
+        columnIndex: columnSidecar.index,
+        expected: columnSidecar.column.length,
         actual: columnSidecar.kzgCommitments.length,
       });
     }
 
-    if (columnSidecar.kzgProofs.length !== columnSidecar.kzgCommitments.length) {
+    if (columnSidecar.column.length !== columnSidecar.kzgProofs.length) {
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT,
         slot: blockSlot,
-        columnIdx: columnSidecar.index,
-        expected: columnSidecar.kzgCommitments.length,
+        columnIndex: columnSidecar.index,
+        expected: columnSidecar.column.length,
         actual: columnSidecar.kzgProofs.length,
       });
     }
@@ -336,7 +420,7 @@ export async function validateBlockDataColumnSidecars(
         {
           code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
           slot: blockSlot,
-          columnIdx: columnSidecar.index,
+          columnIndex: columnSidecar.index,
         },
         "DataColumnSidecar has invalid inclusion proof"
       );

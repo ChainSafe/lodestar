@@ -27,6 +27,7 @@ describe("Forkchoice / GetProposerHead", () => {
 
   const parentSlot = genesisSlot + 1;
   const headSlot = genesisSlot + 2;
+  const validatorCount = 100;
 
   let protoArr: ProtoArray;
 
@@ -253,7 +254,7 @@ describe("Forkchoice / GetProposerHead", () => {
         currentSlot,
       });
 
-      const forkChoice = new ForkChoice(config, fcStore, protoArr, null, {
+      const forkChoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null, {
         proposerBoost: true,
         proposerBoostReorg: true,
       });

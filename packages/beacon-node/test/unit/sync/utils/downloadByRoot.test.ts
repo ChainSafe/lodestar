@@ -44,7 +44,7 @@ describe("downloadByRoot.ts", () => {
 
     it("should successfully fetch and validate block with matching root", async () => {
       network = {
-        sendBeaconBlocksByRoot: vi.fn(() => [{data: capellaBlock.block}]),
+        sendBeaconBlocksByRoot: vi.fn(() => [capellaBlock.block]),
       } as unknown as INetwork;
 
       const response = await fetchAndValidateBlock({
@@ -74,7 +74,7 @@ describe("downloadByRoot.ts", () => {
 
     it("should throw error when block root doesn't match requested root", async () => {
       network = {
-        sendBeaconBlocksByRoot: vi.fn(() => [{data: capellaBlock.block}]),
+        sendBeaconBlocksByRoot: vi.fn(() => [capellaBlock.block]),
       } as unknown as INetwork;
 
       const invalidRoot = randomBytes(ROOT_SIZE);
@@ -112,6 +112,7 @@ describe("downloadByRoot.ts", () => {
 
       const response = await fetchAndValidateBlobs({
         config,
+        chain: null,
         network,
         forkName,
         peerIdStr,
@@ -137,6 +138,7 @@ describe("downloadByRoot.ts", () => {
 
       const response = await fetchAndValidateBlobs({
         config,
+        chain: null,
         network,
         forkName,
         peerIdStr,
@@ -165,6 +167,7 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateBlobs({
           config,
+          chain: null,
           network,
           forkName,
           peerIdStr,
@@ -262,6 +265,7 @@ describe("downloadByRoot.ts", () => {
 
       const response = await fetchAndValidateColumns({
         config,
+        chain: null,
         network,
         forkName,
         peerMeta,
@@ -303,6 +307,7 @@ describe("downloadByRoot.ts", () => {
       await expect(
         fetchAndValidateColumns({
           config,
+          chain: null,
           network,
           forkName,
           peerMeta,

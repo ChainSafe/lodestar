@@ -6,8 +6,8 @@ import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/networ
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 
 describe("network / gossip / topic", () => {
-  // TODO Fulu: this can be removed once fulu is scheduled
-  const config = createBeaconConfig({...chainConfig, FULU_FORK_EPOCH: 500000, EIP7805_FORK_EPOCH: 600000}, ZERO_HASH);
+  // TODO EIP-7805: this can be removed once fulu is scheduled
+  const config = createBeaconConfig({...chainConfig, EIP7805_FORK_EPOCH: 600000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType

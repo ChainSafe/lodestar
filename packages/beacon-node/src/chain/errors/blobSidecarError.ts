@@ -50,9 +50,19 @@ export type BlobSidecarErrorType =
   | {code: BlobSidecarErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlobSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
   | {code: BlobSidecarErrorCode.ALREADY_KNOWN; root: RootHex}
-  | {code: BlobSidecarErrorCode.PARENT_UNKNOWN; parentRoot: RootHex}
+  | {
+      code: BlobSidecarErrorCode.PARENT_UNKNOWN;
+      parentRoot: RootHex;
+      slot: Slot;
+      blockRoot: RootHex;
+    }
   | {code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
-  | {code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID}
+  | {
+      code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID;
+      blockRoot: RootHex;
+      slot: Slot;
+      index: number;
+    }
   | {code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; blobIdx: number}
   | {code: BlobSidecarErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex};
 

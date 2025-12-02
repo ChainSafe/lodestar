@@ -532,7 +532,7 @@ export class BlockInputSync {
         const downloadResult = await downloadByRoot({
           config: this.config,
           network: this.network,
-          seenCache: this.chain.seenBlockInputCache,
+          chain: this.chain,
           emitter: this.chain.emitter,
           peerMeta,
           cacheItem,

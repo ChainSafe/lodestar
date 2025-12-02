@@ -66,7 +66,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
   };
 
-  const forkchoice = new ForkChoice(config, fcStore, protoArr, null);
+  const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null);
   let parentBlockRoot = genesisRoot;
 
   for (let slot = 1; slot < opts.initialBlockCount; slot++) {

@@ -6,15 +6,16 @@ import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
 export const HEX_ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 /**
- * Simplified 'latest message' with previous message
- * The index is relative to ProtoArray indices
+ * The null vote index indicates that a validator votes to a non-existent block. This usually happens when
+ * we prune the proto array and the validator's latest message is in the pruned part.
+ * The number of proto nodes will never exceed this value because it represents (0xffffffff / 365 / 24 / 60 / 5), ie > 1634 years of non-finalized network.
  */
-export type VoteTracker = {
-  currentIndex: number | null;
-  // if a vode is out of date (the voted index was in the past while proto array is pruned), it will be set to null
-  nextIndex: number | null;
-  nextEpoch: Epoch;
-};
+export const NULL_VOTE_INDEX = 0xffffffff;
+
+/**
+ * A vote index is a non-negative integer from 0 to NULL_VOTE_INDEX inclusive, and it will never be undefined.
+ */
+export type VoteIndex = number;
 
 export enum ExecutionStatus {
   Valid = "Valid",

@@ -13,6 +13,17 @@ export const Bytes96 = new ByteVectorType(96);
 export const Uint8 = new UintNumberType(1);
 export const Uint16 = new UintNumberType(2);
 export const Uint32 = new UintNumberType(4);
+/**
+ * A JS `number` is an IEEE-754 double which has 53 bits integer precision. This implies that it can store
+ * a value up to 2^53-1 without losing any precision (`Number.MAX_SAFE_INTEGER` represents that exact limit).
+ * So it can't store a 64 bit integer with precision in the higher bits.
+ *
+ * However, JS `bigint` arithmetics is ~100x slower than `number`.
+ * Therefor, this type uses `number` for 64 bits values, for use in well-analyzed cases where
+ * the value is known to never cross the `Number.MAX_SAFE_INTEGER` limit.
+ *
+ * Caution and reasoned analysis are always required before using this type as the consequence of misuse is a consensus split.
+ */
 export const UintNum64 = new UintNumberType(8);
 export const UintNumInf64 = new UintNumberType(8, {clipInfinity: true});
 export const UintBn64 = new UintBigintType(8);

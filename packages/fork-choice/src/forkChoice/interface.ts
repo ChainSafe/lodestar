@@ -3,17 +3,7 @@ import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
 } from "@lodestar/state-transition";
-import {
-  AttesterSlashing,
-  BeaconBlock,
-  Epoch,
-  IndexedAttestation,
-  Root,
-  RootHex,
-  Slot,
-  ValidatorIndex,
-  eip7805,
-} from "@lodestar/types";
+import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot, eip7805} from "@lodestar/types";
 import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
@@ -184,7 +174,6 @@ export interface IForkChoice {
    * inclusionListCommittee is a list of IL committee validators' index in the current slot
    */
   onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number): void;
-  getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
@@ -212,6 +201,7 @@ export interface IForkChoice {
   getBlockHex(blockRoot: RootHex): ProtoBlock | null;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
+  getFinalizedCheckpointSlot(): Slot;
   /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
@@ -262,7 +252,7 @@ export interface IForkChoice {
   getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
 
   /**
-   * Add IL-unsatisifed block root to store.
+   * Add IL-unsatisfied block root to store.
    */
   addInclusionListUnsatisfiedBlock(blockRoot: RootHex): void;
 }
@@ -272,9 +262,4 @@ export type PowBlockHex = {
   blockHash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
-};
-
-export type LatestMessage = {
-  epoch: Epoch;
-  root: RootHex;
 };

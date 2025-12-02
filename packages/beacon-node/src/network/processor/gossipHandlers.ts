@@ -35,6 +35,7 @@ import {
   BlockError,
   BlockErrorCode,
   BlockGossipError,
+  DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
   GossipAction,
   GossipActionError,
@@ -292,6 +293,21 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const slot = dataColumnBlockHeader.slot;
     const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
 
+    // check to see if block has already been processed and BlockInput has been deleted (column received via reqresp or other means)
+    if (chain.forkChoice.hasBlockHex(blockRootHex)) {
+      metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
+      logger.debug("Already processed block for column sidecar, skipping processing", {
+        slot,
+        blockRoot: blockRootHex,
+        index: dataColumnSidecar.index,
+      });
+      throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+        code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
+        columnIndex: dataColumnSidecar.index,
+        slot,
+      });
+    }
+
     // first check if we should even process this column (we may have already processed it via getBlobsV2)
     {
       const blockInput = chain.seenBlockInputCache.get(blockRootHex);
@@ -301,7 +317,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           ...blockInput.getLogMeta(),
           index: dataColumnSidecar.index,
         });
-        return blockInput;
+        throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+          code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
+          columnIndex: dataColumnSidecar.index,
+          slot,
+        });
       }
     }
 
@@ -493,6 +513,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
       const blockInput = await validateBeaconBlob(blobSidecar, topic.subnet, peerIdStr, seenTimestampSec);
+      chain.serializedCache.set(blobSidecar, serializedData);
       if (!blockInput.hasBlockAndAllData()) {
         const cutoffTimeMs = getCutoffTimeMs(chain, blobSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
         chain.logger.debug("Received gossip blob, waiting for full data availability", {
@@ -539,6 +560,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         peerIdStr,
         seenTimestampSec
       );
+      chain.serializedCache.set(dataColumnSidecar, serializedData);
       const blockInputMeta = blockInput.getLogMeta();
       const {receivedColumns} = blockInputMeta;
       // it's not helpful to track every single column received
@@ -553,6 +575,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
           break;
       }
+
+      if (!blockInput.hasAllData()) {
+        // immediately attempt fetch of data columns from execution engine
+        chain.getBlobsTracker.triggerGetBlobs(blockInput);
+        // if we've received at least half of the columns, trigger reconstruction of the rest
+        if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
+          chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+        }
+      }
+
       if (!blockInput.hasBlockAndAllData()) {
         const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
         chain.logger.debug("Received gossip data column, waiting for full data availability", {
@@ -575,12 +607,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             source: BlockInputSource.gossip,
           });
         });
-        // immediately attempt fetch of data columns from execution engine
-        chain.getBlobsTracker.triggerGetBlobs(blockInput);
-        // if we've received at least half of the columns, trigger reconstruction of the rest
-        if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
-          chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
-        }
       }
     },
 

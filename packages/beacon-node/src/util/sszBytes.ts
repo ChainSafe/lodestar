@@ -418,6 +418,36 @@ export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot |
 }
 
 /**
+ * BeaconState of all forks (up until Electra, check with new forks)
+ * class BeaconState(Container):
+ *   genesis_time: uint64                    - 8 bytes
+ *   genesis_validators_root: Root           - 32 bytes
+ *   slot: Slot                              - 8 bytes
+ *   fork: Fork                              - 16 bytes
+ *   latest_block_header: BeaconBlockHeader  - fixed size
+ *     slot: Slot                            - 8 bytes
+ *
+ */
+
+const BLOCK_HEADER_SLOT_BYTES_POSITION_IN_BEACON_STATE = 8 + 32 + 8 + 16;
+export function getLastProcessedSlotFromBeaconStateSerialized(data: Uint8Array): Slot | null {
+  if (data.length < BLOCK_HEADER_SLOT_BYTES_POSITION_IN_BEACON_STATE + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, BLOCK_HEADER_SLOT_BYTES_POSITION_IN_BEACON_STATE);
+}
+
+const SLOT_BYTES_POSITION_IN_BEACON_STATE = 8 + 32;
+export function getSlotFromBeaconStateSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SLOT_BYTES_POSITION_IN_BEACON_STATE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_BEACON_STATE);
+}
+
+/**
  * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
  *
  * If the high bytes are not zero, return null
