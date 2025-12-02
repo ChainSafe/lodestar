@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build Debug version of Node.js
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     strategy:
       fail-fast: false
     steps:

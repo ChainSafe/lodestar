@@ -25,7 +25,7 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
   sim-test-multifork:
     name: Multifork sim test
     needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -65,7 +65,7 @@ jobs:
   sim-test-endpoints:
     name: Endpoint sim tests
     needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
   sim-test-deneb:
     name: Deneb sim tests
     needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -123,7 +123,7 @@ jobs:
   sim-test-eth-backup-provider:
     name: Eth backup provider sim tests
     needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -152,7 +152,7 @@ jobs:
   sim-test-mixed-clients:
     name: Mixed clients sim tests
     needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4

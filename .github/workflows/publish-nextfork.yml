@@ -15,7 +15,7 @@ env:
 jobs:
   npm:
     name: Publish to NPM Registry
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -109,7 +109,7 @@ jobs:
 
   docker:
     name: Publish to Docker Hub
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     needs: npm
     steps:
       - uses: actions/checkout@v4

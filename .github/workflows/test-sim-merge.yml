@@ -24,7 +24,7 @@ env:
 jobs:
   sim-merge-tests:
     name: Sim merge tests
-    runs-on: buildjet-4vcpu-ubuntu-2404
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
