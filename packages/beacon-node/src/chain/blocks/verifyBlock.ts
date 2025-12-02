@@ -94,7 +94,7 @@ export async function verifyBlocksInEpoch(
 
   try {
     // Start execution payload verification first (async request to execution client)
-    const executionPayloadPromise =
+    const verifyExecutionPayloadsPromise =
       opts.skipVerifyExecutionPayload !== true
         ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, abortController.signal, opts)
         : Promise.resolve({
@@ -122,7 +122,7 @@ export async function verifyBlocksInEpoch(
       {postStates, proposerBalanceDeltas, verifyStateTime},
       {verifySignaturesTime},
     ] = await Promise.all([
-      executionPayloadPromise,
+      verifyExecutionPayloadsPromise,
 
       // data availability for the blobs
       verifyBlocksDataAvailability(blockInputs, abortController.signal),
