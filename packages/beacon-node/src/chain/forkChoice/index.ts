@@ -103,8 +103,6 @@ export function initializeForkChoiceFromFinalizedState(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
-  const isEip7805Enabled = isForkPostEip7805(config.getForkName(currentSlot));
-
   return new forkchoiceConstructor(
     config,
 
@@ -127,7 +125,7 @@ export function initializeForkChoiceFromFinalizedState(
         stateRoot: toRootHex(blockHeader.stateRoot),
         blockRoot: toRootHex(checkpoint.root),
         timeliness: true, // Optimistically assume is timely
-        isEip7805Enabled,
+        isEip7805Enabled: isForkPostEip7805(config.getForkName(currentSlot)),
         justifiedEpoch: justifiedCheckpoint.epoch,
         justifiedRoot: toRootHex(justifiedCheckpoint.root),
         finalizedEpoch: finalizedCheckpoint.epoch,
@@ -208,7 +206,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     blockRoot: headRoot,
     targetRoot: headRoot,
     timeliness: true, // Optimistically assume is timely
-
+    isEip7805Enabled: isForkPostEip7805(config.getForkName(currentSlot)),
     justifiedEpoch: justifiedCheckpoint.epoch,
     justifiedRoot: toRootHex(justifiedCheckpoint.root),
     finalizedEpoch: finalizedCheckpoint.epoch,
