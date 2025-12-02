@@ -98,9 +98,7 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     state.builderPendingPayments.set(SLOTS_PER_EPOCH + (bid.slot % SLOTS_PER_EPOCH), pendingPaymentView);
   }
 
-  state.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU({
-    ...bid,
-  });
+  state.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
 }
 
 function verifyExecutionPayloadBidSignature(

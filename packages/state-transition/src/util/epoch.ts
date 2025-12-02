@@ -68,7 +68,7 @@ export function computeExitEpochAndUpdateChurn(
 }
 
 export function computeConsolidationEpochAndUpdateChurn(
-  state: CachedBeaconStateElectra,
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   consolidationBalance: Gwei
 ): number {
   let earliestConsolidationEpoch = Math.max(
