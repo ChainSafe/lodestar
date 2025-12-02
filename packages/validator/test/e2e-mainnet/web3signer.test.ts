@@ -7,7 +7,7 @@ import {ImportStatus, getClient as getKeymanagerClient} from "@lodestar/api/keym
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {genesisData} from "@lodestar/config/networks";
-import {ACTIVE_PRESET, FAR_FUTURE_EPOCH, PresetName} from "@lodestar/params";
+import {ACTIVE_PRESET, FAR_FUTURE_EPOCH, ForkSeq, PresetName} from "@lodestar/params";
 import {computeStartSlotAtEpoch, interopSecretKey} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {fromHex, retry, toHex, withTimeout} from "@lodestar/utils";
@@ -27,7 +27,7 @@ describe("web3signer signature test", () => {
     throw Error(`ACTIVE_PRESET '${ACTIVE_PRESET}' must be mainnet`);
   }
 
-  // const altairSlot = 2375711;
+  const altairSlot = 2375711;
   const epoch = 0;
   // Sample validator
   const validatorIndex = 4;
@@ -40,9 +40,6 @@ describe("web3signer signature test", () => {
 
   let validatorStoreRemote: ValidatorStore;
   let validatorStoreLocal: ValidatorStore;
-
-  // web3signer requires epochs and slots to match
-  const altairSlot = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
 
   // path to store configuration
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
@@ -102,9 +99,11 @@ describe("web3signer signature test", () => {
   });
 
   for (const fork of config.forksAscendingEpochOrder) {
-    it(`signBlock ${fork.name}`, async function () {
-      if (fork.epoch === FAR_FUTURE_EPOCH) {
-        this.skip();
+    it(`signBlock ${fork.name}`, async ({skip}) => {
+      // Only test till the fork the signer version supports
+      if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
+        skip();
+        return;
       }
 
       const block = ssz[fork.name].BeaconBlock.defaultValue();
@@ -121,7 +120,7 @@ describe("web3signer signature test", () => {
   }
 
   it("signRandao", async () => {
-    await assertSameSignature("signRandao", pubkeyBytes, 0);
+    await assertSameSignature("signRandao", pubkeyBytes, epoch);
   });
 
   const committeeIndex = 1;
@@ -139,22 +138,30 @@ describe("web3signer signature test", () => {
     const attestationData = ssz.phase0.AttestationData.defaultValue();
     attestationData.slot = duty.slot;
     attestationData.index = duty.committeeIndex;
-    const currentEpoch = 0;
-    await assertSameSignature("signAttestation", duty, attestationData, currentEpoch);
+    await assertSameSignature("signAttestation", duty, attestationData, epoch);
   });
 
-  it("signAggregateAndProof", async () => {
-    // committeeIndex must be equal to duty
-    const aggregateAndProof = generateEmptyAggregateAndProof();
-    aggregateAndProof.aggregate.data.index = committeeIndex;
+  for (const fork of config.forksAscendingEpochOrder) {
+    it(`signAggregateAndProof ${fork.name}`, async ({skip}) => {
+      // Only test till the fork the signer version supports
+      if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
+        skip();
+        return;
+      }
 
-    await assertSameSignature(
-      "signAggregateAndProof",
-      duty,
-      aggregateAndProof.selectionProof,
-      aggregateAndProof.aggregate
-    );
-  });
+      const aggregateAndProof = sszTypesFor(fork.name).AggregateAndProof.defaultValue();
+      const slot = computeStartSlotAtEpoch(fork.epoch);
+      aggregateAndProof.aggregate.data.slot = slot;
+      aggregateAndProof.aggregate.data.index = duty.committeeIndex;
+
+      await assertSameSignature(
+        "signAggregateAndProof",
+        {...duty, slot},
+        aggregateAndProof.selectionProof,
+        aggregateAndProof.aggregate
+      );
+    });
+  }
 
   it("signSyncCommitteeSignature", async () => {
     const beaconBlockRoot = ssz.phase0.BeaconBlockHeader.defaultValue().bodyRoot;
@@ -162,8 +169,9 @@ describe("web3signer signature test", () => {
   });
 
   it("signContributionAndProof", async () => {
-    const contributionAndProof = generateContributionAndProof();
-    contributionAndProof.contribution.slot = altairSlot;
+    const contributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
+    contributionAndProof.contribution.slot = duty.slot;
+    contributionAndProof.contribution.subcommitteeIndex = duty.committeeIndex;
 
     await assertSameSignature(
       "signContributionAndProof",
