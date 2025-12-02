@@ -1,25 +1,16 @@
-import {fetch} from "cross-fetch";
-import tmp from "tmp";
 import {beforeAll, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
 import {getClient, routes} from "@lodestar/api";
-import {ImportStatus, getClient as getKeymanagerClient} from "@lodestar/api/keymanager";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {genesisData} from "@lodestar/config/networks";
 import {ACTIVE_PRESET, ForkSeq, PresetName} from "@lodestar/params";
-import {computeStartSlotAtEpoch, interopSecretKey} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
+import {StartedExternalSigner, getKeystoresStr, startExternalSigner} from "@lodestar/test-utils";
 import {ssz, sszTypesFor} from "@lodestar/types";
-import {fromHex, retry, toHex, withTimeout} from "@lodestar/utils";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ISlashingProtection, Interchange, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
-import {runDockerContainer} from "../utils/dockercontainer.js";
 import {testLogger} from "../utils/logger.js";
-
-const web3signerVersion = "25.11.0";
-const web3signerImage = `consensys/web3signer:${web3signerVersion}`;
-/** Till what version is the web3signer image updated for signature verification */
-const supportedForkSeq = ForkSeq.fulu;
 
 describe("web3signer signature test", () => {
   vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
@@ -35,74 +26,45 @@ describe("web3signer signature test", () => {
   const subcommitteeIndex = 0;
 
   const secretKey = interopSecretKey(0);
-  const secKey = toHex(secretKey.toBytes());
   const pubkeyBytes = secretKey.toPublicKey().toBytes();
-  const pubkey = toHex(pubkeyBytes);
 
   let validatorStoreRemote: ValidatorStore;
   let validatorStoreLocal: ValidatorStore;
 
-  // path to store configuration
-  const tmpDir = tmp.dirSync({unsafeCleanup: true});
-  const configDirPathHost = tmpDir.name;
-  const configDirPathContainer = "/var/web3signer/config";
-  const port = 9000;
-  const web3signerUrl = `http://127.0.0.1:${port}`;
+  let externalSigner: StartedExternalSigner;
 
-  // Key data
-  const keystoreStr = getKeystore();
-  const password = "password"; // Hardcoded from pre-generated keystore, do not change
-
-  // Note: for MacOS compatibility do not use `--network=host`
-  runDockerContainer(
-    web3signerImage,
-    [
-      // |
-      "--rm",
-      `--publish=${port}:9000`,
-      `--volume=${configDirPathHost}:${configDirPathContainer}`,
-    ],
-    [
-      "--http-listen-host=0.0.0.0",
-      `--http-listen-port=${port}`,
-      "eth2",
-      "--slashing-protection-enabled=false",
-      "--key-manager-api-enabled=true",
-    ],
-    {pipeToProcess: true}
-  );
+  const duty: routes.validator.AttesterDuty = {
+    slot: altairSlot,
+    committeeIndex: 0,
+    committeeLength: 120,
+    committeesAtSlot: 120,
+    validatorCommitteeIndex: 0,
+    validatorIndex,
+    pubkey: pubkeyBytes,
+  };
 
   beforeAll(async () => {
-    // Start container
-    const secretKey = SecretKey.fromBytes(fromHex(secKey));
+    validatorStoreLocal = await getValidatorStore({type: SignerType.Local, secretKey: secretKey});
 
-    // http://localhost:9000/api/v1/eth2/sign/0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47
-    validatorStoreRemote = await getValidatorStore({type: SignerType.Remote, url: web3signerUrl, pubkey});
-    validatorStoreLocal = await getValidatorStore({type: SignerType.Local, secretKey});
-
-    await retry(
-      () =>
-        withTimeout(async (signal) => {
-          const res = await fetch(`${web3signerUrl}/healthcheck`, {signal});
-          if (res.status !== 200) throw Error(`status ${res.status}`);
-        }, 1000),
-      {retries: 60, retryDelay: 1000}
-    );
-
-    // import keystores via API
-    const keymanagerApi = getKeymanagerClient({baseUrl: web3signerUrl}, {config});
-
-    const resp = await keymanagerApi.importKeystores({keystores: [keystoreStr], passwords: [password]});
-    const data = resp.value();
-    if (data[0].status !== ImportStatus.imported) {
-      throw Error(`Error importing keystore ${data[0].status}: ${data[0].message}`);
-    }
+    const password = "password";
+    externalSigner = await startExternalSigner({
+      keystoreStrings: await getKeystoresStr(
+        password,
+        interopSecretKeys(2).map((k) => k.toHex())
+      ),
+      password: password,
+    });
+    validatorStoreRemote = await getValidatorStore({
+      type: SignerType.Remote,
+      url: externalSigner.url,
+      pubkey: secretKey.toPublicKey().toHex(),
+    });
   });
 
   for (const fork of config.forksAscendingEpochOrder) {
     it(`signBlock ${fork.name}`, async ({skip}) => {
       // Only test till the fork the signer version supports
-      if (ForkSeq[fork.name] > supportedForkSeq) {
+      if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
         skip();
         return;
       }
@@ -124,17 +86,6 @@ describe("web3signer signature test", () => {
     await assertSameSignature("signRandao", pubkeyBytes, epoch);
   });
 
-  const committeeIndex = 1;
-  const duty: routes.validator.AttesterDuty = {
-    slot: 0,
-    committeeIndex,
-    committeeLength: 120,
-    committeesAtSlot: 120,
-    validatorCommitteeIndex: 1,
-    validatorIndex,
-    pubkey: pubkeyBytes,
-  };
-
   it("signAttestation", async () => {
     const attestationData = ssz.phase0.AttestationData.defaultValue();
     attestationData.slot = duty.slot;
@@ -145,7 +96,7 @@ describe("web3signer signature test", () => {
   for (const fork of config.forksAscendingEpochOrder) {
     it(`signAggregateAndProof ${fork.name}`, async ({skip}) => {
       // Only test till the fork the signer version supports
-      if (ForkSeq[fork.name] > supportedForkSeq) {
+      if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
         skip();
         return;
       }
@@ -265,37 +216,4 @@ class SlashingProtectionDisabled implements ISlashingProtection {
   exportInterchange(): Promise<Interchange> {
     throw Error("not implemented");
   }
-}
-
-function getKeystore(): string {
-  return `{
-    "version": 4,
-    "uuid": "f31f3377-694d-4943-8686-5b20356b2597",
-    "path": "m/12381/3600/0/0/0",
-    "pubkey": "8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47",
-    "crypto": {
-      "kdf": {
-        "function": "pbkdf2",
-        "params": {
-          "dklen": 32,
-          "c": 262144,
-          "prf": "hmac-sha256",
-          "salt": "ab2c11fe1a288a8344972e5e03a746f42867f5a9e749bf286f8e26cf16702c93"
-        },
-        "message": ""
-      },
-      "checksum": {
-        "function": "sha256",
-        "params": {},
-        "message": "1f0eda362360b51b85591e99fee6c5d030cc48f36af28eb055b19a2bf55b38a6"
-      },
-      "cipher": {
-        "function": "aes-128-ctr",
-        "params": {
-          "iv": "acf3173c5d0b074e1646bb6058dc0f2a"
-        },
-        "message": "402d1cecaa378e4f079c96437bd1d4771e09a85df2073d014b43980b623b9978"
-      }
-    }
-  }`;
 }
