@@ -240,7 +240,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
   quicPort6: {
     description: "The UDP port that QUIC will listen on. Defaults to `port6` + 1",
     type: "number",
-    defaultDescription: String(defaultQuicPort6),
+    defaultDescription: String(defaultQuicPort),
     group: "network",
   },
 
