@@ -1,4 +1,4 @@
-import {beforeAll, describe, expect, it, vi} from "vitest";
+import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
 import {getClient, routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -59,6 +59,10 @@ describe("web3signer signature test", () => {
       url: externalSigner.url,
       pubkey: secretKey.toPublicKey().toHex(),
     });
+  });
+
+  afterAll(async () => {
+    externalSigner.stop();
   });
 
   for (const fork of config.forksAscendingEpochOrder) {

@@ -12,6 +12,7 @@ const web3signerImage = `consensys/web3signer:${web3signerVersion}`;
 const supportedForkSeq = ForkSeq.fulu;
 
 export type StartedExternalSigner = {
+  stop: () => void;
   url: string;
   supportedForkSeq: ForkSeq;
 };
@@ -46,7 +47,7 @@ export async function startExternalSigner({
   const port = 9000;
   const web3signerUrl = `http://127.0.0.1:${port}`;
 
-  runDockerContainer(
+  const stop = runDockerContainer(
     web3signerImage,
     [
       // |
@@ -77,6 +78,7 @@ export async function startExternalSigner({
   );
 
   return {
+    stop,
     url: web3signerUrl,
     supportedForkSeq,
   };
