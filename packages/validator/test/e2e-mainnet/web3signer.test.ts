@@ -7,18 +7,19 @@ import {ImportStatus, getClient as getKeymanagerClient} from "@lodestar/api/keym
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {genesisData} from "@lodestar/config/networks";
-import {ACTIVE_PRESET, FAR_FUTURE_EPOCH, ForkSeq, PresetName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq, PresetName} from "@lodestar/params";
 import {computeStartSlotAtEpoch, interopSecretKey} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, retry, toHex, withTimeout} from "@lodestar/utils";
 import {ISlashingProtection, Interchange, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {runDockerContainer} from "../utils/dockercontainer.js";
-import {generateContributionAndProof, generateEmptyAggregateAndProof} from "../utils/eth2Objects.js";
 import {testLogger} from "../utils/logger.js";
 
-const web3signerVersion = "22.8.1";
+const web3signerVersion = "25.11.0";
 const web3signerImage = `consensys/web3signer:${web3signerVersion}`;
+/** Till what version is the web3signer image updated for signature verification */
+const supportedForkSeq = ForkSeq.fulu;
 
 describe("web3signer signature test", () => {
   vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
@@ -101,7 +102,7 @@ describe("web3signer signature test", () => {
   for (const fork of config.forksAscendingEpochOrder) {
     it(`signBlock ${fork.name}`, async ({skip}) => {
       // Only test till the fork the signer version supports
-      if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
+      if (ForkSeq[fork.name] > supportedForkSeq) {
         skip();
         return;
       }
@@ -144,7 +145,7 @@ describe("web3signer signature test", () => {
   for (const fork of config.forksAscendingEpochOrder) {
     it(`signAggregateAndProof ${fork.name}`, async ({skip}) => {
       // Only test till the fork the signer version supports
-      if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
+      if (ForkSeq[fork.name] > supportedForkSeq) {
         skip();
         return;
       }

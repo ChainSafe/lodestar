@@ -1,4 +1,5 @@
-import child_process from "node:child_process";
+import childProcess from "node:child_process";
+import {TestContext, afterAll, beforeAll, vi} from "vitest";
 
 /* eslint-disable no-console */
 
@@ -8,29 +9,31 @@ export function runDockerContainer(
   commandArgs: string[],
   opts?: {pipeToProcess: boolean}
 ): void {
-  let proc: child_process.ChildProcessWithoutNullStreams | null;
+  let proc: childProcess.ChildProcessWithoutNullStreams | null;
   let stdoutErr = "";
 
-  after(() => {
+  afterAll(() => {
     if (proc) {
       console.log("Attempting to kill");
       proc.kill("SIGKILL");
       try {
-        child_process.execSync(`pkill -P ${proc.pid}`);
-      } catch (e) {
+        childProcess.execSync(`pkill -P ${proc.pid}`);
+      } catch {
         //
       }
     }
   });
 
-  before("pull image", function () {
+  beforeAll(() => {
+    // Pull image
     // allow enough time to pull image
-    this.timeout("300s");
-    child_process.execSync(`docker pull ${dockerhubImageTag}`);
+    vi.setConfig({hookTimeout: 300_000});
+    childProcess.execSync(`docker pull ${dockerhubImageTag}`);
   });
 
-  beforeDone("docker run container", async function (done) {
-    proc = child_process.spawn("docker", ["run", ...dockerRunArgs, dockerhubImageTag, ...commandArgs]);
+  beforeDone(async (done) => {
+    // docker run container
+    proc = childProcess.spawn("docker", ["run", ...dockerRunArgs, dockerhubImageTag, ...commandArgs]);
 
     if (opts?.pipeToProcess) {
       proc.stdout.on("data", (chunk) => {
@@ -60,17 +63,14 @@ export function runDockerContainer(
   });
 }
 
-export function beforeDone(
-  title: string,
-  cb: (this: Mocha.Context, done: (err?: Error) => void) => Promise<void>
-): void {
-  before(title, function () {
+export function beforeDone(cb: (this: TestContext, done: (err?: Error) => void) => Promise<void>): void {
+  beforeAll(function (this: TestContext) {
     return new Promise<void>((resolve, reject) => {
       function done(err?: Error): void {
         if (err) reject(err);
         else resolve();
       }
-      cb.bind(this)(done).then(resolve, reject);
+      cb.call(this, done).then(resolve, reject);
     });
   });
 }
