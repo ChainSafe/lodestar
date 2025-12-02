@@ -11,16 +11,19 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.31.0",
+  "version": "1.37.0",
   "type": "module",
-  "exports": "./lib/index.js",
-  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "*.d.ts",
-    "*.js"
+    "src",
+    "lib",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -36,12 +39,12 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/ssz": "^1.2.1",
-    "@lodestar/config": "^1.31.0",
-    "@lodestar/params": "^1.31.0",
-    "@lodestar/state-transition": "^1.31.0",
-    "@lodestar/types": "^1.31.0",
-    "@lodestar/utils": "^1.31.0"
+    "@chainsafe/ssz": "^1.2.2",
+    "@lodestar/config": "^1.37.0",
+    "@lodestar/params": "^1.37.0",
+    "@lodestar/state-transition": "^1.37.0",
+    "@lodestar/types": "^1.37.0",
+    "@lodestar/utils": "^1.37.0"
   },
   "keywords": [
     "ethereum",

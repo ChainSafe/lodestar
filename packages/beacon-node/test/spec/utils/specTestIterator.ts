@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import {describe, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
-import {describe, it} from "vitest";
 import {RunnerType, TestRunner} from "./types.js";
 
 const ARTIFACT_FILENAMES = new Set([
@@ -36,7 +36,8 @@ const coveredTestRunners = [
   "sync",
   "fork",
   "genesis",
-  "merkle",
+  "merkle_proof",
+  "networking",
   "operations",
   "rewards",
   "sanity",
@@ -58,7 +59,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7594", "fulu", "eip7732", "eip7805"],
+  skippedForks: ["eip7805"],
   // TODO: capella
   // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
   // Skip them for now to enable subsequently
@@ -66,10 +67,13 @@ export const defaultSkipOpts: SkipOpts = {
     /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
+    /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
+    /^gloas\/(?!.*ssz_static).*$/,
+    /^gloas\/ssz_static\/ForkChoiceNode.*$/,
   ],
   skippedTests: [],
-  skippedRunners: ["merkle_proof", "networking"],
+  skippedRunners: [],
 };
 
 /**

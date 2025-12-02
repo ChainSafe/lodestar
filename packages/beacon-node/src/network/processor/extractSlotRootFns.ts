@@ -5,6 +5,7 @@ import {
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromBeaconAttestationSerialized,
   getSlotFromBlobSidecarSerialized,
+  getSlotFromDataColumnSidecarSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
 } from "../../util/sszBytes.js";
@@ -45,6 +46,14 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
     },
     [GossipType.blob_sidecar]: (data: Uint8Array): SlotOptionalRoot | null => {
       const slot = getSlotFromBlobSidecarSerialized(data);
+
+      if (slot === null) {
+        return null;
+      }
+      return {slot};
+    },
+    [GossipType.data_column_sidecar]: (data: Uint8Array): SlotOptionalRoot | null => {
+      const slot = getSlotFromDataColumnSidecarSerialized(data);
 
       if (slot === null) {
         return null;

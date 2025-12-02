@@ -87,7 +87,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.REPEAT_PROPOSAL; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.BLOCK_SLOT_LIMIT_REACHED}
   | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
-  | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID}
+  | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; blockSlot: Slot}
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.INVALID_SIGNATURE; state: CachedBeaconStateAllForks}
   | {

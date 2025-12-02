@@ -1,5 +1,4 @@
 import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
-
 import {ChainForkConfig} from "@lodestar/config";
 import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
@@ -23,7 +22,6 @@ import {
   isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
-
 import {computeEpochAtSlot, computeSyncPeriodAtSlot, isValidMerkleBranch} from "../utils/index.js";
 import {normalizeMerkleBranch} from "../utils/normalizeMerkleBranch.js";
 import {LightClientStore} from "./store.js";
@@ -141,11 +139,18 @@ export function upgradeLightClientHeader(
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.fulu:
-      // No changes to LightClientHeader in Electra
+      // No changes to LightClientHeader in Fulu
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.fulu) break;
+
+    case ForkName.gloas:
+      // No changes to LightClientHeader in Gloas
+
+      // Break if no further upgrades is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.gloas) break;
   }
   return upgradedHeader;
 }

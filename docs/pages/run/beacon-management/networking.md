@@ -41,10 +41,16 @@ The primary purpose of ENRs is to facilitate node discovery and connectivity in 
 
 Note that bootnodes are announced via ENR.
 
-Lodestar prints out its own ENR on startup, the logs will show something similar to the following
+Lodestar prints out its own ENR on startup, the logs will show something similar to the following for IPv4 nodes:
 
 ```txt
 info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000
+```
+
+Or similar to the following for IPv6 dual-stack nodes (when enabled):
+
+```txt
+info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000, bindAddr6=/ip6/::/udp/9000
 ```
 
 Alternatively, the ENR can also be retrieved from the beacon node API by querying the [getNetworkIdentity](https://ethereum.github.io/beacon-APIs/#/Node/getNetworkIdentity) endpoint.
@@ -80,8 +86,7 @@ If your setup is behind a firewall there are a few ports that will need to be op
 Ports that must be opened:
 
 - 30303/TCP+UDP - Execution layer P2P communication port
-- 9000/TCP+UDP - Beacon node IPv4 P2P communication port
-- 9090/TCP+UDP - Beacon node IPv6 P2P communication port
+- 9000/TCP+UDP - Beacon node IPv4 and IPv6 P2P communication port
 
 Ports that must be protected:
 

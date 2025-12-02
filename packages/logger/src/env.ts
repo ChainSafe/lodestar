@@ -1,5 +1,4 @@
-import {Logger} from "@lodestar/utils";
-import {LogLevel} from "@lodestar/utils";
+import {LogLevel, Logger} from "@lodestar/utils";
 import {BrowserLoggerOpts, getBrowserLogger} from "./browser.js";
 import {getEmptyLogger} from "./empty.js";
 import {LogFormat, TimestampFormat} from "./interface.js";

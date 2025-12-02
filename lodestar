@@ -4,4 +4,6 @@
 #
 # ./lodestar.sh beacon --network mainnet
 
-exec node --trace-deprecation --max-old-space-size=8192 ./packages/cli/bin/lodestar.js "$@"
+SCRIPT_DIR=$(cd "$(dirname -- "$0")" >/dev/null 2>&1 && pwd -P)
+
+exec node --trace-deprecation --max-old-space-size=8192 "$SCRIPT_DIR/packages/cli/bin/lodestar.js" "$@"

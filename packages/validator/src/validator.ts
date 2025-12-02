@@ -20,7 +20,7 @@ import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
 import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
-import {Clock, IClock} from "./util/clock.js";
+import {Clock, ClockOptions, IClock} from "./util/clock.js";
 import {NotEqualParamsError, assertEqualParams, getLoggerVc} from "./util/index.js";
 
 export type ValidatorModules = {
@@ -56,7 +56,6 @@ export type ValidatorOptions = {
   abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
   scAfterBlockDelaySlotFraction?: number;
-  disableAttestationGrouping?: boolean;
   doppelgangerProtection?: boolean;
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
@@ -64,6 +63,7 @@ export type ValidatorOptions = {
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
   externalSigner?: ExternalSignerOptions;
+  clock?: ClockOptions;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -168,7 +168,7 @@ export class Validator {
     const {db, config: chainConfig, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
     const controller = opts.abortController;
-    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
+    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
     const loggerVc = getLoggerVc(logger, clock);
 
     let api: ApiClient;
@@ -179,7 +179,7 @@ export class Validator {
           urls: typeof clientOrUrls === "string" ? [clientOrUrls] : clientOrUrls,
           // Validator would need the beacon to respond within the slot
           // See https://github.com/ChainSafe/lodestar/issues/5315 for rationale
-          globalInit: {timeoutMs: config.SECONDS_PER_SLOT * 1000, signal: controller.signal, ...globalInit},
+          globalInit: {timeoutMs: config.SLOT_DURATION_MS, signal: controller.signal, ...globalInit},
         },
         {config, logger, metrics: metrics?.restApiClient}
       );
@@ -241,7 +241,6 @@ export class Validator {
       config,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
-        disableAttestationGrouping: opts.disableAttestationGrouping,
         distributedAggregationSelection: opts.distributed,
       }
     );

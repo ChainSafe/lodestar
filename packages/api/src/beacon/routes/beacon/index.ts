@@ -10,26 +10,27 @@ import * as state from "./state.js";
 // NOTE: We choose to split the block, pool, state and rewards namespaces so the files are not too big.
 // However, for a consumer all these methods are within the same service "beacon"
 export {block, pool, state, rewards};
+
+export type {BlockHeaderResponse, BlockId} from "./block.js";
 export {BroadcastValidation} from "./block.js";
-export type {BlockId, BlockHeaderResponse} from "./block.js";
 export type {
-  BlockRewards,
   AttestationsRewards,
+  BlockRewards,
   IdealAttestationsReward,
-  TotalAttestationsReward,
   SyncCommitteeRewards,
+  TotalAttestationsReward,
 } from "./rewards.js";
 // TODO: Review if re-exporting all these types is necessary
 export type {
-  StateId,
-  ValidatorId,
-  ValidatorIdentities,
-  ValidatorStatus,
-  FinalityCheckpoints,
-  ValidatorResponse,
-  ValidatorBalance,
   EpochCommitteeResponse,
   EpochSyncCommitteeResponse,
+  FinalityCheckpoints,
+  StateId,
+  ValidatorBalance,
+  ValidatorId,
+  ValidatorIdentities,
+  ValidatorResponse,
+  ValidatorStatus,
 } from "./state.js";
 
 export type Endpoints = block.Endpoints &

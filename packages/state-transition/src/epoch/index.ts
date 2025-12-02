@@ -56,6 +56,7 @@ export {
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
+
 const maxValidatorsPerStateSlashing = SLOTS_PER_EPOCH * MAX_ATTESTER_SLASHINGS * MAX_VALIDATORS_PER_COMMITTEE;
 const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BALANCE);
 
@@ -65,6 +66,7 @@ const maxSafeValidators = Math.floor(Number.MAX_SAFE_INTEGER / MAX_EFFECTIVE_BAL
 export enum EpochTransitionStep {
   beforeProcessEpoch = "beforeProcessEpoch",
   afterProcessEpoch = "afterProcessEpoch",
+  finalProcessEpoch = "finalProcessEpoch",
   processJustificationAndFinalization = "processJustificationAndFinalization",
   processInactivityUpdates = "processInactivityUpdates",
   processRegistryUpdates = "processRegistryUpdates",
@@ -194,7 +196,7 @@ export function processEpoch(
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processProposerLookahead,
     });
-    processProposerLookahead(fork, state as CachedBeaconStateFulu);
+    processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
     timer?.();
   }
 }

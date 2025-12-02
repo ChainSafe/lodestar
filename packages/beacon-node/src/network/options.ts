@@ -45,10 +45,10 @@ export interface NetworkOptions
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
-  maxPeers: 110, // Allow some room above targetPeers for new inbound peers
-  targetPeers: 100,
+  maxPeers: 210, // Allow some room above targetPeers for new inbound peers
+  targetPeers: 200,
   // this default is never used, in practice, it is always overridden by the cli
-  localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000", "/ip4/0.0.0.0/udp/9001/quic-v1"],
+  localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000", "/ip6/::/tcp/9000", "/ip4/0.0.0.0/udp/9001/quic-v1"],
   bootMultiaddrs: [],
   /** disabled by default */
   discv5: null,
@@ -64,4 +64,9 @@ export const defaultNetworkOptions: NetworkOptions = {
   disableLightClientServer: false,
   // enable quic by default
   disableQuic: false,
+  // specific option for fulu
+  //   - this is the same to TARGET_SUBNET_PEERS
+  //   - for fusaka-devnets, we have 25-30 peers per subnet
+  //   - for public testnets or mainnet, average number of peers per group is SAMPLES_PER_SLOT * targetPeers / NUMBER_OF_CUSTODY_GROUPS = 6.25 so this should not be an issue
+  targetGroupPeers: 6,
 };

@@ -47,13 +47,13 @@ export function getPubkeysForIndices(
 
 export function selectBlockProductionSource({
   builderSelection,
-  engineBlockValue,
-  builderBlockValue,
+  engineExecutionPayloadValue,
+  builderExecutionPayloadValue,
   builderBoostFactor,
 }: {
   builderSelection: routes.validator.BuilderSelection;
-  engineBlockValue: bigint;
-  builderBlockValue: bigint;
+  engineExecutionPayloadValue: bigint;
+  builderExecutionPayloadValue: bigint;
   builderBoostFactor: bigint;
 }): BlockSelectionResult {
   switch (builderSelection) {
@@ -71,7 +71,7 @@ export function selectBlockProductionSource({
         return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
       }
 
-      if (engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100)) {
+      if (engineExecutionPayloadValue >= (builderExecutionPayloadValue * builderBoostFactor) / BigInt(100)) {
         return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.BlockValue};
       }
 

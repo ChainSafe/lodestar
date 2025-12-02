@@ -1,13 +1,14 @@
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Slot, phase0} from "@lodestar/types";
+import {Slot} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
+import {BeaconBlocksByRootRequest} from "../../../util/types.js";
 
 export async function* onBeaconBlocksByRoot(
-  requestBody: phase0.BeaconBlocksByRootRequest,
+  requestBody: BeaconBlocksByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {

@@ -3,9 +3,9 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
+  ForkName,
   ForkPostBellatrix,
-  ForkPostDeneb,
-  ForkPreDeneb,
+  ForkPreGloas,
   ForkSeq,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
@@ -23,6 +23,7 @@ import {
   calculateCommitteeAssignments,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   createCachedBeaconState,
   getBlockRootAtSlot,
   getCurrentSlot,
@@ -44,7 +45,6 @@ import {
   Wei,
   bellatrix,
   getValidatorStatus,
-  isBlockContents,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -59,6 +59,7 @@ import {
   toRootHex,
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
+import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -67,21 +68,23 @@ import {
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
-import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
+import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
+import {BlockType, ProduceFullDeneb} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
-import {NoBidReceived} from "../../../execution/builder/http.js";
+import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
+import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
-import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
+import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
@@ -107,22 +110,24 @@ export const SYNC_TOLERANCE_EPOCHS = 1;
  * Empirically the builder block resolves in ~1 second, and execution block resolves in <500 ms.
  * A cutoff of 2 seconds gives enough time and if there are unexpected delays it ensures we publish
  * in time as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
+ *
+ * TODO GLOAS: re-evaluate cutoff timing
  */
 const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 /** Overall timeout for execution and block production apis */
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
-type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & (
-  | {data: BeaconBlock<ForkPreDeneb>; version: ForkPreDeneb}
-  | {data: BlockContents; version: ForkPostDeneb}
-);
+type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
+  data: BlockContents;
+  version: ForkName;
+};
 type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlindedBeaconBlock;
   version: ForkPostBellatrix;
 };
 
-type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedBlockSource} & (
-  | (ProduceBlockOrContentsRes & {executionPayloadBlinded: false})
+type ProduceBlindedBlockOrBlockContentsRes = {executionPayloadSource: ProducedBlockSource} & (
+  | (ProduceBlockContentsRes & {executionPayloadBlinded: false})
   | (ProduceBlindedBlockRes & {executionPayloadBlinded: true})
 );
 
@@ -174,10 +179,13 @@ export function getValidatorApi(
   /**
    * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
    * future slot, wait some time instead of rejecting the request because it's in the future.
-   * This value is the same to MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC.
+   * This value is the same to MAXIMUM_GOSSIP_CLOCK_DISPARITY.
    * For very fast networks, reduce clock disparity to half a slot.
    */
-  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SECONDS_PER_SLOT / 2);
+  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(
+    config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000,
+    config.SLOT_DURATION_MS / 2000
+  );
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
   /** Compute and cache the genesis block root */
@@ -210,7 +218,7 @@ export function getValidatorApi(
       return;
     }
 
-    const slotStartSec = chain.genesisTime + slot * config.SECONDS_PER_SLOT;
+    const slotStartSec = computeTimeAtSlot(config, slot, chain.genesisTime);
     const msToSlot = slotStartSec * 1000 - Date.now();
 
     if (msToSlot > MAX_API_CLOCK_DISPARITY_MS) {
@@ -241,7 +249,7 @@ export function getValidatorApi(
    */
   function msToNextEpoch(): number {
     const nextEpoch = chain.clock.currentEpoch + 1;
-    const secPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT;
+    const secPerEpoch = (SLOTS_PER_EPOCH * config.SLOT_DURATION_MS) / 1000;
     const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
     return nextEpochStartSec * 1000 - Date.now();
   }
@@ -406,11 +414,9 @@ export function getValidatorApi(
     {
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -423,10 +429,17 @@ export function getValidatorApi(
 
     // Error early for builder if builder flow not active
     if (!chain.executionBuilder) {
-      throw Error("Execution builder not set");
+      throw Error("External builder not configured");
     }
-    if (!chain.executionBuilder.status) {
-      throw Error("Execution builder disabled");
+
+    switch (chain.executionBuilder.status) {
+      case BuilderStatus.disabled:
+        throw Error("External builder disabled due to failed status check");
+      case BuilderStatus.circuitBreaker:
+        throw Error("External builder circuit breaker is activated");
+      case BuilderStatus.enabled:
+        // continue
+        break;
     }
 
     let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
@@ -435,7 +448,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
@@ -462,7 +474,7 @@ export function getValidatorApi(
     }
   }
 
-  async function produceEngineFullBlockOrContents(
+  async function produceEngineBlockContents(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: Bytes32,
@@ -471,13 +483,11 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlockRoot,
-      parentSlot,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlockRoot: Root;
-      parentSlot: Slot;
     }
-  ): Promise<ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
+  ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
@@ -487,7 +497,6 @@ export function getValidatorApi(
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         parentBlockRoot,
-        parentSlot,
         randaoReveal,
         graffiti,
         feeRecipient,
@@ -505,24 +514,36 @@ export function getValidatorApi(
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
       metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
       metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+
+      const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
       logger.verbose("Produced execution block", {
         slot,
         executionPayloadValue,
         consensusBlockValue,
-        root: toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+        root: blockRoot,
       });
       if (chain.opts.persistProducedBlocks) {
         void chain.persistBlock(block, "produced_engine_block");
       }
       if (isForkPostDeneb(version)) {
-        const blockHash = toRootHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
-        const contents = chain.producedContentsCache.get(blockHash);
-        if (contents === undefined) {
-          throw Error("contents missing in cache");
+        const produceResult = chain.blockProductionCache.get(blockRoot);
+        if (produceResult === undefined) {
+          throw Error("production result missing in cache");
         }
+        if (!isForkPostDeneb(produceResult.fork)) {
+          throw Error("production result is for pre-deneb fork");
+        }
+        if (produceResult.type !== BlockType.Full) {
+          throw Error("production result is not full block");
+        }
+        const blobsBundle = (produceResult as ProduceFullDeneb).blobsBundle;
 
         return {
-          data: {block, ...contents} as BlockContents,
+          data: {
+            block,
+            blobs: blobsBundle.blobs,
+            kzgProofs: blobsBundle.proofs,
+          },
           version,
           executionPayloadValue,
           consensusBlockValue,
@@ -530,7 +551,7 @@ export function getValidatorApi(
         };
       }
 
-      return {data: block, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
+      return {data: {block}, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
     } finally {
       if (timer) timer({source});
     }
@@ -544,7 +565,7 @@ export function getValidatorApi(
     _skipRandaoVerification?: boolean,
     builderBoostFactor?: bigint,
     {feeRecipient, builderSelection, strictFeeRecipientCheck}: routes.validator.ExtraProduceBlockOpts = {}
-  ): Promise<ProduceFullOrBlindedBlockOrContentsRes> {
+  ): Promise<ProduceBlindedBlockOrBlockContentsRes> {
     notWhileSyncing();
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -618,17 +639,15 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         })
       : Promise.reject(new Error("Builder disabled"));
 
     const enginePromise = isEngineEnabled
-      ? produceEngineFullBlockOrContents(slot, randaoReveal, graffitiBytes, {
+      ? produceEngineBlockContents(slot, randaoReveal, graffitiBytes, {
           feeRecipient,
           strictFeeRecipientCheck,
           commonBlockBodyPromise,
           parentBlockRoot,
-          parentSlot,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
@@ -646,7 +665,7 @@ export function getValidatorApi(
       : Promise.reject(new Error("Engine disabled"));
 
     // Calculate cutoff time based on start of the slot
-    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - Math.round(chain.clock.secFromSlot(slot) * 1000));
+    const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
 
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,
@@ -660,30 +679,42 @@ export function getValidatorApi(
       signal: controller.signal,
     });
 
-    logger.verbose("Producing common block body", loggerContext);
-    const commonBlockBodyStartedAt = Date.now();
+    // Ensure builder and engine HTTP requests are sent before starting common block body production
+    // by deferring the call to next event loop iteration, allowing pending I/O operations like
+    // HTTP requests to be processed first and sent out early in slot.
+    callInNextEventLoop(() => {
+      logger.verbose("Producing common block body", loggerContext);
+      const commonBlockBodyStartedAt = Date.now();
 
-    const produceCommonBlockBodyPromise = chain
-      .produceCommonBlockBody({
-        slot,
-        parentBlockRoot,
-        parentSlot,
-        randaoReveal,
-        graffiti: graffitiBytes,
-      })
-      .then((commonBlockBody) => {
-        deferredCommonBlockBody.resolve(commonBlockBody);
-        logger.verbose("Produced common block body", {
-          ...loggerContext,
-          durationMs: Date.now() - commonBlockBodyStartedAt,
-        });
-      })
-      .catch(deferredCommonBlockBody.reject);
+      chain
+        .produceCommonBlockBody({
+          slot,
+          parentBlockRoot,
+          randaoReveal,
+          graffiti: graffitiBytes,
+        })
+        .then((commonBlockBody) => {
+          deferredCommonBlockBody.resolve(commonBlockBody);
+          logger.verbose("Produced common block body", {
+            ...loggerContext,
+            durationMs: Date.now() - commonBlockBodyStartedAt,
+          });
+        })
+        .catch(deferredCommonBlockBody.reject);
+    });
 
-    const [[builder, engine]] = await Promise.all([blockProductionRacePromise, produceCommonBlockBodyPromise]);
+    const [builder, engine] = await blockProductionRacePromise;
 
     if (builder.status === "pending" && engine.status === "pending") {
       throw Error("Builder and engine both failed to produce the block within timeout");
+    }
+
+    if (builder.status === "pending" && !isEngineEnabled) {
+      throw Error("Builder failed to produce the block within timeout");
+    }
+
+    if (engine.status === "pending" && !isBuilderEnabled) {
+      throw Error("Engine failed to produce the block within timeout");
     }
 
     if (isEngineEnabled) {
@@ -804,8 +835,8 @@ export function getValidatorApi(
 
     if (engine.status === "fulfilled" && builder.status === "fulfilled") {
       const result = selectBlockProductionSource({
-        builderBlockValue: builder.value.executionPayloadValue + builder.value.consensusBlockValue,
-        engineBlockValue: engine.value.executionPayloadValue + engine.value.consensusBlockValue,
+        builderExecutionPayloadValue: builder.value.executionPayloadValue,
+        engineExecutionPayloadValue: engine.value.executionPayloadValue,
         builderBoostFactor,
         builderSelection,
       });
@@ -851,21 +882,14 @@ export function getValidatorApi(
         opts
       );
 
-      if (opts.blindedLocal === true && ForkSeq[meta.version] >= ForkSeq.bellatrix) {
+      const fork = ForkSeq[meta.version];
+      if (opts.blindedLocal === true && fork >= ForkSeq.bellatrix && fork < ForkSeq.gloas) {
         if (meta.executionPayloadBlinded) {
           return {data, meta};
         }
 
-        if (isBlockContents(data)) {
-          const {block} = data;
-          const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix>);
-          return {
-            data: blindedBlock,
-            meta: {...meta, executionPayloadBlinded: true},
-          };
-        }
-
-        const blindedBlock = beaconBlockToBlinded(config, data as BeaconBlock<ForkPostBellatrix>);
+        const {block} = data as BlockContents;
+        const blindedBlock = beaconBlockToBlinded(config, block as BeaconBlock<ForkPostBellatrix & ForkPreGloas>);
         return {
           data: blindedBlock,
           meta: {...meta, executionPayloadBlinded: true},
@@ -954,7 +978,7 @@ export function getValidatorApi(
       // see https://github.com/ChainSafe/lodestar/issues/5063
       if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
         const rootHex = toRootHex(beaconBlockRoot);
-        network.searchUnknownSlotRoot({slot, root: rootHex});
+        network.searchUnknownSlotRoot({slot, root: rootHex}, BlockInputSource.api);
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
         await chain.waitForBlock(slot, rootHex);
       }
@@ -978,7 +1002,7 @@ export function getValidatorApi(
       return {data: contribution};
     },
 
-    async getProposerDuties({epoch}) {
+    async getProposerDuties({epoch}, _context, opts?: {v2?: boolean}) {
       notWhileSyncing();
 
       // Early check that epoch is no more than current_epoch + 1, or allow for pre-genesis
@@ -991,8 +1015,8 @@ export function getValidatorApi(
       const head = chain.forkChoice.getHead();
       let state: CachedBeaconStateAllForks | undefined = undefined;
       const startSlot = computeStartSlotAtEpoch(epoch);
-      const slotMs = config.SECONDS_PER_SLOT * 1000;
-      const prepareNextSlotLookAheadMs = slotMs / SCHEDULER_LOOKAHEAD_FACTOR;
+      const prepareNextSlotLookAheadMs =
+        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
       const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch
       // this is to avoid missed block proposal due to 0 epoch look ahead
@@ -1082,7 +1106,10 @@ export function getValidatorApi(
 
       // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
       // It should be set to the latest block applied to `self` or the genesis block root.
-      const dependentRoot = proposerShufflingDecisionRoot(state) || (await getGenesisBlockRoot(state));
+      const dependentRoot =
+        // In v2 the dependent root is different after fulu due to deterministic proposer lookahead
+        proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state) ||
+        (await getGenesisBlockRoot(state));
 
       return {
         data: duties,
@@ -1091,6 +1118,10 @@ export function getValidatorApi(
           executionOptimistic: isOptimisticBlock(head),
         },
       };
+    },
+
+    async getProposerDutiesV2(args, context) {
+      return this.getProposerDuties(args, context, {v2: true});
     },
 
     async getAttesterDuties({epoch, indices}) {
@@ -1186,12 +1217,12 @@ export function getValidatorApi(
       const pubkeys = getPubkeysForIndices(state.validators, indices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncCommitteeCache = state.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
-      const syncCommitteeValidatorIndexMap = syncCommitteeCache.validatorIndexMap;
+      const validatorSyncCommitteeIndexMap = syncCommitteeCache.validatorIndexMap;
 
       const duties: routes.validator.SyncDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
-        const validatorSyncCommitteeIndices = syncCommitteeValidatorIndexMap.get(validatorIndex);
+        const validatorSyncCommitteeIndices = validatorSyncCommitteeIndexMap.get(validatorIndex);
         if (validatorSyncCommitteeIndices) {
           duties.push({
             pubkey: pubkeys[i],
@@ -1265,7 +1296,7 @@ export function getValidatorApi(
       notWhileSyncing();
 
       const seenTimestampSec = Date.now() / 1000;
-      const errors: Error[] = [];
+      const failures: FailureList = [];
       const fork = chain.config.getForkName(chain.clock.currentSlot);
 
       await Promise.all(
@@ -1277,19 +1308,14 @@ export function getValidatorApi(
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, committeeIndices, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
-              validateFn,
-              network,
-              chain,
-              slot,
-              beaconBlockRoot
-            );
+            const {indexedAttestation, committeeValidatorIndices, attDataRootHex} =
+              await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
             const insertOutcome = chain.aggregatedAttestationPool.add(
               signedAggregateAndProof.message.aggregate,
               attDataRootHex,
               indexedAttestation.attestingIndices.length,
-              committeeIndices
+              committeeValidatorIndices
             );
             metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
@@ -1306,8 +1332,8 @@ export function getValidatorApi(
               return; // Ok to submit the same aggregate twice
             }
 
-            errors.push(e as Error);
-            logger.error(`Error on publishAggregateAndProofs [${i}]`, logCtx, e as Error);
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on publishAggregateAndProofs [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "api_reject");
             }
@@ -1315,12 +1341,8 @@ export function getValidatorApi(
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
-      }
-
-      if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing aggregate and proofs", failures);
       }
     },
 
@@ -1334,7 +1356,7 @@ export function getValidatorApi(
     async publishContributionAndProofs({contributionAndProofs}) {
       notWhileSyncing();
 
-      const errors: Error[] = [];
+      const failures: FailureList = [];
 
       await Promise.all(
         contributionAndProofs.map(async (contributionAndProof, i) => {
@@ -1366,8 +1388,8 @@ export function getValidatorApi(
               return; // Ok to submit the same aggregate twice
             }
 
-            errors.push(e as Error);
-            logger.error(`Error on publishContributionAndProofs [${i}]`, logCtx, e as Error);
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on publishContributionAndProofs [${i}]`, logCtx, e as Error);
             if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "api_reject");
             }
@@ -1375,12 +1397,8 @@ export function getValidatorApi(
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on publishContributionAndProofs\n" + errors.map((e) => e.message).join("\n"));
-      }
-
-      if (errors.length === 1) {
-        throw errors[0];
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing contribution and proofs", failures);
       }
     },
 
@@ -1483,7 +1501,7 @@ export function getValidatorApi(
 
     async registerValidator({registrations}) {
       if (!chain.executionBuilder) {
-        throw Error("Execution builder not enabled");
+        throw Error("External builder not configured");
       }
 
       // should only send active or pending validator to builder

@@ -15,6 +15,8 @@ import {
   Upgrader,
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
+import type {Datastore} from "interface-datastore";
+import {Libp2p as ILibp2p} from "libp2p";
 import {
   AttesterSlashing,
   LightClientFinalityUpdate,
@@ -25,20 +27,21 @@ import {
   Slot,
   SlotRootHex,
   SubnetID,
-  WithBytes,
   altair,
   capella,
   deneb,
+  fulu,
   phase0,
 } from "@lodestar/types";
-import type {Datastore} from "interface-datastore";
-import {Libp2p as ILibp2p} from "libp2p";
+import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
-import {BlobSidecarsByRootRequest} from "../util/types.js";
+import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {INetworkEventBus} from "./events.js";
 import {GossipType} from "./gossip/interface.js";
 import {PeerAction} from "./peers/index.js";
+import {PeerSyncMeta} from "./peers/peersData.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 
 /**
@@ -51,33 +54,39 @@ import {PendingGossipsubMessage} from "./processor/types.js";
  */
 
 export interface INetwork extends INetworkCorePublic {
+  readonly peerId: PeerId;
+  readonly custodyConfig: CustodyConfig;
   readonly closed: boolean;
   events: INetworkEventBus;
 
   getConnectedPeers(): PeerIdStr[];
+  getConnectedPeerSyncMeta(peerId: PeerIdStr): PeerSyncMeta;
   getConnectedPeerCount(): number;
   isSubscribedToGossipCoreTopics(): boolean;
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   shouldAggregate(subnet: SubnetID, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
-  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void;
+  searchUnknownSlotRoot(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
   // ReqResp
-  sendBeaconBlocksByRange(
-    peerId: PeerIdStr,
-    request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<WithBytes<SignedBeaconBlock>[]>;
-  sendBeaconBlocksByRoot(
-    peerId: PeerIdStr,
-    request: phase0.BeaconBlocksByRootRequest
-  ): Promise<WithBytes<SignedBeaconBlock>[]>;
+  sendBeaconBlocksByRange(peerId: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
+  sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
+  sendDataColumnSidecarsByRange(
+    peerId: PeerIdStr,
+    request: fulu.DataColumnSidecarsByRangeRequest
+  ): Promise<fulu.DataColumnSidecar[]>;
+  sendDataColumnSidecarsByRoot(
+    peerId: PeerIdStr,
+    request: DataColumnSidecarsByRootRequest
+  ): Promise<fulu.DataColumnSidecar[]>;
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number>;
+  publishDataColumnSidecar(dataColumnSideCar: fulu.DataColumnSidecar): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
   publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number>;

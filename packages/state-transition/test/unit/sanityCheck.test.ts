@@ -1,5 +1,5 @@
-import {ACTIVE_PRESET, EFFECTIVE_BALANCE_INCREMENT, PresetName} from "@lodestar/params";
 import {beforeAll, describe, expect, it, vi} from "vitest";
+import {ACTIVE_PRESET, EFFECTIVE_BALANCE_INCREMENT, PresetName} from "@lodestar/params";
 import {beforeProcessEpoch} from "../../src/index.js";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "../perf/util.js";
 

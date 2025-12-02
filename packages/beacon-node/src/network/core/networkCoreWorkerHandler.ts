@@ -1,15 +1,15 @@
 import path from "node:path";
 import workerThreads from "node:worker_threads";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
+import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
+import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
-import {phase0} from "@lodestar/types";
+import {Status} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
@@ -37,7 +37,8 @@ export type WorkerNetworkCoreOpts = NetworkOptions & {
   peerStoreDir?: string;
   activeValidatorCount: number;
   genesisTime: number;
-  initialStatus: phase0.Status;
+  initialStatus: Status;
+  initialCustodyGroupCount: number;
 };
 
 export type WorkerNetworkCoreInitModules = {
@@ -72,7 +73,7 @@ export class WorkerNetworkCore implements INetworkCore {
     // Handles ReqResp response from worker and calls async generator in main thread
     this.reqRespBridgeRespHandler = new AsyncIterableBridgeHandler(
       getReqRespBridgeRespEvents(this.reqRespBridgeEventBus),
-      (data) => modules.getReqRespHandler(data.method)(data.req, peerIdFromString(data.peerId))
+      (data) => modules.getReqRespHandler(data.method)(data.req, peerIdFromString(data.peerId), data.peerClient)
     );
 
     wireEventsOnMainThread<NetworkEventData>(
@@ -104,7 +105,15 @@ export class WorkerNetworkCore implements INetworkCore {
 
   static async init(modules: WorkerNetworkCoreInitModules): Promise<WorkerNetworkCore> {
     const {opts, config, privateKey} = modules;
-    const {genesisTime, peerStoreDir, activeValidatorCount, localMultiaddrs, metricsEnabled, initialStatus} = opts;
+    const {
+      genesisTime,
+      peerStoreDir,
+      activeValidatorCount,
+      localMultiaddrs,
+      metricsEnabled,
+      initialStatus,
+      initialCustodyGroupCount,
+    } = opts;
 
     const workerData: NetworkWorkerData = {
       opts,
@@ -116,12 +125,17 @@ export class WorkerNetworkCore implements INetworkCore {
       peerStoreDir,
       genesisTime,
       initialStatus,
+      initialCustodyGroupCount,
       activeValidatorCount,
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), {
+    const workerOpts: ConstructorParameters<typeof Worker>[1] = {
       workerData,
+    };
+    if (globalThis.Bun) {
+      workerOpts.suppressTranspileTS = true;
+    } else {
       /**
        * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
        * That default value was determined via https://github.com/ChainSafe/lodestar/issues/2115 and
@@ -133,10 +147,12 @@ export class WorkerNetworkCore implements INetworkCore {
        * showed that there is a pretty big window of "correct" values but we can always tune as
        * necessary
        */
-      resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
-    } as ConstructorParameters<typeof Worker>[1]);
+      workerOpts.resourceLimits = {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb};
+    }
 
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), workerOpts);
+
+    // biome-ignore lint/suspicious/noExplicitAny: Don't know any specific interface for the spawn
     const networkThreadApi = (await spawn<any>(worker, {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
@@ -172,7 +188,7 @@ export class WorkerNetworkCore implements INetworkCore {
     return this.getApi().scrapeMetrics();
   }
 
-  updateStatus(status: phase0.Status): Promise<void> {
+  updateStatus(status: Status): Promise<void> {
     return this.getApi().updateStatus(status);
   }
   reStatusPeers(peers: PeerIdStr[]): Promise<void> {
@@ -215,6 +231,12 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     return this.getApi().publishGossip(topic, data, opts);
+  }
+
+  // Custody
+
+  setTargetGroupCount(count: number): Promise<void> {
+    return this.getApi().setTargetGroupCount(count);
   }
 
   // Debug

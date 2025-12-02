@@ -12,6 +12,8 @@ import {
   BlockArchiveRepository,
   BlockRepository,
   CheckpointHeaderRepository,
+  DataColumnSidecarArchiveRepository,
+  DataColumnSidecarRepository,
   DepositDataRootRepository,
   DepositEventRepository,
   Eth1DataRepository,
@@ -34,6 +36,8 @@ export class BeaconDb implements IBeaconDb {
 
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
+  dataColumnSidecar: DataColumnSidecarRepository;
+  dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
   stateArchive: StateArchiveRepository;
   checkpointState: CheckpointStateRepository;
@@ -67,6 +71,8 @@ export class BeaconDb implements IBeaconDb {
 
     this.blobSidecars = new BlobSidecarsRepository(config, db);
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
+    this.dataColumnSidecar = new DataColumnSidecarRepository(config, db);
+    this.dataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, db);
 
     this.stateArchive = new StateArchiveRepository(config, db);
     this.checkpointState = new CheckpointStateRepository(config, db);

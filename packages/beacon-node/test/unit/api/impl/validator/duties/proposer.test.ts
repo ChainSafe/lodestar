@@ -1,9 +1,9 @@
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SYNC_TOLERANCE_EPOCHS, getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
@@ -24,7 +24,7 @@ describe("get proposers api impl", () => {
 
   beforeEach(() => {
     vi.useFakeTimers({now: 0});
-    vi.advanceTimersByTime(currentSlot * config.SECONDS_PER_SLOT * 1000);
+    vi.advanceTimersByTime(currentSlot * config.SLOT_DURATION_MS);
     modules = getApiTestModules({clock: "real"});
     api = getValidatorApi(defaultApiOptions, modules);
 
@@ -63,14 +63,14 @@ describe("get proposers api impl", () => {
   });
 
   it("should raise error if node head is behind", async () => {
-    vi.advanceTimersByTime((SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH + 1) * config.SECONDS_PER_SLOT * 1000);
+    vi.advanceTimersByTime((SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH + 1) * config.SLOT_DURATION_MS);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.SyncingHead);
 
     await expect(api.getProposerDuties({epoch: 1})).rejects.toThrow("Node is syncing - headSlot 0 currentSlot 97");
   });
 
   it("should raise error if node stalled", async () => {
-    vi.advanceTimersByTime((SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH + 1) * config.SECONDS_PER_SLOT * 1000);
+    vi.advanceTimersByTime((SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH + 1) * config.SLOT_DURATION_MS);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Stalled);
 
     await expect(api.getProposerDuties({epoch: 1})).rejects.toThrow("Node is syncing - waiting for peers");

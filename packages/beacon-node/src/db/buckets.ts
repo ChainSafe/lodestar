@@ -36,8 +36,8 @@ export enum Bucket {
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
 
-  allForks_blobSidecars = 27, // DENEB BeaconBlockRoot -> BlobSidecars
-  allForks_blobSidecarsArchive = 28, // DENEB BeaconBlockSlot -> BlobSidecars
+  deneb_blobSidecars = 27, // DENEB BeaconBlockRoot -> BlobSidecars
+  deneb_blobSidecarsArchive = 28, // DENEB BeaconBlockSlot -> BlobSidecars
 
   phase0_preGenesisState = 30, // Single = phase0.BeaconState
   phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
@@ -61,6 +61,9 @@ export enum Bucket {
   // 54 was for bestPartialLightClientUpdate, allocate a fresh one
   // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
   lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
+
+  fulu_dataColumnSidecars = 57, // FULU BeaconBlockRoot -> DataColumnSidecars
+  fulu_dataColumnSidecarsArchive = 58, // FULU BeaconBlockSlot -> DataColumnSidecars
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {

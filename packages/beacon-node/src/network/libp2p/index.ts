@@ -1,6 +1,3 @@
-import {ENR} from "@chainsafe/enr";
-import {noise} from "@chainsafe/libp2p-noise";
-import {quic} from "@chainsafe/libp2p-quic";
 import {bootstrap} from "@libp2p/bootstrap";
 import {identify} from "@libp2p/identify";
 import {PrivateKey} from "@libp2p/interface";
@@ -10,6 +7,10 @@ import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
 import {Libp2pInit, createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
+import {ENR} from "@chainsafe/enr";
+import {noise} from "@chainsafe/libp2p-noise";
+import {asCrypto, defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
+import {quic} from "@chainsafe/libp2p-quic";
 import {Libp2p, LodestarComponents} from "../interface.js";
 import {NetworkOptions, defaultNetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
@@ -63,21 +64,24 @@ export async function createNodeJsLibp2p(
       peerDiscovery.push(mdns());
     }
   }
-  const transports: Libp2pInit["transports"] = [
-    // TCP is always enabled
-    // tcp({
-    //   // Reject connections when the server's connection count gets high
-    //   maxConnections: networkOpts.maxPeers,
-    //   // socket option: the maximum length of the queue of pending connections
-    //   // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
-    //   // it's not safe if we increase this number
-    //   backlog: 5,
-    //   closeServerOnMaxConnections: {
-    //     closeAbove: networkOpts.maxPeers ?? Infinity,
-    //     listenBelow: networkOpts.maxPeers ?? Infinity,
-    //   },
-    // }),
-  ];
+  const transports: Libp2pInit["transports"] = [];
+  // TODO: TCP should always be enabled, this is a hack to test QUIC
+  if (!networkOpts.disableQuic) {
+    transports.unshift(
+      tcp({
+        // Reject connections when the server's connection count gets high
+        maxConnections: networkOpts.maxPeers,
+        // socket option: the maximum length of the queue of pending connections
+        // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
+        // it's not safe if we increase this number
+        backlog: 5,
+        closeServerOnMaxConnections: {
+          closeAbove: networkOpts.maxPeers ?? Infinity,
+          listenBelow: networkOpts.maxPeers ?? Infinity,
+        },
+      })
+    );
+  }
   if (!networkOpts.disableQuic) {
     transports.unshift(
       quic({
@@ -91,13 +95,21 @@ export async function createNodeJsLibp2p(
     );
   }
 
+  const noiseCrypto = {
+    ...defaultCrypto,
+  };
+  if (globalThis.Bun) {
+    noiseCrypto.chaCha20Poly1305Decrypt = asCrypto.chaCha20Poly1305Decrypt;
+    noiseCrypto.chaCha20Poly1305Encrypt = asCrypto.chaCha20Poly1305Encrypt;
+  }
+
   return createLibp2p({
     privateKey,
     addresses: {
       listen: localMultiaddrs,
       announce: [],
     },
-    connectionEncrypters: [noise()],
+    connectionEncrypters: [noise({crypto: noiseCrypto})],
     transports,
     streamMuxers: [mplex({maxInboundStreams: 256, disconnectThreshold: networkOpts.disconnectThreshold})],
     peerDiscovery,

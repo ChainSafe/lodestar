@@ -1,5 +1,6 @@
 import path from "node:path";
-import {ForkName} from "@lodestar/params";
+import {expect} from "vitest";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -9,16 +10,12 @@ import {
 } from "@lodestar/state-transition";
 import {ExecutionPayloadHeader, Root, TimeSeconds, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-import {expect} from "vitest";
-
-import {ACTIVE_PRESET} from "@lodestar/params";
 import {getConfig} from "../../utils/config.js";
-import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
-import {TestRunnerFn} from "../utils/types.js";
-
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
-import {RunnerType} from "../utils/types.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
+
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.
 

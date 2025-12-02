@@ -1,6 +1,5 @@
 import {ENR} from "@chainsafe/enr";
 import {BeaconConfig} from "@lodestar/config";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/constants.js";
 import {IClock} from "../../util/clock.js";
 import {ENRKey} from "../metadata.js";
 
@@ -35,7 +34,7 @@ export function enrRelevance(enr: ENR, config: BeaconConfig, clock: IClock): ENR
   }
 
   // Check if fork digest's fork matches ours
-  const currentSlot = clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY);
+  const currentSlot = clock.slotWithFutureTolerance(config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000);
   const localForkInfo = config.getForkInfo(currentSlot);
   // We only connect if the ENR's fork matches our current fork.
   // We also allow it to be the previous fork due to delay and infrequent update of DHT.

@@ -1,4 +1,5 @@
 import path from "node:path";
+import {expect} from "vitest";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -10,7 +11,6 @@ import {
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
-import {expect} from "vitest";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
@@ -47,9 +47,9 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
   pending_deposits: epochFns.processPendingDeposits as EpochTransitionFn,
   pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
-  proposer_lookahead: (state, _) => {
+  proposer_lookahead: (state, epochTransitionCache) => {
     const fork = state.config.getForkSeq(state.slot);
-    epochFns.processProposerLookahead(fork, state as CachedBeaconStateFulu);
+    epochFns.processProposerLookahead(fork, state as CachedBeaconStateFulu, epochTransitionCache);
   },
 };
 

@@ -1,6 +1,13 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkChoice, ForkChoiceOpts, IForkChoiceStore, ProtoArray, ProtoBlock, ProtoNode} from "@lodestar/fork-choice";
-import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
+import {
+  ForkChoice,
+  ForkChoiceOpts,
+  IForkChoiceStore,
+  NotReorgedReason,
+  ProtoArray,
+  ProtoBlock,
+  ProtoNode,
+} from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
 
 /**
@@ -29,9 +36,10 @@ export class ReorgedForkChoice extends ForkChoice {
     fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     protoArray: ProtoArray,
+    validatorCount: number,
     opts?: ForkChoiceOpts
   ) {
-    super(config, fcStore, protoArray, opts);
+    super(config, fcStore, protoArray, validatorCount, null, opts);
     this._fcStore = fcStore;
   }
 

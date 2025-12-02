@@ -50,7 +50,10 @@
         "${input:testName}",
         "--pool",
         "forks",
-        "--poolOptions.forks.singleFork"
+        "--maxWorkers",
+        "1",
+        "--isolate",
+        "true"
       ],
       "cwd": "${workspaceFolder}/${input:packageName}",
       "console": "integratedTerminal",

@@ -1,14 +1,13 @@
+import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
-import {multiaddr} from "@multiformats/multiaddr";
 import {YargsError} from "../../util/index.js";
 
 export const defaultListenAddress = "0.0.0.0";
+export const defaultListenAddress6 = "::";
 export const defaultP2pPort = 9000;
 export const defaultQuicPort = 9001;
-export const defaultP2pPort6 = 9090;
-export const defaultQuicPort6 = 9091;
 
 export type NetworkArgs = {
   discv5?: boolean;
@@ -41,6 +40,7 @@ export type NetworkArgs = {
   "network.maxGossipTopicConcurrency"?: number;
   "network.useWorker"?: boolean;
   "network.maxYoungGenerationSizeMb"?: number;
+  "network.targetGroupPeers"?: number;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit"?: number;
@@ -67,15 +67,16 @@ export function parseListenArgs(args: NetworkArgs) {
   // If listenAddress6 is not set, use defaultListenAddress
   const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
   const port = listenAddress ? (args.port ?? defaultP2pPort) : undefined;
-  const discoveryPort = listenAddress ? (args.discoveryPort ?? args.port ?? defaultP2pPort) : undefined;
+  const discoveryPort = listenAddress ? (args.discoveryPort ?? port) : undefined;
   const quicPort = listenAddress ? (args.quicPort ?? (port !== undefined ? port + 1 : defaultQuicPort)) : undefined;
 
-  // Only use listenAddress6 if it is explicitly set
-  const listenAddress6 = args.listenAddress6;
-  const port6 = listenAddress6 ? (args.port6 ?? defaultP2pPort6) : undefined;
-  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6) : undefined;
+  // If listenAddress6 is explicitly set, use it
+  // If listenAddress is not set, use defaultListenAddress6
+  const listenAddress6 = args.listenAddress6 ?? (args.listenAddress ? undefined : defaultListenAddress6);
+  const port6 = listenAddress6 ? (args.port6 ?? args.port ?? defaultP2pPort) : undefined;
+  const discoveryPort6 = listenAddress6 ? (args.discoveryPort6 ?? port6) : undefined;
   const quicPort6 = listenAddress6
-    ? (args.quicPort6 ?? (port6 !== undefined ? port6 + 1 : defaultQuicPort6))
+    ? (args.quicPort6 ?? (port6 !== undefined ? port6 + 1 : defaultQuicPort))
     : undefined;
 
   return {listenAddress, port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6};
@@ -146,7 +147,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
             ip6: bindMu6,
           },
           bootEnrs,
-          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+          // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
           enr: undefined as any,
         }
       : null,
@@ -172,6 +173,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
     useWorker: args["network.useWorker"],
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
+    targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
   };
 }
 
@@ -216,6 +218,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
   listenAddress6: {
     type: "string",
     description: "The IPv6 address to listen for p2p UDP and TCP connections",
+    defaultDescription: defaultListenAddress6,
     group: "network",
   },
 
@@ -223,7 +226,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort6 flag.",
     type: "number",
     // TODO: Derive from BeaconNode defaults
-    defaultDescription: String(defaultP2pPort6),
+    defaultDescription: String(defaultP2pPort),
     group: "network",
   },
 
@@ -425,5 +428,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
     description: "Max size of young generation in megabytes. Defaults to 152mb",
     defaultDescription: String(defaultOptions.network.maxYoungGenerationSizeMb),
+  },
+
+  "network.targetGroupPeers": {
+    type: "number",
+    hidden: true,
+    group: "network",
+    description: "Target number of peers per sampling group",
+    defaultDescription: String(defaultOptions.network.targetGroupPeers),
   },
 };

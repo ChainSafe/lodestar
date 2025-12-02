@@ -1,10 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
+
+export type ClockOptions = {
+  skipSlots?: boolean;
+};
 
 export interface IClock {
   readonly genesisTime: number;
@@ -16,6 +20,7 @@ export interface IClock {
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
   msToSlot(slot: Slot): number;
+  msFromSlot(slot: Slot): number;
   secFromSlot(slot: Slot): number;
   getCurrentSlot(): Slot;
   getCurrentEpoch(): Epoch;
@@ -33,9 +38,13 @@ export class Clock implements IClock {
   private readonly logger: Logger;
   private readonly fns: {timeItem: TimeItem; fn: RunEveryFn}[] = [];
 
-  constructor(config: ChainForkConfig, logger: Logger, opts: {genesisTime: number}) {
+  constructor(
+    config: ChainForkConfig,
+    logger: Logger,
+    private readonly opts: {genesisTime: number} & ClockOptions
+  ) {
     this.genesisTime = opts.genesisTime;
-    this.secondsPerSlot = config.SECONDS_PER_SLOT;
+    this.secondsPerSlot = config.SLOT_DURATION_MS / 1000;
     this.config = config;
     this.logger = logger;
   }
@@ -72,13 +81,17 @@ export class Clock implements IClock {
 
   /** Milliseconds from now to a specific slot */
   msToSlot(slot: Slot): number {
-    const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * slot;
-    return timeAt * 1000 - Date.now();
+    return computeTimeAtSlot(this.config, slot, this.genesisTime) * 1000 - Date.now();
+  }
+
+  /** Milliseconds elapsed from a specific slot to now */
+  msFromSlot(slot: Slot): number {
+    return Date.now() - computeTimeAtSlot(this.config, slot, this.genesisTime) * 1000;
   }
 
   /** Seconds elapsed from a specific slot to now */
   secFromSlot(slot: Slot): number {
-    return Date.now() / 1000 - (this.genesisTime + this.config.SECONDS_PER_SLOT * slot);
+    return Date.now() / 1000 - computeTimeAtSlot(this.config, slot, this.genesisTime);
   }
 
   /**
@@ -93,16 +106,34 @@ export class Clock implements IClock {
     let slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
     while (!signal.aborted) {
       // Must catch fn() to ensure `sleep()` is awaited both for resolve and reject
-      await fn(slotOrEpoch, signal).catch((e: Error) => {
+      const task = fn(slotOrEpoch, signal).catch((e: Error) => {
         if (!isErrorAborted(e)) this.logger.error("Error on runEvery fn", {}, e);
       });
+
+      if (timeItem !== TimeItem.Slot || this.opts.skipSlots !== false) {
+        // await response to only continue with next task if current task finished within slot
+        await task;
+      }
 
       try {
         await sleep(this.timeUntilNext(timeItem), signal);
         // calling getCurrentSlot here may not be correct when we're close to the next slot
         // it's safe to call getCurrentSlotAround after we sleep
-        slot = getCurrentSlotAround(this.config, this.genesisTime);
-        slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
+        const nextSlot = getCurrentSlotAround(this.config, this.genesisTime);
+
+        if (timeItem === TimeItem.Slot) {
+          if (nextSlot > slot + 1) {
+            // It's not very likely that we skip more than one slot as HTTP timeout is set
+            // to SLOT_DURATION_MS so we will fail task before skipping another slot.
+            this.logger.warn("Skipped slot due to task taking more than one slot to run", {
+              skippedSlot: slot + 1,
+            });
+          }
+          slotOrEpoch = nextSlot;
+        } else {
+          slotOrEpoch = computeEpochAtSlot(nextSlot);
+        }
+        slot = nextSlot;
       } catch (e) {
         if (e instanceof ErrorAborted) {
           return;
@@ -113,7 +144,7 @@ export class Clock implements IClock {
   }
 
   private timeUntilNext(timeItem: TimeItem): number {
-    const milliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
+    const milliSecondsPerSlot = this.config.SLOT_DURATION_MS;
     const msFromGenesis = Date.now() - this.genesisTime * 1000;
 
     if (timeItem === TimeItem.Slot) {
@@ -135,7 +166,7 @@ export class Clock implements IClock {
  */
 export function getCurrentSlotAround(config: ChainForkConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
-  const slotsSinceGenesis = Math.round(diffInSeconds / config.SECONDS_PER_SLOT);
+  const slotsSinceGenesis = Math.round((diffInSeconds * 1000) / config.SLOT_DURATION_MS);
   return GENESIS_SLOT + slotsSinceGenesis;
 }
 

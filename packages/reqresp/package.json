@@ -11,32 +11,24 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.31.0",
+  "version": "1.37.0",
   "type": "module",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
+      "bun": "./src/utils/index.ts",
+      "types": "./lib/utils/index.d.ts",
       "import": "./lib/utils/index.js"
     }
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "./lib/index.d.ts",
   "files": [
-    "lib/**/*.d.ts",
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "*.d.ts",
-    "*.js"
+    "src",
+    "lib",
+    "!**/*.tsbuildinfo"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -54,9 +46,9 @@
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.2.0",
     "@libp2p/interface": "^2.7.0",
-    "@lodestar/config": "^1.31.0",
-    "@lodestar/params": "^1.31.0",
-    "@lodestar/utils": "^1.31.0",
+    "@lodestar/config": "^1.37.0",
+    "@lodestar/params": "^1.37.0",
+    "@lodestar/utils": "^1.37.0",
     "it-all": "^3.0.4",
     "it-pipe": "^3.0.1",
     "snappy": "^7.2.2",
@@ -65,8 +57,8 @@
     "uint8arraylist": "^2.4.7"
   },
   "devDependencies": {
-    "@lodestar/logger": "^1.31.0",
-    "@lodestar/types": "^1.31.0",
+    "@lodestar/logger": "^1.37.0",
+    "@lodestar/types": "^1.37.0",
     "libp2p": "2.9.0"
   },
   "peerDependencies": {

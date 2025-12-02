@@ -1,11 +1,10 @@
 import {EventEmitter} from "node:events";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toRootHex} from "@lodestar/utils";
-import {StrictEventEmitter} from "strict-event-emitter-types";
-
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
@@ -17,6 +16,7 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 import {BackfillBlock, BackfillBlockHeader, verifyBlockProposerSignature, verifyBlockSequence} from "./verify.js";
+
 /**
  * Timeout in ms to take a break from reading a backfillBatchSize from db, as just yielding
  * to sync loop gives hardly any.
@@ -679,7 +679,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     let isPrevFinWsConfirmedAnchorParent = false;
     while (
       backCount !== this.opts.backfillBatchSize &&
-      // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
+      // biome-ignore lint/suspicious/noAssignInExpressions: May be refactored later
       (parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))
     ) {
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock
@@ -749,27 +749,33 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     const anchorBlock = res[0];
 
     // GENESIS_SLOT doesn't has valid signature
-    if (anchorBlock.data.message.slot === GENESIS_SLOT) return;
+    if (anchorBlock.message.slot === GENESIS_SLOT) return;
     await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), [anchorBlock]);
 
     // We can write to the disk if this is ahead of prevFinalizedCheckpointBlock otherwise
     // we will need to go make checks on the top of sync loop before writing as it might
     // override prevFinalizedCheckpointBlock
-    if (this.prevFinalizedCheckpointBlock.slot < anchorBlock.data.message.slot)
-      await this.db.blockArchive.putBinary(anchorBlock.data.message.slot, anchorBlock.bytes);
+    if (this.prevFinalizedCheckpointBlock.slot < anchorBlock.message.slot) {
+      const serialized = this.chain.serializedCache.get(anchorBlock);
+      if (serialized) {
+        await this.db.blockArchive.putBinary(anchorBlock.message.slot, serialized);
+      } else {
+        await this.db.blockArchive.put(anchorBlock.message.slot, anchorBlock);
+      }
+    }
 
     this.syncAnchor = {
-      anchorBlock: anchorBlock.data,
+      anchorBlock: anchorBlock,
       anchorBlockRoot,
-      anchorSlot: anchorBlock.data.message.slot,
-      lastBackSyncedBlock: {root: anchorBlockRoot, slot: anchorBlock.data.message.slot, block: anchorBlock.data},
+      anchorSlot: anchorBlock.message.slot,
+      lastBackSyncedBlock: {root: anchorBlockRoot, slot: anchorBlock.message.slot, block: anchorBlock},
     };
 
     this.metrics?.backfillSync.totalBlocks.inc({method: BackfillSyncMethod.blockbyroot});
 
     this.logger.verbose("Fetched new anchorBlock", {
       root: toRootHex(anchorBlockRoot),
-      slot: anchorBlock.data.message.slot,
+      slot: anchorBlock.message.slot,
     });
 
     return;
@@ -825,15 +831,33 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         nextAnchor.slot > this.prevFinalizedCheckpointBlock.slot
           ? verifiedBlocks
           : verifiedBlocks.slice(0, verifiedBlocks.length - 1);
-      await this.db.blockArchive.batchPutBinary(
-        blocksToPut.map((block) => ({
-          key: block.data.message.slot,
-          value: block.bytes,
-          slot: block.data.message.slot,
-          blockRoot: this.config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message),
-          parentRoot: block.data.message.parentRoot,
-        }))
-      );
+
+      const binaryPuts = [];
+      const nonBinaryPuts = [];
+
+      for (const block of blocksToPut) {
+        const serialized = this.chain.serializedCache.get(block);
+        const item = {
+          key: block.message.slot,
+          slot: block.message.slot,
+          blockRoot: this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+          parentRoot: block.message.parentRoot,
+        };
+
+        if (serialized) {
+          binaryPuts.push({...item, value: serialized});
+        } else {
+          nonBinaryPuts.push({...item, value: block});
+        }
+      }
+
+      if (binaryPuts.length > 0) {
+        await this.db.blockArchive.batchPutBinary(binaryPuts);
+      }
+      if (nonBinaryPuts.length > 0) {
+        await this.db.blockArchive.batchPut(nonBinaryPuts);
+      }
+
       this.metrics?.backfillSync.totalBlocks.inc({method: BackfillSyncMethod.rangesync}, verifiedBlocks.length);
     }
 

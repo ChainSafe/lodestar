@@ -1,5 +1,8 @@
+import {describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
+import {createChainForkConfig} from "@lodestar/config";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {
   CommitteeIndex,
   Epoch,
@@ -15,7 +18,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {describe, expect, it} from "vitest";
+import {kzg} from "../../../src/util/kzg.js";
 import {
   getAggregationBitsFromAttestationSerialized,
   getAttDataFromAttestationSerialized,
@@ -23,19 +26,23 @@ import {
   getAttDataFromSignedAggregateAndProofPhase0,
   getAttDataFromSingleAttestationSerialized,
   getAttesterIndexFromSingleAttestationSerialized,
+  getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getBlockRootFromSingleAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
   getCommitteeIndexFromSingleAttestationSerialized,
+  getLastProcessedSlotFromBeaconStateSerialized,
   getSignatureFromAttestationSerialized,
   getSignatureFromSingleAttestationSerialized,
   getSlotFromAttestationSerialized,
+  getSlotFromBeaconStateSerialized,
   getSlotFromBlobSidecarSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromSingleAttestationSerialized,
 } from "../../../src/util/sszBytes.js";
+import {generateRandomBlob} from "../../utils/kzg.js";
 
 describe("SinlgeAttestation SSZ serialized picking", () => {
   const testCases: SingleAttestation[] = [
@@ -315,6 +322,86 @@ describe("BlobSidecar SSZ serialized picking", () => {
     const invalidSlotDataSizes = [0, 20, 38];
     for (const size of invalidSlotDataSizes) {
       expect(getSlotFromBlobSidecarSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+});
+
+describe("getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized", () => {
+  const config = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 5,
+    ELECTRA_FORK_EPOCH: 10,
+    FULU_FORK_EPOCH: 15,
+  });
+
+  it("should return 0 blob count pre deneb", async () => {
+    const slot = 1;
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
+    block.message.slot = slot;
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
+
+    expect(blobsCount).toBe(0);
+  });
+
+  it("should return blob count post deneb for empty blobs", async () => {
+    const slot = computeStartSlotAtEpoch(5);
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue() as deneb.SignedBeaconBlock;
+    block.message.slot = slot;
+    block.message.body.blobKzgCommitments = [];
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
+
+    expect(blobsCount).toBe(0);
+  });
+
+  it("should return blob count post deneb with blobs", async () => {
+    const slot = computeStartSlotAtEpoch(5);
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue() as deneb.SignedBeaconBlock;
+    const blobs = [generateRandomBlob(), generateRandomBlob(), generateRandomBlob()];
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    block.message.body.blobKzgCommitments = kzgCommitments;
+    block.message.slot = slot;
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
+
+    expect(blobsCount).toBe(blobs.length);
+  });
+});
+
+describe("BeaconState ssz serialized picking", () => {
+  it("getLastProcessedSlotFromBeaconStateSerialized", () => {
+    const slot = 1_000_000;
+    const state = ssz.phase0.BeaconState.defaultValue();
+    state.latestBlockHeader.slot = slot;
+    const bytes = ssz.phase0.BeaconState.serialize(state);
+    expect(getLastProcessedSlotFromBeaconStateSerialized(bytes)).toBe(slot);
+  });
+
+  it("getLastProcessedSlotFromBeaconStateSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 50, 60];
+    for (const size of invalidSlotDataSizes) {
+      expect(getLastProcessedSlotFromBeaconStateSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getSlotFromBeaconStateSerialized", () => {
+    const slot = 1_000_000;
+    const state = ssz.phase0.BeaconState.defaultValue();
+    state.slot = slot;
+    const bytes = ssz.phase0.BeaconState.serialize(state);
+    expect(getSlotFromBeaconStateSerialized(bytes)).toBe(slot);
+  });
+
+  it("getSlotFromBeaconStateSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 20, 39];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromBeaconStateSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 });

@@ -1,5 +1,5 @@
-import {defaultOptions} from "@lodestar/beacon-node";
 import {describe, expect, it} from "vitest";
+import {defaultOptions} from "@lodestar/beacon-node";
 import {BeaconNodeOptions} from "../../../src/config/index.js";
 
 describe("config / beaconNodeOptions", () => {

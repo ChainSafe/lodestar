@@ -1,8 +1,13 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  isExecutionCachedStateType,
+  isMergeTransitionComplete,
+} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
@@ -152,7 +157,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 }
 
 function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTime: boolean): number {
-  const msPerSlot = config.SECONDS_PER_SLOT * 1000;
+  const msPerSlot = config.SLOT_DURATION_MS;
   const msPerHalfSlot = msPerSlot / 2;
   const msFromGenesis = Date.now() - chain.genesisTime * 1000;
   const msToNextSlot =

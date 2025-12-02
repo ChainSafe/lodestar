@@ -288,7 +288,7 @@ export const responseEncodersErrorTestCases: {
   {
     id: "SERVER_ERROR - with error message",
     protocol: pingNoHandler,
-    decodeError: new ResponseError(RespStatus.SERVER_ERROR, "sNaPpYIzTEST_ERROR"),
+    decodeError: new ResponseError(RespStatus.SERVER_ERROR, "TEST_ERROR"),
     chunks: [
       Buffer.from([RespStatus.SERVER_ERROR]),
       fromHexBuf("0x0a"),

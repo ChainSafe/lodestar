@@ -6,8 +6,7 @@ import {
   SLOTS_PER_EPOCH,
   isForkPostElectra,
 } from "@lodestar/params";
-import {Epoch, Root} from "@lodestar/types";
-import {ssz} from "@lodestar/types";
+import {Epoch, Root, ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/constants.js";

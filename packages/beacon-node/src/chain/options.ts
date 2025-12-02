@@ -6,8 +6,11 @@ import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
-import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
-import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
+import {
+  DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
+  DEFAULT_MAX_CP_STATE_ON_DISK,
+  PersistentCheckpointStateCacheOpts,
+} from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
 export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
@@ -39,9 +42,10 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedBlobSidecars?: number;
     /** Max number of produced block roots (blinded or full) cached for broadcast validations */
     maxCachedProducedRoots?: number;
+    initialCustodyGroupCount?: number;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
-    archiveBlobEpochs?: number;
+    archiveDateEpochs?: number;
     nHistoricalStates?: boolean;
     nHistoricalStatesFileDataStore?: boolean;
   };
@@ -103,7 +107,7 @@ export const defaultChainOptions: IChainOptions = {
   blacklistedBlocks: [],
   disableBlsBatchVerify: false,
   proposerBoost: true,
-  proposerBoostReorg: false,
+  proposerBoostReorg: true,
   computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
@@ -129,4 +133,5 @@ export const defaultChainOptions: IChainOptions = {
   nHistoricalStatesFileDataStore: true,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
+  maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,
 };

@@ -4,17 +4,17 @@ import path from "node:path";
 import {pipeline} from "node:stream/promises";
 import {ReadableStream as NodeReadableStream} from "node:stream/web";
 import {promisify} from "node:util";
-import {fetch, retry} from "@lodestar/utils";
 import {rimraf} from "rimraf";
+import {fetch, retry} from "@lodestar/utils";
 
-export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
+export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-specs";
 
 const logEmpty = (): void => {};
 
 export type DownloadTestsOptions = {
   specVersion: string;
   outputDir: string;
-  /** Root Github URL `https://github.com/ethereum/consensus-spec-tests` */
+  /** Root Github URL `https://github.com/ethereum/consensus-specs` */
   specTestsRepoUrl: string;
   /** Release files names to download without prefix `["general", "mainnet", "minimal"]` */
   testsToDownload: string[];
@@ -81,7 +81,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           log(`Downloading ${url} - ${totalSize} bytes`);
 
           // stream download to local .tar.gz file
-          await pipeline(res.body as NodeReadableStream, fs.createWriteStream(tarball));
+          await pipeline(res.body as unknown as NodeReadableStream, fs.createWriteStream(tarball));
           log(`Downloaded ${url} - ${fs.statSync(tarball).size} bytes`);
 
           // extract tar into output directory

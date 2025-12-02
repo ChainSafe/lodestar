@@ -1,7 +1,7 @@
+import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {describe, expect, it} from "vitest";
 import {interopDeposits} from "../../../src/node/utils/interop/deposits.js";
 import {initDevState} from "../../../src/node/utils/state.js";
 

@@ -20,8 +20,8 @@ export async function computeSyncCommitteeRewards(
   const preStateAltair = preState as CachedBeaconStateAltair;
   const {index2pubkey} = preStateAltair.epochCtx;
 
-  // Bound committeeIndices in case it goes beyond SYNC_COMMITTEE_SIZE just to be safe
-  const committeeIndices = preStateAltair.epochCtx.currentSyncCommitteeIndexed.validatorIndices.slice(
+  // Bound syncCommitteeValidatorIndices in case it goes beyond SYNC_COMMITTEE_SIZE just to be safe
+  const syncCommitteeValidatorIndices = preStateAltair.epochCtx.currentSyncCommitteeIndexed.validatorIndices.slice(
     0,
     SYNC_COMMITTEE_SIZE
   );
@@ -30,11 +30,11 @@ export async function computeSyncCommitteeRewards(
 
   // Use balance of each committee as starting point such that we cap the penalty to avoid balance dropping below 0
   const balances: Map<ValidatorIndex, BalanceRecord> = new Map();
-  for (const i of committeeIndices) {
+  for (const i of syncCommitteeValidatorIndices) {
     balances.set(i, {val: preStateAltair.balances.get(i)});
   }
 
-  for (const i of committeeIndices) {
+  for (const i of syncCommitteeValidatorIndices) {
     const balanceRecord = balances.get(i) as BalanceRecord;
     if (syncCommitteeBits.get(i)) {
       // Positive rewards for participants
