@@ -5,7 +5,7 @@ import {Logger} from "@lodestar/logger";
 import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 import {NetworkCoreWorkerMetrics} from "../network/core/metrics.js";
-import {NetworkEvent} from "../network/events.js";
+import {EventDirection, NetworkEvent} from "../network/events.js";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
 
 const NANO_TO_SECOND_CONVERSION = 1e9;
@@ -16,13 +16,6 @@ export type WorkerBridgeEvent<EventData> = {
   posted: [number, number];
   data: EventData[keyof EventData];
 };
-
-export enum EventDirection {
-  workerToMain,
-  mainToWorker,
-  /** Event not emitted through worker boundary */
-  none,
-}
 
 /**
  * Bridges events from worker to main thread
