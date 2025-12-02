@@ -66,6 +66,9 @@ export async function verifyBlocksInEpoch(
     }
   }
 
+  // All blocks are in the same epoch
+  const fork = this.config.getForkSeq(block0.message.slot);
+
   // TODO: Skip in process chain segment
   // Retrieve preState from cache (regen)
   const preState0 = await this.regen
@@ -105,10 +108,6 @@ export async function verifyBlocksInEpoch(
 
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
-
-    // All blocks are in the same epoch
-    const fork = this.config.getForkSeq(block0.message.slot);
-
     for (const [i, block] of blocks.entries()) {
       indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) =>
         preState0.epochCtx.getIndexedAttestation(fork, attestation)
