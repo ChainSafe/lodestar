@@ -93,7 +93,7 @@ export async function verifyBlocksInEpoch(
   const abortController = new AbortController();
 
   try {
-    // Start execution payload verification first (async I/O to EL client)
+    // Start execution payload verification first (async request to execution client)
     const executionPayloadPromise =
       opts.skipVerifyExecutionPayload !== true
         ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, abortController.signal, opts)
