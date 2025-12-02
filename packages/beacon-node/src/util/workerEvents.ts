@@ -1,9 +1,11 @@
 import {MessagePort, Worker} from "node:worker_threads";
+import {Message} from "@libp2p/interface";
 import {Thread} from "@chainsafe/threads";
 import {Logger} from "@lodestar/logger";
 import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 import {NetworkCoreWorkerMetrics} from "../network/core/metrics.js";
+import {NetworkEvent} from "../network/events.js";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
 
 const NANO_TO_SECOND_CONVERSION = 1e9;
@@ -63,7 +65,13 @@ export function wireEventsOnWorkerThread<EventData>(
           posted: process.hrtime(),
           data,
         };
-        parentPort.postMessage(workerEvent);
+        let transferList: ArrayBuffer[] | undefined = undefined;
+        const payload = data as {msg?: Message};
+        if (eventName === NetworkEvent.pendingGossipsubMessage && payload.msg && payload.msg.data) {
+          // Transfer the underlying ArrayBuffer to avoid copy for PendingGossipsubMessage
+          transferList = [payload.msg.data.buffer as ArrayBuffer];
+        }
+        parentPort.postMessage(workerEvent, transferList);
       });
     }
   }
