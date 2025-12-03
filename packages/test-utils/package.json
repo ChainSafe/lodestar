@@ -37,7 +37,7 @@
     "lint": "biome check src/",
     "lint:fix": "pnpm run lint --write",
     "test:unit": "echo 'No unit tests for @lodestar/test-utils'",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",

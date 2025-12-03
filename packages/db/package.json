@@ -40,7 +40,7 @@
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:e2e": "vitest run --project e2e",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "dependencies": {
     "@chainsafe/ssz": "^1.2.2",

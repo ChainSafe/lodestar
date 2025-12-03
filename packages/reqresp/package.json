@@ -41,7 +41,7 @@
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.2.0",

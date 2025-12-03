@@ -51,7 +51,7 @@
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "types": "lib/index.d.ts",
   "dependencies": {

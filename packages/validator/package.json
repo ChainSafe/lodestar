@@ -35,7 +35,7 @@
     "test:spec": "vitest run --project spec-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",

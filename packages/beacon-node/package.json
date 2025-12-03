@@ -111,7 +111,7 @@
     "test:spec:minimal": "vitest run --project spec-minimal test/spec/presets/",
     "test:spec:mainnet": "vitest run --project spec-mainnet test/spec/presets/",
     "test:spec": "pnpm test:spec:bls && pnpm test:spec:general && pnpm test:spec:minimal && pnpm test:spec:mainnet",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",

@@ -60,7 +60,7 @@
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "pnpm run build:bundle && vitest run --project browser",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "dependencies": {
     "@chainsafe/bls": "8.2.0",

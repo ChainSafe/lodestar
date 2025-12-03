@@ -42,7 +42,7 @@
     "lint:fix": "pnpm run lint --write",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "vitest run --project browser",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
