@@ -90,8 +90,8 @@ describe("computeShuffledIndex", () => {
     });
 
     const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-
-    bench({
+    // getComputeShuffledIndexFn() is also not in prod anymore so no need to track it
+    bench.skip({
       id: `cached computeShuffledIndex ${vc} validators`,
       fn: () => {
         for (let i = 0; i < vc; i++) {
