@@ -18,6 +18,11 @@
       "bun": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
+    },
+    "./era": {
+      "bun": "./src/era/index.ts",
+      "types": "./lib/era/index.d.ts",
+      "import": "./lib/era/index.js"
     }
   },
   "files": [

@@ -43,6 +43,14 @@ export function computeStartBlockSlotFromEraNumber(eraNumber: number): Slot {
   return (eraNumber - 1) * SLOTS_PER_HISTORICAL_ROOT;
 }
 
+export function computeEraNumberFromStateSlot(slot: Slot): number {
+  return Math.floor(slot / SLOTS_PER_HISTORICAL_ROOT);
+}
+
+export function computeStateSlotFromEraNumber(eraNumber: number): Slot {
+  return eraNumber * SLOTS_PER_HISTORICAL_ROOT;
+}
+
 /**
  * Parse era filename.
  *
