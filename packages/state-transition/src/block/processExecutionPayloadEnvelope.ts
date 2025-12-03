@@ -1,9 +1,9 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {DOMAIN_BEACON_BUILDER, ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {DOMAIN_BEACON_BUILDER, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.ts";
+import {toHex, toRootHex} from "@lodestar/utils";
+import {CachedBeaconStateGloas} from "../types.ts";
 import {computeExitEpochAndUpdateChurn, computeSigningRoot, computeTimeAtSlot} from "../util/index.ts";
 import {processConsolidationRequest} from "./processConsolidationRequest.ts";
 import {processDepositRequest} from "./processDepositRequest.ts";
@@ -17,6 +17,7 @@ export function processExecutionPayloadEnvelope(
 ): void {
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
+  const fork = state.config.getForkSeq(envelope.slot);
 
   if (verify) {
     const builderIndex = envelope.builderIndex;
@@ -32,18 +33,15 @@ export function processExecutionPayloadEnvelope(
   const requests = envelope.executionRequests;
 
   for (const deposit of requests.deposits) {
-    // TODO GLOAS: Fix type or properly cast it to the correct state type
-    processDepositRequest(state as unknown as CachedBeaconStateElectra, deposit);
+    processDepositRequest(state, deposit);
   }
 
   for (const withdrawal of requests.withdrawals) {
-    // TODO GLOAS: Fix type or properly cast it to the correct state type
-    processWithdrawalRequest(ForkSeq.gloas, state as unknown as CachedBeaconStateElectra, withdrawal);
+    processWithdrawalRequest(fork, state, withdrawal);
   }
 
   for (const consolidation of requests.consolidations) {
-    // TODO GLOAS: Fix type or properly cast it to the correct state type
-    processConsolidationRequest(ForkSeq.gloas, state as unknown as CachedBeaconStateElectra, consolidation);
+    processConsolidationRequest(fork, state, consolidation);
   }
 
   // Queue the builder payment
@@ -66,7 +64,7 @@ export function processExecutionPayloadEnvelope(
 
   if (verify && !byteArrayEquals(envelope.stateRoot, state.hashTreeRoot())) {
     throw new Error(
-      `Envelope's state root does not match state envelope=${envelope.stateRoot} state=${state.hashTreeRoot()}`
+      `Envelope's state root does not match state envelope=${toRootHex(envelope.stateRoot)} state=${toRootHex(state.hashTreeRoot())}`
     );
   }
 }
@@ -85,7 +83,7 @@ function validateExecutionPayloadEnvelope(
   // Verify consistency with the beacon block
   if (!byteArrayEquals(envelope.beaconBlockRoot, state.latestBlockHeader.hashTreeRoot())) {
     throw new Error(
-      `Envelope's block is not the latest block header envelope=${toHex(envelope.beaconBlockRoot)} latestBlockHeader=${toHex(state.latestBlockHeader.hashTreeRoot())}`
+      `Envelope's block is not the latest block header envelope=${toRootHex(envelope.beaconBlockRoot)} latestBlockHeader=${toRootHex(state.latestBlockHeader.hashTreeRoot())}`
     );
   }
 
@@ -106,7 +104,7 @@ function validateExecutionPayloadEnvelope(
   const envelopeKzgRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(envelope.blobKzgCommitments);
   if (!byteArrayEquals(committedBid.blobKzgCommitmentsRoot, envelopeKzgRoot)) {
     throw new Error(
-      `Kzg commitment root mismatch between envelope and committed bid envelope=${toHex(envelopeKzgRoot)} committedBid=${toHex(committedBid.blobKzgCommitmentsRoot)}`
+      `Kzg commitment root mismatch between envelope and committed bid envelope=${toRootHex(envelopeKzgRoot)} committedBid=${toRootHex(committedBid.blobKzgCommitmentsRoot)}`
     );
   }
 
@@ -114,7 +112,7 @@ function validateExecutionPayloadEnvelope(
   const envelopeWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(envelope.payload.withdrawals);
   if (!byteArrayEquals(state.latestWithdrawalsRoot, envelopeWithdrawalsRoot)) {
     throw new Error(
-      `Withdrawals root mismatch between envelope and latest withdrawals root envelope=${toHex(envelopeWithdrawalsRoot)} latestWithdrawalRoot=${toHex(state.latestWithdrawalsRoot)}`
+      `Withdrawals root mismatch between envelope and latest withdrawals root envelope=${toRootHex(envelopeWithdrawalsRoot)} latestWithdrawalRoot=${toRootHex(state.latestWithdrawalsRoot)}`
     );
   }
 
@@ -128,14 +126,14 @@ function validateExecutionPayloadEnvelope(
   // Verify the block hash
   if (!byteArrayEquals(committedBid.blockHash, payload.blockHash)) {
     throw new Error(
-      `Block hash mismatch between envelope's payload and committed bid envelope=${toHex(payload.blockHash)} committedBid=${toHex(committedBid.blockHash)}`
+      `Block hash mismatch between envelope's payload and committed bid envelope=${toRootHex(payload.blockHash)} committedBid=${toRootHex(committedBid.blockHash)}`
     );
   }
 
   // Verify consistency of the parent hash with respect to the previous execution payload
   if (!byteArrayEquals(payload.parentHash, state.latestBlockHash)) {
     throw new Error(
-      `Parent hash mismatch between envelope's payload and state envelope=${toHex(payload.parentHash)} state=${toHex(state.latestBlockHash)}`
+      `Parent hash mismatch between envelope's payload and state envelope=${toRootHex(payload.parentHash)} state=${toRootHex(state.latestBlockHash)}`
     );
   }
 
@@ -154,9 +152,10 @@ function validateExecutionPayloadEnvelope(
   }
 
   // Verify commitments are under limit
-  if (envelope.blobKzgCommitments.length > state.config.getMaxBlobsPerBlock(state.epochCtx.epoch)) {
+  const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
+  if (envelope.blobKzgCommitments.length > maxBlobsPerBlock) {
     throw new Error(
-      `Kzg commitments exceed limit commitment.length=${envelope.blobKzgCommitments.length} limit=${state.config.getBlobParameters(state.epochCtx.epoch).maxBlobsPerBlock}`
+      `Kzg commitments exceed limit commitment.length=${envelope.blobKzgCommitments.length} limit=${maxBlobsPerBlock}`
     );
   }
 

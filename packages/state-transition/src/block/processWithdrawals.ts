@@ -155,7 +155,7 @@ export function getExpectedWithdrawals(
         ? allBuilderPendingWithdrawals[i]
         : stateGloas.builderPendingWithdrawals.getReadonly(i);
 
-      if (withdrawal.withdrawableEpoch > epoch || withdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
+      if (withdrawal.withdrawableEpoch > epoch || withdrawals.length + 1 === MAX_WITHDRAWALS_PER_PAYLOAD) {
         break;
       }
 
@@ -173,14 +173,16 @@ export function getExpectedWithdrawals(
             balance - MIN_ACTIVATION_BALANCE < withdrawal.amount ? balance - MIN_ACTIVATION_BALANCE : withdrawal.amount;
         }
 
-        withdrawals.push({
-          index: withdrawalIndex,
-          validatorIndex: withdrawal.builderIndex,
-          address: withdrawal.feeRecipient,
-          amount: BigInt(withdrawableBalance),
-        });
-        withdrawalIndex++;
-        withdrawnBalances.set(withdrawal.builderIndex, totalWithdrawn + withdrawableBalance);
+        if (withdrawableBalance > 0) {
+          withdrawals.push({
+            index: withdrawalIndex,
+            validatorIndex: withdrawal.builderIndex,
+            address: withdrawal.feeRecipient,
+            amount: BigInt(withdrawableBalance),
+          });
+          withdrawalIndex++;
+          withdrawnBalances.set(withdrawal.builderIndex, totalWithdrawn + withdrawableBalance);
+        }
       }
       processedBuilderWithdrawalsCount++;
     }

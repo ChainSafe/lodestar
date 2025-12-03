@@ -158,6 +158,14 @@ export function processEpoch(
     }
   }
 
+  if (fork >= ForkSeq.gloas) {
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: EpochTransitionStep.processBuilderPendingPayments,
+    });
+    processBuilderPendingPayments(state as CachedBeaconStateGloas);
+    timer?.();
+  }
+
   {
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processEffectiveBalanceUpdates,
@@ -201,14 +209,6 @@ export function processEpoch(
       step: EpochTransitionStep.processProposerLookahead,
     });
     processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
-    timer?.();
-  }
-
-  if (fork >= ForkSeq.gloas) {
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      step: EpochTransitionStep.processBuilderPendingPayments,
-    });
-    processBuilderPendingPayments(state as CachedBeaconStateGloas);
     timer?.();
   }
 }

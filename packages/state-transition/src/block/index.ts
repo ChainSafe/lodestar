@@ -1,5 +1,5 @@
-import {ForkSeq} from "@lodestar/params";
-import {BeaconBlock, BlindedBeaconBlock, altair, capella, gloas} from "@lodestar/types";
+import {ForkPostGloas, ForkSeq} from "@lodestar/params";
+import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,
@@ -76,7 +76,7 @@ export function processBlock(
   }
 
   if (fork >= ForkSeq.gloas) {
-    processExecutionPayloadBid(state as CachedBeaconStateGloas, block as gloas.BeaconBlock);
+    processExecutionPayloadBid(state as CachedBeaconStateGloas, block as BeaconBlock<ForkPostGloas>);
   }
 
   processRandao(state, block, verifySignatures);

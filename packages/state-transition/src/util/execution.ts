@@ -63,7 +63,6 @@ export function isMergeTransitionBlock(state: BeaconStateExecutions, body: bella
  * Merge is complete when the state includes execution layer data:
  * state.latestExecutionPayloadHeader NOT EMPTY
  */
-// TODO GLOAS: See if we need to update this for gloas
 export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean {
   if (!isCapellaStateType(state)) {
     return !ssz.bellatrix.ExecutionPayloadHeader.equals(
