@@ -1,4 +1,5 @@
 import {LevelDbControllerMetrics} from "@lodestar/db";
+import {EraStore} from "../era/eraStore.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
@@ -66,6 +67,8 @@ export interface IBeaconDb {
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   backfilledRanges: BackfilledRanges;
+
+  eraStore: EraStore | null;
 
   pruneHotDb(): Promise<void>;
 

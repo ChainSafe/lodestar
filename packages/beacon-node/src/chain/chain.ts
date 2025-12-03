@@ -682,7 +682,18 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const data = await this.db.blockArchive.get(slot);
-    return data && {block: data, executionOptimistic: false, finalized: true};
+    if (data) {
+      return {block: data, executionOptimistic: false, finalized: true};
+    }
+
+    if (this.db.eraStore?.hasSlot(slot)) {
+      const eraBlock = await this.db.eraStore.getBlockBySlot(slot);
+      if (eraBlock) {
+        return {block: eraBlock, executionOptimistic: false, finalized: true};
+      }
+    }
+
+    return null;
   }
 
   async getBlockByRoot(
@@ -699,7 +710,18 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const data = await this.db.blockArchive.getByRoot(fromHex(root));
-    return data && {block: data, executionOptimistic: false, finalized: true};
+    if (data) {
+      return {block: data, executionOptimistic: false, finalized: true};
+    }
+
+    if (this.db.eraStore) {
+      const eraBlock = await this.db.eraStore.getBlockByRoot(root);
+      if (eraBlock) {
+        return {block: eraBlock, executionOptimistic: false, finalized: true};
+      }
+    }
+
+    return null;
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {

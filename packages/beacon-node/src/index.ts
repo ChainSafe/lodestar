@@ -6,6 +6,8 @@ export {checkAndPersistAnchorState, initStateFromDb, initStateFromEth1} from "./
 export {DbCPStateDatastore} from "./chain/stateCache/datastore/db.js";
 export {FileCPStateDatastore} from "./chain/stateCache/datastore/file.js";
 export {BeaconDb, type IBeaconDb} from "./db/index.js";
+export {EraStore} from "./era/eraStore.js";
+export {type EraOptions, defaultEraOptions} from "./era/options.js";
 export {Eth1Provider, type IEth1Provider} from "./eth1/index.js";
 // Export metrics utilities to de-duplicate validator metrics
 export {

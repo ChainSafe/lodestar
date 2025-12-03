@@ -2,7 +2,7 @@ import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
+import {BeaconDb, BeaconNode, EraStore} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
@@ -67,6 +67,19 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
   logger.info("Connected to LevelDB database", {path: options.db.name});
+
+  // Initialize EraStore if era.dir is configured
+  if (options.era.dir) {
+    const eraStore = await EraStore.create(config, logger, options.era.dir);
+    if (eraStore) {
+      db.eraStore = eraStore;
+      const slotRange = eraStore.getSlotRange();
+      logger.info("EraStore initialized for historical data", {
+        eraDir: options.era.dir,
+        slotRange: slotRange ? `${slotRange.minSlot}-${slotRange.maxSlot}` : "none",
+      });
+    }
+  }
 
   // BeaconNode setup
   try {

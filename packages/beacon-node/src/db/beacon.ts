@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics} from "@lodestar/db";
+import {EraStore} from "../era/eraStore.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
@@ -61,6 +62,8 @@ export class BeaconDb implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
+  eraStore: EraStore | null = null;
+
   constructor(
     config: ChainForkConfig,
     protected readonly db: Db
@@ -95,7 +98,10 @@ export class BeaconDb implements IBeaconDb {
     this.backfilledRanges = new BackfilledRanges(config, db);
   }
 
-  close(): Promise<void> {
+  async close(): Promise<void> {
+    if (this.eraStore) {
+      await this.eraStore.close();
+    }
     return this.db.close();
   }
 
