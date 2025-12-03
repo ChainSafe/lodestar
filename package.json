@@ -82,7 +82,6 @@
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
-    "testcontainers/**/nan": "^2.19.0",
     "elliptic": ">=6.6.1"
   }
 }

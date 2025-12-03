@@ -1,5 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
-import {SignedBeaconBlock, altair, capella} from "@lodestar/types";
+import {IndexedAttestation, SignedBeaconBlock, altair, capella} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {ISignatureSet} from "../util/index.js";
@@ -26,6 +26,7 @@ export * from "./voluntaryExits.js";
 export function getBlockSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock,
+  indexedAttestations: IndexedAttestation[],
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;
@@ -38,7 +39,7 @@ export function getBlockSignatureSets(
     getRandaoRevealSignatureSet(state, signedBlock.message),
     ...getProposerSlashingsSignatureSets(state, signedBlock),
     ...getAttesterSlashingsSignatureSets(state, signedBlock),
-    ...getAttestationsSignatureSets(state, signedBlock),
+    ...getAttestationsSignatureSets(state, signedBlock, indexedAttestations),
     ...getVoluntaryExitsSignatureSets(state, signedBlock),
   ];
 
