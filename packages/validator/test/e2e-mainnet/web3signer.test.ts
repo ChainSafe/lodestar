@@ -61,8 +61,8 @@ describe("web3signer signature test", () => {
     });
   });
 
-  afterAll(async () => {
-    await externalSigner.container.stop();
+  afterAll(() => {
+    externalSigner.stop();
   });
 
   for (const fork of config.forksAscendingEpochOrder) {

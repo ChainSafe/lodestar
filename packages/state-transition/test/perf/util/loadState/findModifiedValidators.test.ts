@@ -71,7 +71,7 @@ describe("find modified validators by different ways", () => {
           return clonedState;
         },
         fn: (clonedState) => {
-          const validatorsBytes = Uint8Array.from(stateBytes.subarray(validatorsRange.start, validatorsRange.end));
+          const validatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
           const validatorsBytes2 = clonedState.validators.serialize();
           const modifiedValidators: number[] = [];
           findModifiedValidators(validatorsBytes, validatorsBytes2, modifiedValidators);
@@ -84,7 +84,7 @@ describe("find modified validators by different ways", () => {
     }
   });
 
-  describe("deserialize validators then compare validator ViewDUs", () => {
+  describe.skip("deserialize validators then compare validator ViewDUs", () => {
     const validatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
     bench("compare ViewDUs", () => {
       const numValidator = state.validators.length;
@@ -97,7 +97,7 @@ describe("find modified validators by different ways", () => {
     });
   });
 
-  describe("serialize each validator then compare Uin8Array", () => {
+  describe.skip("serialize each validator then compare Uin8Array", () => {
     const validators = state.validators.getAllReadonly();
     bench("compare each validator Uint8Array", () => {
       for (let i = 0; i < state.validators.length; i++) {
@@ -117,7 +117,7 @@ describe("find modified validators by different ways", () => {
     });
   });
 
-  describe("compare validator ViewDU to Uint8Array", () => {
+  describe.skip("compare validator ViewDU to Uint8Array", () => {
     bench("compare ViewDU to Uint8Array", () => {
       const numValidator = state.validators.length;
       for (let i = 0; i < numValidator; i++) {

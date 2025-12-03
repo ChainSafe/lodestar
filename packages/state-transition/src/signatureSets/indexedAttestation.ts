@@ -39,13 +39,13 @@ export function getIndexedAttestationSignatureSet(
 
 export function getAttestationsSignatureSets(
   state: CachedBeaconStateAllForks,
-  signedBlock: SignedBeaconBlock
+  signedBlock: SignedBeaconBlock,
+  indexedAttestations: IndexedAttestation[]
 ): ISignatureSet[] {
-  // TODO: figure how to get attesting indices of an attestation once per block processing
-  return signedBlock.message.body.attestations.map((attestation) =>
-    getIndexedAttestationSignatureSet(
-      state,
-      state.epochCtx.getIndexedAttestation(state.config.getForkSeq(signedBlock.message.slot), attestation)
-    )
-  );
+  if (indexedAttestations.length !== signedBlock.message.body.attestations.length) {
+    throw Error(
+      `Indexed attestations length mismatch: got ${indexedAttestations.length}, expected ${signedBlock.message.body.attestations.length}`
+    );
+  }
+  return indexedAttestations.map((indexedAttestation) => getIndexedAttestationSignatureSet(state, indexedAttestation));
 }
