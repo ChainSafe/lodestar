@@ -44,14 +44,14 @@ export async function startExternalSigner({
   }
   fs.writeFileSync(path.join(configDirPathHost, passwordFilename), password);
 
-  const port = 9000;
+  const port = 9090;
   const web3signerUrl = `http://127.0.0.1:${port}`;
 
   const stop = runDockerContainer(
     web3signerImage,
     [
       // |
-      `--publish=${port}:9000`,
+      `--publish=${port}:${port}`,
       `--volume=${configDirPathHost}:${configDirPathContainer}`,
     ],
     [
