@@ -1,6 +1,7 @@
 #!/bin/bash
 
 IGNORE_WARNINGS=(
+  'WARN  using --force I sure hope you know what you are doing'
 )
 
 # Run pnpm install --force and capture output
@@ -18,8 +19,8 @@ FILTERED_OUTPUT=$(echo "$OUTPUT" | grep -viF "${FILTER_ARGS[@]}")
 
 # Check for remaining warnings
 if echo "$FILTERED_OUTPUT" | grep -qi 'warning'; then
-  echo "There were unexpected warnings in pnpm install --check-files"
+  echo "There were unexpected warnings in pnpm install"
   exit 1
 else
-  echo "No unexpected warnings in pnpm install --check-files"
+  echo "No unexpected warnings in pnpm install"
 fi
