@@ -42,7 +42,7 @@ Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scrip
 
 ### Prerequisites
 
-Make sure to have [pnpm installed](https://pnpm.io/). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v22) of [NodeJS](https://nodejs.org/en/).
+Make sure to have [pnpm installed](https://pnpm.io/). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v24) of [NodeJS](https://nodejs.org/en/).
 
 :::info
 NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.
