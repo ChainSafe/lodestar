@@ -62,7 +62,6 @@ export async function startExternalSigner({
       // Don't use path.join here, the container is running on unix filesystem
       `--keystores-password-file=${configDirPathContainer}/${passwordFilename}`,
       "--slashing-protection-enabled=false",
-      "--key-manager-api-enabled=true",
     ],
     {pipeToProcess: true}
   );
