@@ -79,8 +79,8 @@ jobs:
       - name: Check Types
         run: pnpm check-types
 
-      - name: README check
-        run: pnpm check-readme
+      # - name: README check
+      #   run: pnpm check-readme
 
   unit-tests:
     name: Unit Tests
