@@ -80,6 +80,9 @@
     "vitest-when": "^0.9.0",
     "wait-port": "^1.1.0"
   },
+  "dependencies": {
+    "debug": "^4.4.3"
+  },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
