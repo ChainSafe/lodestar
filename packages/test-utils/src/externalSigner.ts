@@ -1,16 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
-import {GenericContainer, StartedTestContainer, Wait} from "testcontainers";
 import {dirSync as tmpDirSync} from "tmp";
 import {ForkSeq} from "@lodestar/params";
+import {fetch, retry, withTimeout} from "@lodestar/utils";
+import {runDockerContainer} from "./dockercontainer.ts";
 
 const web3signerVersion = "25.11.0";
+const web3signerImage = `consensys/web3signer:${web3signerVersion}`;
 
 /** Till what version is the web3signer image updated for signature verification */
 const supportedForkSeq = ForkSeq.fulu;
 
 export type StartedExternalSigner = {
-  container: StartedTestContainer;
+  stop: () => void;
   url: string;
   supportedForkSeq: ForkSeq;
 };
@@ -41,39 +43,41 @@ export async function startExternalSigner({
     fs.writeFileSync(path.join(configDirPathHost, `keystore-${idx}.json`), keystoreString);
   }
   fs.writeFileSync(path.join(configDirPathHost, passwordFilename), password);
-  const port = 9000;
 
-  const startedContainer = await new GenericContainer(`consensys/web3signer:${web3signerVersion}`)
-    .withHealthCheck({
-      test: ["CMD-SHELL", `curl -f http://localhost:${port}/healthcheck || exit 1`],
-      interval: 1000,
-      timeout: 3000,
-      retries: 5,
-      startPeriod: 1000,
-    })
-    .withWaitStrategy(Wait.forHealthCheck())
-    .withExposedPorts(port)
-    .withBindMounts([{source: configDirPathHost, target: configDirPathContainer, mode: "ro"}])
-    .withCommand([
+  const port = 9090;
+  const web3signerUrl = `http://127.0.0.1:${port}`;
+
+  const stop = runDockerContainer(
+    web3signerImage,
+    [
+      // |
+      `--publish=${port}:${port}`,
+      `--volume=${configDirPathHost}:${configDirPathContainer}`,
+    ],
+    [
+      "--http-listen-host=0.0.0.0",
+      `--http-listen-port=${port}`,
       "eth2",
       `--keystores-path=${configDirPathContainer}`,
       // Don't use path.join here, the container is running on unix filesystem
       `--keystores-password-file=${configDirPathContainer}/${passwordFilename}`,
       "--slashing-protection-enabled=false",
-    ])
-    .start();
+    ],
+    {pipeToProcess: true}
+  );
 
-  const url = `http://localhost:${startedContainer.getMappedPort(port)}`;
-
-  const stream = await startedContainer.logs();
-  stream
-    .on("data", (line) => process.stdout.write(line))
-    .on("err", (line) => process.stderr.write(line))
-    .on("end", () => console.log("Stream closed"));
+  await retry(
+    () =>
+      withTimeout(async (signal) => {
+        const res = await fetch(`${web3signerUrl}/healthcheck`, {signal});
+        if (res.status !== 200) throw Error(`status ${res.status}`);
+      }, 1000),
+    {retries: 60, retryDelay: 1000}
+  );
 
   return {
-    container: startedContainer,
-    url: url,
+    stop,
+    url: web3signerUrl,
     supportedForkSeq,
   };
 }

@@ -21,8 +21,9 @@ import {generateValidators} from "../../utils/validator.js";
  *   - with 123687377 bytes, Buffer.compare() is 38x faster
  *    ✔ byteArrayEquals 123687377                                           3.077884 ops/s    324.8985 ms/op        -          1 runs   64.5 s
  *    ✔ Buffer.compare 123687377                                            114.7834 ops/s    8.712061 ms/op        -         13 runs   12.1 s
+ *
  */
-describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () => {
+describe.skip("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () => {
   const numValidator = 1_000_000;
   const validators = generateValidators(numValidator);
   const state = generateState({validators: validators});

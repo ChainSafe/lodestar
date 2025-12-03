@@ -26,7 +26,8 @@ describe("computeProposerIndex", () => {
 
   const activeIndices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
   const runsFactor = 100;
-  bench({
+  // enable this if you want to see the naive version performance
+  bench.skip({
     id: `naive computeProposerIndex ${vc} validators`,
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
@@ -57,7 +58,8 @@ describe("getNextSyncCommitteeIndices electra", () => {
       effectiveBalanceIncrements[i] = 32;
     }
 
-    bench({
+    // enable this if you want to see the naive version performance
+    bench.skip({
       id: `naiveGetNextSyncCommitteeIndices ${vc} validators`,
       fn: () => {
         naiveGetNextSyncCommitteeIndices(ForkSeq.electra, state, activeIndices, effectiveBalanceIncrements);
@@ -77,7 +79,8 @@ describe("computeShuffledIndex", () => {
   const seed = new Uint8Array(Array.from({length: 32}, (_, i) => i));
 
   for (const vc of [100_000, 2_000_000]) {
-    bench({
+    // enable this if you want to see the naive version performance
+    bench.skip({
       id: `naive computeShuffledIndex ${vc} validators`,
       fn: () => {
         for (let i = 0; i < vc; i++) {
@@ -87,8 +90,8 @@ describe("computeShuffledIndex", () => {
     });
 
     const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-
-    bench({
+    // getComputeShuffledIndexFn() is also not in prod anymore so no need to track it
+    bench.skip({
       id: `cached computeShuffledIndex ${vc} validators`,
       fn: () => {
         for (let i = 0; i < vc; i++) {
