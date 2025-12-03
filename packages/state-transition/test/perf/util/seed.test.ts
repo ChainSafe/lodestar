@@ -58,7 +58,8 @@ describe("getNextSyncCommitteeIndices electra", () => {
       effectiveBalanceIncrements[i] = 32;
     }
 
-    bench({
+    // enable this if you want to see the naive version performance
+    bench.skip({
       id: `naiveGetNextSyncCommitteeIndices ${vc} validators`,
       fn: () => {
         naiveGetNextSyncCommitteeIndices(ForkSeq.electra, state, activeIndices, effectiveBalanceIncrements);
