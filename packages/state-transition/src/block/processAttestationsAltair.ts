@@ -201,7 +201,7 @@ export function getAttestationParticipationStatus(
   const isMatchingTarget = byteArrayEquals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
 
   // a timely head is only be set if the target is _also_ matching
-  // In gloas, this is called `is_matching_blockroot`
+  // In gloas, this is called `head_root_matches`
   let isMatchingHead =
     isMatchingTarget && byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
 

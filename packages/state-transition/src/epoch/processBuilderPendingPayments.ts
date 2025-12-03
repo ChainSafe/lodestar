@@ -9,10 +9,9 @@ import {getBuilderPaymentQuorumThreshold} from "../util/gloas.ts";
  */
 export function processBuilderPendingPayments(state: CachedBeaconStateGloas): void {
   const quorum = getBuilderPaymentQuorumThreshold(state);
-  const builderPendingPayments = state.builderPendingPayments.getAllReadonly();
 
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
-    const payment = builderPendingPayments[i];
+    const payment = state.builderPendingPayments.get(i);
     if (payment.weight > quorum) {
       const exitQueueEpoch = computeExitEpochAndUpdateChurn(state, BigInt(payment.withdrawal.amount));
       payment.withdrawal.withdrawableEpoch = exitQueueEpoch + state.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;

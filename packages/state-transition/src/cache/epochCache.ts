@@ -1180,7 +1180,7 @@ export class EpochCache {
     const epoch = computeEpochAtSlot(slot);
 
     if (epoch < this.config.GLOAS_FORK_EPOCH) {
-      throw new Error("PTC is not available before GLOAS fork");
+      throw new Error("PTC is not available before gloas fork");
     }
 
     if (epoch === this.epoch) {

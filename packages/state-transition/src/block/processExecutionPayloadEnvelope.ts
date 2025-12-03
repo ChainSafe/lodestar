@@ -54,9 +54,9 @@ export function processExecutionPayloadEnvelope(
 
     payment.withdrawal.withdrawableEpoch = exitQueueEpoch + state.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
     state.builderPendingWithdrawals.push(payment.withdrawal);
-
-    state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
   }
+
+  state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
 
   // Cache the execution payload hash
   state.executionPayloadAvailability.set(state.slot % SLOTS_PER_HISTORICAL_ROOT, true);
