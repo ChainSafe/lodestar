@@ -37,8 +37,9 @@ describe("Forkchoice / GetProposerHead", () => {
     unrealizedFinalizedEpoch: genesisEpoch,
     unrealizedFinalizedRoot: genesisRoot,
 
-    executionPayloadBlockHash: null,
-    executionStatus: ExecutionStatus.PreMerge,
+    executionPayloadBlockHash: genesisRoot,
+    executionPayloadNumber: 0,
+    executionStatus: ExecutionStatus.Valid,
 
     timeliness: false,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -60,8 +61,9 @@ describe("Forkchoice / GetProposerHead", () => {
     unrealizedFinalizedEpoch: genesisEpoch,
     unrealizedFinalizedRoot: genesisRoot,
 
-    executionPayloadBlockHash: null,
-    executionStatus: ExecutionStatus.PreMerge,
+    executionPayloadBlockHash: getBlockRoot(headSlot),
+    executionPayloadNumber: headSlot,
+    executionStatus: ExecutionStatus.Valid,
 
     timeliness: false,
 
@@ -85,8 +87,9 @@ describe("Forkchoice / GetProposerHead", () => {
     unrealizedFinalizedEpoch: genesisEpoch,
     unrealizedFinalizedRoot: genesisRoot,
 
-    executionPayloadBlockHash: null,
-    executionStatus: ExecutionStatus.PreMerge,
+    executionPayloadBlockHash: getBlockRoot(parentSlot),
+    executionPayloadNumber: parentSlot,
+    executionStatus: ExecutionStatus.Valid,
 
     timeliness: false,
     weight: 212, // 240 - 29 + 1

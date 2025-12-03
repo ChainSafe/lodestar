@@ -40,7 +40,6 @@ import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
@@ -344,9 +343,8 @@ const forkChoiceTest =
                 blockHash: toHexString(powBlock.blockHash),
                 parentHash: toHexString(powBlock.parentHash),
               });
-              // Register PowBlock for `get_pow_block(hash: Hash32)` calls in verifyBlock
-              eth1.addPowBlock(powBlock);
               // Register PowBlock to allow validation in execution engine
+              // Note: eth1.addPowBlock removed since merge validation is no longer needed
               executionEngineBackend.addPowBlock(powBlock);
             }
 
@@ -655,24 +653,9 @@ function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
 }
 
-// Extend Eth1ForBlockProductionDisabled to not have to re-implement new methods
-class Eth1ForBlockProductionMock extends Eth1ForBlockProductionDisabled {
-  private items = new Map<string, PowMergeBlock>();
-
-  async getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
-    return this.items.get(powBlockHash) ?? null;
-  }
-
-  addPowBlock(powBlock: bellatrix.PowBlock): void {
-    this.items.set(toHexString(powBlock.blockHash), {
-      // not used by verifyBlock()
-      number: 0,
-      blockHash: toHexString(powBlock.blockHash),
-      parentHash: toHexString(powBlock.parentHash),
-      totalDifficulty: powBlock.totalDifficulty,
-    });
-  }
-}
+// Note: PowMergeBlock tracking removed since merge validation is no longer needed
+// Just use Eth1ForBlockProductionDisabled directly
+const Eth1ForBlockProductionMock = Eth1ForBlockProductionDisabled;
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   fork_choice: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: false})},

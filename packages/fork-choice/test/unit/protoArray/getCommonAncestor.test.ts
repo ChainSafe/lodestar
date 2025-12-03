@@ -43,7 +43,9 @@ describe("getCommonAncestor", () => {
 
       timeliness: false,
 
-      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      executionPayloadBlockHash: "0",
+      executionPayloadNumber: 0,
+      executionStatus: ExecutionStatus.Valid,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     },
     0
@@ -69,7 +71,9 @@ describe("getCommonAncestor", () => {
 
         timeliness: false,
 
-        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        executionPayloadBlockHash: block.root,
+        executionPayloadNumber: block.slot,
+        executionStatus: ExecutionStatus.Valid,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       block.slot

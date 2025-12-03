@@ -314,7 +314,7 @@ export class ProtoArray {
     // propagate till we keep encountering syncing status
     while (nodeIndex !== undefined) {
       const node = this.getNodeFromIndex(nodeIndex);
-      if (node.executionStatus === ExecutionStatus.PreMerge || node.executionStatus === ExecutionStatus.Valid) {
+      if (node.executionStatus === ExecutionStatus.Valid) {
         break;
       }
       this.validateNodeByIndex(nodeIndex);
@@ -372,10 +372,7 @@ export class ProtoArray {
     let nodeIndex: number | undefined = ancestorFromIndex;
     while (nodeIndex !== undefined && nodeIndex >= 0) {
       const node = this.getNodeFromIndex(nodeIndex);
-      if (
-        (node.executionStatus === ExecutionStatus.PreMerge && latestValidExecHash === ZERO_HASH_HEX) ||
-        node.executionPayloadBlockHash === latestValidExecHash
-      ) {
+      if (node.executionPayloadBlockHash === latestValidExecHash) {
         break;
       }
       nodeIndex = node.parent;
@@ -386,19 +383,13 @@ export class ProtoArray {
   private invalidateNodeByIndex(nodeIndex: number): ProtoNode {
     const invalidNode = this.getNodeFromIndex(nodeIndex);
 
-    // If node to be invalidated is pre-merge or valid,it is a catastrophe,
+    // If node to be invalidated is valid, it is a catastrophe,
     // and indicates consensus failure and a non recoverable damage.
     //
     // There is no further processing that can be done.
     // Just assign error for marking proto-array perma damaged and throw!
-    if (
-      invalidNode.executionStatus === ExecutionStatus.Valid ||
-      invalidNode.executionStatus === ExecutionStatus.PreMerge
-    ) {
-      const lvhCode =
-        invalidNode.executionStatus === ExecutionStatus.Valid
-          ? LVHExecErrorCode.ValidToInvalid
-          : LVHExecErrorCode.PreMergeToInvalid;
+    if (invalidNode.executionStatus === ExecutionStatus.Valid) {
+      const lvhCode = LVHExecErrorCode.ValidToInvalid;
 
       this.lvhError = {
         lvhCode,

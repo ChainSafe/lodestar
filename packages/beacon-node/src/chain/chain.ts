@@ -3,7 +3,7 @@ import {PrivateKey} from "@libp2p/interface";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
@@ -1177,17 +1177,6 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations.prune(epoch);
     this.seenBlockAttesters.prune(epoch);
     this.beaconProposerCache.prune(epoch);
-
-    // Poll for merge block in the background to speed-up block production. Only if:
-    // - after BELLATRIX_FORK_EPOCH
-    // - Beacon node synced
-    // - head state not isMergeTransitionComplete
-    if (this.config.BELLATRIX_FORK_EPOCH - epoch < 1) {
-      const head = this.forkChoice.getHead();
-      if (epoch - computeEpochAtSlot(head.slot) < 5 && head.executionStatus === ExecutionStatus.PreMerge) {
-        this.eth1.startPollingMergeBlock();
-      }
-    }
   }
 
   protected onNewHead(head: ProtoBlock): void {

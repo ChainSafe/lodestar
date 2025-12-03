@@ -197,7 +197,7 @@ export class PrepareNextSlotScheduler {
           this.chain.opts.emitPayloadAttributes === true &&
           this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
         ) {
-          const data = await getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
+          const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
             parentBlockRoot: fromHex(headRoot),

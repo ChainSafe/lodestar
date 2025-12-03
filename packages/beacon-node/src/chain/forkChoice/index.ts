@@ -18,11 +18,9 @@ import {
   getBlockRootAtSlot,
   getEffectiveBalanceIncrementsZeroInactive,
   isExecutionStateType,
-  isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
-import {GENESIS_SLOT} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
@@ -103,6 +101,11 @@ export function initializeForkChoiceFromFinalizedState(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
+  const executionPayloadBlockHash = isExecutionStateType(state)
+    ? toRootHex(state.latestExecutionPayloadHeader.blockHash)
+    : ZERO_HASH_HEX;
+  const executionPayloadNumber = isExecutionStateType(state) ? state.latestExecutionPayloadHeader.blockNumber : 0;
+
   return new forkchoiceConstructor(
     config,
 
@@ -135,13 +138,9 @@ export function initializeForkChoiceFromFinalizedState(
         unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
         unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
-        ...(isExecutionStateType(state) && isMergeTransitionComplete(state)
-          ? {
-              executionPayloadBlockHash: toRootHex(state.latestExecutionPayloadHeader.blockHash),
-              executionPayloadNumber: state.latestExecutionPayloadHeader.blockNumber,
-              executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
-            }
-          : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+        executionPayloadBlockHash,
+        executionPayloadNumber,
+        executionStatus: ExecutionStatus.Valid,
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
@@ -184,6 +183,13 @@ export function initializeForkChoiceFromUnfinalizedState(
   };
   logger?.warn("Initializing fork choice from unfinalized state", logCtx);
 
+  const executionPayloadBlockHash = isExecutionStateType(unfinalizedState)
+    ? toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash)
+    : ZERO_HASH_HEX;
+  const executionPayloadNumber = isExecutionStateType(unfinalizedState)
+    ? unfinalizedState.latestExecutionPayloadHeader.blockNumber
+    : 0;
+
   // this is not the justified state, but there is no other ways to get justified balances
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(unfinalizedState);
   const store = new ForkChoiceStore(
@@ -216,13 +222,9 @@ export function initializeForkChoiceFromUnfinalizedState(
     unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
     unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
-    ...(isExecutionStateType(unfinalizedState) && isMergeTransitionComplete(unfinalizedState)
-      ? {
-          executionPayloadBlockHash: toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash),
-          executionPayloadNumber: unfinalizedState.latestExecutionPayloadHeader.blockNumber,
-          executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
-        }
-      : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+    executionPayloadBlockHash,
+    executionPayloadNumber,
+    executionStatus: ExecutionStatus.Valid,
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };

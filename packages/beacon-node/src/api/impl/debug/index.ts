@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {BeaconState, deneb, fulu, sszTypesFor} from "@lodestar/types";
 import {fromAsync, toRootHex} from "@lodestar/utils";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
@@ -47,11 +47,10 @@ export function getDebugApi({
                 case ExecutionStatus.Invalid:
                   return "invalid";
                 case ExecutionStatus.Syncing:
-                case ExecutionStatus.PreMerge:
                   return "optimistic";
               }
             })(),
-            executionBlockHash: node.executionPayloadBlockHash ?? ZERO_HASH_HEX,
+            executionBlockHash: node.executionPayloadBlockHash,
           })),
         },
       };
@@ -59,10 +58,7 @@ export function getDebugApi({
 
     async getProtoArrayNodes() {
       const nodes = chain.forkChoice.getAllNodes().map((node) => ({
-        // if node has executionPayloadNumber, it will overwrite the below default
-        executionPayloadNumber: 0,
         ...node,
-        executionPayloadBlockHash: node.executionPayloadBlockHash ?? "",
         parent: String(node.parent),
         bestChild: String(node.bestChild),
         bestDescendant: String(node.bestDescendant),

@@ -103,7 +103,6 @@
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "test:sim": "vitest run test/sim/**/*.test.ts",
-    "test:sim:mergemock": "vitest run test/sim/mergemock.test.ts",
     "test:sim:blobs": "vitest run test/sim/4844-interop.test.ts",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "test:spec:bls": "vitest run --project spec-minimal test/spec/bls/",

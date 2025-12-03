@@ -1,4 +1,4 @@
-import {ChainConfig, ChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -23,7 +23,6 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
-  bellatrix,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -32,7 +31,6 @@ import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
-  ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
   MaybeValidExecutionStatus,
@@ -49,7 +47,6 @@ import {
   EpochDifference,
   IForkChoice,
   NotReorgedReason,
-  PowBlockHex,
   ShouldOverrideForkChoiceUpdateResult,
 } from "./interface.js";
 import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
@@ -737,6 +734,11 @@ export class ForkChoice implements IForkChoice {
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
+    // Post-merge: always require execution data
+    if (!isExecutionBlockBodyType(block.body) || !isExecutionStateType(state) || !isExecutionEnabled(state, block)) {
+      throw Error("Fork choice requires execution-enabled block and state post-merge");
+    }
+
     const protoBlock: ProtoBlock = {
       slot: slot,
       blockRoot: blockRootHex,
@@ -754,18 +756,10 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-      ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
-        ? {
-            executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
-            executionPayloadNumber: block.body.executionPayload.blockNumber,
-            executionStatus: this.getPostMergeExecStatus(executionStatus),
-            dataAvailabilityStatus,
-          }
-        : {
-            executionPayloadBlockHash: null,
-            executionStatus: this.getPreMergeExecStatus(executionStatus),
-            dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
-          }),
+      executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
+      executionPayloadNumber: block.body.executionPayload.blockNumber,
+      executionStatus,
+      dataAvailabilityStatus,
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
@@ -1228,30 +1222,6 @@ export class ForkChoice implements IForkChoice {
     return secFromSlot * 1000 <= proposerReorgCutoff;
   }
 
-  private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
-    if (executionStatus !== ExecutionStatus.PreMerge)
-      throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
-    return executionStatus;
-  }
-
-  private getPreMergeDataStatus(dataAvailabilityStatus: DataAvailabilityStatus): DataAvailabilityStatus.PreData {
-    if (dataAvailabilityStatus !== DataAvailabilityStatus.PreData)
-      throw Error(
-        `Invalid pre-merge data status: expected: ${DataAvailabilityStatus.PreData}, got ${dataAvailabilityStatus}`
-      );
-    return dataAvailabilityStatus;
-  }
-
-  private getPostMergeExecStatus(
-    executionStatus: MaybeValidExecutionStatus
-  ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
-    if (executionStatus === ExecutionStatus.PreMerge)
-      throw Error(
-        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`
-      );
-    return executionStatus;
-  }
-
   /**
    * Why `getJustifiedBalances` getter?
    * - updateCheckpoints() is called in both on_block and on_tick.
@@ -1609,65 +1579,6 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-/**
- * This function checks the terminal pow conditions on the merge block as
- * specified in the config either via TTD or TBH. This function is part of
- * forkChoice because if the merge block was previously imported as syncing
- * and the EL eventually signals it catching up via validateLatestHash
- * the specs mandates validating terminal conditions on the previously
- * imported merge block.
- */
-export function assertValidTerminalPowBlock(
-  config: ChainConfig,
-  block: bellatrix.BeaconBlock,
-  preCachedData: {
-    executionStatus: ExecutionStatus.Syncing | ExecutionStatus.Valid;
-    powBlock?: PowBlockHex | null;
-    powBlockParent?: PowBlockHex | null;
-  }
-): void {
-  if (!ssz.Root.equals(config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {
-    if (computeEpochAtSlot(block.slot) < config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH)
-      throw Error(`Terminal block activation epoch ${config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH} not reached`);
-
-    // powBock.blockHash is hex, so we just pick the corresponding root
-    if (!ssz.Root.equals(block.body.executionPayload.parentHash, config.TERMINAL_BLOCK_HASH))
-      throw new Error(
-        `Invalid terminal block hash, expected: ${toRootHex(config.TERMINAL_BLOCK_HASH)}, actual: ${toRootHex(
-          block.body.executionPayload.parentHash
-        )}`
-      );
-  } else {
-    // If no TERMINAL_BLOCK_HASH override, check ttd
-
-    // Delay powBlock checks if the payload execution status is unknown because of
-    // syncing response in notifyNewPayload call while verifying
-    if (preCachedData?.executionStatus === ExecutionStatus.Syncing) return;
-
-    const {powBlock, powBlockParent} = preCachedData;
-    if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
-    // if powBlock is genesis don't assert powBlockParent
-    if (!powBlockParent && powBlock.parentHash !== HEX_ZERO_HASH)
-      throw Error("onBlock preCachedData must include powBlockParent");
-
-    const isTotalDifficultyReached = powBlock.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
-    // If we don't have powBlockParent here, powBlock is the genesis and as we would have errored above
-    // we can mark isParentTotalDifficultyValid as valid
-    const isParentTotalDifficultyValid =
-      !powBlockParent || powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
-    if (!isTotalDifficultyReached) {
-      throw Error(
-        `Invalid terminal POW block: total difficulty not reached expected >= ${config.TERMINAL_TOTAL_DIFFICULTY}, actual = ${powBlock.totalDifficulty}`
-      );
-    }
-
-    if (!isParentTotalDifficultyValid) {
-      throw Error(
-        `Invalid terminal POW block parent: expected < ${config.TERMINAL_TOTAL_DIFFICULTY}, actual = ${powBlockParent.totalDifficulty}`
-      );
-    }
-  }
-}
 // Approximate https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#calculate_committee_fraction
 // Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
 export function getCommitteeFraction(

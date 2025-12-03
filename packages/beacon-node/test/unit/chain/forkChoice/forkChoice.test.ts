@@ -48,7 +48,7 @@ describe("LodestarForkChoice", () => {
   justifiedBalances[0] = 1;
   justifiedBalances[1] = 2;
   justifiedBalances[2] = 3;
-  const executionStatus = ExecutionStatus.PreMerge;
+  const executionStatus = ExecutionStatus.Valid;
   const dataAvailabilityStatus = DataAvailabilityStatus.PreData;
   const blockDelaySec = 0;
 

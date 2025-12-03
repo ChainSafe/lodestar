@@ -9,8 +9,8 @@ import {shell} from "../sim/shell.js";
 
 let txRpcId = 1;
 
+// Note: PreMerge mode removed since all networks are post-merge
 export enum ELStartMode {
-  PreMerge = "pre-merge",
   PostMerge = "post-merge",
 }
 

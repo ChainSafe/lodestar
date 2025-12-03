@@ -76,7 +76,9 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
     timeliness: false,
 
-    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+    executionPayloadBlockHash: ZERO_HASH_HEX,
+    executionPayloadNumber: 0,
+    executionStatus: ExecutionStatus.Valid,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
 
