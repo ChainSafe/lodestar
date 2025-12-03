@@ -1,9 +1,13 @@
 import {pipe} from "it-pipe";
 import {Uint8ArrayList} from "uint8arraylist";
 import {describe, expect, it} from "vitest";
-import {ChunkType, IDENTIFIER_FRAME, crc} from "../../../../../src/encodingStrategies/sszSnappy/snappyFrames/common.js";
-import {encodeSnappy} from "../../../../../src/encodingStrategies/sszSnappy/snappyFrames/compress.js";
-import {SnappyFramesUncompress} from "../../../../../src/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
+import {
+  ChunkType,
+  IDENTIFIER_FRAME,
+  SnappyFramesUncompress,
+  crc,
+  encodeSnappy,
+} from "../../../../../src/utils/snappyIndex.js";
 
 describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
   it("should work with short input", () =>

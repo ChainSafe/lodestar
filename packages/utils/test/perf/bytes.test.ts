@@ -22,10 +22,6 @@ describe("bytes utils", async () => {
       name: "browser",
       impl: browser,
     },
-    Boolean(globalThis.Bun) && {
-      name: "bun",
-      impl: await import("../../src/bytes/bun.ts"),
-    },
   ].filter(Boolean) as {
     name: string;
     impl: typeof nodejs;

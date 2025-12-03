@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
+import {bench, describe} from "@chainsafe/benchmark";
 import {ssz} from "@lodestar/types";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
@@ -7,10 +7,6 @@ import {getAttDataFromAttestationSerialized} from "../../../../src/util/sszBytes
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 
 describe("validate gossip attestation", () => {
-  setBenchOpts({
-    minMs: 30_000,
-  });
-
   const vc = 640_000;
   const stateSlot = 100;
   const state = generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot});

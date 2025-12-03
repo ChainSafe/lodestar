@@ -1,7 +1,7 @@
 // MUST import this file first before anything and not import any Lodestar code.
 
-import {hasher as hashtreeHasher} from "#hashtree-hasher";
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
+import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 
 // Without setting this first, persistent-merkle-tree will use noble instead
 setHasher(hashtreeHasher);

@@ -153,13 +153,17 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  const signatureSet = getBlockProposerSignatureSet(blockState, signedBlock);
-  // Don't batch so verification is not delayed
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
-    throw new BlockGossipError(GossipAction.REJECT, {
-      code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
-      blockSlot,
-    });
+  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
+    const signatureSet = getBlockProposerSignatureSet(blockState, signedBlock);
+    // Don't batch so verification is not delayed
+    if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        blockSlot,
+      });
+    }
+
+    chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature);
   }
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
