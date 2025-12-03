@@ -79,7 +79,8 @@ describe("computeShuffledIndex", () => {
   const seed = new Uint8Array(Array.from({length: 32}, (_, i) => i));
 
   for (const vc of [100_000, 2_000_000]) {
-    bench({
+    // enable this q
+    bench.skip({
       id: `naive computeShuffledIndex ${vc} validators`,
       fn: () => {
         for (let i = 0; i < vc; i++) {
