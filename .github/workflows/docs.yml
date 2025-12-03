@@ -29,7 +29,11 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_REF }}
 
-      - uses: actions/setup-node@v4
+      - name: Install pnpm before setup node
+        shell: bash
+        run: npm install -g pnpm
+
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           check-latest: true
