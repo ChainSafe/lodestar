@@ -103,7 +103,7 @@ export class DataTransformSnappy implements DataTransform {
       throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${sszType.maxSize}`);
     }
 
-    // Only after saniy length checks, we can decompress the data
+    // Only after sanity length checks, we can decompress the data
     const uncompressedData = Buffer.allocUnsafe(uncompressedDataLength);
     decoder.decompress_into(data, uncompressedData);
     return uncompressedData;
