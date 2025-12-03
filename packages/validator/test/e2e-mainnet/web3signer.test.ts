@@ -61,7 +61,7 @@ describe("web3signer signature test", () => {
     });
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     externalSigner.stop();
   });
 

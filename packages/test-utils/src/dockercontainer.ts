@@ -2,10 +2,8 @@ import childProcess from "node:child_process";
 import {randomUUID} from "node:crypto";
 import {vi} from "vitest";
 
-/* eslint-disable no-console */
-
 export function runDockerContainer(
-  dockerhubImageTag: string,
+  dockerImageTag: string,
   dockerRunArgs: string[],
   commandArgs: string[],
   opts?: {pipeToProcess: boolean}
@@ -15,20 +13,20 @@ export function runDockerContainer(
   // Pull image
   // allow enough time to pull image
   vi.setConfig({hookTimeout: 300_000});
-  console.log(`Pulling docker image ${dockerhubImageTag}...`);
-  childProcess.execSync(`docker pull ${dockerhubImageTag}`);
+  console.log(`Pulling docker image ${dockerImageTag}...`);
+  childProcess.execSync(`docker pull ${dockerImageTag}`);
 
   const containerName = `test-${randomUUID()}`;
 
   // docker run container
-  console.log(`Running docker container ${dockerhubImageTag}...`);
+  console.log(`Running docker container ${dockerImageTag}...`);
   const proc = childProcess.spawn("docker", [
     "run",
     "--rm",
     "--name",
     containerName,
     ...dockerRunArgs,
-    dockerhubImageTag,
+    dockerImageTag,
     ...commandArgs,
   ]);
 
