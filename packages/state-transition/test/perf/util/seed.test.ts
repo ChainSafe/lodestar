@@ -26,7 +26,8 @@ describe("computeProposerIndex", () => {
 
   const activeIndices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
   const runsFactor = 100;
-  bench({
+  // enable this if you want to see the naive version performance
+  bench.skip({
     id: `naive computeProposerIndex ${vc} validators`,
     fn: () => {
       for (let i = 0; i < runsFactor; i++) {
