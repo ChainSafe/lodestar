@@ -66,7 +66,7 @@ export function processBlock(
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
-  // We call processExecutionPayload somewhere else post-gloas
+  // TODO GLOAS: We call processExecutionPayload somewhere else post-gloas
   if (
     fork >= ForkSeq.bellatrix &&
     fork < ForkSeq.gloas &&

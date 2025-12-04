@@ -47,7 +47,7 @@ import {
   getSeed,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
-  naiveGetPTCIndices,
+  naiveGetPayloadTimlinessCommitteeIndices,
 } from "../util/index.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
@@ -242,7 +242,7 @@ export class EpochCache {
 
   // TODO GLOAS: See if we need to cached PTC for prev/next epoch
   // PTC for current epoch
-  PTC: ValidatorIndex[][];
+  payloadTimelinessCommittee: ValidatorIndex[][];
 
   // TODO: Helper stats
   syncPeriod: SyncPeriod;
@@ -282,7 +282,7 @@ export class EpochCache {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
-    PTC: ValidatorIndex[][];
+    payloadTimelinessCommittee: ValidatorIndex[][];
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
@@ -314,7 +314,7 @@ export class EpochCache {
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
-    this.PTC = data.PTC;
+    this.payloadTimelinessCommittee = data.payloadTimelinessCommittee;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -494,9 +494,14 @@ export class EpochCache {
     }
 
     // Compute PTC for this epoch
-    let PTC: ValidatorIndex[][] = [];
+    let payloadTimelinessCommittee: ValidatorIndex[][] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
-      PTC = naiveGetPTCIndices(state as BeaconStateGloas, currentShuffling, effectiveBalanceIncrements, currentEpoch);
+      payloadTimelinessCommittee = naiveGetPayloadTimlinessCommitteeIndices(
+        state as BeaconStateGloas,
+        currentShuffling,
+        effectiveBalanceIncrements,
+        currentEpoch
+      );
     }
 
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
@@ -573,7 +578,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
-      PTC,
+      payloadTimelinessCommittee: payloadTimelinessCommittee,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
     });
@@ -620,7 +625,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
-      PTC: this.PTC,
+      payloadTimelinessCommittee: this.payloadTimelinessCommittee,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });
@@ -767,7 +772,7 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
-      this.PTC = naiveGetPTCIndices(
+      this.payloadTimelinessCommittee = naiveGetPayloadTimlinessCommitteeIndices(
         state as BeaconStateGloas,
         this.currentShuffling,
         this.effectiveBalanceIncrements,
@@ -1176,26 +1181,26 @@ export class EpochCache {
     return this.epoch >= this.config.ELECTRA_FORK_EPOCH;
   }
 
-  getPTC(slot: Slot): ValidatorIndex[] {
+  getPayloadTimelinessCommittee(slot: Slot): ValidatorIndex[] {
     const epoch = computeEpochAtSlot(slot);
 
     if (epoch < this.config.GLOAS_FORK_EPOCH) {
-      throw new Error("PTC is not available before gloas fork");
+      throw new Error("Payload Timeliness Committee is not available before gloas fork");
     }
 
     if (epoch === this.epoch) {
-      return this.PTC[slot % SLOTS_PER_EPOCH];
+      return this.payloadTimelinessCommittee[slot % SLOTS_PER_EPOCH];
     }
 
-    throw new Error(`PTC is not available for slot=${slot}`);
+    throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
   }
 
   getIndexedPayloadAttestation(
     slot: Slot,
     payloadAttestation: gloas.PayloadAttestation
   ): gloas.IndexedPayloadAttestation {
-    const PTC = this.getPTC(slot);
-    const attestingIndices = payloadAttestation.aggregationBits.intersectValues(PTC);
+    const payloadTimelinessCommittee = this.getPayloadTimelinessCommittee(slot);
+    const attestingIndices = payloadAttestation.aggregationBits.intersectValues(payloadTimelinessCommittee);
 
     return {
       attestingIndices: attestingIndices.sort((a, b) => a - b),

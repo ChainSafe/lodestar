@@ -268,7 +268,7 @@ export function getNextSyncCommitteeIndices(
   );
 }
 
-export function naiveGetPTCIndices(
+export function naiveGetPayloadTimlinessCommitteeIndices(
   state: BeaconStateGloas,
   shuffling: {committees: Uint32Array[][]},
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
@@ -276,22 +276,22 @@ export function naiveGetPTCIndices(
 ): ValidatorIndex[][] {
   const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
   const startSlot = computeStartSlotAtEpoch(epoch);
-  const ptcIndices = [];
+  const committeeIndices = [];
 
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     const slotCommittees = shuffling.committees[slot % SLOTS_PER_EPOCH];
-    const indices = naiveComputePTCIndices(
+    const indices = naiveComputePayloadTimelinessCommitteeIndices(
       effectiveBalanceIncrements,
       slotCommittees.flatMap((c) => Array.from(c)),
       digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
     );
-    ptcIndices.push(indices);
+    committeeIndices.push(indices);
   }
 
-  return ptcIndices;
+  return committeeIndices;
 }
 
-export function naiveComputePTCIndices(
+export function naiveComputePayloadTimelinessCommitteeIndices(
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
   indices: ArrayLike<ValidatorIndex>,
   seed: Uint8Array
