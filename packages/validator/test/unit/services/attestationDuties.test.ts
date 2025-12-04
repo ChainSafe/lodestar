@@ -244,6 +244,87 @@ describe("AttestationDutiesService", () => {
     expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
   });
 
+  it("Should fetch duties with distributed aggregation selection", async () => {
+    // Reply with some duties
+    const slot = 1;
+    const epoch = computeEpochAtSlot(slot);
+    const duty: routes.validator.AttesterDuty = {
+      slot: slot,
+      committeeIndex: 1,
+      committeeLength: 120,
+      committeesAtSlot: 120,
+      validatorCommitteeIndex: 1,
+      validatorIndex: index,
+      pubkey: pubkeys[0],
+    };
+    api.validator.getAttesterDuties.mockResolvedValue(
+      mockApiResponse({data: [duty], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
+
+    // Accept all subscriptions
+    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
+
+    // Mock distributed validator middleware client selections endpoint
+    // and return a selection proof that passes `is_aggregator` test
+    const aggregatorSelectionProof = Buffer.alloc(1, 0x10);
+    api.validator.submitBeaconCommitteeSelections.mockResolvedValue(
+      mockApiResponse({data: [{validatorIndex: index, slot, selectionProof: aggregatorSelectionProof}]})
+    );
+
+    // Clock will call runDutiesTasks() immediately
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeadTracker,
+      syncingStatusTracker,
+      null,
+      {distributedAggregationSelection: true}
+    );
+
+    // Trigger clock onSlot for slot 0
+    await clock.tickEpochFns(0, controller.signal);
+
+    // Validator index should be persisted
+    expect(validatorStore.getAllLocalIndices()).toEqual([index]);
+    expect(validatorStore.getPubkeyOfIndex(index)).toBe(toHexString(pubkeys[0]));
+
+    // Must submit partial beacon committee selection proofs for current and next epoch
+    expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledTimes(2);
+    expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledWith({
+      selections: [
+        expect.objectContaining({
+          validatorIndex: index,
+          slot,
+        }),
+      ],
+    });
+
+    // Duties for current epoch should be persisted with selection proof set for aggregator
+    const dutiesAtEpoch = dutiesService["dutiesByIndexByEpoch"].get(epoch);
+    expect(dutiesAtEpoch).toBeDefined();
+    const dutyAndProof = dutiesAtEpoch?.dutiesByIndex.get(index);
+    expect(dutyAndProof).toBeDefined();
+    expect(dutyAndProof?.duty).toEqual(duty);
+    // Selection proof should be set since the mocked proof passes `is_aggregator`
+    expect(dutyAndProof?.selectionProof).toEqual(aggregatorSelectionProof);
+
+    // Must subscribe validator as aggregator on beacon committee subnet
+    expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
+    expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledWith({
+      subscriptions: expect.arrayContaining([
+        expect.objectContaining({
+          validatorIndex: index,
+          slot,
+          isAggregator: true,
+        }),
+      ]),
+    });
+  });
+
   describe("Reorg handling", () => {
     const oldDependentRoot = toRootHex(Buffer.alloc(32, 1));
     const newDependentRoot = toRootHex(Buffer.alloc(32, 2));

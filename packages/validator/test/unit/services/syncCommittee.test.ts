@@ -1,7 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
@@ -64,10 +63,7 @@ describe("SyncCommitteeService", () => {
     vi.resetAllMocks();
   });
 
-  const testContexts: [string, SyncCommitteeServiceOpts][] = [
-    ["With default configuration", {}],
-    ["With distributed aggregation selection enabled", {distributedAggregationSelection: true}],
-  ];
+  const testContexts: [string, SyncCommitteeServiceOpts][] = [["With default configuration", {}]];
 
   for (const [title, opts] of testContexts) {
     describe(title, () => {
@@ -99,8 +95,7 @@ describe("SyncCommitteeService", () => {
             },
             selectionProofs: [
               {
-                selectionProof: opts.distributedAggregationSelection ? null : ZERO_HASH,
-                partialSelectionProof: opts.distributedAggregationSelection ? ZERO_HASH : undefined,
+                selectionProof: ZERO_HASH,
                 subcommitteeIndex: 0,
               },
             ],
@@ -125,34 +120,12 @@ describe("SyncCommitteeService", () => {
         api.validator.produceSyncCommitteeContribution.mockResolvedValue(mockApiResponse({data: contribution}));
         api.validator.publishContributionAndProofs.mockResolvedValue(mockApiResponse({}));
 
-        if (opts.distributedAggregationSelection) {
-          // Mock distributed validator middleware client selections endpoint
-          // and return a selection proof that passes `is_sync_committee_aggregator` test
-          api.validator.submitSyncCommitteeSelections.mockResolvedValue(
-            mockApiResponse({
-              data: [{validatorIndex: 0, slot: 0, subcommitteeIndex: 0, selectionProof: Buffer.alloc(1, 0x19)}],
-            })
-          );
-        }
-
         // Mock signing service
         validatorStore.signSyncCommitteeSignature.mockResolvedValue(syncCommitteeSignature);
         validatorStore.signContributionAndProof.mockResolvedValue(contributionAndProof);
 
         // Trigger clock onSlot for slot 0
         await clock.tickSlotFns(0, controller.signal);
-
-        if (opts.distributedAggregationSelection) {
-          // Must submit partial sync committee selection proof based on duty
-          const selection: routes.validator.SyncCommitteeSelection = {
-            validatorIndex: 0,
-            slot: 0,
-            subcommitteeIndex: 0,
-            selectionProof: ZERO_HASH,
-          };
-          expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledOnce();
-          expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledWith({selections: [selection]});
-        }
 
         // Must submit the signature received through signSyncCommitteeSignature()
         expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledOnce();

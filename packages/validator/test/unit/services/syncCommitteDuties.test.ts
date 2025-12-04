@@ -340,6 +340,79 @@ describe("SyncCommitteeDutiesService", () => {
 
     expect(api.validator.prepareSyncCommitteeSubnets).toHaveBeenCalledOnce();
   });
+
+  it("Should fetch duties with distributed aggregation selection", async () => {
+    // Reply with some duties
+    const slot = 1;
+    const duty: routes.validator.SyncDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: indices[0],
+      validatorSyncCommitteeIndices: [7],
+    };
+    api.validator.getSyncCommitteeDuties.mockResolvedValue(
+      mockApiResponse({data: [duty], meta: {executionOptimistic: false}})
+    );
+
+    // Accept all subscriptions
+    api.validator.prepareSyncCommitteeSubnets.mockResolvedValue(mockApiResponse({}));
+
+    // Mock distributed validator middleware client selections endpoint
+    // and return a selection proof that passes `is_sync_committee_aggregator` test
+    const aggregatorSelectionProof = Buffer.alloc(1, 0x19);
+    api.validator.submitSyncCommitteeSelections.mockResolvedValue(
+      mockApiResponse({
+        data: [{validatorIndex: indices[0], slot, subcommitteeIndex: 0, selectionProof: aggregatorSelectionProof}],
+      })
+    );
+
+    // Clock will call runDutiesTasks() immediately
+    const clock = new ClockMock();
+    const syncingStatusTracker = new SyncingStatusTracker(loggerVc, api, clock, null);
+    const dutiesService = new SyncCommitteeDutiesService(
+      altair0Config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      syncingStatusTracker,
+      null,
+      {distributedAggregationSelection: true}
+    );
+
+    // Trigger clock onSlot for slot 0 to fetch duties
+    await clock.tickEpochFns(0, controller.signal);
+
+    // Validator index should be persisted
+    expect(validatorStore.getAllLocalIndices()).toEqual(indices);
+
+    // Get duties for the slot
+    const duties = await dutiesService.getDutiesAtSlot(slot);
+
+    // Verify duties are returned with partial selection proofs
+    expect(duties.length).toBe(1);
+    expect(duties[0].duty.validatorIndex).toBe(indices[0]);
+    expect(duties[0].selectionProofs[0].partialSelectionProof).toBeDefined();
+
+    // Wait for the async DVT task to complete and verify API was called
+    await vi.waitFor(() => {
+      expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledOnce();
+    });
+
+    // Must submit partial sync committee selection proof based on duty
+    expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledWith(
+      {
+        selections: [
+          expect.objectContaining({
+            validatorIndex: duty.validatorIndex,
+            slot,
+            subcommitteeIndex: 0,
+          }),
+        ],
+      },
+      expect.any(Object)
+    );
+    expect(duties[0].selectionProofs[0].selectionProof).toBe(aggregatorSelectionProof);
+  });
 });
 
 function toSyncDutySubnet(duty: routes.validator.SyncDuty): SyncDutySubnet {
