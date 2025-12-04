@@ -85,7 +85,7 @@ export class SyncCommitteeDutiesService {
     private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: ApiClient,
-    clock: IClock,
+    private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     syncingStatusTracker: SyncingStatusTracker,
     metrics: Metrics | null,
@@ -133,6 +133,18 @@ export class SyncCommitteeDutiesService {
           duty: dutyAtPeriod.duty,
           selectionProofs: await this.getSelectionProofs(slot, dutyAtPeriod.duty),
         });
+      }
+
+      if (this.opts?.distributedAggregationSelection) {
+        // Validator in distributed cluster only has a key share, not the full private key.
+        // The partial selection proofs must be exchanged for combined selection proofs by
+        // calling submitSyncCommitteeSelections on the distributed validator middleware client.
+        // This will run in parallel to other sync committee tasks but must be finished before starting
+        // sync committee contributions as it is required to correctly determine if validator is aggregator
+        // and to produce a ContributionAndProof that can be threshold aggregated by the middleware client.
+        this.runDistributedAggregationSelectionTasks(duties, slot).catch((e) =>
+          this.logger.error("Error on sync committee aggregation selection", {slot}, e)
+        );
       }
     }
 
@@ -307,8 +319,8 @@ export class SyncCommitteeDutiesService {
       if (this.opts?.distributedAggregationSelection) {
         // Validator in distributed cluster only has a key share, not the full private key.
         // Passing a partial selection proof to `is_sync_committee_aggregator` would produce incorrect result.
-        // SyncCommitteeService will exchange partial for combined selection proofs retrieved from
-        // distributed validator middleware client and determine aggregators at beginning of every slot.
+        // For all duties in the slot, aggregators are determined by exchanging partial for combined selection
+        // proofs retrieved from distributed validator middleware client at beginning of every slot.
         dutiesAndProofs.push({
           selectionProof: null,
           partialSelectionProof: selectionProof,
@@ -331,6 +343,72 @@ export class SyncCommitteeDutiesService {
     for (const period of this.dutiesByIndexByPeriod.keys()) {
       if (period + HISTORICAL_DUTIES_PERIODS < currentPeriod) {
         this.dutiesByIndexByPeriod.delete(period);
+      }
+    }
+  }
+
+  /**
+   * Performs additional sync committee contribution tasks required if validator is part of distributed cluster
+   *
+   * 1. Exchange partial for combined selection proofs
+   * 2. Determine validators that should produce sync committee contribution
+   * 3. Mutate duty objects to set selection proofs for aggregators
+   */
+  private async runDistributedAggregationSelectionTasks(duties: SyncDutyAndProofs[], slot: number): Promise<void> {
+    const partialSelections: routes.validator.SyncCommitteeSelection[] = [];
+
+    for (const {duty, selectionProofs} of duties) {
+      const validatorSelections: routes.validator.SyncCommitteeSelection[] = selectionProofs.map(
+        ({subcommitteeIndex, partialSelectionProof}) => ({
+          validatorIndex: duty.validatorIndex,
+          slot,
+          subcommitteeIndex,
+          selectionProof: partialSelectionProof as BLSSignature,
+        })
+      );
+      partialSelections.push(...validatorSelections);
+    }
+
+    this.logger.debug("Submitting partial sync committee selection proofs", {slot, count: partialSelections.length});
+
+    const res = await this.api.validator.submitSyncCommitteeSelections(
+      {selections: partialSelections},
+      {
+        // Exit sync committee contributions flow if there is no response until CONTRIBUTION_DUE_BPS of the slot.
+        // Note that the sync committee contributions flow is not explicitly exited but rather will be skipped
+        // due to the fact that calculation of `is_sync_committee_aggregator` in SyncCommitteeDutiesService is not done
+        // and selectionProof is set to null, meaning no validator will be considered an aggregator.
+        timeoutMs: this.config.getSyncContributionDueMs(this.config.getForkName(slot)) - this.clock.msFromSlot(slot),
+      }
+    );
+
+    const combinedSelections = res.value();
+    this.logger.debug("Received combined sync committee selection proofs", {slot, count: combinedSelections.length});
+
+    for (const dutyAndProofs of duties) {
+      const {validatorIndex, subnets} = dutyAndProofs.duty;
+
+      for (const subnet of subnets) {
+        const logCtxValidator = {slot, index: subnet, validatorIndex};
+
+        const combinedSelection = combinedSelections.find(
+          (s) => s.validatorIndex === validatorIndex && s.slot === slot && s.subcommitteeIndex === subnet
+        );
+
+        if (!combinedSelection) {
+          this.logger.warn("Did not receive combined sync committee selection proof", logCtxValidator);
+          continue;
+        }
+
+        const isAggregator = isSyncCommitteeAggregator(combinedSelection.selectionProof);
+
+        if (isAggregator) {
+          const selectionProofObject = dutyAndProofs.selectionProofs.find((p) => p.subcommitteeIndex === subnet);
+          if (selectionProofObject) {
+            // Update selection proof by mutating proof objects in duty object
+            selectionProofObject.selectionProof = combinedSelection.selectionProof;
+          }
+        }
       }
     }
   }
