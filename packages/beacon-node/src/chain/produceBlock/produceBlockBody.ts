@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostBellatrix,
@@ -191,7 +192,7 @@ export async function produceBlockBody<T extends BlockType>(
 
     // We don't deal with blinded blocks, execution engine, blobs and execution requests post-gloas
   } else if (isForkPostBellatrix(fork)) {
-    const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
     const feeRecipientType = requestedFeeRecipient

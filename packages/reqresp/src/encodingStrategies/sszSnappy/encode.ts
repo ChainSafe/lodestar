@@ -1,5 +1,5 @@
 import {encode as varintEncode} from "uint8-varint";
-import {encodeSnappy} from "./snappyFrames/compress.js";
+import {encodeSnappy} from "../../utils/snappyIndex.js";
 
 /**
  * ssz_snappy encoding strategy writer.

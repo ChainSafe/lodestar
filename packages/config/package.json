@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/config",
-  "version": "1.36.0",
+  "version": "1.37.0",
   "description": "Chain configuration required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -61,8 +61,8 @@
   ],
   "dependencies": {
     "@chainsafe/ssz": "^1.2.2",
-    "@lodestar/params": "^1.36.0",
-    "@lodestar/types": "^1.36.0",
-    "@lodestar/utils": "^1.36.0"
+    "@lodestar/params": "^1.37.0",
+    "@lodestar/types": "^1.37.0",
+    "@lodestar/utils": "^1.37.0"
   }
 }

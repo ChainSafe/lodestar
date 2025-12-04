@@ -1,4 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
+import {ForkSeq} from "@lodestar/params";
 import {processSlot} from "../../../src/slot/index.js";
 import {State} from "../types.js";
 import {generatePerfTestCachedStatePhase0} from "../util.js";
@@ -14,7 +15,7 @@ describe("processSlot", () => {
       fn: (state) => {
         for (let i = 0; i < slotCount; i++) {
           state.slot++;
-          processSlot(state);
+          processSlot(ForkSeq.phase0, state);
         }
       },
     });

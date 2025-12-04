@@ -1,6 +1,5 @@
-/// <reference types="@vitest/browser/providers/webdriverio" />
-
 import path from "node:path";
+import {playwright} from "@vitest/browser-playwright";
 import {nodePolyfills} from "vite-plugin-node-polyfills";
 import {defineProject} from "vitest/config";
 import {blsBrowserPlugin} from "../scripts/vite/plugins/blsBrowserPlugin.js";
@@ -21,29 +20,18 @@ export const browserTestProject = defineProject({
       headless: true,
       ui: false,
       screenshotFailures: false,
-      // Recommended provider is `playwright` but it's causing following error on CI
-      // Error: Failed to connect to the browser session "af5be85a-7f29-4299-b680-b07f0cfc2520" within the timeout.
-      // TODO: Debug the issue in later versions of playwright and vitest
-      provider: "webdriverio",
+      provider: playwright(),
       connectTimeout: 90_0000,
       instances: [
         // TODO: Add support for webkit when available
-        // Invalid types from webdriverio for capabilities
         {
           browser: "firefox",
           maxConcurrency: 1,
-          capabilities: {
-            browserVersion: "stable",
-          },
-        } as never,
-        // Invalid types from webdriverio for capabilities
+        },
         {
-          browser: "chrome",
+          browser: "chromium",
           maxConcurrency: 1,
-          capabilities: {
-            browserVersion: "stable",
-          },
-        } as never,
+        },
       ],
     },
   },

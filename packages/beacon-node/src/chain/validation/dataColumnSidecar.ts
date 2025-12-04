@@ -32,6 +32,7 @@ export async function validateGossipDataColumnSidecar(
   metrics: Metrics | null
 ): Promise<void> {
   const blockHeader = dataColumnSidecar.signedBlockHeader.message;
+  const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
   verifyDataColumnSidecar(chain.config, dataColumnSidecar);
@@ -131,24 +132,28 @@ export async function validateGossipDataColumnSidecar(
   }
 
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
-  const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
-    blockState,
-    dataColumnSidecar.signedBlockHeader
-  );
-  // Don't batch so verification is not delayed
-  if (
-    !(await chain.bls.verifySignatureSets([signatureSet], {
-      verifyOnMainThread: blockHeader.slot > chain.forkChoice.getHead().slot,
-    }))
-  ) {
-    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message);
-    const blockRootHex = toRootHex(blockRoot);
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
-      blockRoot: blockRootHex,
-      index: dataColumnSidecar.index,
-      slot: blockHeader.slot,
-    });
+  const signature = dataColumnSidecar.signedBlockHeader.signature;
+  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
+    const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+      blockState,
+      dataColumnSidecar.signedBlockHeader
+    );
+
+    if (
+      !(await chain.bls.verifySignatureSets([signatureSet], {
+        // verify on main thread so that we only need to verify block proposer signature once per block
+        verifyOnMainThread: true,
+      }))
+    ) {
+      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+        code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+        blockRoot: blockRootHex,
+        index: dataColumnSidecar.index,
+        slot: blockHeader.slot,
+      });
+    }
+
+    chain.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
   }
 
   // 9) [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
@@ -326,22 +331,27 @@ export async function validateBlockDataColumnSidecars(
   }
 
   if (chain !== null) {
-    const headState = await chain.getHeadState();
-    const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
+    const rootHex = toRootHex(blockRoot);
+    const slot = firstSidecarSignedBlockHeader.message.slot;
+    const signature = firstSidecarSignedBlockHeader.signature;
+    if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, rootHex, signature)) {
+      const headState = await chain.getHeadState();
+      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
 
-    if (
-      !(await chain.bls.verifySignatureSets([signatureSet], {
-        batchable: true,
-        priority: true,
-        verifyOnMainThread: false,
-      }))
-    ) {
-      throw new DataColumnSidecarValidationError({
-        code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
-        blockRoot: toRootHex(blockRoot),
-        slot: blockSlot,
-        index: dataColumnSidecars[0].index,
-      });
+      if (
+        !(await chain.bls.verifySignatureSets([signatureSet], {
+          verifyOnMainThread: true,
+        }))
+      ) {
+        throw new DataColumnSidecarValidationError({
+          code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+          blockRoot: rootHex,
+          slot: blockSlot,
+          index: dataColumnSidecars[0].index,
+        });
+      }
+
+      chain.seenBlockInputCache.markVerifiedProposerSignature(slot, rootHex, signature);
     }
   }
 

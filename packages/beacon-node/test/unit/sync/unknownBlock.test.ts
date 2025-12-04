@@ -12,7 +12,6 @@ import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {ChainEvent, IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
-import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {INetwork, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
@@ -27,6 +26,8 @@ import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
 
 describe.skip(
   "sync by UnknownBlockSync",
+  // spacer comment to avoid unnecessary changes in git
+  {timeout: 20_000},
   () => {
     const logger = testLogger();
     const slotSec = 0.3;
@@ -144,11 +145,8 @@ describe.skip(
             sendBeaconBlocksByRootResolveFn([_peerId, roots]);
             const correctBlocks = Array.from(roots)
               .map((root) => blocksByRoot.get(toHexString(root)))
-              .filter(notNullish)
-              .map((data) => ({data, bytes: ZERO_HASH}));
-            return wrongBlockRoot
-              ? [{data: ssz.phase0.SignedBeaconBlock.defaultValue(), bytes: ZERO_HASH}]
-              : correctBlocks;
+              .filter(notNullish);
+            return wrongBlockRoot ? [ssz.phase0.SignedBeaconBlock.defaultValue()] : correctBlocks;
           },
 
           reportPeer: async (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
@@ -258,8 +256,7 @@ describe.skip(
         syncService.close();
       });
     }
-  },
-  {timeout: 20_000}
+  }
 );
 
 describe("UnknownBlockSync", () => {

@@ -27,7 +27,6 @@ import {
   Slot,
   SlotRootHex,
   SubnetID,
-  WithBytes,
   altair,
   capella,
   deneb,
@@ -69,14 +68,8 @@ export interface INetwork extends INetworkCorePublic {
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
   searchUnknownSlotRoot(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
   // ReqResp
-  sendBeaconBlocksByRange(
-    peerId: PeerIdStr,
-    request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<WithBytes<SignedBeaconBlock>[]>;
-  sendBeaconBlocksByRoot(
-    peerId: PeerIdStr,
-    request: BeaconBlocksByRootRequest
-  ): Promise<WithBytes<SignedBeaconBlock>[]>;
+  sendBeaconBlocksByRange(peerId: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
+  sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
   sendDataColumnSidecarsByRange(

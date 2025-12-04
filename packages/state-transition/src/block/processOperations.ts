@@ -1,7 +1,12 @@
 import {ForkSeq} from "@lodestar/params";
-import {BeaconBlockBody, capella, electra} from "@lodestar/types";
+import {BeaconBlockBody, capella, electra, gloas} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
+  CachedBeaconStateElectra,
+  CachedBeaconStateGloas,
+} from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
@@ -9,6 +14,7 @@ import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDeposit} from "./processDeposit.js";
 import {processDepositRequest} from "./processDepositRequest.js";
+import {processPayloadAttestation} from "./processPayloadAttestation.ts";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
@@ -64,7 +70,7 @@ export function processOperations(
     }
   }
 
-  if (fork >= ForkSeq.electra) {
+  if (fork >= ForkSeq.electra && fork < ForkSeq.gloas) {
     const stateElectra = state as CachedBeaconStateElectra;
     const bodyElectra = body as electra.BeaconBlockBody;
 
@@ -77,7 +83,13 @@ export function processOperations(
     }
 
     for (const elConsolidationRequest of bodyElectra.executionRequests.consolidations) {
-      processConsolidationRequest(stateElectra, elConsolidationRequest);
+      processConsolidationRequest(fork, stateElectra, elConsolidationRequest);
+    }
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    for (const payloadAttestation of (body as gloas.BeaconBlockBody).payloadAttestations) {
+      processPayloadAttestation(state as CachedBeaconStateGloas, payloadAttestation);
     }
   }
 }

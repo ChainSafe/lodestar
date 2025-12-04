@@ -65,8 +65,12 @@ describe("signatureSets", () => {
     }
 
     const state = generateCachedState(config, {validators});
+    const fork = state.config.getForkSeq(signedBlock.message.slot);
+    const indexedAttestations = signedBlock.message.body.attestations.map((attestation) =>
+      state.epochCtx.getIndexedAttestation(fork, attestation)
+    );
 
-    const signatureSets = getBlockSignatureSets(state, signedBlock);
+    const signatureSets = getBlockSignatureSets(state, signedBlock, indexedAttestations);
     expect(signatureSets.length).toBe(
       // block signature
       1 +

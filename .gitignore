@@ -29,6 +29,7 @@ validators
 .vscode/launch.json
 !.vscode/settings.json
 .vscode/tasks.json
+.claude/
 
 # Tests artifacts
 packages/*/spec-tests*
