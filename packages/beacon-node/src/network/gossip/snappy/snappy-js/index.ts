@@ -37,7 +37,7 @@ export function uncompress<T extends Buffer | Uint8Array>(compressed: T, maxLeng
         ? new Uint8Array(length)
         : Buffer.allocUnsafe(length);
 
-  if (!decompressor.uncompressToBuffer(uncompressed)) {
+  if (!decompressor.uncompressInto(uncompressed)) {
     throw new SnappyError({code: SnappyErrorCode.UNCOMPRESS_INVALID_BITSTREAM});
   }
   return uncompressed as T;

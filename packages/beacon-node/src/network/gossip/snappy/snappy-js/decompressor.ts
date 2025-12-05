@@ -1,3 +1,5 @@
+import {ISnappyDecompressor} from "../interface.js";
+
 const WORD_MASK = [0, 0xff, 0xffff, 0xffffff, 0xffffffff];
 function copyBytes(fromArray: Uint8Array, fromPos: number, toArray: Uint8Array, toPos: number, length: number): void {
   for (let i = 0; i < length; i++) {
@@ -11,7 +13,7 @@ function selfCopyBytes(array: Uint8Array, pos: number, offset: number, length: n
   }
 }
 
-export class SnappyDecompressor {
+export class SnappyDecompressor implements ISnappyDecompressor {
   private pos = 0;
   constructor(private readonly array: Uint8Array) {}
 
@@ -37,7 +39,7 @@ export class SnappyDecompressor {
     return -1;
   }
 
-  uncompressToBuffer(outBuffer: Uint8Array): boolean {
+  uncompressInto(outBuffer: Uint8Array): boolean {
     const array = this.array;
     const arrayLength = array.length;
     let pos = this.pos;
