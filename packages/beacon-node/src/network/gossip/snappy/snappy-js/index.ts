@@ -1,3 +1,4 @@
+/** Based on snappyjs - https://github.com/zhipeng-jia/snappyjs */
 import {SnappyCompressor} from "./compressor.js";
 import {SnappyDecompressor} from "./decompressor.js";
 import {SnappyError, SnappyErrorCode} from "./error.js";
