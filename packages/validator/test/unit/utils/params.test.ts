@@ -1,7 +1,17 @@
 import {describe, expect, it} from "vitest";
-import {chainConfigToJson} from "@lodestar/config";
+import {ChainConfig, chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {networksChainConfig} from "@lodestar/config/networks";
 import {NotEqualParamsError, assertEqualParams} from "../../../src/util/params.js";
+import {grandineHoodiConfig, lighthouseHoodiConfig, nimbusHoodiConfig, prysmHoodiConfig, tekuHoodiConfig} from "./interopConfigs.js";
+
+const testCases: {name: string; items: [ChainConfig, Record<string, string>]}[] = [
+  {name: "lighthouse", items: [networksChainConfig.hoodi, lighthouseHoodiConfig]},
+  {name: "prysm", items: [networksChainConfig.hoodi, prysmHoodiConfig]},
+  {name: "teku", items: [networksChainConfig.hoodi, tekuHoodiConfig]},
+  {name: "nimbus", items: [networksChainConfig.hoodi, nimbusHoodiConfig]},
+  {name: "grandine", items: [networksChainConfig.hoodi, grandineHoodiConfig]},
+];
 
 describe("utils / params / assertEqualParams", () => {
   it("default == default", () => {
@@ -25,4 +35,10 @@ describe("utils / params / assertEqualParams", () => {
     delete chainConfigJson["DEPOSIT_CONTRACT_ADDRESS"];
     assertEqualParams(chainConfig, chainConfigJson);
   });
+
+  for (const {name, items} of testCases) {
+    it(`${name} hoodi == lodestar hoodi`, () => {
+      assertEqualParams(items[0], items[1]);
+    });
+  }
 });
