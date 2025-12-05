@@ -9,9 +9,11 @@ import {SnappyWasmDecompressor} from "./snappy-wasm.js";
  */
 export function getSnappyDecompressor(topicType: GossipType, data: Uint8Array): ISnappyDecompressor {
   switch (topicType) {
-    case GossipType.beacon_attestation:
-      return new SnappyDecompressor(data);
-    default:
+    case GossipType.beacon_block:
+    case GossipType.blob_sidecar:
+    case GossipType.data_column_sidecar:
       return new SnappyWasmDecompressor(data);
+    default:
+      return new SnappyDecompressor(data);
   }
 }
