@@ -69,7 +69,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    /^gloas\/(?!.*ssz_static).*$/,
+    /^gloas\/(finality|fork_choice|networking|sanity|transition)\/.*$/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
   ],
   skippedTests: [],

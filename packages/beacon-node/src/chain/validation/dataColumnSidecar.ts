@@ -132,12 +132,13 @@ export async function validateGossipDataColumnSidecar(
   }
 
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
-  const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
-    blockState,
-    dataColumnSidecar.signedBlockHeader
-  );
+  const signature = dataColumnSidecar.signedBlockHeader.signature;
+  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
+    const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+      blockState,
+      dataColumnSidecar.signedBlockHeader
+    );
 
-  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex)) {
     if (
       !(await chain.bls.verifySignatureSets([signatureSet], {
         // verify on main thread so that we only need to verify block proposer signature once per block
@@ -152,7 +153,7 @@ export async function validateGossipDataColumnSidecar(
       });
     }
 
-    chain.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex);
+    chain.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
   }
 
   // 9) [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
@@ -332,7 +333,8 @@ export async function validateBlockDataColumnSidecars(
   if (chain !== null) {
     const rootHex = toRootHex(blockRoot);
     const slot = firstSidecarSignedBlockHeader.message.slot;
-    if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, rootHex)) {
+    const signature = firstSidecarSignedBlockHeader.signature;
+    if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, rootHex, signature)) {
       const headState = await chain.getHeadState();
       const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
 
@@ -349,7 +351,7 @@ export async function validateBlockDataColumnSidecars(
         });
       }
 
-      chain.seenBlockInputCache.markVerifiedProposerSignature(slot, rootHex);
+      chain.seenBlockInputCache.markVerifiedProposerSignature(slot, rootHex, signature);
     }
   }
 

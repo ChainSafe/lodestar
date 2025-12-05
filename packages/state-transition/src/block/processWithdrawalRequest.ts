@@ -7,7 +7,7 @@ import {
 } from "@lodestar/params";
 import {electra, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {CachedBeaconStateElectra} from "../types.js";
+import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
@@ -15,7 +15,7 @@ import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
 export function processWithdrawalRequest(
   fork: ForkSeq,
-  state: CachedBeaconStateElectra,
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   withdrawalRequest: electra.WithdrawalRequest
 ): void {
   const amount = Number(withdrawalRequest.amount);
@@ -42,7 +42,7 @@ export function processWithdrawalRequest(
   }
 
   // TODO Electra: Consider caching pendingPartialWithdrawals
-  const pendingBalanceToWithdraw = getPendingBalanceToWithdraw(state, validatorIndex);
+  const pendingBalanceToWithdraw = getPendingBalanceToWithdraw(fork, state, validatorIndex);
   const validatorBalance = state.balances.get(validatorIndex);
 
   if (isFullExitRequest) {
@@ -81,7 +81,7 @@ export function processWithdrawalRequest(
 function isValidatorEligibleForWithdrawOrExit(
   validator: phase0.Validator,
   sourceAddress: Uint8Array,
-  state: CachedBeaconStateElectra
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas
 ): boolean {
   const {withdrawalCredentials} = validator;
   const addressStr = toHex(withdrawalCredentials.subarray(12));

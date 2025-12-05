@@ -1,5 +1,5 @@
 import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
-import {SignedBeaconBlock} from "@lodestar/types";
+import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -20,6 +20,7 @@ export async function verifyBlocksSignatures(
   metrics: Metrics | null,
   preState0: CachedBeaconStateAllForks,
   blocks: SignedBeaconBlock[],
+  indexedAttestationsByBlock: IndexedAttestation[][],
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
@@ -37,7 +38,7 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(preState0, block, {
+          getBlockSignatureSets(preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
           })
         );

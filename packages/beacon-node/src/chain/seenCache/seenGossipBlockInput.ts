@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {ForkName, ForkPostFulu, ForkPreGloas, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
@@ -85,7 +85,8 @@ export class SeenBlockInput {
   private blockInputs = new Map<RootHex, IBlockInput>();
   // using a Map of slot helps it more convenient to prune
   // there should only 1 block root per slot but we need to always compare against rootHex
-  private verifiedProposerSignatures = new Map<Slot, Set<RootHex>>();
+  // and the signature to ensure we only skip verification if both match
+  private verifiedProposerSignatures = new Map<Slot, Map<RootHex, BLSSignature>>();
 
   constructor({config, custodyConfig, clock, chainEvents, signal, metrics, logger}: SeenBlockInputCacheModules) {
     this.config = config;
@@ -333,20 +334,30 @@ export class SeenBlockInput {
     return blockInput;
   }
 
-  isVerifiedProposerSignature(slot: Slot, blockRootHex: RootHex): boolean {
-    const seenSet = this.verifiedProposerSignatures.get(slot);
-    return seenSet?.has(blockRootHex) ?? false;
+  /**
+   * Check if a proposer signature has already been verified for this slot and block root.
+   */
+  isVerifiedProposerSignature(slot: Slot, blockRootHex: RootHex, signature: BLSSignature): boolean {
+    const seenMap = this.verifiedProposerSignatures.get(slot);
+    const cachedSignature = seenMap?.get(blockRootHex);
+    if (!cachedSignature) {
+      return false;
+    }
+    // Only consider verified if the signature matches
+    return Buffer.compare(cachedSignature, signature) === 0;
   }
 
-  // Mark that the proposer signature for this slot and block root has been verified
-  // so that we only verify it once per slot
-  markVerifiedProposerSignature(slot: Slot, blockRootHex: RootHex): void {
-    let seenSet = this.verifiedProposerSignatures.get(slot);
-    if (!seenSet) {
-      seenSet = new Set<RootHex>();
-      this.verifiedProposerSignatures.set(slot, seenSet);
+  /**
+   * Mark that the proposer signature for this slot and block root has been verified
+   * so that we only verify it once per slot
+   */
+  markVerifiedProposerSignature(slot: Slot, blockRootHex: RootHex, signature: BLSSignature): void {
+    let seenMap = this.verifiedProposerSignatures.get(slot);
+    if (!seenMap) {
+      seenMap = new Map<RootHex, BLSSignature>();
+      this.verifiedProposerSignatures.set(slot, seenMap);
     }
-    seenSet.add(blockRootHex);
+    seenMap.set(blockRootHex, signature);
   }
 
   private buildCommonProps(slot: Slot): {

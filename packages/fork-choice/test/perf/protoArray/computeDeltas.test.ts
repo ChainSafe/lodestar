@@ -1,4 +1,4 @@
-import {beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 import {NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
@@ -25,11 +25,6 @@ describe("computeDeltas", () => {
       },
       2 * 60 * 1000
     );
-
-    setBenchOpts({
-      minMs: 10 * 1000,
-      maxMs: 10 * 1000,
-    });
 
     for (const inainactiveValidatorsPercentage of inactiveValidatorsPercentages) {
       if (inainactiveValidatorsPercentage < 0 || inainactiveValidatorsPercentage > 1) {

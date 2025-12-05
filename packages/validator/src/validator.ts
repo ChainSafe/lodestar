@@ -20,7 +20,7 @@ import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
 import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
-import {Clock, IClock} from "./util/clock.js";
+import {Clock, ClockOptions, IClock} from "./util/clock.js";
 import {NotEqualParamsError, assertEqualParams, getLoggerVc} from "./util/index.js";
 
 export type ValidatorModules = {
@@ -63,6 +63,7 @@ export type ValidatorOptions = {
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
   externalSigner?: ExternalSignerOptions;
+  clock?: ClockOptions;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -167,7 +168,7 @@ export class Validator {
     const {db, config: chainConfig, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
     const controller = opts.abortController;
-    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
+    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
     const loggerVc = getLoggerVc(logger, clock);
 
     let api: ApiClient;

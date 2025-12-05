@@ -517,14 +517,71 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "validator_monitor_validators",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
+          "range": false,
           "refId": "A"
         }
       ],
       "title": "Validators connected",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 20,
+        "y": 1
+      },
+      "id": 543,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "beacon_target_custody_group_count",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Custody Group Count",
       "type": "stat"
     },
     {
@@ -543,8 +600,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 2,
-        "x": 20,
+        "w": 1,
+        "x": 22,
         "y": 1
       },
       "id": 72,
@@ -579,7 +636,7 @@
           "refId": "A"
         }
       ],
-      "title": "CPU %",
+      "title": "CPU",
       "type": "stat"
     },
     {
@@ -596,8 +653,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 2,
-        "x": 22,
+        "w": 1,
+        "x": 23,
         "y": 1
       },
       "id": 73,
