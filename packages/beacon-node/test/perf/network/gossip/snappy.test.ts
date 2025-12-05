@@ -57,7 +57,7 @@ describe("network / gossip / snappy", () => {
         runsFactor: RUNS_FACTOR,
         fn: () => {
           for (let i = 0; i < RUNS_FACTOR; i++) {
-            let out = Buffer.allocUnsafe(snappyWasm.max_compress_len(uncompressed.length));
+            let out = Buffer.alloc(snappyWasm.max_compress_len(uncompressed.length));
             const len = encoder.compress_into(uncompressed, out);
             out = out.subarray(0, len);
           }
@@ -108,7 +108,7 @@ describe("network / gossip / snappy", () => {
         runsFactor: RUNS_FACTOR,
         fn: () => {
           for (let i = 0; i < RUNS_FACTOR; i++) {
-            decoder.decompress_into(compressed, Buffer.allocUnsafe(snappyWasm.decompress_len(compressed)));
+            decoder.decompress_into(compressed, Buffer.alloc(snappyWasm.decompress_len(compressed)));
           }
         },
       });
