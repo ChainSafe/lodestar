@@ -93,6 +93,12 @@ export class DataTransformSnappy implements DataTransform {
     // check uncompressed data length before we actually decompress
     const decompressor = getSnappyDecompressor(topic.type, data);
     const uncompressedDataLength = decompressor.readUncompressedLength();
+    if (uncompressedDataLength < 0) {
+      throw Error(
+        `ssz_snappy failed to read uncompressed length for topic ${topicStr}, compressed length ${data.length}`
+      );
+    }
+
     if (uncompressedDataLength > this.maxSizePerMessage) {
       throw Error(
         `ssz_snappy decoded data length ${uncompressedDataLength} > ${this.maxSizePerMessage} for topic ${topicStr}`
