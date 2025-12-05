@@ -1,8 +1,9 @@
 import {randomBytes} from "node:crypto";
-import * as snappyRs from "snappy";
 import * as snappyJs from "snappyjs";
 import {bench, describe} from "@chainsafe/benchmark";
 import snappyWasm from "@chainsafe/snappy-wasm";
+import {SnappyDecompressor} from "../../../../src/network/gossip/snappy/snappy-js/decompressor.js";
+import {SnappyWasmDecompressor} from "../../../../src/network/gossip/snappy/snappy-wasm.js";
 
 describe("network / gossip / snappy", () => {
   const msgLens = [
@@ -33,16 +34,6 @@ describe("network / gossip / snappy", () => {
       });
 
       bench({
-        id: `${msgLen} bytes - compress - snappy`,
-        runsFactor: RUNS_FACTOR,
-        fn: () => {
-          for (let i = 0; i < RUNS_FACTOR; i++) {
-            snappyRs.compressSync(uncompressed);
-          }
-        },
-      });
-
-      bench({
         id: `${msgLen} bytes - compress - snappy-wasm`,
         runsFactor: RUNS_FACTOR,
         fn: () => {
@@ -65,9 +56,8 @@ describe("network / gossip / snappy", () => {
       });
     }
   });
-  describe("uncompress", () => {
-    const decoder = new snappyWasm.Decoder();
 
+  describe("uncompress", () => {
     for (const msgLen of msgLens) {
       const uncompressed = randomBytes(msgLen);
       const compressed = snappyJs.compress(uncompressed);
@@ -78,17 +68,12 @@ describe("network / gossip / snappy", () => {
         runsFactor: RUNS_FACTOR,
         fn: () => {
           for (let i = 0; i < RUNS_FACTOR; i++) {
-            snappyJs.uncompress(compressed);
-          }
-        },
-      });
-
-      bench({
-        id: `${msgLen} bytes - uncompress - snappy`,
-        runsFactor: RUNS_FACTOR,
-        fn: () => {
-          for (let i = 0; i < RUNS_FACTOR; i++) {
-            snappyRs.uncompressSync(compressed);
+            const snappyJsDecompressor = new SnappyDecompressor(compressed);
+            const uncompressedDataLength = snappyJsDecompressor.readUncompressedLength();
+            const uncompressedData = Buffer.alloc(uncompressedDataLength);
+            if (!snappyJsDecompressor.uncompressInto(uncompressedData)) {
+              throw Error("Decompression failed");
+            }
           }
         },
       });
@@ -98,17 +83,12 @@ describe("network / gossip / snappy", () => {
         runsFactor: RUNS_FACTOR,
         fn: () => {
           for (let i = 0; i < RUNS_FACTOR; i++) {
-            decoder.decompress(compressed);
-          }
-        },
-      });
-
-      bench({
-        id: `${msgLen} bytes - uncompress - snappy-wasm - prealloc`,
-        runsFactor: RUNS_FACTOR,
-        fn: () => {
-          for (let i = 0; i < RUNS_FACTOR; i++) {
-            decoder.decompress_into(compressed, Buffer.allocUnsafe(snappyWasm.decompress_len(compressed)));
+            const snappyWasmDecompressor = new SnappyWasmDecompressor(compressed);
+            const uncompressedDataLength = snappyWasmDecompressor.readUncompressedLength();
+            const uncompressedData = Buffer.alloc(uncompressedDataLength);
+            if (!snappyWasmDecompressor.uncompressInto(uncompressedData)) {
+              throw Error("Decompression failed");
+            }
           }
         },
       });
