@@ -118,7 +118,8 @@ export class DataTransformSnappy implements DataTransform {
     }
 
     // Only after sanity length checks, we can decompress the data
-    const uncompressedData = Buffer.allocUnsafe(uncompressedDataLength);
+    // using Buffer.allocUnsafe() caused huge MarkSweepCompact gc on the main thread of sas nodes
+    const uncompressedData = Buffer.alloc(uncompressedDataLength);
     if (!decompressor.uncompressInto(uncompressedData)) {
       throw Error(
         `ssz_snappy failed to decompress data for topic ${topicStr}, compressed length ${data.length}, expected uncompressed length ${uncompressedDataLength}`
@@ -139,7 +140,8 @@ export class DataTransformSnappy implements DataTransform {
       throw Error(`ssz_snappy encoded data length ${data.length} > ${this.maxSizePerMessage}`);
     }
 
-    const compressedData = Buffer.allocUnsafe(snappyWasm.max_compress_len(data.length));
+    // using Buffer.allocUnsafe() caused huge MarkSweepCompact gc on the main thread of sas nodes
+    const compressedData = Buffer.alloc(snappyWasm.max_compress_len(data.length));
     const compressedLen = encoder.compress_into(data, compressedData);
     return compressedData.subarray(0, compressedLen);
   }
