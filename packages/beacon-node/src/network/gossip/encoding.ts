@@ -9,6 +9,7 @@ import {ForkName} from "@lodestar/params";
 import {intToBytes} from "@lodestar/utils";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {Eth2GossipsubMetrics} from "./metrics.js";
+import {getSnappyDecompressor} from "./snappy/index.js";
 import {GossipTopicCache, getGossipSSZType} from "./topic.js";
 
 // Load WASM
@@ -17,9 +18,8 @@ const xxhash = await xxhashFactory();
 // Use salt to prevent msgId from being mined for collisions
 const h64Seed = BigInt(Math.floor(Math.random() * 1e9));
 
-// create singleton snappy encoder + decoder
+// to compress outgoing data, we always go with snappy-wasm, this is singleton encoder
 const encoder = new snappyWasm.Encoder();
-const decoder = new snappyWasm.Decoder();
 
 // Shared buffer to convert msgId to string
 const sharedMsgIdBuf = Buffer.alloc(20);
@@ -86,26 +86,39 @@ export class DataTransformSnappy implements DataTransform {
    * - `outboundTransform()`: compress snappy payload
    */
   inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
-    // check uncompressed data length before we actually decompress
-    const uncompressedDataLength = snappyWasm.decompress_len(data);
-    if (uncompressedDataLength > this.maxSizePerMessage) {
-      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${this.maxSizePerMessage}`);
-    }
-
     const topic = this.gossipTopicCache.getTopic(topicStr);
     const sszType = getGossipSSZType(topic);
     this.metrics?.dataTransform.inbound.inc({type: topic.type});
 
-    if (uncompressedDataLength < sszType.minSize) {
-      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${sszType.minSize}`);
+    // check uncompressed data length before we actually decompress
+    const decompressor = getSnappyDecompressor(topic.type, data);
+    const uncompressedDataLength = decompressor.readUncompressedLength();
+    if (uncompressedDataLength > this.maxSizePerMessage) {
+      throw Error(
+        `ssz_snappy decoded data length ${uncompressedDataLength} > ${this.maxSizePerMessage} for topic ${topicStr}`
+      );
     }
+
+    if (uncompressedDataLength < sszType.minSize) {
+      throw Error(
+        `ssz_snappy decoded data length ${uncompressedDataLength} < ${sszType.minSize} for topic ${topicStr}`
+      );
+    }
+
     if (uncompressedDataLength > sszType.maxSize) {
-      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${sszType.maxSize}`);
+      throw Error(
+        `ssz_snappy decoded data length ${uncompressedDataLength} > ${sszType.maxSize} for topic ${topicStr}`
+      );
     }
 
     // Only after sanity length checks, we can decompress the data
     const uncompressedData = Buffer.allocUnsafe(uncompressedDataLength);
-    decoder.decompress_into(data, uncompressedData);
+    if (!decompressor.uncompressInto(uncompressedData)) {
+      throw Error(
+        `ssz_snappy failed to decompress data for topic ${topicStr}, compressed length ${data.length}, expected uncompressed length ${uncompressedDataLength}`
+      );
+    }
+
     return uncompressedData;
   }
 
