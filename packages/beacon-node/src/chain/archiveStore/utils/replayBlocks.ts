@@ -47,8 +47,7 @@ export async function replayBlocks(
     }
   );
 
-  // Will use this for metrics
-  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
+  // biome-ignore lint/correctness/noUnusedVariables: Will use this for metrics
   let blockCount = 0;
 
   for await (const block of db.blockArchive.valuesStream({gt: fromSlot, lte: toSlot})) {
@@ -61,8 +60,7 @@ export async function replayBlocks(
         dataAvailabilityStatus: DataAvailabilityStatus.Available,
       });
     } catch (e) {
-      // Add metrics for error
-      // biome-ignore lint/complexity/noUselessCatch: <explanation>
+      // biome-ignore lint/complexity/noUselessCatch: Add metrics for error
       throw e;
     }
     blockCount++;
