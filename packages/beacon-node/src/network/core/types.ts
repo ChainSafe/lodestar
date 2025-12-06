@@ -92,9 +92,6 @@ export type NetworkWorkerData = {
  * API exposed by the libp2p worker
  */
 export type NetworkWorkerApi = INetworkCorePublic & {
-  // To satisfy the constraint of `ModuleThread` type
-  // biome-ignore lint/suspicious/noExplicitAny: Explicitly needed the `any` type here
-  [string: string]: (...args: any[]) => Promise<any> | any;
   // Async method through worker boundary
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void>;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
@@ -113,6 +110,8 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   scrapeMetrics(): Promise<string>;
   writeProfile(durationMs: number, dirpath: string): Promise<string>;
   writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string>;
+  writeHeapSnapshot(prefix: string, dirpath: string): Promise<string>;
+  writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string>;
 
   // TODO: ReqResp outgoing
   // TODO: ReqResp incoming

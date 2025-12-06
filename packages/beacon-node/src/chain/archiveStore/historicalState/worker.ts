@@ -1,6 +1,5 @@
 import worker from "node:worker_threads";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {Transfer, expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
@@ -8,6 +7,7 @@ import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
 import {JobFnQueue} from "../../../util/queue/fnQueue.js";
 import {QueueMetrics} from "../../../util/queue/options.js";
+import {handleWorkerRpc} from "../../../util/workerRpc.js";
 import {getHistoricalState} from "./getHistoricalState.js";
 import {
   HistoricalStateRegenMetrics,
@@ -19,6 +19,9 @@ import {HistoricalStateWorkerApi, HistoricalStateWorkerData} from "./types.js";
 // most of this setup copied from networkCoreWorker.ts
 
 const workerData = worker.workerData as HistoricalStateWorkerData;
+const parentPort = worker.parentPort;
+if (!workerData) throw Error("workerData must be defined");
+if (!parentPort) throw Error("parentPort must be defined");
 
 const logger = getNodeLogger(workerData.loggerOpts);
 
@@ -67,11 +70,12 @@ const api: HistoricalStateWorkerApi = {
     const stateBytes = await queue.push<Uint8Array>(() =>
       getHistoricalState(slot, config, db, pubkey2index, historicalStateRegenMetrics)
     );
-    const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 
     historicalStateRegenMetrics?.regenSuccessCount.inc();
-    return result;
+    // Return state bytes - structured cloning handles Uint8Array efficiently
+    return stateBytes;
   },
 };
 
-expose(api);
+// Handle RPC calls from main thread
+handleWorkerRpc(parentPort, api);

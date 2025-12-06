@@ -1,4 +1,4 @@
-import {ModuleThread} from "@chainsafe/threads";
+import {Worker} from "node:worker_threads";
 import {BeaconConfig, SpecJson} from "@lodestar/config";
 import {LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
 import {Metrics} from "../../../metrics/index.js";
@@ -14,7 +14,9 @@ export type HistoricalStateRegenInitModules = {
   signal?: AbortSignal;
 };
 export type HistoricalStateRegenModules = HistoricalStateRegenInitModules & {
-  api: ModuleThread<HistoricalStateWorkerApi>;
+  api: HistoricalStateWorkerApi;
+  worker: Worker;
+  closeRpc: () => void;
 };
 
 export type HistoricalStateWorkerData = {

@@ -50,8 +50,7 @@ describe("chain / bls / multithread queue", () => {
     const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null});
     // await terminating all workers
     afterEachCallbacks.push(() => pool.close());
-    // Wait until initialized
-    await pool["waitTillInitialized"]();
+    // Piscina handles worker initialization automatically
     return pool;
   }
 

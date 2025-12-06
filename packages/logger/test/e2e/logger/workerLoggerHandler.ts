@@ -1,5 +1,6 @@
-import workerThreads from "node:worker_threads";
-import {Worker, spawn} from "@chainsafe/threads";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+import {Worker} from "node:worker_threads";
 
 export type LoggerWorker = {
   log(data: string): void;
@@ -9,16 +10,26 @@ export type LoggerWorker = {
 type WorkerData = {logFilepath: string};
 
 export async function getLoggerWorker(opts: WorkerData): Promise<LoggerWorker> {
-  const workerThreadjs = new Worker("./workerLogger.js", {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const worker = new Worker(path.join(__dirname, "workerLogger.js"), {
     workerData: opts,
   });
-  const worker = workerThreadjs as unknown as workerThreads.Worker;
 
-  await spawn<any>(workerThreadjs, {
-    // A Lodestar Node may do very expensive task at start blocking the event loop and causing
-    // the initialization to timeout. The number below is big enough to almost disable the timeout
-    timeout: 5 * 60 * 1000,
-    // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satifies its contrains
+  // Wait for worker to be online
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("Logger worker initialization timeout"));
+    }, 5 * 60 * 1000);
+
+    worker.once("online", () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+
+    worker.once("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
   });
 
   return {
@@ -27,7 +38,7 @@ export async function getLoggerWorker(opts: WorkerData): Promise<LoggerWorker> {
     },
 
     async close() {
-      await workerThreadjs.terminate();
+      await worker.terminate();
     },
   };
 }

@@ -1,9 +1,5 @@
 import {VerifySignatureOpts} from "../interface.js";
 
-export type WorkerData = {
-  workerId: number;
-};
-
 export type SerializedSet = {
   publicKey: Uint8Array;
   message: Uint8Array;
@@ -24,8 +20,6 @@ export type WorkResultError = {code: WorkResultCode.error; error: Error};
 export type WorkResult<R> = {code: WorkResultCode.success; result: R} | WorkResultError;
 
 export type BlsWorkResult = {
-  /** Ascending integer identifying the worker for metrics */
-  workerId: number;
   /** Total num of batches that had to be retried */
   batchRetries: number;
   /** Total num of sigs that have been successfully verified with batching */

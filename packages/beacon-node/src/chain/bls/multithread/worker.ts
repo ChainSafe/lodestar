@@ -1,8 +1,6 @@
-import worker from "node:worker_threads";
 import {PublicKey} from "@chainsafe/blst";
-import {expose} from "@chainsafe/threads/worker";
 import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
-import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
+import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 /**
@@ -14,18 +12,11 @@ import {chunkifyMaximizeChunkSize} from "./utils.js";
  */
 const BATCHABLE_MIN_PER_CHUNK = 16;
 
-// Cloned data from instatiation
-const workerData = worker.workerData as WorkerData;
-if (!workerData) throw Error("workerData must be defined");
-const {workerId} = workerData || {};
-
-expose({
-  async verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
-    return verifyManySignatureSets(workReqArr);
-  },
-});
-
-function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
+/**
+ * Worker function for BLS signature verification.
+ * Exported as default for piscina to pick up.
+ */
+export default function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
@@ -96,7 +87,6 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [workerEndSec, workerEndNs] = process.hrtime();
 
   return {
-    workerId,
     batchRetries,
     batchSigsSuccess,
     workerStartTime: [startSec, startNs],

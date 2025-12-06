@@ -1,13 +1,24 @@
 import EventEmitter from "node:events";
+import path from "node:path";
+import {Worker} from "node:worker_threads";
+import {fileURLToPath} from "node:url";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
-import {Thread, Worker, spawn} from "@chainsafe/threads";
 import {BeaconConfig, chainConfigFromJson, chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
+import {Discv5WorkerData, Discv5WorkerMessage, Discv5WorkerResponse, LodestarDiscv5Opts} from "./types.js";
+
+// Resolve worker path relative to this file
+// In dev/test mode: running from src/, worker is in lib/
+// In production: running from lib/, worker is in same directory
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const workerPath =
+  process.env.NODE_ENV === "test"
+    ? path.join(__dirname, "../../../lib/network/discv5/worker.js")
+    : path.join(__dirname, "worker.js");
 
 export type Discv5Opts = {
   privateKey: PrivateKey;
@@ -22,20 +33,30 @@ export type Discv5Events = {
   discovered: (enr: ENR) => void;
 };
 
+type PendingRequest = {
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+};
+
 /**
  * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
  */
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
-  private readonly subscription: {unsubscribe: () => void};
+  private readonly worker: Worker;
+  private readonly opts: Discv5Opts;
+  private readonly pendingRequests = new Map<number, PendingRequest>();
+  private nextId = 0;
   private closed = false;
 
-  constructor(
-    private readonly opts: Discv5Opts,
-    private readonly workerApi: Discv5WorkerApi
-  ) {
+  constructor(opts: Discv5Opts, worker: Worker) {
     super();
+    this.opts = opts;
+    this.worker = worker;
 
-    this.subscription = workerApi.discovered().subscribe((enrObj) => this.onDiscovered(enrObj));
+    this.worker.on("message", this.handleWorkerMessage);
+    this.worker.on("error", (error) => {
+      opts.logger.error("Discv5 worker error", {}, error);
+    });
   }
 
   static async init(opts: Discv5Opts): Promise<Discv5Worker> {
@@ -51,27 +72,35 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       loggerOpts: opts.logger.toOpts(),
       genesisTime: opts.genesisTime,
     };
-    const worker = new Worker("./worker.js", {
-      suppressTranspileTS: Boolean(globalThis.Bun),
-      workerData,
-    } as ConstructorParameters<typeof Worker>[1]);
 
-    const workerApi = await spawn<Discv5WorkerApi>(worker, {
-      // A Lodestar Node may do very expensive task at start blocking the event loop and causing
-      // the initialization to timeout. The number below is big enough to almost disable the timeout
-      timeout: 5 * 60 * 1000,
+    const worker = new Worker(workerPath, {workerData});
+
+    // Wait for worker to be ready (it starts discv5 on initialization)
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Discv5 worker initialization timeout"));
+      }, 5 * 60 * 1000);
+
+      worker.once("online", () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+
+      worker.once("error", (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
     });
 
-    return new Discv5Worker(opts, workerApi);
+    return new Discv5Worker(opts, worker);
   }
 
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
 
-    this.subscription.unsubscribe();
-    await this.workerApi.close();
-    await Thread.terminate(this.workerApi as unknown as Thread);
+    await this.sendRequest({type: "close", id: this.nextId++});
+    await this.worker.terminate();
   }
 
   onDiscovered(obj: ENRData): void {
@@ -82,37 +111,74 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   }
 
   async enr(): Promise<SignableENR> {
-    const obj = await this.workerApi.enr();
-    return new SignableENR(obj.kvs, obj.seq, this.opts.privateKey.raw);
+    const response = (await this.sendRequest({type: "enr", id: this.nextId++})) as {enr: {kvs: Map<string, Uint8Array>; seq: bigint}};
+    return new SignableENR(response.enr.kvs, response.enr.seq, this.opts.privateKey.raw);
   }
 
   setEnrValue(key: string, value: Uint8Array): Promise<void> {
-    return this.workerApi.setEnrValue(key, value);
+    return this.sendRequest({type: "setEnrValue", id: this.nextId++, key, value}) as Promise<void>;
   }
 
   async kadValues(): Promise<ENR[]> {
-    return this.decodeEnrs(await this.workerApi.kadValues());
+    const response = (await this.sendRequest({type: "kadValues", id: this.nextId++})) as {enrs: ENRData[]};
+    return this.decodeEnrs(response.enrs);
   }
 
   discoverKadValues(): Promise<void> {
-    return this.workerApi.discoverKadValues();
+    return this.sendRequest({type: "discoverKadValues", id: this.nextId++}) as Promise<void>;
   }
 
   async findRandomNode(): Promise<ENR[]> {
-    return this.decodeEnrs(await this.workerApi.findRandomNode());
+    const response = (await this.sendRequest({type: "findRandomNode", id: this.nextId++})) as {enrs: ENRData[]};
+    return this.decodeEnrs(response.enrs);
   }
 
-  scrapeMetrics(): Promise<string> {
-    return this.workerApi.scrapeMetrics();
+  async scrapeMetrics(): Promise<string> {
+    const response = (await this.sendRequest({type: "scrapeMetrics", id: this.nextId++})) as {metrics: string};
+    return response.metrics;
   }
 
   async writeProfile(durationMs: number, dirpath: string): Promise<string> {
-    return this.workerApi.writeProfile(durationMs, dirpath);
+    const response = (await this.sendRequest({type: "writeProfile", id: this.nextId++, durationMs, dirpath})) as {path: string};
+    return response.path;
   }
 
   async writeHeapSnapshot(prefix: string, dirpath: string): Promise<string> {
-    return this.workerApi.writeHeapSnapshot(prefix, dirpath);
+    const response = (await this.sendRequest({type: "writeHeapSnapshot", id: this.nextId++, prefix, dirpath})) as {path: string};
+    return response.path;
   }
+
+  private sendRequest(message: Discv5WorkerMessage): Promise<unknown> {
+    return new Promise((resolve, reject) => {
+      this.pendingRequests.set(message.id, {resolve, reject});
+      this.worker.postMessage(message);
+    });
+  }
+
+  private handleWorkerMessage = (response: Discv5WorkerResponse): void => {
+    // Handle discovered events (no id, broadcast)
+    if (response.type === "discovered") {
+      this.onDiscovered(response.enr);
+      return;
+    }
+
+    // Handle request/response messages
+    const pending = this.pendingRequests.get(response.id);
+    if (!pending) {
+      this.opts.logger.warn("Received response for unknown request", {id: response.id, type: response.type});
+      return;
+    }
+
+    this.pendingRequests.delete(response.id);
+
+    if (response.type === "error") {
+      const error = new Error(response.error.message);
+      if (response.error.stack) error.stack = response.error.stack;
+      pending.reject(error);
+    } else {
+      pending.resolve(response);
+    }
+  };
 
   private decodeEnrs(objs: ENRData[]): ENR[] {
     const enrs: ENR[] = [];

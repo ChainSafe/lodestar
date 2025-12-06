@@ -1,6 +1,5 @@
 import {Discv5} from "@chainsafe/discv5";
 import {ENRData, SignableENRData} from "@chainsafe/enr";
-import {Observable} from "@chainsafe/threads/observable";
 import {ChainConfig} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 
@@ -43,32 +42,31 @@ export interface Discv5WorkerData {
 }
 
 /**
- * API exposed by the discv5 worker
- *
- * Note: ENRs are represented as bytes to facilitate message-passing
+ * Messages sent from main thread to worker
  */
-export type Discv5WorkerApi = {
-  /** The current host ENR */
-  enr(): Promise<SignableENRData>;
-  /** Set a key-value of the current host ENR */
-  setEnrValue(key: string, value: Uint8Array): Promise<void>;
+export type Discv5WorkerMessage =
+  | {type: "enr"; id: number}
+  | {type: "setEnrValue"; id: number; key: string; value: Uint8Array}
+  | {type: "kadValues"; id: number}
+  | {type: "discoverKadValues"; id: number}
+  | {type: "findRandomNode"; id: number}
+  | {type: "scrapeMetrics"; id: number}
+  | {type: "writeProfile"; id: number; durationMs: number; dirpath: string}
+  | {type: "writeHeapSnapshot"; id: number; prefix: string; dirpath: string}
+  | {type: "close"; id: number};
 
-  /** Return the ENRs currently in the kad table */
-  kadValues(): Promise<ENRData[]>;
-  /** emit the ENRs currently in the kad table */
-  discoverKadValues(): Promise<void>;
-  /** Begin a random search through the DHT, return discovered ENRs */
-  findRandomNode(): Promise<ENRData[]>;
-  /** Stream of discovered ENRs */
-  discovered(): Observable<ENRData>;
-
-  /** Prometheus metrics string */
-  scrapeMetrics(): Promise<string>;
-
-  /** write profile to disc */
-  writeProfile(durationMs: number, dirpath: string): Promise<string>;
-  /** write heap snapshot to disc */
-  writeHeapSnapshot(prefix: string, dirpath: string): Promise<string>;
-  /** tear down discv5 resources */
-  close(): Promise<void>;
-};
+/**
+ * Messages sent from worker to main thread
+ */
+export type Discv5WorkerResponse =
+  | {type: "discovered"; enr: ENRData}
+  | {type: "enr"; id: number; enr: SignableENRData}
+  | {type: "setEnrValue"; id: number}
+  | {type: "kadValues"; id: number; enrs: ENRData[]}
+  | {type: "discoverKadValues"; id: number}
+  | {type: "findRandomNode"; id: number; enrs: ENRData[]}
+  | {type: "scrapeMetrics"; id: number; metrics: string}
+  | {type: "writeProfile"; id: number; path: string}
+  | {type: "writeHeapSnapshot"; id: number; path: string}
+  | {type: "close"; id: number}
+  | {type: "error"; id: number; error: {message: string; stack?: string}};

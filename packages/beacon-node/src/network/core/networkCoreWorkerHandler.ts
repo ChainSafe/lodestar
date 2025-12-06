@@ -1,10 +1,10 @@
 import path from "node:path";
-import workerThreads from "node:worker_threads";
+import {Worker} from "node:worker_threads";
+import {fileURLToPath} from "node:url";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -14,6 +14,7 @@ import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
 import {terminateWorkerThread, wireEventsOnMainThread} from "../../util/workerEvents.js";
+import {createWorkerRpcClient} from "../../util/workerRpc.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
@@ -29,8 +30,14 @@ import {
 } from "./events.js";
 import {INetworkCore, MultiaddrStr, NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 
-// Worker constructor consider the path relative to the current working directory
-const workerDir = process.env.NODE_ENV === "test" ? "../../../lib/network/core/" : "./";
+// Resolve worker path relative to this file
+// In dev/test mode: running from src/, worker is in lib/
+// In production: running from lib/, worker is in same directory
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const workerPath =
+  process.env.NODE_ENV === "test"
+    ? path.join(__dirname, "../../../lib/network/core/networkCoreWorker.js")
+    : path.join(__dirname, "networkCoreWorker.js");
 
 export type WorkerNetworkCoreOpts = NetworkOptions & {
   metricsEnabled: boolean;
@@ -52,8 +59,9 @@ export type WorkerNetworkCoreInitModules = {
 };
 
 type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
-  networkThreadApi: ModuleThread<NetworkWorkerApi>;
+  networkThreadApi: NetworkWorkerApi;
   worker: Worker;
+  closeRpc: () => void;
 };
 
 const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
@@ -79,19 +87,20 @@ export class WorkerNetworkCore implements INetworkCore {
     wireEventsOnMainThread<NetworkEventData>(
       NetworkWorkerThreadEventType.networkEvent,
       modules.events,
-      modules.worker as unknown as workerThreads.Worker,
+      modules.worker,
       modules.metrics,
       networkEventDirection
     );
     wireEventsOnMainThread<ReqRespBridgeEventData>(
       NetworkWorkerThreadEventType.reqRespBridgeEvents,
       this.reqRespBridgeEventBus,
-      modules.worker as unknown as workerThreads.Worker,
+      modules.worker,
       modules.metrics,
       reqRespBridgeEventDirection
     );
 
-    Thread.errors(modules.networkThreadApi).subscribe((err) => {
+    // Subscribe to worker errors
+    modules.worker.on("error", (err) => {
       this.modules.logger.error("Network worker thread error", {}, err);
     });
 
@@ -133,9 +142,7 @@ export class WorkerNetworkCore implements INetworkCore {
     const workerOpts: ConstructorParameters<typeof Worker>[1] = {
       workerData,
     };
-    if (globalThis.Bun) {
-      workerOpts.suppressTranspileTS = true;
-    } else {
+    if (!globalThis.Bun) {
       /**
        * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
        * That default value was determined via https://github.com/ChainSafe/lodestar/issues/2115 and
@@ -150,29 +157,43 @@ export class WorkerNetworkCore implements INetworkCore {
       workerOpts.resourceLimits = {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb};
     }
 
-    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), workerOpts);
+    const worker = new Worker(workerPath, workerOpts);
 
-    // biome-ignore lint/suspicious/noExplicitAny: Don't know any specific interface for the spawn
-    const networkThreadApi = (await spawn<any>(worker, {
-      // A Lodestar Node may do very expensive task at start blocking the event loop and causing
-      // the initialization to timeout. The number below is big enough to almost disable the timeout
-      timeout: 5 * 60 * 1000,
-      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satisfies its contrains
-    })) as unknown as ModuleThread<NetworkWorkerApi>;
+    // Wait for worker to be online
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Network worker initialization timeout"));
+      }, 5 * 60 * 1000);
+
+      worker.once("online", () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+
+      worker.once("error", (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+    });
+
+    // Create RPC client for typed method calls
+    const {api: networkThreadApi, close: closeRpc} = createWorkerRpcClient<NetworkWorkerApi>(worker);
 
     return new WorkerNetworkCore({
       ...modules,
       networkThreadApi,
       worker,
+      closeRpc,
     });
   }
 
   async close(): Promise<void> {
     this.modules.logger.debug("closing network core running in network worker");
     await this.getApi().close();
+    this.modules.closeRpc();
     this.modules.logger.debug("terminating network worker");
     await terminateWorkerThread({
-      worker: this.getApi(),
+      worker: this.modules.worker,
       retryCount: NETWORK_WORKER_EXIT_RETRY_COUNT,
       retryMs: NETWORK_WORKER_EXIT_TIMEOUT_MS,
       logger: this.modules.logger,
@@ -278,7 +299,7 @@ export class WorkerNetworkCore implements INetworkCore {
     return this.getApi().writeDiscv5HeapSnapshot(prefix, dirpath);
   }
 
-  private getApi(): ModuleThread<NetworkWorkerApi> {
+  private getApi(): NetworkWorkerApi {
     return this.modules.networkThreadApi;
   }
 }

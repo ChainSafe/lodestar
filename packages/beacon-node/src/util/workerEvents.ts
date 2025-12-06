@@ -1,5 +1,4 @@
 import {MessagePort, Worker} from "node:worker_threads";
-import {Thread} from "@chainsafe/threads";
 import {Logger} from "@lodestar/logger";
 import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
@@ -116,22 +115,17 @@ export async function terminateWorkerThread({
   retryCount,
   logger,
 }: {
-  worker: Thread;
+  worker: Worker;
   retryMs: number;
   retryCount: number;
   logger?: Logger;
 }): Promise<void> {
-  const terminated = new Promise((resolve) => {
-    Thread.events(worker).subscribe((event) => {
-      if (event.type === "termination") {
-        resolve(true);
-      }
-    });
-  });
-
   for (let i = 0; i < retryCount; i++) {
-    await Thread.terminate(worker);
-    const result = await Promise.race([terminated, sleep(retryMs).then(() => false)]);
+    const terminatePromise = worker.terminate();
+    const result = await Promise.race([
+      terminatePromise.then(() => true),
+      sleep(retryMs).then(() => false),
+    ]);
 
     if (result) return;
 

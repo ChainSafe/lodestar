@@ -1,7 +1,9 @@
 import path from "node:path";
-import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
+import {Worker} from "node:worker_threads";
+import {fileURLToPath} from "node:url";
 import {chainConfigToJson} from "@lodestar/config";
-import {LoggerNode} from "@lodestar/logger/node";
+import {terminateWorkerThread} from "../../../util/workerEvents.js";
+import {createWorkerRpcClient} from "../../../util/workerRpc.js";
 import {
   HistoricalStateRegenInitModules,
   HistoricalStateRegenModules,
@@ -9,22 +11,30 @@ import {
   HistoricalStateWorkerData,
 } from "./types.js";
 
-// Worker constructor consider the path relative to the current working directory
-const WORKER_DIR = process.env.NODE_ENV === "test" ? "../../../../lib/chain/archiveStore/historicalState" : "./";
+// Resolve worker path relative to this file
+// In dev/test mode: running from src/, worker is in lib/
+// In production: running from lib/, worker is in same directory
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const workerPath =
+  process.env.NODE_ENV === "test"
+    ? path.join(__dirname, "../../../../lib/chain/archiveStore/historicalState/worker.js")
+    : path.join(__dirname, "worker.js");
+
+const HISTORICAL_STATE_WORKER_TIMEOUT_MS = 1000;
+const HISTORICAL_STATE_WORKER_TIMEOUT_RETRY_COUNT = 3;
 
 /**
  * HistoricalStateRegen limits the damage from recreating historical states
  * by running regen in a separate worker thread.
  */
 export class HistoricalStateRegen implements HistoricalStateWorkerApi {
-  private readonly api: ModuleThread<HistoricalStateWorkerApi>;
-  private readonly logger: LoggerNode;
+  private readonly modules: HistoricalStateRegenModules;
 
   constructor(modules: HistoricalStateRegenModules) {
-    this.api = modules.api;
-    this.logger = modules.logger;
+    this.modules = modules;
     modules.signal?.addEventListener("abort", () => this.close(), {once: true});
   }
+
   static async init(modules: HistoricalStateRegenInitModules): Promise<HistoricalStateRegen> {
     const workerData: HistoricalStateWorkerData = {
       chainConfigJson: chainConfigToJson(modules.config),
@@ -37,32 +47,58 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker(path.join(WORKER_DIR, "worker.js"), {
-      suppressTranspileTS: Boolean(globalThis.Bun),
-      workerData,
-    } as ConstructorParameters<typeof Worker>[1]);
+    const worker = new Worker(workerPath, {workerData});
 
-    const api = await spawn<HistoricalStateWorkerApi>(worker, {
-      // A Lodestar Node may do very expensive task at start blocking the event loop and causing
-      // the initialization to timeout. The number below is big enough to almost disable the timeout
-      timeout: 5 * 60 * 1000,
+    // Wait for worker to be online
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Historical state worker initialization timeout"));
+      }, 5 * 60 * 1000);
+
+      worker.once("online", () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+
+      worker.once("error", (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
     });
 
-    return new HistoricalStateRegen({...modules, api});
+    // Subscribe to worker errors
+    worker.on("error", (err) => {
+      modules.logger.error("Historical state worker thread error", {}, err);
+    });
+
+    // Create RPC client for typed method calls
+    const {api, close: closeRpc} = createWorkerRpcClient<HistoricalStateWorkerApi>(worker);
+
+    return new HistoricalStateRegen({
+      ...modules,
+      api,
+      worker,
+      closeRpc,
+    });
   }
 
   async scrapeMetrics(): Promise<string> {
-    return this.api.scrapeMetrics();
+    return this.modules.api.scrapeMetrics();
   }
 
   async close(): Promise<void> {
-    await this.api.close();
-    this.logger.debug("Terminating historical state worker");
-    await Thread.terminate(this.api);
-    this.logger.debug("Terminated historical state worker");
+    await this.modules.api.close();
+    this.modules.closeRpc();
+    this.modules.logger.debug("Terminating historical state worker");
+    await terminateWorkerThread({
+      worker: this.modules.worker,
+      retryCount: HISTORICAL_STATE_WORKER_TIMEOUT_RETRY_COUNT,
+      retryMs: HISTORICAL_STATE_WORKER_TIMEOUT_MS,
+    });
+    this.modules.logger.debug("Terminated historical state worker");
   }
 
   async getHistoricalState(slot: number): Promise<Uint8Array> {
-    return this.api.getHistoricalState(slot);
+    return this.modules.api.getHistoricalState(slot);
   }
 }

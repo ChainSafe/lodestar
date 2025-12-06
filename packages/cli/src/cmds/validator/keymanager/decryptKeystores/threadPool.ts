@@ -1,41 +1,47 @@
 import path from "node:path";
-import {ModuleThread, Pool, QueuedTask, Worker, spawn} from "@chainsafe/threads";
+import {fileURLToPath} from "node:url";
+import {Piscina} from "piscina";
 import {maxPoolSize} from "./poolSize.js";
-import {DecryptKeystoreArgs, DecryptKeystoreWorkerAPI} from "./types.js";
+import {DecryptKeystoreArgs} from "./types.js";
 
-// Worker constructor consider the path relative to the current working directory
-const workerDir =
-  process.env.NODE_ENV === "test" ? "../../../../../lib/cmds/validator/keymanager/decryptKeystores" : "./";
+// Resolve worker path relative to this file
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const workerPath =
+  process.env.NODE_ENV === "test"
+    ? path.join(__dirname, "../../../../../lib/cmds/validator/keymanager/decryptKeystores/worker.js")
+    : path.join(__dirname, "worker.js");
+
+type PendingTask = {
+  controller: AbortController;
+  promise: Promise<Uint8Array>;
+};
 
 /**
  * Thread pool to decrypt keystores
  */
 export class DecryptKeystoresThreadPool {
-  private pool: Pool<ModuleThread<DecryptKeystoreWorkerAPI>>;
-  private tasks: QueuedTask<ModuleThread<DecryptKeystoreWorkerAPI>, Uint8Array>[] = [];
+  private pool: Piscina;
+  private tasks: PendingTask[] = [];
   private terminatePoolHandler: () => void;
 
   constructor(
     keystoreCount: number,
     private readonly signal: AbortSignal
   ) {
-    this.pool = Pool(
-      () =>
-        spawn<DecryptKeystoreWorkerAPI>(new Worker(path.join(workerDir, "worker.js")), {
-          // The number below is big enough to almost disable the timeout
-          // which helps during tests run on unpredictably slow hosts
-          timeout: 5 * 60 * 1000,
-        }),
-      {
-        // Adjust worker pool size based on keystore count
-        size: Math.min(keystoreCount, maxPoolSize),
-        // Decrypt keystores in sequence, increasing concurrency does not improve performance
-        concurrency: 1,
-      }
-    );
+    this.pool = new Piscina({
+      filename: workerPath,
+      // Adjust worker pool size based on keystore count
+      minThreads: Math.min(keystoreCount, maxPoolSize),
+      maxThreads: Math.min(keystoreCount, maxPoolSize),
+      // Decrypt keystores in sequence per worker, increasing concurrency does not improve performance
+      concurrentTasksPerWorker: 1,
+      // Enable timing statistics
+      recordTiming: true,
+    });
+
     // Terminate worker threads when process receives exit signal
     this.terminatePoolHandler = () => {
-      void this.pool.terminate(true);
+      void this.pool.destroy();
     };
     signal.addEventListener("abort", this.terminatePoolHandler, {once: true});
   }
@@ -48,9 +54,11 @@ export class DecryptKeystoresThreadPool {
     onDecrypted: (secretKeyBytes: Uint8Array) => void,
     onError: (e: Error) => void
   ): void {
-    const task = this.pool.queue((thread) => thread.decryptKeystore(args));
-    this.tasks.push(task);
-    task.then(onDecrypted).catch(onError);
+    const controller = new AbortController();
+    const promise = this.pool.run(args, {signal: controller.signal});
+
+    this.tasks.push({controller, promise});
+    promise.then(onDecrypted).catch(onError);
   }
 
   /**
@@ -58,8 +66,9 @@ export class DecryptKeystoresThreadPool {
    * Errors during executing can be captured in `onError` handler for each task.
    */
   async completed(): Promise<void> {
-    await this.pool.settled(true);
-    await this.pool.terminate();
+    // Wait for all tasks to settle (resolve or reject)
+    await Promise.allSettled(this.tasks.map((t) => t.promise));
+    await this.pool.close();
     this.signal.removeEventListener("abort", this.terminatePoolHandler);
   }
 
@@ -68,7 +77,7 @@ export class DecryptKeystoresThreadPool {
    */
   cancel(): void {
     for (const task of this.tasks) {
-      task.cancel();
+      task.controller.abort();
     }
     this.tasks = [];
   }
