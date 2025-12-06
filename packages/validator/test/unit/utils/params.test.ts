@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {ChainConfig, chainConfigToJson} from "@lodestar/config";
+import {ChainConfig, SpecJson, chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {networksChainConfig} from "@lodestar/config/networks";
 import {NotEqualParamsError, assertEqualParams} from "../../../src/util/params.js";
@@ -11,7 +11,7 @@ import {
   tekuHoodiConfig,
 } from "./interopConfigs.js";
 
-const testCases: {name: string; items: [ChainConfig, Record<string, string>]}[] = [
+const testCases: {name: string; items: [ChainConfig, SpecJson]}[] = [
   {name: "lighthouse", items: [networksChainConfig.hoodi, lighthouseHoodiConfig]},
   {name: "prysm", items: [networksChainConfig.hoodi, prysmHoodiConfig]},
   {name: "teku", items: [networksChainConfig.hoodi, tekuHoodiConfig]},

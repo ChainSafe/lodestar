@@ -53,18 +53,15 @@ export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Sp
     }
 
     if (key === "BLOB_SCHEDULE") {
-      // Parse JSON string if needed (interopConfigs stores BLOB_SCHEDULE as JSON string)
-      const remoteBlobScheduleValue =
-        typeof externalSpecJson[key] === "string" ? JSON.parse(externalSpecJson[key]) : externalSpecJson[key];
       const localBlobSchedule = deserializeBlobSchedule(localSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
-      const remoteBlobSchedule = deserializeBlobSchedule(remoteBlobScheduleValue).sort((a, b) => a.EPOCH - b.EPOCH);
+      const remoteBlobSchedule = deserializeBlobSchedule(externalSpecJson[key]).sort((a, b) => a.EPOCH - b.EPOCH);
 
       if (localBlobSchedule.length !== remoteBlobSchedule.length) {
         errors.push(`BLOB_SCHEDULE different length: ${localBlobSchedule.length} != ${remoteBlobSchedule.length}`);
 
         // Skip per entry comparison
         continue;
-      }
+    }
 
       for (let i = 0; i < localBlobSchedule.length; i++) {
         const localEntry = localBlobSchedule[i];
