@@ -25,6 +25,8 @@ export type ArchiveStoreOpts = StatesArchiveOpts & {
   archiveDataEpochs?: number;
   pruneHistory?: boolean;
   serveHistoricalState?: boolean;
+  /** Directory to write archived ERA files to. When set, enables era archiving */
+  eraArchiveDir?: string;
 };
 
 export type ProposalStats = {
@@ -45,7 +47,7 @@ export type FinalizedStats = {
 export interface StateArchiveStrategy {
   onCheckpoint(stateRoot: RootHex, metrics?: Metrics | null): Promise<void>;
   onFinalizedCheckpoint(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
-  maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
+  maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null, lastArchivedEra?: number): Promise<void>;
   archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
 }
 

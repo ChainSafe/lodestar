@@ -18,7 +18,7 @@ import {Logger, toRootHex} from "@lodestar/utils";
 export class EraStore {
   private readonly config: ChainForkConfig;
   private readonly logger: Logger;
-  private readonly eraDir: string;
+  private readonly eraDirs: string[];
 
   /** Map of era number -> ERA file path */
   private readonly eraFiles: Map<number, string> = new Map();
@@ -32,31 +32,45 @@ export class EraStore {
   /** Track which eras have been indexed */
   private readonly indexedEras: Set<number> = new Set();
 
-  private constructor(config: ChainForkConfig, logger: Logger, eraDir: string) {
+  private constructor(config: ChainForkConfig, logger: Logger, eraDirs: string[]) {
     this.config = config;
     this.logger = logger;
-    this.eraDir = eraDir;
+    this.eraDirs = eraDirs;
   }
 
   /**
    * Create and initialize an EraStore from a directory of ERA files.
    */
-  static async create(config: ChainForkConfig, logger: Logger, eraDir: string): Promise<EraStore | null> {
-    if (!eraDir || !fs.existsSync(eraDir)) {
-      logger.debug("ERA directory not found, EraStore disabled", {eraDir});
+  static async create(
+    config: ChainForkConfig,
+    logger: Logger,
+    eraDir: string,
+    archiveDir?: string
+  ): Promise<EraStore | null> {
+    // Collect all valid directories
+    const eraDirs: string[] = [];
+    if (eraDir && fs.existsSync(eraDir)) {
+      eraDirs.push(eraDir);
+    }
+    if (archiveDir && fs.existsSync(archiveDir) && archiveDir !== eraDir) {
+      eraDirs.push(archiveDir);
+    }
+
+    if (eraDirs.length === 0) {
+      logger.debug("No ERA directories found, EraStore disabled", {eraDir, archiveDir});
       return null;
     }
 
-    const store = new EraStore(config, logger, eraDir);
+    const store = new EraStore(config, logger, eraDirs);
     store.scanEraFiles();
 
     if (store.eraFiles.size === 0) {
-      logger.debug("No ERA files found in directory", {eraDir});
+      logger.debug("No ERA files found in directories", {eraDirs: eraDirs.join(", ")});
       return null;
     }
 
     logger.info("EraStore initialized", {
-      eraDir,
+      eraDirs: eraDirs.join(", "),
       eraCount: store.eraFiles.size,
       eraRange: store.getEraRange(),
     });
@@ -65,17 +79,24 @@ export class EraStore {
   }
 
   /**
-   * Scan the ERA directory for available files.
+   * Scan all ERA directories for available files.
    */
   private scanEraFiles(): void {
-    const files = fs.readdirSync(this.eraDir).filter((f) => f.endsWith(".era"));
+    for (const eraDir of this.eraDirs) {
+      if (!fs.existsSync(eraDir)) continue;
 
-    for (const file of files) {
-      try {
-        const {eraNumber} = parseEraName(file);
-        this.eraFiles.set(eraNumber, path.join(this.eraDir, file));
-      } catch (e) {
-        this.logger.warn("Failed to parse era number from file", {file, error: (e as Error).message});
+      const files = fs.readdirSync(eraDir).filter((f) => f.endsWith(".era"));
+
+      for (const file of files) {
+        try {
+          const {eraNumber} = parseEraName(file);
+          // Don't overwrite if already found (first directory takes precedence)
+          if (!this.eraFiles.has(eraNumber)) {
+            this.eraFiles.set(eraNumber, path.join(eraDir, file));
+          }
+        } catch (e) {
+          this.logger.warn("Failed to parse era number from file", {file, error: (e as Error).message});
+        }
       }
     }
   }

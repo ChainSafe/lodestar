@@ -1,5 +1,5 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -55,7 +55,7 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
    * epoch - 1024*2    epoch - 1024    epoch - 32    epoch
    * ```
    */
-  async maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
+  async maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null, lastArchivedEra = 0): Promise<void> {
     let timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
     const lastStoredSlot = await this.db.stateArchive.lastKey();
     timer?.({step: FrequencyStateArchiveStep.LoadLastStoredSlot});
@@ -63,8 +63,14 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
     const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
     const {archiveStateEpochFrequency} = this.opts;
 
-    const logCtx = {finalizedEpoch: finalized.epoch, lastStoredEpoch, archiveStateEpochFrequency};
-    if (finalized.epoch - lastStoredEpoch >= Math.min(PERSIST_TEMP_STATE_EVERY_EPOCHS, archiveStateEpochFrequency)) {
+    const finalizedSlot = computeStartSlotAtEpoch(finalized.epoch);
+    const isEraBoundary = finalizedSlot % SLOTS_PER_HISTORICAL_ROOT === 0;
+
+    const logCtx = {finalizedEpoch: finalized.epoch, lastStoredEpoch, archiveStateEpochFrequency, isEraBoundary};
+    if (
+      finalized.epoch - lastStoredEpoch >= Math.min(PERSIST_TEMP_STATE_EVERY_EPOCHS, archiveStateEpochFrequency) ||
+      isEraBoundary
+    ) {
       this.logger.verbose("Start archiving state", logCtx);
       await this.archiveState(finalized, metrics);
 
@@ -81,7 +87,11 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
       });
       timer?.({step: FrequencyStateArchiveStep.LoadStoredSlotsToDelete});
 
-      const statesSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, archiveStateEpochFrequency);
+      const statesSlotsToDelete = computeStateSlotsToDelete(
+        storedStateSlots,
+        archiveStateEpochFrequency,
+        lastArchivedEra
+      );
       timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
       if (statesSlotsToDelete.length > 0) {
         await this.db.stateArchive.batchDelete(statesSlotsToDelete);
@@ -145,14 +155,28 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
 }
 
 /**
- * Keeps first epoch per interval of persistEveryEpochs, deletes the rest
+ * Keeps first epoch per interval of persistEveryEpochs, deletes the rest.
+ * Era boundary states are kept
+ * until they have been archived to an era file.
  */
-export function computeStateSlotsToDelete(storedStateSlots: Slot[], persistEveryEpochs: Epoch): Slot[] {
+export function computeStateSlotsToDelete(
+  storedStateSlots: Slot[],
+  persistEveryEpochs: Epoch,
+  lastArchivedEra = 0
+): Slot[] {
   const persistEverySlots = persistEveryEpochs * SLOTS_PER_EPOCH;
   const intervalsWithStates = new Set<number>();
   const stateSlotsToDelete = new Set<number>();
 
   for (const slot of storedStateSlots) {
+    // Keep era boundary states until they've been archived to era files
+    if (slot % SLOTS_PER_HISTORICAL_ROOT === 0) {
+      const eraNumber = slot / SLOTS_PER_HISTORICAL_ROOT;
+      if (eraNumber > lastArchivedEra) {
+        continue;
+      }
+    }
+
     const interval = Math.floor(slot / persistEverySlots);
     if (intervalsWithStates.has(interval)) {
       stateSlotsToDelete.add(slot);

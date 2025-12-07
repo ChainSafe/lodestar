@@ -68,14 +68,21 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
-  // Initialize EraStore if era.dir is configured
-  if (options.era.dir) {
-    const eraStore = await EraStore.create(config, logger, options.era.dir);
+  // Create archive directory if era archiving is enabled
+  if (options.era.archiveDir) {
+    mkdir(options.era.archiveDir);
+    logger.info("Era archiving enabled", {archiveDir: options.era.archiveDir});
+  }
+
+  // Initialize EraStore if era.dir or era.archiveDir is configured
+  if (options.era.dir || options.era.archiveDir) {
+    const eraStore = await EraStore.create(config, logger, options.era.dir, options.era.archiveDir);
     if (eraStore) {
       db.eraStore = eraStore;
       const slotRange = eraStore.getSlotRange();
       logger.info("EraStore initialized for historical data", {
-        eraDir: options.era.dir,
+        eraDir: options.era.dir || "(none)",
+        archiveDir: options.era.archiveDir || "(none)",
         slotRange: slotRange ? `${slotRange.minSlot}-${slotRange.maxSlot}` : "none",
       });
     }
@@ -225,6 +232,12 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   }
 
   beaconNodeOptions.set({chain: {initialCustodyGroupCount: getInitialCustodyGroupCount(args, config, logger, enr)}});
+
+  // Pass era options to chain options for era archiving
+  const eraArchiveDir = beaconNodeOptions.get().era?.archiveDir;
+  if (eraArchiveDir) {
+    beaconNodeOptions.set({chain: {eraArchiveDir}});
+  }
 
   if (args.disableLightClientServer) {
     beaconNodeOptions.set({chain: {disableLightClientServer: true}});

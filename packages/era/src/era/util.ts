@@ -133,9 +133,15 @@ export function getShortHistoricalRoot(config: ChainForkConfig, state: BeaconSta
       : // Post-Capella, historical_roots is replaced by historical_summaries
         isForkPostCapella(config.getForkName(state.slot))
         ? ssz.capella.HistoricalSummary.hashTreeRoot(
-            (state as capella.BeaconState).historicalSummaries.at(-1) as capella.BeaconState["historicalSummaries"][0]
+            ((state as capella.BeaconState).historicalSummaries.at(-1) ??
+              (() => {
+                throw new Error(`historicalSummaries is empty at slot ${state.slot}`);
+              })()) as capella.BeaconState["historicalSummaries"][0]
           )
-        : (state.historicalRoots.at(-1) as Uint8Array)
+        : ((state.historicalRoots.at(-1) ??
+          (() => {
+            throw new Error(`historicalRoots is empty at slot ${state.slot}`);
+          })()) as Uint8Array)
   )
     .subarray(0, 4)
     .toString("hex");

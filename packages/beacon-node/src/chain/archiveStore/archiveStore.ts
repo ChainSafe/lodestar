@@ -9,6 +9,7 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH} from "./constants.js";
+import {archiveToEra, detectLastArchivedEra} from "./eraArchiver.js";
 import {HistoricalStateRegen} from "./historicalState/historicalStateRegen.js";
 import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
@@ -28,6 +29,7 @@ type ArchiveStoreInitOpts = ArchiveStoreOpts & {dbName: string; anchorState: {fi
 export enum ArchiveStoreTask {
   ArchiveBlocks = "archive_blocks",
   PruneHistory = "prune_history",
+  ArchiveToEra = "archive_to_era",
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
   RegenPruneOnFinalized = "regen_prune_on_finalized",
@@ -53,6 +55,9 @@ export class ArchiveStore {
   private readonly signal: AbortSignal;
 
   private historicalStateRegen?: HistoricalStateRegen;
+
+  /** Last era number that was archived to file */
+  private lastArchivedEra = 0;
 
   constructor(modules: ArchiveStoreModules, opts: ArchiveStoreInitOpts, signal: AbortSignal) {
     this.chain = modules.chain;
@@ -125,6 +130,14 @@ export class ArchiveStore {
         metrics: this.metrics,
         logger: this.logger,
         signal: this.signal,
+      });
+    }
+
+    if (this.opts.eraArchiveDir) {
+      this.lastArchivedEra = detectLastArchivedEra(this.opts.eraArchiveDir, this.chain.config.CONFIG_NAME);
+      this.logger.info("Era archiving enabled", {
+        archiveDir: this.opts.eraArchiveDir,
+        lastArchivedEra: this.lastArchivedEra,
       });
     }
   }
@@ -221,8 +234,23 @@ export class ArchiveStore {
 
       // should be after ArchiveBlocksTask to handle restart cleanly
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
+      await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics, this.lastArchivedEra);
       timer?.({source: ArchiveStoreTask.MaybeArchiveState});
+
+      // Archive to ERA files after state archiving
+      if (this.opts.eraArchiveDir) {
+        timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
+        this.lastArchivedEra = await archiveToEra(
+          this.chain.config,
+          this.db,
+          this.logger,
+          this.opts.eraArchiveDir,
+          this.chain.clock.currentEpoch,
+          finalizedEpoch,
+          this.lastArchivedEra
+        );
+        timer?.({source: ArchiveStoreTask.ArchiveToEra});
+      }
 
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       this.chain.regen.pruneOnFinalized(finalizedEpoch);
