@@ -139,9 +139,9 @@ export function getShortHistoricalRoot(config: ChainForkConfig, state: BeaconSta
               })()) as capella.BeaconState["historicalSummaries"][0]
           )
         : ((state.historicalRoots.at(-1) ??
-          (() => {
-            throw new Error(`historicalRoots is empty at slot ${state.slot}`);
-          })()) as Uint8Array)
+            (() => {
+              throw new Error(`historicalRoots is empty at slot ${state.slot}`);
+            })()) as Uint8Array)
   )
     .subarray(0, 4)
     .toString("hex");
