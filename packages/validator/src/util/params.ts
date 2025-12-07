@@ -61,7 +61,7 @@ export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Sp
 
         // Skip per entry comparison
         continue;
-    }
+      }
 
       for (let i = 0; i < localBlobSchedule.length; i++) {
         const localEntry = localBlobSchedule[i];
