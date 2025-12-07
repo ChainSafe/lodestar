@@ -56,8 +56,8 @@ export class ArchiveStore {
 
   private historicalStateRegen?: HistoricalStateRegen;
 
-  /** Last era number that was archived to file */
-  private lastArchivedEra = 0;
+  /** Last era number that was archived to file (-1 means none archived yet) */
+  private lastArchivedEra = -1;
 
   constructor(modules: ArchiveStoreModules, opts: ArchiveStoreInitOpts, signal: AbortSignal) {
     this.chain = modules.chain;

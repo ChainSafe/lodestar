@@ -52,11 +52,6 @@ export async function archiveToEra(
   }
 
   for (let eraNumber = lastArchivedEra + 1; eraNumber <= maxEraToArchive; eraNumber++) {
-    // Skip era 0 (genesis era) - it only has state, no blocks
-    if (eraNumber === 0) {
-      continue;
-    }
-
     try {
       const success = await writeEra(config, db, logger, archiveDir, eraNumber);
       if (success) {
@@ -77,6 +72,7 @@ export async function archiveToEra(
 
 /**
  * Writes a complete era file containing blocks and state.
+ * Era 0 contains only the genesis state (no blocks).
  */
 async function writeEra(
   config: ChainForkConfig,
@@ -86,8 +82,6 @@ async function writeEra(
   eraNumber: number
 ): Promise<boolean> {
   const stateSlot = computeStateSlotFromEraNumber(eraNumber);
-  const blockStartSlot = computeStartBlockSlotFromEraNumber(eraNumber);
-  const blockEndSlot = stateSlot - 1;
 
   // Check if state is available at the era boundary
   const stateBytes = await db.stateArchive.getBinary(stateSlot);
@@ -101,12 +95,16 @@ async function writeEra(
   const writer = await EraWriter.create(config, tempPath, eraNumber);
 
   try {
-    // binaryEntriesStream yields {key, value} pairs in slot order
+    // Era 0 has no blocks, only genesis state
     let blocksWritten = 0;
-    for await (const entry of db.blockArchive.binaryEntriesStream({gte: blockStartSlot, lte: blockEndSlot})) {
-      const slot = db.blockArchive.decodeKey(entry.key);
-      await writer.writeSerializedBlock(slot, entry.value);
-      blocksWritten++;
+    if (eraNumber > 0) {
+      const blockStartSlot = computeStartBlockSlotFromEraNumber(eraNumber);
+      const blockEndSlot = stateSlot - 1;
+      for await (const entry of db.blockArchive.binaryEntriesStream({gte: blockStartSlot, lte: blockEndSlot})) {
+        const slot = db.blockArchive.decodeKey(entry.key);
+        await writer.writeSerializedBlock(slot, entry.value);
+        blocksWritten++;
+      }
     }
 
     logger.debug("Writing era state", {eraNumber, stateSlot, blocksWritten});
@@ -129,14 +127,15 @@ async function writeEra(
 
 /**
  * Scans the archive directory to detect the last archived era number.
+ * Returns -1 if no era files exist (so archiving starts from era 0).
  */
 export function detectLastArchivedEra(archiveDir: string, configName: string): number {
   if (!fs.existsSync(archiveDir)) {
-    return 0;
+    return -1;
   }
 
   const files = fs.readdirSync(archiveDir);
-  let maxEra = 0;
+  let maxEra = -1;
 
   for (const file of files) {
     if (!file.endsWith(".era")) continue;
