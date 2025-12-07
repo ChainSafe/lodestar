@@ -2,7 +2,7 @@ import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {ByteVectorType} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   computeAnchorCheckpoint,
@@ -308,6 +308,21 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       );
       // DEBUG_CODE
 
+      const anchorSlot = this.syncAnchor.anchorSlot ?? this.backfillStartFromSlot;
+
+      if (anchorSlot === GENESIS_SLOT) {
+        this.logger.info("Backfill sync success. Reached Genesis slot.");
+        this.status = BackfillSyncStatus.completed;
+        this.processor.end();
+      }
+
+      const head = this.chain.forkChoice.getHead();
+      if (computeEpochAtSlot(anchorSlot) < computeEpochAtSlot(head.slot) - this.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS) {
+        this.logger.info("Backfill sync success. Reached minimum backfill blocks serving window.");
+        this.status = BackfillSyncStatus.completed;
+        this.processor.end();
+      }
+
       // DEBUG_CODE
       this.logger.info("Trying to do backfill sync", {
         iteration: iterationCount,
@@ -325,10 +340,18 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       }
       // DEBUG_CODE
 
+      // Flow:
+      // get a good peer
+      // create beacon_blocks_by_range request
+      // send beacon_blocks_by_range request
+      // validate blocks
+      // store blocks in db blockarchive
+      // update lastBackSyncedBlock
+      // update BackfillRange and BackfillState
+      // update earliestAvailableSlot
       try {
         const {goodPeer, goodPeerMetaData} = this.getGoodSyncPeerWithMeta();
 
-        const anchorSlot = this.syncAnchor.anchorSlot ?? this.backfillStartFromSlot;
         // Todo: Allow users to configure batchSize
         // default: 32 slots (1 epoch)
         const batchSize = isStartSlotOfEpoch(anchorSlot) ? 32 : anchorSlot % SLOTS_PER_EPOCH;
@@ -338,16 +361,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         // (epoch 2) 64-32=32 // (epoch 3) 68-(68%32)=68-4=64
         // batchSize: 32      // batchSize: 4
         // batchStartSlot: 32 // batchStartSlot: 64
-
-        // Flow:
-        // get a good peer
-        // create beacon_blocks_by_range request
-        // send beacon_blocks_by_range request
-        // validate blocks
-        // store blocks in db blockarchive
-        // update lastBackSyncedBlock
-        // update BackfillRange and BackfillState
-        // update earliestAvailableSlot
 
         const req: phase0.BeaconBlocksByRangeRequest = {
           startSlot: batchStartSlot,
@@ -839,7 +852,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // ignore irrelevant peers
     if (peerMetaData.earliestAvailableSlot !== undefined && peerMetaData.earliestAvailableSlot > anchorSlot) {
       // DEBUG_CODE
-      this.logger.warn("Peer doesn't have required historical data", {
+      this.logger.warn("Peer might not have required historical data", {
         peer: data.peer,
         earliestAvailableSlot,
         anchorSlot,
