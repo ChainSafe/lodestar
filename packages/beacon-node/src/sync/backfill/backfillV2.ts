@@ -52,6 +52,7 @@ type BackfillModules = BackfillSyncModules & {
 
 export type BackfillSyncOpts = {
   backfillBatchSize: number;
+  forceCheckpointSync?: boolean;
 };
 
 export enum BackfillSyncEvent {
@@ -192,7 +193,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     let syncAnchor: BackFillSyncAnchor;
 
-    if (prevBackfillRange) {
+    const isForceCheckpointSync: boolean = opts.forceCheckpointSync ?? false;
+
+    if (prevBackfillRange && !isForceCheckpointSync) {
       // the beggining and ending epoch slots must be in blockarchive.
       // beginningEpoch is always greater than endingEpoch
       const anchorBlock = await modules.db.blockArchive.get(computeStartSlotAtEpoch(prevBackfillRange.endingEpoch));
@@ -250,6 +253,25 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     } else {
       // Todo: Remove this duplicate code.
       modules.logger.warn("prevBackfillRange absent in db. Initializing backfill states using anchorState.");
+      // use anchor from modules
+      const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
+      const anchorBlockParentRoot = anchorState.latestBlockHeader.toValue().parentRoot;
+      const anchorSlot = anchorState.latestBlockHeader.slot;
+      syncAnchor = {
+        anchorBlockParentRoot,
+        anchorBlock: null,
+        anchorBlockRoot: anchorCp.root, // this may help
+        anchorSlot,
+        lastBackSyncedBlock: null,
+      };
+      // Initialize backfill states to maintain point of reference for future
+      await modules.db.backfillRange.put({beginningEpoch: anchorCp.epoch, endingEpoch: anchorCp.epoch});
+      await modules.db.backfillState.put(anchorCp.epoch, {hasBlock: true, hasBlobs: true, columnIndices: []});
+    }
+
+    if (isForceCheckpointSync) {
+      // Todo: Remove this duplicate code.
+      modules.logger.warn("ForcedCheckpointSync. Initializing backfill states using anchorState(checkpointState).");
       // use anchor from modules
       const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
       const anchorBlockParentRoot = anchorState.latestBlockHeader.toValue().parentRoot;

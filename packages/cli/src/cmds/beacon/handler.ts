@@ -9,6 +9,7 @@ import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
+import {defaultSyncOptions} from "../../../../beacon-node/src/sync/options.js";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
@@ -229,6 +230,10 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}, eth1: {jwtVersion: versionStr}});
     // Set commit and version for ClientVersion
     beaconNodeOptions.set({executionEngine: {commit, version}});
+    // Set forceCheckpointSync flag to use in backfill sync
+    beaconNodeOptions.set({
+      sync: {forceCheckpointSync: args?.forceCheckpointSync ?? defaultSyncOptions.forceCheckpointSync},
+    });
   }
 
   // Render final options
