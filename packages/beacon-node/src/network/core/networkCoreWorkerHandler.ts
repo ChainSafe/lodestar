@@ -157,6 +157,9 @@ export class WorkerNetworkCore implements INetworkCore {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
       timeout: 5 * 60 * 1000,
+      // Use async atomics for long-lived network worker with event-driven architecture
+      // This keeps the event loop alive for gossip, reqresp, and peer connections
+      atomics: "async",
       // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satisfies its contrains
     })) as unknown as ModuleThread<NetworkWorkerApi>;
 

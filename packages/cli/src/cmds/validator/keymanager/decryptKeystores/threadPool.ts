@@ -25,6 +25,9 @@ export class DecryptKeystoresThreadPool {
           // The number below is big enough to almost disable the timeout
           // which helps during tests run on unpredictably slow hosts
           timeout: 5 * 60 * 1000,
+          // Use sync atomics for CPU-bound keystore decryption workers
+          // Workers perform synchronous KDF computation with no event loop requirements
+          atomics: "sync",
         }),
       {
         // Adjust worker pool size based on keystore count

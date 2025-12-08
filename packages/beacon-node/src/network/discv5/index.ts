@@ -60,6 +60,9 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
       timeout: 5 * 60 * 1000,
+      // Use async atomics for long-lived discovery worker with event-driven architecture
+      // This keeps the event loop alive for discovery events and DHT operations
+      atomics: "async",
     });
 
     return new Discv5Worker(opts, workerApi);

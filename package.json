@@ -80,6 +80,7 @@
     "wait-port": "^1.1.0"
   },
   "resolutions": {
+    "@chainsafe/threads": "file:./chainsafe-threads-1.11.3.tgz",
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
     "elliptic": ">=6.6.1"
