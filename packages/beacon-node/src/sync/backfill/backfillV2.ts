@@ -23,6 +23,7 @@ import {
 import {ErrorAborted, Logger, prettyPrintIndices, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {IBeaconDb} from "../../db/index.js";
+import {BackfillState, EpochBackfillState} from "../../db/repositories/backfillState.ts";
 import {Metrics} from "../../metrics/metrics.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
@@ -402,6 +403,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         await this.updateBackfillStates(validationRes);
 
         this.currentAttempt = 1; // won't be hitted
+
+        if (computeEpochAtSlot(anchorSlot) % 5 === 0) await this.checkBackfillStatus();
       } catch (error) {
         this.logger.error("Caught Error: ", {
           error: (error as Error).message,
@@ -448,6 +451,70 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     });
     // DEBUG_CODE
     // throw new ErrorAborted("BackfillSync");
+  }
+
+  private async checkBackfillStatus(): Promise<void> {
+    let startIndex = 0;
+    let endIndex = 0;
+    let restarted = false;
+    const filledIndices: Map<number, number> = new Map();
+    let wasPrevFilled = false;
+
+    const startTime = Date.now();
+    for await (const k of this.db.backfillState.keysStream({gte: 0})) {
+      let v: EpochBackfillState;
+      try {
+        v = (await this.db.backfillState.get(k)) as EpochBackfillState;
+      } catch (e) {
+        // If SSZ decoding fails, treating as a gap
+        this.logger.warn("Skipping corrupted backfill state entry", {epoch: k, error: (e as Error).message});
+        if (wasPrevFilled) {
+          filledIndices.set(startIndex, endIndex);
+          wasPrevFilled = false;
+        }
+        continue;
+      }
+      // If value is null, treating as a gap
+      if (!v) {
+        if (wasPrevFilled) {
+          filledIndices.set(startIndex, endIndex);
+          wasPrevFilled = false;
+        }
+        continue;
+      }
+      if (wasPrevFilled && k - endIndex > 1) {
+        // gap
+        filledIndices.set(startIndex, endIndex);
+        restarted = true;
+        wasPrevFilled = false; // starting new run
+      }
+      if (!v.hasBlock) {
+        if (wasPrevFilled) {
+          filledIndices.set(startIndex, endIndex);
+          wasPrevFilled = false;
+        }
+        continue;
+      }
+      // now if this block is present
+      if (!wasPrevFilled || k === 0 /* Genesis */ || restarted) {
+        startIndex = k;
+      }
+      wasPrevFilled = true;
+      endIndex = k;
+      restarted = false;
+    }
+    // loop exited, handle last filled part
+    if (wasPrevFilled) filledIndices.set(startIndex, endIndex);
+    const endTime = Date.now();
+
+    const filledIndicesArr: string[] = [];
+    filledIndices.forEach((v, k) => {
+      filledIndicesArr.push(k === v ? `${k}` : `${k}-${v}`);
+    });
+    this.logger.info("DB BackfillState:", {
+      FilledEpochs: filledIndicesArr.join(", "),
+      DBFetchTime: endTime - startTime + "ms",
+    });
   }
 
   private getGoodSyncPeerWithMeta(): {
