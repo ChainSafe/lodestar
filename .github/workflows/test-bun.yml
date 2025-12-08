@@ -17,9 +17,9 @@ jobs:
     name: Unit Tests (Bun)
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
+      - uses: actions/checkout@v4
       - name: Install pnpm before setup node
         uses: pnpm/action-setup@v4
-      - uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
