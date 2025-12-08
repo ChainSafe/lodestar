@@ -18,8 +18,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - name: Install pnpm before setup node
-        shell: bash
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v4
       - uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v6

@@ -20,8 +20,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install pnpm before setup node
-        shell: bash
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v6
         with:
