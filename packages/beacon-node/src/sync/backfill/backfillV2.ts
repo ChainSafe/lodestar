@@ -193,9 +193,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     let syncAnchor: BackFillSyncAnchor;
 
-    const isForceCheckpointSync: boolean = opts.forceCheckpointSync ?? false;
+    const isForcedCheckpointSync: boolean = opts.forceCheckpointSync ?? false;
 
-    if (prevBackfillRange && !isForceCheckpointSync) {
+    if (prevBackfillRange && !isForcedCheckpointSync) {
       // the beggining and ending epoch slots must be in blockarchive.
       // beginningEpoch is always greater than endingEpoch
       const anchorBlock = await modules.db.blockArchive.get(computeStartSlotAtEpoch(prevBackfillRange.endingEpoch));
@@ -269,7 +269,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       await modules.db.backfillState.put(anchorCp.epoch, {hasBlock: true, hasBlobs: true, columnIndices: []});
     }
 
-    if (isForceCheckpointSync) {
+    if (isForcedCheckpointSync) {
       // Todo: Remove this duplicate code.
       modules.logger.warn("ForcedCheckpointSync. Initializing backfill states using anchorState(checkpointState).");
       // use anchor from modules
