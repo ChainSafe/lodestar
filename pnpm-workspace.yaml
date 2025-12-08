@@ -7,6 +7,12 @@ minimumReleaseAge: 2880
 
 nodeLinker: isolated
 
+catalog:
+  vitest: "^4.0.7"
+  "@vitest/browser": "^4.0.7"
+  "@vitest/browser-playwright": "^4.0.7"
+  "@vitest/coverage-v8": "^4.0.7"
+
 overrides:
   dns-over-http-resolver": "^2.1.1"
   loupe": "^2.3.6"
