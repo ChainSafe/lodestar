@@ -829,7 +829,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
       
-      // TODO GLOAS: Handle valid envelope. Store execution payload envelope in a pool
+      // TODO GLOAS: Handle valid envelope. Call `processExecutionPayloadEnvelope` and call fork choice
     },
     [GossipType.payload_attestation_message]: async ({
       gossipData,
@@ -837,9 +837,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.payload_attestation_message>) => {
       const {serializedData} = gossipData;
       const payloadAttestationMessage = sszDeserialize(topic, serializedData);
-      await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
+      const validationResult = await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
       
-      // TODO GLOAS: Handle valid payload attestation message. Store in a pool
+      try {
+        const insertOutcome = chain.payloadAttestationPool.add(payloadAttestationMessage, validationResult.attDataRootHex, validationResult.validatorCommitteeIndex);
+        metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+      } catch (e) {
+        logger.error("Error adding to payloadAttestation pool", {}, e as Error);
+      }
     },
     [GossipType.execution_payload_bid]: async ({
       gossipData,
@@ -849,7 +854,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const executionPayloadBid = sszDeserialize(topic, serializedData);
       await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
       
-      // TODO GLOAS: Handle valid payload bid. Store in a pool
+      // TODO GLOAS: In devnet-0 is self-built only so we will not test bidding flow
+      // Handle valid payload bid by storing in a bid pool
     }
   };
 }

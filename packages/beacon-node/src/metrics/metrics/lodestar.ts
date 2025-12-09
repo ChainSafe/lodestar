@@ -1116,6 +1116,30 @@ export function createLodestarMetrics(
           help: "Total number of empty returns in SyncContributionAndProofPool.getAggregate(slot, root)",
         }),
       },
+      payloadAttestationPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_payload_attestation_pool_size",
+          help: "Current size of the PayloadAttestationPool = total payload attestations unique by data and slot",
+        }),
+        payloadAttDataPerSlot: register.gauge({
+          name: "lodestar_oppool_payload_attestation_pool_payload_attestation_data_per_slot_total",
+          help: "Total number of payload attestation data per slot in PayloadAttestationPool",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_payload_attestation_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a payload attestation message from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_payload_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a payload attestation message from api to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        getPayloadAttestationsCacheMisses: register.counter({
+          name: "lodestar_oppool_payload_attestation_pool_get_payload_attestations_cache_misses_total",
+          help: "Total number of getPayloadAttesttationsForBlock calls with no aggregate for slot and payload attestation data root",
+        }),
+      }
     },
 
     chain: {

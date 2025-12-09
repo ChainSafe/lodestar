@@ -1,27 +1,32 @@
-import {gloas} from "@lodestar/types";
+import {gloas, RootHex, ssz} from "@lodestar/types";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import { toRootHex } from "@lodestar/utils";
-import { CachedBeaconStateGloas, computeEpochAtSlot, createSingleSignatureSetFromComponents, getIndexedPayloadAttestationSignatureSet, getPayloadAttestationDataSigningRoot } from "@lodestar/state-transition";
+import { CachedBeaconStateGloas, computeEpochAtSlot, createSingleSignatureSetFromComponents, getPayloadAttestationDataSigningRoot } from "@lodestar/state-transition";
+
+export type PayloadAttestationValidationResult = {
+  attDataRootHex: RootHex,
+  validatorCommitteeIndex: number,
+}
 
 export async function validateApiPayloadAttestationMessage(
   chain: IBeaconChain,
   payloadAttestationMessage: gloas.PayloadAttestationMessage,
-): Promise<void> {
+): Promise<PayloadAttestationValidationResult> {
   return validatePayloadAttestationMessage(chain, payloadAttestationMessage);
 }
 
 export async function validateGossipPayloadAttestationMessage(
   chain: IBeaconChain,
   payloadAttestationMessage: gloas.PayloadAttestationMessage,
-): Promise<void> {
+): Promise<PayloadAttestationValidationResult> {
   return validatePayloadAttestationMessage(chain, payloadAttestationMessage);
 }
 
 async function validatePayloadAttestationMessage(
   chain: IBeaconChain,
   payloadAttestationMessage: gloas.PayloadAttestationMessage,
-): Promise<void> {
+): Promise<PayloadAttestationValidationResult> {
 
   const {data, validatorIndex} = payloadAttestationMessage;
   const epoch = computeEpochAtSlot(data.slot);
@@ -71,7 +76,9 @@ async function validatePayloadAttestationMessage(
   //   `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
   //   processing the block up to the current slot as determined by the fork choice.
   const ptc = state.epochCtx.getPayloadTimelinessCommittee(data.slot);
-  if (!ptc.includes(validatorIndex)) {
+  const validatorCommitteeIndex = ptc.indexOf(validatorIndex);
+
+  if (validatorCommitteeIndex === -1) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_ATTESTER,
       attesterIndex: validatorIndex,
@@ -94,4 +101,9 @@ async function validatePayloadAttestationMessage(
 
   // Valid
   chain.seenPayloadAttesters.add(epoch, validatorIndex);
+
+  return {
+    attDataRootHex: toRootHex(ssz.gloas.PayloadAttestationData.hashTreeRoot(data)),
+    validatorCommitteeIndex,
+  }
 }

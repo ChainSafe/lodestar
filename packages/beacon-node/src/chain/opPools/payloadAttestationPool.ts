@@ -2,12 +2,12 @@ import { aggregateSignatures, Signature } from "@chainsafe/blst";
 import { ChainForkConfig } from "@lodestar/config";
 import { RootHex, Slot, gloas } from "@lodestar/types";
 import { MapDef, toRootHex } from "@lodestar/utils";
-import { IClock } from "../../util/clock.ts";
+import { IClock } from "../../util/clock.js";
 import { MAX_COMMITTEES_PER_SLOT, PTC_SIZE } from "@lodestar/params";
-import { InsertOutcome, OpPoolError, OpPoolErrorCode } from "./types.ts";
-import { pruneBySlot, signatureFromBytesNoCheck } from "./utils.ts";
+import { InsertOutcome, OpPoolError, OpPoolErrorCode } from "./types.js";
+import { pruneBySlot, signatureFromBytesNoCheck } from "./utils.js";
 import { BitArray } from "@chainsafe/ssz";
-import { Metrics } from "../../metrics/metrics.ts";
+import { Metrics } from "../../metrics/metrics.js";
 
 /**
  * The number of slots that will be stored in the pool
@@ -46,6 +46,16 @@ export class PayloadAttestationPool {
     private readonly clock: IClock,
     private readonly metrics: Metrics | null = null
   ) {}
+
+  get size(): number {
+    let count = 0;
+    for (const aggregateByDataRootByBlockRoot of this.aggregateByDataRootByBlockRootBySlot.values()) {
+      for (const aggregateByDataRoot of aggregateByDataRootByBlockRoot.values()) {
+        count += aggregateByDataRoot.size;
+      }
+    }
+    return count;
+  }
 
   add(message: PayloadAttestationMessage, payloadAttDataRootHex: RootHex, validatorCommitteeIndex: number): InsertOutcome {
     const slot = message.data.slot;
