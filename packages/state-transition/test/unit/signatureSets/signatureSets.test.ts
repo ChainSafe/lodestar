@@ -70,7 +70,7 @@ describe("signatureSets", () => {
       state.epochCtx.getIndexedAttestation(fork, attestation)
     );
 
-    const signatureSets = getBlockSignatureSets(state, signedBlock, indexedAttestations);
+    const signatureSets = getBlockSignatureSets(state.epochCtx.index2pubkey, state, signedBlock, indexedAttestations);
     expect(signatureSets.length).toBe(
       // block signature
       1 +

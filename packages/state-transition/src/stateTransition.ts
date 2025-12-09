@@ -111,7 +111,7 @@ export function stateTransition(
   postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
 
   // Verify proposer signature only
-  if (verifyProposer && !verifyProposerSignature(postState, signedBlock)) {
+  if (verifyProposer && !verifyProposerSignature(postState.epochCtx.index2pubkey, postState, signedBlock)) {
     throw new Error("Invalid block signature");
   }
 

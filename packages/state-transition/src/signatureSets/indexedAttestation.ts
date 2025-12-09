@@ -1,5 +1,6 @@
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {
   ISignatureSet,
@@ -19,25 +20,33 @@ export function getAttestationDataSigningRoot(
 }
 
 export function getAttestationWithIndicesSignatureSet(
+  index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   attestation: Pick<phase0.Attestation, "data" | "signature">,
   attestingIndices: number[]
 ): ISignatureSet {
   return createAggregateSignatureSetFromComponents(
-    attestingIndices.map((i) => state.epochCtx.index2pubkey[i]),
+    attestingIndices.map((i) => index2pubkey[i]),
     getAttestationDataSigningRoot(state, attestation.data),
     attestation.signature
   );
 }
 
 export function getIndexedAttestationSignatureSet(
+  index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   indexedAttestation: IndexedAttestation
 ): ISignatureSet {
-  return getAttestationWithIndicesSignatureSet(state, indexedAttestation, indexedAttestation.attestingIndices);
+  return getAttestationWithIndicesSignatureSet(
+    index2pubkey,
+    state,
+    indexedAttestation,
+    indexedAttestation.attestingIndices
+  );
 }
 
 export function getAttestationsSignatureSets(
+  index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock,
   indexedAttestations: IndexedAttestation[]
@@ -47,5 +56,7 @@ export function getAttestationsSignatureSets(
       `Indexed attestations length mismatch: got ${indexedAttestations.length}, expected ${signedBlock.message.body.attestations.length}`
     );
   }
-  return indexedAttestations.map((indexedAttestation) => getIndexedAttestationSignatureSet(state, indexedAttestation));
+  return indexedAttestations.map((indexedAttestation) =>
+    getIndexedAttestationSignatureSet(index2pubkey, state, indexedAttestation)
+  );
 }

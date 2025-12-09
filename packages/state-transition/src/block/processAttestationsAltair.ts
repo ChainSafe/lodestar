@@ -64,7 +64,7 @@ export function processAttestationsAltair(
     // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature
     // we can verify only that and nothing else.
     if (verifySignature) {
-      const sigSet = getAttestationWithIndicesSignatureSet(state, attestation, attestingIndices);
+      const sigSet = getAttestationWithIndicesSignatureSet(epochCtx.index2pubkey, state, attestation, attestingIndices);
       if (!verifySignatureSet(sigSet)) {
         throw new Error("Attestation signature is not valid");
       }

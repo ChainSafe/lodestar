@@ -77,7 +77,7 @@ export function assertValidProposerSlashing(
 
   // verify signatures
   if (verifySignatures) {
-    const signatureSets = getProposerSlashingSignatureSets(state, proposerSlashing);
+    const signatureSets = getProposerSlashingSignatureSets(state.epochCtx.index2pubkey, state, proposerSlashing);
     for (let i = 0; i < signatureSets.length; i++) {
       if (!verifySignatureSet(signatureSets[i])) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);

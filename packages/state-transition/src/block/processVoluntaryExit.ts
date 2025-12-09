@@ -74,7 +74,7 @@ export function getVoluntaryExitValidity(
     return VoluntaryExitValidity.pendingWithdrawals;
   }
 
-  if (verifySignature && !verifyVoluntaryExitSignature(state, signedVoluntaryExit)) {
+  if (verifySignature && !verifyVoluntaryExitSignature(epochCtx.index2pubkey, state, signedVoluntaryExit)) {
     return VoluntaryExitValidity.invalidSignature;
   }
 
