@@ -7,14 +7,14 @@ import {
   MaybeValidExecutionStatus,
   ProtoBlock,
 } from "@lodestar/fork-choice";
-import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   isExecutionBlockBodyType,
   isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
-import {Slot, bellatrix, electra} from "@lodestar/types";
+import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -92,15 +92,6 @@ export async function verifyBlocksExecutionPayload(
   //
   // When to import such blocks:
   // From: https://github.com/ethereum/consensus-specs/pull/2844
-  // A block MUST NOT be optimistically imported, unless either of the following
-  // conditions are met:
-  //
-  // 1. Parent of the block has execution - always true post-merge
-  //
-  const currentSlot = chain.clock.currentSlot;
-  // Post-merge, we're always optimistically safe
-  const isOptimisticallySafe = true;
-
   for (let blockIndex = 0; blockIndex < blockInputs.length; blockIndex++) {
     const blockInput = blockInputs[blockIndex];
     // If blocks are invalid in consensus the main promise could resolve before this loop ends.
@@ -108,14 +99,7 @@ export async function verifyBlocksExecutionPayload(
     if (signal.aborted) {
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
-    const verifyResponse = await verifyBlockExecutionPayload(
-      chain,
-      blockInput,
-      preState0,
-      opts,
-      isOptimisticallySafe,
-      currentSlot
-    );
+    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, preState0);
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
@@ -160,10 +144,7 @@ export async function verifyBlocksExecutionPayload(
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   blockInput: IBlockInput,
-  preState0: CachedBeaconStateAllForks,
-  opts: BlockProcessOpts,
-  isOptimisticallySafe: boolean,
-  currentSlot: Slot
+  preState0: CachedBeaconStateAllForks
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
   /** Not null if execution is enabled */
@@ -223,24 +204,10 @@ export async function verifyBlockExecutionPayload(
     }
 
     // Accepted and Syncing have the same treatment, as final validation of block is pending
+    // Post-merge, we're always safe to optimistically import
     case ExecutionPayloadStatus.ACCEPTED:
-    case ExecutionPayloadStatus.SYNCING: {
-      // Check if the entire segment was deemed safe or, this block specifically itself if not in
-      // the safeSlotsToImportOptimistically window of current slot, then we can import else
-      // we need to throw and not import his block
-      const safeSlotsToImportOptimistically =
-        opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
-      if (!isOptimisticallySafe && blockInput.slot + safeSlotsToImportOptimistically >= currentSlot) {
-        const execError = new BlockError(block, {
-          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-          execStatus: ExecutionPayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
-          errorMessage: `not safe to import ${execResult.status} payload within ${opts.safeSlotsToImportOptimistically} of currentSlot`,
-        });
-        return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
-      }
-
+    case ExecutionPayloadStatus.SYNCING:
       return {executionStatus: ExecutionStatus.Syncing, execError: null};
-    }
 
     // If the block has is not valid, or it referenced an invalid terminal block then the
     // block is invalid, however it has no bearing on any forkChoice cleanup
