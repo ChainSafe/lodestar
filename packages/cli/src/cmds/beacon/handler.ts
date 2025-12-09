@@ -2,14 +2,13 @@ import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
+import {BeaconDb, BeaconNode, defaultOptions} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {defaultSyncOptions} from "../../../../beacon-node/src/sync/options.js";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
@@ -27,6 +26,8 @@ import {initBeaconState} from "./initBeaconState.js";
 import {initPrivateKeyAndEnr} from "./initPeerIdAndEnr.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
+
+const {sync: defaultSyncOptions} = defaultOptions;
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
