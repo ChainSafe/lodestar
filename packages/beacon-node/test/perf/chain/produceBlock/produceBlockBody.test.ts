@@ -3,7 +3,6 @@ import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
@@ -31,7 +30,6 @@ describe("produceBlockBody", () => {
         proposerBoost: true,
         proposerBoostReorg: true,
         computeUnrealized: false,
-        safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
         disableArchiveOnCheckpoint: true,
         suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
         skipCreateStateCacheIfAvailable: true,
