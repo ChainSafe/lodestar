@@ -101,10 +101,10 @@ export function initializeForkChoiceFromFinalizedState(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
-  const executionPayloadBlockHash = isExecutionStateType(state)
-    ? toRootHex(state.latestExecutionPayloadHeader.blockHash)
-    : ZERO_HASH_HEX;
-  const executionPayloadNumber = isExecutionStateType(state) ? state.latestExecutionPayloadHeader.blockNumber : 0;
+  const isPostMerge = isExecutionStateType(state);
+  const executionPayloadBlockHash = isPostMerge ? toRootHex(state.latestExecutionPayloadHeader.blockHash) : null;
+  const executionPayloadNumber = isPostMerge ? state.latestExecutionPayloadHeader.blockNumber : null;
+  const executionStatus = isPostMerge ? ExecutionStatus.Valid : ExecutionStatus.PreMerge;
 
   return new forkchoiceConstructor(
     config,
@@ -140,7 +140,7 @@ export function initializeForkChoiceFromFinalizedState(
 
         executionPayloadBlockHash,
         executionPayloadNumber,
-        executionStatus: ExecutionStatus.Valid,
+        executionStatus,
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
@@ -183,12 +183,12 @@ export function initializeForkChoiceFromUnfinalizedState(
   };
   logger?.warn("Initializing fork choice from unfinalized state", logCtx);
 
-  const executionPayloadBlockHash = isExecutionStateType(unfinalizedState)
+  const isPostMerge = isExecutionStateType(unfinalizedState);
+  const executionPayloadBlockHash = isPostMerge
     ? toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash)
-    : ZERO_HASH_HEX;
-  const executionPayloadNumber = isExecutionStateType(unfinalizedState)
-    ? unfinalizedState.latestExecutionPayloadHeader.blockNumber
-    : 0;
+    : null;
+  const executionPayloadNumber = isPostMerge ? unfinalizedState.latestExecutionPayloadHeader.blockNumber : null;
+  const executionStatus = isPostMerge ? ExecutionStatus.Valid : ExecutionStatus.PreMerge;
 
   // this is not the justified state, but there is no other ways to get justified balances
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(unfinalizedState);
@@ -205,7 +205,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   );
 
   // this is the same to the finalized state
-  const headBlock: ProtoBlock = {
+  const headBlock = {
     slot: blockHeader.slot,
     parentRoot: toRootHex(blockHeader.parentRoot),
     stateRoot: toRootHex(blockHeader.stateRoot),
@@ -224,10 +224,10 @@ export function initializeForkChoiceFromUnfinalizedState(
 
     executionPayloadBlockHash,
     executionPayloadNumber,
-    executionStatus: ExecutionStatus.Valid,
+    executionStatus,
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-  };
+  } as ProtoBlock;
 
   const parentSlot = blockHeader.slot - 1;
   const parentEpoch = computeEpochAtSlot(parentSlot);

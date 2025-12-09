@@ -20,22 +20,6 @@ import {
   CachedBeaconStateExecutions,
 } from "../types.js";
 
-/**
- * Execution is always enabled post-merge.
- * Since all networks have transitioned, this always returns true for execution states.
- */
-export function isExecutionEnabled(_state: BeaconStateExecutions, _block: BeaconBlock | BlindedBeaconBlock): boolean {
-  return true;
-}
-
-/**
- * Merge is complete for all networks.
- * This function is kept for API compatibility but always returns true.
- */
-export function isMergeTransitionComplete(_state: BeaconStateExecutions): boolean {
-  return true;
-}
-
 /** Type guard for bellatrix.BeaconState */
 export function isExecutionStateType(state: BeaconStateAllForks): state is BeaconStateExecutions {
   return (state as BeaconStateExecutions).latestExecutionPayloadHeader !== undefined;

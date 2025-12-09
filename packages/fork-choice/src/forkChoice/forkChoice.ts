@@ -10,7 +10,6 @@ import {
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isExecutionBlockBodyType,
-  isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
@@ -734,12 +733,9 @@ export class ForkChoice implements IForkChoice {
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
-    // Post-merge: always require execution data
-    if (!isExecutionBlockBodyType(block.body) || !isExecutionStateType(state) || !isExecutionEnabled(state, block)) {
-      throw Error("Fork choice requires execution-enabled block and state post-merge");
-    }
+    const isPostMerge = isExecutionBlockBodyType(block.body) && isExecutionStateType(state);
 
-    const protoBlock: ProtoBlock = {
+    const protoBlock = {
       slot: slot,
       blockRoot: blockRootHex,
       parentRoot: parentRootHex,
@@ -756,11 +752,15 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-      executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
-      executionPayloadNumber: block.body.executionPayload.blockNumber,
+      executionPayloadBlockHash: isPostMerge
+        ? toRootHex((block.body as {executionPayload: {blockHash: Uint8Array}}).executionPayload.blockHash)
+        : null,
+      executionPayloadNumber: isPostMerge
+        ? (block.body as {executionPayload: {blockNumber: number}}).executionPayload.blockNumber
+        : null,
       executionStatus,
       dataAvailabilityStatus,
-    };
+    } as ProtoBlock;
 
     this.protoArray.onBlock(protoBlock, currentSlot);
 

@@ -48,9 +48,11 @@ export function getDebugApi({
                   return "invalid";
                 case ExecutionStatus.Syncing:
                   return "optimistic";
+                case ExecutionStatus.PreMerge:
+                  return "valid"; // Pre-merge blocks are considered valid
               }
             })(),
-            executionBlockHash: node.executionPayloadBlockHash,
+            executionBlockHash: node.executionPayloadBlockHash ?? "0x",
           })),
         },
       };
@@ -59,6 +61,8 @@ export function getDebugApi({
     async getProtoArrayNodes() {
       const nodes = chain.forkChoice.getAllNodes().map((node) => ({
         ...node,
+        executionPayloadBlockHash: node.executionPayloadBlockHash ?? "",
+        executionPayloadNumber: node.executionPayloadNumber ?? 0,
         parent: String(node.parent),
         bestChild: String(node.bestChild),
         bestDescendant: String(node.bestDescendant),

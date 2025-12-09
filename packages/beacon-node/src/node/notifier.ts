@@ -169,8 +169,8 @@ function getHeadExecutionInfo(
 
   const executionStatusStr = headInfo.executionStatus.toLowerCase();
 
-  // Add execution status to notifier only if head is on/post bellatrix
-  if (isExecutionCachedStateType(headState)) {
+  // Add execution status to notifier only if head is on/post bellatrix and has execution payload
+  if (isExecutionCachedStateType(headState) && headInfo.executionPayloadBlockHash !== null) {
     return [
       `exec-block: ${executionStatusStr}(${headInfo.executionPayloadNumber} ${prettyBytesShort(
         headInfo.executionPayloadBlockHash

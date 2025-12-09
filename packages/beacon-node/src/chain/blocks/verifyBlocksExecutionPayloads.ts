@@ -8,12 +8,7 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  isExecutionBlockBodyType,
-  isExecutionEnabled,
-  isExecutionStateType,
-} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, isExecutionBlockBodyType, isExecutionStateType} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
@@ -50,7 +45,8 @@ type VerifyExecutionErrorResponse =
 type VerifyBlockExecutionResponse =
   | VerifyExecutionErrorResponse
   | {executionStatus: ExecutionStatus.Valid; lvhResponse: LVHValidResponse; execError: null}
-  | {executionStatus: ExecutionStatus.Syncing; lvhResponse?: LVHValidResponse; execError: null};
+  | {executionStatus: ExecutionStatus.Syncing; lvhResponse?: LVHValidResponse; execError: null}
+  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null};
 
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
@@ -149,15 +145,13 @@ export async function verifyBlockExecutionPayload(
   const block = blockInput.getBlock();
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
-    isExecutionStateType(preState0) &&
-    isExecutionBlockBodyType(block.message.body) &&
-    isExecutionEnabled(preState0, block.message)
+    isExecutionStateType(preState0) && isExecutionBlockBodyType(block.message.body)
       ? block.message.body.executionPayload
       : null;
 
   if (!executionPayloadEnabled) {
-    // This should not happen post-merge, but handle gracefully
-    throw Error("Execution payload not enabled for post-merge block");
+    // Pre-merge block, no execution payload to verify
+    return {executionStatus: ExecutionStatus.PreMerge, lvhResponse: undefined, execError: null};
   }
 
   // TODO: Handle better notifyNewPayload() returning error is syncing

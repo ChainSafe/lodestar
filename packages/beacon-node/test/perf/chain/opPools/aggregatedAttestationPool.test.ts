@@ -2,7 +2,7 @@ import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
-import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   DataAvailabilityStatus,
@@ -62,8 +62,8 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           unrealizedJustifiedRoot: toHexString(justifiedCheckpoint.root),
           unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
           unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
-          executionPayloadBlockHash: toHexString(finalizedCheckpoint.root),
-          executionPayloadNumber: computeStartSlotAtEpoch(finalizedCheckpoint.epoch),
+          executionPayloadBlockHash: ZERO_HASH_HEX,
+          executionPayloadNumber: 0,
           executionStatus: ExecutionStatus.Valid,
 
           timeliness: false,
@@ -89,8 +89,8 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
             unrealizedJustifiedRoot: toHexString(justifiedCheckpoint.root),
             unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
             unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
-            executionPayloadBlockHash: toHexString(getBlockRootAtSlot(originalState, slot)),
-            executionPayloadNumber: slot,
+            executionPayloadBlockHash: ZERO_HASH_HEX,
+            executionPayloadNumber: 0,
             executionStatus: ExecutionStatus.Valid,
             timeliness: false,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,

@@ -2,7 +2,7 @@ import {ForkSeq} from "@lodestar/params";
 import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
-import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
+import {getFullOrBlindedPayload} from "../util/execution.js";
 import {BlockExternalData, DataAvailabilityStatus} from "./externalData.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {processBlockHeader} from "./processBlockHeader.js";
@@ -43,7 +43,7 @@ export function processBlock(
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
-  if (fork >= ForkSeq.bellatrix && isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
+  if (fork >= ForkSeq.bellatrix) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
     // TODO Deneb: Allow to disable withdrawals for interop testing
     // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals

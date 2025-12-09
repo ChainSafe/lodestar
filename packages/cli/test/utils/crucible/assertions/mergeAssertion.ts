@@ -1,4 +1,4 @@
-import {BeaconStateAllForks, isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
+import {BeaconStateAllForks, isExecutionStateType} from "@lodestar/state-transition";
 import {Assertion, AssertionResult} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
 
@@ -12,8 +12,9 @@ export const mergeAssertion: Assertion<"merge", string> = {
     const res = await node.beacon.api.debug.getStateV2({stateId: "head"});
     const state = res.value() as unknown as BeaconStateAllForks;
 
-    if (!(isExecutionStateType(state) && isMergeTransitionComplete(state))) {
-      errors.push("Node has not yet completed the merged transition");
+    // Post-merge, we just check that the state is an execution state type (Bellatrix+)
+    if (!isExecutionStateType(state)) {
+      errors.push("Node state is not an execution state type (pre-Bellatrix)");
     }
 
     return errors;

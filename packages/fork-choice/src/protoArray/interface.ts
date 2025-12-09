@@ -18,6 +18,7 @@ export const NULL_VOTE_INDEX = 0xffffffff;
 export type VoteIndex = number;
 
 export enum ExecutionStatus {
+  PreMerge = "PreMerge",
   Valid = "Valid",
   Syncing = "Syncing",
   Invalid = "Invalid",
@@ -41,13 +42,23 @@ export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus
  *
  * Note: executionStatus uses full ExecutionStatus enum because blocks
  * can become Invalid through EL validation after being added as Valid/Syncing.
+ *
+ * For PreMerge blocks, executionPayloadBlockHash and executionPayloadNumber
+ * will be null since there is no execution payload.
  */
-export type BlockExtraMeta = {
-  executionPayloadBlockHash: RootHex;
-  executionPayloadNumber: UintNum64;
-  executionStatus: ExecutionStatus;
-  dataAvailabilityStatus: DataAvailabilityStatus;
-};
+export type BlockExtraMeta =
+  | {
+      executionPayloadBlockHash: null;
+      executionPayloadNumber: null;
+      executionStatus: ExecutionStatus.PreMerge;
+      dataAvailabilityStatus: DataAvailabilityStatus;
+    }
+  | {
+      executionPayloadBlockHash: RootHex;
+      executionPayloadNumber: UintNum64;
+      executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
+      dataAvailabilityStatus: DataAvailabilityStatus;
+    };
 
 /**
  * A block that is to be applied to the fork choice
