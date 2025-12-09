@@ -1974,6 +1974,16 @@
     tinyrainbow "^3.0.3"
     wide-align "^1.1.5"
 
+"@lerna-lite/profiler@4.9.4":
+  version "4.9.4"
+  resolved "https://registry.yarnpkg.com/@lerna-lite/profiler/-/profiler-4.9.4.tgz#52c230d5d018b84b6a3c7d22222974abbdf947c0"
+  integrity sha512-bjEgQOHI4WH71p69+gVPGl/hgB4Z8KjojRBsrv/5r/824ry66SdG10RJayhE5xnZl/L2+96L9c12jPMwsshD7g==
+  dependencies:
+    "@lerna-lite/core" "4.9.4"
+    "@lerna-lite/npmlog" "4.9.4"
+    fs-extra "^11.3.2"
+    upath "^2.0.1"
+
 "@lerna-lite/publish@^4.9.4":
   version "4.9.4"
   resolved "https://registry.yarnpkg.com/@lerna-lite/publish/-/publish-4.9.4.tgz#c9185d1722d40e170f20b1a3956a5186e5aabeed"
@@ -2005,7 +2015,20 @@
     tinyglobby "^0.2.15"
     tinyrainbow "^3.0.3"
 
-"@lerna-lite/version@4.9.4":
+"@lerna-lite/run@^4.9.4":
+  version "4.9.4"
+  resolved "https://registry.yarnpkg.com/@lerna-lite/run/-/run-4.9.4.tgz#66cfd62ce5ea86b74794cd035f65e61a6068b827"
+  integrity sha512-t+5y5u1Y8dblHdJIg+TZJXZjkbIhUTNHN3bS+le+pGyEUzDj256xT6iwKynlCRbZbhHU4yhFcV3eG2s5INc5Lg==
+  dependencies:
+    "@lerna-lite/cli" "4.9.4"
+    "@lerna-lite/core" "4.9.4"
+    "@lerna-lite/npmlog" "4.9.4"
+    "@lerna-lite/profiler" "4.9.4"
+    fs-extra "^11.3.2"
+    p-map "^7.0.4"
+    tinyrainbow "^3.0.3"
+
+"@lerna-lite/version@4.9.4", "@lerna-lite/version@^4.9.4":
   version "4.9.4"
   resolved "https://registry.yarnpkg.com/@lerna-lite/version/-/version-4.9.4.tgz#00c4e10e75e3083932a4009554ca5d163c9be0f2"
   integrity sha512-hRFGB47RWHNKZkh9t+ka34kNlv5DQwrIDBvjI+mmzZqZK7UAtPRsJoE+MlQHVlQApDFwUPiSTdxY9UXzJrYFdQ==
@@ -3756,7 +3779,7 @@
   resolved "https://registry.yarnpkg.com/@types/normalize-package-data/-/normalize-package-data-2.4.4.tgz#56e2cc26c397c038fab0e3a917a12d5c5909e901"
   integrity sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==
 
-"@types/parse-path@^7.0.0":
+"@types/parse-path@^7.0.0", "@types/parse-path@^7.1.0":
   version "7.1.0"
   resolved "https://registry.yarnpkg.com/@types/parse-path/-/parse-path-7.1.0.tgz#1bdddfe4fb2038e76c7e622234a97d6a050a1be3"
   integrity sha512-EULJ8LApcVEPbrfND0cRQqutIOdiIgJ1Mgrhpy755r14xMohPTEpkV/k28SJvuOs9bHRFW8x+KeDAEPiGQPB9Q==
@@ -11152,6 +11175,11 @@ universalify@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/universalify/-/universalify-2.0.0.tgz#75a4984efedc4b08975c5aeb73f530d02df25717"
   integrity sha512-hAZsKq7Yy11Zu1DE0OzWjw7nnLZmJZYTDZZyEFHZdUhV8FkH5MCfoU1XMaxXovpyW5nq5scPqq0ZDP9Zyl04oQ==
+
+upath@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/upath/-/upath-2.0.1.tgz#50c73dea68d6f6b990f51d279ce6081665d61a8b"
+  integrity sha512-1uEe95xksV1O0CYKXo8vQvN1JEbtJp7lb7C5U9HMsIp6IVwntkH/oNUzyVNQSd4S1sYk2FpSSW44FqMc8qee5w==
 
 uri-js@^4.2.2, uri-js@^4.4.1:
   version "4.4.1"
