@@ -104,7 +104,8 @@ export class DataTransformSnappy implements DataTransform {
     }
 
     // Only after sanity length checks, we can decompress the data
-    const uncompressedData = Buffer.allocUnsafe(uncompressedDataLength);
+    // Using Buffer.alloc() instead of Buffer.allocUnsafe() to mitigate high GC pressure observed in some environments
+    const uncompressedData = Buffer.alloc(uncompressedDataLength);
     decoder.decompress_into(data, uncompressedData);
     return uncompressedData;
   }
@@ -120,7 +121,8 @@ export class DataTransformSnappy implements DataTransform {
       throw Error(`ssz_snappy encoded data length ${data.length} > ${this.maxSizePerMessage}`);
     }
 
-    const compressedData = Buffer.allocUnsafe(snappyWasm.max_compress_len(data.length));
+    // Using Buffer.alloc() instead of Buffer.allocUnsafe() to mitigate high GC pressure observed in some environments
+    const compressedData = Buffer.alloc(snappyWasm.max_compress_len(data.length));
     const compressedLen = encoder.compress_into(data, compressedData);
     return compressedData.subarray(0, compressedLen);
   }
