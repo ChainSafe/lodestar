@@ -9,10 +9,11 @@ import {
 } from "@lodestar/params";
 import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
-import {G2_POINT_AT_INFINITY} from "../constants/constants.ts";
-import {CachedBeaconStateGloas} from "../types.ts";
-import {hasBuilderWithdrawalCredential} from "../util/gloas.ts";
-import {computeSigningRoot, getCurrentEpoch, getRandaoMix, isActiveValidator} from "../util/index.ts";
+import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
+import {CachedBeaconStateGloas} from "../types.js";
+import {hasBuilderWithdrawalCredential} from "../util/gloas.js";
+import {computeSigningRoot, getCurrentEpoch, getRandaoMix, isActiveValidator} from "../util/index.js";
+import { getExecutionPayloadBidSigningRoot } from "../signatureSets/executionPayloadBid.js";
 
 export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block: BeaconBlock<ForkPostGloas>): void {
   const signedBid = block.body.signedExecutionPayloadBid;
@@ -106,8 +107,7 @@ function verifyExecutionPayloadBidSignature(
   pubkey: Uint8Array,
   signedBid: gloas.SignedExecutionPayloadBid
 ): boolean {
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_BUILDER);
-  const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadBid, signedBid.message, domain);
+  const signingRoot = getExecutionPayloadBidSigningRoot(state, signedBid.message);
 
   try {
     const publicKey = PublicKey.fromBytes(pubkey);

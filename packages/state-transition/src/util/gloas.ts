@@ -8,10 +8,10 @@ import {
 } from "@lodestar/params";
 import {gloas} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
-import {CachedBeaconStateGloas} from "../types.ts";
-import {getBlockRootAtSlot} from "./blockRoot.ts";
-import {computeEpochAtSlot} from "./epoch.ts";
-import {RootCache} from "./rootCache.ts";
+import {CachedBeaconStateGloas} from "../types.js";
+import {getBlockRootAtSlot} from "./blockRoot.js";
+import {computeEpochAtSlot} from "./epoch.js";
+import {RootCache} from "./rootCache.js";
 
 export function hasBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;

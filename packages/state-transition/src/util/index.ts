@@ -11,6 +11,7 @@ export * from "./computeAnchorCheckpoint.js";
 export * from "./deposit.js";
 export * from "./domain.js";
 export * from "./electra.js";
+export * from "./gloas.js";
 export * from "./epoch.js";
 export * from "./epochShuffling.js";
 export * from "./execution.js";

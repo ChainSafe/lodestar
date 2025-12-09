@@ -1,9 +1,9 @@
 import {gloas} from "@lodestar/types";
-import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.ts";
-import {IBeaconChain} from "../index.ts";
+import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
+import {IBeaconChain} from "../index.js";
 import { toRootHex } from "@lodestar/utils";
-import { RegenCaller } from "../regen/index.ts";
-import { getCurrentEpoch, isActiveValidator } from "@lodestar/state-transition";
+import { RegenCaller } from "../regen/index.js";
+import { CachedBeaconStateGloas, createSingleSignatureSetFromComponents, getCurrentEpoch, getExecutionPayloadBidSigningRoot, hasBuilderWithdrawalCredential, isActiveValidator } from "@lodestar/state-transition";
 
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
@@ -41,6 +41,13 @@ async function validateExecutionPayloadBid(
   // `BUILDER_WITHDRAWAL_PREFIX` -- i.e.
   // `is_builder_withdrawal_credential(state.validators[bid.builder_index].withdrawal_credentials)`
   // returns `True`.
+  if (!hasBuilderWithdrawalCredential(builder.withdrawalCredentials)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BUILDER_BAD_CREDENTIALS,
+      builderIndex: bid.builderIndex,
+    });
+  }
+
   // [IGNORE] this is the first signed bid seen with a valid signature from the
   // given builder for this slot.
   // [IGNORE] this bid is the highest value bid seen for the corresponding slot
@@ -73,4 +80,17 @@ async function validateExecutionPayloadBid(
 
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   // TODO GLOAS: implement thi
+  const signatureSet = createSingleSignatureSetFromComponents(
+    chain.index2pubkey[bid.builderIndex],
+    getExecutionPayloadBidSigningRoot(state as CachedBeaconStateGloas, bid),
+    signedExecutionPayloadBid.signature,
+  );
+
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
+    });
+  }
+
+  // Valid
 }

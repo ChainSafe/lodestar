@@ -64,7 +64,8 @@ async function validatePayloadAttestationMessage(
   const state = chain.getHeadState() as CachedBeaconStateGloas;
 
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
-  // TODO GLOAS: implement this
+  // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
+  // it is possible that the block didn't pass the validation
 
   // [REJECT] The message's validator index is within the payload committee in
   //   `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
