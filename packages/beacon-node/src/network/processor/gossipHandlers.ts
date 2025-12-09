@@ -48,6 +48,8 @@ import {
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {validateGossipDataColumnSidecar} from "../../chain/validation/dataColumnSidecar.js";
+import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
+import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
 import {
   AggregateAndProofValidationResult,
   GossipAttestation,
@@ -64,6 +66,7 @@ import {
 } from "../../chain/validation/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
+import {validateGossipPayloadAttestationMessage} from "../../chain/validation/payloadAttestationMessage.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -80,9 +83,6 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
-import { validateGossipExecutionPayloadEnvelope } from "../../chain/validation/executionPayloadEnvelope.js";
-import { validateGossipPayloadAttestationMessage } from "../../chain/validation/payloadAttestationMessage.js";
-import { validateGossipExecutionPayloadBid } from "../../chain/validation/executionPayloadBid.js";
 
 /**
  * Gossip handler options as part of network options
@@ -828,7 +828,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
-      
+
       // TODO GLOAS: Handle valid envelope. Call `processExecutionPayloadEnvelope` and call fork choice
     },
     [GossipType.payload_attestation_message]: async ({
@@ -838,9 +838,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const payloadAttestationMessage = sszDeserialize(topic, serializedData);
       const validationResult = await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
-      
+
       try {
-        const insertOutcome = chain.payloadAttestationPool.add(payloadAttestationMessage, validationResult.attDataRootHex, validationResult.validatorCommitteeIndex);
+        const insertOutcome = chain.payloadAttestationPool.add(
+          payloadAttestationMessage,
+          validationResult.attDataRootHex,
+          validationResult.validatorCommitteeIndex
+        );
         metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
       } catch (e) {
         logger.error("Error adding to payloadAttestation pool", {}, e as Error);
@@ -853,10 +857,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const executionPayloadBid = sszDeserialize(topic, serializedData);
       await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
-      
+
       // TODO GLOAS: In devnet-0 is self-built only so we will not test bidding flow
       // Handle valid payload bid by storing in a bid pool
-    }
+    },
   };
 }
 

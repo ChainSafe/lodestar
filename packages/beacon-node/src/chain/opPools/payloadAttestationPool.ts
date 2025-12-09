@@ -1,13 +1,13 @@
-import { aggregateSignatures, Signature } from "@chainsafe/blst";
-import { ChainForkConfig } from "@lodestar/config";
-import { RootHex, Slot, gloas } from "@lodestar/types";
-import { MapDef, toRootHex } from "@lodestar/utils";
-import { IClock } from "../../util/clock.js";
-import { MAX_COMMITTEES_PER_SLOT, PTC_SIZE } from "@lodestar/params";
-import { InsertOutcome, OpPoolError, OpPoolErrorCode } from "./types.js";
-import { pruneBySlot, signatureFromBytesNoCheck } from "./utils.js";
-import { BitArray } from "@chainsafe/ssz";
-import { Metrics } from "../../metrics/metrics.js";
+import {Signature, aggregateSignatures} from "@chainsafe/blst";
+import {BitArray} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
+import {MAX_COMMITTEES_PER_SLOT, PTC_SIZE} from "@lodestar/params";
+import {RootHex, Slot, gloas} from "@lodestar/types";
+import {MapDef, toRootHex} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
+import {IClock} from "../../util/clock.js";
+import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
+import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 /**
  * The number of slots that will be stored in the pool
@@ -29,16 +29,16 @@ type DataRootHex = string;
 type BlockRootHex = string;
 
 type AggregateFast = {
-  aggregationBits: BitArray,
-  data: PayloadAttestationData,
-  signature: Signature,
-}
+  aggregationBits: BitArray;
+  data: PayloadAttestationData;
+  signature: Signature;
+};
 
 export class PayloadAttestationPool {
   private readonly aggregateByDataRootByBlockRootBySlot = new MapDef<
     Slot,
     Map<BlockRootHex, Map<DataRootHex, AggregateFast>>
-    >(() => new Map<BlockRootHex, Map<DataRootHex, AggregateFast>>());
+  >(() => new Map<BlockRootHex, Map<DataRootHex, AggregateFast>>());
   private lowestPermissibleSlot = 0;
 
   constructor(
@@ -57,7 +57,11 @@ export class PayloadAttestationPool {
     return count;
   }
 
-  add(message: PayloadAttestationMessage, payloadAttDataRootHex: RootHex, validatorCommitteeIndex: number): InsertOutcome {
+  add(
+    message: PayloadAttestationMessage,
+    payloadAttDataRootHex: RootHex,
+    validatorCommitteeIndex: number
+  ): InsertOutcome {
     const slot = message.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -81,7 +85,7 @@ export class PayloadAttestationPool {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
 
-    let aggregate = aggregateByDataRoot.get(payloadAttDataRootHex);
+    const aggregate = aggregateByDataRoot.get(payloadAttDataRootHex);
     if (aggregate) {
       // Aggregate msg into aggregate
       return aggregateMessageInto(message, validatorCommitteeIndex, aggregate);
@@ -95,14 +99,13 @@ export class PayloadAttestationPool {
   /**
    * Get payload attestations to be included in a block.
    * Pick the top `maxAttestation` number of attestations with the most votes
-   * 
+   *
    */
   getPayloadAttesttationsForBlock(
     beaconBlockRoot: BlockRootHex,
     slot: Slot,
     maxAttestation: number
   ): PayloadAttestation[] {
-
     const aggregateByDataRootByBlockRoot = this.aggregateByDataRootByBlockRootBySlot.get(slot);
 
     if (!aggregateByDataRootByBlockRoot) {
@@ -128,7 +131,6 @@ export class PayloadAttestationPool {
     pruneBySlot(this.aggregateByDataRootByBlockRootBySlot, clockSlot, SLOTS_RETAINED);
     this.lowestPermissibleSlot = clockSlot;
   }
-
 }
 
 function messageToAggregate(message: PayloadAttestationMessage, validatorCommitteeIndex: number): AggregateFast {
@@ -136,22 +138,21 @@ function messageToAggregate(message: PayloadAttestationMessage, validatorCommitt
     aggregationBits: BitArray.fromSingleBit(PTC_SIZE, validatorCommitteeIndex),
     data: message.data,
     signature: signatureFromBytesNoCheck(message.signature),
-  }
+  };
 }
 
 function aggregateMessageInto(
   message: PayloadAttestationMessage,
   validatorCommitteeIndex: number,
-  aggregate: AggregateFast,
+  aggregate: AggregateFast
 ): InsertOutcome {
-
   if (aggregate.aggregationBits.get(validatorCommitteeIndex) === true) {
     return InsertOutcome.AlreadyKnown;
   }
 
   aggregate.aggregationBits.set(validatorCommitteeIndex, true);
   aggregate.signature = aggregateSignatures([aggregate.signature, signatureFromBytesNoCheck(message.signature)]);
-  
+
   return InsertOutcome.Aggregated;
 }
 

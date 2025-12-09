@@ -1,33 +1,37 @@
-import {gloas, RootHex, ssz} from "@lodestar/types";
+import {
+  CachedBeaconStateGloas,
+  computeEpochAtSlot,
+  createSingleSignatureSetFromComponents,
+  getPayloadAttestationDataSigningRoot,
+} from "@lodestar/state-transition";
+import {RootHex, gloas, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import { toRootHex } from "@lodestar/utils";
-import { CachedBeaconStateGloas, computeEpochAtSlot, createSingleSignatureSetFromComponents, getPayloadAttestationDataSigningRoot } from "@lodestar/state-transition";
 
 export type PayloadAttestationValidationResult = {
-  attDataRootHex: RootHex,
-  validatorCommitteeIndex: number,
-}
+  attDataRootHex: RootHex;
+  validatorCommitteeIndex: number;
+};
 
 export async function validateApiPayloadAttestationMessage(
   chain: IBeaconChain,
-  payloadAttestationMessage: gloas.PayloadAttestationMessage,
+  payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
   return validatePayloadAttestationMessage(chain, payloadAttestationMessage);
 }
 
 export async function validateGossipPayloadAttestationMessage(
   chain: IBeaconChain,
-  payloadAttestationMessage: gloas.PayloadAttestationMessage,
+  payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
   return validatePayloadAttestationMessage(chain, payloadAttestationMessage);
 }
 
 async function validatePayloadAttestationMessage(
   chain: IBeaconChain,
-  payloadAttestationMessage: gloas.PayloadAttestationMessage,
+  payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
-
   const {data, validatorIndex} = payloadAttestationMessage;
   const epoch = computeEpochAtSlot(data.slot);
 
@@ -53,13 +57,12 @@ async function validatePayloadAttestationMessage(
     });
   }
 
-
   // [IGNORE] The message's block `data.beacon_block_root` has been seen (via
   //   gossip or non-gossip sources) (a client MAY queue attestation for processing
   //   once the block is retrieved. Note a client might want to request payload
   //   after).
   const block = chain.forkChoice.getBlock(data.beaconBlockRoot);
-  if (block === null ) {
+  if (block === null) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.UNKNWON_BLOCK_ROOT,
       blockRoot: toRootHex(data.beaconBlockRoot),
@@ -90,8 +93,8 @@ async function validatePayloadAttestationMessage(
   const signatureSet = createSingleSignatureSetFromComponents(
     chain.index2pubkey[validatorIndex],
     getPayloadAttestationDataSigningRoot(state, data),
-    payloadAttestationMessage.signature,
-  )
+    payloadAttestationMessage.signature
+  );
 
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
@@ -105,5 +108,5 @@ async function validatePayloadAttestationMessage(
   return {
     attDataRootHex: toRootHex(ssz.gloas.PayloadAttestationData.hashTreeRoot(data)),
     validatorCommitteeIndex,
-  }
+  };
 }

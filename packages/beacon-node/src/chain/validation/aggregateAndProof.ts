@@ -79,12 +79,12 @@ async function validateAggregateAndProof(
     }
     // [REJECT] `aggregate.data.index == 0` if `block.slot == aggregate.data.slot`.
     const block = chain.forkChoice.getBlock(attData.beaconBlockRoot);
-    
+
     // If block is unknown, we don't handle it here. It will throw error later on at `verifyHeadBlockAndTargetRoot()`
-    if (block !== null) {
-      if (block.slot === attData.slot && attData.index !== 0) {
-        throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.PREMATURELY_INDICATE_PAYLOAD_PRESENT})
-      }
+    if (block !== null && block.slot === attData.slot && attData.index !== 0) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.PREMATURELY_INDICATE_PAYLOAD_PRESENT,
+      });
     }
 
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)

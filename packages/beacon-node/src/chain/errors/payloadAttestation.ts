@@ -1,4 +1,4 @@
-import { RootHex, Slot, ValidatorIndex } from "@lodestar/types";
+import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.ts";
 
 export enum PayloadAttestationErrorCode {
@@ -11,7 +11,12 @@ export enum PayloadAttestationErrorCode {
 }
 export type PayloadAttestationErrorType =
   | {code: PayloadAttestationErrorCode.NOT_CURRENT_SLOT; currentSlot: Slot; slot: Slot}
-  | {code: PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN; validatorIndex: ValidatorIndex; slot: Slot; blockRoot: RootHex}
+  | {
+      code: PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN;
+      validatorIndex: ValidatorIndex;
+      slot: Slot;
+      blockRoot: RootHex;
+    }
   | {code: PayloadAttestationErrorCode.UNKNWON_BLOCK_ROOT; blockRoot: RootHex}
   | {code: PayloadAttestationErrorCode.INVALID_BLOCK; blockRoot: RootHex}
   | {code: PayloadAttestationErrorCode.INVALID_ATTESTER; attesterIndex: ValidatorIndex}

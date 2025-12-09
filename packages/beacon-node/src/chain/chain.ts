@@ -87,9 +87,9 @@ import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncC
 import {
   SeenAggregators,
   SeenAttesters,
-  SeenPayloadAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
+  SeenPayloadAttesters,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";

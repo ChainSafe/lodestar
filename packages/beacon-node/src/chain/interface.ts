@@ -44,7 +44,13 @@ import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {AttestationPool, OpPool, PayloadAttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
+import {
+  AttestationPool,
+  OpPool,
+  PayloadAttestationPool,
+  SyncCommitteeMessagePool,
+  SyncContributionAndProofPool,
+} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -55,9 +61,9 @@ import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {
   SeenAggregators,
   SeenAttesters,
-  SeenPayloadAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
+  SeenPayloadAttesters,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";

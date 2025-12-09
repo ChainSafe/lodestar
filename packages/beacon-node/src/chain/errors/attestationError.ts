@@ -146,7 +146,7 @@ export enum AttestationErrorCode {
   /**
    * Gloas: Current slot attestation is marking payload as present
    */
-  PREMATURELY_INDICATE_PAYLOAD_PRESENT = "ATTESTATION_ERROR_PREMATURELY_INDICATE_PAYLOAD_PRESENT"
+  PREMATURELY_INDICATE_PAYLOAD_PRESENT = "ATTESTATION_ERROR_PREMATURELY_INDICATE_PAYLOAD_PRESENT",
 }
 
 export type AttestationErrorType =

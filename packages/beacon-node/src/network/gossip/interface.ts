@@ -15,6 +15,7 @@ import {
   capella,
   deneb,
   fulu,
+  gloas,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -139,9 +140,7 @@ export type GossipFnByType = {
   [GossipType.payload_attestation_message]: (
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ) => Promise<void> | void;
-  [GossipType.execution_payload_bid]: (
-    executionPayloadBid: gloas.SignedExecutionPayloadBid
-  ) => Promise<void> | void;
+  [GossipType.execution_payload_bid]: (executionPayloadBid: gloas.SignedExecutionPayloadBid) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];

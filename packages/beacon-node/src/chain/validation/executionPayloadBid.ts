@@ -1,29 +1,35 @@
+import {
+  CachedBeaconStateGloas,
+  createSingleSignatureSetFromComponents,
+  getCurrentEpoch,
+  getExecutionPayloadBidSigningRoot,
+  hasBuilderWithdrawalCredential,
+  isActiveValidator,
+} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import { toRootHex } from "@lodestar/utils";
-import { RegenCaller } from "../regen/index.js";
-import { CachedBeaconStateGloas, createSingleSignatureSetFromComponents, getCurrentEpoch, getExecutionPayloadBidSigningRoot, hasBuilderWithdrawalCredential, isActiveValidator } from "@lodestar/state-transition";
+import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
-  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<void> {
   return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
 }
 
 export async function validateGossipExecutionPayloadBid(
   chain: IBeaconChain,
-  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<void> {
   return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
 }
 
 async function validateExecutionPayloadBid(
   chain: IBeaconChain,
-  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<void> {
-
   const bid = signedExecutionPayloadBid.message;
   const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipExecutionPayloadBid);
 
@@ -62,7 +68,7 @@ async function validateExecutionPayloadBid(
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon
   // block in fork choice.
   const block = chain.forkChoice.getBlock(bid.parentBlockRoot);
-  if (block === null ) {
+  if (block === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNWON_BLOCK_ROOT,
       parentBlockRoot: toRootHex(bid.parentBlockRoot),
@@ -83,7 +89,7 @@ async function validateExecutionPayloadBid(
   const signatureSet = createSingleSignatureSetFromComponents(
     chain.index2pubkey[bid.builderIndex],
     getExecutionPayloadBidSigningRoot(state as CachedBeaconStateGloas, bid),
-    signedExecutionPayloadBid.signature,
+    signedExecutionPayloadBid.signature
   );
 
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {

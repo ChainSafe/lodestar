@@ -1139,7 +1139,7 @@ export function createLodestarMetrics(
           name: "lodestar_oppool_payload_attestation_pool_get_payload_attestations_cache_misses_total",
           help: "Total number of getPayloadAttesttationsForBlock calls with no aggregate for slot and payload attestation data root",
         }),
-      }
+      },
     },
 
     chain: {

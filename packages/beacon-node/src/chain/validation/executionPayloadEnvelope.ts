@@ -1,10 +1,8 @@
-import {
-  computeStartSlotAtEpoch,
-} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import { toRootHex } from "@lodestar/utils";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
@@ -22,7 +20,7 @@ export async function validateGossipExecutionPayloadEnvelope(
 
 async function validateExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  exeuctionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  exeuctionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   const envelope = exeuctionPayloadEnvelope.message;
   const _payload = envelope.payload;
@@ -32,7 +30,7 @@ async function validateExecutionPayloadEnvelope(
   //  the block is retrieved).
   // TODO GLOAS: Need to review this
   const block = chain.forkChoice.getBlock(envelope.beaconBlockRoot);
-  if (block === null ) {
+  if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,
       blockRoot: toRootHex(envelope.beaconBlockRoot),
@@ -42,7 +40,6 @@ async function validateExecutionPayloadEnvelope(
   //  [IGNORE] The node has not seen another valid
   //  `SignedExecutionPayloadEnvelope` for this block root from this builder.
   // TODO GLOAS: implement this
-
 
   //  [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `envelope.slot >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
   const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
@@ -71,7 +68,6 @@ async function validateExecutionPayloadEnvelope(
   // [REJECT] `payload.block_hash == bid.block_hash`
   // TODO GLOAS: need to get bid from somewhere
 
-  
   // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
   // TODO GLOAS: implement this
 }
