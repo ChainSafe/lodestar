@@ -5,9 +5,7 @@ concurrency:
   group: cd-publish-dev
 
 on:
-  push:
-    branches:
-      - unstable
+  workflow_call:
 
 permissions:
   contents: write # Required for OIDC

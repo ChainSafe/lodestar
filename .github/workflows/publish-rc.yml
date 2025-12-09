@@ -5,9 +5,7 @@ concurrency: cd-publish-rc
 
 # See for rationale https://github.com/ChainSafe/lodestar/blob/unstable/RELEASE.md
 on:
-  push:
-    tags:
-      - v*
+  workflow_call:
 
 permissions:
   contents: write # Required for OIDC
