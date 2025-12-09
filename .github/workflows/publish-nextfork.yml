@@ -65,7 +65,7 @@ jobs:
         # This "temp" commit doesn't change the actually release commit which is captured above.
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
-          pnpm exec lerna version ${{ steps.version.outputs.version }} \
+          yarn lerna version ${{ steps.version.outputs.version }} \
           --force-publish \
           --exact \
           --yes \
@@ -100,7 +100,7 @@ jobs:
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          pnpm exec lerna publish from-package \
+          yarn lerna publish from-package \
           --yes \
           --no-verify-access \
           --dist-tag next \

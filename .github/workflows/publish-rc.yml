@@ -96,7 +96,7 @@ jobs:
         # This "temp" commit doesn't change the actually release commit which is captured above.
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
-          pnpm exec lerna version ${{ needs.tag.outputs.version }} \
+          yarn lerna version ${{ needs.tag.outputs.version }} \
           --force-publish \
           --exact \
           --yes \
