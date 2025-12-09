@@ -80,6 +80,7 @@
     "wait-port": "^1.1.0"
   },
   "resolutions": {
+    "@parcel/watcher": "^2.5.1",
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
     "elliptic": ">=6.6.1"
