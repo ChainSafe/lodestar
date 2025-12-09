@@ -123,7 +123,7 @@ export class PayloadAttestationPool {
     return Array.from(aggregateByDataRoot.values())
       .slice()
       .sort((a, b) => b.aggregationBits.getTrueBitIndexes().length - a.aggregationBits.getTrueBitIndexes().length)
-      .slice(maxAttestation)
+      .slice(0, maxAttestation)
       .map(fastToPayloadAttestation);
   }
 
