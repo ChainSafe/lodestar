@@ -2,12 +2,14 @@ import {DOMAIN_SYNC_COMMITTEE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   ISignatureSet,
+  Index2PubkeyCache,
   SignatureSetType,
   computeSigningRoot,
 } from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
 
 export function getSyncCommitteeSignatureSet(
+  index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   syncCommittee: altair.SyncCommitteeMessage
 ): ISignatureSet {
@@ -15,7 +17,7 @@ export function getSyncCommitteeSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    pubkey: state.epochCtx.index2pubkey[syncCommittee.validatorIndex],
+    pubkey: index2pubkey[syncCommittee.validatorIndex],
     signingRoot: computeSigningRoot(ssz.Root, syncCommittee.beaconBlockRoot, domain),
     signature: syncCommittee.signature,
   };

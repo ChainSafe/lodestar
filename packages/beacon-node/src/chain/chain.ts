@@ -757,7 +757,7 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
+    const proposerPubKey = this.index2pubkey[proposerIndex].toBytes();
 
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
@@ -1372,6 +1372,6 @@ export class BeaconChain implements IBeaconChain {
 
     preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
-    return computeSyncCommitteeRewards(block, preState.clone(), validatorIds);
+    return computeSyncCommitteeRewards(this.index2pubkey, block, preState.clone(), validatorIds);
   }
 }
