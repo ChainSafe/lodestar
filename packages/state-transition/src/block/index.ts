@@ -1,14 +1,22 @@
-import {ForkSeq} from "@lodestar/params";
+import {ForkPostGloas, ForkSeq} from "@lodestar/params";
 import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
+  CachedBeaconStateGloas,
+} from "../types.js";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {BlockExternalData, DataAvailabilityStatus} from "./externalData.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
+import {processExecutionPayloadBid} from "./processExecutionPayloadBid.ts";
+import {processExecutionPayloadEnvelope} from "./processExecutionPayloadEnvelope.ts";
 import {processOperations} from "./processOperations.js";
+import {processPayloadAttestation} from "./processPayloadAttestation.ts";
 import {processRandao} from "./processRandao.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processWithdrawals} from "./processWithdrawals.js";
@@ -22,6 +30,9 @@ export {
   processEth1Data,
   processSyncAggregate,
   processWithdrawals,
+  processExecutionPayloadBid,
+  processPayloadAttestation,
+  processExecutionPayloadEnvelope,
 };
 
 export * from "./externalData.js";
@@ -41,21 +52,31 @@ export function processBlock(
 
   processBlockHeader(state, block);
 
+  if (fork >= ForkSeq.gloas) {
+    // After gloas, processWithdrawals does not take a payload parameter
+    processWithdrawals(fork, state as CachedBeaconStateGloas);
+  } else if (fork >= ForkSeq.capella) {
+    const fullOrBlindedPayload = getFullOrBlindedPayload(block);
+    processWithdrawals(
+      fork,
+      state as CachedBeaconStateCapella,
+      fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
+    );
+  }
+
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
-  if (fork >= ForkSeq.bellatrix && isExecutionEnabled(state as CachedBeaconStateBellatrix, block)) {
-    const fullOrBlindedPayload = getFullOrBlindedPayload(block);
-    // TODO Deneb: Allow to disable withdrawals for interop testing
-    // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals
-    if (fork >= ForkSeq.capella) {
-      processWithdrawals(
-        fork,
-        state as CachedBeaconStateCapella,
-        fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
-      );
-    }
-
+  // TODO GLOAS: We call processExecutionPayload somewhere else post-gloas
+  if (
+    fork >= ForkSeq.bellatrix &&
+    fork < ForkSeq.gloas &&
+    isExecutionEnabled(state as CachedBeaconStateBellatrix, block)
+  ) {
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    processExecutionPayloadBid(state as CachedBeaconStateGloas, block as BeaconBlock<ForkPostGloas>);
   }
 
   processRandao(state, block, verifySignatures);

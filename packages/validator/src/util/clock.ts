@@ -6,6 +6,10 @@ import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
+export type ClockOptions = {
+  skipSlots?: boolean;
+};
+
 export interface IClock {
   readonly genesisTime: number;
   readonly secondsPerSlot: number;
@@ -34,7 +38,11 @@ export class Clock implements IClock {
   private readonly logger: Logger;
   private readonly fns: {timeItem: TimeItem; fn: RunEveryFn}[] = [];
 
-  constructor(config: ChainForkConfig, logger: Logger, opts: {genesisTime: number}) {
+  constructor(
+    config: ChainForkConfig,
+    logger: Logger,
+    private readonly opts: {genesisTime: number} & ClockOptions
+  ) {
     this.genesisTime = opts.genesisTime;
     this.secondsPerSlot = config.SLOT_DURATION_MS / 1000;
     this.config = config;
@@ -98,9 +106,14 @@ export class Clock implements IClock {
     let slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
     while (!signal.aborted) {
       // Must catch fn() to ensure `sleep()` is awaited both for resolve and reject
-      await fn(slotOrEpoch, signal).catch((e: Error) => {
+      const task = fn(slotOrEpoch, signal).catch((e: Error) => {
         if (!isErrorAborted(e)) this.logger.error("Error on runEvery fn", {}, e);
       });
+
+      if (timeItem !== TimeItem.Slot || this.opts.skipSlots !== false) {
+        // await response to only continue with next task if current task finished within slot
+        await task;
+      }
 
       try {
         await sleep(this.timeUntilNext(timeItem), signal);

@@ -6,6 +6,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -69,7 +70,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus} = fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus, indexedAttestations} =
+    fullyVerifiedBlock;
   const block = blockInput.getBlock();
   const source = blockInput.getBlockSource();
   const {slot: blockSlot} = block.message;
@@ -137,10 +139,10 @@ export async function importBlock(
 
     const addAttestation = fork >= ForkSeq.electra ? addAttestationPostElectra : addAttestationPreElectra;
 
-    for (const attestation of attestations) {
+    for (let i = 0; i < attestations.length; i++) {
+      const attestation = attestations[i];
       try {
-        // TODO Electra: figure out how to reuse the attesting indices computed from state transition
-        const indexedAttestation = postState.epochCtx.getIndexedAttestation(fork, attestation);
+        const indexedAttestation = indexedAttestations[i];
         const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
@@ -394,7 +396,7 @@ export async function importBlock(
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
      * zero block hash (pre TTD)
      */
-    const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine

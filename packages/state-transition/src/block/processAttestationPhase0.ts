@@ -86,7 +86,11 @@ export function validateAttestation(fork: ForkSeq, state: CachedBeaconStateAllFo
   }
 
   if (fork >= ForkSeq.electra) {
-    assert.equal(data.index, 0, `AttestationData.index must be zero: index=${data.index}`);
+    if (fork >= ForkSeq.gloas) {
+      assert.lt(data.index, 2, `AttestationData.index must be 0 or 1: index=${data.index}`);
+    } else {
+      assert.equal(data.index, 0, `AttestationData.index must be 0: index=${data.index}`);
+    }
     const attestationElectra = attestation as electra.Attestation;
     const committeeIndices = attestationElectra.committeeBits.getTrueBitIndexes();
 

@@ -72,7 +72,7 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus} =
+    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock} =
       await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
@@ -94,6 +94,7 @@ export async function processBlocks(
         // start supporting optimistic syncing/processing
         dataAvailabilityStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
+        indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
       })

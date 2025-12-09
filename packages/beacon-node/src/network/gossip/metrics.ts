@@ -67,5 +67,17 @@ export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
         labelNames: ["subnet", "boundary"],
       }),
     },
+    dataTransform: {
+      inbound: register.counter<{type: GossipType}>({
+        name: "lodestar_gossip_data_transform_inbound_total",
+        help: "Total number of inbound data transforms by gossip type",
+        labelNames: ["type"],
+      }),
+      outbound: register.counter<{type: GossipType}>({
+        name: "lodestar_gossip_data_transform_outbound_total",
+        help: "Total number of outbound data transforms by gossip type",
+        labelNames: ["type"],
+      }),
+    },
   };
 }

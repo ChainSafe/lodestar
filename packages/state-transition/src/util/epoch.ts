@@ -1,6 +1,6 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconState, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
-import {CachedBeaconStateElectra} from "../types.js";
+import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "./validator.js";
 
 /**
@@ -41,7 +41,10 @@ export function computeActivationExitEpoch(epoch: Epoch): Epoch {
   return epoch + 1 + MAX_SEED_LOOKAHEAD;
 }
 
-export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, exitBalance: Gwei): number {
+export function computeExitEpochAndUpdateChurn(
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
+  exitBalance: Gwei
+): number {
   let earliestExitEpoch = Math.max(state.earliestExitEpoch, computeActivationExitEpoch(state.epochCtx.epoch));
   const perEpochChurn = getActivationExitChurnLimit(state.epochCtx);
 
@@ -65,7 +68,7 @@ export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, 
 }
 
 export function computeConsolidationEpochAndUpdateChurn(
-  state: CachedBeaconStateElectra,
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   consolidationBalance: Gwei
 ): number {
   let earliestConsolidationEpoch = Math.max(
