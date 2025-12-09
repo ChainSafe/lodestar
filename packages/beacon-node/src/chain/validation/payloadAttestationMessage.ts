@@ -1,7 +1,8 @@
 import {gloas} from "@lodestar/types";
-import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.ts";
-import {IBeaconChain} from "../index.ts";
+import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
+import {IBeaconChain} from "../index.js";
 import { toRootHex } from "@lodestar/utils";
+import { CachedBeaconStateGloas, computeEpochAtSlot, createSingleSignatureSetFromComponents, getIndexedPayloadAttestationSignatureSet, getPayloadAttestationDataSigningRoot } from "@lodestar/state-transition";
 
 export async function validateApiPayloadAttestationMessage(
   chain: IBeaconChain,
@@ -22,7 +23,8 @@ async function validatePayloadAttestationMessage(
   payloadAttestationMessage: gloas.PayloadAttestationMessage,
 ): Promise<void> {
 
-  const data = payloadAttestationMessage.data;
+  const {data, validatorIndex} = payloadAttestationMessage;
+  const epoch = computeEpochAtSlot(data.slot);
 
   // [IGNORE] The message's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance), i.e. `data.slot == current_slot`.
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(data.slot)) {
@@ -36,7 +38,15 @@ async function validatePayloadAttestationMessage(
   // [IGNORE] The `payload_attestation_message` is the first valid message
   //   received from the validator with index
   //   `payload_attestation_message.validate_index`.
-  // TODO GLOAS: implement this
+  // A single validator can participate PTC at most once per epoch
+  if (chain.seenPayloadAttesters.isKnown(epoch, validatorIndex)) {
+    throw new PayloadAttestationError(GossipAction.IGNORE, {
+      code: PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN,
+      validatorIndex,
+      slot: data.slot,
+      blockRoot: toRootHex(data.beaconBlockRoot),
+    });
+  }
 
 
   // [IGNORE] The message's block `data.beacon_block_root` has been seen (via
@@ -51,15 +61,36 @@ async function validatePayloadAttestationMessage(
     });
   }
 
+  const state = chain.getHeadState() as CachedBeaconStateGloas;
+
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this
 
   // [REJECT] The message's validator index is within the payload committee in
   //   `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
   //   processing the block up to the current slot as determined by the fork choice.
-  // TODO GLOAS: implement this
+  const ptc = state.epochCtx.getPayloadTimelinessCommittee(data.slot);
+  if (!ptc.includes(validatorIndex)) {
+    throw new PayloadAttestationError(GossipAction.REJECT, {
+      code: PayloadAttestationErrorCode.INVALID_ATTESTER,
+      attesterIndex: validatorIndex,
+    });
+  }
 
   // [REJECT] `payload_attestation_message.signature` is valid with respect to
   //   the validator's public key.
-  // TODO GLOAS: implement this
+  const signatureSet = createSingleSignatureSetFromComponents(
+    chain.index2pubkey[validatorIndex],
+    getPayloadAttestationDataSigningRoot(state, data),
+    payloadAttestationMessage.signature,
+  )
+
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+    throw new PayloadAttestationError(GossipAction.REJECT, {
+      code: PayloadAttestationErrorCode.INVALID_SIGNATURE,
+    });
+  }
+
+  // Valid
+  chain.seenPayloadAttesters.add(epoch, validatorIndex);
 }

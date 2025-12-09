@@ -55,6 +55,7 @@ import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {
   SeenAggregators,
   SeenAttesters,
+  SeenPayloadAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
@@ -123,6 +124,7 @@ export interface IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
   readonly seenAggregators: SeenAggregators;
+  readonly seenPayloadAttesters: SeenPayloadAttesters;
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;

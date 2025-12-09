@@ -1,7 +1,7 @@
 import {DOMAIN_PTC_ATTESTER} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {CachedBeaconStateGloas} from "../types.ts";
-import {ISignatureSet, computeSigningRoot, createAggregateSignatureSetFromComponents} from "../util/index.ts";
+import {CachedBeaconStateGloas} from "../types.js";
+import {ISignatureSet, computeSigningRoot, createAggregateSignatureSetFromComponents} from "../util/index.js";
 
 export function getIndexedPayloadAttestationSignatureSet(
   state: CachedBeaconStateGloas,

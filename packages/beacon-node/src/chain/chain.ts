@@ -86,6 +86,7 @@ import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncC
 import {
   SeenAggregators,
   SeenAttesters,
+  SeenPayloadAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
@@ -149,6 +150,7 @@ export class BeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
@@ -479,6 +481,8 @@ export class BeaconChain implements IBeaconChain {
       this.seenAttesters.isKnown(epoch, index) ||
       //   seenAggregators = single aggregator index, not participants of the aggregate
       this.seenAggregators.isKnown(epoch, index) ||
+      //  seenPayloadAttesters = single signer of payload attestation message
+      this.seenPayloadAttesters.isKnown(epoch, index) ||
       //   seenBlockProposers = single block proposer
       this.seenBlockProposers.seenAtEpoch(epoch, index)
     );
@@ -1174,6 +1178,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);
+    this.seenPayloadAttesters.prune(epoch);
     this.seenAggregatedAttestations.prune(epoch);
     this.seenBlockAttesters.prune(epoch);
     this.beaconProposerCache.prune(epoch);

@@ -80,7 +80,9 @@ import {sszDeserialize} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
-import { validateGossipExecutionPayloadEnvelope } from "../../chain/validation/executionPayloadEnvelope.ts";
+import { validateGossipExecutionPayloadEnvelope } from "../../chain/validation/executionPayloadEnvelope.js";
+import { validateGossipPayloadAttestationMessage } from "../../chain/validation/payloadAttestationMessage.js";
+import { validateGossipExecutionPayloadBid } from "../../chain/validation/executionPayloadBid.js";
 
 /**
  * Gossip handler options as part of network options
