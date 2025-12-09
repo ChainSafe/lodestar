@@ -258,7 +258,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     //    section of the EIP. Additionally, if this validation fails, client software MUST NOT update the forkchoice
     //    state and MUST NOT begin a payload build process.
     //
-    // > TODO
+    // > N/A: All networks have completed the merge transition
 
     // 4. Before updating the forkchoice state, client software MUST ensure the validity of the payload referenced by
     //    forkchoiceState.headBlockHash, and MAY validate the payload while processing the call. The validation process

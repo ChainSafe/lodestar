@@ -652,16 +652,6 @@ export class ForkChoice implements IForkChoice {
       this.proposerBoostRoot = blockRootHex;
     }
 
-    // As per specs, we should be validating here the terminal conditions of
-    // the PoW if this were a merge transition block.
-    // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
-    //
-    // However this check has been moved to the `verifyBlockStateTransition` in
-    // `packages/beacon-node/src/chain/blocks/verifyBlock.ts` as:
-    //
-    //  1. Its prudent to fail fast and not try importing a block in forkChoice.
-    //  2. Also the data to run such a validation is readily available there.
-
     const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
     const finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
