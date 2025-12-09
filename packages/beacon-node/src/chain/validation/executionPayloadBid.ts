@@ -70,7 +70,7 @@ async function validateExecutionPayloadBid(
   const block = chain.forkChoice.getBlock(bid.parentBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.UNKNWON_BLOCK_ROOT,
+      code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
       parentBlockRoot: toRootHex(bid.parentBlockRoot),
     });
   }

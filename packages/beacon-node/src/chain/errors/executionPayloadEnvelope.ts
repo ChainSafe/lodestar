@@ -6,7 +6,7 @@ export enum ExecutionPayloadEnvelopeErrorCode {
   BLOCK_ROOT_UNKNOWN = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_ROOT_UNKNOWN",
   ENVELOPE_ALREADY_KNOWN = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_ALREADY_KNOWN",
   INVALID_BLOCK = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_BLOCK",
-  SLOT_MISTACH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_SLOT_MISTACH",
+  SLOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_SLOT_MISMATCH",
   BUILDER_INDEX_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BUILDER_INDEX_MISMATCH",
   BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_HASH_MISMATCH",
   INVALID_SIGNATURE = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_SIGNATURE",
@@ -21,7 +21,7 @@ export type ExecutionPayloadEnvelopeErrorType =
       builderIndex: ValidatorIndex;
     }
   | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK; blockRoot: RootHex}
-  | {code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISTACH; envelopeSlot: Slot; blockSlot: Slot}
+  | {code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH; envelopeSlot: Slot; blockSlot: Slot}
   | {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH;
       envelopeBuilderIndex: ValidatorIndex;

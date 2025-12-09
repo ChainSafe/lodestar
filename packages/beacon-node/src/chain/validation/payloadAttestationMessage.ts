@@ -64,7 +64,7 @@ async function validatePayloadAttestationMessage(
   const block = chain.forkChoice.getBlock(data.beaconBlockRoot);
   if (block === null) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
-      code: PayloadAttestationErrorCode.UNKNWON_BLOCK_ROOT,
+      code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
       blockRoot: toRootHex(data.beaconBlockRoot),
     });
   }

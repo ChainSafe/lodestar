@@ -92,8 +92,7 @@ async function validateAggregateAndProof(
     if (attIndex === null) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
     }
-  }
-  if (ForkSeq[fork] >= ForkSeq.electra) {
+  } else if (ForkSeq[fork] >= ForkSeq.electra) {
     attIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
     if (attIndex === null) {

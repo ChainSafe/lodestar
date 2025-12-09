@@ -20,10 +20,9 @@ export async function validateGossipExecutionPayloadEnvelope(
 
 async function validateExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  exeuctionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
-  const envelope = exeuctionPayloadEnvelope.message;
-  const _payload = envelope.payload;
+  const envelope = executionPayloadEnvelope.message;
 
   //  GLOAS: [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
   //  gossip or non-gossip sources) (a client MAY queue payload for processing once
@@ -58,7 +57,7 @@ async function validateExecutionPayloadEnvelope(
   // [REJECT] `block.slot` equals `envelope.slot`.
   if (block.slot !== envelope.slot) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISTACH,
+      code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
       envelopeSlot: envelope.slot,
       blockSlot: block.slot,
     });

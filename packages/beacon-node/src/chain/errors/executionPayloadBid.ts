@@ -8,7 +8,7 @@ export enum ExecutionPayloadBidErrorCode {
   BID_TOO_LOW = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_LOW",
   BID_TOO_HIGH = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_HIGH",
   UNKNOWN_PARENT_BLOCK_HASH = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_PARENT_BLOCK_HASH",
-  UNKNWON_BLOCK_ROOT = "EXECUTION_PAYLOAD_BID_ERROR_UNKNWON_BLOCK_ROOT",
+  UNKNOWN_BLOCK_ROOT = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_BLOCK_ROOT",
   INVALID_SLOT = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_SLOT",
   INVALID_SIGNATURE = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_SIGNATURE",
 }
@@ -26,7 +26,7 @@ export type ExecutionPayloadBidErrorType =
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW; bidValue: bigint; currentHighestBid: bigint}
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH; bidValue: bigint; builderBalance: bigint}
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH; parentBlockHash: RootHex}
-  | {code: ExecutionPayloadBidErrorCode.UNKNWON_BLOCK_ROOT; parentBlockRoot: RootHex}
+  | {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT; parentBlockRoot: RootHex}
   | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; slot: Slot}
   | {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE};
 
