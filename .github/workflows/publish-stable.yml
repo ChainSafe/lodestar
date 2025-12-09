@@ -9,13 +9,18 @@ on:
     tags:
       - v*
 
+permissions:
+  contents: write # Required for OIDC
+  id-token: write # Required to create a Github release
+  pull-requests: write # Required to add tags to pull requests
+
 jobs:
   tag:
     name: Check tag
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -91,15 +96,8 @@ jobs:
           name: Release ${{ needs.tag.outputs.tag }}
           prerelease: false
 
-      # From https://github.com/lerna/lerna/issues/2404
-      - run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Publish to npm registry (release)
         run: yarn run release:publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # In case of failure
       - name: Rollback on failure

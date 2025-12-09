@@ -9,6 +9,11 @@ on:
     branches:
       - peerDAS # Nextfork branch
 
+permissions:
+  contents: write # Required for OIDC
+  id-token: write # Required to create a Github release
+  pull-requests: write # Required to add tags to pull requests
+
 env:
   NEXT_FORK: peerDAS
 
@@ -18,7 +23,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4
@@ -60,7 +65,7 @@ jobs:
         # This "temp" commit doesn't change the actually release commit which is captured above.
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
-          node_modules/.bin/lerna version ${{ steps.version.outputs.version }} \
+          pnpm exec lerna version ${{ steps.version.outputs.version }} \
           --force-publish \
           --exact \
           --yes \
@@ -95,15 +100,13 @@ jobs:
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          node_modules/.bin/lerna publish from-package \
+          pnpm exec lerna publish from-package \
           --yes \
           --no-verify-access \
           --dist-tag next \
           --no-git-reset \
           --force-publish \
           --exact
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     outputs:
       version: ${{ steps.version.outputs.version }}
 
