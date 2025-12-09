@@ -775,9 +775,9 @@
     "@chainsafe/swap-or-not-shuffle-win32-arm64-msvc" "1.2.1"
     "@chainsafe/swap-or-not-shuffle-win32-x64-msvc" "1.2.1"
 
-"@chainsafe/threads@^1.11.3", "@chainsafe/threads@file:./chainsafe-threads-1.11.3.tgz":
-  version "1.11.3"
-  resolved "file:./chainsafe-threads-1.11.3.tgz#a602e8c4a007ba14f1e8f523967cf996c6bd88b4"
+"@chainsafe/threads@^1.11.3", "@chainsafe/threads@file:./chainsafe-threads-1.11.4.tgz":
+  version "1.11.4"
+  resolved "file:./chainsafe-threads-1.11.4.tgz#f74f6abf004cd07f53634f2f814e84d2635b1acb"
   dependencies:
     callsites "^3.1.0"
     debug "^4.2.0"
