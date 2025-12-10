@@ -100,7 +100,6 @@ export async function verifyBlocksInEpoch(
         : Promise.resolve({
             execAborted: null,
             executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
-            executionTime: Date.now(),
           } as SegmentExecStatus);
 
     // Store indexed attestations for each block to avoid recomputing them during import

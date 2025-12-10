@@ -30,6 +30,7 @@ import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
+  ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
   MaybeValidExecutionStatus,
@@ -723,9 +724,7 @@ export class ForkChoice implements IForkChoice {
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
-    const isPostMerge = isExecutionBlockBodyType(block.body) && isExecutionStateType(state);
-
-    const protoBlock = {
+    const protoBlock: ProtoBlock = {
       slot: slot,
       blockRoot: blockRootHex,
       parentRoot: parentRootHex,
@@ -742,15 +741,19 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-      executionPayloadBlockHash: isPostMerge
-        ? toRootHex((block.body as {executionPayload: {blockHash: Uint8Array}}).executionPayload.blockHash)
-        : null,
-      executionPayloadNumber: isPostMerge
-        ? (block.body as {executionPayload: {blockNumber: number}}).executionPayload.blockNumber
-        : null,
-      executionStatus,
-      dataAvailabilityStatus,
-    } as ProtoBlock;
+      ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state)
+        ? {
+            executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
+            executionPayloadNumber: block.body.executionPayload.blockNumber,
+            executionStatus: this.getPostMergeExecStatus(executionStatus),
+            dataAvailabilityStatus,
+          }
+        : {
+            executionPayloadBlockHash: null,
+            executionStatus: this.getPreMergeExecStatus(executionStatus),
+            dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
+          }),
+    };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
 
@@ -1210,6 +1213,30 @@ export class ForkChoice implements IForkChoice {
     const fork = this.config.getForkName(slot);
     const proposerReorgCutoff = this.config.getProposerReorgCutoffMs(fork);
     return secFromSlot * 1000 <= proposerReorgCutoff;
+  }
+
+  private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
+    if (executionStatus !== ExecutionStatus.PreMerge)
+      throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
+    return executionStatus;
+  }
+
+  private getPreMergeDataStatus(dataAvailabilityStatus: DataAvailabilityStatus): DataAvailabilityStatus.PreData {
+    if (dataAvailabilityStatus !== DataAvailabilityStatus.PreData)
+      throw Error(
+        `Invalid pre-merge data status: expected: ${DataAvailabilityStatus.PreData}, got ${dataAvailabilityStatus}`
+      );
+    return dataAvailabilityStatus;
+  }
+
+  private getPostMergeExecStatus(
+    executionStatus: MaybeValidExecutionStatus
+  ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
+    if (executionStatus === ExecutionStatus.PreMerge)
+      throw Error(
+        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`
+      );
+    return executionStatus;
   }
 
   /**

@@ -18,9 +18,9 @@ export const NULL_VOTE_INDEX = 0xffffffff;
 export type VoteIndex = number;
 
 export enum ExecutionStatus {
-  PreMerge = "PreMerge",
   Valid = "Valid",
   Syncing = "Syncing",
+  PreMerge = "PreMerge",
   Invalid = "Invalid",
 }
 
@@ -37,27 +37,17 @@ export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
 export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
 
-/**
- * Extra metadata for execution-related data.
- *
- * Note: executionStatus uses full ExecutionStatus enum because blocks
- * can become Invalid through EL validation after being added as Valid/Syncing.
- *
- * For PreMerge blocks, executionPayloadBlockHash and executionPayloadNumber
- * will be null since there is no execution payload.
- */
 export type BlockExtraMeta =
-  | {
-      executionPayloadBlockHash: null;
-      executionPayloadNumber: null;
-      executionStatus: ExecutionStatus.PreMerge;
-      dataAvailabilityStatus: DataAvailabilityStatus;
-    }
   | {
       executionPayloadBlockHash: RootHex;
       executionPayloadNumber: UintNum64;
       executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
       dataAvailabilityStatus: DataAvailabilityStatus;
+    }
+  | {
+      executionPayloadBlockHash: null;
+      executionStatus: ExecutionStatus.PreMerge;
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData;
     };
 
 /**
@@ -103,7 +93,7 @@ export type ProtoBlock = BlockExtraMeta & {
 
 /**
  * A block root with additional metadata required to form a DAG
- * with vote weights and best blocks stored as metadata.
+ * with vote weights and best blocks stored as metadata
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;

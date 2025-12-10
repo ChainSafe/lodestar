@@ -259,8 +259,14 @@ function getSegmentErrorResponse(
     }
 
     // If there is no valid in the segment then we have to propagate invalid response
-    // in forkchoice as well if the parentBlock is also not the lvh
-    if (!lvhFound && parentBlock.executionPayloadBlockHash !== lvhResponse.latestValidExecHash) {
+    // in forkchoice as well if
+    //  - if the parentBlock is also not the lvh
+    //  - and parentBlock is not pre merge
+    if (
+      !lvhFound &&
+      parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
+      parentBlock.executionPayloadBlockHash !== lvhResponse.latestValidExecHash
+    ) {
       invalidSegmentLVH = {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,

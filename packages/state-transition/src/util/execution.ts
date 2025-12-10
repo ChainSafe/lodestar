@@ -2,7 +2,6 @@ import {ForkName, ForkPostBellatrix, ForkPreGloas, ForkSeq} from "@lodestar/para
 import {
   BeaconBlock,
   BeaconBlockBody,
-  BlindedBeaconBlock,
   BlindedBeaconBlockBody,
   ExecutionPayload,
   ExecutionPayloadHeader,
