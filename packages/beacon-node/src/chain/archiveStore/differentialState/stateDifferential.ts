@@ -91,7 +91,7 @@ export async function replayStateDifferentials(
 }
 
 export async function getStateDifferential(
-  modules: {db: IBeaconDb; metrics?: DifferentialStateRegenMetrics},
+  modules: {db: IBeaconDb; metrics?: DifferentialStateRegenMetrics | null},
   {slot}: {slot: Slot}
 ): Promise<BeaconStateDifferential | null> {
   const {db} = modules;

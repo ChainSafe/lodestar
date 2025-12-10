@@ -68,7 +68,7 @@ export function beaconStateBytesToSnapshot(
 }
 
 export async function getStateSnapshot(
-  modules: {db: IBeaconDb; metrics?: DifferentialStateRegenMetrics},
+  modules: {db: IBeaconDb; metrics?: DifferentialStateRegenMetrics | null},
   {slot, fallback}: {slot: Slot; fallback: boolean}
 ): Promise<BeaconStateSnapshot | null> {
   const {db} = modules;
