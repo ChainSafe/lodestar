@@ -25,6 +25,7 @@ jobs:
         !contains(github.ref_name, '-alpha')
       )
     uses: ./.github/workflows/publish-stable.yml
+    secrets: inherit
 
   publish-rc:
     if: |
@@ -34,11 +35,14 @@ jobs:
         contains(github.ref_name, '-alpha')
       )
     uses: ./.github/workflows/publish-rc.yml
+    secrets: inherit
 
   # publish-nextfork:
   #   if: github.ref == 'refs/heads/peerDAS'
   #   uses: ./.github/workflows/publish-next-fork.yml
+  # secrets: inherit
 
   publish-dev:
     if: github.ref == 'refs/heads/unstable'
     uses: ./.github/workflows/publish-dev.yml
+    secrets: inherit
