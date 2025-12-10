@@ -177,8 +177,6 @@ export const zeroProtoBlock: ProtoBlock = {
 
   timeliness: false,
 
-  executionPayloadBlockHash: ZERO_HASH_HEX,
-  executionPayloadNumber: 0,
-  executionStatus: ExecutionStatus.Valid,
+  ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 };

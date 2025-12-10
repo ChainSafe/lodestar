@@ -98,15 +98,6 @@ export const SignedBeaconBlock = new ContainerType(
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
-export const PowBlock = new ContainerType(
-  {
-    blockHash: Root,
-    parentHash: Root,
-    totalDifficulty: Uint256,
-  },
-  {typeName: "PowBlock", jsonCase: "eth2"}
-);
-
 // we don't reuse phase0.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
 export const BeaconState = new ContainerType(

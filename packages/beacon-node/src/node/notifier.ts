@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -169,12 +169,14 @@ function getHeadExecutionInfo(
 
   const executionStatusStr = headInfo.executionStatus.toLowerCase();
 
-  // Add execution status to notifier only if head is on/post bellatrix and has execution payload
-  if (isExecutionCachedStateType(headState) && headInfo.executionPayloadBlockHash !== null) {
+  // Add execution status to notifier only if head is on/post bellatrix
+  if (isExecutionCachedStateType(headState)) {
+    const executionPayloadHashInfo =
+      headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
+    const executionPayloadNumberInfo =
+      headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
     return [
-      `exec-block: ${executionStatusStr}(${headInfo.executionPayloadNumber} ${prettyBytesShort(
-        headInfo.executionPayloadBlockHash
-      )})`,
+      `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(executionPayloadHashInfo)})`,
     ];
   }
 

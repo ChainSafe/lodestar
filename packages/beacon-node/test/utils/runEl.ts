@@ -9,12 +9,7 @@ import {shell} from "../sim/shell.js";
 
 let txRpcId = 1;
 
-// Note: PreMerge mode removed since all networks are post-merge
-export enum ELStartMode {
-  PostMerge = "post-merge",
-}
-
-export type ELSetupConfig = {mode: ELStartMode; elScriptDir: string; elBinaryDir: string; genesisTemplate?: string};
+export type ELSetupConfig = {elScriptDir: string; elBinaryDir: string; genesisTemplate?: string};
 export type ELRunOptions = {ttd: bigint; dataPath: string; jwtSecretHex: string; enginePort: number; ethPort: number};
 export type ELClient = {
   genesisBlockHash: string;
@@ -26,7 +21,7 @@ export type ELClient = {
 };
 
 /**
- * A util function to start an EL in a "pre-merge" or "post-merge" mode using an `elScriptDir` setup
+ * A util function to start an EL using an `elScriptDir` setup
  * scripts folder  in packages/beacon-node/test/scripts/el-interop.
  *
  * Returns an ELRunConfig after starting the EL, which can be used to initialize the genesis
@@ -34,11 +29,11 @@ export type ELClient = {
  */
 
 export async function runEL(
-  {mode, elScriptDir, elBinaryDir, genesisTemplate: template}: ELSetupConfig,
+  {elScriptDir, elBinaryDir, genesisTemplate: template}: ELSetupConfig,
   {ttd, dataPath, jwtSecretHex, enginePort, ethPort}: ELRunOptions,
   signal: AbortSignal
 ): Promise<{elClient: ELClient; tearDownCallBack: () => Promise<void>}> {
-  const network = `${elScriptDir}/${mode}`;
+  const network = `${elScriptDir}`;
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
   const genesisTemplate = template ?? "genesisPre.tmpl";

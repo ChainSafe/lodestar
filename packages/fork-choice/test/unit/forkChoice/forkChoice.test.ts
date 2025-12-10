@@ -38,9 +38,8 @@ describe("Forkchoice", () => {
         finalizedEpoch: genesisEpoch,
         finalizedRoot: genesisRoot,
 
-        executionPayloadBlockHash: genesisRoot,
-        executionPayloadNumber: 0,
-        executionStatus: ExecutionStatus.Valid,
+        executionPayloadBlockHash: null,
+        executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
@@ -100,9 +99,8 @@ describe("Forkchoice", () => {
       unrealizedFinalizedEpoch: genesisEpoch,
       unrealizedFinalizedRoot: genesisRoot,
 
-      executionPayloadBlockHash: getBlockRoot(slot),
-      executionPayloadNumber: slot,
-      executionStatus: ExecutionStatus.Valid,
+      executionPayloadBlockHash: null,
+      executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,

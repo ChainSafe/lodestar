@@ -27,14 +27,9 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       justifiedRoot: genesisRoot,
       finalizedEpoch: genesisEpoch,
       finalizedRoot: genesisRoot,
-      unrealizedJustifiedEpoch: genesisEpoch,
-      unrealizedJustifiedRoot: genesisRoot,
-      unrealizedFinalizedEpoch: genesisEpoch,
-      unrealizedFinalizedRoot: genesisRoot,
 
-      executionPayloadBlockHash: genesisRoot,
-      executionPayloadNumber: 0,
-      executionStatus: ExecutionStatus.Valid,
+      executionPayloadBlockHash: null,
+      executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     } as Omit<ProtoBlock, "targetRoot">,
     genesisSlot
@@ -80,9 +75,8 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       unrealizedFinalizedEpoch: genesisEpoch,
       unrealizedFinalizedRoot: genesisRoot,
 
-      executionPayloadBlockHash: blockRoot,
-      executionPayloadNumber: slot,
-      executionStatus: ExecutionStatus.Valid,
+      executionPayloadBlockHash: null,
+      executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,

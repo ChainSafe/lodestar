@@ -352,7 +352,10 @@ export async function produceBlockBody<T extends BlockType>(
         });
 
         return {...prepareRes, ...payloadRes};
-      })();
+      })().catch((e) => {
+        this.metrics?.blockPayload.payloadFetchErrors.inc();
+        throw e;
+      });
 
       const [engineRes, commonBlockBody] = await Promise.all([enginePromise, commonBlockBodyPromise]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
@@ -465,11 +468,7 @@ export async function produceBlockBody<T extends BlockType>(
 }
 
 /**
- * Produce ExecutionPayload for pre-merge, merge, and post-merge.
- *
- * Expects `eth1MergeBlockFinder` to be actively searching for blocks well in advance to being called.
- *
- * @returns PayloadId = pow block found, null = pow NOT found
+ * Produce ExecutionPayload for post-merge.
  */
 export async function prepareExecutionPayload(
   chain: {
@@ -484,7 +483,7 @@ export async function prepareExecutionPayload(
   state: CachedBeaconStateExecutions,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  const {parentHash} = getExecutionPayloadParentHash(chain, state);
+  const parentHash = state.latestExecutionPayloadHeader.blockHash;
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = getRandaoMix(state, state.epochCtx.epoch);
 
@@ -561,18 +560,8 @@ async function prepareExecutionPayloadHeader(
     throw Error("executionBuilder required");
   }
 
-  const {parentHash} = getExecutionPayloadParentHash(chain, state);
+  const parentHash = state.latestExecutionPayloadHeader.blockHash;
   return chain.executionBuilder.getHeader(fork, state.slot, parentHash, proposerPubKey);
-}
-
-export function getExecutionPayloadParentHash(
-  _chain: {
-    config: ChainForkConfig;
-  },
-  state: CachedBeaconStateExecutions
-): {parentHash: Root} {
-  // Post-merge, use the latest execution payload header block hash as parent
-  return {parentHash: state.latestExecutionPayloadHeader.blockHash};
 }
 
 export function getPayloadAttributesForSSE(
@@ -587,14 +576,13 @@ export function getPayloadAttributesForSSE(
     feeRecipient,
   }: {prepareState: CachedBeaconStateExecutions; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
 ): SSEPayloadAttributes {
-  const {parentHash} = getExecutionPayloadParentHash(chain, prepareState);
+  const parentHash = prepareState.latestExecutionPayloadHeader.blockHash;
   const payloadAttributes = preparePayloadAttributes(fork, chain, {
     prepareState,
     prepareSlot,
     parentBlockRoot,
     feeRecipient,
   });
-
   const ssePayloadAttributes: SSEPayloadAttributes = {
     proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
     proposalSlot: prepareSlot,

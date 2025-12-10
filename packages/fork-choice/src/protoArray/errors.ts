@@ -2,6 +2,7 @@ import {Epoch, RootHex} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 
 export enum LVHExecErrorCode {
+  PreMergeToInvalid = "PreMergeToInvalid",
   ValidToInvalid = "ValidToInvalid",
   InvalidToValid = "InvalidToValid",
 }
