@@ -2,8 +2,9 @@
 
 scriptDir=$(dirname $0)
 currentDir=$(pwd)
+elDir=$scriptDir/netherminddocker
 
-. $scriptDir/common-setup.sh
+. $elDir/common-setup.sh
 
 if [ "$TEMPLATE_FILE" == "genesisPostWithdraw.tmpl" ]
 then
