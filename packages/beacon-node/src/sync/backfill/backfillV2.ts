@@ -149,7 +149,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
   private signal: AbortSignal;
 
-  private readonly SLOTS_PER_EPOCH = 32; // Todo: Discuss if we need some flexibility for this
+  private readonly BACKFILL_BATCH_SIZE = 32; // Todo: Discuss if we need some flexibility for this
   private readonly MAX_RETRY_ATTEMPTS_FOR_EMPTY_RESPONSE = 3;
   private currentAttempt = 1;
 
@@ -399,7 +399,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
         // Todo: Allow users to configure batchSize
         // default: 32 slots (1 epoch)
-        const batchSize = isStartSlotOfEpoch(anchorSlot) ? 32 : anchorSlot % SLOTS_PER_EPOCH;
+        const batchSize = isStartSlotOfEpoch(anchorSlot) ? this.BACKFILL_BATCH_SIZE : anchorSlot % SLOTS_PER_EPOCH;
         const batchStartSlot = Math.max(0, anchorSlot - batchSize);
         // Ex:
         // 0-31, 32-63, 64-95, 96-127, 128-...
@@ -1077,7 +1077,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       if (
         meta?.lastSlotRequested &&
         meta.lastSlotRequested !== 0 &&
-        Math.abs(meta.lastSlotRequested - anchorSlot) < 2 * 32 // this.opts.backfillBatchSize
+        Math.abs(meta.lastSlotRequested - anchorSlot) < 2 * this.BACKFILL_BATCH_SIZE // this.opts.backfillBatchSize
       ) {
         // DEBUG_CODE
         // this.logger.info("Skipping recently used peer", {
