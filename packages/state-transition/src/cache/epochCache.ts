@@ -678,35 +678,10 @@ export class EpochCache {
     this.nextDecisionRoot = epochTransitionCache.nextShufflingDecisionRoot;
     this.nextActiveIndices = epochTransitionCache.nextShufflingActiveIndices;
     if (this.shufflingCache) {
-      if (!epochTransitionCache.asyncShufflingCalculation) {
-        this.nextShuffling = this.shufflingCache.getSync(epochAfterUpcoming, this.nextDecisionRoot, {
-          state,
-          activeIndices: this.nextActiveIndices,
-        });
-      } else {
-        this.nextShuffling = null;
-        // This promise will resolve immediately after the synchronous code of the state-transition runs. Until
-        // the build is done on a worker thread it will be calculated immediately after the epoch transition
-        // completes.  Once the work is done concurrently it should be ready by time this get runs so the promise
-        // will resolve directly on the next spin of the event loop because the epoch transition and shuffling take
-        // about the same time to calculate so theoretically its ready now.  Do not await here though in case it
-        // is not ready yet as the transition must not be asynchronous.
-        this.shufflingCache
-          .get(epochAfterUpcoming, this.nextDecisionRoot)
-          .then((shuffling) => {
-            if (!shuffling) {
-              throw new Error("EpochShuffling not returned from get in afterProcessEpoch");
-            }
-            this.nextShuffling = shuffling;
-          })
-          .catch((err) => {
-            this.shufflingCache?.logger?.error(
-              "EPOCH_CONTEXT_SHUFFLING_BUILD_ERROR",
-              {epoch: epochAfterUpcoming, decisionRoot: epochTransitionCache.nextShufflingDecisionRoot},
-              err
-            );
-          });
-      }
+      this.nextShuffling = this.shufflingCache.getSync(epochAfterUpcoming, this.nextDecisionRoot, {
+        state,
+        activeIndices: this.nextActiveIndices,
+      });
     } else {
       // Only for testing. shufflingCache should always be available in prod
       this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
