@@ -149,6 +149,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
   private signal: AbortSignal;
 
+  private readonly SLOTS_PER_EPOCH = 32; // Todo: Discuss if we need some flexibility for this
   private readonly MAX_RETRY_ATTEMPTS_FOR_EMPTY_RESPONSE = 3;
   private currentAttempt = 1;
 
