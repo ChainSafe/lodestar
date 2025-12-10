@@ -23,7 +23,6 @@ export async function createExecutionNode<E extends ExecutionClient>(
 
   const genesisOptions: ExecutionGenesisOptions<E> = {
     ...options,
-    ttd: options.ttd ?? forkConfig.TERMINAL_TOTAL_DIFFICULTY,
     cliqueSealingPeriod: options.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
     shanghaiTime:
       options.shanghaiTime ??

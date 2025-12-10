@@ -259,7 +259,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     electraEpoch: Epoch;
     testName: string;
   }): Promise<void> {
-    const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
+    const {genesisBlockHash, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
@@ -306,7 +306,6 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: electraEpoch,
-        TERMINAL_TOTAL_DIFFICULTY: ttd,
       },
       options: {
         api: {rest: {enabled: true} as BeaconRestApiServerOpts},

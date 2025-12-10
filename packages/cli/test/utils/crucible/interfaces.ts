@@ -120,7 +120,6 @@ export interface ValidatorGeneratorOptions<V extends ValidatorClient = Validator
 }
 
 export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionClient> {
-  ttd: bigint;
   cliqueSealingPeriod: number;
   shanghaiTime: number;
   cancunTime: number;

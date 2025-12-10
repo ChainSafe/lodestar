@@ -13,7 +13,6 @@ export type ELSetupConfig = {elScriptDir: string; elBinaryDir: string; genesisTe
 export type ELRunOptions = {ttd: bigint; dataPath: string; jwtSecretHex: string; enginePort: number; ethPort: number};
 export type ELClient = {
   genesisBlockHash: string;
-  ttd: bigint;
   engineRpcUrl: string;
   ethRpcUrl: string;
   network: string;
