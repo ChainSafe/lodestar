@@ -10,7 +10,7 @@ import {BeaconStateDifferential, BeaconStateSnapshot} from "./ssz.js";
  * Compute the differential state between a base state and a target state view
  */
 export function computeStateDifferential(
-  modules: {codec: IStateDiffCodec; config: ChainForkConfig; metrics?: DifferentialStateRegenMetrics},
+  modules: {codec: IStateDiffCodec; config: ChainForkConfig; metrics?: DifferentialStateRegenMetrics | null},
   base: BeaconState,
   target: BeaconStateSnapshot
 ): BeaconStateDifferential {
@@ -40,7 +40,7 @@ export function computeStateDifferential(
  * Apply a differential state to a base state view
  */
 export function applyStateDifferential(
-  modules: {codec: IStateDiffCodec; logger?: Logger; metrics?: DifferentialStateRegenMetrics},
+  modules: {codec: IStateDiffCodec; logger?: Logger; metrics?: DifferentialStateRegenMetrics | null},
   base: BeaconStateSnapshot,
   diff: BeaconStateDifferential
 ): BeaconStateSnapshot {
@@ -77,7 +77,7 @@ export function applyStateDifferential(
 }
 
 export async function replayStateDifferentials(
-  modules: {codec: IStateDiffCodec; logger?: Logger},
+  modules: {codec: IStateDiffCodec; logger?: Logger; metrics?: DifferentialStateRegenMetrics | null},
   {
     stateDifferentials,
     stateSnapshot,
@@ -102,7 +102,7 @@ export async function getStateDifferential(
 }
 
 export async function getStateDifferentials(
-  modules: {db: IBeaconDb},
+  modules: {db: IBeaconDb; metrics?: DifferentialStateRegenMetrics | null},
   {slots}: {slots: Slot[]}
 ): Promise<BeaconStateDifferential[]> {
   const result: BeaconStateDifferential[] = [];

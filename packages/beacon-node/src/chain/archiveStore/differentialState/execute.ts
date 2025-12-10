@@ -23,7 +23,7 @@ export async function regenerateState(
 
   try {
     const plan = buildStateRegenPlan(ctx.layers, target);
-    const artifacts = await fetchStateRegenArtifacts(ctx.db, plan, opts);
+    const artifacts = await fetchStateRegenArtifacts({db: ctx.db, metrics: ctx.metrics}, plan, opts);
     const finalState = await applyStateRegenPlan(ctx, plan, artifacts);
     const state = snapshotToBeaconState(ctx, finalState);
 
@@ -65,10 +65,10 @@ export async function storeDifferentialState(
 
   const lastDiffSlot = plan.diffSlots.at(-1);
   if (slot === lastDiffSlot) {
-    const artifacts = await fetchStateRegenArtifacts(db, plan);
+    const artifacts = await fetchStateRegenArtifacts({db: ctx.db, metrics: ctx.metrics}, plan);
     const finalState = await applyStateRegenPlan(ctx, plan, artifacts);
     const diffState = await computeStateDifferential(
-      {codec, config},
+      {codec, config, metrics: ctx.metrics},
       config.getForkTypes(slot).BeaconState.deserialize(stateBytes),
       finalState
     );
