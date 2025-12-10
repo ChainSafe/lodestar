@@ -17,34 +17,28 @@ permissions:
   pull-requests: write # Required to add tags to pull requests
 
 jobs:
-  call-publish-workflow:
-    runs-on: ubuntu-latest
+  publish-stable:
+    if: |
+      startsWith(github.ref, 'refs/tags/v') && (
+        !contains(github.ref_name, '-rc') && 
+        !contains(github.ref_name, '-beta') &&
+        !contains(github.ref_name, '-alpha')
+      )
+    uses: ./.github/workflows/publish-stable.yml
 
-    steps:
-      - uses: actions/checkout@v6
+  publish-rc:
+    if: |
+      startsWith(github.ref, 'refs/tags/v') && (
+        contains(github.ref_name, '-rc') ||
+        contains(github.ref_name, '-beta') ||
+        contains(github.ref_name, '-alpha')
+      )
+    uses: ./.github/workflows/publish-rc.yml
 
-      - name: Call publish-stable.yml
-        if: |
-          startsWith(github.ref, 'refs/tags/v') && (
-            !contains(github.ref_name, '-rc') && 
-            !contains(github.ref_name, '-beta') &&
-            !contains(github.ref_name, '-alpha')
-          )
-        uses: ./.github/workflows/publish-stable.yml
+  # publish-nextfork:
+  #   if: github.ref == 'refs/heads/peerDAS'
+  #   uses: ./.github/workflows/publish-next-fork.yml
 
-      - name: Call publish-rc.yml
-        if: |
-          startsWith(github.ref, 'refs/tags/v') && (
-            contains(github.ref_name, '-rc') ||
-            contains(github.ref_name, '-beta') ||
-            contains(github.ref_name, '-alpha')
-          )
-        uses: ./.github/workflows/publish-rc.yml
-
-#      - name: Call publish-nextfork.yml
-#        if: github.ref == 'refs/heads/peerDAS'
-#        uses: ./.github/workflows/publish-next-fork.yml
-
-      - name: Call publish-dev.yml
-        if: github.ref == 'refs/heads/unstable'
-        uses: ./.github/workflows/publish-dev.yml
+  publish-dev:
+    if: github.ref == 'refs/heads/unstable'
+    uses: ./.github/workflows/publish-dev.yml
