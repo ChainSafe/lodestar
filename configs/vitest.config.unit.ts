@@ -11,6 +11,13 @@ export const unitTestMinimalProject = defineProject({
   test: {
     name: "unit-minimal",
     include: ["**/test/unit-minimal/**/*.test.ts"],
+    // TODO: We are using very old version of `@@ethereumjs/*` packages which are mixing up ESM and CJS with top-level-await
+    // https://github.com/ChainSafe/lodestar/issues/8679
+    exclude: [
+      "**/web3_provider.node.test.ts",
+      "**/verified_requests/eth_call.test.ts",
+      "**/verified_requests/eth_estimateGas.test.ts",
+    ],
     setupFiles,
     pool: "forks",
     env: {
@@ -26,6 +33,13 @@ export const unitTestMainnetProject = defineProject({
     // to write and faster when using `minimal` preset due to reduced committee size which lowers validator count required.
     name: "unit",
     include: ["**/test/unit/**/*.test.ts"],
+    // TODO: We are using very old version of `@@ethereumjs/*` packages which are mixing up ESM and CJS with top-level-await
+    // https://github.com/ChainSafe/lodestar/issues/8679
+    exclude: [
+      "**/web3_provider.node.test.ts",
+      "**/verified_requests/eth_call.test.ts",
+      "**/verified_requests/eth_estimateGas.test.ts",
+    ],
     setupFiles,
     // There are some tests which are taking huge time
     // test/unit/chain/rewards/blockRewards.test.ts > chain / rewards / blockRewards > Normal case 73869ms
