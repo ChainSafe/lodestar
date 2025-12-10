@@ -167,7 +167,7 @@ export class ShufflingCache implements IShufflingCache {
    * Add an EpochShuffling to the ShufflingCache. If a promise for the shuffling is present it will
    * resolve the promise with the built shuffling
    */
-  private set(shuffling: EpochShuffling, decisionRoot: string): void {
+  set(shuffling: EpochShuffling, decisionRoot: string): void {
     const shufflingAtEpoch = this.itemsByDecisionRootByEpoch.getOrDefault(shuffling.epoch);
     // if a pending shuffling promise exists, resolve it
     const cacheItem = shufflingAtEpoch.get(decisionRoot);

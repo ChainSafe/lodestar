@@ -50,6 +50,11 @@ export interface IShufflingCache {
    * not been queued nor a shuffling was calculated.
    */
   get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null>;
+
+  /**
+   * Add an EpochShuffling to the ShufflingCache.
+   */
+  set(shuffling: EpochShuffling, decisionRoot: RootHex): void;
 }
 
 /**
