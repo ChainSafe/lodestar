@@ -111,7 +111,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PRESET_BASE: false, // Not relevant, each preset value is checked below
     CONFIG_NAME: false, // Arbitrary string, not relevant
 
-    // Deprecated - No longer used post-merge
+    // Deprecated - All networks have completed the merge transition
     TERMINAL_TOTAL_DIFFICULTY: false,
     TERMINAL_BLOCK_HASH: false,
     TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: false,
