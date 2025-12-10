@@ -484,7 +484,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         // if (this.status !== BackfillSyncStatus.aborted) this.processor.trigger(); ?
         // sleep for sometime
         // await sleep(5000, this.signal);
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await sleep(5000, this.signal);
       }
     }
 
