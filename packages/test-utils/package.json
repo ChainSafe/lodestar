@@ -56,12 +56,12 @@
     "@lodestar/utils": "^1.37.0",
     "axios": "^1.3.4",
     "tmp": "^0.2.1",
-    "vitest": "^4.0.7"
+    "vitest": "^4.0.15"
   },
   "devDependencies": {
     "@types/yargs": "^17.0.24"
   },
   "peerDependencies": {
-    "vitest": "^4.0.7"
+    "vitest": "^4.0.15"
   }
 }
