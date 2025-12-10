@@ -1,6 +1,6 @@
 name: Publish
 
-# only one can tun at a time
+# only one can run at a time
 concurrency: cd-publish
 
 on:
@@ -8,7 +8,7 @@ on:
     tags:
       - v*
     branches:
-      - peerDAS # Nextfork branch
+      # - peerDAS # Nextfork branch
       - unstable
 
 permissions:
@@ -41,9 +41,9 @@ jobs:
           )
         uses: ./.github/workflows/publish-rc.yml
 
-      - name: Call publish-nextfork.yml
-        if: github.ref == 'refs/heads/peerDAS'
-        uses: ./.github/workflows/publish-next-fork.yml
+#      - name: Call publish-nextfork.yml
+#        if: github.ref == 'refs/heads/peerDAS'
+#        uses: ./.github/workflows/publish-next-fork.yml
 
       - name: Call publish-dev.yml
         if: github.ref == 'refs/heads/unstable'
