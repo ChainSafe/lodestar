@@ -380,7 +380,6 @@ export function beforeProcessEpoch(
   });
 
   // Trigger async build of shuffling for epoch after next (nextShuffling post epoch transition)
-  const epochAfterNext = state.epochCtx.nextEpoch + 1;
   // cannot call calculateShufflingDecisionRoot here because spec prevent getting current slot
   // as a decision block.  we are part way through the transition though and this was added in
   // process slot beforeProcessEpoch happens so it available and valid
@@ -397,9 +396,6 @@ export function beforeProcessEpoch(
   }
 
   const asyncShufflingCalculation = opts?.asyncShufflingCalculation ?? false;
-  if (asyncShufflingCalculation) {
-    state.epochCtx.shufflingCache?.build(epochAfterNext, nextShufflingDecisionRoot, state, nextShufflingActiveIndices);
-  }
 
   if (totalActiveStakeByIncrement < 1) {
     totalActiveStakeByIncrement = 1;

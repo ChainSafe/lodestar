@@ -50,11 +50,6 @@ export interface IShufflingCache {
    * not been queued nor a shuffling was calculated.
    */
   get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null>;
-
-  /**
-   * Queue asynchronous build for an EpochShuffling
-   */
-  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: Uint32Array): void;
 }
 
 /**

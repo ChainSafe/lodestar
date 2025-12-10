@@ -1,11 +1,4 @@
-import {
-  BeaconStateAllForks,
-  EpochShuffling,
-  IShufflingCache,
-  ShufflingBuildProps,
-  computeEpochShuffling,
-  computeEpochShufflingAsync,
-} from "@lodestar/state-transition";
+import {EpochShuffling, IShufflingCache, ShufflingBuildProps, computeEpochShuffling} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
 import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
@@ -168,28 +161,6 @@ export class ShufflingCache implements IShufflingCache {
       this.set(shuffling, decisionRoot);
     }
     return shuffling as T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
-  }
-
-  /**
-   * Queue asynchronous build for an EpochShuffling, triggered from state-transition
-   */
-  build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: Uint32Array): void {
-    this.insertPromise(epoch, decisionRoot);
-    /**
-     * TODO: (@matthewkeil) This will get replaced by a proper build queue and a worker to do calculations
-     * on a NICE thread
-     */
-    const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer({source: "build"});
-    computeEpochShufflingAsync(state, activeIndices, epoch)
-      .then((shuffling) => {
-        this.set(shuffling, decisionRoot);
-      })
-      .catch((err) =>
-        this.logger?.error(`error building shuffling for epoch ${epoch} at decisionRoot ${decisionRoot}`, {}, err)
-      )
-      .finally(() => {
-        timer?.();
-      });
   }
 
   /**
