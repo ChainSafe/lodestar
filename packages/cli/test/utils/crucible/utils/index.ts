@@ -1,7 +1,13 @@
 import {ChainConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
-import {CLIQUE_SEALING_PERIOD, SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID, SIM_TESTS_SLOT_DURATION_MS} from "../constants.js";
+import {
+  CLIQUE_SEALING_PERIOD,
+  ETH_TTD_INCREMENT,
+  SIM_ENV_CHAIN_ID,
+  SIM_ENV_NETWORK_ID,
+  SIM_TESTS_SLOT_DURATION_MS,
+} from "../constants.js";
 import {Simulation} from "../simulation.js";
 
 export const logFilesDir = "test-logs";
@@ -59,11 +65,20 @@ export function defineSimTestConfig(
       graceExtraTimeFraction: 0.3,
     }) * 1000;
 
+  const ttd = getEstimatedTTD({
+    bellatrixForkEpoch: opts.BELLATRIX_FORK_EPOCH ?? Infinity,
+    secondsPerSlot: opts.SLOT_DURATION_MS ? opts.SLOT_DURATION_MS / 1000 : SIM_TESTS_SLOT_DURATION_MS / 1000,
+    cliqueSealingPeriod: opts.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
+    // To make sure bellatrix already started
+    additionalSlots: opts.additionalSlotsForTTD ?? 2,
+  });
+
   const forkConfig = createChainForkConfig({
     ...opts,
     GENESIS_DELAY: genesisDelaySeconds,
     SECONDS_PER_SLOT: (opts.SLOT_DURATION_MS ?? SIM_TESTS_SLOT_DURATION_MS) / 1000,
     SLOT_DURATION_MS: opts.SLOT_DURATION_MS ?? SIM_TESTS_SLOT_DURATION_MS,
+    TERMINAL_TOTAL_DIFFICULTY: ttd,
     DEPOSIT_CHAIN_ID: SIM_ENV_CHAIN_ID,
     DEPOSIT_NETWORK_ID: SIM_ENV_NETWORK_ID,
     SECONDS_PER_ETH1_BLOCK: opts.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
@@ -90,6 +105,23 @@ export const getEstimatedTimeInSecForRun = ({
   const durationSec = secondsPerSlot * activePreset.SLOTS_PER_EPOCH * runTill + genesisDelaySeconds;
 
   return Math.round(durationSec + durationSec * graceExtraTimeFraction);
+};
+
+export const getEstimatedTTD = ({
+  cliqueSealingPeriod,
+  secondsPerSlot,
+  additionalSlots,
+  bellatrixForkEpoch,
+}: {
+  cliqueSealingPeriod: number;
+  additionalSlots: number;
+  secondsPerSlot: number;
+  bellatrixForkEpoch: number;
+}): bigint => {
+  const secondsTillBellatrix =
+    bellatrixForkEpoch * activePreset.SLOTS_PER_EPOCH * secondsPerSlot + additionalSlots * secondsPerSlot;
+
+  return BigInt(Math.ceil(secondsTillBellatrix / cliqueSealingPeriod) * ETH_TTD_INCREMENT);
 };
 
 export const getEstimatedForkTime = ({
