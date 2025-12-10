@@ -55,7 +55,7 @@ jobs:
 
   npm:
     name: Publish to NPM & Github
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     needs: [tag, binaries]
     if: needs.tag.outputs.is_rc == 'true'
     steps:
