@@ -3,13 +3,14 @@ import {BeaconState, Slot} from "@lodestar/types";
 import {Logger, formatBytes} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
 import {IStateDiffCodec} from "../interface.js";
+import {DifferentialStateRegenMetrics} from "./metrics.ts";
 import {BeaconStateDifferential, BeaconStateSnapshot} from "./ssz.js";
 
 /**
  * Compute the differential state between a base state and a target state view
  */
 export function computeStateDifferential(
-  modules: {codec: IStateDiffCodec; config: ChainForkConfig},
+  modules: {codec: IStateDiffCodec; config: ChainForkConfig; metrics?: DifferentialStateRegenMetrics},
   base: BeaconState,
   target: BeaconStateSnapshot
 ): BeaconStateDifferential {
@@ -19,11 +20,13 @@ export function computeStateDifferential(
   const balances = [...state.balances];
   state.balances = [];
 
+  const timer = modules.metrics?.computeDiffStateTime.startTimer();
   const stateDiffBytes = codec.compute(config.getForkTypes(base.slot).BeaconState.serialize(base), target.stateBytes);
   const balancesDiffBytes = codec.compute(
     config.getForkTypes(base.slot).Balances.serialize(balances),
     target.balancesBytes
   );
+  timer?.();
 
   return {
     slot: target.slot,
@@ -37,7 +40,7 @@ export function computeStateDifferential(
  * Apply a differential state to a base state view
  */
 export function applyStateDifferential(
-  modules: {codec: IStateDiffCodec; logger?: Logger},
+  modules: {codec: IStateDiffCodec; logger?: Logger; metrics?: DifferentialStateRegenMetrics},
   base: BeaconStateSnapshot,
   diff: BeaconStateDifferential
 ): BeaconStateSnapshot {
@@ -57,8 +60,10 @@ export function applyStateDifferential(
   logger?.verbose("Applying state differential", logInfo);
 
   try {
+    const timer = modules.metrics?.applyDiffStateTime.startTimer();
     const stateBytes = codec.apply(base.stateBytes, diff.stateDiffBytes);
     const balancesBytes = codec.apply(base.balancesBytes, diff.balancesDiffBytes);
+    timer?.();
 
     return {
       slot: diff.slot,
@@ -86,11 +91,13 @@ export async function replayStateDifferentials(
 }
 
 export async function getStateDifferential(
-  modules: {db: IBeaconDb},
+  modules: {db: IBeaconDb; metrics?: DifferentialStateRegenMetrics},
   {slot}: {slot: Slot}
 ): Promise<BeaconStateDifferential | null> {
   const {db} = modules;
+  const timer = modules.metrics?.loadDiffStateTime.startTimer();
   const state = await db.beaconStateDifferentialArchive.get(slot);
+  timer?.();
   return state;
 }
 

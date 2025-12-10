@@ -5,6 +5,7 @@ import {IBeaconDb} from "../../../db/index.ts";
 import {IStateDiffCodec} from "../interface.ts";
 import {replayBlocks} from "../utils/replayBlocks.ts";
 import {StateRegenArtifacts} from "./fetch.ts";
+import {DifferentialStateRegenMetrics} from "./metrics.ts";
 import {StateRegenPlan} from "./plan.ts";
 import {BeaconStateSnapshot} from "./ssz.ts";
 import {replayStateDifferentials} from "./stateDifferential.ts";
@@ -16,6 +17,7 @@ export type StateRegenContext = {
   logger?: Logger;
   pubkey2index: PubkeyIndexMap;
   db: IBeaconDb;
+  metrics?: DifferentialStateRegenMetrics | null;
 };
 
 export async function applyStateRegenPlan(
@@ -76,11 +78,14 @@ export async function applyStateRegenPlan(
     tillSlot: plan.blockReplay.tillSlot,
   });
 
+  const blockReplayTimer = ctx.metrics?.blockReplayTime.startTimer();
   const replayed = await replayBlocks(ctx, {
     stateBytes,
     fromSlot: plan.blockReplay.fromSlot,
     toSlot: plan.blockReplay.tillSlot,
   });
+  blockReplayTimer?.();
+  ctx.metrics?.blockReplayCount.observe(plan.blockReplay.tillSlot - plan.blockReplay.fromSlot);
 
   return beaconStateBytesToSnapshot({config: ctx.config}, plan.blockReplay.tillSlot, replayed);
 }
