@@ -24,4 +24,4 @@ jobs:
       - name: Run test
         uses: ethpandaops/kurtosis-assertoor-github-action@v1
         with:
-          ethereum_package_args: '.github/workflows/assets/kurtosis_sim_test_config.yaml'
+          ethereum_package_args: ".github/workflows/assets/kurtosis_sim_test_config.yaml"

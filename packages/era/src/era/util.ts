@@ -10,7 +10,7 @@ import {readUint48} from "../util.ts";
  * Format: <config-name>-<era-number>-<short-historical-root>.era
  */
 export interface EraFileName {
-  /** CONFIG_NAME field of runtime config (mainnet, sepolia, holesky, etc.) */
+  /** CONFIG_NAME field of runtime config (mainnet, sepolia, hoodi, etc.) */
   configName: string;
   /** Number of the first era stored in file, 5-digit zero-padded (00000, 00001, etc.) */
   eraNumber: number;

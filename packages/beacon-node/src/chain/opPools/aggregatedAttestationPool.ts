@@ -22,6 +22,7 @@ import {
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
   EffectiveBalanceIncrements,
   RootCache,
@@ -486,7 +487,10 @@ export class AggregatedAttestationPool {
             consolidation.attData,
             inclusionDistance,
             stateEpoch,
-            rootCache
+            rootCache,
+            ForkSeq[fork] >= ForkSeq.gloas
+              ? (state as CachedBeaconStateGloas).executionPayloadAvailability.toBoolArray()
+              : null
           );
 
           const weight =
