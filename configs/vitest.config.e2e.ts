@@ -8,6 +8,9 @@ export const e2eMinimalProject = defineProject({
     // `mainnet` preset to allow testing across multiple forks and ensure mainnet compatibility
     name: "e2e",
     include: ["**/test/e2e/**/*.test.ts"],
+    // TODO: We are using very old version of `@@ethereumjs/*` packages which are mixing up ESM and CJS with top-level-await
+    // https://github.com/ChainSafe/lodestar/issues/8679
+    exclude: ["**/e2e/web3_batch_request.test.ts", "**/e2e/web3_provider.test.ts", "**/e2e/cli/cmds/start.test.ts"],
     setupFiles: [
       path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
       path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
@@ -31,6 +34,9 @@ export const e2eMainnetProject = defineProject({
     // Currently only `e2e` tests for the `validator` package runs with the `mainnet` preset.
     name: "e2e-mainnet",
     include: ["**/test/e2e-mainnet/**/*.test.ts"],
+    // TODO: We are using very old version of `@@ethereumjs/*` packages which are mixing up ESM and CJS with top-level-await
+    // https://github.com/ChainSafe/lodestar/issues/8679
+    exclude: ["**/e2e/web3_batch_request.test.ts", "**/e2e/web3_provider.test.ts", "**/e2e/cli/cmds/start.test.ts"],
     setupFiles: [
       path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
       path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
