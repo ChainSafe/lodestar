@@ -15,7 +15,8 @@ permissions:
 jobs:
   tag:
     name: Check tag
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    # To support npm provenance we must use github-hosted runners
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v6

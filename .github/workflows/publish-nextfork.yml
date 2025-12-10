@@ -18,7 +18,8 @@ env:
 jobs:
   npm:
     name: Publish to NPM Registry
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    # To support npm provenance we must use github-hosted runners
+    runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v6
