@@ -64,6 +64,9 @@ export const defaultSkipOpts: SkipOpts = {
   // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
   // Skip them for now to enable subsequently
   skippedTestSuites: [
+    // Merge transition tests are skipped because we no longer support performing the merge transition.
+    // All networks have already completed the merge, so this code path is no longer needed.
+    /^bellatrix\/fork_choice\/on_merge_block\/.*/,
     /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
