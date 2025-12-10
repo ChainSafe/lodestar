@@ -886,7 +886,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     } else {
       const updatedStateData = {
         ...prevBackfillStateData,
-        hasblock: true,
+        hasBlock: true,
       };
       await this.db.backfillState.put(computeEpochAtSlot(nextAnchorSlot), updatedStateData);
       this.logger.info("Updated backfillState:", {
