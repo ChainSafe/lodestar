@@ -12,6 +12,7 @@ runs:
       uses: actions/setup-node@v6
       with:
         node-version: ${{inputs.node}}
+        package-manager-cache: false
         check-latest: true
 
     - uses: pnpm/action-setup@v4
