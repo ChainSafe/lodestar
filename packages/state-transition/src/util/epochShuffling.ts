@@ -52,7 +52,8 @@ export interface IShufflingCache {
   get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null>;
 
   /**
-   * Add an EpochShuffling to the ShufflingCache.
+   * Add an EpochShuffling to the ShufflingCache. If a promise for the shuffling
+   * is present it will resolve the promise with the built shuffling.
    */
   set(shuffling: EpochShuffling, decisionRoot: RootHex): void;
 }

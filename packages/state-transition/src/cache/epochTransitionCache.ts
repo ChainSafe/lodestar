@@ -369,7 +369,7 @@ export function beforeProcessEpoch(
     }
   });
 
-  // Trigger async build of shuffling for epoch after next (nextShuffling post epoch transition)
+  // Prepare shuffling data for epoch after next (nextShuffling post epoch transition)
   // cannot call calculateShufflingDecisionRoot here because spec prevent getting current slot
   // as a decision block.  we are part way through the transition though and this was added in
   // process slot beforeProcessEpoch happens so it available and valid
