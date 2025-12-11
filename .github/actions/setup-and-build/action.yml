@@ -24,11 +24,15 @@ runs:
       with:
         run_install: false
 
+    - name: Configure pnpm store
+      shell: bash
+      run: pnpm config set store-dir ~/.pnpm-store
+
     - name: Get pnpm store path
       id: pnpm-store
       shell: bash
       run: |
-        echo "PNPM_STORE_PATH=$(pnpm store path)" >> "$GITHUB_ENV"
+        echo "PNPM_STORE_PATH=$(pnpm store path | tr -d '\n')" >> "$GITHUB_ENV"
 
     - name: Restore pnpm cache
       uses: actions/cache/restore@v4
