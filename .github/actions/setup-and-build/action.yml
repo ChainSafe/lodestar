@@ -15,7 +15,7 @@ runs:
         package-manager-cache: false
         check-latest: true
 
-    - uses: pnpm/action-setup@v4
+    - uses: pnpm/action-setup@b9e1dbc72ff7358f971cc0b7c62c7a0d83f1068b
       with:
         cache: true
 
