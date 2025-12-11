@@ -1,4 +1,8 @@
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {
+  computeStartSlotAtEpoch,
+  createSingleSignatureSetFromComponents,
+  getExecutionPayloadSigningRoot,
+} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
@@ -23,6 +27,7 @@ async function validateExecutionPayloadEnvelope(
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
+  const {builderIndex, payload} = envelope;
 
   //  GLOAS: [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
   //  gossip or non-gossip sources) (a client MAY queue payload for processing once
@@ -63,10 +68,42 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  if (block.builderIndex === undefined || block.blockHashHex === undefined) {
+    // Cache fail. This should not happen
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
+      blockRoot: toRootHex(envelope.beaconBlockRoot),
+    });
+  }
+
   // [REJECT] `envelope.builder_index == bid.builder_index`
+  if (builderIndex !== block.builderIndex) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
+      envelopeBuilderIndex: builderIndex,
+      bidBuilderIndex: block.builderIndex,
+    });
+  }
+
   // [REJECT] `payload.block_hash == bid.block_hash`
-  // TODO GLOAS: need to get bid from somewhere
+  if (toRootHex(payload.blockHash) !== block.blockHashHex) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+      envelopeBlockHash: toRootHex(payload.blockHash),
+      bidBlockHash: block.blockHashHex,
+    });
+  }
 
   // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
-  // TODO GLOAS: implement this
+  const signatureSet = createSingleSignatureSetFromComponents(
+    chain.index2pubkey[envelope.builderIndex],
+    getExecutionPayloadSigningRoot({config: chain.config, slot: envelope.slot}, payload),
+    executionPayloadEnvelope.signature
+  );
+
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+    });
+  }
 }

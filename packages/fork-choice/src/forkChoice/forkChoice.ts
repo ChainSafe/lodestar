@@ -24,6 +24,7 @@ import {
   Slot,
   ValidatorIndex,
   bellatrix,
+  isGloasBeaconBlock,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -765,6 +766,15 @@ export class ForkChoice implements IForkChoice {
             executionPayloadBlockHash: null,
             executionStatus: this.getPreMergeExecStatus(executionStatus),
             dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
+          }),
+      ...(isGloasBeaconBlock(block)
+        ? {
+            builderIndex: block.body.signedExecutionPayloadBid.message.builderIndex,
+            blockHashHex: toRootHex(block.body.signedExecutionPayloadBid.message.blockHash),
+          }
+        : {
+            builderIndex: undefined,
+            blockHashHex: undefined,
           }),
     };
 

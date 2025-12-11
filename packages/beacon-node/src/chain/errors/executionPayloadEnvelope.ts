@@ -10,6 +10,7 @@ export enum ExecutionPayloadEnvelopeErrorCode {
   BUILDER_INDEX_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BUILDER_INDEX_MISMATCH",
   BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_HASH_MISMATCH",
   INVALID_SIGNATURE = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_SIGNATURE",
+  CACHE_FAIL = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_CACHE_FAIL",
 }
 export type ExecutionPayloadEnvelopeErrorType =
   | {code: ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK; envelopeSlot: Slot; finalizedSlot: Slot}
@@ -28,6 +29,7 @@ export type ExecutionPayloadEnvelopeErrorType =
       bidBuilderIndex: ValidatorIndex;
     }
   | {code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH; envelopeBlockHash: RootHex; bidBlockHash: RootHex}
-  | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE};
+  | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE}
+  | {code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL; blockRoot: RootHex};
 
 export class ExecutionPayloadEnvelopeError extends GossipActionError<ExecutionPayloadEnvelopeErrorType> {}
