@@ -1,5 +1,5 @@
 import path from "node:path";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -7,11 +7,12 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateElectra,
+  CachedBeaconStateGloas,
   ExecutionPayloadStatus,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {AttesterSlashing, altair, bellatrix, capella, electra, phase0, ssz, sszTypesFor} from "@lodestar/types";
+import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
@@ -67,13 +68,24 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
   },
 
-  execution_payload: (state, testCase: {body: bellatrix.BeaconBlockBody; execution: {execution_valid: boolean}}) => {
+  execution_payload: (
+    state,
+    testCase: {
+      body: bellatrix.BeaconBlockBody | gloas.BeaconBlockBody;
+      signed_envelope: gloas.SignedExecutionPayloadEnvelope;
+      execution: {execution_valid: boolean};
+    }
+  ) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
-      executionPayloadStatus: testCase.execution.execution_valid
-        ? ExecutionPayloadStatus.valid
-        : ExecutionPayloadStatus.invalid,
-    });
+    if (fork >= ForkSeq.gloas) {
+      blockFns.processExecutionPayloadEnvelope(state as CachedBeaconStateGloas, testCase.signed_envelope, true);
+    } else {
+      blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
+        executionPayloadStatus: testCase.execution.execution_valid
+          ? ExecutionPayloadStatus.valid
+          : ExecutionPayloadStatus.invalid,
+      });
+    }
   },
 
   bls_to_execution_change: (state, testCase: {address_change: capella.SignedBLSToExecutionChange}) => {
@@ -95,7 +107,16 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   },
 
   consolidation_request: (state, testCase: {consolidation_request: electra.ConsolidationRequest}) => {
-    blockFns.processConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation_request);
+    const fork = state.config.getForkSeq(state.slot);
+    blockFns.processConsolidationRequest(fork, state as CachedBeaconStateElectra, testCase.consolidation_request);
+  },
+
+  execution_payload_bid: (state, testCase: {block: gloas.BeaconBlock}) => {
+    blockFns.processExecutionPayloadBid(state as CachedBeaconStateGloas, testCase.block);
+  },
+
+  payload_attestation: (state, testCase: {payload_attestation: gloas.PayloadAttestation}) => {
+    blockFns.processPayloadAttestation(state as CachedBeaconStateGloas, testCase.payload_attestation);
   },
 };
 
@@ -149,6 +170,8 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         withdrawal_request: ssz.electra.WithdrawalRequest,
         deposit_request: ssz.electra.DepositRequest,
         consolidation_request: ssz.electra.ConsolidationRequest,
+        payload_attestation: ssz.gloas.PayloadAttestation,
+        signed_envelope: ssz.gloas.SignedExecutionPayloadEnvelope,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,

@@ -51,6 +51,7 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     const fork = state.config.getForkSeq(state.slot);
     epochFns.processProposerLookahead(fork, state as CachedBeaconStateFulu, epochTransitionCache);
   },
+  builder_pending_payments: epochFns.processBuilderPendingPayments as EpochTransitionFn,
 };
 
 /**

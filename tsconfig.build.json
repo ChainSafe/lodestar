@@ -40,5 +40,13 @@
       "../../node_modules/@types",
       "../../types", 
     ],
+
+    // TODO: This is a workaround to fix the error came after adding `@lerna-lite/version`
+    // Need to be cleared and cleaned this config later 
+    // 
+    // @lodestar/params: error TS2688: Cannot find type definition file for 'parse-path'.
+    // @lodestar/params:   The file is in the program because:
+    // @lodestar/params:     Entry point for implicit type library 'parse-path'
+    "types": ["node", "bun", "snappyjs", "mitt", "vitest"],
   }
 }

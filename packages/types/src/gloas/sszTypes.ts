@@ -23,7 +23,7 @@ const {Gwei, ExecutionAddress, ValidatorIndex, Epoch, BLSSignature, Bytes32, Roo
 export const BuilderPendingWithdrawal = new ContainerType(
   {
     feeRecipient: ExecutionAddress,
-    amount: Gwei,
+    amount: UintNum64,
     builderIndex: ValidatorIndex,
     withdrawableEpoch: Epoch,
   },
@@ -32,7 +32,7 @@ export const BuilderPendingWithdrawal = new ContainerType(
 
 export const BuilderPendingPayment = new ContainerType(
   {
-    weight: Gwei,
+    weight: UintNum64,
     withdrawal: BuilderPendingWithdrawal,
   },
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}
@@ -80,11 +80,13 @@ export const ExecutionPayloadBid = new ContainerType(
     parentBlockHash: Bytes32,
     parentBlockRoot: Root,
     blockHash: Bytes32,
+    prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
     gasLimit: UintBn64,
     builderIndex: ValidatorIndex,
     slot: Slot,
-    value: Gwei,
+    value: UintNum64,
+    executionPayment: UintNum64,
     blobKzgCommitmentsRoot: Root,
   },
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
