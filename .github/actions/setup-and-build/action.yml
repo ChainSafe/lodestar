@@ -26,7 +26,7 @@ runs:
 
     - name: Configure pnpm store
       shell: bash
-      run: pnpm config set store-dir ~/.pnpm-store
+      run: pnpm config set store-dir .pnpm-store
 
     - name: Get pnpm store path
       id: pnpm-store
