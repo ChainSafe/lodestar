@@ -8,6 +8,8 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - uses: pnpm/action-setup@v4
+
     - name: Setup Node
       uses: actions/setup-node@v6
       with:
@@ -17,8 +19,6 @@ runs:
         # https://github.com/pnpm/pnpm/issues/6234
         # cache: pnpm
         package-manager-cache: false
-
-    - uses: pnpm/action-setup@v4
 
     - name: Node.js version
       id: node
