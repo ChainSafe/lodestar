@@ -409,6 +409,9 @@ importers:
       snappy:
         specifier: ^7.2.2
         version: 7.2.2
+      snappyjs:
+        specifier: ^0.7.0
+        version: 0.7.0
       tmp:
         specifier: ^0.2.1
         version: 0.2.4

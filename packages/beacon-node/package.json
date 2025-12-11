@@ -123,6 +123,7 @@
     "@chainsafe/persistent-merkle-tree": "^1.2.1",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",
+    "@chainsafe/snappy-wasm": "^0.5.0",
     "@chainsafe/ssz": "^1.2.2",
     "@chainsafe/threads": "^1.11.3",
     "@crate-crypto/node-eth-kzg": "0.9.1",
@@ -166,7 +167,6 @@
     "multiformats": "^11.0.1",
     "prom-client": "^15.1.0",
     "qs": "^6.11.1",
-    "@chainsafe/snappy-wasm": "^0.5.0",
     "strict-event-emitter-types": "^2.0.0",
     "systeminformation": "^5.22.9",
     "uint8arraylist": "^2.4.7",
@@ -174,9 +174,9 @@
   },
   "devDependencies": {
     "@chainsafe/swap-or-not-shuffle": "^1.2.1",
+    "@libp2p/interface-internal": "^2.3.18",
     "@libp2p/logger": "^5.1.21",
     "@lodestar/spec-test-util": "workspace:^",
-    "@libp2p/interface-internal": "^2.3.18",
     "@types/js-yaml": "^4.0.5",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
@@ -186,6 +186,7 @@
     "rewiremock": "^3.14.5",
     "rimraf": "^4.4.1",
     "snappy": "^7.2.2",
+    "snappyjs": "^0.7.0",
     "tmp": "^0.2.1"
   },
   "keywords": [
