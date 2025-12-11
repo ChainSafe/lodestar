@@ -43,7 +43,7 @@ runs:
 
     - name: Install & build
       shell: bash
-      run: pnpm install --frozen-lockfile && yarn build
+      run: pnpm install --frozen-lockfile && pnpm build
 
     - name: Check Build
       shell: bash
