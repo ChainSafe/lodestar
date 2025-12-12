@@ -14,16 +14,12 @@ import {
   CheckpointHeaderRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
-  DepositDataRootRepository,
-  DepositEventRepository,
-  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 export type BeaconDbModules = {
   config: ChainForkConfig;
@@ -45,13 +41,7 @@ export class BeaconDb implements IBeaconDb {
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
   attesterSlashing: AttesterSlashingRepository;
-  depositEvent: DepositEventRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
-
-  depositDataRoot: DepositDataRootRepository;
-  eth1Data: Eth1DataRepository;
-  preGenesisState: PreGenesisState;
-  preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
   // lightclient
   bestLightClientUpdate: BestLightClientUpdateRepository;
@@ -80,11 +70,6 @@ export class BeaconDb implements IBeaconDb {
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);
     this.proposerSlashing = new ProposerSlashingRepository(config, db);
     this.attesterSlashing = new AttesterSlashingRepository(config, db);
-    this.depositEvent = new DepositEventRepository(config, db);
-    this.depositDataRoot = new DepositDataRootRepository(config, db);
-    this.eth1Data = new Eth1DataRepository(config, db);
-    this.preGenesisState = new PreGenesisState(config, db);
-    this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(config, db);
 
     // lightclient
     this.bestLightClientUpdate = new BestLightClientUpdateRepository(config, db);

@@ -4,14 +4,6 @@ import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} fr
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
-import {
-  ErrorJsonRpcResponse,
-  HttpRpcError,
-  IJsonRpcHttpClient,
-  JsonRpcHttpClientEvent,
-  ReqOpts,
-} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {bytesToData, numToQuantity} from "../../eth1/provider/utils.js";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
@@ -27,6 +19,13 @@ import {
   PayloadId,
   VersionedHashes,
 } from "./interface.js";
+import {
+  ErrorJsonRpcResponse,
+  HttpRpcError,
+  IJsonRpcHttpClient,
+  JsonRpcHttpClientEvent,
+  ReqOpts,
+} from "./jsonRpcHttpClient.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
@@ -45,7 +44,7 @@ import {
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
-import {getExecutionEngineState} from "./utils.js";
+import {bytesToData, getExecutionEngineState, numToQuantity} from "./utils.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;

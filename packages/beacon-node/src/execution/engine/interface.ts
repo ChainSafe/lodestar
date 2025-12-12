@@ -9,9 +9,9 @@ import {
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {DATA} from "../../eth1/provider/utils.js";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
+import {DATA} from "./utils.js";
 
 export {PayloadIdCache, type PayloadId, type WithdrawalV1};
 

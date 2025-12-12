@@ -17,7 +17,7 @@ import {BeaconNode} from "../../../src/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {IBeaconNodeOptions, defaultOptions} from "../../../src/node/options.js";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
-import {initDevState, writeDeposits} from "../../../src/node/utils/state.js";
+import {initDevState} from "../../../src/node/utils/state.js";
 import {testLogger} from "../logger.js";
 
 export async function getDevBeaconNode(
@@ -45,13 +45,10 @@ export async function getDevBeaconNode(
 
   let anchorState = opts.anchorState;
   if (!anchorState) {
-    const {state, deposits} = initDevState(config, validatorCount, opts);
-    anchorState = state;
+    anchorState = initDevState(config, validatorCount, opts);
 
-    // Is it necessary to persist deposits and genesis block?
-    await writeDeposits(db, deposits);
     const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
-    block.message.stateRoot = state.hashTreeRoot();
+    block.message.stateRoot = anchorState.hashTreeRoot();
     await db.blockArchive.add(block);
 
     if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.deneb) {
@@ -69,7 +66,6 @@ export async function getDevBeaconNode(
       // dev defaults that we wish, especially for the api options
       {
         db: {name: tmpDir.name},
-        eth1: {enabled: false},
         api: {rest: {api: ["beacon", "config", "events", "node", "validator"], port: 19596}},
         metrics: {enabled: false},
         network: {

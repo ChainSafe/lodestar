@@ -49,7 +49,6 @@ const GET_STATE_LOG_INTERVAL = 30 * 1000;
 
 export function getNetworkData(network: NetworkName): {
   chainConfig: ChainConfig;
-  depositContractDeployBlock: number;
   genesisFileUrl: string | null;
   genesisStateRoot: string | null;
   bootnodesFileUrl: string | null;

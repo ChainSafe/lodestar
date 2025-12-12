@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
-import {decodeJwtToken, encodeJwtToken} from "../../../src/eth1/provider/jwt.js";
+import {decodeJwtToken, encodeJwtToken} from "../../../../src/execution/engine/jwt.js";
 
-describe("ExecutionEngine / jwt", () => {
+describe("execution / engine / jwt", () => {
   it("encode/decode correctly", () => {
     const jwtSecret = Buffer.from(Array.from({length: 32}, () => Math.round(Math.random() * 255)));
     const claim = {iat: Math.floor(new Date().getTime() / 1000)};

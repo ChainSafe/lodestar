@@ -2,10 +2,8 @@ import {
   DbCPStateDatastore,
   FileCPStateDatastore,
   IBeaconDb,
-  IBeaconNodeOptions,
   checkAndPersistAnchorState,
   getStateTypeFromBytes,
-  initStateFromEth1,
 } from "@lodestar/beacon-node";
 import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {
@@ -94,20 +92,17 @@ async function initAndVerifyWeakSubjectivityState(
  * 1. restore from weak subjectivity state (possibly downloaded from a remote beacon node)
  * 2. restore from db
  * 3. restore from genesis state (possibly downloaded via URL)
- * 4. create genesis state from eth1
  *
  * The returned anchorState could be finalized or not.
  * - if we load from checkpointState, checkpointSyncUrl, genesisStateFile or archived db, it is finalized
  * - it's not finalized if we load from unsafeCheckpointState or lastPersistedCheckpointState
  */
 export async function initBeaconState(
-  options: IBeaconNodeOptions,
   args: BeaconArgs & GlobalArgs,
   dataDir: string,
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
-  logger: Logger,
-  signal: AbortSignal
+  logger: Logger
 ): Promise<{anchorState: BeaconStateAllForks; isFinalized: boolean; wsCheckpoint?: Checkpoint}> {
   if (args.forceCheckpointSync && !(args.checkpointState || args.checkpointSyncUrl || args.unsafeCheckpointState)) {
     throw new Error("Forced checkpoint sync without specifying a checkpointState or checkpointSyncUrl");
@@ -333,9 +328,7 @@ export async function initBeaconState(
     return {anchorState, isFinalized};
   }
 
-  // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
-  const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
-  return {anchorState, isFinalized: true};
+  throw Error("Failed to initialize beacon state, please provide a genesis state file or use checkpoint sync");
 }
 
 async function readWSState(

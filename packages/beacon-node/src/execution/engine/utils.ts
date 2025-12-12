@@ -1,14 +1,107 @@
-import {isErrorAborted, isFetchError} from "@lodestar/utils";
-import {IJson, RpcPayload} from "../../eth1/interface.js";
+import {bigIntToBytes, bytesToBigInt, fromHex, fromHexInto, isErrorAborted, isFetchError, toHex} from "@lodestar/utils";
+import {isQueueErrorAborted} from "../../util/queue/errors.js";
+import {ExecutionEngineState, ExecutionPayloadStatus} from "./interface.js";
 import {
   ErrorJsonRpcResponse,
   HttpRpcError,
   IJsonRpcHttpClient,
   JsonRpcHttpClientEvent,
   JsonRpcHttpClientEventEmitter,
-} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {isQueueErrorAborted} from "../../util/queue/errors.js";
-import {ExecutionEngineState, ExecutionPayloadStatus} from "./interface.js";
+} from "./jsonRpcHttpClient.js";
+
+/** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
+export type QUANTITY = string;
+/** DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
+export type DATA = string;
+
+export const rootHexRegex = /^0x[a-fA-F0-9]{64}$/;
+
+export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};
+
+export interface RpcPayload<P = IJson[]> {
+  method: string;
+  params: P;
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ *
+ * When encoding QUANTITIES (integers, numbers): encode as hex, prefix with "0x", the most compact representation.
+ */
+export function numToQuantity(num: number | bigint): QUANTITY {
+  return "0x" + num.toString(16);
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ */
+export function quantityToNum(hex: QUANTITY, id = ""): number {
+  const num = parseInt(hex, 16);
+  if (Number.isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
+  return num;
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
+ * Typesafe fn to convert hex string to bigint.
+ */
+export function quantityToBigint(hex: QUANTITY, id = ""): bigint {
+  try {
+    return BigInt(hex);
+  } catch (e) {
+    throw Error(`Invalid hex bigint ${id} '${hex}': ${(e as Error).message}`);
+  }
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
+ */
+export function quantityToBytes(hex: QUANTITY): Uint8Array {
+  const bn = quantityToBigint(hex);
+  return bigIntToBytes(bn, 32, "le");
+}
+
+/**
+ * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
+ * Compress a 32 ByteVector into a QUANTITY
+ */
+export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
+  const bn = bytesToBigInt(bytes, "le");
+  return numToQuantity(bn);
+}
+
+/**
+ * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ */
+export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
+  try {
+    const bytes = fromHex(hex);
+    if (fixedLength != null && bytes.length !== fixedLength) {
+      throw Error(`Wrong data length ${bytes.length} expected ${fixedLength}`);
+    }
+    return bytes;
+  } catch (e) {
+    (e as Error).message = `Invalid hex string: ${(e as Error).message}`;
+    throw e;
+  }
+}
+
+/**
+ * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ * - 0x-prefixed, can be empty
+ */
+export function bytesToData(bytes: Uint8Array): DATA {
+  return toHex(bytes);
+}
+
+/**
+ * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ * Writes hex into buffer
+ */
+export function dataIntoBytes(hex: DATA, buffer: Uint8Array): Uint8Array {
+  fromHexInto(hex, buffer);
+  return buffer;
+}
 
 export type JsonRpcBackend = {
   // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here

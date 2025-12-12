@@ -6,9 +6,9 @@ import {
   quantityToBigint,
   quantityToBytes,
   quantityToNum,
-} from "../../../src/eth1/provider/utils.js";
+} from "../../../../src/execution/engine/utils.js";
 
-describe("eth1 / hex encoding", () => {
+describe("execution / engine / hex encoding", () => {
   describe("QUANTITY", () => {
     const testCases: {
       quantity: QUANTITY;
