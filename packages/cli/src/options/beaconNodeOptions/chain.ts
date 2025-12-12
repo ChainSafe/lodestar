@@ -23,7 +23,6 @@ export type ChainArgs = {
   "chain.computeUnrealized"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
-  "safe-slots-to-import-optimistically": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
@@ -63,7 +62,6 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     computeUnrealized: args["chain.computeUnrealized"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
-    safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
@@ -224,15 +222,6 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     description: "Enable asserting the progressive balances",
     type: "boolean",
-    group: "chain",
-  },
-
-  "safe-slots-to-import-optimistically": {
-    hidden: true,
-    type: "number",
-    description:
-      "Slots from current (clock) slot till which its safe to import a block optimistically if the merge is not justified yet.",
-    default: defaultOptions.chain.safeSlotsToImportOptimistically,
     group: "chain",
   },
 

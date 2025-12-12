@@ -17,10 +17,8 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateExecutions,
   computeTimeAtSlot,
-  getCurrentEpoch,
   getExpectedWithdrawals,
   getRandaoMix,
-  isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -44,12 +42,9 @@ import {
   deneb,
   electra,
   fulu,
-  ssz,
-  sszTypesFor,
 } from "@lodestar/types";
 import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
-import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
 import {
   IExecutionBuilder,
@@ -337,14 +332,6 @@ export async function produceBlockBody<T extends BlockType>(
           feeRecipient
         );
 
-        if (prepareRes.isPremerge) {
-          return {
-            ...prepareRes,
-            executionPayload: sszTypesFor(fork).ExecutionPayload.defaultValue(),
-            executionPayloadValue: BigInt(0),
-          };
-        }
-
         const {prepType, payloadId} = prepareRes;
         Object.assign(logMeta, {executionPayloadPrepType: prepType});
 
@@ -366,37 +353,14 @@ export async function produceBlockBody<T extends BlockType>(
 
         return {...prepareRes, ...payloadRes};
       })().catch((e) => {
-        // catch payload fetch here, because there is still a recovery path possible if we
-        // are pre-merge. We don't care the same for builder segment as the execution block
-        // will takeover if the builder flow was activated and errors
         this.metrics?.blockPayload.payloadFetchErrors.inc();
-
-        if (!isMergeTransitionComplete(currentState as CachedBeaconStateBellatrix)) {
-          this.logger?.warn(
-            "Fetch payload from the execution failed, however since we are still pre-merge proceeding with an empty one.",
-            {},
-            e as Error
-          );
-          // ok we don't have an execution payload here, so we can assign an empty one
-          // if pre-merge
-          return {
-            isPremerge: true as const,
-            executionPayload: sszTypesFor(fork).ExecutionPayload.defaultValue(),
-            executionPayloadValue: BigInt(0),
-          };
-        }
-        // since merge transition is complete, we need a valid payload even if with an
-        // empty (transactions) one. defaultValue isn't gonna cut it!
         throw e;
       });
 
       const [engineRes, commonBlockBody] = await Promise.all([enginePromise, commonBlockBodyPromise]);
       blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<BlockType.Blinded>;
 
-      if (engineRes.isPremerge) {
-        (blockBody as BeaconBlockBody<ForkPostBellatrix & ForkPreGloas>).executionPayload = engineRes.executionPayload;
-        executionPayloadValue = engineRes.executionPayloadValue;
-      } else {
+      {
         const {prepType, payloadId, executionPayload, blobsBundle, executionRequests} = engineRes;
         shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
 
@@ -504,15 +468,10 @@ export async function produceBlockBody<T extends BlockType>(
 }
 
 /**
- * Produce ExecutionPayload for pre-merge, merge, and post-merge.
- *
- * Expects `eth1MergeBlockFinder` to be actively searching for blocks well in advance to being called.
- *
- * @returns PayloadId = pow block found, null = pow NOT found
+ * Produce ExecutionPayload for post-merge.
  */
 export async function prepareExecutionPayload(
   chain: {
-    eth1: IEth1ForBlockProduction;
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
   },
@@ -523,14 +482,8 @@ export async function prepareExecutionPayload(
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateExecutions,
   suggestedFeeRecipient: string
-): Promise<{isPremerge: true} | {isPremerge: false; prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  const parentHashRes = await getExecutionPayloadParentHash(chain, state);
-  if (parentHashRes.isPremerge) {
-    // Return null only if the execution is pre-merge
-    return {isPremerge: true};
-  }
-
-  const {parentHash} = parentHashRes;
+): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
+  const parentHash = state.latestExecutionPayloadHeader.blockHash;
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = getRandaoMix(state, state.epochCtx.epoch);
 
@@ -586,12 +539,11 @@ export async function prepareExecutionPayload(
   // We are only returning payloadId here because prepareExecutionPayload is also called from
   // prepareNextSlot, which is an advance call to execution engine to start building payload
   // Actual payload isn't produced till getPayload is called.
-  return {isPremerge: false, payloadId, prepType};
+  return {payloadId, prepType};
 }
 
 async function prepareExecutionPayloadHeader(
   chain: {
-    eth1: IEth1ForBlockProduction;
     executionBuilder?: IExecutionBuilder;
     config: ChainForkConfig;
   },
@@ -608,53 +560,13 @@ async function prepareExecutionPayloadHeader(
     throw Error("executionBuilder required");
   }
 
-  const parentHashRes = await getExecutionPayloadParentHash(chain, state);
-  if (parentHashRes.isPremerge) {
-    throw Error("External builder disabled pre-merge");
-  }
-
-  const {parentHash} = parentHashRes;
+  const parentHash = state.latestExecutionPayloadHeader.blockHash;
   return chain.executionBuilder.getHeader(fork, state.slot, parentHash, proposerPubKey);
 }
 
-export async function getExecutionPayloadParentHash(
-  chain: {
-    eth1: IEth1ForBlockProduction;
-    config: ChainForkConfig;
-  },
-  state: CachedBeaconStateExecutions
-): Promise<{isPremerge: true} | {isPremerge: false; parentHash: Root}> {
-  // Use different POW block hash parent for block production based on merge status.
-  // Returned value of null == using an empty ExecutionPayload value
-  if (isMergeTransitionComplete(state)) {
-    // Post-merge, normal payload
-    return {isPremerge: false, parentHash: state.latestExecutionPayloadHeader.blockHash};
-  }
-
-  if (
-    !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
-    getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-  ) {
-    throw new Error(
-      `InvalidMergeTBH epoch: expected >= ${
-        chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-      }, actual: ${getCurrentEpoch(state)}`
-    );
-  }
-
-  const terminalPowBlockHash = await chain.eth1.getTerminalPowBlock();
-  if (terminalPowBlockHash === null) {
-    // Pre-merge, no prepare payload call is needed
-    return {isPremerge: true};
-  }
-  // Signify merge via producing on top of the last PoW block
-  return {isPremerge: false, parentHash: terminalPowBlockHash};
-}
-
-export async function getPayloadAttributesForSSE(
+export function getPayloadAttributesForSSE(
   fork: ForkPostBellatrix,
   chain: {
-    eth1: IEth1ForBlockProduction;
     config: ChainForkConfig;
   },
   {
@@ -663,30 +575,23 @@ export async function getPayloadAttributesForSSE(
     parentBlockRoot,
     feeRecipient,
   }: {prepareState: CachedBeaconStateExecutions; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
-): Promise<SSEPayloadAttributes> {
-  const parentHashRes = await getExecutionPayloadParentHash(chain, prepareState);
-
-  if (!parentHashRes.isPremerge) {
-    const {parentHash} = parentHashRes;
-    const payloadAttributes = preparePayloadAttributes(fork, chain, {
-      prepareState,
-      prepareSlot,
-      parentBlockRoot,
-      feeRecipient,
-    });
-
-    const ssePayloadAttributes: SSEPayloadAttributes = {
-      proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
-      proposalSlot: prepareSlot,
-      parentBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber,
-      parentBlockRoot,
-      parentBlockHash: parentHash,
-      payloadAttributes,
-    };
-    return ssePayloadAttributes;
-  }
-
-  throw Error("The execution is still pre-merge");
+): SSEPayloadAttributes {
+  const parentHash = prepareState.latestExecutionPayloadHeader.blockHash;
+  const payloadAttributes = preparePayloadAttributes(fork, chain, {
+    prepareState,
+    prepareSlot,
+    parentBlockRoot,
+    feeRecipient,
+  });
+  const ssePayloadAttributes: SSEPayloadAttributes = {
+    proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
+    proposalSlot: prepareSlot,
+    parentBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber,
+    parentBlockRoot,
+    parentBlockHash: parentHash,
+    payloadAttributes,
+  };
+  return ssePayloadAttributes;
 }
 
 function preparePayloadAttributes(

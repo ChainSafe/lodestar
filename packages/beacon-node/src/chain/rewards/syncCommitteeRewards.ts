@@ -1,12 +1,13 @@
 import {routes} from "@lodestar/api";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, Index2PubkeyCache} from "@lodestar/state-transition";
 import {BeaconBlock, ValidatorIndex, altair} from "@lodestar/types";
 
 export type SyncCommitteeRewards = routes.beacon.SyncCommitteeRewards;
 type BalanceRecord = {val: number}; // Use val for convenient way to increment/decrement balance
 
 export async function computeSyncCommitteeRewards(
+  index2pubkey: Index2PubkeyCache,
   block: BeaconBlock,
   preState: CachedBeaconStateAllForks,
   validatorIds: (ValidatorIndex | string)[] = []
@@ -18,7 +19,6 @@ export async function computeSyncCommitteeRewards(
 
   const altairBlock = block as altair.BeaconBlock;
   const preStateAltair = preState as CachedBeaconStateAltair;
-  const {index2pubkey} = preStateAltair.epochCtx;
 
   // Bound syncCommitteeValidatorIndices in case it goes beyond SYNC_COMMITTEE_SIZE just to be safe
   const syncCommitteeValidatorIndices = preStateAltair.epochCtx.currentSyncCommitteeIndexed.validatorIndices.slice(

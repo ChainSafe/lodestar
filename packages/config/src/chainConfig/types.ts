@@ -9,14 +9,17 @@ export type ChainConfig = {
    * Free-form short name of the network that this configuration applies to - known
    * canonical network names include:
    * * 'mainnet' - there can be only one
-   * * 'holesky' - testnet
+   * * 'hoodi' - testnet
    * Must match the regex: [a-z0-9\-]
    */
   CONFIG_NAME: string;
 
   // Transition
+  /** @deprecated All networks have completed the merge transition */
   TERMINAL_TOTAL_DIFFICULTY: bigint;
+  /** @deprecated All networks have completed the merge transition */
   TERMINAL_BLOCK_HASH: Uint8Array;
+  /** @deprecated All networks have completed the merge transition */
   TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: number;
 
   // Genesis

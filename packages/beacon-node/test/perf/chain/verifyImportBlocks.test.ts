@@ -2,7 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
@@ -82,7 +82,6 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           proposerBoost: true,
           proposerBoostReorg: true,
           computeUnrealized: false,
-          safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,

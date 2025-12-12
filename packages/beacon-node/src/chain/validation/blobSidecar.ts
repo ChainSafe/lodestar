@@ -137,7 +137,11 @@ export async function validateGossipBlobSidecar(
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   const signature = blobSidecar.signedBlockHeader.signature;
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blobSlot, blockHex, signature)) {
-    const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(blockState, blobSidecar.signedBlockHeader);
+    const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+      chain.index2pubkey,
+      blockState,
+      blobSidecar.signedBlockHeader
+    );
     // Don't batch so verification is not delayed
     if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
       throw new BlobSidecarGossipError(GossipAction.REJECT, {
@@ -240,7 +244,11 @@ export async function validateBlockBlobSidecars(
     const signature = firstSidecarSignedBlockHeader.signature;
     if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRootHex, signature)) {
       const headState = await chain.getHeadState();
-      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
+      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
+        chain.index2pubkey,
+        headState,
+        firstSidecarSignedBlockHeader
+      );
 
       if (
         !(await chain.bls.verifySignatureSets([signatureSet], {

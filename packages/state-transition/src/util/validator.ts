@@ -7,7 +7,7 @@ import {
 } from "@lodestar/params";
 import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {BeaconStateAllForks, CachedBeaconStateElectra, EpochCache} from "../types.js";
+import {BeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas, EpochCache} from "../types.js";
 import {hasCompoundingWithdrawalCredential} from "./electra.js";
 
 /**
@@ -94,12 +94,31 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
   return MIN_ACTIVATION_BALANCE;
 }
 
-export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
+export function getPendingBalanceToWithdraw(
+  fork: ForkSeq,
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
+  validatorIndex: ValidatorIndex
+): number {
   let total = 0;
   for (const item of state.pendingPartialWithdrawals.getAllReadonly()) {
     if (item.validatorIndex === validatorIndex) {
       total += Number(item.amount);
     }
   }
+
+  if (fork >= ForkSeq.gloas) {
+    const stateGloas = state as CachedBeaconStateGloas;
+    for (const item of stateGloas.builderPendingWithdrawals.getAllReadonly()) {
+      if (item.builderIndex === validatorIndex) {
+        total += item.amount;
+      }
+    }
+    for (const item of stateGloas.builderPendingPayments.getAllReadonly()) {
+      if (item.withdrawal.builderIndex === validatorIndex) {
+        total += item.withdrawal.amount;
+      }
+    }
+  }
+
   return total;
 }

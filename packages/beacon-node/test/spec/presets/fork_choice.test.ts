@@ -21,7 +21,6 @@ import {
   BeaconBlock,
   RootHex,
   SignedBeaconBlock,
-  bellatrix,
   deneb,
   fulu,
   ssz,
@@ -40,7 +39,6 @@ import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
@@ -61,7 +59,6 @@ const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const BLOBS_FILE_NAME = "^(blobs)_([0-9a-zA-Z]+)$";
 const COLUMN_FILE_NAME = "^(column)_([0-9a-zA-Z]+)$";
-const POW_BLOCK_FILE_NAME = "^(pow_block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 
@@ -80,7 +77,7 @@ const forkChoiceTest =
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;
         const clock = new ClockStopped(currentSlot);
-        const eth1 = new Eth1ForBlockProductionMock();
+        const eth1 = new Eth1ForBlockProductionDisabled();
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
           genesisBlockHash: isExecutionStateType(anchorState)
@@ -333,23 +330,6 @@ const forkChoiceTest =
               }
             }
 
-            // **on_merge_block execution**
-            // Adds PowBlock data which is required for executing on_block(store, block).
-            // The file is located in the same folder (see below). PowBlocks should be used as return values for
-            // get_pow_block(hash: Hash32) -> PowBlock function if hashes match.
-            else if (isPowBlock(step)) {
-              const powBlock = testcase.powBlocks.get(step.pow_block);
-              if (!powBlock) throw Error(`pow_block ${step.pow_block} not found`);
-              logger.debug(`Step ${i}/${stepsLen} pow_block`, {
-                blockHash: toHexString(powBlock.blockHash),
-                parentHash: toHexString(powBlock.parentHash),
-              });
-              // Register PowBlock for `get_pow_block(hash: Hash32)` calls in verifyBlock
-              eth1.addPowBlock(powBlock);
-              // Register PowBlock to allow validation in execution engine
-              executionEngineBackend.addPowBlock(powBlock);
-            }
-
             // Optional step for optimistic sync tests.
             else if (isOnPayloadInfoStep(step)) {
               logger.debug(`Step ${i}/${stepsLen} payload_status`, {blockHash: step.block_hash});
@@ -455,7 +435,6 @@ const forkChoiceTest =
           [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
           [BLOBS_FILE_NAME]: ssz.deneb.Blobs,
           [COLUMN_FILE_NAME]: ssz.fulu.DataColumnSidecar,
-          [POW_BLOCK_FILE_NAME]: ssz.bellatrix.PowBlock,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
         },
@@ -464,7 +443,6 @@ const forkChoiceTest =
           const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
           const columns = new Map<string, fulu.DataColumnSidecar>();
-          const powBlocks = new Map<string, bellatrix.PowBlock>();
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
@@ -481,10 +459,6 @@ const forkChoiceTest =
             const columnMatch = key.match(COLUMN_FILE_NAME);
             if (columnMatch) {
               columns.set(key, t[key]);
-            }
-            const powBlockMatch = key.match(POW_BLOCK_FILE_NAME);
-            if (powBlockMatch) {
-              powBlocks.set(key, t[key]);
             }
             const attMatch = key.match(ATTESTATION_FILE_NAME);
             if (attMatch) {
@@ -503,7 +477,6 @@ const forkChoiceTest =
             blocks,
             blobs,
             columns,
-            powBlocks,
             attestations,
             attesterSlashings,
           };
@@ -530,7 +503,7 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
   };
 }
 
-type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPowBlock | OnPayloadInfo | Checks;
+type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPayloadInfo | Checks;
 
 type SpecTestCheckpoint = {epoch: bigint; root: string};
 
@@ -569,15 +542,6 @@ type OnBlock = {
   columns?: string[];
   /** optional, default to `true`. */
   valid?: number;
-};
-
-/** Optional step for optimistic sync tests. */
-type OnPowBlock = {
-  /**
-   * the name of the `pow_block_<32-byte-root>.ssz_snappy` file. To
-   * execute `on_pow_block(store, block)`
-   */
-  pow_block: string;
 };
 
 type OnPayloadInfo = {
@@ -622,7 +586,6 @@ type ForkChoiceTestCase = {
   blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
   columns: Map<string, fulu.DataColumnSidecar>;
-  powBlocks: Map<string, bellatrix.PowBlock>;
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
 };
@@ -643,35 +606,12 @@ function isBlock(step: Step): step is OnBlock {
   return typeof (step as OnBlock).block === "string";
 }
 
-function isPowBlock(step: Step): step is OnPowBlock {
-  return typeof (step as OnPowBlock).pow_block === "string";
-}
-
 function isOnPayloadInfoStep(step: Step): step is OnPayloadInfo {
   return typeof (step as OnPayloadInfo).block_hash === "string";
 }
 
 function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
-}
-
-// Extend Eth1ForBlockProductionDisabled to not have to re-implement new methods
-class Eth1ForBlockProductionMock extends Eth1ForBlockProductionDisabled {
-  private items = new Map<string, PowMergeBlock>();
-
-  async getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
-    return this.items.get(powBlockHash) ?? null;
-  }
-
-  addPowBlock(powBlock: bellatrix.PowBlock): void {
-    this.items.set(toHexString(powBlock.blockHash), {
-      // not used by verifyBlock()
-      number: 0,
-      blockHash: toHexString(powBlock.blockHash),
-      parentHash: toHexString(powBlock.parentHash),
-      totalDifficulty: powBlock.totalDifficulty,
-    });
-  }
 }
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {

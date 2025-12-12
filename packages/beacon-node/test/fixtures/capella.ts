@@ -1,7 +1,8 @@
-import {CachedBeaconStateAltair} from "@lodestar/state-transition";
+import {CachedBeaconStateAltair, Index2PubkeyCache} from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
 
 export function generateBlsToExecutionChanges(
+  index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAltair,
   count: number
 ): capella.SignedBLSToExecutionChange[] {
@@ -10,7 +11,7 @@ export function generateBlsToExecutionChanges(
   for (const validatorIndex of state.epochCtx.proposers) {
     result.push({
       message: {
-        fromBlsPubkey: state.epochCtx.index2pubkey[validatorIndex].toBytes(),
+        fromBlsPubkey: index2pubkey[validatorIndex].toBytes(),
         toExecutionAddress: Buffer.alloc(20),
         validatorIndex,
       },

@@ -6,7 +6,6 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   isExecutionCachedStateType,
-  isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
@@ -36,7 +35,6 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
   const {network, chain, sync, config, logger, signal} = modules;
 
   const headSlotTimeSeries = new TimeSeries({maxPoints: 10});
-  const tdTimeSeries = new TimeSeries({maxPoints: 50});
 
   const SLOTS_PER_SYNC_COMMITTEE_PERIOD = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
   let hasLowPeerCount = false;
@@ -86,21 +84,6 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
       const executionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
-
-      // Log in TD progress in separate line to not clutter regular status update.
-      // This line will only exist between BELLATRIX_FORK_EPOCH and TTD, a window of some days / weeks max.
-      // Notifier log lines must be kept at a reasonable max width otherwise it's very hard to read
-      const tdProgress = chain.eth1.getTDProgress();
-      if (tdProgress !== null && !tdProgress.ttdHit) {
-        tdTimeSeries.addPoint(tdProgress.tdDiffScaled, tdProgress.timestamp);
-
-        const timestampTDD = tdTimeSeries.computeY0Point();
-        // It is possible to get ttd estimate with an error at imminent merge
-        const secToTTD = Math.max(Math.floor(timestampTDD - Date.now() / 1000), 0);
-        const timeLeft = Number.isFinite(secToTTD) ? prettyTimeDiffSec(secToTTD) : "?";
-
-        logger.info(`TTD in ${timeLeft} current TD ${tdProgress.td} / ${tdProgress.ttd}`);
-      }
 
       let nodeState: string[];
       switch (sync.state) {
@@ -188,18 +171,13 @@ function getHeadExecutionInfo(
 
   // Add execution status to notifier only if head is on/post bellatrix
   if (isExecutionCachedStateType(headState)) {
-    if (isMergeTransitionComplete(headState)) {
-      const executionPayloadHashInfo =
-        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
-      const executionPayloadNumberInfo =
-        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
-      return [
-        `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
-          executionPayloadHashInfo
-        )})`,
-      ];
-    }
-    return [`exec-block: ${executionStatusStr}`];
+    const executionPayloadHashInfo =
+      headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
+    const executionPayloadNumberInfo =
+      headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
+    return [
+      `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(executionPayloadHashInfo)})`,
+    ];
   }
 
   return [];

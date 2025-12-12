@@ -246,10 +246,3 @@ export interface IForkChoice {
    */
   getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
 }
-
-/** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
-export type PowBlockHex = {
-  blockHash: RootHex;
-  parentHash: RootHex;
-  totalDifficulty: bigint;
-};

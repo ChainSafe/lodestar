@@ -1,8 +1,8 @@
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {getProposerSlashingSignatureSets} from "../signatureSets/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
-import {isSlashableValidator} from "../util/index.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
+import {computeEpochAtSlot, isSlashableValidator} from "../util/index.js";
 import {verifySignatureSet} from "../util/signatureSets.js";
 import {slashValidator} from "./slashValidator.js";
 
@@ -19,6 +19,27 @@ export function processProposerSlashing(
   verifySignatures = true
 ): void {
   assertValidProposerSlashing(state, proposerSlashing, verifySignatures);
+
+  if (fork >= ForkSeq.gloas) {
+    const slot = Number(proposerSlashing.signedHeader1.message.slot);
+    const proposalEpoch = computeEpochAtSlot(slot);
+    const currentEpoch = state.epochCtx.epoch;
+    const previousEpoch = currentEpoch - 1;
+
+    const paymentIndex =
+      proposalEpoch === currentEpoch
+        ? SLOTS_PER_EPOCH + (slot % SLOTS_PER_EPOCH)
+        : proposalEpoch === previousEpoch
+          ? slot % SLOTS_PER_EPOCH
+          : undefined;
+
+    if (paymentIndex !== undefined) {
+      (state as CachedBeaconStateGloas).builderPendingPayments.set(
+        paymentIndex,
+        ssz.gloas.BuilderPendingPayment.defaultViewDU()
+      );
+    }
+  }
 
   slashValidator(fork, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }
@@ -56,7 +77,7 @@ export function assertValidProposerSlashing(
 
   // verify signatures
   if (verifySignatures) {
-    const signatureSets = getProposerSlashingSignatureSets(state, proposerSlashing);
+    const signatureSets = getProposerSlashingSignatureSets(state.epochCtx.index2pubkey, state, proposerSlashing);
     for (let i = 0; i < signatureSets.length; i++) {
       if (!verifySignatureSet(signatureSets[i])) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);

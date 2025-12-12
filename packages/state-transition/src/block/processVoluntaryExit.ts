@@ -69,12 +69,12 @@ export function getVoluntaryExitValidity(
   // only exit validator if it has no pending withdrawals in the queue
   if (
     fork >= ForkSeq.electra &&
-    getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) !== 0
+    getPendingBalanceToWithdraw(fork, state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) !== 0
   ) {
     return VoluntaryExitValidity.pendingWithdrawals;
   }
 
-  if (verifySignature && !verifyVoluntaryExitSignature(state, signedVoluntaryExit)) {
+  if (verifySignature && !verifyVoluntaryExitSignature(epochCtx.index2pubkey, state, signedVoluntaryExit)) {
     return VoluntaryExitValidity.invalidSignature;
   }
 

@@ -111,7 +111,7 @@ export function stateTransition(
   postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
 
   // Verify proposer signature only
-  if (verifyProposer && !verifyProposerSignature(postState, signedBlock)) {
+  if (verifyProposer && !verifyProposerSignature(postState.epochCtx.index2pubkey, postState, signedBlock)) {
     throw new Error("Invalid block signature");
   }
 
@@ -217,13 +217,13 @@ function processSlotsWithTransientCache(
   }
 
   while (postState.slot < slot) {
-    processSlot(postState);
+    const fork = postState.config.getForkSeq(postState.slot);
+    processSlot(fork, postState);
 
     // Process epoch on the first slot of the next epoch
+    // We use `fork` because at fork boundary we don't want to process
+    // "next fork" epoch before upgrading state
     if ((postState.slot + 1) % SLOTS_PER_EPOCH === 0) {
-      // At fork boundary we don't want to process "next fork" epoch before upgrading state
-      const fork = postState.config.getForkSeq(postState.slot);
-
       const epochTransitionTimer = metrics?.epochTransitionTime.startTimer();
 
       let epochTransitionCache: EpochTransitionCache;
