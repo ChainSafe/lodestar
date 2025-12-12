@@ -32,7 +32,6 @@ export type IChainOptions = BlockProcessOpts &
     persistInvalidSszObjectsDir?: string;
     persistOrphanedBlocks?: boolean;
     persistOrphanedBlocksDir?: string;
-    skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
     maxSkipSlots?: number;
     /** Ensure blobs returned by the execution engine are valid */
