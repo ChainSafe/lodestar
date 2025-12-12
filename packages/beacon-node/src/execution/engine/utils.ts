@@ -26,7 +26,12 @@ export interface RpcPayload<P = IJson[]> {
 /**
  * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
  *
- * When encoding QUANTITIES (integers, numbers): encode as hex, prefix with "0x", the most compact representation.
+ * When encoding QUANTITIES (integers, numbers): encode as hex, prefix with “0x”, the most compact representation (slight exception: zero should be represented as “0x0”). Examples:
+ * - 0x41 (65 in decimal)
+ * - 0x400 (1024 in decimal)
+ * - WRONG: 0x (should always have at least one digit - zero is “0x0”)
+ * - WRONG: 0x0400 (no leading zeroes allowed)
+ * - WRONG: ff (must be prefixed 0x)
  */
 export function numToQuantity(num: number | bigint): QUANTITY {
   return "0x" + num.toString(16);
@@ -43,7 +48,7 @@ export function quantityToNum(hex: QUANTITY, id = ""): number {
 
 /**
  * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
- * Typesafe fn to convert hex string to bigint.
+ * Typesafe fn to convert hex string to bigint. The BigInt constructor param is any
  */
 export function quantityToBigint(hex: QUANTITY, id = ""): bigint {
   try {
@@ -72,6 +77,22 @@ export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
 
 /**
  * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
+ *
+ * When encoding UNFORMATTED DATA (byte arrays, account addresses, hashes, bytecode arrays): encode as hex, prefix with
+ * “0x”, two hex digits per byte. Examples:
+ *
+ * - 0x41 (size 1, “A”)
+ * - 0x004200 (size 3, “\0B\0”)
+ * - 0x (size 0, “”)
+ * - WRONG: 0xf0f0f (must be even number of digits)
+ * - WRONG: 004200 (must be prefixed 0x)
+ */
+export function bytesToData(bytes: Uint8Array): DATA {
+  return toHex(bytes);
+}
+
+/**
+ * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
  */
 export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
   try {
@@ -87,16 +108,8 @@ export function dataToBytes(hex: DATA, fixedLength: number | null): Uint8Array {
 }
 
 /**
- * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
- * - 0x-prefixed, can be empty
- */
-export function bytesToData(bytes: Uint8Array): DATA {
-  return toHex(bytes);
-}
-
-/**
- * DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API
- * Writes hex into buffer
+ * Convert DATA into a preallocated buffer
+ * fromHexInto will throw if buffer's length is not the same as the decoded hex length
  */
 export function dataIntoBytes(hex: DATA, buffer: Uint8Array): Uint8Array {
   fromHexInto(hex, buffer);
