@@ -1,7 +1,7 @@
 import {spawn} from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
-import {sleep} from "@lodestar/utils";
+import {fromHex, sleep} from "@lodestar/utils";
 import {JsonRpcHttpClient} from "../../src/execution/engine/jsonRpcHttpClient.js";
 import {shell} from "../sim/shell.js";
 
@@ -87,7 +87,7 @@ async function getGenesisBlockHash(
 ): Promise<string> {
   const rpc = new JsonRpcHttpClient([providerUrl], {
     signal,
-    jwtSecret: jwtSecretHex ? Buffer.from(jwtSecretHex.replace("0x", ""), "hex") : undefined,
+    jwtSecret: jwtSecretHex ? fromHex(jwtSecretHex) : undefined,
   });
 
   // Need to run multiple tries because nethermind sometimes is not yet ready and throws error
