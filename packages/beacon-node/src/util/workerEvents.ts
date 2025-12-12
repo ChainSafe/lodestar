@@ -59,8 +59,8 @@ export function wireEventsOnWorkerThread<EventData>(
           data,
         };
         let transferList: ArrayBuffer[] | undefined = undefined;
-        const payload = data as {msg?: Message};
-        if (eventName === NetworkEvent.pendingGossipsubMessage && payload.msg && payload.msg.data) {
+        if (eventName === NetworkEvent.pendingGossipsubMessage) {
+          const payload = data as {msg: Message};
           // Transfer the underlying ArrayBuffer to avoid copy for PendingGossipsubMessage
           transferList = [payload.msg.data.buffer as ArrayBuffer];
         }
