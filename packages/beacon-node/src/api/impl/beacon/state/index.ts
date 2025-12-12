@@ -95,7 +95,7 @@ export function getBeaconStateApi({
       const {state, executionOptimistic, finalized} = await getState(stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
-      const {pubkey2index} = chain.getHeadState().epochCtx;
+      const {pubkey2index} = chain;
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (validatorIds.length) {
@@ -154,7 +154,7 @@ export function getBeaconStateApi({
 
     async postStateValidatorIdentities({stateId, validatorIds = []}) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
-      const {pubkey2index} = chain.getHeadState().epochCtx;
+      const {pubkey2index} = chain;
 
       let validatorIdentities: routes.beacon.ValidatorIdentities;
 
@@ -187,7 +187,7 @@ export function getBeaconStateApi({
 
     async getStateValidator({stateId, validatorId}) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
-      const {pubkey2index} = chain.getHeadState().epochCtx;
+      const {pubkey2index} = chain;
 
       const resp = getStateValidatorIndex(validatorId, state, pubkey2index);
       if (!resp.valid) {
@@ -212,10 +212,9 @@ export function getBeaconStateApi({
       if (validatorIds.length) {
         assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
 
-        const headState = chain.getHeadState();
         const balances: routes.beacon.ValidatorBalance[] = [];
         for (const id of validatorIds) {
-          const resp = getStateValidatorIndex(id, state, headState.epochCtx.pubkey2index);
+          const resp = getStateValidatorIndex(id, state, chain.pubkey2index);
 
           if (resp.valid) {
             balances.push({
