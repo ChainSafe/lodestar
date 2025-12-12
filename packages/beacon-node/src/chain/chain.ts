@@ -1344,7 +1344,7 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`State is not in cache for slot ${slot}`);
     }
 
-    const rewards = await computeAttestationsRewards(epoch, cachedState, this.config, validatorIds);
+    const rewards = await computeAttestationsRewards(this.pubkey2index, cachedState, validatorIds);
 
     return {rewards, executionOptimistic, finalized};
   }
