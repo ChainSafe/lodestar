@@ -610,45 +610,45 @@
     uint8arrays "^5.0.0"
     wherearewe "^2.0.1"
 
-"@chainsafe/libp2p-quic-darwin-arm64@1.1.7":
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-darwin-arm64/-/libp2p-quic-darwin-arm64-1.1.7.tgz#2bebe37e2c63a54f00700d9dff0b0388d0ce7ed3"
-  integrity sha512-81hK73CjZP7BPnvqysK+rhCCcg/XQLu8ZHphI45jKWe4sBLSqVWqiwEDcGSZTMH8rDIvgoAwCJXbk9Z6ylzsng==
+"@chainsafe/libp2p-quic-darwin-arm64@1.1.8":
+  version "1.1.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-darwin-arm64/-/libp2p-quic-darwin-arm64-1.1.8.tgz#2b412f99c674960bb4f9c322d8eba202db24335c"
+  integrity sha512-/w7nvBNVS5898+psJOgI5HvKpVjp3JvV6cZvb9oV2a+bMa3m9iVSUDlXVh1rM2F1bXkfsYiy0aEziFRzp2ElmA==
 
-"@chainsafe/libp2p-quic-darwin-x64@1.1.7":
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-darwin-x64/-/libp2p-quic-darwin-x64-1.1.7.tgz#83bceba069ff9192ce4997d4027f5862ddfe6d4f"
-  integrity sha512-FJwZahITBp1r+5C7nJJCzb1vCGpV9PfFNscs00TYg0/YsWOXFg++b35egivyqmtKjIp+EcfGCb7BW7ptEzjXug==
+"@chainsafe/libp2p-quic-darwin-x64@1.1.8":
+  version "1.1.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-darwin-x64/-/libp2p-quic-darwin-x64-1.1.8.tgz#7b7727ca21bf9a7954bfd9373900638f24427c22"
+  integrity sha512-07gIpuUG5mm+THTHqqP5G38WG5t7xWAlk/ASIIQ+jFk4HX/S1zuWXAA63VTaA/kh3y+K9I341YHYwK6hgR1erg==
 
-"@chainsafe/libp2p-quic-linux-arm64-gnu@1.1.7":
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-arm64-gnu/-/libp2p-quic-linux-arm64-gnu-1.1.7.tgz#d31c0d2a666e705038b2fddc395e220293c9f80f"
-  integrity sha512-dHv8r0Ow+eROHvyC50wX1DHi5CFPQiSNBGEwV7Z1Z/zuGTzpos7OkEKvjp5QOGlbbimD2CfBoyknfWFQW/rhUw==
+"@chainsafe/libp2p-quic-linux-arm64-gnu@1.1.8":
+  version "1.1.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-arm64-gnu/-/libp2p-quic-linux-arm64-gnu-1.1.8.tgz#77c9c8dd2d8ff4ed2033d324ee77c36aa094a0ab"
+  integrity sha512-QTll87NloHghBbAVENjAGEtNOHbZjxVQQd8+b9zZm/Mjs2APzSxwxVebeUlxsm9Z8G0p3X5AdlweL+sNW92A2Q==
 
-"@chainsafe/libp2p-quic-linux-arm64-musl@1.1.7":
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-arm64-musl/-/libp2p-quic-linux-arm64-musl-1.1.7.tgz#cc6df2bade5d9a511f3856de7c367398345dfac6"
-  integrity sha512-9xvefj/u++DC6+3E2pmaJBeCDxfbOjrYph/QLMnwYSe9NQFFPo0QxR0N90kYkXDlKxlfoR+Bcz8tCL8uKejFBQ==
+"@chainsafe/libp2p-quic-linux-arm64-musl@1.1.8":
+  version "1.1.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-arm64-musl/-/libp2p-quic-linux-arm64-musl-1.1.8.tgz#e5784f79502082477352a6186c0c637b96cae960"
+  integrity sha512-3BHxwYLDS/9osNqctqwjCLhW1A7VajnRkgBhQEe+Q6MsjImQzmperOkG3q92hOpQ/Hh8UcIUUGJ1IB2Xpn92TQ==
 
-"@chainsafe/libp2p-quic-linux-x64-gnu@1.1.7":
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-x64-gnu/-/libp2p-quic-linux-x64-gnu-1.1.7.tgz#24d625ef24b7e5f3cb9f73274d2f701a8aecd153"
-  integrity sha512-iycBb9YVnGpfoXbEM87NL6esl+gQZSSKmJu1466cpPc+Qq7wZOFqzI+fGfKXjH6uQkz7uUfhDoqb1Qgm+0kyIA==
+"@chainsafe/libp2p-quic-linux-x64-gnu@1.1.8":
+  version "1.1.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-x64-gnu/-/libp2p-quic-linux-x64-gnu-1.1.8.tgz#7228bbccccbec231f2e716254f027c20d53a439b"
+  integrity sha512-OUI6FON+w7igFpRBzN4D9Co0jZ1GSzcZRVtH7RjCN/MXEWB2x8h87Bg16bOFRwFr3WqmB5QCqaOdMMFe2kAqCw==
 
-"@chainsafe/libp2p-quic-linux-x64-musl@1.1.7":
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-x64-musl/-/libp2p-quic-linux-x64-musl-1.1.7.tgz#8aef22d8991a212c31bd9d1d1310d187af9ec20a"
-  integrity sha512-KbotqjOdMGJseu8OmuI8ha42qhcxq1wzYsdHCYfhyA8IQioGCsKeC7N560gS1dn5yglTz03FopeXo2foIzyKAw==
+"@chainsafe/libp2p-quic-linux-x64-musl@1.1.8":
+  version "1.1.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-linux-x64-musl/-/libp2p-quic-linux-x64-musl-1.1.8.tgz#46dfb9792b98dde83b6d4b131c50d50454edbb77"
+  integrity sha512-PfURP49XPU+Ke2fNfHhpjYWJdnkUKL/X5OJZ4R3cIzF889l3UbmGkg/dXs+s63fefq1P2i+aTyigPw1UBGgs0g==
 
-"@chainsafe/libp2p-quic-win32-x64-msvc@1.1.7":
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-win32-x64-msvc/-/libp2p-quic-win32-x64-msvc-1.1.7.tgz#cb0a0ee996dac1ce8bde9a3b2feeb898a6db0f58"
-  integrity sha512-9rdhFOTMAbMQjglbki1jwYOgx7YVL/lVmEg6Ny4Gwwd8Rr81ewfwM7inDq8CpUALCf0XXRU/OFJvE3u3cuBRTw==
+"@chainsafe/libp2p-quic-win32-x64-msvc@1.1.8":
+  version "1.1.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic-win32-x64-msvc/-/libp2p-quic-win32-x64-msvc-1.1.8.tgz#02c27aa50e909810dea299251827a8a994ac45af"
+  integrity sha512-BL24zXw565Nhc7luKg2lzST404PqfK8i3E+zMigrwbay1non1HaBIjDmiB0XCrfhPT8mdq+fS3wQcnsN5vuYnQ==
 
-"@chainsafe/libp2p-quic@^1.1.7":
-  version "1.1.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic/-/libp2p-quic-1.1.7.tgz#9dcd60005a5361630ca2a14857e4c7e0ab59dc81"
-  integrity sha512-4YIVkFEt6IBn7VJ0vSavrFbMH3iQ6v2hAUZ62vcROZCLtCC5CXo6kvt9ZcnGjOdxF7zptM4m8Ikr7EYTDpQXOA==
+"@chainsafe/libp2p-quic@^1.1.8":
+  version "1.1.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-quic/-/libp2p-quic-1.1.8.tgz#fe7524ecc80837f578fd4613660d77298ca0cdd8"
+  integrity sha512-90jwMEk7qzIxMu2WhpA+8LaZ6uiwcX7WmbqCNoAEjOhNrJsLF+OoBCoNvb5SFML5UY0BVNnG238lEkSIspf6Vw==
   dependencies:
     "@libp2p/crypto" "^5.1.7"
     "@libp2p/interface" "^2.10.5"
@@ -659,13 +659,13 @@
     race-signal "^1.1.3"
     uint8arraylist "^2.4.8"
   optionalDependencies:
-    "@chainsafe/libp2p-quic-darwin-arm64" "1.1.7"
-    "@chainsafe/libp2p-quic-darwin-x64" "1.1.7"
-    "@chainsafe/libp2p-quic-linux-arm64-gnu" "1.1.7"
-    "@chainsafe/libp2p-quic-linux-arm64-musl" "1.1.7"
-    "@chainsafe/libp2p-quic-linux-x64-gnu" "1.1.7"
-    "@chainsafe/libp2p-quic-linux-x64-musl" "1.1.7"
-    "@chainsafe/libp2p-quic-win32-x64-msvc" "1.1.7"
+    "@chainsafe/libp2p-quic-darwin-arm64" "1.1.8"
+    "@chainsafe/libp2p-quic-darwin-x64" "1.1.8"
+    "@chainsafe/libp2p-quic-linux-arm64-gnu" "1.1.8"
+    "@chainsafe/libp2p-quic-linux-arm64-musl" "1.1.8"
+    "@chainsafe/libp2p-quic-linux-x64-gnu" "1.1.8"
+    "@chainsafe/libp2p-quic-linux-x64-musl" "1.1.8"
+    "@chainsafe/libp2p-quic-win32-x64-msvc" "1.1.8"
 
 "@chainsafe/netmask@^2.0.0":
   version "2.0.0"
