@@ -669,7 +669,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
   const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
     randaoReveal,
     graffiti,
-    // Eth1 data voting is not required since electra
+    // Eth1 data voting is no longer required since electra
     eth1Data: currentState.eth1Data,
     proposerSlashings,
     attesterSlashings,

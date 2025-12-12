@@ -289,13 +289,16 @@ export class BeaconChain implements IBeaconChain {
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
     // pubkeys takes ~30 seconds for 350k keys (mainnet 2022Q2).
-    const cachedState = isCachedBeaconState(anchorState)
-      ? anchorState
-      : createCachedBeaconState(anchorState, {
-          config,
-          pubkey2index: new PubkeyIndexMap(),
-          index2pubkey: [],
-        });
+    // When the BeaconStateCache is created in initializeBeaconStateFromEth1 it may be incorrect. Until we can ensure that
+    // it's safe to re-use _ANY_ BeaconStateCache, this option is disabled by default and only used in tests.
+    const cachedState =
+      isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
+        ? anchorState
+        : createCachedBeaconState(anchorState, {
+            config,
+            pubkey2index: new PubkeyIndexMap(),
+            index2pubkey: [],
+          });
     this._earliestAvailableSlot = cachedState.slot;
 
     this.shufflingCache = cachedState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
