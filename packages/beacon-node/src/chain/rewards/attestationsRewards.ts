@@ -1,5 +1,5 @@
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
-import {BeaconConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
@@ -25,7 +25,7 @@ import {
   hasMarkers,
   isInInactivityLeak,
 } from "@lodestar/state-transition";
-import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 
 export type AttestationsRewards = routes.beacon.AttestationsRewards;
@@ -38,9 +38,8 @@ const defaultAttestationsReward = {head: 0, target: 0, source: 0, inclusionDelay
 const defaultAttestationsPenalty = {target: 0, source: 0};
 
 export async function computeAttestationsRewards(
-  _epoch: Epoch,
+  pubkey2index: PubkeyIndexMap,
   state: CachedBeaconStateAllForks,
-  _config: BeaconConfig,
   validatorIds?: (ValidatorIndex | string)[]
 ): Promise<AttestationsRewards> {
   const fork = state.config.getForkName(state.slot);
@@ -53,6 +52,7 @@ export async function computeAttestationsRewards(
 
   const [idealRewards, penalties] = computeIdealAttestationsRewardsAndPenaltiesAltair(stateAltair, transitionCache);
   const totalRewards = computeTotalAttestationsRewardsAltair(
+    pubkey2index,
     stateAltair,
     transitionCache,
     idealRewards,
@@ -139,6 +139,7 @@ function computeIdealAttestationsRewardsAndPenaltiesAltair(
 
 // Same calculation as `getRewardsAndPenaltiesAltair` but returns the breakdown of rewards instead of aggregated
 function computeTotalAttestationsRewardsAltair(
+  pubkey2index: PubkeyIndexMap,
   state: CachedBeaconStateAltair,
   transitionCache: EpochTransitionCache,
   idealRewards: IdealAttestationsReward[],
@@ -149,7 +150,7 @@ function computeTotalAttestationsRewardsAltair(
   const {flags} = transitionCache;
   const {epochCtx, config} = state;
   const validatorIndices = validatorIds
-    .map((id) => (typeof id === "number" ? id : epochCtx.pubkey2index.get(fromHex(id))))
+    .map((id) => (typeof id === "number" ? id : pubkey2index.get(fromHex(id))))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
   const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;

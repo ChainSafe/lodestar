@@ -60,10 +60,13 @@ const coveredTestRunners = [
 // ```
 export const defaultSkipOpts: SkipOpts = {
   skippedForks: ["eip7805"],
-  // TODO: capella
-  // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
-  // Skip them for now to enable subsequently
   skippedTestSuites: [
+    // Merge transition tests are skipped because we no longer support performing the merge transition.
+    // All networks have already completed the merge, so this code path is no longer needed.
+    /^bellatrix\/fork_choice\/on_merge_block\/.*/,
+    // TODO: capella
+    // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
+    // Skip them for now to enable subsequently
     /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
@@ -72,7 +75,12 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/(finality|fork_choice|networking|sanity|transition)\/.*$/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // These tests validate "first payload" scenarios where is_execution_enabled was false pre-merge.
+    // Since we removed merge transition support, these code paths no longer exist.
+    /^bellatrix\/operations\/execution_payload\/.+\/bad_parent_hash_first_payload$/,
+    /^bellatrix\/sanity\/blocks\/.+\/is_execution_enabled_false$/,
+  ],
   skippedRunners: [],
 };
 

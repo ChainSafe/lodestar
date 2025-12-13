@@ -3,7 +3,7 @@ import path from "node:path";
 import {Web3} from "web3";
 import {fetch} from "@lodestar/utils";
 import {EL_GENESIS_PASSWORD, EL_GENESIS_SECRET_KEY, SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../../constants.js";
-import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
+import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
 import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
@@ -13,7 +13,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     throw new Error("GETH_BINARY_DIR or GETH_DOCKER_IMAGE must be provided");
   }
 
-  const {id, mode, ttd, address, mining, clientOptions, nodeIndex} = opts;
+  const {id, ttd, address, mining, clientOptions, nodeIndex} = opts;
   const ports = getNodePorts(nodeIndex);
 
   const isDocker = !!process.env.GETH_DOCKER_IMAGE;
@@ -136,7 +136,6 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         "--verbosity",
         "5",
         ...(mining ? ["--mine"] : []),
-        ...(mode === ExecutionStartMode.PreMerge ? ["--nodiscover"] : []),
         ...clientOptions,
       ],
       env: {},

@@ -1,6 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {Root, RootHex, phase0} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 
 export type EthJsonRpcBlockRaw = {
   /** the block number. null when its pending block. `"0x1b4"` */
@@ -47,22 +47,6 @@ export type Eth1DataAndDeposits = {
 export interface IEth1ForBlockProduction {
   getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits>;
 
-  /** Returns the most recent POW block that satisfies the merge block condition */
-  getTerminalPowBlock(): Promise<Root | null>;
-  /** Get a POW block by hash checking the local cache first */
-  getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null>;
-
-  /** Get current TD progress for log notifier */
-  getTDProgress(): TDProgress | null;
-
-  /**
-   * Should only start polling for mergeBlock if:
-   * - after BELLATRIX_FORK_EPOCH
-   * - Beacon node synced
-   * - head state not isMergeTransitionComplete
-   */
-  startPollingMergeBlock(): void;
-
   isPollingEth1Data(): boolean;
 
   /**
@@ -77,34 +61,6 @@ export type Eth1Block = {
   blockNumber: number;
   timestamp: number;
 };
-
-export type PowMergeBlock = {
-  number: number;
-  blockHash: RootHex;
-  parentHash: RootHex;
-  totalDifficulty: bigint;
-};
-
-export type PowMergeBlockTimestamp = PowMergeBlock & {
-  /** in seconds */
-  timestamp: number;
-};
-
-export type TDProgress =
-  | {
-      ttdHit: false;
-      /** Power of ten by which tdDiffScaled is scaled down */
-      tdFactor: bigint;
-      /** (TERMINAL_TOTAL_DIFFICULTY - block.totalDifficulty) / tdFactor */
-      tdDiffScaled: number;
-      /** TERMINAL_TOTAL_DIFFICULTY */
-      ttd: bigint;
-      /** totalDifficulty of latest fetched eth1 block */
-      td: bigint;
-      /** timestamp in sec of latest fetched eth1 block */
-      timestamp: number;
-    }
-  | {ttdHit: true};
 
 export type BatchDepositEvents = {
   depositEvents: phase0.DepositEvent[];

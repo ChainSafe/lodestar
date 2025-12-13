@@ -21,6 +21,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   const contributionAndProof = signedContributionAndProof.message;
   const {contribution, aggregatorIndex} = contributionAndProof;
   const {subcommitteeIndex, slot} = contribution;
+  const {index2pubkey} = chain;
 
   const headState = chain.getHeadState();
   validateGossipSyncCommitteeExceptSig(chain, headState, subcommitteeIndex, {
@@ -73,16 +74,14 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // i.e. state.validators[contribution_and_proof.aggregator_index].pubkey in get_sync_subcommittee_pubkeys(state, contribution.subcommittee_index).
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
-  const participantPubkeys = syncCommitteeParticipantIndices.map(
-    (validatorIndex) => headState.epochCtx.index2pubkey[validatorIndex]
-  );
+  const participantPubkeys = syncCommitteeParticipantIndices.map((validatorIndex) => index2pubkey[validatorIndex]);
   const signatureSets = [
     // [REJECT] The contribution_and_proof.selection_proof is a valid signature of the SyncAggregatorSelectionData
     // derived from the contribution by the validator with index contribution_and_proof.aggregator_index.
-    getSyncCommitteeSelectionProofSignatureSet(headState, contributionAndProof),
+    getSyncCommitteeSelectionProofSignatureSet(index2pubkey, headState, contributionAndProof),
 
     // [REJECT] The aggregator signature, signed_contribution_and_proof.signature, is valid.
-    getContributionAndProofSignatureSet(headState, signedContributionAndProof),
+    getContributionAndProofSignatureSet(index2pubkey, headState, signedContributionAndProof),
 
     // [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from
     // the participation info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.

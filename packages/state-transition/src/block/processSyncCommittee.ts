@@ -1,6 +1,7 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {G2_POINT_AT_INFINITY} from "../constants/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {
@@ -23,7 +24,7 @@ export function processSyncAggregate(
   if (verifySignatures) {
     // This is to conform to the spec - we want the signature to be verified
     const participantIndices = block.body.syncAggregate.syncCommitteeBits.intersectValues(committeeIndices);
-    const signatureSet = getSyncCommitteeSignatureSet(state, block, participantIndices);
+    const signatureSet = getSyncCommitteeSignatureSet(state.epochCtx.index2pubkey, state, block, participantIndices);
     // When there's no participation we consider the signature valid and just ignore i
     if (signatureSet !== null && !verifySignatureSet(signatureSet)) {
       throw Error("Sync committee signature invalid");
@@ -63,12 +64,12 @@ export function processSyncAggregate(
 }
 
 export function getSyncCommitteeSignatureSet(
+  index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   block: altair.BeaconBlock,
   /** Optional parameter to prevent computing it twice */
   participantIndices?: number[]
 ): ISignatureSet | null {
-  const {epochCtx} = state;
   const {syncAggregate} = block.body;
   const signature = syncAggregate.syncCommitteeSignature;
 
@@ -110,7 +111,7 @@ export function getSyncCommitteeSignatureSet(
 
   return {
     type: SignatureSetType.aggregate,
-    pubkeys: participantIndices.map((i) => epochCtx.index2pubkey[i]),
+    pubkeys: participantIndices.map((i) => index2pubkey[i]),
     signingRoot: computeSigningRoot(ssz.Root, rootSigned, domain),
     signature,
   };

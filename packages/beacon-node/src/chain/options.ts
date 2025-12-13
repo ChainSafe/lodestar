@@ -1,4 +1,3 @@
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
@@ -57,10 +56,6 @@ export type BlockProcessOpts = {
    */
   disableBlsBatchVerify?: boolean;
   /**
-   * Override SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY
-   */
-  safeSlotsToImportOptimistically?: number;
-  /**
    * Assert progressive balances the same to EpochTransitionCache
    */
   assertCorrectProgressiveBalances?: boolean;
@@ -109,7 +104,6 @@ export const defaultChainOptions: IChainOptions = {
   proposerBoost: true,
   proposerBoostReorg: true,
   computeUnrealized: true,
-  safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,

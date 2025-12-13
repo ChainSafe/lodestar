@@ -6,7 +6,6 @@ import {
   computeTimeAtSlot,
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
-  isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb} from "@lodestar/types";
@@ -141,7 +140,7 @@ export async function validateGossipBlock(
   if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
     if (!isExecutionBlockBodyType(block.body)) throw Error("Not merge block type");
     const executionPayload = block.body.executionPayload;
-    if (isExecutionStateType(blockState) && isExecutionEnabled(blockState, block)) {
+    if (isExecutionStateType(blockState)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
@@ -155,7 +154,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
-    const signatureSet = getBlockProposerSignatureSet(blockState, signedBlock);
+    const signatureSet = getBlockProposerSignatureSet(chain.index2pubkey, blockState, signedBlock);
     // Don't batch so verification is not delayed
     if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
       throw new BlockGossipError(GossipAction.REJECT, {

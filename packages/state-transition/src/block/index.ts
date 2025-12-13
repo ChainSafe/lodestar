@@ -7,7 +7,7 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateGloas,
 } from "../types.js";
-import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
+import {getFullOrBlindedPayload} from "../util/execution.js";
 import {BlockExternalData, DataAvailabilityStatus} from "./externalData.js";
 import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {processBlockHeader} from "./processBlockHeader.js";
@@ -67,11 +67,7 @@ export function processBlock(
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
   // TODO GLOAS: We call processExecutionPayload somewhere else post-gloas
-  if (
-    fork >= ForkSeq.bellatrix &&
-    fork < ForkSeq.gloas &&
-    isExecutionEnabled(state as CachedBeaconStateBellatrix, block)
-  ) {
+  if (fork >= ForkSeq.bellatrix && fork < ForkSeq.gloas) {
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);
   }
 
