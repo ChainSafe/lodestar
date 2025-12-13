@@ -28,6 +28,7 @@ async function validateExecutionPayloadEnvelope(
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
   const {builderIndex, payload} = envelope;
+  const blockRootHex = toRootHex(envelope.beaconBlockRoot);
 
   //  GLOAS: [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
   //  gossip or non-gossip sources) (a client MAY queue payload for processing once
@@ -37,13 +38,20 @@ async function validateExecutionPayloadEnvelope(
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,
-      blockRoot: toRootHex(envelope.beaconBlockRoot),
+      blockRoot: blockRootHex,
     });
   }
 
   //  [IGNORE] The node has not seen another valid
   //  `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  // TODO GLOAS: implement this
+  if (chain.seenExecutionPayloadEnvelopes.isKnown(blockRootHex, builderIndex)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+      blockRoot: blockRootHex,
+      slot: envelope.slot,
+      builderIndex,
+    });
+  }
 
   //  [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `envelope.slot >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
   const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
@@ -72,7 +80,7 @@ async function validateExecutionPayloadEnvelope(
     // Cache fail. This should not happen
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
-      blockRoot: toRootHex(envelope.beaconBlockRoot),
+      blockRoot: blockRootHex,
     });
   }
 
@@ -106,4 +114,6 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
     });
   }
+
+  chain.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot, builderIndex);
 }

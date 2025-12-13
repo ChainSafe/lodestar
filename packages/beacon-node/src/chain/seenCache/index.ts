@@ -3,3 +3,4 @@ export {SeenBlockProposers} from "./seenBlockProposers.js";
 export {SeenSyncCommitteeMessages} from "./seenCommittee.js";
 export {SeenContributionAndProof} from "./seenCommitteeContribution.js";
 export {SeenBlockInput} from "./seenGossipBlockInput.js";
+export {SeenExecutionPayloadEnvelopes} from "./seenExecutionPayloadEnvelope.js";
