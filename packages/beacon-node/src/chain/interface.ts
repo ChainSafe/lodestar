@@ -46,8 +46,8 @@ import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
 import {
   AttestationPool,
-  OpPool,
   ExecutionPayloadBidPool,
+  OpPool,
   PayloadAttestationPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,

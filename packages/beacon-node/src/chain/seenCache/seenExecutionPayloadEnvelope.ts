@@ -10,7 +10,7 @@ type SeenExecutionPayloadEnvelopeEntry = {
  * We only keep track of envelopes of unfinalized slots
  * _[IGNORE]_ The node has not seen another valid
  *  `SignedExecutionPayloadEnvelope` for this block root from this builder.
-*/
+ */
 export class SeenExecutionPayloadEnvelopes {
   private readonly builderIndexesByBlockRoot = new Map<RootHex, SeenExecutionPayloadEnvelopeEntry>();
   private finalizedSlot: Slot = 0;
