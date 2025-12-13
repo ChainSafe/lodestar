@@ -65,7 +65,8 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `block` passes validation.
-  // TODO GLOAS: implement this
+  // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
+  // it is possible that the block didn't pass the validation
 
   // [REJECT] `block.slot` equals `envelope.slot`.
   if (block.slot !== envelope.slot) {

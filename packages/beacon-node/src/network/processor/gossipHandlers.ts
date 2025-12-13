@@ -829,7 +829,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 
-      // TODO GLOAS: Handle valid envelope. Call `processExecutionPayloadEnvelope` and call fork choice
+      // TODO GLOAS: Handle valid envelope. Need an import flow that calls `processExecutionPayloadEnvelope` and fork choice
     },
     [GossipType.payload_attestation_message]: async ({
       gossipData,
