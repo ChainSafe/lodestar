@@ -858,8 +858,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const executionPayloadBid = sszDeserialize(topic, serializedData);
       await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
 
-      // TODO GLOAS: In devnet-0 is self-built only so we will not test bidding flow
       // Handle valid payload bid by storing in a bid pool
+      try {
+        chain.executionPayloadBidPool.add(executionPayloadBid);
+      } catch (e) {
+        logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
+      }
     },
   };
 }
