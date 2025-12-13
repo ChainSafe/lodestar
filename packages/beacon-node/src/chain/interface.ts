@@ -64,6 +64,7 @@ import {
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
+  SeenExecutionPayloadBids,
   SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
   SeenSyncCommitteeMessages,
@@ -137,6 +138,7 @@ export interface IBeaconChain {
   readonly seenPayloadAttesters: SeenPayloadAttesters;
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadEnvelopes: SeenExecutionPayloadEnvelopes;
+  readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;

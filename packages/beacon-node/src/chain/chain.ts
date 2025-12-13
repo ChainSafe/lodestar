@@ -90,6 +90,7 @@ import {
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
+  SeenExecutionPayloadBids,
   SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
   SeenSyncCommitteeMessages,
@@ -158,6 +159,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadEnvelopes = new SeenExecutionPayloadEnvelopes();
+  readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
@@ -1166,6 +1168,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
+    this.seenExecutionPayloadBids.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 

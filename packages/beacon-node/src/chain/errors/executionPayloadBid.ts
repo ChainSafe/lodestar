@@ -23,8 +23,8 @@ export type ExecutionPayloadBidErrorType =
       parentBlockRoot: RootHex;
       parentBlockHash: RootHex;
     }
-  | {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW; bidValue: bigint; currentHighestBid: bigint}
-  | {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH; bidValue: bigint; builderBalance: bigint}
+  | {code: ExecutionPayloadBidErrorCode.BID_TOO_LOW; bidValue: number; currentHighestBid: number}
+  | {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH; bidValue: number; builderBalance: number}
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH; parentBlockHash: RootHex}
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT; parentBlockRoot: RootHex}
   | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; slot: Slot}

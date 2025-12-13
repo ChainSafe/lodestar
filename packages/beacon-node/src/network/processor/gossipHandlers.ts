@@ -860,7 +860,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       // Handle valid payload bid by storing in a bid pool
       try {
-        chain.executionPayloadBidPool.add(executionPayloadBid);
+        chain.executionPayloadBidPool.add(executionPayloadBid.message);
       } catch (e) {
         logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
       }

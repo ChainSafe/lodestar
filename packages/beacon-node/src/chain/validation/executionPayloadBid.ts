@@ -1,3 +1,4 @@
+import {MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {
   CachedBeaconStateGloas,
   createSingleSignatureSetFromComponents,
@@ -31,6 +32,8 @@ async function validateExecutionPayloadBid(
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
+  const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
+  const parentBlockHashHex = toRootHex(bid.parentBlockHash);
   const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipExecutionPayloadBid);
 
   // [REJECT] `bid.builder_index` is a valid, active, and non-slashed builder
@@ -54,13 +57,39 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] this is the first signed bid seen with a valid signature from the
-  // given builder for this slot.
+  // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for this slot.
+  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+      parentBlockRoot: parentBlockRootHex,
+      parentBlockHash: parentBlockHashHex,
+    });
+  }
+
   // [IGNORE] this bid is the highest value bid seen for the corresponding slot
   // and the given parent block hash.
+  const bestBid = chain.executionPayloadBidPool.getBestBid(parentBlockRootHex, parentBlockHashHex, bid.slot);
+  if (bestBid !== null && bestBid.value >= bid.value) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
+      bidValue: bid.value,
+      currentHighestBid: bestBid.value,
+    });
+  }
   // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
   // i.e.
   // `MIN_ACTIVATION_BALANCE + bid.value <= state.balances[bid.builder_index]`.
+  const builderBalance = state.balances.get(bid.builderIndex);
+  if (builderBalance < bid.value + MIN_ACTIVATION_BALANCE) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH,
+      bidValue: bid.value,
+      builderBalance,
+    });
+  }
+
   // [IGNORE] `bid.parent_block_hash` is the block hash of a known execution
   // payload in fork choice.
   // TODO GLOAS: implement this
@@ -71,7 +100,7 @@ async function validateExecutionPayloadBid(
   if (block === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
-      parentBlockRoot: toRootHex(bid.parentBlockRoot),
+      parentBlockRoot: parentBlockRootHex,
     });
   }
 
@@ -85,7 +114,6 @@ async function validateExecutionPayloadBid(
   }
 
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
-  // TODO GLOAS: implement thi
   const signatureSet = createSingleSignatureSetFromComponents(
     chain.index2pubkey[bid.builderIndex],
     getExecutionPayloadBidSigningRoot(state as CachedBeaconStateGloas, bid),
@@ -99,4 +127,5 @@ async function validateExecutionPayloadBid(
   }
 
   // Valid
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex);
 }
