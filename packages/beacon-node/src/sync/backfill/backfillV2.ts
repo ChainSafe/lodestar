@@ -725,6 +725,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         ...goodPeerMetaData,
         score: goodPeerMetaData.score - 1,
         failedRequests: goodPeerMetaData.failedRequests + 1,
+        lastSlotRequested: req.startSlot,
       };
       this.peersMeta.set(goodPeer, updatedMeta);
 
