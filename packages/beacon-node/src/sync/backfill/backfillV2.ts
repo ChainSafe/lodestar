@@ -337,6 +337,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
       // handle previously filled ranges
       if (this.nextRangeToSkip?.start === computeEpochAtSlot(anchorSlot - 1)) {
+        // Todo: Cleanup: anchor updation code is duplicate now as it is already present in updateNextRangeToSkip fn
         // Todo: Also handle the case when its in hot db
         const newAnchorSlot = computeStartSlotAtEpoch(this.nextRangeToSkip.end);
         const newAnchorBlock = await this.db.blockArchive.get(newAnchorSlot);
@@ -1135,6 +1136,34 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       if (updatedBackfillRange.beginningEpoch === updatedBackfillRange.endingEpoch) {
         this.logger.info("Node startup case. BackfillRange must have been initialized already.");
       } else {
+        // Update syncAnchor to the actual ending edge to prevent re-fetching already synced epochs
+        const newAnchorSlot = computeStartSlotAtEpoch(updatedBackfillRange.endingEpoch);
+        const newAnchorBlock = await this.db.blockArchive.get(newAnchorSlot);
+        if (newAnchorBlock) {
+          const blockRoot = this.config.getForkTypes(newAnchorSlot).BeaconBlock.hashTreeRoot(newAnchorBlock.message);
+          this.syncAnchor = {
+            anchorBlockParentRoot: newAnchorBlock.message.parentRoot,
+            anchorBlock: newAnchorBlock,
+            anchorBlockRoot: blockRoot,
+            anchorSlot: newAnchorSlot,
+            lastBackSyncedBlock: {slot: newAnchorSlot, root: blockRoot, block: newAnchorBlock},
+          };
+          this.logger.info(
+            "Updated syncAnchor to match actual DB state while merging backfill ranges and updating nextRangeToSkip:",
+            {
+              newAnchorSlot,
+              newAnchorEpoch: updatedBackfillRange.endingEpoch,
+            }
+          );
+        } else {
+          this.logger.error(
+            "Could not find anchor block at start of ending epoch while merging backfill ranges and updating nextRangeToSkip",
+            {
+              newAnchorSlot,
+              endingEpoch: updatedBackfillRange.endingEpoch,
+            }
+          );
+        }
         this.db.backfillRange.put(updatedBackfillRange);
         this.logger.info(
           "Updated backfillRange while merging backfill ranges and updating nextRangeToSkip: ",
@@ -1151,8 +1180,36 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         endingEpoch: Number(currentFilledRange[0]),
       };
       if (updatedBackfillRange.beginningEpoch === updatedBackfillRange.endingEpoch) {
-        this.logger.info("Node startup case. BackfillRange must have been initialized already.");
+        this.logger.info("Node fresh startup case. BackfillRange must have been initialized already.");
       } else {
+        // Update syncAnchor to the actual ending edge to prevent re-fetching already synced epochs
+        const newAnchorSlot = computeStartSlotAtEpoch(updatedBackfillRange.endingEpoch);
+        const newAnchorBlock = await this.db.blockArchive.get(newAnchorSlot);
+        if (newAnchorBlock) {
+          const blockRoot = this.config.getForkTypes(newAnchorSlot).BeaconBlock.hashTreeRoot(newAnchorBlock.message);
+          this.syncAnchor = {
+            anchorBlockParentRoot: newAnchorBlock.message.parentRoot,
+            anchorBlock: newAnchorBlock,
+            anchorBlockRoot: blockRoot,
+            anchorSlot: newAnchorSlot,
+            lastBackSyncedBlock: {slot: newAnchorSlot, root: blockRoot, block: newAnchorBlock},
+          };
+          this.logger.info(
+            "Updated syncAnchor to match actual DB state while merging backfill ranges and updating nextRangeToSkip:",
+            {
+              newAnchorSlot,
+              newAnchorEpoch: updatedBackfillRange.endingEpoch,
+            }
+          );
+        } else {
+          this.logger.error(
+            "Could not find anchor block at start of ending epoch while merging backfill ranges and updating nextRangeToSkip",
+            {
+              newAnchorSlot,
+              endingEpoch: updatedBackfillRange.endingEpoch,
+            }
+          );
+        }
         this.db.backfillRange.put(updatedBackfillRange);
         this.logger.info(
           "Updated backfillRange while merging backfill ranges and updating nextRangeToSkip: ",
