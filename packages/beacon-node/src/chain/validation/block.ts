@@ -6,6 +6,7 @@ import {
   computeTimeAtSlot,
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
+  isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb} from "@lodestar/types";
@@ -139,7 +140,7 @@ export async function validateGossipBlock(
   if (fork === ForkName.bellatrix) {
     if (!isExecutionBlockBodyType(block.body)) throw Error("Not merge block type");
     const executionPayload = block.body.executionPayload;
-    if (isExecutionStateType(blockState)) {
+    if (isExecutionStateType(blockState) && isExecutionEnabled(blockState, block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
