@@ -10,7 +10,7 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
+import {DataColumnSidecar, DataColumnSidecars, Root, Slot, SubnetID, fulu, gloas, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
@@ -206,10 +206,13 @@ export async function validateGossipDataColumnSidecar(
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
 function verifyDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: DataColumnSidecar): void {
+  const slot = isGloasDataColumnSidecar(dataColumnSidecar)
+    ? dataColumnSidecar.slot
+    : dataColumnSidecar.signedBlockHeader.message.slot;
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_INDEX,
-      slot: dataColumnSidecar.signedBlockHeader.message.slot,
+      slot,
       columnIndex: dataColumnSidecar.index,
     });
   }
@@ -217,18 +220,18 @@ function verifyDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: Dat
   if (dataColumnSidecar.kzgCommitments.length === 0) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.NO_COMMITMENTS,
-      slot: dataColumnSidecar.signedBlockHeader.message.slot,
+      slot,
       columnIndex: dataColumnSidecar.index,
     });
   }
 
-  const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
+  const epoch = computeEpochAtSlot(slot);
   const maxBlobsPerBlock = config.getMaxBlobsPerBlock(epoch);
 
   if (dataColumnSidecar.kzgCommitments.length > maxBlobsPerBlock) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.TOO_MANY_KZG_COMMITMENTS,
-      slot: dataColumnSidecar.signedBlockHeader.message.slot,
+      slot,
       columnIndex: dataColumnSidecar.index,
       count: dataColumnSidecar.kzgCommitments.length,
       limit: maxBlobsPerBlock,
