@@ -7,7 +7,7 @@ import {
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
-import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
+import {DataColumnSidecars, SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,

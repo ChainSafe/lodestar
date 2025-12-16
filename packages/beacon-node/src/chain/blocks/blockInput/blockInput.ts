@@ -586,7 +586,7 @@ type BlockInputColumnsState =
  * - The block is not yet seen and all required sampled columns are seen
  * - The block is not yet seen and all required sampled columns are not yet seen
  */
-export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.DataColumnSidecars> {
+export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, DataColumnSidecars> {
   type = DAType.Columns as const;
 
   state: BlockInputColumnsState;
@@ -791,7 +791,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.state.versionedHashes;
   }
 
-  getCustodyColumns(): fulu.DataColumnSidecars {
+  getCustodyColumns(): DataColumnSidecars {
     const columns: fulu.DataColumnSidecars = [];
     for (const index of this.custodyColumns) {
       const column = this.columnsCache.get(index);
@@ -813,7 +813,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return columns;
   }
 
-  getSampledColumns(): fulu.DataColumnSidecars {
+  getSampledColumns(): DataColumnSidecars {
     const columns: fulu.DataColumnSidecars = [];
     for (const index of this.sampledColumns) {
       const column = this.columnsCache.get(index);
@@ -828,8 +828,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return [...this.columnsCache.values()];
   }
 
-  getAllColumns(): fulu.DataColumnSidecars {
-    return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar);
+  getAllColumns(): DataColumnSidecars {
   }
 
   getMissingSampledColumnMeta(): MissingColumnMeta {

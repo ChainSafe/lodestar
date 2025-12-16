@@ -297,7 +297,7 @@ export async function validateBlockDataColumnSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
-  dataColumnSidecars: fulu.DataColumnSidecars
+  dataColumnSidecars: DataColumnSidecars
 ): Promise<void> {
   if (dataColumnSidecars.length === 0) {
     return;
