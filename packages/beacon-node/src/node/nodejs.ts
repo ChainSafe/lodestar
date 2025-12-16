@@ -197,6 +197,9 @@ export class BeaconNode {
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
 
+    // Delete deprecated eth1 data to free up disk space for users
+    await db.deleteDeprecatedEth1Data();
+
     const monitoring = opts.monitoring.endpoint
       ? new MonitoringService(
           "beacon",

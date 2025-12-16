@@ -56,6 +56,8 @@ export interface IBeaconDb {
 
   pruneHotDb(): Promise<void>;
 
+  deleteDeprecatedEth1Data(): Promise<void>;
+
   /**  Close the connection to the db instance and close the db store. */
   close(): Promise<void>;
   /** To inject metrics after CLI initialization */

@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, LevelDbControllerMetrics} from "@lodestar/db";
+import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
+import {Bucket} from "./buckets.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
@@ -94,5 +95,29 @@ export class BeaconDb implements IBeaconDb {
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());
+  }
+
+  async deleteDeprecatedEth1Data(): Promise<void> {
+    const deprecatedBuckets = [
+      Bucket.phase0_eth1Data,
+      Bucket.index_depositDataRoot,
+      Bucket.phase0_depositData,
+      Bucket.phase0_depositEvent,
+      Bucket.phase0_preGenesisState,
+      Bucket.phase0_preGenesisStateLastProcessedBlock,
+    ];
+
+    for (const bucket of deprecatedBuckets) {
+      await this.deleteBucketData(bucket);
+    }
+  }
+
+  private async deleteBucketData(bucket: Bucket): Promise<void> {
+    const minKey = encodeKey(bucket, Buffer.alloc(0));
+    const maxKey = encodeKey(bucket + 1, Buffer.alloc(0));
+    const keys = await this.db.keys({gte: minKey, lt: maxKey});
+    if (keys.length > 0) {
+      await this.db.batchDelete(keys);
+    }
   }
 }
