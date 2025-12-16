@@ -54,10 +54,7 @@ export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean
     );
   }
 
-  return !ssz.capella.ExecutionPayloadHeader.equals(
-    state.latestExecutionPayloadHeader,
-    ssz.capella.ExecutionPayloadHeader.defaultValue()
-  );
+  return true;
 }
 
 /** Type guard for bellatrix.BeaconState */
