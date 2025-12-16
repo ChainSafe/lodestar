@@ -27,7 +27,7 @@ import {RegenCaller} from "../regen/interface.js";
 // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
-  dataColumnSidecar: fulu.DataColumnSidecar,
+  dataColumnSidecar: DataColumnSidecar,
   gossipSubnet: SubnetID,
   metrics: Metrics | null
 ): Promise<void> {
@@ -205,7 +205,7 @@ export async function validateGossipDataColumnSidecar(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
-function verifyDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: fulu.DataColumnSidecar): void {
+function verifyDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_INDEX,
@@ -462,9 +462,6 @@ export async function validateBlockDataColumnSidecars(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
  */
-export function computeSubnetForDataColumnSidecar(
-  config: ChainConfig,
-  columnSidecar: fulu.DataColumnSidecar
-): SubnetID {
+export function computeSubnetForDataColumnSidecar(config: ChainConfig, columnSidecar: DataColumnSidecar): SubnetID {
   return columnSidecar.index % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
 }

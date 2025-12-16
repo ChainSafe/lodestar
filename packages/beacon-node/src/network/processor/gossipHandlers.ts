@@ -285,7 +285,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   }
 
   async function validateBeaconDataColumn(
-    dataColumnSidecar: fulu.DataColumnSidecar,
+    dataColumnSidecar: DataColumnSidecar,
     _dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID,
     peerIdStr: string,

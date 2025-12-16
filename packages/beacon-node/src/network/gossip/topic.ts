@@ -6,6 +6,7 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkPostAltair,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
@@ -89,7 +90,9 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.data_column_sidecar:
-      return ssz.fulu.DataColumnSidecar;
+      return isForkPostGloas(fork) 
+        ? sszTypesFor(fork).DataColumnSidecar
+        : ssz.fulu.DataColumnSidecar;
     case GossipType.beacon_aggregate_and_proof:
       return sszTypesFor(fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:

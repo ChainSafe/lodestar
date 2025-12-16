@@ -19,6 +19,7 @@ import type {Datastore} from "interface-datastore";
 import {Libp2p as ILibp2p} from "libp2p";
 import {
   AttesterSlashing,
+  DataColumnSidecar,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
@@ -75,18 +76,18 @@ export interface INetwork extends INetworkCorePublic {
   sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
-  ): Promise<fulu.DataColumnSidecar[]>;
+  ): Promise<DataColumnSidecar[]>;
   sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
     request: DataColumnSidecarsByRootRequest
-  ): Promise<fulu.DataColumnSidecar[]>;
+  ): Promise<DataColumnSidecar[]>;
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number>;
-  publishDataColumnSidecar(dataColumnSideCar: fulu.DataColumnSidecar): Promise<number>;
+  publishDataColumnSidecar(dataColumnSideCar: DataColumnSidecar): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
   publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number>;

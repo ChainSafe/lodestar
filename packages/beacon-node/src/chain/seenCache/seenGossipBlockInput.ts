@@ -280,7 +280,7 @@ export class SeenBlockInput {
       seenTimestampSec,
       source,
       peerIdStr,
-    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: fulu.DataColumnSidecar},
+    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: DataColumnSidecar},
     opts: GetByBlobOptions = {}
   ): BlockInputColumns {
     let blockInput = this.blockInputs.get(blockRootHex);
