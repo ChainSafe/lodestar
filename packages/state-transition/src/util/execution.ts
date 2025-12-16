@@ -44,18 +44,18 @@ export function isExecutionEnabled(state: BeaconStateExecutions, block: BeaconBl
 
 /**
  * Merge is complete when the state includes execution layer data:
- * state.latestExecutionPayloadHeader NOT EMPTY
+ * state.latestExecutionPayloadHeader NOT EMPTY or state is post-capella
  */
 export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean {
-  if (!isCapellaStateType(state)) {
-    return !ssz.bellatrix.ExecutionPayloadHeader.equals(
-      (state as BeaconStateBellatrix).latestExecutionPayloadHeader,
-      ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
-    );
+  if (isCapellaStateType(state)) {
+    // All networks have completed the merge transition before capella
+    return true;
   }
 
-  // All networks have completed the merge transition before capella
-  return true;
+  return !ssz.bellatrix.ExecutionPayloadHeader.equals(
+    (state as BeaconStateBellatrix).latestExecutionPayloadHeader,
+    ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
+  );
 }
 
 /** Type guard for bellatrix.BeaconState */
