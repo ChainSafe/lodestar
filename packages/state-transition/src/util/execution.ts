@@ -54,6 +54,7 @@ export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean
     );
   }
 
+  // All networks have completed the merge transition before capella
   return true;
 }
 
