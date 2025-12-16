@@ -115,9 +115,21 @@ export class BeaconDb implements IBeaconDb {
   private async deleteBucketData(bucket: Bucket): Promise<void> {
     const minKey = encodeKey(bucket, Buffer.alloc(0));
     const maxKey = encodeKey(bucket + 1, Buffer.alloc(0));
-    const keys = await this.db.keys({gte: minKey, lt: maxKey});
-    if (keys.length > 0) {
-      await this.db.batchDelete(keys);
+
+    // Batch delete to avoid loading all keys into memory at once
+    const batchSize = 1000;
+    let keysBatch: Uint8Array[] = [];
+
+    for await (const key of this.db.keysStream({gte: minKey, lt: maxKey})) {
+      keysBatch.push(key);
+      if (keysBatch.length >= batchSize) {
+        await this.db.batchDelete(keysBatch);
+        keysBatch = [];
+      }
+    }
+
+    if (keysBatch.length > 0) {
+      await this.db.batchDelete(keysBatch);
     }
   }
 }
