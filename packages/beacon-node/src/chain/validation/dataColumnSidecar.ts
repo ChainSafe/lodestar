@@ -10,7 +10,17 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {DataColumnSidecar, DataColumnSidecars, Root, Slot, SubnetID, fulu, gloas, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {
+  DataColumnSidecar,
+  DataColumnSidecars,
+  Root,
+  Slot,
+  SubnetID,
+  fulu,
+  gloas,
+  isGloasDataColumnSidecar,
+  ssz,
+} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
@@ -23,16 +33,12 @@ import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/interface.js";
 
-// SPEC FUNCTION
-// https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
   dataColumnSidecar: DataColumnSidecar,
   gossipSubnet: SubnetID,
   metrics: Metrics | null
 ): Promise<void> {
-  const blockHeader = dataColumnSidecar.signedBlockHeader.message;
-  const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
   verifyDataColumnSidecar(chain.config, dataColumnSidecar);
@@ -45,6 +51,23 @@ export async function validateGossipDataColumnSidecar(
       gossipSubnet: gossipSubnet,
     });
   }
+
+  if (isGloasDataColumnSidecar(dataColumnSidecar)) {
+    await validateGossipDataColumnSidecarGloas(chain, dataColumnSidecar, metrics);
+  } else {
+    await validateGossipDataColumnSidecarFulu(chain, dataColumnSidecar, metrics);
+  }
+}
+
+// SPEC FUNCTION
+// https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
+export async function validateGossipDataColumnSidecarFulu(
+  chain: IBeaconChain,
+  dataColumnSidecar: fulu.DataColumnSidecar,
+  metrics: Metrics | null
+): Promise<void> {
+  const blockHeader = dataColumnSidecar.signedBlockHeader.message;
+  const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // 3) [IGNORE] The sidecar is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
   //             -- i.e. validate that sidecar.slot <= current_slot (a client MAY queue future blocks
@@ -199,6 +222,60 @@ export async function validateGossipDataColumnSidecar(
   // 12) [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
   //              sidecar.index) with valid header signature, sidecar inclusion proof, and kzg proof
   //              -- Handled in seenGossipBlockInput
+}
+
+export async function validateGossipDataColumnSidecarGloas(
+  chain: IBeaconChain,
+  dataColumnSidecar: gloas.DataColumnSidecar,
+  metrics: Metrics | null
+): Promise<void> {
+  const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
+  const slot = dataColumnSidecar.slot;
+
+  // [IGNORE] The sidecar is the first sidecar for the tuple
+  // `(sidecar.beacon_block_root, sidecar.index)` with valid kzg proof.
+  // [IGNORE] The sidecar's `beacon_block_root` has been seen via a valid signed
+  // execution payload bid. A client MAY queue the sidecar for processing once the
+  // block is retrieved.
+  // [REJECT] The hash of the sidecar's `kzg_commitments` matches the
+  // `blob_kzg_commitments_root` in the corresponding builder's bid for
+  // `sidecar.beacon_block_root`.
+  // TODO GLOAS: Implement these
+
+  // TODO GLOAS: Validate data column sidecar against builder bid commitments root once available.
+  // [REJECT]_The sidecars's `slot` matches the slot of the block with root
+  // `beacon_block_root`.
+  const block = chain.forkChoice.getBlockHex(blockRootHex);
+  if (block !== null && block.slot !== slot) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
+      slot,
+      columnIndex: dataColumnSidecar.index,
+      expected: blockRootHex,
+      actual: blockRootHex,
+    });
+  }
+
+  // [REJECT] The sidecar's column data is valid as verified by verify_data_column_sidecar_kzg_proofs
+  const kzgProofTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
+  try {
+    await verifyDataColumnSidecarKzgProofs(
+      dataColumnSidecar.kzgCommitments,
+      Array.from({length: dataColumnSidecar.column.length}, () => dataColumnSidecar.index),
+      dataColumnSidecar.column,
+      dataColumnSidecar.kzgProofs
+    );
+  } catch {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF,
+      slot,
+      columnIndex: dataColumnSidecar.index,
+    });
+  } finally {
+    kzgProofTimer?.();
+  }
+
+  // TODO GLOAS: Add to seen cache
 }
 
 /**
