@@ -16,15 +16,15 @@ export enum Bucket {
   index_mainChain = 6, // Slot -> Root<BeaconBlock>
   // justified, finalized state and block hashes
   index_chainInfo = 7, // Key -> Number64 | stateHash | blockHash
-  // DEPRECATED - eth1 deposit tracking is not required since electra, only kept around to delete data from existing databases
+  /** @deprecated Eth1 deposit tracking is not required since electra, only kept around to delete data from existing databases */
   phase0_eth1Data = 8,
-  // DEPRECATED - eth1 deposit tracking is not required since electra, only kept around to delete data from existing databases
+  /** @deprecated Eth1 deposit tracking is not required since electra, only kept around to delete data from existing databases */
   index_depositDataRoot = 9,
 
   // op pool
   // phase0_attestation = 10, // DEPRECATED on v0.25.0
   // phase0_aggregateAndProof = 11, // Root -> AggregateAndProof, DEPRECATED on v.27.0
-  // DEPRECATED - eth1 deposit tracking is not required since electra, only kept around to delete data from existing databases
+  /** @deprecated Eth1 deposit tracking is not required since electra, only kept around to delete data from existing databases */
   phase0_depositData = 12,
   phase0_exit = 13, // ValidatorIndex -> VoluntaryExit
   phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
@@ -34,7 +34,7 @@ export enum Bucket {
   allForks_checkpointState = 17, // Root -> BeaconState
 
   // allForks_pendingBlock = 25, // Root -> SignedBeaconBlock // DEPRECATED on v0.30.0
-  // DEPRECATED - eth1 deposit tracking is not required since electra, only kept around to delete data from existing databases
+  /** @deprecated Eth1 deposit tracking is not required since electra, only kept around to delete data from existing databases */
   phase0_depositEvent = 19,
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
@@ -42,9 +42,9 @@ export enum Bucket {
   deneb_blobSidecars = 27, // DENEB BeaconBlockRoot -> BlobSidecars
   deneb_blobSidecarsArchive = 28, // DENEB BeaconBlockSlot -> BlobSidecars
 
-  // DEPRECATED - genesis from eth1 is no longer supported, only kept around to delete data from existing databases
+  /** @deprecated Genesis from eth1 is no longer supported, only kept around to delete data from existing databases */
   phase0_preGenesisState = 30,
-  // DEPRECATED - genesis from eth1 is no longer supported, only kept around to delete data from existing databases
+  /** @deprecated Genesis from eth1 is no longer supported, only kept around to delete data from existing databases */
   phase0_preGenesisStateLastProcessedBlock = 31,
 
   // Lightclient server
