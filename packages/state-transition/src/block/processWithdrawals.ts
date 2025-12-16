@@ -34,6 +34,7 @@ export function processWithdrawals(
   // processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas (EIP-7732)
   const {
     withdrawals: expectedWithdrawals,
+    processedValidatorsSweepCount,
     processedPartialWithdrawalsCount,
     processedBuilderWithdrawalsCount,
   } = getExpectedWithdrawals(fork, state);
@@ -105,15 +106,8 @@ export function processWithdrawals(
   }
 
   // Update the nextWithdrawalValidatorIndex
-  if (latestWithdrawal && expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
-    // All slots filled, nextWithdrawalValidatorIndex should be validatorIndex having next turn
-    state.nextWithdrawalValidatorIndex = (latestWithdrawal.validatorIndex + 1) % state.validators.length;
-  } else {
-    // expected withdrawals came up short in the bound, so we move nextWithdrawalValidatorIndex to
-    // the next post the bound
-    state.nextWithdrawalValidatorIndex =
-      (state.nextWithdrawalValidatorIndex + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) % state.validators.length;
-  }
+  const nextIndex = state.nextWithdrawalValidatorIndex + processedValidatorsSweepCount;
+  state.nextWithdrawalValidatorIndex = nextIndex % state.validators.length;
 }
 
 export function getExpectedWithdrawals(
@@ -121,7 +115,7 @@ export function getExpectedWithdrawals(
   state: CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas
 ): {
   withdrawals: capella.Withdrawal[];
-  sampledValidators: number;
+  processedValidatorsSweepCount: number;
   processedPartialWithdrawalsCount: number;
   processedBuilderWithdrawalsCount: number;
 } {
@@ -217,6 +211,7 @@ export function getExpectedWithdrawals(
       const totalWithdrawn = withdrawnBalances.getOrDefault(withdrawal.validatorIndex);
       const balance = state.balances.get(withdrawal.validatorIndex) - totalWithdrawn;
 
+      // is_eligible_for_partial_withdrawals
       if (
         validator.exitEpoch === FAR_FUTURE_EPOCH &&
         validator.effectiveBalance >= MIN_ACTIVATION_BALANCE &&
@@ -238,31 +233,36 @@ export function getExpectedWithdrawals(
     }
   }
 
-  const withdrawalBound = Math.min(validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
-  let n = 0;
-  // Just run a bounded loop max iterating over all withdrawals
-  // however breaks out once we have MAX_WITHDRAWALS_PER_PAYLOAD
-  for (n = 0; n < withdrawalBound; n++) {
-    // Get next validator in turn
-    const validatorIndex = (nextWithdrawalValidatorIndex + n) % validators.length;
+  // get_validators_sweep_withdrawals
+  const validatorsLimit = Math.min(validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
+  const withdrawalsLimit = MAX_WITHDRAWALS_PER_PAYLOAD;
+
+  let processedValidatorsSweepCount = 0;
+  let validatorIndex = nextWithdrawalValidatorIndex;
+
+  for (let i = 0; i < validatorsLimit; i++) {
+    if (withdrawals.length === withdrawalsLimit) {
+      break;
+    }
 
     const validator = validators.getReadonly(validatorIndex);
     const withdrawnBalance = withdrawnBalances.getOrDefault(validatorIndex);
-    const balance = isPostElectra
-      ? // Deduct partially withdrawn balance already queued above
-        balances.get(validatorIndex) - withdrawnBalance
-      : balances.get(validatorIndex);
+    // get_balance_after_withdrawals
+    const balance = balances.get(validatorIndex) - withdrawnBalance;
     const {withdrawableEpoch, withdrawalCredentials, effectiveBalance} = validator;
     const hasWithdrawableCredentials = isPostElectra
       ? hasExecutionWithdrawalCredential(withdrawalCredentials)
       : hasEth1WithdrawalCredential(withdrawalCredentials);
-    // early skip for balance = 0 as its now more likely that validator has exited/slashed with
-    // balance zero than not have withdrawal credentials set
+
+    // Early skip for balance = 0 as it's now more likely that validator has exited/slashed with
+    // balance zero than not having withdrawal credentials set
     if (balance === 0 || !hasWithdrawableCredentials) {
+      validatorIndex = (validatorIndex + 1) % validators.length;
+      processedValidatorsSweepCount++;
       continue;
     }
 
-    // capella full withdrawal
+    // is_fully_withdrawable_validator
     if (withdrawableEpoch <= epoch) {
       withdrawals.push({
         index: withdrawalIndex,
@@ -272,27 +272,31 @@ export function getExpectedWithdrawals(
       });
       withdrawalIndex++;
       withdrawnBalances.set(validatorIndex, withdrawnBalance + balance);
-    } else if (
-      effectiveBalance === (isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE) &&
-      balance > effectiveBalance
-    ) {
-      // capella partial withdrawal
-      const partialAmount = balance - effectiveBalance;
-      withdrawals.push({
-        index: withdrawalIndex,
-        validatorIndex,
-        address: validator.withdrawalCredentials.subarray(12),
-        amount: BigInt(partialAmount),
-      });
-      withdrawalIndex++;
-      withdrawnBalances.set(validatorIndex, withdrawnBalance + partialAmount);
+    }
+    // is_partially_withdrawable_validator
+    else {
+      const maxEffectiveBalance = isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE;
+      if (effectiveBalance === maxEffectiveBalance && balance > maxEffectiveBalance) {
+        const withdrawableBalance = balance - maxEffectiveBalance;
+        withdrawals.push({
+          index: withdrawalIndex,
+          validatorIndex,
+          address: validator.withdrawalCredentials.subarray(12),
+          amount: BigInt(withdrawableBalance),
+        });
+        withdrawalIndex++;
+        withdrawnBalances.set(validatorIndex, withdrawnBalance + withdrawableBalance);
+      }
     }
 
-    // Break if we have enough to pack the block
-    if (withdrawals.length >= MAX_WITHDRAWALS_PER_PAYLOAD) {
-      break;
-    }
+    validatorIndex = (validatorIndex + 1) % validators.length;
+    processedValidatorsSweepCount++;
   }
 
-  return {withdrawals, sampledValidators: n, processedPartialWithdrawalsCount, processedBuilderWithdrawalsCount};
+  return {
+    withdrawals,
+    processedValidatorsSweepCount,
+    processedPartialWithdrawalsCount,
+    processedBuilderWithdrawalsCount,
+  };
 }

@@ -8,20 +8,21 @@ import {WithdrawalOpts, getExpectedWithdrawalsTestData} from "../../utils/capell
 describe("getExpectedWithdrawals", () => {
   const vc = numValidators;
 
-  const testCases: (WithdrawalOpts & {withdrawals: number; sampled: number})[] = [
+  const testCases: (WithdrawalOpts & {withdrawals: number; sweepCount: number})[] = [
     // Best case when every probe results into a withdrawal candidate
-    {excessBalance: 1, eth1Credentials: 1, withdrawable: 0, withdrawn: 0, withdrawals: 16, sampled: 15},
+    // Note: sweepCount is +1 compared to old "sampled" since we now count validators processed, not the loop index
+    {excessBalance: 1, eth1Credentials: 1, withdrawable: 0, withdrawn: 0, withdrawals: 16, sweepCount: 16},
     // Normal case based on mainnet conditions: mainnet network conditions: 95% reward rate
-    {excessBalance: 0.95, eth1Credentials: 0.1, withdrawable: 0.05, withdrawn: 0, withdrawals: 16, sampled: 219},
+    {excessBalance: 0.95, eth1Credentials: 0.1, withdrawable: 0.05, withdrawn: 0, withdrawals: 16, sweepCount: 220},
     // Intermediate good case
-    {excessBalance: 0.95, eth1Credentials: 0.3, withdrawable: 0.05, withdrawn: 0, withdrawals: 16, sampled: 42},
-    {excessBalance: 0.95, eth1Credentials: 0.7, withdrawable: 0.05, withdrawn: 0, withdrawals: 16, sampled: 18},
+    {excessBalance: 0.95, eth1Credentials: 0.3, withdrawable: 0.05, withdrawn: 0, withdrawals: 16, sweepCount: 43},
+    {excessBalance: 0.95, eth1Credentials: 0.7, withdrawable: 0.05, withdrawn: 0, withdrawals: 16, sweepCount: 19},
     // Intermediate bad case
-    {excessBalance: 0.1, eth1Credentials: 0.1, withdrawable: 0, withdrawn: 0, withdrawals: 16, sampled: 1020},
+    {excessBalance: 0.1, eth1Credentials: 0.1, withdrawable: 0, withdrawn: 0, withdrawals: 16, sweepCount: 1021},
     // Expected 141069 but gets bounded by 16384
-    {excessBalance: 0.01, eth1Credentials: 0.01, withdrawable: 0, withdrawn: 0, withdrawals: 2, sampled: 16384},
+    {excessBalance: 0.01, eth1Credentials: 0.01, withdrawable: 0, withdrawn: 0, withdrawals: 2, sweepCount: 16384},
     // Expected 250000 but gets bounded by 16384
-    {excessBalance: 0, eth1Credentials: 0.0, withdrawable: 0, withdrawn: 0, withdrawals: 0, sampled: 16384},
+    {excessBalance: 0, eth1Credentials: 0.0, withdrawable: 0, withdrawn: 0, withdrawals: 0, sweepCount: 16384},
   ];
 
   for (const opts of testCases) {
@@ -39,8 +40,8 @@ describe("getExpectedWithdrawals", () => {
 
     // TODO Electra: Add test for electra
     it(`getExpectedWithdrawals ${vc} ${caseID}`, () => {
-      const {sampledValidators, withdrawals} = getExpectedWithdrawals(ForkSeq.capella, state.value);
-      expect(sampledValidators).toBe(opts.sampled);
+      const {processedValidatorsSweepCount, withdrawals} = getExpectedWithdrawals(ForkSeq.capella, state.value);
+      expect(processedValidatorsSweepCount).toBe(opts.sweepCount);
       expect(withdrawals.length).toBe(opts.withdrawals);
     });
   }
