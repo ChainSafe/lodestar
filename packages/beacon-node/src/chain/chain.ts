@@ -335,6 +335,7 @@ export class BeaconChain implements IBeaconChain {
       this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
       checkpointStateCache = new PersistentCheckpointStateCache(
         {
+          config,
           metrics,
           logger,
           clock,
