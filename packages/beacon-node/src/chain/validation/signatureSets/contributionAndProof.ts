@@ -1,4 +1,4 @@
-import { BeaconConfig } from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_CONTRIBUTION_AND_PROOF} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
