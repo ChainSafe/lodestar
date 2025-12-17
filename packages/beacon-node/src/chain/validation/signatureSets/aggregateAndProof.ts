@@ -14,7 +14,7 @@ export function getAggregateAndProofSigningRoot(
   epoch: Epoch,
   aggregateAndProof: SignedAggregateAndProof
 ): Uint8Array {
-  // previously, we call `const aggregatorDomain = state.config.getDomain(state.slot, DOMAIN_AGGREGATE_AND_PROOF, slot);`
+  // previously, we call `const aggregatorDomain = config.getDomain(state.slot, DOMAIN_AGGREGATE_AND_PROOF, slot);`
   // at fork boundary, it's required to dial to target epoch https://github.com/ChainSafe/lodestar/blob/v1.11.3/packages/beacon-node/src/chain/validation/attestation.ts#L573
   // instead of that, just use the fork of slot in the attestation data
   const slot = computeStartSlotAtEpoch(epoch);

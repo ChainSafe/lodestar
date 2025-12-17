@@ -81,7 +81,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
     getSyncCommitteeSelectionProofSignatureSet(index2pubkey, headState, contributionAndProof),
 
     // [REJECT] The aggregator signature, signed_contribution_and_proof.signature, is valid.
-    getContributionAndProofSignatureSet(index2pubkey, headState, signedContributionAndProof),
+    getContributionAndProofSignatureSet(chain.config, index2pubkey, headState, signedContributionAndProof),
 
     // [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from
     // the participation info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.
