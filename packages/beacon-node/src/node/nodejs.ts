@@ -198,7 +198,15 @@ export class BeaconNode {
     await db.pruneHotDb();
 
     // Delete deprecated eth1 data to free up disk space for users
-    await db.deleteDeprecatedEth1Data();
+    logger.debug("Deleting deprecated eth1 data from database");
+    const startTime = Date.now();
+    db.deleteDeprecatedEth1Data()
+      .then(() => {
+        logger.debug("Deleted deprecated eth1 data", {durationMs: Date.now() - startTime});
+      })
+      .catch((e) => {
+        logger.error("Failed to delete deprecated eth1 data", {}, e);
+      });
 
     const monitoring = opts.monitoring.endpoint
       ? new MonitoringService(
