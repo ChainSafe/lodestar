@@ -85,7 +85,12 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
     // [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from
     // the participation info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.
-    getSyncCommitteeContributionSignatureSet(headState as CachedBeaconStateAltair, contribution, participantPubkeys),
+    getSyncCommitteeContributionSignatureSet(
+      chain.config,
+      headState as CachedBeaconStateAltair,
+      contribution,
+      participantPubkeys
+    ),
   ];
 
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
