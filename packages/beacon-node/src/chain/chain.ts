@@ -1348,6 +1348,6 @@ export class BeaconChain implements IBeaconChain {
 
     preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
-    return computeSyncCommitteeRewards(this.index2pubkey, block, preState.clone(), validatorIds);
+    return computeSyncCommitteeRewards(this.config, this.index2pubkey, block, preState.clone(), validatorIds);
   }
 }
