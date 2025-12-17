@@ -1,4 +1,6 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {createBeaconConfig} from "@lodestar/config";
+import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {
   ForkName,
   MAX_ATTESTER_SLASHINGS,
@@ -20,6 +22,7 @@ import {
 
 describe("opPool", () => {
   let originalState: CachedBeaconStateAltair;
+  const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
 
   beforeAll(
     () => {
@@ -31,7 +34,7 @@ describe("opPool", () => {
   bench({
     id: "getSlashingsAndExits - default max",
     beforeEach: () => {
-      const pool = new OpPool();
+      const pool = new OpPool(config);
       fillAttesterSlashing(pool, originalState, MAX_ATTESTER_SLASHINGS);
       fillProposerSlashing(pool, originalState, MAX_PROPOSER_SLASHINGS);
       fillVoluntaryExits(pool, originalState, MAX_VOLUNTARY_EXITS);
@@ -48,7 +51,7 @@ describe("opPool", () => {
   bench({
     id: "getSlashingsAndExits - 2k",
     beforeEach: () => {
-      const pool = new OpPool();
+      const pool = new OpPool(config);
       const maxItemsInPool = 2_000;
 
       fillAttesterSlashing(pool, originalState, maxItemsInPool);
