@@ -231,7 +231,7 @@ describe("api/validator - produceBlockV3", () => {
     });
   });
 
-  it.only("correctly use passed feeRecipient in notifyForkchoiceUpdate", async () => {
+  it("correctly use passed feeRecipient in notifyForkchoiceUpdate", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
     const slot = 100000;
