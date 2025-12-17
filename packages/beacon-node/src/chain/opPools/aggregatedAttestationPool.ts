@@ -1,6 +1,6 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {
   ForkName,
@@ -162,7 +162,7 @@ export class AggregatedAttestationPool {
   private lowestPermissibleSlot = 0;
 
   constructor(
-    private readonly config: ChainForkConfig,
+    private readonly config: BeaconConfig,
     private readonly metrics: Metrics | null = null
   ) {
     metrics?.opPool.aggregatedAttestationPool.attDataPerSlot.addCollect(() => this.onScrapeMetrics(metrics));
@@ -249,7 +249,7 @@ export class AggregatedAttestationPool {
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
 
-    const notSeenValidatorsFn = getNotSeenValidatorsFn(state);
+    const notSeenValidatorsFn = getNotSeenValidatorsFn(this.config, state);
     const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
 
     const attestationsByScore: AttestationWithScore[] = [];
@@ -362,7 +362,7 @@ export class AggregatedAttestationPool {
     const statePrevEpoch = stateEpoch - 1;
     const rootCache = new RootCache(state);
 
-    const notSeenValidatorsFn = getNotSeenValidatorsFn(state);
+    const notSeenValidatorsFn = getNotSeenValidatorsFn(this.config, state);
     const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
 
     const slots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys()).sort((a, b) => b - a);
@@ -656,7 +656,7 @@ export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[] = [];
 
   constructor(
-    private readonly config: ChainForkConfig,
+    private readonly config: BeaconConfig,
     readonly committee: Uint32Array,
     readonly data: phase0.AttestationData
   ) {}
@@ -864,9 +864,9 @@ export function aggregateConsolidation({byCommittee, attData}: AttestationsConso
  * Pre-compute participation from a CachedBeaconStateAllForks, for use to check if an attestation's committee
  * has already attested or not.
  */
-export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNotSeenValidatorsFn {
+export function getNotSeenValidatorsFn(config: BeaconConfig, state: CachedBeaconStateAllForks): GetNotSeenValidatorsFn {
   const stateSlot = state.slot;
-  if (state.config.getForkName(stateSlot) === ForkName.phase0) {
+  if (config.getForkName(stateSlot) === ForkName.phase0) {
     // Get attestations to be included in a phase0 block.
     // As we are close to altair, this is not really important, it's mainly for e2e.
     // The performance is not great due to the different BeaconState data structure to altair.

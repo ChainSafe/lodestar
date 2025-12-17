@@ -1,6 +1,6 @@
 import {Mock, Mocked, vi} from "vitest";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {ChainForkConfig} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/utils";
@@ -134,7 +134,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       },
       executionBuilder: {},
       opPool: new OpPool(),
-      aggregatedAttestationPool: new AggregatedAttestationPool(config),
+      aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
