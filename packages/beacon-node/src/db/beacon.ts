@@ -117,12 +117,12 @@ export class BeaconDb implements IBeaconDb {
     const maxKey = encodeKey(bucket + 1, Buffer.alloc(0));
 
     // Batch delete to avoid loading all keys into memory at once
-    const batchSize = 1000;
+    const BATCH_DELETE_SIZE = 1000;
     let keysBatch: Uint8Array[] = [];
 
     for await (const key of this.db.keysStream({gte: minKey, lt: maxKey})) {
       keysBatch.push(key);
-      if (keysBatch.length >= batchSize) {
+      if (keysBatch.length >= BATCH_DELETE_SIZE) {
         await this.db.batchDelete(keysBatch);
         keysBatch = [];
       }
