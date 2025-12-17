@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, altair, capella} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
@@ -26,6 +27,7 @@ export * from "./voluntaryExits.js";
  * Deposits are not included because they can legally have invalid signatures.
  */
 export function getBlockSignatureSets(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock,
@@ -39,20 +41,21 @@ export function getBlockSignatureSets(
   const fork = state.config.getForkSeq(signedBlock.message.slot);
 
   const signatureSets = [
-    getRandaoRevealSignatureSet(index2pubkey, state, signedBlock.message),
-    ...getProposerSlashingsSignatureSets(index2pubkey, state, signedBlock),
-    ...getAttesterSlashingsSignatureSets(index2pubkey, state, signedBlock),
-    ...getAttestationsSignatureSets(index2pubkey, state, signedBlock, indexedAttestations),
-    ...getVoluntaryExitsSignatureSets(index2pubkey, state, signedBlock),
+    getRandaoRevealSignatureSet(config, index2pubkey, state, signedBlock.message),
+    ...getProposerSlashingsSignatureSets(config, index2pubkey, state, signedBlock),
+    ...getAttesterSlashingsSignatureSets(config, index2pubkey, state, signedBlock),
+    ...getAttestationsSignatureSets(config, index2pubkey, state, signedBlock, indexedAttestations),
+    ...getVoluntaryExitsSignatureSets(config, index2pubkey, state, signedBlock),
   ];
 
   if (!opts?.skipProposerSignature) {
-    signatureSets.push(getBlockProposerSignatureSet(index2pubkey, state, signedBlock));
+    signatureSets.push(getBlockProposerSignatureSet(config, index2pubkey, state, signedBlock));
   }
 
   // Only after altair fork, validate tSyncCommitteeSignature
   if (fork >= ForkSeq.altair) {
     const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(
+      config,
       index2pubkey,
       state as CachedBeaconStateAltair,
       (signedBlock as altair.SignedBeaconBlock).message

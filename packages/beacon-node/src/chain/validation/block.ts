@@ -153,7 +153,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
-    const signatureSet = getBlockProposerSignatureSet(chain.index2pubkey, blockState, signedBlock);
+    const signatureSet = getBlockProposerSignatureSet(chain.config, chain.index2pubkey, blockState, signedBlock);
     // Don't batch so verification is not delayed
     if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
       throw new BlockGossipError(GossipAction.REJECT, {

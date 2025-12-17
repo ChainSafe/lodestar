@@ -51,7 +51,7 @@ export async function validateAttesterSlashing(
     });
   }
 
-  const signatureSets = getAttesterSlashingSignatureSets(chain.index2pubkey, state, attesterSlashing);
+  const signatureSets = getAttesterSlashingSignatureSets(chain.config, chain.index2pubkey, state, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,

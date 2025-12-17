@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
@@ -10,16 +11,18 @@ import {
 } from "../util/index.js";
 
 export function getAttestationDataSigningRoot(
+  config: BeaconConfig,
   state: CachedBeaconStateAllForks,
   data: phase0.AttestationData
 ): Uint8Array {
   const slot = computeStartSlotAtEpoch(data.target.epoch);
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
+  const domain = config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
 
   return computeSigningRoot(ssz.phase0.AttestationData, data, domain);
 }
 
 export function getAttestationWithIndicesSignatureSet(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   attestation: Pick<phase0.Attestation, "data" | "signature">,
@@ -27,17 +30,19 @@ export function getAttestationWithIndicesSignatureSet(
 ): ISignatureSet {
   return createAggregateSignatureSetFromComponents(
     attestingIndices.map((i) => index2pubkey[i]),
-    getAttestationDataSigningRoot(state, attestation.data),
+    getAttestationDataSigningRoot(config, state, attestation.data),
     attestation.signature
   );
 }
 
 export function getIndexedAttestationSignatureSet(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   indexedAttestation: IndexedAttestation
 ): ISignatureSet {
   return getAttestationWithIndicesSignatureSet(
+    config,
     index2pubkey,
     state,
     indexedAttestation,
@@ -46,6 +51,7 @@ export function getIndexedAttestationSignatureSet(
 }
 
 export function getAttestationsSignatureSets(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock,
@@ -57,6 +63,6 @@ export function getAttestationsSignatureSets(
     );
   }
   return indexedAttestations.map((indexedAttestation) =>
-    getIndexedAttestationSignatureSet(index2pubkey, state, indexedAttestation)
+    getIndexedAttestationSignatureSet(config, index2pubkey, state, indexedAttestation)
   );
 }
