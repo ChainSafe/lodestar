@@ -165,7 +165,7 @@ export async function produceBlockBody<T extends BlockType>(
   // even though shouldOverrideBuilder is relevant for the engine response, for simplicity of typing
   // we just return it undefined for the builder which anyway doesn't get consumed downstream
   let shouldOverrideBuilder: boolean | undefined;
-  const fork = currentState.config.getForkName(blockSlot);
+  const fork = this.config.getForkName(blockSlot);
   const produceResult = {
     type: blockType,
     fork,
@@ -644,7 +644,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  const fork = currentState.config.getForkName(slot);
+  const fork = this.config.getForkName(slot);
 
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there

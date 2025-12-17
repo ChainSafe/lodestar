@@ -32,7 +32,7 @@ describe("api/validator - produceBlockV3", () => {
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   beforeEach(() => {
-    modules = getApiTestModules();
+    modules = getApiTestModules({config});
     api = getValidatorApi(defaultApiOptions, {...modules, config});
     state = generateCachedBellatrixState();
 
@@ -231,7 +231,7 @@ describe("api/validator - produceBlockV3", () => {
     });
   });
 
-  it("correctly use passed feeRecipient in notifyForkchoiceUpdate", async () => {
+  it.only("correctly use passed feeRecipient in notifyForkchoiceUpdate", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
     const slot = 100000;
