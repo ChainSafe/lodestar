@@ -1307,7 +1307,7 @@ export class BeaconChain implements IBeaconChain {
 
     const postState = this.regen.getStateSync(toRootHex(block.stateRoot)) ?? undefined;
 
-    return computeBlockRewards(block, preState.clone(), postState?.clone());
+    return computeBlockRewards(this.config, block, preState.clone(), postState?.clone());
   }
 
   async getAttestationsRewards(

@@ -1,4 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
+import {createBeaconConfig} from "@lodestar/config";
+import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -15,6 +17,7 @@ import {
 import {computeBlockRewards} from "../../../../src/chain/rewards/blockRewards.js";
 
 describe("chain / rewards / blockRewards", () => {
+  const config = createBeaconConfig({...chainConfigDef, ALTAIR_FORK_EPOCH: 0}, Buffer.alloc(32, 0xaa));
   const testCases: {id: string; timeout?: number; opts: BlockAltairOpts}[] = [
     {
       id: "Normal case",
@@ -92,7 +95,11 @@ describe("chain / rewards / blockRewards", () => {
       // Populate tree root caches of the state
       state.hashTreeRoot();
       cachedStateAltairPopulateCaches(state);
-      const calculatedBlockReward = await computeBlockRewards(block.message, state as CachedBeaconStateAllForks);
+      const calculatedBlockReward = await computeBlockRewards(
+        config,
+        block.message,
+        state as CachedBeaconStateAllForks
+      );
       const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} =
         calculatedBlockReward;
 
@@ -153,6 +160,7 @@ describe("chain / rewards / blockRewards", () => {
     postState.proposerRewards = {attestations: 1000, syncAggregate: 1001, slashing: 1002};
 
     const calculatedBlockReward = await computeBlockRewards(
+      config,
       block.message,
       preState as CachedBeaconStateAllForks,
       postState
