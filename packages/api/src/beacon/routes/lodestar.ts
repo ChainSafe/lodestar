@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ssz} from "@lodestar/types";
+import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 import {
   EmptyArgs,
   EmptyMeta,
@@ -304,6 +304,19 @@ export type Endpoints = {
     {root: RootHex; slot: Slot}[],
     EmptyMeta
   >;
+
+  /**
+   * Returns the validator indices that are currently being monitored by the validator monitor.
+   * These are validators that have registered with this beacon node via the validator API.
+   */
+  getMonitoredValidatorIndices: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ValidatorIndex[],
+    EmptyMeta
+  >;
 };
 
 export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -480,6 +493,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
     },
     dumpDbStateIndex: {
       url: "/eth/v1/debug/dump_db_state_index",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    getMonitoredValidatorIndices: {
+      url: "/eth/v1/lodestar/monitored_validators",
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
