@@ -1,7 +1,7 @@
 import {afterEach, beforeAll, beforeEach, describe, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
-import {createBeaconConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
+import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {chainConfig} from "@lodestar/config/default";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -22,6 +22,7 @@ describe("validate voluntary exit", () => {
   let state: CachedBeaconStateAllForks;
   let signedVoluntaryExit: phase0.SignedVoluntaryExit;
   let opPool: MockedBeaconChain["opPool"];
+  let config: BeaconConfig;
 
   beforeAll(() => {
     const sk = SecretKey.fromKeygen(Buffer.alloc(32));
@@ -29,7 +30,7 @@ describe("validate voluntary exit", () => {
     const stateEmpty = ssz.phase0.BeaconState.defaultValue();
 
     // Validator has to be active for long enough
-    stateEmpty.slot = config.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
+    stateEmpty.slot = chainConfig.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
 
     // Add a validator that's active since genesis and ready to exit
     const validator = ssz.phase0.Validator.toViewDU({
@@ -55,13 +56,14 @@ describe("validate voluntary exit", () => {
     );
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
     signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).toBytes()};
-    const _state = generateState(stateEmpty, config);
+    const _state = generateState(stateEmpty, createChainForkConfig(chainConfig));
+    config = createBeaconConfig(chainConfig, _state.genesisValidatorsRoot);
 
-    state = createCachedBeaconStateTest(_state, createBeaconConfig(config, _state.genesisValidatorsRoot));
+    state = createCachedBeaconStateTest(_state, config);
   });
 
   beforeEach(() => {
-    chainStub = getMockedBeaconChain();
+    chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
     vi.spyOn(opPool, "hasSeenBlsToExecutionChange");

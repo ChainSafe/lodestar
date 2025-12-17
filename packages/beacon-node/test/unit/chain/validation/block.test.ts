@@ -1,6 +1,6 @@
 import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
-import {createChainForkConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {config as configDef} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostDeneb, ForkPreFulu} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
@@ -26,15 +26,16 @@ describe("gossip block validation", () => {
   const signature = EMPTY_SIGNATURE;
   const maxSkipSlots = 10;
   const denebConfig = createChainForkConfig({
-    ...config,
+    ...configDef,
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 0,
     CAPELLA_FORK_EPOCH: 0,
     DENEB_FORK_EPOCH: 0,
   });
+  const config = createBeaconConfig(configDef, Buffer.alloc(32, 0xaa));
 
   beforeEach(() => {
-    chain = getMockedBeaconChain();
+    chain = getMockedBeaconChain({config});
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
     forkChoice.getBlockHex.mockReturnValue(null);
