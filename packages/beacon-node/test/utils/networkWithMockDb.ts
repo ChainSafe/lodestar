@@ -3,7 +3,6 @@ import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconChain} from "../../src/chain/chain.js";
-import {Eth1ForBlockProductionDisabled} from "../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
 import {ArchiveMode} from "../../src/index.js";
 import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from "../../src/network/index.js";
@@ -76,7 +75,6 @@ export async function getNetworkForTest(
       validatorMonitor: null,
       anchorState: createCachedBeaconStateTest(state, beaconConfig),
       isAnchorStateFinalized: true,
-      eth1: new Eth1ForBlockProductionDisabled(),
       executionEngine: new ExecutionEngineDisabled(),
     }
   );

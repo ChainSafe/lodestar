@@ -20,7 +20,6 @@ switch (ACTIVE_PRESET) {
 
 export {chainConfig};
 
-export const depositContractDeployBlock = 0;
 export const genesisFileUrl = null;
 export const genesisStateRoot = null;
 export const bootnodesFileUrl = null;

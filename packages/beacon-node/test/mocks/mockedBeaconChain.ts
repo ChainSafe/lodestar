@@ -12,7 +12,6 @@ import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from ".
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
-import {Eth1ForBlockProduction} from "../../src/eth1/index.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
 import {Clock} from "../../src/util/clock.js";
@@ -24,7 +23,6 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   forkChoice: MockedForkChoice;
   executionEngine: Mocked<ExecutionEngineHttp>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
-  eth1: Mocked<Eth1ForBlockProduction>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
   syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
@@ -73,7 +71,6 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
 });
 
 vi.mock("../../src/chain/regen/index.js");
-vi.mock("../../src/eth1/index.js");
 vi.mock("../../src/chain/beaconProposerCache.js");
 vi.mock("../../src/chain/seenCache/seenGossipBlockInput.js");
 vi.mock("../../src/chain/shufflingCache.js");
@@ -136,8 +133,6 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         getClientVersion: vi.fn(),
       },
       executionBuilder: {},
-      // @ts-expect-error
-      eth1: new Eth1ForBlockProduction(),
       opPool: new OpPool(),
       aggregatedAttestationPool: new AggregatedAttestationPool(config),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),

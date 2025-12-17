@@ -38,7 +38,6 @@ import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
@@ -77,7 +76,6 @@ const forkChoiceTest =
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;
         const clock = new ClockStopped(currentSlot);
-        const eth1 = new Eth1ForBlockProductionDisabled();
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
           genesisBlockHash: isExecutionStateType(anchorState)
@@ -124,7 +122,6 @@ const forkChoiceTest =
             validatorMonitor: null,
             anchorState,
             isAnchorStateFinalized: true,
-            eth1,
             executionEngine,
             executionBuilder: undefined,
           }

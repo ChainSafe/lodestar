@@ -273,7 +273,6 @@
         "**/packages/beacon-node/src/db/buckets.ts",
         "**/packages/beacon-node/src/execution/engine/mock.ts",
         "**/packages/beacon-node/src/execution/engine/types.ts",
-        "**/packages/beacon-node/src/eth1/provider/eth1Provider.ts",
         "**/packages/validator/src/buckets.ts",
         "**/packages/prover/src/types.ts",
         "**/prover/src/utils/process.ts",

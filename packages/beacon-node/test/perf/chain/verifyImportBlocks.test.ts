@@ -12,7 +12,6 @@ import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
@@ -101,7 +100,6 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           validatorMonitor: null,
           anchorState: state,
           isAnchorStateFinalized: true,
-          eth1: new Eth1ForBlockProductionDisabled(),
           executionEngine: new ExecutionEngineDisabled(),
         }
       );

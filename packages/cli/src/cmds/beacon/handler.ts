@@ -10,7 +10,7 @@ import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
-import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
+import {getNetworkBootnodes, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {LogArgs} from "../../options/logOptions.js";
 import {
@@ -71,13 +71,11 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   // BeaconNode setup
   try {
     const {anchorState, isFinalized, wsCheckpoint} = await initBeaconState(
-      options,
       args,
       beaconPaths.dataDir,
       config,
       db,
-      logger,
-      abortController.signal
+      logger
     );
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const node = await BeaconNode.init({
@@ -189,12 +187,6 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {commit, version}});
 
-  // Set known depositContractDeployBlock
-  if (isKnownNetworkName(network)) {
-    const {depositContractDeployBlock} = getNetworkData(network);
-    beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
-  }
-
   const logger = initLogger(args, beaconPaths.dataDir, config);
   const {privateKey, enr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
 
@@ -226,7 +218,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     // Add User-Agent header to all builder requests
     beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
     // Set jwt version with version string
-    beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}, eth1: {jwtVersion: versionStr}});
+    beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}});
     // Set commit and version for ClientVersion
     beaconNodeOptions.set({executionEngine: {commit, version}});
   }

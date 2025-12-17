@@ -16,14 +16,13 @@ export enum Bucket {
   index_mainChain = 6, // Slot -> Root<BeaconBlock>
   // justified, finalized state and block hashes
   index_chainInfo = 7, // Key -> Number64 | stateHash | blockHash
-  // eth1 processing
-  phase0_eth1Data = 8, // timestamp -> Eth1Data
-  index_depositDataRoot = 9, // depositIndex -> Root<DepositData>
+  // phase0_eth1Data = 8, // DEPRECATED - eth1 deposit tracking is not required since electra
+  // index_depositDataRoot = 9, // DEPRECATED - eth1 deposit tracking is not required since electra
 
   // op pool
   // phase0_attestation = 10, // DEPRECATED on v0.25.0
   // phase0_aggregateAndProof = 11, // Root -> AggregateAndProof, DEPRECATED on v.27.0
-  phase0_depositData = 12, // [DEPRECATED] index -> DepositData
+  // phase0_depositData = 12, // DEPRECATED - eth1 deposit tracking is not required since electra
   phase0_exit = 13, // ValidatorIndex -> VoluntaryExit
   phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
   allForks_attesterSlashing = 15, // Root -> AttesterSlashing
@@ -32,15 +31,15 @@ export enum Bucket {
   allForks_checkpointState = 17, // Root -> BeaconState
 
   // allForks_pendingBlock = 25, // Root -> SignedBeaconBlock // DEPRECATED on v0.30.0
-  phase0_depositEvent = 19, // depositIndex -> DepositEvent
+  // phase0_depositEvent = 19, // DEPRECATED - eth1 deposit tracking is not required since electra
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
 
   deneb_blobSidecars = 27, // DENEB BeaconBlockRoot -> BlobSidecars
   deneb_blobSidecarsArchive = 28, // DENEB BeaconBlockSlot -> BlobSidecars
 
-  phase0_preGenesisState = 30, // Single = phase0.BeaconState
-  phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
+  // phase0_preGenesisState = 30, // DEPRECATED - genesis from eth1 is no longer supported
+  // phase0_preGenesisStateLastProcessedBlock = 31, // DEPRECATED - genesis from eth1 is no longer supported
 
   // Lightclient server
   // altair_bestUpdatePerCommitteePeriod = 30, // DEPRECATED on v0.32.0

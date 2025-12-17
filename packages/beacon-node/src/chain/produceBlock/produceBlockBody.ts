@@ -45,7 +45,7 @@ import {
 } from "@lodestar/types";
 import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
+import {numToQuantity} from "../../execution/engine/utils.js";
 import {
   IExecutionBuilder,
   IExecutionEngine,
@@ -78,7 +78,6 @@ export enum BlockProductionStep {
   voluntaryExits = "voluntaryExits",
   blsToExecutionChanges = "blsToExecutionChanges",
   attestations = "attestations",
-  eth1DataAndDeposits = "eth1DataAndDeposits",
   syncAggregate = "syncAggregate",
   executionPayload = "executionPayload",
 }
@@ -667,20 +666,17 @@ export async function produceCommonBlockBody<T extends BlockType>(
     step: BlockProductionStep.attestations,
   });
 
-  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
-  const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
-  endEth1DataAndDeposits?.({
-    step: BlockProductionStep.eth1DataAndDeposits,
-  });
-
   const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
     randaoReveal,
     graffiti,
-    eth1Data,
+    // Eth1 data voting is no longer required since electra
+    eth1Data: currentState.eth1Data,
     proposerSlashings,
     attesterSlashings,
     attestations,
-    deposits,
+    // Since electra, deposits are processed by the execution layer,
+    // we no longer support handling deposits from earlier forks.
+    deposits: [],
     voluntaryExits,
   };
 
