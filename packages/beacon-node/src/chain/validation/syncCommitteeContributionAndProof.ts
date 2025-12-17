@@ -78,7 +78,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   const signatureSets = [
     // [REJECT] The contribution_and_proof.selection_proof is a valid signature of the SyncAggregatorSelectionData
     // derived from the contribution by the validator with index contribution_and_proof.aggregator_index.
-    getSyncCommitteeSelectionProofSignatureSet(index2pubkey, headState, contributionAndProof),
+    getSyncCommitteeSelectionProofSignatureSet(chain.config, index2pubkey, headState, contributionAndProof),
 
     // [REJECT] The aggregator signature, signed_contribution_and_proof.signature, is valid.
     getContributionAndProofSignatureSet(chain.config, index2pubkey, headState, signedContributionAndProof),
