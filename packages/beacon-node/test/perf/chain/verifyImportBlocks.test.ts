@@ -1,5 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -91,6 +92,8 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         {
           privateKey: await generateKeyPair("secp256k1"),
           config: state.config,
+          pubkey2index: new PubkeyIndexMap(),
+          index2pubkey: [],
           db,
           dataDir: ".",
           dbName: ".",

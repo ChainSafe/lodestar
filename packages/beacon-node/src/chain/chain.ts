@@ -17,10 +17,8 @@ import {
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  createCachedBeaconState,
   getEffectiveBalanceIncrementsZeroInactive,
   getEffectiveBalancesFromStateBytes,
-  isCachedBeaconState,
   processSlots,
 } from "@lodestar/state-transition";
 import {
@@ -204,6 +202,8 @@ export class BeaconChain implements IBeaconChain {
     {
       privateKey,
       config,
+      pubkey2index,
+      index2pubkey,
       db,
       dbName,
       dataDir,
@@ -219,6 +219,8 @@ export class BeaconChain implements IBeaconChain {
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
+      pubkey2index: PubkeyIndexMap;
+      index2pubkey: Index2PubkeyCache;
       db: IBeaconDb;
       dbName: string;
       dataDir: string;
@@ -228,7 +230,7 @@ export class BeaconChain implements IBeaconChain {
       clock?: IClock;
       metrics: Metrics | null;
       validatorMonitor: ValidatorMonitor | null;
-      anchorState: BeaconStateAllForks;
+      anchorState: CachedBeaconStateAllForks;
       isAnchorStateFinalized: boolean;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
@@ -287,39 +289,25 @@ export class BeaconChain implements IBeaconChain {
       logger,
     });
 
-    // Restore state caches
-    // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
-    // pubkeys takes ~30 seconds for 350k keys (mainnet 2022Q2).
-    // When the BeaconStateCache is created in initializeBeaconStateFromEth1 it may be incorrect. Until we can ensure that
-    // it's safe to re-use _ANY_ BeaconStateCache, this option is disabled by default and only used in tests.
-    const cachedState =
-      isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
-        ? anchorState
-        : createCachedBeaconState(anchorState, {
-            config,
-            pubkey2index: new PubkeyIndexMap(),
-            index2pubkey: [],
-          });
-    this._earliestAvailableSlot = cachedState.slot;
-
-    this.shufflingCache = cachedState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
+    this._earliestAvailableSlot = anchorState.slot;
+    this.shufflingCache = anchorState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
       {
-        shuffling: cachedState.epochCtx.previousShuffling,
-        decisionRoot: cachedState.epochCtx.previousDecisionRoot,
+        shuffling: anchorState.epochCtx.previousShuffling,
+        decisionRoot: anchorState.epochCtx.previousDecisionRoot,
       },
       {
-        shuffling: cachedState.epochCtx.currentShuffling,
-        decisionRoot: cachedState.epochCtx.currentDecisionRoot,
+        shuffling: anchorState.epochCtx.currentShuffling,
+        decisionRoot: anchorState.epochCtx.currentDecisionRoot,
       },
       {
-        shuffling: cachedState.epochCtx.nextShuffling,
-        decisionRoot: cachedState.epochCtx.nextDecisionRoot,
+        shuffling: anchorState.epochCtx.nextShuffling,
+        decisionRoot: anchorState.epochCtx.nextDecisionRoot,
       },
     ]);
 
-    // Persist single global instance of state caches
-    this.pubkey2index = cachedState.epochCtx.pubkey2index;
-    this.index2pubkey = cachedState.epochCtx.index2pubkey;
+    // Global cache of validators pubkey/index mapping
+    this.pubkey2index = pubkey2index;
+    this.index2pubkey = index2pubkey;
 
     const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
     const blockStateCache = this.opts.nHistoricalStates
@@ -350,15 +338,15 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
-    blockStateCache.add(cachedState);
-    blockStateCache.setHeadState(cachedState);
-    checkpointStateCache.add(checkpoint, cachedState);
+    blockStateCache.add(anchorState);
+    blockStateCache.setHeadState(anchorState);
+    checkpointStateCache.add(checkpoint, anchorState);
 
     const forkChoice = initializeForkChoice(
       config,
       emitter,
       clock.currentSlot,
-      cachedState,
+      anchorState,
       isAnchorStateFinalized,
       opts,
       this.justifiedBalancesGetter.bind(this),

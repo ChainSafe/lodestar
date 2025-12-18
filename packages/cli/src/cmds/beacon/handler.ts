@@ -2,11 +2,13 @@ import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
+import {Index2PubkeyCache, createCachedBeaconState, syncPubkeys} from "@lodestar/state-transition";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -78,16 +80,31 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       logger
     );
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
+    const pubkey2index = new PubkeyIndexMap();
+    const index2pubkey: Index2PubkeyCache = [];
+    syncPubkeys(anchorState.validators.getAllReadonlyValues(), pubkey2index, index2pubkey);
+    const cachedState = createCachedBeaconState(
+      anchorState,
+      {
+        config: beaconConfig,
+        pubkey2index,
+        index2pubkey,
+      },
+      {skipSyncPubkeys: true}
+    );
+
     const node = await BeaconNode.init({
       opts: options,
       config: beaconConfig,
+      pubkey2index,
+      index2pubkey,
       db,
       logger,
       processShutdownCallback,
       privateKey,
       dataDir: beaconPaths.dataDir,
       peerStoreDir: beaconPaths.peerStoreDir,
-      anchorState,
+      anchorState: cachedState,
       isAnchorStateFinalized: isFinalized,
       wsCheckpoint,
     });

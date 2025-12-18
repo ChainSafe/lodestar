@@ -2,10 +2,11 @@ import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, Index2PubkeyCache} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -45,13 +46,15 @@ export type BeaconNodeModules = {
 export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
   config: BeaconConfig;
+  pubkey2index: PubkeyIndexMap;
+  index2pubkey: Index2PubkeyCache;
   db: IBeaconDb;
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
   privateKey: PrivateKey;
   dataDir: string;
   peerStoreDir?: string;
-  anchorState: BeaconStateAllForks;
+  anchorState: CachedBeaconStateAllForks;
   isAnchorStateFinalized: boolean;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
@@ -146,6 +149,8 @@ export class BeaconNode {
   static async init<T extends BeaconNode = BeaconNode>({
     opts,
     config,
+    pubkey2index,
+    index2pubkey,
     db,
     logger,
     processShutdownCallback,
@@ -220,6 +225,8 @@ export class BeaconNode {
       privateKey,
       config,
       clock,
+      pubkey2index,
+      index2pubkey,
       dataDir,
       db,
       dbName: opts.db.name,

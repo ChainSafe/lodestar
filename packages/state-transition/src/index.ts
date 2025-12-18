@@ -27,8 +27,7 @@ export {
   createEmptyEpochCacheImmutableData,
 } from "./cache/epochCache.js";
 export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
-// Aux data-structures
-export {type Index2PubkeyCache} from "./cache/pubkeyCache.js";
+export {type Index2PubkeyCache, syncPubkeys} from "./cache/pubkeyCache.js";
 // Main state caches
 export {
   type BeaconStateCache,

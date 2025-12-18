@@ -1,5 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {Index2PubkeyCache, createCachedBeaconState, syncPubkeys} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconChain} from "../../src/chain/chain.js";
@@ -9,7 +11,6 @@ import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from ".
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
-import {createCachedBeaconStateTest} from "./cachedBeaconState.js";
 import {ClockStatic} from "./clock.js";
 import {testLogger} from "./logger.js";
 import {generateState} from "./state.js";
@@ -42,6 +43,18 @@ export async function getNetworkForTest(
   );
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
+  const pubkey2index = new PubkeyIndexMap();
+  const index2pubkey: Index2PubkeyCache = [];
+  syncPubkeys(state.validators.getAllReadonlyValues(), pubkey2index, index2pubkey);
+  const cachedState = createCachedBeaconState(
+    state,
+    {
+      config: beaconConfig,
+      pubkey2index,
+      index2pubkey,
+    },
+    {skipSyncPubkeys: true}
+  );
   const db = getMockedBeaconDb();
   const privateKey = await generateKeyPair("secp256k1");
 
@@ -60,6 +73,8 @@ export async function getNetworkForTest(
     {
       privateKey,
       config: beaconConfig,
+      pubkey2index,
+      index2pubkey,
       db,
       dataDir: ".",
       dbName: ".",
@@ -73,7 +88,7 @@ export async function getNetworkForTest(
       ),
       metrics: null,
       validatorMonitor: null,
-      anchorState: createCachedBeaconStateTest(state, beaconConfig),
+      anchorState: cachedState,
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),
     }
