@@ -8,7 +8,9 @@ export enum InsertOutcome {
   /** The data had not been seen before and was added to the pool. */
   NewData = "NewData",
   /** A validator signature for a participant of this data is already known. No changes were made. */
-  AlreadyKnown = "AlreadyKnown",
+  // AlreadyKnown = "AlreadyKnown",
+  Subset = "Subset",
+  Equal = "Equal",
   /** Not existing in the pool but it's too old to add. No changes were made. */
   Old = "Old",
   /** The pool has reached its limit. No changes were made. */

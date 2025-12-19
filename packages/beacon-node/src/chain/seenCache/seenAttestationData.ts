@@ -92,7 +92,7 @@ export class SeenAttestationDatas {
     const cacheEntryByAttData = cacheEntryByAttDataByIndex.getOrDefault(committeeIndex);
     if (cacheEntryByAttData.has(attDataBase64)) {
       this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.already_known});
-      return InsertOutcome.AlreadyKnown;
+      return InsertOutcome.Equal;
     }
 
     if (cacheEntryByAttData.size >= this.maxCacheSizePerSlot) {

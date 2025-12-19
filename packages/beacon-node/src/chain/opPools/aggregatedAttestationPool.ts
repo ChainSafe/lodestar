@@ -681,9 +681,10 @@ export class MatchingDataAttestationGroup {
 
       switch (intersectUint8Arrays(newBits.uint8Array, prevBits.uint8Array)) {
         case IntersectResult.Subset:
+          return InsertOutcome.Subset;
         case IntersectResult.Equal:
           // this new attestation is actually a subset of an existing one, don't want to add it
-          return InsertOutcome.AlreadyKnown;
+          return InsertOutcome.Equal;
 
         case IntersectResult.Exclusive:
           // no intersection

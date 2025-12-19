@@ -242,7 +242,7 @@ function aggregateAttestationInto(
   assert.notNull(bitIndex, "Invalid attestation in pool, not exactly one bit set");
 
   if (aggregate.aggregationBits.get(bitIndex) === true) {
-    return InsertOutcome.AlreadyKnown;
+    return InsertOutcome.Equal;
   }
 
   aggregate.aggregationBits.set(bitIndex, true);

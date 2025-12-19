@@ -137,7 +137,7 @@ function aggregateSignatureInto(
   indexInSubcommittee: number
 ): InsertOutcome {
   if (contribution.aggregationBits.get(indexInSubcommittee) === true) {
-    return InsertOutcome.AlreadyKnown;
+    return InsertOutcome.Equal;
   }
 
   contribution.aggregationBits.set(indexInSubcommittee, true);
