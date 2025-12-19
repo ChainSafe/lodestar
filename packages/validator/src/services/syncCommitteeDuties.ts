@@ -143,7 +143,7 @@ export class SyncCommitteeDutiesService {
         // sync committee contributions as it is required to correctly determine if validator is aggregator
         // and to produce a ContributionAndProof that can be threshold aggregated by the middleware client.
         this.runDistributedAggregationSelectionTasks(duties, slot).catch((e) =>
-          this.logger.error("Error on sync committee aggregation selection", {slot}, e)
+          this.logger.debug("Error on sync committee aggregation selection", {slot}, e)
         );
       }
     }
@@ -400,7 +400,7 @@ export class SyncCommitteeDutiesService {
         );
 
         if (!combinedSelection) {
-          this.logger.warn("Did not receive combined sync committee selection proof", logCtxValidator);
+          this.logger.debug("Did not receive combined sync committee selection proof", logCtxValidator);
           continue;
         }
 

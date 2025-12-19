@@ -211,7 +211,7 @@ export class AttestationDutiesService {
           // This is required to correctly determine if validator is aggregator and to produce
           // a AggregateAndProof that can be threshold aggregated by the middleware client.
           await this.runDistributedAggregationSelectionTasks(Array.from(epochDuties.values()), epoch).catch((e) =>
-            this.logger.error("Error on attestation aggregation selection", {epoch}, e)
+            this.logger.debug("Error on attestation aggregation selection", {epoch}, e)
           );
         }
 
@@ -380,7 +380,7 @@ export class AttestationDutiesService {
     if (epochDuties) {
       if (this.opts?.distributedAggregationSelection) {
         await this.runDistributedAggregationSelectionTasks(Array.from(epochDuties.values()), dutyEpoch).catch((e) =>
-          this.logger.error("Error on attestation aggregation selection after duties reorg", logContext, e)
+          this.logger.debug("Error on attestation aggregation selection after duties reorg", logContext, e)
         );
       }
 
@@ -479,7 +479,7 @@ export class AttestationDutiesService {
       const combinedSelection = combinedSelections.find((s) => s.validatorIndex === validatorIndex && s.slot === slot);
 
       if (!combinedSelection) {
-        this.logger.warn("Did not receive combined beacon committee selection proof", logCtxValidator);
+        this.logger.debug("Did not receive combined beacon committee selection proof", logCtxValidator);
         continue;
       }
 
