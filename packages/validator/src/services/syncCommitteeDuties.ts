@@ -355,6 +355,10 @@ export class SyncCommitteeDutiesService {
    * 3. Mutate duty objects to set selection proofs for aggregators
    */
   private async runDistributedAggregationSelectionTasks(duties: SyncDutyAndProofs[], slot: number): Promise<void> {
+    if (duties.length === 0) {
+      return;
+    }
+
     const partialSelections: routes.validator.SyncCommitteeSelection[] = [];
 
     for (const {duty, selectionProofs} of duties) {

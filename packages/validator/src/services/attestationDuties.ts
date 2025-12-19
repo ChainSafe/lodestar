@@ -453,6 +453,10 @@ export class AttestationDutiesService {
    * 3. Mutate duty objects to set selection proofs for aggregators
    */
   private async runDistributedAggregationSelectionTasks(duties: AttDutyAndProof[], epoch: Epoch): Promise<void> {
+    if (duties.length === 0) {
+      return;
+    }
+
     const partialSelections: routes.validator.BeaconCommitteeSelection[] = duties.map(
       ({duty, partialSelectionProof}) => ({
         validatorIndex: duty.validatorIndex,
