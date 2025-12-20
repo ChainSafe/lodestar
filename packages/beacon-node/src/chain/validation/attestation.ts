@@ -797,7 +797,7 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
 
 /**
  * Get a list of validator indices in the given committee
- * attestationIndex - Index of the committee in shuffling.committees
+ * committeeIndex - Index of the committee in shuffling.committees
  */
 export function getCommitteeValidatorIndices(
   shuffling: EpochShuffling,
