@@ -40,6 +40,7 @@ export function verifyBlockSequence(
   return {nextAnchor, verifiedBlocks};
 }
 
+// This assumes we'll be backfilling only for the current and prev fork. If we are backfilling shorter that MIN_EPOCHS_FOR_BLOCK_REQUESTS and we are across 2 prev forks, getBlockProposerSignatureSet will wrongly calculate the signing domain
 export async function verifyBlockProposerSignature(
   bls: IBlsVerifier,
   state: CachedBeaconStateAllForks,

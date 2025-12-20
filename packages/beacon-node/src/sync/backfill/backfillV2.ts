@@ -71,12 +71,6 @@ export enum BackfillSyncStatus {
   aborted = "aborted",
 }
 
-type BackfillSyncEvents = {
-  [BackfillSyncEvent.completed]: (oldestSlotSynced: Slot) => void;
-};
-
-type BackfillSyncEmitter = StrictEventEmitter<EventEmitter, BackfillSyncEvents>;
-
 // Assumptions:
 //  BackfillBlock type exists purely as a convenience helper type to store a block along with its own root
 //  lastBackSyncedBlock and anchorBlock are almost always the same, except some cases (ex: when BackfillSyncErrorCode.NOT_LINEAR)
@@ -116,7 +110,8 @@ type PeerBackfillSyncMeta =
     })
   | null;
 
-export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
+// This assumes we'll be backfilling only for the current and prev fork. If we are backfilling shorter that MIN_EPOCHS_FOR_BLOCK_REQUESTS and we are across 2 prev forks, getBlockProposerSignatureSet (inside validation) will wrongly calculate the signing domain
+export class BackfillSync {
   syncAnchor: BackFillSyncAnchor;
 
   private readonly chain: IBeaconChain;
@@ -154,8 +149,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private currentAttempt = 1;
 
   constructor(opts: BackfillSyncOpts, modules: BackfillModules) {
-    super();
-
     this.syncAnchor = modules.syncAnchor;
     this.backfillStartFromSlot = modules.backfillStartFromSlot;
     this.wsCheckpointHeader = modules.wsCheckpointHeader;
