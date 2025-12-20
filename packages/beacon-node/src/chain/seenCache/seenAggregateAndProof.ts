@@ -21,6 +21,8 @@ export type AggregationInfo = {
   trueBitCount: number;
 };
 
+type AttestationDataIndex = number;
+
 /**
  * Although there are up to TARGET_AGGREGATORS_PER_COMMITTEE (16 for mainnet) AggregateAndProof messages per slot,
  * they tend to have the same aggregate attestation, or one attestation is non-strict superset of another,
@@ -38,10 +40,10 @@ export class SeenAggregatedAttestations {
    * */
   private readonly aggregateRootsByEpoch = new MapDef<
     Epoch,
-    MapDef<CommitteeIndex, MapDef<RootHex, AggregationInfo[]>>
+    MapDef<AttestationDataIndex, MapDef<RootHex, AggregationInfo[]>>
   >(
     () =>
-      new MapDef<CommitteeIndex, MapDef<RootHex, AggregationInfo[]>>(
+      new MapDef<AttestationDataIndex, MapDef<RootHex, AggregationInfo[]>>(
         () => new MapDef<RootHex, AggregationInfo[]>(() => [])
       )
   );
@@ -51,13 +53,13 @@ export class SeenAggregatedAttestations {
 
   isKnown(
     targetEpoch: Epoch,
-    committeeIndex: CommitteeIndex,
+    attDataIndex: AttestationDataIndex,
     attDataRoot: RootHex,
     aggregationBits: BitArray
   ): boolean {
     const seenAggregationInfoArr = this.aggregateRootsByEpoch
       .getOrDefault(targetEpoch)
-      .getOrDefault(committeeIndex)
+      .getOrDefault(attDataIndex)
       .getOrDefault(attDataRoot);
     this.metrics?.seenCache.aggregatedAttestations.isKnownCalls.inc();
 
@@ -75,19 +77,19 @@ export class SeenAggregatedAttestations {
 
   add(
     targetEpoch: Epoch,
-    committeeIndex: CommitteeIndex,
+    attDataIndex: AttestationDataIndex,
     attDataRoot: RootHex,
     newItem: AggregationInfo,
     checkIsKnown: boolean
   ): void {
     const {aggregationBits} = newItem;
-    if (checkIsKnown && this.isKnown(targetEpoch, committeeIndex, attDataRoot, aggregationBits)) {
+    if (checkIsKnown && this.isKnown(targetEpoch, attDataIndex, attDataRoot, aggregationBits)) {
       return;
     }
 
     const seenAggregationInfoArr = this.aggregateRootsByEpoch
       .getOrDefault(targetEpoch)
-      .getOrDefault(committeeIndex)
+      .getOrDefault(attDataIndex)
       .getOrDefault(attDataRoot);
     insertDesc(seenAggregationInfoArr, newItem);
   }

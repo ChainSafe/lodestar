@@ -802,18 +802,18 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
 export function getCommitteeValidatorIndices(
   shuffling: EpochShuffling,
   attestationSlot: Slot,
-  attestationIndex: number
+  committeeIndex: CommitteeIndex
 ): Uint32Array {
   const {committees} = shuffling;
   const slotCommittees = committees[attestationSlot % SLOTS_PER_EPOCH];
 
-  if (attestationIndex >= slotCommittees.length) {
+  if (committeeIndex >= slotCommittees.length) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
-      index: attestationIndex,
+      index: committeeIndex,
     });
   }
-  return slotCommittees[attestationIndex];
+  return slotCommittees[committeeIndex];
 }
 
 /**

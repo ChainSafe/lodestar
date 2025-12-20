@@ -70,22 +70,25 @@ async function validateAggregateAndProof(
   const {aggregationBits} = aggregate;
   const attData = aggregate.data;
   const attSlot = attData.slot;
-  const attIndex = attData.index;
+  const attDataIndex = attData.index;
 
+  let committeeIndex: number | null;
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const committeeIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
+    committeeIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
     if (committeeIndex === null) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
     }
     // [REJECT] aggregate.data.index == 0
-    if (attIndex !== 0) {
+    if (attDataIndex !== 0) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
     }
+  } else {
+    committeeIndex = attData.index;
   }
 
   const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
-  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, attIndex, seenAttDataKey) : null;
+  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, committeeIndex, seenAttDataKey) : null;
 
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
@@ -134,7 +137,7 @@ async function validateAggregateAndProof(
     : toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
   if (
     !skipValidationKnownAttesters &&
-    chain.seenAggregatedAttestations.isKnown(targetEpoch, attIndex, attDataRootHex, aggregationBits)
+    chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataIndex, attDataRootHex, aggregationBits)
   ) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
@@ -175,7 +178,7 @@ async function validateAggregateAndProof(
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
   const committeeValidatorIndices = cachedAttData
     ? cachedAttData.committeeValidatorIndices
-    : getCommitteeValidatorIndices(shuffling, attSlot, attIndex);
+    : getCommitteeValidatorIndices(shuffling, attSlot, committeeIndex);
 
   // [REJECT] The number of aggregation bits matches the committee size
   // -- i.e. `len(aggregation_bits) == len(get_beacon_committee(state, aggregate.data.slot, index))`.
@@ -246,7 +249,7 @@ async function validateAggregateAndProof(
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
   chain.seenAggregatedAttestations.add(
     targetEpoch,
-    attIndex,
+    attDataIndex,
     attDataRootHex,
     {aggregationBits, trueBitCount: attestingIndices.length},
     false
