@@ -1,6 +1,3 @@
-import {EventEmitter} from "node:events";
-import {StrictEventEmitter} from "strict-event-emitter-types";
-import {ByteVectorType} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -10,26 +7,16 @@ import {
   computeStartSlotAtEpoch,
   isStartSlotOfEpoch,
 } from "@lodestar/state-transition";
-import {
-  BeaconBlockHeader,
-  Root,
-  SignedBeaconBlock,
-  SignedBeaconBlockHeader,
-  Slot,
-  WithBytes,
-  fulu,
-  phase0,
-} from "@lodestar/types";
+import {Root, SignedBeaconBlock, Slot, WithBytes, fulu, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyPrintIndices, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {IBeaconDb} from "../../db/index.js";
-import {BackfillState, EpochBackfillState} from "../../db/repositories/backfillState.ts";
+import {EpochBackfillState} from "../../db/repositories/backfillState.ts";
 import {Metrics} from "../../metrics/metrics.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.ts";
 import {BackfillBlock, BackfillBlockHeader, verifyBlockProposerSignature, verifyBlockSequence} from "./verify.js";
 
 export type BackfillSyncModules = {
