@@ -70,20 +70,18 @@ async function validateAggregateAndProof(
   const {aggregationBits} = aggregate;
   const attData = aggregate.data;
   const attSlot = attData.slot;
+  const attIndex = attData.index;
 
-  let attIndex: number | null;
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    attIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
+    const committeeIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
-    if (attIndex === null) {
+    if (committeeIndex === null) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
     }
     // [REJECT] aggregate.data.index == 0
-    if (attData.index !== 0) {
+    if (attIndex !== 0) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
     }
-  } else {
-    attIndex = attData.index;
   }
 
   const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
