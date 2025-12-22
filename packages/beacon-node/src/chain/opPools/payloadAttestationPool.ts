@@ -22,15 +22,12 @@ const SLOTS_RETAINED = 2;
 // TODO GLOAS: Revisit this value. Educated guess would be MAX_ATTESTATIONS_PER_SLOT in AttestationPool divided by MAX_COMMITTEES_PER_SLOT
 const MAX_PAYLOAD_ATTESTATIONS_PER_SLOT = 16_384 / MAX_COMMITTEES_PER_SLOT;
 
-type PayloadAttestation = gloas.PayloadAttestation;
-type PayloadAttestationData = gloas.PayloadAttestationData;
-type PayloadAttestationMessage = gloas.PayloadAttestationMessage;
 type DataRootHex = string;
 type BlockRootHex = string;
 
 type AggregateFast = {
   aggregationBits: BitArray;
-  data: PayloadAttestationData;
+  data: gloas.PayloadAttestationData;
   signature: Signature;
 };
 
@@ -58,7 +55,7 @@ export class PayloadAttestationPool {
   }
 
   add(
-    message: PayloadAttestationMessage,
+    message: gloas.PayloadAttestationMessage,
     payloadAttDataRootHex: RootHex,
     validatorCommitteeIndex: number
   ): InsertOutcome {
@@ -76,7 +73,7 @@ export class PayloadAttestationPool {
     const aggregateByDataRootByBlockRoot = this.aggregateByDataRootByBlockRootBySlot.getOrDefault(slot);
     let aggregateByDataRoot = aggregateByDataRootByBlockRoot.get(toRootHex(message.data.beaconBlockRoot));
 
-    if (aggregateByDataRoot === undefined) {
+    if (!aggregateByDataRoot) {
       aggregateByDataRoot = new Map<DataRootHex, AggregateFast>();
       aggregateByDataRootByBlockRoot.set(toRootHex(message.data.beaconBlockRoot), aggregateByDataRoot);
     }
@@ -99,13 +96,12 @@ export class PayloadAttestationPool {
   /**
    * Get payload attestations to be included in a block.
    * Pick the top `maxAttestation` number of attestations with the most votes
-   *
    */
-  getPayloadAttesttationsForBlock(
+  getPayloadAttestationsForBlock(
     beaconBlockRoot: BlockRootHex,
     slot: Slot,
     maxAttestation: number
-  ): PayloadAttestation[] {
+  ): gloas.PayloadAttestation[] {
     const aggregateByDataRootByBlockRoot = this.aggregateByDataRootByBlockRootBySlot.get(slot);
 
     if (!aggregateByDataRootByBlockRoot) {
@@ -133,7 +129,7 @@ export class PayloadAttestationPool {
   }
 }
 
-function messageToAggregate(message: PayloadAttestationMessage, validatorCommitteeIndex: number): AggregateFast {
+function messageToAggregate(message: gloas.PayloadAttestationMessage, validatorCommitteeIndex: number): AggregateFast {
   return {
     aggregationBits: BitArray.fromSingleBit(PTC_SIZE, validatorCommitteeIndex),
     data: message.data,
@@ -142,7 +138,7 @@ function messageToAggregate(message: PayloadAttestationMessage, validatorCommitt
 }
 
 function aggregateMessageInto(
-  message: PayloadAttestationMessage,
+  message: gloas.PayloadAttestationMessage,
   validatorCommitteeIndex: number,
   aggregate: AggregateFast
 ): InsertOutcome {
@@ -156,6 +152,6 @@ function aggregateMessageInto(
   return InsertOutcome.Aggregated;
 }
 
-function fastToPayloadAttestation(aggFast: AggregateFast): PayloadAttestation {
+function fastToPayloadAttestation(aggFast: AggregateFast): gloas.PayloadAttestation {
   return {...aggFast, signature: aggFast.signature.toBytes()};
 }

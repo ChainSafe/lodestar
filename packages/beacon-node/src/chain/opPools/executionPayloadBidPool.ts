@@ -3,7 +3,7 @@ import {MapDef, toRootHex} from "@lodestar/utils";
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot} from "./utils.js";
 
-const SLOTS_RETAINED: Slot = 2;
+const SLOTS_RETAINED = 2;
 
 type BlockRootHex = string;
 type BlockHashHex = string;
@@ -14,8 +14,8 @@ type BlockHashHex = string;
 export class ExecutionPayloadBidPool {
   private readonly bidByParentHashByParentRootBySlot = new MapDef<
     Slot,
-    MapDef<string, Map<string, gloas.ExecutionPayloadBid>>
-  >(() => new MapDef<string, Map<string, gloas.ExecutionPayloadBid>>(() => new Map()));
+    MapDef<BlockRootHex, Map<BlockHashHex, gloas.ExecutionPayloadBid>>
+  >(() => new MapDef<BlockRootHex, Map<BlockHashHex, gloas.ExecutionPayloadBid>>(() => new Map()));
   private lowestPermissibleSlot = 0;
 
   add(bid: gloas.ExecutionPayloadBid): InsertOutcome {
@@ -32,8 +32,8 @@ export class ExecutionPayloadBidPool {
     const existing = bidByParentHash.get(parentHashHex);
 
     if (existing) {
-      const existingValue = BigInt(existing.value);
-      const newValue = BigInt(value);
+      const existingValue = existing.value;
+      const newValue = value;
       if (newValue > existingValue) {
         bidByParentHash.set(parentHashHex, bid);
         return InsertOutcome.NewData;

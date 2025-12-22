@@ -192,7 +192,7 @@ function getAllTopicsScoreParams(
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: EXECUTION_PAYLOAD_BID_WEIGHT,
-      expectedMessageRate: 1024, // TODO GLOAS: Need an estimate for thsi
+      expectedMessageRate: 1024, // TODO GLOAS: Need an estimate for this
       firstMessageDecayTime: epochDurationMs * 100,
     });
 
