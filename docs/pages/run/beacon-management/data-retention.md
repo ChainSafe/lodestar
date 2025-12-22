@@ -51,7 +51,7 @@ Configuring your node to store and prune data is key to success. On average you 
 
 Logs can also become quite large so please check out the section on [log management](../logging-and-metrics/log-management.md) for more information.
 
-There is really only one flag that is needed to manage the data for Lodestar, [`--dataDir`](./beacon-cli#--datadir). Other than that handling log management is really the heart of the data management story. Beacon node data is what it is. Depending on the execution client that is chosen, there may be flags to help with data storage growth but that is outside the scope of this document.
+The primary flag for managing data storage location in Lodestar is [`--dataDir`](./beacon-cli#--datadir). For managing the volume of stored data, see the [Pruning history](#pruning-history) section below. Other than that handling log management is really the heart of the data management story. Beacon node data is what it is. Depending on the execution client that is chosen, there may be flags to help with data storage growth but that is outside the scope of this document.
 
 ### Pruning history
 
