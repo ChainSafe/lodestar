@@ -17,7 +17,11 @@ export enum ExecutionPayloadBidErrorCode {
 export type ExecutionPayloadBidErrorType =
   | {code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE; builderIndex: ValidatorIndex}
   | {code: ExecutionPayloadBidErrorCode.BUILDER_BAD_CREDENTIALS; builderIndex: ValidatorIndex}
-  | {code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT; executionPayment: number}
+  | {
+      code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT;
+      builderIndex: ValidatorIndex;
+      executionPayment: number;
+    }
   | {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN;
       builderIndex: ValidatorIndex;
@@ -29,7 +33,7 @@ export type ExecutionPayloadBidErrorType =
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH; bidValue: number; builderBalance: number}
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH; parentBlockHash: RootHex}
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT; parentBlockRoot: RootHex}
-  | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; slot: Slot}
-  | {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE};
+  | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; builderIndex: ValidatorIndex; slot: Slot}
+  | {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE; builderIndex: ValidatorIndex; slot: Slot};
 
 export class ExecutionPayloadBidError extends GossipActionError<ExecutionPayloadBidErrorType> {}

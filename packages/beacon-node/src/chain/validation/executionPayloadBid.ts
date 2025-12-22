@@ -59,6 +59,7 @@ async function validateExecutionPayloadBid(
   if (bid.executionPayment !== 0) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
+      builderIndex: bid.builderIndex,
       executionPayment: bid.executionPayment,
     });
   }
@@ -114,6 +115,7 @@ async function validateExecutionPayloadBid(
   if (bid.slot !== currentSlot && bid.slot !== currentSlot + 1) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
+      builderIndex: bid.builderIndex,
       slot: bid.slot,
     });
   }
@@ -128,6 +130,8 @@ async function validateExecutionPayloadBid(
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
     });
   }
 
