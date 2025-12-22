@@ -4,12 +4,19 @@ import deepmerge from "deepmerge";
 import tmp from "tmp";
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
-import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  Index2PubkeyCache,
+  computeTimeAtSlot,
+  createCachedBeaconState,
+  syncPubkeys,
+} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {RecursivePartial, isPlainObject, toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../src/db/index.js";
@@ -17,7 +24,7 @@ import {BeaconNode} from "../../../src/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {IBeaconNodeOptions, defaultOptions} from "../../../src/node/options.js";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
-import {initDevState, writeDeposits} from "../../../src/node/utils/state.js";
+import {initDevState} from "../../../src/node/utils/state.js";
 import {testLogger} from "../logger.js";
 
 export async function getDevBeaconNode(
@@ -45,13 +52,10 @@ export async function getDevBeaconNode(
 
   let anchorState = opts.anchorState;
   if (!anchorState) {
-    const {state, deposits} = initDevState(config, validatorCount, opts);
-    anchorState = state;
+    anchorState = initDevState(config, validatorCount, opts);
 
-    // Is it necessary to persist deposits and genesis block?
-    await writeDeposits(db, deposits);
     const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
-    block.message.stateRoot = state.hashTreeRoot();
+    block.message.stateRoot = anchorState.hashTreeRoot();
     await db.blockArchive.add(block);
 
     if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.deneb) {
@@ -69,7 +73,6 @@ export async function getDevBeaconNode(
       // dev defaults that we wish, especially for the api options
       {
         db: {name: tmpDir.name},
-        eth1: {enabled: false},
         api: {rest: {api: ["beacon", "config", "events", "node", "validator"], port: 19596}},
         metrics: {enabled: false},
         network: {
@@ -120,16 +123,31 @@ export async function getDevBeaconNode(
   );
 
   const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
+  const pubkey2index = new PubkeyIndexMap();
+  const index2pubkey: Index2PubkeyCache = [];
+  syncPubkeys(anchorState.validators.getAllReadonlyValues(), pubkey2index, index2pubkey);
+  const cachedState = createCachedBeaconState(
+    anchorState,
+    {
+      config: beaconConfig,
+      pubkey2index,
+      index2pubkey,
+    },
+    {skipSyncPubkeys: true}
+  );
+
   return BeaconNode.init({
     opts: options as IBeaconNodeOptions,
     config: beaconConfig,
+    pubkey2index,
+    index2pubkey,
     db,
     logger,
     processShutdownCallback: () => {},
     privateKey,
     dataDir: ".",
     peerStoreDir,
-    anchorState,
+    anchorState: cachedState,
     wsCheckpoint: opts.wsCheckpoint,
     isAnchorStateFinalized: true,
   });

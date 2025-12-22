@@ -46,6 +46,7 @@ export function verifyBlockSequence(
 }
 
 export async function verifyBlockProposerSignature(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   bls: IBlsVerifier,
   state: CachedBeaconStateAllForks,
@@ -54,7 +55,8 @@ export async function verifyBlockProposerSignature(
   if (blocks.length === 1 && blocks[0].message.slot === GENESIS_SLOT) return;
   const signatures = blocks.reduce((sigs: ISignatureSet[], block) => {
     // genesis block doesn't have valid signature
-    if (block.message.slot !== GENESIS_SLOT) sigs.push(getBlockProposerSignatureSet(index2pubkey, state, block));
+    if (block.message.slot !== GENESIS_SLOT)
+      sigs.push(getBlockProposerSignatureSet(config, index2pubkey, state, block));
     return sigs;
   }, []);
 

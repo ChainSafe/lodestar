@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {CachedBeaconStateAllForks, Index2PubkeyCache, getBlockSignatureSets} from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -15,6 +16,7 @@ import {ImportBlockOpts} from "./types.js";
  * Since all data is known in advance all signatures are verified at once in parallel.
  */
 export async function verifyBlocksSignatures(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   bls: IBlsVerifier,
   logger: Logger,
@@ -39,7 +41,7 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(index2pubkey, preState0, block, indexedAttestationsByBlock[i], {
+          getBlockSignatureSets(config, index2pubkey, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
           })
         );

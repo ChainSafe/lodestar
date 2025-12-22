@@ -498,6 +498,10 @@ export type Endpoints = {
    * a validator client to correctly determine if one of its validators has been selected to
    * perform an aggregation duty in this slot.
    *
+   * Validator clients running in a distributed validator cluster must query this endpoint
+   * at the start of an epoch for the current and lookahead (next) epochs for all validators
+   * that have attester duties in the current and lookahead epochs.
+   *
    * Note that this endpoint is not implemented by the beacon node and will return a 501 error
    *
    * Returns an array of threshold aggregated beacon committee selection proofs
@@ -520,6 +524,9 @@ export type Endpoints = {
    * partial sync committee selection proofs for combined/aggregated selection proofs to allow
    * a validator client to correctly determine if one of its validators has been selected to
    * perform a sync committee contribution (sync aggregation) duty in this slot.
+   *
+   * Validator clients running in a distributed validator cluster must query this endpoint
+   * at the start of each slot for all validators that are included in the current sync committee.
    *
    * Note that this endpoint is not implemented by the beacon node and will return a 501 error
    *

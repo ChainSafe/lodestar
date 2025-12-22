@@ -32,7 +32,7 @@ describe("api/validator - produceBlockV3", () => {
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   beforeEach(() => {
-    modules = getApiTestModules();
+    modules = getApiTestModules({config});
     api = getValidatorApi(defaultApiOptions, {...modules, config});
     state = generateCachedBellatrixState();
 
@@ -245,10 +245,6 @@ describe("api/validator - produceBlockV3", () => {
     modules.chain.recomputeForkChoiceHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
     modules.chain["opPool"].getSlashingsAndExits.mockReturnValue([[], [], [], []]);
     modules.chain["aggregatedAttestationPool"].getAttestationsForBlock.mockReturnValue([]);
-    modules.chain["eth1"].getEth1DataAndDeposits.mockResolvedValue({
-      eth1Data: ssz.phase0.Eth1Data.defaultValue(),
-      deposits: [],
-    });
     modules.chain["syncContributionAndProofPool"].getAggregate.mockReturnValue({
       syncCommitteeBits: ssz.altair.SyncCommitteeBits.defaultValue(),
       syncCommitteeSignature: G2_POINT_AT_INFINITY,

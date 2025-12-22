@@ -1,4 +1,5 @@
 import {routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -24,6 +25,7 @@ export type PersistentCheckpointStateCacheOpts = {
 };
 
 type PersistentCheckpointStateCacheModules = {
+  config: BeaconConfig;
   metrics?: Metrics | null;
   logger: Logger;
   clock?: IClock | null;
@@ -107,6 +109,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<CacheKey, CacheItem>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<RootHex>>(() => new Set<string>());
+  private readonly config: BeaconConfig;
   private readonly metrics: Metrics | null | undefined;
   private readonly logger: Logger;
   private readonly clock: IClock | null | undefined;
@@ -120,10 +123,20 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly bufferPool?: BufferPool | null;
 
   constructor(
-    {metrics, logger, clock, signal, datastore, blockStateCache, bufferPool}: PersistentCheckpointStateCacheModules,
+    {
+      config,
+      metrics,
+      logger,
+      clock,
+      signal,
+      datastore,
+      blockStateCache,
+      bufferPool,
+    }: PersistentCheckpointStateCacheModules,
     opts: PersistentCheckpointStateCacheOpts
   ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
+    this.config = config;
     if (metrics) {
       this.metrics = metrics;
       metrics.cpStateCache.size.addCollect(() => {
@@ -484,7 +497,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     }
 
     const blockSlot = state.slot;
-    const processCPStatesTimeMs = state.config.getSlotComponentDurationMs(PROCESS_CHECKPOINT_STATES_BPS);
+    const processCPStatesTimeMs = this.config.getSlotComponentDurationMs(PROCESS_CHECKPOINT_STATES_BPS);
     // we always have clock in production, fallback value is only for test
     const msFromSlot = this.clock?.msFromSlot(blockSlot) ?? processCPStatesTimeMs;
     const msToProcessCPStates = processCPStatesTimeMs - msFromSlot;

@@ -1,8 +1,8 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, fetch, isValidHttpUrl, retry} from "@lodestar/utils";
-import {IJson, RpcPayload} from "../interface.js";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
+import {IJson, RpcPayload} from "./utils.js";
 
 export enum JsonRpcHttpClientEvent {
   /**

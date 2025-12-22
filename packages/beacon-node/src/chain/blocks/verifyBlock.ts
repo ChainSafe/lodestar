@@ -139,6 +139,7 @@ export async function verifyBlocksInEpoch(
       // All signatures at once
       opts.skipVerifyBlockSignatures !== true
         ? verifyBlocksSignatures(
+            this.config,
             this.index2pubkey,
             this.bls,
             this.logger,

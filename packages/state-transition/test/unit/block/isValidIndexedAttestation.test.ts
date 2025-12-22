@@ -45,7 +45,7 @@ describe("validate indexed attestation", () => {
       data: attestationData,
       signature: EMPTY_SIGNATURE,
     };
-    expect(isValidIndexedAttestation(state.epochCtx.index2pubkey, state, indexedAttestation, false)).toBe(
+    expect(isValidIndexedAttestation(state.config, state.epochCtx.index2pubkey, state, indexedAttestation, false)).toBe(
       expectedValue
     );
   });

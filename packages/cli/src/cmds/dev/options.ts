@@ -80,11 +80,6 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     defaultDescription: undefined,
     default: true,
   },
-  eth1: {
-    ...beaconNodeOptions.eth1,
-    defaultDescription: undefined,
-    default: false,
-  },
   rest: {
     ...beaconNodeOptions.rest,
     defaultDescription: undefined,

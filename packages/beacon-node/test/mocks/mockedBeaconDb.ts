@@ -10,9 +10,6 @@ import {
   BlockRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
-  DepositDataRootRepository,
-  DepositEventRepository,
-  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
@@ -34,10 +31,6 @@ export type MockedBeaconDb = Mocked<BeaconDb> & {
   blsToExecutionChange: Mocked<BLSToExecutionChangeRepository>;
   proposerSlashing: Mocked<ProposerSlashingRepository>;
   attesterSlashing: Mocked<AttesterSlashingRepository>;
-  depositEvent: Mocked<DepositEventRepository>;
-
-  depositDataRoot: Mocked<DepositDataRootRepository>;
-  eth1Data: Mocked<Eth1DataRepository>;
 };
 
 vi.mock("../../src/db/repositories/index.js");
@@ -55,10 +48,6 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       blsToExecutionChange: vi.mocked(new BLSToExecutionChangeRepository({} as any, {} as any)),
       proposerSlashing: vi.mocked(new ProposerSlashingRepository({} as any, {} as any)),
       attesterSlashing: vi.mocked(new AttesterSlashingRepository({} as any, {} as any)),
-      depositEvent: vi.mocked(new DepositEventRepository({} as any, {} as any)),
-
-      depositDataRoot: vi.mocked(new DepositDataRootRepository({} as any, {} as any)),
-      eth1Data: vi.mocked(new Eth1DataRepository({} as any, {} as any)),
 
       blobSidecars: vi.mocked(new BlobSidecarsRepository({} as any, {} as any)),
       blobSidecarsArchive: vi.mocked(new BlobSidecarsArchiveRepository({} as any, {} as any)),

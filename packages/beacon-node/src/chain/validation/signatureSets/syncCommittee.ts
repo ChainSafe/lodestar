@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_SYNC_COMMITTEE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -9,11 +10,12 @@ import {
 import {altair, ssz} from "@lodestar/types";
 
 export function getSyncCommitteeSignatureSet(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   syncCommittee: altair.SyncCommitteeMessage
 ): ISignatureSet {
-  const domain = state.config.getDomain(state.slot, DOMAIN_SYNC_COMMITTEE, syncCommittee.slot);
+  const domain = config.getDomain(state.slot, DOMAIN_SYNC_COMMITTEE, syncCommittee.slot);
 
   return {
     type: SignatureSetType.single,

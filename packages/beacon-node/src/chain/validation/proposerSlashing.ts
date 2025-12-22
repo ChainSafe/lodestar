@@ -44,7 +44,7 @@ async function validateProposerSlashing(
     });
   }
 
-  const signatureSets = getProposerSlashingSignatureSets(chain.index2pubkey, state, proposerSlashing);
+  const signatureSets = getProposerSlashingSignatureSets(chain.config, chain.index2pubkey, state, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,

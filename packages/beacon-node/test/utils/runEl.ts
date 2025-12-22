@@ -1,10 +1,8 @@
 import {spawn} from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
-import {ChainConfig} from "@lodestar/config";
-import {sleep} from "@lodestar/utils";
-import {ZERO_HASH} from "../../src/constants/index.js";
-import {Eth1Provider} from "../../src/index.js";
+import {fromHex, sleep} from "@lodestar/utils";
+import {JsonRpcHttpClient} from "../../src/execution/engine/jsonRpcHttpClient.js";
 import {shell} from "../sim/shell.js";
 
 let txRpcId = 1;
@@ -87,18 +85,20 @@ async function getGenesisBlockHash(
   {providerUrl, jwtSecretHex}: {providerUrl: string; jwtSecretHex?: string},
   signal: AbortSignal
 ): Promise<string> {
-  const eth1Provider = new Eth1Provider(
-    {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<ChainConfig> as ChainConfig,
-    {providerUrls: [providerUrl], jwtSecretHex},
-    signal
-  );
+  const rpc = new JsonRpcHttpClient([providerUrl], {
+    signal,
+    jwtSecret: jwtSecretHex ? fromHex(jwtSecretHex) : undefined,
+  });
 
   // Need to run multiple tries because nethermind sometimes is not yet ready and throws error
   // of connection refused while fetching genesis block
   for (let i = 1; i <= 60; i++) {
     console.log(`fetching genesisBlock hash, try: ${i}`);
     try {
-      const genesisBlock = await eth1Provider.getBlockByNumber(0);
+      const genesisBlock = await rpc.fetch<{hash: string}>({
+        method: "eth_getBlockByNumber",
+        params: ["0x0", false],
+      });
       console.log({genesisBlock});
       if (!genesisBlock) {
         throw Error("No genesis block available");

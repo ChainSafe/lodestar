@@ -3,7 +3,6 @@ import {PeerId, TopicValidatorResult} from "@libp2p/interface";
 import {CustodyIndex, Status} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
-import {EventDirection} from "../util/workerEvents.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 
@@ -37,6 +36,13 @@ export type NetworkEventData = {
     acceptance: TopicValidatorResult;
   };
 };
+
+export enum EventDirection {
+  workerToMain,
+  mainToWorker,
+  /** Event not emitted through worker boundary */
+  none,
+}
 
 export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.peerConnected]: EventDirection.workerToMain,

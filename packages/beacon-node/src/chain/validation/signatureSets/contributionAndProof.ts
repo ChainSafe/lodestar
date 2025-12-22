@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_CONTRIBUTION_AND_PROOF} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -9,11 +10,12 @@ import {
 import {altair, ssz} from "@lodestar/types";
 
 export function getContributionAndProofSignatureSet(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedContributionAndProof: altair.SignedContributionAndProof
 ): ISignatureSet {
-  const domain = state.config.getDomain(
+  const domain = config.getDomain(
     state.slot,
     DOMAIN_CONTRIBUTION_AND_PROOF,
     signedContributionAndProof.message.contribution.slot

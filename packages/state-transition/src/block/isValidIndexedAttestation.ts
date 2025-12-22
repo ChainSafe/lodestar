@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {IndexedAttestation, IndexedAttestationBigint} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
@@ -9,6 +10,7 @@ import {verifySignatureSet} from "../util/index.js";
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
  */
 export function isValidIndexedAttestation(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   indexedAttestation: IndexedAttestation,
@@ -19,12 +21,13 @@ export function isValidIndexedAttestation(
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationSignatureSet(index2pubkey, state, indexedAttestation));
+    return verifySignatureSet(getIndexedAttestationSignatureSet(config, index2pubkey, state, indexedAttestation));
   }
   return true;
 }
 
 export function isValidIndexedAttestationBigint(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   indexedAttestation: IndexedAttestationBigint,
@@ -35,7 +38,7 @@ export function isValidIndexedAttestationBigint(
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(index2pubkey, state, indexedAttestation));
+    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(config, index2pubkey, state, indexedAttestation));
   }
   return true;
 }

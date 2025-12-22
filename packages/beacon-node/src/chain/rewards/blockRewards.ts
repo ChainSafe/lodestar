@@ -1,4 +1,5 @@
 import {routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
 import {
   ForkName,
   WHISTLEBLOWER_REWARD_QUOTIENT,
@@ -26,11 +27,12 @@ type SubRewardValue = number; // All reward values should be integer
  *  3) Reporting slashable behaviours from proposer and attester
  */
 export async function computeBlockRewards(
+  config: BeaconConfig,
   block: BeaconBlock,
   preState: CachedBeaconStateAllForks,
   postState?: CachedBeaconStateAllForks
 ): Promise<BlockRewards> {
-  const fork = preState.config.getForkName(block.slot);
+  const fork = config.getForkName(block.slot);
   const {attestations: cachedAttestationsReward = 0, syncAggregate: cachedSyncAggregateReward = 0} =
     postState?.proposerRewards ?? {};
   let blockAttestationReward = cachedAttestationsReward;
@@ -40,7 +42,7 @@ export async function computeBlockRewards(
     blockAttestationReward =
       fork === ForkName.phase0
         ? computeBlockAttestationRewardPhase0(block as phase0.BeaconBlock, preState as CachedBeaconStatePhase0)
-        : computeBlockAttestationRewardAltair(block as altair.BeaconBlock, preState as CachedBeaconStateAltair);
+        : computeBlockAttestationRewardAltair(config, block as altair.BeaconBlock, preState as CachedBeaconStateAltair);
   }
 
   if (syncAggregateReward === 0) {
@@ -78,10 +80,11 @@ function computeBlockAttestationRewardPhase0(
  * Reuses `processAttestationsAltair()`. Has dependency on RewardCache
  */
 function computeBlockAttestationRewardAltair(
+  config: BeaconConfig,
   block: altair.BeaconBlock,
   preState: CachedBeaconStateAltair
 ): SubRewardValue {
-  const fork = preState.config.getForkSeq(block.slot);
+  const fork = config.getForkSeq(block.slot);
   const {attestations} = block.body;
 
   processAttestationsAltair(fork, preState, attestations, false);

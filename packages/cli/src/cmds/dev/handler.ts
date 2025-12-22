@@ -60,7 +60,7 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
     const genesisTime = args.genesisTime ?? Math.floor(Date.now() / 1000) + 5;
     const eth1BlockHash = fromHex(args.genesisEth1Hash ?? toHex(Buffer.alloc(32, 0x0b)));
 
-    const {state} = nodeUtils.initDevState(config, validatorCount, {genesisTime, eth1BlockHash});
+    const state = nodeUtils.initDevState(config, validatorCount, {genesisTime, eth1BlockHash});
 
     args.genesisStateFile = "genesis.ssz";
     fs.writeFileSync(args.genesisStateFile, state.serialize());

@@ -75,12 +75,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/(finality|fork_choice|networking|sanity|transition)\/.*$/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
   ],
-  skippedTests: [
-    // These tests validate "first payload" scenarios where is_execution_enabled was false pre-merge.
-    // Since we removed merge transition support, these code paths no longer exist.
-    /^bellatrix\/operations\/execution_payload\/.+\/bad_parent_hash_first_payload$/,
-    /^bellatrix\/sanity\/blocks\/.+\/is_execution_enabled_false$/,
-  ],
+  skippedTests: [],
   skippedRunners: [],
 };
 

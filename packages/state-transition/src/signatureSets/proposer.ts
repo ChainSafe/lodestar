@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
@@ -6,20 +7,21 @@ import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
 
 export function verifyProposerSignature(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): boolean {
-  const signatureSet = getBlockProposerSignatureSet(index2pubkey, state, signedBlock);
+  const signatureSet = getBlockProposerSignatureSet(config, index2pubkey, state, signedBlock);
   return verifySignatureSet(signatureSet);
 }
 
 export function getBlockProposerSignatureSet(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): ISignatureSet {
-  const {config} = state;
   const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
 
   const blockType = isBlindedBeaconBlock(signedBlock.message)

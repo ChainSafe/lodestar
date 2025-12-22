@@ -1,6 +1,7 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
@@ -14,7 +15,14 @@ import {
   ForkSeq,
 } from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
-import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  Index2PubkeyCache,
+  createCachedBeaconState,
+  isExecutionStateType,
+  signedBlockToSignedHeader,
+  syncPubkeys,
+} from "@lodestar/state-transition";
 import {
   Attestation,
   AttesterSlashing,
@@ -38,7 +46,6 @@ import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
@@ -46,7 +53,6 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {testLogger} from "../../utils/logger.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
@@ -72,12 +78,11 @@ const forkChoiceTest =
         const {steps, anchorState} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
-        const state = createCachedBeaconStateTest(anchorState, config);
+        // const state = createCachedBeaconStateTest(anchorState, config);
 
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;
         const clock = new ClockStopped(currentSlot);
-        const eth1 = new Eth1ForBlockProductionDisabled();
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
           genesisBlockHash: isExecutionStateType(anchorState)
@@ -90,6 +95,20 @@ const forkChoiceTest =
           signal: controller.signal,
           logger: testLogger("executionEngine"),
         });
+
+        const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
+        const pubkey2index = new PubkeyIndexMap();
+        const index2pubkey: Index2PubkeyCache = [];
+        syncPubkeys(anchorState.validators.getAllReadonlyValues(), pubkey2index, index2pubkey);
+        const cachedState = createCachedBeaconState(
+          anchorState,
+          {
+            config: beaconConfig,
+            pubkey2index,
+            index2pubkey,
+          },
+          {skipSyncPubkeys: true}
+        );
 
         const chain = new BeaconChain(
           {
@@ -113,7 +132,9 @@ const forkChoiceTest =
           },
           {
             privateKey: await generateKeyPair("secp256k1"),
-            config: createBeaconConfig(config, state.genesisValidatorsRoot),
+            config: beaconConfig,
+            pubkey2index,
+            index2pubkey,
             db: getMockedBeaconDb(),
             dataDir: ".",
             dbName: ",",
@@ -122,9 +143,8 @@ const forkChoiceTest =
             clock,
             metrics: null,
             validatorMonitor: null,
-            anchorState,
+            anchorState: cachedState,
             isAnchorStateFinalized: true,
-            eth1,
             executionEngine,
             executionBuilder: undefined,
           }

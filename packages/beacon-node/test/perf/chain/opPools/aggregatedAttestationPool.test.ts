@@ -1,6 +1,6 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -232,7 +232,7 @@ function getAggregatedAttestationPool(
   numMissedVotes: number,
   numBadVotes: number
 ): AggregatedAttestationPool {
-  const config = createChainForkConfig(defaultChainConfig);
+  const config = createBeaconConfig(defaultChainConfig, Buffer.alloc(32, 0xaa));
 
   const pool = new AggregatedAttestationPool(config);
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {

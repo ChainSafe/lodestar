@@ -1,5 +1,6 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
@@ -38,11 +39,12 @@ const defaultAttestationsReward = {head: 0, target: 0, source: 0, inclusionDelay
 const defaultAttestationsPenalty = {target: 0, source: 0};
 
 export async function computeAttestationsRewards(
+  config: BeaconConfig,
   pubkey2index: PubkeyIndexMap,
   state: CachedBeaconStateAllForks,
   validatorIds?: (ValidatorIndex | string)[]
 ): Promise<AttestationsRewards> {
-  const fork = state.config.getForkName(state.slot);
+  const fork = config.getForkName(state.slot);
   if (fork === ForkName.phase0) {
     throw Error("Unsupported fork. Attestations rewards calculation is not available in phase0");
   }
@@ -50,8 +52,13 @@ export async function computeAttestationsRewards(
   const stateAltair = state as CachedBeaconStateAltair;
   const transitionCache = beforeProcessEpoch(stateAltair);
 
-  const [idealRewards, penalties] = computeIdealAttestationsRewardsAndPenaltiesAltair(stateAltair, transitionCache);
+  const [idealRewards, penalties] = computeIdealAttestationsRewardsAndPenaltiesAltair(
+    config,
+    stateAltair,
+    transitionCache
+  );
   const totalRewards = computeTotalAttestationsRewardsAltair(
+    config,
     pubkey2index,
     stateAltair,
     transitionCache,
@@ -64,12 +71,13 @@ export async function computeAttestationsRewards(
 }
 
 function computeIdealAttestationsRewardsAndPenaltiesAltair(
+  config: BeaconConfig,
   state: CachedBeaconStateAllForks,
   transitionCache: EpochTransitionCache
 ): [IdealAttestationsReward[], AttestationsPenalty[]] {
   const baseRewardPerIncrement = transitionCache.baseRewardPerIncrement;
   const activeBalanceByIncrement = transitionCache.totalActiveStakeByIncrement;
-  const fork = state.config.getForkName(state.slot);
+  const fork = config.getForkName(state.slot);
   const maxEffectiveBalance = isForkPostElectra(fork) ? MAX_EFFECTIVE_BALANCE_ELECTRA : MAX_EFFECTIVE_BALANCE;
   const maxEffectiveBalanceByIncrement = Math.floor(maxEffectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
 
@@ -139,6 +147,7 @@ function computeIdealAttestationsRewardsAndPenaltiesAltair(
 
 // Same calculation as `getRewardsAndPenaltiesAltair` but returns the breakdown of rewards instead of aggregated
 function computeTotalAttestationsRewardsAltair(
+  config: BeaconConfig,
   pubkey2index: PubkeyIndexMap,
   state: CachedBeaconStateAltair,
   transitionCache: EpochTransitionCache,
@@ -148,7 +157,7 @@ function computeTotalAttestationsRewardsAltair(
 ): TotalAttestationsReward[] {
   const rewards = [];
   const {flags} = transitionCache;
-  const {epochCtx, config} = state;
+  const {epochCtx} = state;
   const validatorIndices = validatorIds
     .map((id) => (typeof id === "number" ? id : pubkey2index.get(fromHex(id))))
     .filter((index) => index !== undefined); // Validator indices to include in the result

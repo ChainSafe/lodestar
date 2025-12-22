@@ -19,6 +19,7 @@ import {
   getBlockRootAtSlot,
   getEffectiveBalanceIncrementsZeroInactive,
   isExecutionStateType,
+  isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
@@ -135,7 +136,7 @@ export function initializeForkChoiceFromFinalizedState(
         unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
         unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
-        ...(isExecutionStateType(state)
+        ...(isExecutionStateType(state) && isMergeTransitionComplete(state)
           ? {
               executionPayloadBlockHash: toRootHex(state.latestExecutionPayloadHeader.blockHash),
               executionPayloadNumber: state.latestExecutionPayloadHeader.blockNumber,
@@ -225,7 +226,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
     unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
-    ...(isExecutionStateType(unfinalizedState)
+    ...(isExecutionStateType(unfinalizedState) && isMergeTransitionComplete(unfinalizedState)
       ? {
           executionPayloadBlockHash: toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash),
           executionPayloadNumber: unfinalizedState.latestExecutionPayloadHeader.blockNumber,

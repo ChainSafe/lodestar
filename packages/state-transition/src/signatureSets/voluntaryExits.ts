@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks} from "../types.js";
@@ -10,23 +11,25 @@ import {
 } from "../util/index.js";
 
 export function verifyVoluntaryExitSignature(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(index2pubkey, state, signedVoluntaryExit));
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, index2pubkey, state, signedVoluntaryExit));
 }
 
 /**
  * Extract signatures to allow validating all block signatures at once
  */
 export function getVoluntaryExitSignatureSet(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
   const slot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = state.config.getDomainForVoluntaryExit(state.slot, slot);
+  const domain = config.getDomainForVoluntaryExit(state.slot, slot);
 
   return {
     type: SignatureSetType.single,
@@ -37,11 +40,12 @@ export function getVoluntaryExitSignatureSet(
 }
 
 export function getVoluntaryExitsSignatureSets(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
-    getVoluntaryExitSignatureSet(index2pubkey, state, voluntaryExit)
+    getVoluntaryExitSignatureSet(config, index2pubkey, state, voluntaryExit)
   );
 }

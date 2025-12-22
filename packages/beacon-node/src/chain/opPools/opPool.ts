@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {Id, Repository} from "@lodestar/db";
 import {
   BLS_WITHDRAWAL_PREFIX,
@@ -50,6 +51,8 @@ export class OpPool {
   private readonly attesterSlashingIndexes = new Set<ValidatorIndex>();
   /** Map of validator index -> SignedBLSToExecutionChange */
   private readonly blsToExecutionChanges = new Map<ValidatorIndex, SignedBLSToExecutionChangeVersioned>();
+
+  constructor(private readonly config: BeaconConfig) {}
 
   // Getters for metrics
 
@@ -191,9 +194,8 @@ export class OpPool {
     phase0.SignedVoluntaryExit[],
     capella.SignedBLSToExecutionChange[],
   ] {
-    const {config} = state;
     const stateEpoch = computeEpochAtSlot(state.slot);
-    const stateFork = config.getForkSeq(state.slot);
+    const stateFork = this.config.getForkSeq(state.slot);
     const toBeSlashedIndices = new Set<ValidatorIndex>();
     const proposerSlashings: phase0.ProposerSlashing[] = [];
 
@@ -265,7 +267,7 @@ export class OpPool {
         // a future fork.
         isVoluntaryExitSignatureIncludable(
           stateFork,
-          config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch))
+          this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch))
         )
       ) {
         voluntaryExits.push(voluntaryExit);
@@ -368,14 +370,13 @@ export class OpPool {
    * Prune if validator has already exited at or before the finalized checkpoint of the head.
    */
   private pruneVoluntaryExits(headState: CachedBeaconStateAllForks): void {
-    const {config} = headState;
-    const headStateFork = config.getForkSeq(headState.slot);
+    const headStateFork = this.config.getForkSeq(headState.slot);
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
 
     for (const [key, voluntaryExit] of this.voluntaryExits.entries()) {
       // VoluntaryExit messages signed in the previous fork become invalid and can never be included in any future
       // block, so just drop as the head state advances into the next fork.
-      if (config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch)) < headStateFork) {
+      if (this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch)) < headStateFork) {
         this.voluntaryExits.delete(key);
       }
 
@@ -392,9 +393,8 @@ export class OpPool {
    * to opPool once gossipsub seen cache TTL passes.
    */
   private pruneBlsToExecutionChanges(headBlock: SignedBeaconBlock, headState: CachedBeaconStateAllForks): void {
-    const {config} = headState;
     const recentBlsToExecutionChanges =
-      config.getForkSeq(headBlock.message.slot) >= ForkSeq.capella
+      this.config.getForkSeq(headBlock.message.slot) >= ForkSeq.capella
         ? (headBlock as capella.SignedBeaconBlock).message.body.blsToExecutionChanges
         : [];
 

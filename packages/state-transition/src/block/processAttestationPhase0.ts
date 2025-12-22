@@ -52,6 +52,7 @@ export function processAttestationPhase0(
 
   if (
     !isValidIndexedAttestation(
+      state.config,
       epochCtx.index2pubkey,
       state,
       epochCtx.getIndexedAttestation(ForkSeq.phase0, attestation),

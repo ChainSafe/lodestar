@@ -1,3 +1,4 @@
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
@@ -8,6 +9,7 @@ import {ISignatureSet, SignatureSetType, computeSigningRoot} from "../util/index
  * Extract signatures to allow validating all block signatures at once
  */
 export function getProposerSlashingSignatureSets(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   proposerSlashing: phase0.ProposerSlashing
@@ -17,11 +19,7 @@ export function getProposerSlashingSignatureSets(
   // In state transition, ProposerSlashing headers are only partially validated. Their slot could be higher than the
   // clock and the slashing would still be valid. Must use bigint variants to hash correctly to all possible values
   return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map((signedHeader): ISignatureSet => {
-    const domain = state.config.getDomain(
-      state.slot,
-      DOMAIN_BEACON_PROPOSER,
-      Number(signedHeader.message.slot as bigint)
-    );
+    const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, Number(signedHeader.message.slot as bigint));
 
     return {
       type: SignatureSetType.single,
@@ -33,11 +31,12 @@ export function getProposerSlashingSignatureSets(
 }
 
 export function getProposerSlashingsSignatureSets(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return signedBlock.message.body.proposerSlashings.flatMap((proposerSlashing) =>
-    getProposerSlashingSignatureSets(index2pubkey, state, proposerSlashing)
+    getProposerSlashingSignatureSets(config, index2pubkey, state, proposerSlashing)
   );
 }
