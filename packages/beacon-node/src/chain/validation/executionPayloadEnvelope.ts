@@ -1,7 +1,7 @@
 import {
   computeStartSlotAtEpoch,
   createSingleSignatureSetFromComponents,
-  getExecutionPayloadSigningRoot,
+  getExecutionPayloadEnvelopeSigningRoot,
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -27,12 +27,12 @@ async function validateExecutionPayloadEnvelope(
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
-  const {builderIndex, payload} = envelope;
+  const {payload} = envelope;
   const blockRootHex = toRootHex(envelope.beaconBlockRoot);
 
-  //  GLOAS: [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
-  //  gossip or non-gossip sources) (a client MAY queue payload for processing once
-  //  the block is retrieved).
+  // [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
+  // gossip or non-gossip sources) (a client MAY queue payload for processing once
+  // the block is retrieved).
   // TODO GLOAS: Need to review this
   const block = chain.forkChoice.getBlock(envelope.beaconBlockRoot);
   if (block === null) {
@@ -42,18 +42,18 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  //  [IGNORE] The node has not seen another valid
-  //  `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  if (chain.seenExecutionPayloadEnvelopes.isKnown(blockRootHex, builderIndex)) {
+  // [IGNORE] The node has not seen another valid
+  // `SignedExecutionPayloadEnvelope` for this block root from this builder.
+  if (chain.seenExecutionPayloadEnvelopes.isKnown(blockRootHex, envelope.builderIndex)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,
       slot: envelope.slot,
-      builderIndex,
+      builderIndex: envelope.builderIndex,
     });
   }
 
-  //  [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `envelope.slot >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
+  // [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `envelope.slot >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
   const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   if (envelope.slot < finalizedSlot) {
@@ -86,10 +86,10 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `envelope.builder_index == bid.builder_index`
-  if (builderIndex !== block.builderIndex) {
+  if (envelope.builderIndex !== block.builderIndex) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
-      envelopeBuilderIndex: builderIndex,
+      envelopeBuilderIndex: envelope.builderIndex,
       bidBuilderIndex: block.builderIndex,
     });
   }
@@ -106,7 +106,7 @@ async function validateExecutionPayloadEnvelope(
   // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
   const signatureSet = createSingleSignatureSetFromComponents(
     chain.index2pubkey[envelope.builderIndex],
-    getExecutionPayloadSigningRoot({config: chain.config, slot: envelope.slot}, payload),
+    getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
     executionPayloadEnvelope.signature
   );
 
@@ -116,5 +116,5 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  chain.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot, builderIndex);
+  chain.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot, envelope.builderIndex);
 }

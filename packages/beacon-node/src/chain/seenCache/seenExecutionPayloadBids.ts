@@ -1,7 +1,7 @@
 import {Slot, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
-const SLOTS_RETAINED: Slot = 2;
+const SLOTS_RETAINED = 2;
 
 /**
  * Tracks execution payload bids we've already seen per (slot, builder).

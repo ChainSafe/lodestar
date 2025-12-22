@@ -36,8 +36,7 @@ async function validateExecutionPayloadBid(
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
   const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipExecutionPayloadBid);
 
-  // [REJECT] `bid.builder_index` is a valid, active, and non-slashed builder
-  // index.
+  // [REJECT] `bid.builder_index` is a valid, active, and non-slashed builder index.
   const builder = state.validators.getReadonly(bid.builderIndex);
   if (builder.slashed || !isActiveValidator(builder, getCurrentEpoch(state))) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
@@ -46,14 +45,21 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [REJECT] the builder's withdrawal credentials' prefix is
-  // `BUILDER_WITHDRAWAL_PREFIX` -- i.e.
+  // [REJECT] the builder's withdrawal credentials' prefix is `BUILDER_WITHDRAWAL_PREFIX` -- i.e.
   // `is_builder_withdrawal_credential(state.validators[bid.builder_index].withdrawal_credentials)`
   // returns `True`.
   if (!hasBuilderWithdrawalCredential(builder.withdrawalCredentials)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_BAD_CREDENTIALS,
       builderIndex: bid.builderIndex,
+    });
+  }
+
+  // [REJECT] `bid.execution_payment` is zero.
+  if (bid.executionPayment !== 0) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
+      executionPayment: bid.executionPayment,
     });
   }
 
@@ -79,8 +85,7 @@ async function validateExecutionPayloadBid(
     });
   }
   // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
-  // i.e.
-  // `MIN_ACTIVATION_BALANCE + bid.value <= state.balances[bid.builder_index]`.
+  // i.e. `MIN_ACTIVATION_BALANCE + bid.value <= state.balances[bid.builder_index]`.
   const builderBalance = state.balances.get(bid.builderIndex);
   if (builderBalance < bid.value + MIN_ACTIVATION_BALANCE) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
@@ -116,7 +121,7 @@ async function validateExecutionPayloadBid(
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
     chain.index2pubkey[bid.builderIndex],
-    getExecutionPayloadBidSigningRoot(state as CachedBeaconStateGloas, bid),
+    getExecutionPayloadBidSigningRoot(chain.config, state as CachedBeaconStateGloas, bid),
     signedExecutionPayloadBid.signature
   );
 

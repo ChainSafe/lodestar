@@ -83,7 +83,7 @@ async function validateAggregateAndProof(
     // If block is unknown, we don't handle it here. It will throw error later on at `verifyHeadBlockAndTargetRoot()`
     if (block !== null && block.slot === attData.slot && attData.index !== 0) {
       throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.PREMATURELY_INDICATE_PAYLOAD_PRESENT,
+        code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT,
       });
     }
 

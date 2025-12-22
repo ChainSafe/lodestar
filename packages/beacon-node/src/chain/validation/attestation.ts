@@ -307,7 +307,7 @@ async function validateAttestationNoSignatureCheck(
         // block being null will be handled by `verifyHeadBlockAndTargetRoot`
         if (block !== null && block.slot === attSlot && attData.index !== 0) {
           throw new AttestationError(GossipAction.REJECT, {
-            code: AttestationErrorCode.PREMATURELY_INDICATE_PAYLOAD_PRESENT,
+            code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT,
           });
         }
       } else {

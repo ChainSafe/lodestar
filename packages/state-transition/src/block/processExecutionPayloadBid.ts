@@ -101,7 +101,7 @@ function verifyExecutionPayloadBidSignature(
   pubkey: Uint8Array,
   signedBid: gloas.SignedExecutionPayloadBid
 ): boolean {
-  const signingRoot = getExecutionPayloadBidSigningRoot(state, signedBid.message);
+  const signingRoot = getExecutionPayloadBidSigningRoot(state.config, state, signedBid.message);
 
   try {
     const publicKey = PublicKey.fromBytes(pubkey);

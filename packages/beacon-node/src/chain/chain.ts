@@ -467,7 +467,7 @@ export class BeaconChain implements IBeaconChain {
       this.seenAttesters.isKnown(epoch, index) ||
       //   seenAggregators = single aggregator index, not participants of the aggregate
       this.seenAggregators.isKnown(epoch, index) ||
-      //  seenPayloadAttesters = single signer of payload attestation message
+      //   seenPayloadAttesters = single signer of payload attestation message
       this.seenPayloadAttesters.isKnown(epoch, index) ||
       //   seenBlockProposers = single block proposer
       this.seenBlockProposers.seenAtEpoch(epoch, index)

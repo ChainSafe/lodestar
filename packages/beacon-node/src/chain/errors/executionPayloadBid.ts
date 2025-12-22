@@ -4,6 +4,7 @@ import {GossipActionError} from "./gossipValidation.ts";
 export enum ExecutionPayloadBidErrorCode {
   BUILDER_NOT_ELIGIBLE = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_NOT_ELIGIBLE",
   BUILDER_BAD_CREDENTIALS = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_BAD_CREDENTIALS",
+  NON_ZERO_EXECUTION_PAYMENT = "EXECUTION_PAYLOAD_BID_ERROR_NON_ZERO_EXECUTION_PAYMENT",
   BID_ALREADY_KNOWN = "EXECUTION_PAYLOAD_BID_ERROR_BID_ALREADY_KNOWN",
   BID_TOO_LOW = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_LOW",
   BID_TOO_HIGH = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_HIGH",
@@ -16,6 +17,7 @@ export enum ExecutionPayloadBidErrorCode {
 export type ExecutionPayloadBidErrorType =
   | {code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE; builderIndex: ValidatorIndex}
   | {code: ExecutionPayloadBidErrorCode.BUILDER_BAD_CREDENTIALS; builderIndex: ValidatorIndex}
+  | {code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT; executionPayment: number}
   | {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN;
       builderIndex: ValidatorIndex;

@@ -44,9 +44,8 @@ async function validatePayloadAttestationMessage(
     });
   }
 
-  // [IGNORE] The `payload_attestation_message` is the first valid message
-  //   received from the validator with index
-  //   `payload_attestation_message.validate_index`.
+  // [IGNORE] The `payload_attestation_message` is the first valid message received
+  // from the validator with index `payload_attestation_message.validate_index`.
   // A single validator can participate PTC at most once per epoch
   if (chain.seenPayloadAttesters.isKnown(epoch, validatorIndex)) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
@@ -58,9 +57,8 @@ async function validatePayloadAttestationMessage(
   }
 
   // [IGNORE] The message's block `data.beacon_block_root` has been seen (via
-  //   gossip or non-gossip sources) (a client MAY queue attestation for processing
-  //   once the block is retrieved. Note a client might want to request payload
-  //   after).
+  // gossip or non-gossip sources) (a client MAY queue attestation for processing
+  // once the block is retrieved. Note a client might want to request payload after).
   const block = chain.forkChoice.getBlock(data.beaconBlockRoot);
   if (block === null) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
@@ -76,8 +74,8 @@ async function validatePayloadAttestationMessage(
   // it is possible that the block didn't pass the validation
 
   // [REJECT] The message's validator index is within the payload committee in
-  //   `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
-  //   processing the block up to the current slot as determined by the fork choice.
+  // `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
+  // processing the block up to the current slot as determined by the fork choice.
   const ptc = state.epochCtx.getPayloadTimelinessCommittee(data.slot);
   const validatorCommitteeIndex = ptc.indexOf(validatorIndex);
 
@@ -88,8 +86,7 @@ async function validatePayloadAttestationMessage(
     });
   }
 
-  // [REJECT] `payload_attestation_message.signature` is valid with respect to
-  //   the validator's public key.
+  // [REJECT] `payload_attestation_message.signature` is valid with respect to the validator's public key.
   const signatureSet = createSingleSignatureSetFromComponents(
     chain.index2pubkey[validatorIndex],
     getPayloadAttestationDataSigningRoot(state, data),
