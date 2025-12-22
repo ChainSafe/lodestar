@@ -175,14 +175,6 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         data: ForkChoiceResponseType,
         meta: EmptyMetaCodec,
         onlySupport: WireFormat.json,
-        transform: {
-          toResponse: (data) => ({
-            ...(data as ForkChoiceResponse),
-          }),
-          fromResponse: (resp) => ({
-            data: resp as ForkChoiceResponse,
-          }),
-        },
       },
     },
     getProtoArrayNodes: {
