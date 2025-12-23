@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, DbReqOpts, encodeKey as _encodeKey} from "@lodestar/db";
+import {Db, DbReqOpts} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
@@ -17,6 +17,20 @@ export type BackfillRangeWrapper = ValueOf<typeof backfillRangeSSZ>;
 // bucket which stores Epoch -> EpochBackfillState key value pairs
 export const BACKFILL_RANGE_KEY = -1;
 
+// Note: intToBytes(-1) incorrectly encodes to 0x0000000000000001, so we manually
+// encode as 0xFFFFFFFFFFFFFFFF (two's complement big-endian representation of -1)
+// This ensures no collision with epoch keys
+const BACKFILL_RANGE_KEY_BYTES = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+const BUCKET_PREFIX_LEN = 1;
+const KEY_LEN = 8;
+
+function encodeBackfillRangeKey(bucket: number): Uint8Array {
+  const buf = new Uint8Array(BUCKET_PREFIX_LEN + KEY_LEN);
+  buf[0] = bucket;
+  buf.set(BACKFILL_RANGE_KEY_BYTES, BUCKET_PREFIX_LEN);
+  return buf;
+}
+
 export class BackfillRange {
   private readonly bucket: Bucket;
   private readonly db: Db;
@@ -27,7 +41,7 @@ export class BackfillRange {
   constructor(_config: ChainForkConfig, db: Db) {
     this.db = db;
     this.bucket = Bucket.backfill_state;
-    this.key = _encodeKey(this.bucket, BACKFILL_RANGE_KEY);
+    this.key = encodeBackfillRangeKey(this.bucket);
     this.type = backfillRangeSSZ;
     this.dbReqOpts = {bucketId: getBucketNameByValue(this.bucket)};
   }
