@@ -1,3 +1,5 @@
+import {EventEmitter} from "node:events";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -45,6 +47,12 @@ export type BackfillSyncOpts = {
 export enum BackfillSyncEvent {
   completed = "BackfillSync-completed",
 }
+
+type BackfillSyncEvents = {
+  [BackfillSyncEvent.completed]: () => void;
+};
+
+export type BackfillSyncEventEmitter = StrictEventEmitter<EventEmitter, BackfillSyncEvents>;
 
 export enum BackfillSyncMethod {
   rangesync = "rangesync",
@@ -113,6 +121,7 @@ export class BackfillSync {
   private nextRangeToSkip: {start: Slot; end: Slot} | null = null; // stores the immediate previous gap in backfill DB
 
   private processor = new ItTrigger();
+  readonly emitter: BackfillSyncEventEmitter = new EventEmitter();
 
   // TODO: Consider implementing more efficient data structures and explore using util fns from network.ts (getConnectedPeerSyncMeta, getConnectedPeers, etc.)
   // - Adding selectivity to peers: we already have earliestAvailableSlot via PeerSyncMeta,
@@ -156,6 +165,7 @@ export class BackfillSync {
     this.sync()
       .then(() => {
         this.logger.info("BackfillSync completed");
+        this.emitter.emit(BackfillSyncEvent.completed);
         this.close();
       })
       .catch((e) => {
