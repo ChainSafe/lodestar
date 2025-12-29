@@ -2,7 +2,6 @@ import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_RANDAO} from "@lodestar/params";
 import {BeaconBlock, ssz} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 import {
   ISignatureSet,
   SignatureSetType,
@@ -14,10 +13,9 @@ import {
 export function verifyRandaoSignature(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
   block: BeaconBlock
 ): boolean {
-  return verifySignatureSet(getRandaoRevealSignatureSet(config, index2pubkey, state, block));
+  return verifySignatureSet(getRandaoRevealSignatureSet(config, index2pubkey, block));
 }
 
 /**
@@ -26,12 +24,13 @@ export function verifyRandaoSignature(
 export function getRandaoRevealSignatureSet(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
   block: BeaconBlock
 ): ISignatureSet {
   // should not get epoch from epochCtx
   const epoch = computeEpochAtSlot(block.slot);
-  const domain = config.getDomain(state.slot, DOMAIN_RANDAO, block.slot);
+  // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
+  // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
+  const domain = config.getDomain(block.slot, DOMAIN_RANDAO, block.slot);
 
   return {
     type: SignatureSetType.single,

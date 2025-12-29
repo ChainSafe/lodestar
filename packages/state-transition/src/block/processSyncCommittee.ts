@@ -3,6 +3,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {G2_POINT_AT_INFINITY} from "../constants/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {
@@ -28,7 +29,7 @@ export function processSyncAggregate(
     const signatureSet = getSyncCommitteeSignatureSet(
       state.config,
       state.epochCtx.index2pubkey,
-      state,
+      state.epochCtx.currentSyncCommitteeIndexed,
       block,
       participantIndices
     );
@@ -73,7 +74,7 @@ export function processSyncAggregate(
 export function getSyncCommitteeSignatureSet(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
+  currentSyncCommitteeIndexed: SyncCommitteeCache,
   block: altair.BeaconBlock,
   /** Optional parameter to prevent computing it twice */
   participantIndices?: number[]
@@ -101,7 +102,7 @@ export function getSyncCommitteeSignatureSet(
   const rootSigned = block.parentRoot;
 
   if (!participantIndices) {
-    const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
+    const committeeIndices = currentSyncCommitteeIndexed.validatorIndices;
     participantIndices = syncAggregate.syncCommitteeBits.intersectValues(committeeIndices);
   }
 
@@ -115,7 +116,9 @@ export function getSyncCommitteeSignatureSet(
     throw Error("Empty sync committee signature is not infinity");
   }
 
-  const domain = config.getDomain(state.slot, DOMAIN_SYNC_COMMITTEE, previousSlot);
+  // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
+  // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
+  const domain = config.getDomain(block.slot, DOMAIN_SYNC_COMMITTEE, previousSlot);
 
   return {
     type: SignatureSetType.aggregate,
