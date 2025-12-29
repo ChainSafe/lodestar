@@ -1,14 +1,6 @@
-import {
-  ArrayType,
-  ContainerType,
-  ListBasicType,
-  ListCompositeType,
-  Type,
-  ValueOf,
-  isBasicType,
-  isCompositeType,
-} from "@chainsafe/ssz";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {UintNum64, ValidatorIndex} from "./sszTypes.js";
+import {ArrayOf} from "./utils/array.js";
 
 export const BlockRewardsType = new ContainerType(
   {
@@ -108,13 +100,3 @@ export type AttestationsRewards = ValueOf<typeof AttestationsRewardsType>;
  * outputs into their block
  */
 export type SyncCommitteeRewards = ValueOf<typeof SyncCommitteeRewardsType>;
-
-export function ArrayOf<T>(elementType: Type<T>, limit = Infinity): ArrayType<Type<T>, unknown, unknown> {
-  if (isCompositeType(elementType)) {
-    return new ListCompositeType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
-  }
-  if (isBasicType(elementType)) {
-    return new ListBasicType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
-  }
-  throw Error(`Unknown type ${elementType.typeName}`);
-}

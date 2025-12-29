@@ -6,6 +6,7 @@ import {sszTypesFor} from "./sszTypes.js";
 export {sszTypesFor, SSZTypesFor, ssz};
 
 export * from "./rewards.js";
+export * from "./utils/array.js";
 // Container utils
 export * from "./utils/container.js";
 export {ExecutionAddressType} from "./utils/executionAddress.js";
