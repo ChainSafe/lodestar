@@ -1,5 +1,4 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -14,24 +13,19 @@ import {
   WEIGHT_DENOMINATOR,
   isForkPostElectra,
 } from "@lodestar/params";
+import {AttestationsRewards, IdealAttestationsReward, TotalAttestationsReward, ValidatorIndex} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
+import {EpochTransitionCache, beforeProcessEpoch} from "../cache/epochTransitionCache.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
-  EpochTransitionCache,
   FLAG_ELIGIBLE_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER_UNSLASHED,
   FLAG_PREV_SOURCE_ATTESTER_UNSLASHED,
   FLAG_PREV_TARGET_ATTESTER_UNSLASHED,
-  beforeProcessEpoch,
   hasMarkers,
   isInInactivityLeak,
-} from "@lodestar/state-transition";
-import {ValidatorIndex} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+} from "../util/index.js";
 
-export type AttestationsRewards = routes.beacon.AttestationsRewards;
-type IdealAttestationsReward = routes.beacon.IdealAttestationsReward;
-type TotalAttestationsReward = routes.beacon.TotalAttestationsReward;
 /** Attestations penalty with respect to effective balance in Gwei */
 type AttestationsPenalty = {target: number; source: number; effectiveBalance: number};
 

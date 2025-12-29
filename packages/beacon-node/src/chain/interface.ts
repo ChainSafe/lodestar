@@ -9,14 +9,17 @@ import {
   Index2PubkeyCache,
 } from "@lodestar/state-transition";
 import {
+  AttestationsRewards,
   BeaconBlock,
   BlindedBeaconBlock,
+  BlockRewards,
   Epoch,
   Root,
   RootHex,
   SignedBeaconBlock,
   Slot,
   Status,
+  SyncCommitteeRewards,
   UintNum64,
   ValidatorIndex,
   Wei,
@@ -48,9 +51,9 @@ import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
-import {AttestationsRewards} from "./rewards/attestationsRewards.js";
-import {BlockRewards} from "./rewards/blockRewards.js";
-import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
+// import {AttestationsRewards} from "./rewards/attestationsRewards.js";
+// import {BlockRewards} from "./rewards/blockRewards.js";
+// import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {
   SeenAggregators,
   SeenAttesters,

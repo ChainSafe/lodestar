@@ -14,23 +14,29 @@ import {
   EpochShuffling,
   Index2PubkeyCache,
   computeAnchorCheckpoint,
+  computeAttestationsRewards,
+  computeBlockRewards,
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeSyncCommitteeRewards,
   getEffectiveBalanceIncrementsZeroInactive,
   getEffectiveBalancesFromStateBytes,
   processSlots,
 } from "@lodestar/state-transition";
 import {
+  AttestationsRewards,
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
+  BlockRewards,
   Epoch,
   Root,
   RootHex,
   SignedBeaconBlock,
   Slot,
   Status,
+  SyncCommitteeRewards,
   UintNum64,
   ValidatorIndex,
   Wei,
@@ -77,9 +83,6 @@ import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
-import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
-import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
-import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {
   SeenAggregators,
   SeenAttesters,
