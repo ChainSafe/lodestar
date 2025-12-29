@@ -10,8 +10,8 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import { BlockAltairOpts, getBlockAltair } from "../../perf/block/util.js";
-import { cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair } from "../../perf/util.js";
+import {BlockAltairOpts, getBlockAltair} from "../../perf/block/util.js";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../../perf/util.js";
 
 describe("chain / rewards / blockRewards", () => {
   const config = createBeaconConfig({...chainConfigDef, ALTAIR_FORK_EPOCH: 0}, Buffer.alloc(32, 0xaa));

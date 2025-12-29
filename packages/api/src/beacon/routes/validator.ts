@@ -8,6 +8,7 @@ import {
   isForkPostElectra,
 } from "@lodestar/params";
 import {
+  ArrayOf,
   Attestation,
   BLSSignature,
   BeaconBlock,
@@ -28,7 +29,6 @@ import {
 } from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {
-  ArrayOf,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyResponseCodec,
