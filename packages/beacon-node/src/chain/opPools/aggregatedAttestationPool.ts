@@ -30,16 +30,7 @@ import {
   getAttestationParticipationStatus,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
-import {
-  Attestation,
-  Epoch,
-  RootHex,
-  Slot,
-  electra,
-  isElectraAttestation,
-  phase0,
-  ssz,
-} from "@lodestar/types";
+import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
 import {MapDef, assert, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IntersectResult, intersectUint8Arrays} from "../../util/bitArray.js";
