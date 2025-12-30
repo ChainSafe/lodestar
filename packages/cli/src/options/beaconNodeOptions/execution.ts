@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import {IBeaconNodeOptions, defaultExecutionEngineHttpOpts} from "@lodestar/beacon-node";
+import {ZERO_HASH_HEX} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
 import {extractJwtHexSecret} from "../../util/index.js";
 
@@ -15,9 +16,10 @@ export type ExecutionEngineArgs = {
 
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
   if (args["execution.engineMock"]) {
+    // these values will be overriden later by Beacon.init() entry point
     return {
       mode: "mock",
-      genesisBlockHash: "",
+      genesisBlockHash: ZERO_HASH_HEX,
     };
   }
 

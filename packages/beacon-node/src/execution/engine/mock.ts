@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import {ChainConfig} from "@lodestar/config";
 import {
   BLOB_TX_TYPE,
   BYTES_PER_FIELD_ELEMENT,
@@ -7,7 +8,9 @@ import {
   ForkPostBellatrix,
   ForkPostCapella,
   ForkSeq,
+  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {ExecutionPayload, RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
@@ -37,11 +40,8 @@ export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;
   eth1BlockHash?: string;
   onlyPredefinedResponses?: boolean;
-  capellaForkTimestamp?: number;
-  denebForkTimestamp?: number;
-  electraForkTimestamp?: number;
-  fuluForkTimestamp?: number;
-  gloasForkTimestamp?: number;
+  genesisTime?: number;
+  config?: ChainConfig;
 };
 
 type ExecutionBlock = {
@@ -78,6 +78,11 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   private readonly predefinedPayloadStatuses = new Map<RootHex, PayloadStatus>();
 
   private payloadId = 0;
+  private capellaForkTimestamp: number;
+  private denebForkTimestamp: number;
+  private electraForkTimestamp: number;
+  private fuluForkTimestamp: number;
+  private gloasForkTimestamp: number;
 
   readonly handlers: {
     [K in keyof EngineApiRpcParamTypes]: (...args: EngineApiRpcParamTypes[K]) => EngineApiRpcReturnTypes[K];
@@ -99,6 +104,29 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       timestamp: 0,
       blockNumber: 1,
     });
+
+    const {config} = opts;
+
+    this.capellaForkTimestamp =
+      opts.genesisTime && config
+        ? computeTimeAtSlot(config, config.CAPELLA_FORK_EPOCH * SLOTS_PER_EPOCH, opts.genesisTime)
+        : Infinity;
+    this.denebForkTimestamp =
+      opts.genesisTime && config
+        ? computeTimeAtSlot(config, config.DENEB_FORK_EPOCH * SLOTS_PER_EPOCH, opts.genesisTime)
+        : Infinity;
+    this.electraForkTimestamp =
+      opts.genesisTime && config
+        ? computeTimeAtSlot(config, config.ELECTRA_FORK_EPOCH * SLOTS_PER_EPOCH, opts.genesisTime)
+        : Infinity;
+    this.fuluForkTimestamp =
+      opts.genesisTime && config
+        ? computeTimeAtSlot(config, config.FULU_FORK_EPOCH * SLOTS_PER_EPOCH, opts.genesisTime)
+        : Infinity;
+    this.gloasForkTimestamp =
+      opts.genesisTime && config
+        ? computeTimeAtSlot(config, config.GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH, opts.genesisTime)
+        : Infinity;
 
     this.handlers = {
       engine_newPayloadV1: this.notifyNewPayload.bind(this),
@@ -448,11 +476,11 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   }
 
   private timestampToFork(timestamp: number): ForkPostBellatrix {
-    if (timestamp >= (this.opts.gloasForkTimestamp ?? Infinity)) return ForkName.gloas;
-    if (timestamp >= (this.opts.fuluForkTimestamp ?? Infinity)) return ForkName.fulu;
-    if (timestamp >= (this.opts.electraForkTimestamp ?? Infinity)) return ForkName.electra;
-    if (timestamp >= (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
-    if (timestamp >= (this.opts.capellaForkTimestamp ?? Infinity)) return ForkName.capella;
+    if (timestamp >= this.gloasForkTimestamp) return ForkName.gloas;
+    if (timestamp >= this.fuluForkTimestamp) return ForkName.fulu;
+    if (timestamp >= this.electraForkTimestamp) return ForkName.electra;
+    if (timestamp >= this.denebForkTimestamp) return ForkName.deneb;
+    if (timestamp >= this.capellaForkTimestamp) return ForkName.capella;
     return ForkName.bellatrix;
   }
 }

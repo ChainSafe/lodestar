@@ -9,16 +9,10 @@ import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/
 import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
-import {
-  BeaconStateAllForks,
-  Index2PubkeyCache,
-  computeTimeAtSlot,
-  createCachedBeaconState,
-  syncPubkeys,
-} from "@lodestar/state-transition";
+import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
+import {BeaconStateAllForks, Index2PubkeyCache, createCachedBeaconState, syncPubkeys} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {RecursivePartial, isPlainObject, toRootHex} from "@lodestar/utils";
+import {RecursivePartial, isPlainObject} from "@lodestar/utils";
 import {BeaconDb} from "../../../src/db/index.js";
 import {BeaconNode} from "../../../src/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
@@ -89,29 +83,8 @@ export async function getDevBeaconNode(
           initialCustodyGroupCount: config.NUMBER_OF_CUSTODY_GROUPS,
         },
         executionEngine: {
+          // these values will be overriden later by Beacon.init() entry point
           mode: "mock",
-          genesisBlockHash: ZERO_HASH_HEX,
-          eth1BlockHash: opts.eth1BlockHash ? toRootHex(opts.eth1BlockHash) : undefined,
-          fuluForkTimestamp: computeTimeAtSlot(
-            config,
-            config.FULU_FORK_EPOCH * SLOTS_PER_EPOCH,
-            anchorState.genesisTime
-          ),
-          electraForkTimestamp: computeTimeAtSlot(
-            config,
-            config.ELECTRA_FORK_EPOCH * SLOTS_PER_EPOCH,
-            anchorState.genesisTime
-          ),
-          denebForkTimestamp: computeTimeAtSlot(
-            config,
-            config.DENEB_FORK_EPOCH * SLOTS_PER_EPOCH,
-            anchorState.genesisTime
-          ),
-          capellaForkTimestamp: computeTimeAtSlot(
-            config,
-            config.CAPELLA_FORK_EPOCH * SLOTS_PER_EPOCH,
-            anchorState.genesisTime
-          ),
         },
       } as Partial<IBeaconNodeOptions>,
       options
