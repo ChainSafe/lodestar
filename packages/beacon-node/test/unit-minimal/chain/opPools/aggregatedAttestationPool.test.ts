@@ -4,21 +4,14 @@ import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDefault} from "@lodestar/config/default";
 import {
-  ACTIVE_PRESET,
   FAR_FUTURE_EPOCH,
   ForkName,
   ForkPostElectra,
   MAX_COMMITTEES_PER_SLOT,
   MAX_EFFECTIVE_BALANCE,
-  PresetName,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
-  CachedBeaconStateElectra,
-  newFilledArray,
-} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, CachedBeaconStateElectra, newFilledArray} from "@lodestar/state-transition";
 import {Attestation, electra, phase0, ssz} from "@lodestar/types";
 import {
   AggregatedAttestationPool,
@@ -26,14 +19,13 @@ import {
   MatchingDataAttestationGroup,
   aggregateConsolidation,
   aggregateInto,
-  getNotSeenValidatorsFn,
 } from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {linspace} from "../../../../src/util/numpy.js";
 import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
 import {renderBitArray} from "../../../utils/render.js";
-import {generateCachedAltairState, generateCachedElectraState} from "../../../utils/state.js";
+import {generateCachedElectraState} from "../../../utils/state.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 import {generateValidators} from "../../../utils/validator.js";
 
@@ -41,131 +33,6 @@ import {generateValidators} from "../../../utils/validator.js";
 const validSignature = fromHexString(
   "0xb2afb700f6c561ce5e1b4fedaec9d7c06b822d38c720cf588adfda748860a940adf51634b6788f298c552de40183b5a203b2bbe8b7dd147f0bb5bc97080a12efbb631c8888cb31a99cc4706eb3711865b8ea818c10126e4d818b542e9dbf9ae8"
 );
-
-describe("AggregatedAttestationPool - Altair", () => {
-  if (ACTIVE_PRESET !== PresetName.minimal) {
-    throw Error(`ACTIVE_PRESET '${ACTIVE_PRESET}' must be minimal`);
-  }
-
-  let pool: AggregatedAttestationPool;
-  const fork = ForkName.altair;
-  const altairForkEpoch = 2020;
-  const currentEpoch = altairForkEpoch + 10;
-  const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
-
-  const committeeIndex = 0;
-  const attestation = ssz.phase0.Attestation.defaultValue();
-  // state slot is (currentSlot + 1) so if set attestation slot to currentSlot, it will be included in the block
-  attestation.data.slot = currentSlot - 1;
-  attestation.data.index = committeeIndex;
-  attestation.data.target.epoch = currentEpoch;
-  const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
-
-  const validatorOpts = {
-    activationEpoch: 0,
-    effectiveBalance: MAX_EFFECTIVE_BALANCE,
-    withdrawableEpoch: FAR_FUTURE_EPOCH,
-    exitEpoch: FAR_FUTURE_EPOCH,
-  };
-  // this makes a committee length of 4
-  const vc = 64;
-  const committeeLength = 4;
-  const validators = generateValidators(vc, validatorOpts);
-  const originalState = generateCachedAltairState({slot: currentSlot + 1, validators}, altairForkEpoch);
-  const committee = originalState.epochCtx.getBeaconCommittee(currentSlot - 1, committeeIndex);
-  expect(committee.length).toEqual(committeeLength);
-  // 0 and 1 in committee are fully participated
-  const epochParticipation = newFilledArray(vc, 0b111);
-  for (let i = 0; i < committeeLength; i++) {
-    if (i === 0 || i === 1) {
-      epochParticipation[committee[i]] = 0b111;
-    } else {
-      epochParticipation[committee[i]] = 0b000;
-    }
-  }
-  (originalState as CachedBeaconStateAltair).previousEpochParticipation =
-    ssz.altair.EpochParticipation.toViewDU(epochParticipation);
-  (originalState as CachedBeaconStateAltair).currentEpochParticipation =
-    ssz.altair.EpochParticipation.toViewDU(epochParticipation);
-  originalState.commit();
-  let altairState: CachedBeaconStateAllForks;
-
-  let forkchoiceStub: MockedForkChoice;
-  const config = createBeaconConfig(
-    createChainForkConfig({...chainConfigDefault, ALTAIR_FORK_EPOCH: altairForkEpoch}),
-    originalState.genesisValidatorsRoot
-  );
-
-  beforeEach(() => {
-    pool = new AggregatedAttestationPool(config);
-    altairState = originalState.clone();
-    forkchoiceStub = getMockedForkChoice();
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("getNotSeenValidatorsFn", () => {
-    // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
-    // 0 and 1 are fully participated
-    const notSeenValidatorFn = getNotSeenValidatorsFn(config, altairState);
-    // seen attesting indices are 0, 1 => not seen are 2, 3
-    expect(notSeenValidatorFn(currentEpoch, currentSlot - 1, committeeIndex)).toEqual(new Set([2, 3]));
-    // attestations in current slot are always included (since altairState.slot = currentSlot + 1)
-    expect(notSeenValidatorFn(currentEpoch, currentSlot, committeeIndex)).toEqual(new Set([0, 1, 2, 3]));
-  });
-
-  // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
-  // 0 and 1 are fully participated
-  const testCases: {name: string; attestingBits: number[]; isReturned: boolean}[] = [
-    {name: "all validators are seen", attestingBits: [0b00000011], isReturned: false},
-    {name: "all validators are NOT seen", attestingBits: [0b00001100], isReturned: true},
-    {name: "one is seen and one is NOT", attestingBits: [0b00001101], isReturned: true},
-  ];
-
-  for (const {name, attestingBits, isReturned} of testCases) {
-    it(name, () => {
-      const aggregationBits = new BitArray(new Uint8Array(attestingBits), committeeLength);
-      pool.add(
-        {...attestation, aggregationBits},
-        attDataRootHex,
-        aggregationBits.getTrueBitIndexes().length,
-        committee
-      );
-      forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock({slot: attestation.data.slot}));
-      forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
-      if (isReturned) {
-        expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState).length).toBeGreaterThan(0);
-      } else {
-        expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState).length).toEqual(0);
-      }
-      // "forkchoice should be called to check pivot block"
-      expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
-    });
-  }
-
-  it("incorrect source", () => {
-    altairState.currentJustifiedCheckpoint.epoch = 1000;
-    // all attesters are not seen
-    const attestingIndices = [2, 3];
-    pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
-    expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState)).toEqual([]);
-    // "forkchoice should not be called"
-    expect(forkchoiceStub.iterateAncestorBlocks).not.toHaveBeenCalledTimes(1);
-  });
-
-  it("incompatible shuffling - incorrect pivot block root", () => {
-    // all attesters are not seen
-    const attestingIndices = [2, 3];
-    pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
-    forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock({slot: attestation.data.slot}));
-    forkchoiceStub.getDependentRoot.mockReturnValue("0xWeird");
-    expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState)).toEqual([]);
-    // "forkchoice should be called to check pivot block"
-    expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
-  });
-});
 
 describe("AggregatedAttestationPool - get packed attestations - Electra", () => {
   let pool: AggregatedAttestationPool;
