@@ -10,10 +10,11 @@ export function getAttesterSlashingsSignatureSets(
   index2pubkey: Index2PubkeyCache,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
+  // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
+  // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
+  const blockSlot = signedBlock.message.slot;
   return signedBlock.message.body.attesterSlashings.flatMap((attesterSlashing) =>
-    // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
-    // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
-    getAttesterSlashingSignatureSets(config, index2pubkey, signedBlock.message.slot, attesterSlashing)
+    getAttesterSlashingSignatureSets(config, index2pubkey, blockSlot, attesterSlashing)
   );
 }
 

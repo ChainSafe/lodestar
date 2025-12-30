@@ -6,8 +6,6 @@ import {ISignatureSet, SignatureSetType, computeSigningRoot} from "../util/index
 
 /**
  * Extract signatures to allow validating all block signatures at once
- * The getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
- * and the same epoch when we verify blocks in batch in beacon-node. So we can also safely use block.slot here.
  */
 export function getProposerSlashingSignatureSets(
   config: BeaconConfig,
@@ -36,6 +34,8 @@ export function getProposerSlashingsSignatureSets(
   index2pubkey: Index2PubkeyCache,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
+  // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
+  // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
   const blockSlot = signedBlock.message.slot;
   return signedBlock.message.body.proposerSlashings.flatMap((proposerSlashing) =>
     getProposerSlashingSignatureSets(config, index2pubkey, blockSlot, proposerSlashing)
