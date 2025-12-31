@@ -120,7 +120,8 @@ describe("lightclient api", () => {
   });
 
   it.skip("getLightClientCommitteeRoot() for the 1st period", async () => {
-    // TODO: investigate why this test fails after upgrading to electra
+    // need to investigate why this test fails after upgrading to electra
+    // TODO: https://github.com/ChainSafe/lodestar/issues/8723
     await waitForBestUpdate();
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
