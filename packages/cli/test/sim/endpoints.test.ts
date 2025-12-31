@@ -120,7 +120,7 @@ await env.tracker.assert("should return HTTP error responses in a spec compliant
   assert.deepStrictEqual(JSON.parse(await res2.errorBody()), {code: 400, message: "slot must be integer"});
 
   // Error processing multiple items
-  const signedAttestations = Array.from({length: 3}, () => ssz.phase0.Attestation.defaultValue());
+  const signedAttestations = Array.from({length: 3}, () => ssz.electra.SingleAttestation.defaultValue());
   const res3 = await node.api.beacon.submitPoolAttestationsV2({signedAttestations});
   const errBody = JSON.parse(await res3.errorBody()) as {code: number; message: string; failures: unknown[]};
   assert.equal(errBody.code, 400);
