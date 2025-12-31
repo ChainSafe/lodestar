@@ -128,7 +128,7 @@ await env.tracker.assert("should return HTTP error responses in a spec compliant
   assert.equal(errBody.failures.length, signedAttestations.length);
   assert.deepStrictEqual(errBody.failures[0], {
     index: 0,
-    message: "ATTESTATION_ERROR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET",
+    message: "ATTESTATION_ERROR_UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT",
   });
 
   // Route does not exist
