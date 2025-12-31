@@ -83,7 +83,7 @@ export async function getDevBeaconNode(
           initialCustodyGroupCount: config.NUMBER_OF_CUSTODY_GROUPS,
         },
         executionEngine: {
-          // these values will be overriden later by Beacon.init() entry point
+          // options for mock EL will be provided in Beacon.init() entry point
           mode: "mock",
         },
       } as Partial<IBeaconNodeOptions>,

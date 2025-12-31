@@ -37,7 +37,7 @@ const INTEROP_GAS_LIMIT = 30e6;
 const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
 
 export type ExecutionEngineMockOpts = {
-  genesisBlockHash: string;
+  genesisBlockHash?: string;
   eth1BlockHash?: string;
   onlyPredefinedResponses?: boolean;
   genesisTime?: number;
@@ -74,7 +74,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   /** Preparing payloads to be retrieved via engine_getPayloadV1 */
   private readonly preparingPayloads = new Map<number, PreparedPayload>();
   private readonly payloadsForDeletion = new Map<number, number>();
-
   private readonly predefinedPayloadStatuses = new Map<RootHex, PayloadStatus>();
 
   private payloadId = 0;
@@ -89,7 +88,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   };
 
   constructor(private readonly opts: ExecutionEngineMockOpts) {
-    this.validBlocks.set(opts.genesisBlockHash, {
+    this.validBlocks.set(opts.genesisBlockHash ?? ZERO_HASH_HEX, {
       parentHash: ZERO_HASH_HEX,
       blockHash: ZERO_HASH_HEX,
       timestamp: 0,
