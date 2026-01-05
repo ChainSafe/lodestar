@@ -1,6 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {UintNum64, ValidatorIndex} from "./sszTypes.js";
-import {ArrayOf} from "./utils/array.js";
+import {UintNum64, ValidatorIndex} from "../sszTypes.js";
+import {ArrayOf} from "./array.js";
 
 export const BlockRewardsType = new ContainerType(
   {

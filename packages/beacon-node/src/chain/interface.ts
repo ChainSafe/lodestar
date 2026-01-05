@@ -9,23 +9,21 @@ import {
   Index2PubkeyCache,
 } from "@lodestar/state-transition";
 import {
-  AttestationsRewards,
   BeaconBlock,
   BlindedBeaconBlock,
-  BlockRewards,
   Epoch,
   Root,
   RootHex,
   SignedBeaconBlock,
   Slot,
   Status,
-  SyncCommitteeRewards,
   UintNum64,
   ValidatorIndex,
   Wei,
   altair,
   capella,
   phase0,
+  rewards,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -255,15 +253,15 @@ export interface IBeaconChain {
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
 
-  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards>;
+  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
   getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
+  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
   getSyncCommitteeRewards(
     blockRef: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<SyncCommitteeRewards>;
+  ): Promise<rewards.SyncCommitteeRewards>;
 }
 
 export type SSZObjectType =

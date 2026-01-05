@@ -25,23 +25,21 @@ import {
   processSlots,
 } from "@lodestar/state-transition";
 import {
-  AttestationsRewards,
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
-  BlockRewards,
   Epoch,
   Root,
   RootHex,
   SignedBeaconBlock,
   Slot,
   Status,
-  SyncCommitteeRewards,
   UintNum64,
   ValidatorIndex,
   Wei,
   isBlindedBeaconBlock,
   phase0,
+  rewards,
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -1288,7 +1286,7 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards> {
+  async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {
     let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
@@ -1305,7 +1303,7 @@ export class BeaconChain implements IBeaconChain {
   async getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}> {
+  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}> {
     // We use end slot of (epoch + 1) to ensure we have seen all attestations. On-time or late. Any late attestation beyond this slot is not considered
     const slot = computeEndSlotAtEpoch(epoch + 1);
     const stateResult = await this.getStateBySlot(slot, {allowRegen: false}); // No regen if state not in cache
@@ -1331,7 +1329,7 @@ export class BeaconChain implements IBeaconChain {
   async getSyncCommitteeRewards(
     block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<SyncCommitteeRewards> {
+  ): Promise<rewards.SyncCommitteeRewards> {
     let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {

@@ -13,7 +13,7 @@ import {
   WEIGHT_DENOMINATOR,
   isForkPostElectra,
 } from "@lodestar/params";
-import {AttestationsRewards, IdealAttestationsReward, TotalAttestationsReward, ValidatorIndex} from "@lodestar/types";
+import {ValidatorIndex, rewards} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {EpochTransitionCache, beforeProcessEpoch} from "../cache/epochTransitionCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
@@ -37,7 +37,7 @@ export async function computeAttestationsRewards(
   pubkey2index: PubkeyIndexMap,
   state: CachedBeaconStateAllForks,
   validatorIds?: (ValidatorIndex | string)[]
-): Promise<AttestationsRewards> {
+): Promise<rewards.AttestationsRewards> {
   const fork = config.getForkName(state.slot);
   if (fork === ForkName.phase0) {
     throw Error("Unsupported fork. Attestations rewards calculation is not available in phase0");
@@ -68,7 +68,7 @@ function computeIdealAttestationsRewardsAndPenaltiesAltair(
   config: BeaconConfig,
   state: CachedBeaconStateAllForks,
   transitionCache: EpochTransitionCache
-): [IdealAttestationsReward[], AttestationsPenalty[]] {
+): [rewards.IdealAttestationsReward[], AttestationsPenalty[]] {
   const baseRewardPerIncrement = transitionCache.baseRewardPerIncrement;
   const activeBalanceByIncrement = transitionCache.totalActiveStakeByIncrement;
   const fork = config.getForkName(state.slot);
@@ -92,7 +92,7 @@ function computeIdealAttestationsRewardsAndPenaltiesAltair(
     const weight = PARTICIPATION_FLAG_WEIGHTS[i];
 
     let unslashedStakeByIncrement: number;
-    let flagName: keyof IdealAttestationsReward;
+    let flagName: keyof rewards.IdealAttestationsReward;
 
     switch (i) {
       case TIMELY_SOURCE_FLAG_INDEX: {
@@ -145,10 +145,10 @@ function computeTotalAttestationsRewardsAltair(
   pubkey2index: PubkeyIndexMap,
   state: CachedBeaconStateAltair,
   transitionCache: EpochTransitionCache,
-  idealRewards: IdealAttestationsReward[],
+  idealRewards: rewards.IdealAttestationsReward[],
   penalties: AttestationsPenalty[],
   validatorIds: (ValidatorIndex | string)[] = []
-): TotalAttestationsReward[] {
+): rewards.TotalAttestationsReward[] {
   const rewards = [];
   const {flags} = transitionCache;
   const {epochCtx} = state;

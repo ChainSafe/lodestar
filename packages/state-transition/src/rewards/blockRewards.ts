@@ -5,7 +5,7 @@ import {
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
   isForkPostElectra,
 } from "@lodestar/params";
-import {BeaconBlock, BlockRewards, altair, phase0} from "@lodestar/types";
+import {BeaconBlock, altair, phase0, rewards} from "@lodestar/types";
 import {processAttestationsAltair} from "../block/processAttestationsAltair.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../cache/stateCache.js";
 import {getAttesterSlashableIndices} from "../util/attestation.js";
@@ -25,7 +25,7 @@ export async function computeBlockRewards(
   block: BeaconBlock,
   preState: CachedBeaconStateAllForks,
   postState?: CachedBeaconStateAllForks
-): Promise<BlockRewards> {
+): Promise<rewards.BlockRewards> {
   const fork = config.getForkName(block.slot);
   const {attestations: cachedAttestationsReward = 0, syncAggregate: cachedSyncAggregateReward = 0} =
     postState?.proposerRewards ?? {};

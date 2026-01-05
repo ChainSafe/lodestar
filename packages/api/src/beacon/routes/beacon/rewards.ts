@@ -1,13 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  AttestationsRewards,
-  AttestationsRewardsType,
-  BlockRewards,
-  BlockRewardsType,
-  Epoch,
-  SyncCommitteeRewards,
-  SyncCommitteeRewardsType,
-} from "@lodestar/types";
+import {Epoch, rewards} from "@lodestar/types";
 import {JsonOnlyReq} from "../../../utils/codecs.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
@@ -24,7 +16,7 @@ export type Endpoints = {
     "GET",
     BlockArgs,
     {params: {block_id: string}},
-    BlockRewards,
+    rewards.BlockRewards,
     ExecutionOptimisticAndFinalizedMeta
   >;
 
@@ -41,7 +33,7 @@ export type Endpoints = {
       validatorIds?: ValidatorId[];
     },
     {params: {epoch: number}; body: string[]},
-    AttestationsRewards,
+    rewards.AttestationsRewards,
     ExecutionOptimisticAndFinalizedMeta
   >;
 
@@ -56,7 +48,7 @@ export type Endpoints = {
       validatorIds?: ValidatorId[];
     },
     {params: {block_id: string}; body: string[]},
-    SyncCommitteeRewards,
+    rewards.SyncCommitteeRewards,
     ExecutionOptimisticAndFinalizedMeta
   >;
 };
@@ -72,7 +64,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         schema: {params: {block_id: Schema.StringRequired}},
       },
       resp: {
-        data: BlockRewardsType,
+        data: rewards.BlockRewardsType,
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
@@ -94,7 +86,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
       }),
       resp: {
-        data: AttestationsRewardsType,
+        data: rewards.AttestationsRewardsType,
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
@@ -116,7 +108,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
       }),
       resp: {
-        data: SyncCommitteeRewardsType,
+        data: rewards.SyncCommitteeRewardsType,
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
