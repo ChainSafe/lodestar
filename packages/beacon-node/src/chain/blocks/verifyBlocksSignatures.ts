@@ -28,6 +28,7 @@ export async function verifyBlocksSignatures(
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const currentSyncCommitteeIndexed = preState0.epochCtx.currentSyncCommitteeIndexed;
 
   // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
   // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
@@ -41,9 +42,16 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(config, index2pubkey, preState0, block, indexedAttestationsByBlock[i], {
-            skipProposerSignature: opts.validProposerSignature,
-          })
+          getBlockSignatureSets(
+            config,
+            index2pubkey,
+            currentSyncCommitteeIndexed,
+            block,
+            indexedAttestationsByBlock[i],
+            {
+              skipProposerSignature: opts.validProposerSignature,
+            }
+          )
         );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks

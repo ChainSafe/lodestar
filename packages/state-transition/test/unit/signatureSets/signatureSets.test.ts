@@ -73,7 +73,7 @@ describe("signatureSets", () => {
     const signatureSets = getBlockSignatureSets(
       state.config,
       state.epochCtx.index2pubkey,
-      state,
+      state.epochCtx.currentSyncCommitteeIndexed,
       signedBlock,
       indexedAttestations
     );

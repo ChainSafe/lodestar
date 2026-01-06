@@ -12,12 +12,12 @@ import {getRandaoMix} from "../util/index.js";
  * PERF: Fixed work independent of block contents.
  */
 export function processRandao(state: CachedBeaconStateAllForks, block: BeaconBlock, verifySignature = true): void {
-  const {epochCtx} = state;
+  const {epochCtx, config} = state;
   const epoch = epochCtx.epoch;
   const randaoReveal = block.body.randaoReveal;
 
   // verify RANDAO reveal
-  if (verifySignature && !verifyRandaoSignature(state.config, epochCtx.index2pubkey, state, block)) {
+  if (verifySignature && !verifyRandaoSignature(config, epochCtx.index2pubkey, block)) {
     throw new Error("RANDAO reveal is an invalid signature");
   }
 

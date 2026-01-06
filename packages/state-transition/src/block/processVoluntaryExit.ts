@@ -76,7 +76,7 @@ export function getVoluntaryExitValidity(
 
   if (
     verifySignature &&
-    !verifyVoluntaryExitSignature(state.config, epochCtx.index2pubkey, state, signedVoluntaryExit)
+    !verifyVoluntaryExitSignature(state.config, epochCtx.index2pubkey, state.slot, signedVoluntaryExit)
   ) {
     return VoluntaryExitValidity.invalidSignature;
   }
