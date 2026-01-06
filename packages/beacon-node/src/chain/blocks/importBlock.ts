@@ -117,6 +117,13 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
 
+  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
+  if (parentEpoch < blockEpoch && postState.epochCtx.nextShuffling !== null) {
+    // current epoch and previous epoch are likely cached in previous states
+    this.shufflingCache.set(postState.epochCtx.nextShuffling, postState.epochCtx.nextDecisionRoot);
+    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+  }
+
   this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 

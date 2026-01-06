@@ -22,13 +22,7 @@ export function processProposerLookahead(
   // Fill in the last epoch with new proposer indices
   const epoch = state.epochCtx.epoch + MIN_SEED_LOOKAHEAD + 1;
 
-  const shuffling =
-    state.epochCtx.shufflingCache?.getSync(epoch, cache.nextShufflingDecisionRoot, {
-      state,
-      activeIndices: cache.nextShufflingActiveIndices,
-    }) ??
-    // Only for testing. shufflingCache should always be available in prod
-    computeEpochShuffling(state, cache.nextShufflingActiveIndices, epoch);
+  const shuffling = computeEpochShuffling(state, cache.nextShufflingActiveIndices, epoch);
 
   const lastEpochProposerLookahead = computeProposerIndices(fork, state, shuffling, epoch);
 

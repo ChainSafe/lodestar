@@ -30,12 +30,7 @@ import {
 import {LodestarError} from "@lodestar/utils";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
-import {
-  EpochShuffling,
-  IShufflingCache,
-  calculateShufflingDecisionRoot,
-  computeEpochShuffling,
-} from "../util/epochShuffling.js";
+import {EpochShuffling, calculateShufflingDecisionRoot, computeEpochShuffling} from "../util/epochShuffling.js";
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
@@ -70,7 +65,6 @@ export type EpochCacheImmutableData = {
   config: BeaconConfig;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
-  shufflingCache?: IShufflingCache;
 };
 
 export type EpochCacheOpts = {
@@ -120,12 +114,6 @@ export class EpochCache {
    * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
    */
   index2pubkey: Index2PubkeyCache;
-  /**
-   * ShufflingCache is passed in from `beacon-node` so should be available at runtime but may not be
-   * present during testing.
-   */
-  shufflingCache?: IShufflingCache;
-
   /**
    * Indexes of the block proposers for the current epoch.
    * For pre-fulu, this is computed and cached from the current shuffling.
@@ -257,7 +245,6 @@ export class EpochCache {
     config: BeaconConfig;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
-    shufflingCache?: IShufflingCache;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
@@ -289,7 +276,6 @@ export class EpochCache {
     this.config = data.config;
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
-    this.shufflingCache = data.shufflingCache;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
@@ -327,7 +313,7 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {config, pubkey2index, index2pubkey, shufflingCache}: EpochCacheImmutableData,
+    {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
     const currentEpoch = computeEpochAtSlot(state.slot);
@@ -354,14 +340,10 @@ export class EpochCache {
     const currentActiveIndicesAsNumberArray: ValidatorIndex[] = [];
     const nextActiveIndicesAsNumberArray: ValidatorIndex[] = [];
 
-    // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
-    // in that case, we don't need to compute shufflings again
+    // Decision roots for shuffling, beacon-node will use these to populate its ShufflingCache
     const previousDecisionRoot = calculateShufflingDecisionRoot(config, state, previousEpoch);
-    const cachedPreviousShuffling = shufflingCache?.getSync(previousEpoch, previousDecisionRoot);
     const currentDecisionRoot = calculateShufflingDecisionRoot(config, state, currentEpoch);
-    const cachedCurrentShuffling = shufflingCache?.getSync(currentEpoch, currentDecisionRoot);
     const nextDecisionRoot = calculateShufflingDecisionRoot(config, state, nextEpoch);
-    const cachedNextShuffling = shufflingCache?.getSync(nextEpoch, nextDecisionRoot);
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -369,19 +351,16 @@ export class EpochCache {
       // Note: Not usable for fork-choice balances since in-active validators are not zero'ed
       effectiveBalanceIncrements[i] = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
 
-      // we only need to track active indices for previous, current and next epoch if we have to compute shufflings
-      // skip doing that if we already have cached shufflings
-      if (cachedPreviousShuffling == null && isActiveValidator(validator, previousEpoch)) {
+      // Collect active indices for each epoch to compute shufflings
+      if (isActiveValidator(validator, previousEpoch)) {
         previousActiveIndicesAsNumberArray.push(i);
       }
       if (isActiveValidator(validator, currentEpoch)) {
-        if (cachedCurrentShuffling == null) {
-          currentActiveIndicesAsNumberArray.push(i);
-        }
+        currentActiveIndicesAsNumberArray.push(i);
         // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
         totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
       }
-      if (cachedNextShuffling == null && isActiveValidator(validator, nextEpoch)) {
+      if (isActiveValidator(validator, nextEpoch)) {
         nextActiveIndicesAsNumberArray.push(i);
       }
 
@@ -405,47 +384,18 @@ export class EpochCache {
     }
 
     const nextActiveIndices = new Uint32Array(nextActiveIndicesAsNumberArray);
-    let previousShuffling: EpochShuffling;
-    let currentShuffling: EpochShuffling;
-    let nextShuffling: EpochShuffling;
 
-    if (!shufflingCache) {
-      // Only for testing. shufflingCache should always be available in prod
-      previousShuffling = computeEpochShuffling(
-        state,
-        new Uint32Array(previousActiveIndicesAsNumberArray),
-        previousEpoch
-      );
+    const previousShuffling = computeEpochShuffling(
+      state,
+      new Uint32Array(previousActiveIndicesAsNumberArray),
+      previousEpoch
+    );
 
-      currentShuffling = isGenesis
-        ? previousShuffling
-        : computeEpochShuffling(state, new Uint32Array(currentActiveIndicesAsNumberArray), currentEpoch);
+    const currentShuffling = isGenesis
+      ? previousShuffling
+      : computeEpochShuffling(state, new Uint32Array(currentActiveIndicesAsNumberArray), currentEpoch);
 
-      nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
-    } else {
-      currentShuffling = cachedCurrentShuffling
-        ? cachedCurrentShuffling
-        : shufflingCache.getSync(currentEpoch, currentDecisionRoot, {
-            state,
-            activeIndices: new Uint32Array(currentActiveIndicesAsNumberArray),
-          });
-
-      previousShuffling = cachedPreviousShuffling
-        ? cachedPreviousShuffling
-        : isGenesis
-          ? currentShuffling
-          : shufflingCache.getSync(previousEpoch, previousDecisionRoot, {
-              state,
-              activeIndices: new Uint32Array(previousActiveIndicesAsNumberArray),
-            });
-
-      nextShuffling = cachedNextShuffling
-        ? cachedNextShuffling
-        : shufflingCache.getSync(nextEpoch, nextDecisionRoot, {
-            state,
-            activeIndices: nextActiveIndices,
-          });
-    }
+    const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
@@ -552,7 +502,6 @@ export class EpochCache {
       config,
       pubkey2index,
       index2pubkey,
-      shufflingCache,
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
@@ -596,7 +545,6 @@ export class EpochCache {
       // Common append-only structures shared with all states, no need to clone
       pubkey2index: this.pubkey2index,
       index2pubkey: this.index2pubkey,
-      shufflingCache: this.shufflingCache,
       // Immutable data
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,
@@ -658,34 +606,16 @@ export class EpochCache {
     // move next to current or calculate upcoming
     this.currentDecisionRoot = this.nextDecisionRoot;
     if (this.nextShuffling) {
-      // was already pulled from the ShufflingCache to the EpochCache (should be in most cases)
+      // was already pulled to the EpochCache
       this.currentShuffling = this.nextShuffling;
     } else {
-      this.shufflingCache?.metrics?.shufflingCache.nextShufflingNotOnEpochCache.inc();
-      this.currentShuffling =
-        this.shufflingCache?.getSync(upcomingEpoch, this.currentDecisionRoot, {
-          state,
-          // have to use the "nextActiveIndices" that were saved in the last transition here to calculate
-          // the upcoming shuffling if it is not already built (similar condition to the below computation)
-          activeIndices: this.nextActiveIndices,
-        }) ??
-        // allow for this case during testing where the ShufflingCache is not present, may affect perf testing
-        // so should be taken into account when structuring tests.  Should not affect unit or other tests though
-        computeEpochShuffling(state, this.nextActiveIndices, upcomingEpoch);
+      this.currentShuffling = computeEpochShuffling(state, this.nextActiveIndices, upcomingEpoch);
     }
 
-    // handle next values
+    // handle next values - always compute the shuffling for epoch after upcoming
     this.nextDecisionRoot = epochTransitionCache.nextShufflingDecisionRoot;
     this.nextActiveIndices = epochTransitionCache.nextShufflingActiveIndices;
-    if (this.shufflingCache) {
-      this.nextShuffling = this.shufflingCache.getSync(epochAfterUpcoming, this.nextDecisionRoot, {
-        state,
-        activeIndices: this.nextActiveIndices,
-      });
-    } else {
-      // Only for testing. shufflingCache should always be available in prod
-      this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
-    }
+    this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
 
     // TODO: DEDUPLICATE from createEpochCache
     //
@@ -1078,10 +1008,6 @@ export class EpochCache {
       case this.epoch:
         return this.currentShuffling;
       case this.nextEpoch:
-        if (!this.nextShuffling) {
-          this.nextShuffling =
-            this.shufflingCache?.getSync(this.nextEpoch, this.getShufflingDecisionRoot(this.nextEpoch)) ?? null;
-        }
         return this.nextShuffling;
       default:
         return null;

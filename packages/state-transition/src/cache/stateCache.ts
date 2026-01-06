@@ -179,7 +179,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     stateBytes,
     seedValidatorsBytes
   );
-  const {pubkey2index, index2pubkey, shufflingCache} = cachedSeedState.epochCtx;
+  const {pubkey2index, index2pubkey} = cachedSeedState.epochCtx;
   // Get the validators sub tree once for all the loop
   const validators = migratedState.validators;
   for (const validatorIndex of modifiedValidators) {
@@ -195,7 +195,6 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
       config: cachedSeedState.config,
       pubkey2index,
       index2pubkey,
-      shufflingCache,
     },
     {...(opts ?? {}), ...{skipSyncPubkeys: true}}
   ) as T;

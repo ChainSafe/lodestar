@@ -306,7 +306,7 @@ export class BeaconChain implements IBeaconChain {
           });
     this._earliestAvailableSlot = cachedState.slot;
 
-    this.shufflingCache = cachedState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
+    this.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
       {
         shuffling: cachedState.epochCtx.previousShuffling,
         decisionRoot: cachedState.epochCtx.previousDecisionRoot,
@@ -1004,8 +1004,10 @@ export class BeaconChain implements IBeaconChain {
       state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
     }
 
-    // should always be the current epoch of the active context so no need to await a result from the ShufflingCache
-    return state.epochCtx.getShufflingAtEpoch(attEpoch);
+    // Get shuffling from the regenerated state and populate the cache
+    const shuffling = state.epochCtx.getShufflingAtEpoch(attEpoch);
+    this.shufflingCache.set(shuffling, shufflingDependentRoot);
+    return shuffling;
   }
 
   /**

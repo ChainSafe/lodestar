@@ -1,4 +1,4 @@
-import {EpochShuffling, IShufflingCache, ShufflingBuildProps, computeEpochShuffling} from "@lodestar/state-transition";
+import {EpochShuffling} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
 import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
@@ -46,7 +46,7 @@ export type ShufflingCacheOpts = {
  * - if a shuffling is not available (which does not happen with default chain option of maxSkipSlots = 32), track a promise to make sure we don't compute the same shuffling twice
  * - skip computing shuffling when loading state bytes from disk
  */
-export class ShufflingCache implements IShufflingCache {
+export class ShufflingCache {
   /** LRU cache implemented as a map, pruned every time we add an item */
   private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, CacheItem>> = new MapDef(
     () => new Map<RootHex, CacheItem>()
@@ -129,38 +129,21 @@ export class ShufflingCache implements IShufflingCache {
   }
 
   /**
-   * Gets a cached shuffling via the epoch and decision root.  If the shuffling is not
-   * available it will build it synchronously and return the shuffling.
-   *
-   * NOTE: If a shuffling is already queued and not calculated it will build and resolve
-   * the promise but the already queued build will happen at some later time
+   * Gets a cached shuffling synchronously via the epoch and decision root.
+   * Returns null if not found in cache.
    */
-  getSync<T extends ShufflingBuildProps | undefined>(
-    epoch: Epoch,
-    decisionRoot: RootHex,
-    buildProps?: T
-  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null {
+  getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     if (!cacheItem) {
       this.metrics?.shufflingCache.miss.inc();
-    } else if (isShufflingCacheItem(cacheItem)) {
+      return null;
+    }
+    if (isShufflingCacheItem(cacheItem)) {
       this.metrics?.shufflingCache.hit.inc();
       return cacheItem.shuffling;
-    } else if (buildProps) {
-      // TODO: (@matthewkeil) This should possible log a warning??
-      this.metrics?.shufflingCache.shufflingPromiseNotResolvedAndThrownAway.inc();
-    } else {
-      this.metrics?.shufflingCache.shufflingPromiseNotResolved.inc();
     }
-
-    let shuffling: EpochShuffling | null = null;
-    if (buildProps) {
-      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer({source: "getSync"});
-      shuffling = computeEpochShuffling(buildProps.state, buildProps.activeIndices, epoch);
-      timer?.();
-      this.set(shuffling, decisionRoot);
-    }
-    return shuffling as T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
+    this.metrics?.shufflingCache.shufflingPromiseNotResolved.inc();
+    return null;
   }
 
   /**
