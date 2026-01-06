@@ -3276,7 +3276,7 @@
         "current": {
           "selected": false,
           "text": "${VAR_BEACON_JOB}",
-          "value": "${VAR_BEACON_JOB}"
+          "value": "${unstable-super
         },
         "description": "Job name used in Prometheus config to scrape Beacon node",
         "hide": 2,

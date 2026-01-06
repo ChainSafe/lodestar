@@ -4145,7 +4145,7 @@
       "1h",
       "2h",
       "1d"
-    ]
+    ]unstable-super
   },
   "timezone": "utc",
   "title": "Lodestar - block production",
