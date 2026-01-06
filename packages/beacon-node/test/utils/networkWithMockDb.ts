@@ -1,16 +1,16 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {Index2PubkeyCache, createCachedBeaconState, syncPubkeys} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconChain} from "../../src/chain/chain.js";
-import {Eth1ForBlockProductionDisabled} from "../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
 import {ArchiveMode} from "../../src/index.js";
 import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from "../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
-import {createCachedBeaconStateTest} from "./cachedBeaconState.js";
 import {ClockStatic} from "./clock.js";
 import {testLogger} from "./logger.js";
 import {generateState} from "./state.js";
@@ -43,12 +43,23 @@ export async function getNetworkForTest(
   );
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
+  const pubkey2index = new PubkeyIndexMap();
+  const index2pubkey: Index2PubkeyCache = [];
+  syncPubkeys(state.validators.getAllReadonlyValues(), pubkey2index, index2pubkey);
+  const cachedState = createCachedBeaconState(
+    state,
+    {
+      config: beaconConfig,
+      pubkey2index,
+      index2pubkey,
+    },
+    {skipSyncPubkeys: true}
+  );
   const db = getMockedBeaconDb();
   const privateKey = await generateKeyPair("secp256k1");
 
   const chain = new BeaconChain(
     {
-      safeSlotsToImportOptimistically: 0,
       archiveStateEpochFrequency: 0,
       suggestedFeeRecipient: "",
       blsVerifyAllMainThread: true,
@@ -62,6 +73,8 @@ export async function getNetworkForTest(
     {
       privateKey,
       config: beaconConfig,
+      pubkey2index,
+      index2pubkey,
       db,
       dataDir: ".",
       dbName: ".",
@@ -75,9 +88,8 @@ export async function getNetworkForTest(
       ),
       metrics: null,
       validatorMonitor: null,
-      anchorState: createCachedBeaconStateTest(state, beaconConfig),
+      anchorState: cachedState,
       isAnchorStateFinalized: true,
-      eth1: new Eth1ForBlockProductionDisabled(),
       executionEngine: new ExecutionEngineDisabled(),
     }
   );

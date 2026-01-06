@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar",
-  "version": "1.37.0",
+  "version": "1.38.0",
   "description": "Command line interface for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -64,6 +64,7 @@
     "@chainsafe/discv5": "^11.0.4",
     "@chainsafe/enr": "^5.0.1",
     "@chainsafe/persistent-merkle-tree": "^1.2.1",
+    "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.2.2",
     "@chainsafe/threads": "^1.11.3",
     "@libp2p/crypto": "^5.0.15",
@@ -96,8 +97,8 @@
   "devDependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
     "@ethereumjs/rlp": "^4.0.1",
-    "@types/tmp": "^0.2.3",
     "@lodestar/test-utils": "workspace:^",
+    "@types/tmp": "^0.2.3",
     "@types/js-yaml": "^4.0.5",
     "@types/debug": "^4.1.7",
     "@types/inquirer": "^9.0.3",

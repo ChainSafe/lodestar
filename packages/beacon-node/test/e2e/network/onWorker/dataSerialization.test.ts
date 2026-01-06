@@ -9,6 +9,7 @@ import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {ReqRespBridgeEvent, ReqRespBridgeEventData} from "../../../../src/network/core/events.js";
 import {NetworkWorkerApi} from "../../../../src/network/core/index.js";
 import {
+  EventDirection,
   GossipType,
   NetworkEvent,
   NetworkEventData,
@@ -18,7 +19,6 @@ import {
 } from "../../../../src/network/index.js";
 import {CommitteeSubscription} from "../../../../src/network/subnets/interface.js";
 import {IteratorEventType} from "../../../../src/util/asyncIterableToEvents.js";
-import {EventDirection} from "../../../../src/util/workerEvents.js";
 import {getValidPeerId, validPeerIdStr} from "../../../utils/peer.js";
 import {EchoWorker, getEchoWorker} from "./workerEchoHandler.js";
 

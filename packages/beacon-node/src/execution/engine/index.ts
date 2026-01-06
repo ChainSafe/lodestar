@@ -1,5 +1,4 @@
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
-import {JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {ExecutionEngineDisabled} from "./disabled.js";
 import {
   ExecutionEngineHttp,
@@ -8,6 +7,7 @@ import {
   defaultExecutionEngineHttpOpts,
 } from "./http.js";
 import {IExecutionEngine} from "./interface.js";
+import {JsonRpcHttpClient} from "./jsonRpcHttpClient.js";
 import {ExecutionEngineMockBackend, ExecutionEngineMockOpts} from "./mock.js";
 import {ExecutionEngineMockJsonRpcClient, JsonRpcBackend} from "./utils.js";
 

@@ -1,26 +1,24 @@
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {ISignatureSet, SignatureSetType, computeSigningRoot} from "../util/index.js";
 
 /**
  * Extract signatures to allow validating all block signatures at once
  */
 export function getProposerSlashingSignatureSets(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
+  index2pubkey: Index2PubkeyCache,
+  stateSlot: Slot,
   proposerSlashing: phase0.ProposerSlashing
 ): ISignatureSet[] {
-  const {epochCtx} = state;
-  const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
+  const pubkey = index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
 
   // In state transition, ProposerSlashing headers are only partially validated. Their slot could be higher than the
   // clock and the slashing would still be valid. Must use bigint variants to hash correctly to all possible values
   return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map((signedHeader): ISignatureSet => {
-    const domain = state.config.getDomain(
-      state.slot,
-      DOMAIN_BEACON_PROPOSER,
-      Number(signedHeader.message.slot as bigint)
-    );
+    const domain = config.getDomain(stateSlot, DOMAIN_BEACON_PROPOSER, Number(signedHeader.message.slot as bigint));
 
     return {
       type: SignatureSetType.single,
@@ -32,10 +30,14 @@ export function getProposerSlashingSignatureSets(
 }
 
 export function getProposerSlashingsSignatureSets(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
+  index2pubkey: Index2PubkeyCache,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
+  // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
+  // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
+  const blockSlot = signedBlock.message.slot;
   return signedBlock.message.body.proposerSlashings.flatMap((proposerSlashing) =>
-    getProposerSlashingSignatureSets(state, proposerSlashing)
+    getProposerSlashingSignatureSets(config, index2pubkey, blockSlot, proposerSlashing)
   );
 }

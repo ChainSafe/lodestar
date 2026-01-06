@@ -68,8 +68,8 @@ export function processBlock(
   // on the randao_mix computed with the reveal of the previous block.
   // TODO GLOAS: We call processExecutionPayload somewhere else post-gloas
   if (
-    fork >= ForkSeq.bellatrix &&
     fork < ForkSeq.gloas &&
+    fork >= ForkSeq.bellatrix &&
     isExecutionEnabled(state as CachedBeaconStateBellatrix, block)
   ) {
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);

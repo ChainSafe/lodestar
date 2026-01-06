@@ -45,11 +45,6 @@ export enum ExecutionClient {
   Nethermind = "execution-nethermind",
 }
 
-export enum ExecutionStartMode {
-  PreMerge = "pre-merge",
-  PostMerge = "post-merge",
-}
-
 export type BeaconClientsOptions = {
   [BeaconClient.Lodestar]: Partial<BeaconArgs & GlobalArgs>;
   [BeaconClient.Lighthouse]: Record<string, unknown>;
@@ -137,7 +132,6 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
 export interface ExecutionGeneratorOptions<E extends ExecutionClient = ExecutionClient>
   extends ExecutionGenesisOptions<E>,
     GeneratorOptions {
-  mode: ExecutionStartMode;
   mining: boolean;
   paths: ExecutionPaths;
   clientOptions: ExecutionClientsOptions[E];

@@ -24,6 +24,14 @@ import {
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {
+  ExecutionPayloadStatus,
+  ExecutionRequestType,
+  PayloadAttributes,
+  VersionedHashes,
+  isExecutionRequestType,
+} from "./interface.js";
+import {WithdrawalV1} from "./payloadIdCache.js";
+import {
   DATA,
   QUANTITY,
   bytesToData,
@@ -32,15 +40,7 @@ import {
   numToQuantity,
   quantityToBigint,
   quantityToNum,
-} from "../../eth1/provider/utils.js";
-import {
-  ExecutionPayloadStatus,
-  ExecutionRequestType,
-  PayloadAttributes,
-  VersionedHashes,
-  isExecutionRequestType,
-} from "./interface.js";
-import {WithdrawalV1} from "./payloadIdCache.js";
+} from "./utils.js";
 
 export type EngineApiRpcParamTypes = {
   /**

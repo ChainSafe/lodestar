@@ -1,6 +1,6 @@
 import {Mock, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, altair} from "@lodestar/types";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
@@ -20,7 +20,10 @@ describe("Sync Committee Signature validation", () => {
   let altairForkEpochBk: Epoch;
   const altairForkEpoch = 2020;
   const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 1);
-  const config = createChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
+  const chainConfig = createChainForkConfig(
+    Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch})
+  );
+  const config = createBeaconConfig(chainConfig, Buffer.alloc(32, 0xaa));
   // all validators have same pubkey
   const validatorIndexInSyncCommittee = 15;
 
@@ -34,7 +37,7 @@ describe("Sync Committee Signature validation", () => {
   });
 
   beforeEach(() => {
-    chain = getMockedBeaconChain();
+    chain = getMockedBeaconChain({config});
     (
       chain as {
         seenSyncCommitteeMessages: SeenSyncCommitteeMessages;

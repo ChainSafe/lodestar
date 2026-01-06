@@ -6,14 +6,13 @@ export {
   type InvalidBlock,
   InvalidBlockCode,
 } from "./forkChoice/errors.js";
-export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt, assertValidTerminalPowBlock} from "./forkChoice/forkChoice.js";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,
   AncestorStatus,
   EpochDifference,
   type IForkChoice,
   NotReorgedReason,
-  type PowBlockHex,
 } from "./forkChoice/interface.js";
 export * from "./forkChoice/safeBlocks.js";
 export {

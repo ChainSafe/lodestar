@@ -2,7 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
@@ -12,7 +12,6 @@ import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
@@ -82,7 +81,6 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           proposerBoost: true,
           proposerBoostReorg: true,
           computeUnrealized: false,
-          safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
@@ -93,6 +91,8 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         {
           privateKey: await generateKeyPair("secp256k1"),
           config: state.config,
+          pubkey2index: state.epochCtx.pubkey2index,
+          index2pubkey: state.epochCtx.index2pubkey,
           db,
           dataDir: ".",
           dbName: ".",
@@ -102,7 +102,6 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           validatorMonitor: null,
           anchorState: state,
           isAnchorStateFinalized: true,
-          eth1: new Eth1ForBlockProductionDisabled(),
           executionEngine: new ExecutionEngineDisabled(),
         }
       );

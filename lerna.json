@@ -2,7 +2,6 @@
   "packages": [
     "packages/*"
   ],
-  "npmClient": "pnpm",
   "version": "1.37.0",
   "stream": true,
   "command": {
