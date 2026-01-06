@@ -612,7 +612,19 @@ export class EpochCache {
       this.currentShuffling = computeEpochShuffling(state, this.nextActiveIndices, upcomingEpoch);
     }
 
-    // handle next values - always compute the shuffling for epoch after upcoming
+    // Compute shuffling for epoch n+2
+    //
+    // Post-Fulu (EIP-7917), the beacon state includes a `proposer_lookahead` field that stores
+    // proposer indices for MIN_SEED_LOOKAHEAD + 1 epochs ahead (2 epochs with MIN_SEED_LOOKAHEAD=1).
+    // At each epoch boundary, processProposerLookahead() shifts out the current epoch's proposers
+    // and appends new proposers for epoch n + MIN_SEED_LOOKAHEAD + 1 (i.e., epoch n+2).
+    //
+    // processProposerLookahead() computes its own shuffling for epoch n+2 using computeEpochShuffling()
+    // with cache.nextShufflingActiveIndices. We also cache the n+2 shuffling here in nextShuffling so that:
+    // 1. It becomes currentShuffling in the next epoch transition to avoiding recomputation
+    // 2. beacon-node can populate its ShufflingCache for attestation verification
+    //
+    // See: https://eips.ethereum.org/EIPS/eip-7917
     this.nextDecisionRoot = epochTransitionCache.nextShufflingDecisionRoot;
     this.nextActiveIndices = epochTransitionCache.nextShufflingActiveIndices;
     this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
