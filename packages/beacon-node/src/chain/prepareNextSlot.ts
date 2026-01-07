@@ -148,6 +148,7 @@ export class PrepareNextSlotScheduler {
             updatedPrepareState = (await this.chain.regen.getBlockSlotState(
               proposerHeadRoot,
               prepareSlot,
+              // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
             )) as CachedBeaconStateExecutions;

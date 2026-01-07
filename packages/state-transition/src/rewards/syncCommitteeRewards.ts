@@ -19,7 +19,7 @@ export async function computeSyncCommitteeRewards(
   }
 
   const altairBlock = block as altair.BeaconBlock;
-  const preStateAltair = preState as CachedBeaconStateAltair;
+  const preStateAltair = preState.clone() as CachedBeaconStateAltair;
 
   // Bound syncCommitteeValidatorIndices in case it goes beyond SYNC_COMMITTEE_SIZE just to be safe
   const syncCommitteeValidatorIndices = preStateAltair.epochCtx.currentSyncCommitteeIndexed.validatorIndices.slice(

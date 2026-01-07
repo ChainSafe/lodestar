@@ -4,7 +4,6 @@ import {RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
-import {StateRegenerationOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache} from "./types.js";
 
@@ -86,14 +85,14 @@ export class FIFOBlockStateCache implements BlockStateCache {
     }
 
     const firstState = firstValue.value;
-    // don't transfer cache because consumer only use this cache to reload another state from disc
-    return firstState.clone(true);
+    // consumers should not mutate the returned state
+    return firstState;
   }
 
   /**
    * Get a state from this cache given a state root hex.
    */
-  get(rootHex: RootHex, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null {
+  get(rootHex: RootHex): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const item = this.cache.get(rootHex);
     if (!item) {
@@ -103,7 +102,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
     this.metrics?.hits.inc();
     this.metrics?.stateClonedCount.observe(item.clonedCount);
 
-    return item.clone(opts?.dontTransferCache);
+    return item;
   }
 
   /**

@@ -23,9 +23,12 @@ type SubRewardValue = number; // All reward values should be integer
 export async function computeBlockRewards(
   config: BeaconConfig,
   block: BeaconBlock,
-  preState: CachedBeaconStateAllForks,
-  postState?: CachedBeaconStateAllForks
+  preStateIn: CachedBeaconStateAllForks,
+  postStateIn?: CachedBeaconStateAllForks
 ): Promise<rewards.BlockRewards> {
+  const preState = preStateIn.clone();
+  const postState = postStateIn?.clone();
+
   const fork = config.getForkName(block.slot);
   const {attestations: cachedAttestationsReward = 0, syncAggregate: cachedSyncAggregateReward = 0} =
     postState?.proposerRewards ?? {};
