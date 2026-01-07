@@ -1298,9 +1298,9 @@ export class BeaconChain implements IBeaconChain {
 
     preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
-    const postState = this.regen.getStateSync(toRootHex(block.stateRoot)) ?? undefined;
+    const proposerRewards = this.regen.getStateSync(toRootHex(block.stateRoot))?.proposerRewards ?? undefined;
 
-    return computeBlockRewards(this.config, block, preState, postState);
+    return computeBlockRewards(this.config, block, preState, proposerRewards);
   }
 
   async getAttestationsRewards(
