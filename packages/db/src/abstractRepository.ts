@@ -119,6 +119,25 @@ export abstract class BinaryRepository<I extends Id> {
     await this.db.delete(this.encodeKey(id), this.dbReqOpts);
   }
 
+  async batchDelete(ids: I[]): Promise<void> {
+    if (ids.length === 1) {
+      return this.delete(ids[0]);
+    }
+
+    await this.db.batchDelete(
+      Array.from({length: ids.length}, (_, i) => this.encodeKey(ids[i])),
+      this.dbReqOpts
+    );
+  }
+
+  async batchBinary(batch: DbBatch<I, Uint8Array>): Promise<void> {
+    const batchWithKeys: DbBatch<Uint8Array, Uint8Array> = [];
+    for (const b of batch) {
+      batchWithKeys.push({...b, key: this.encodeKey(b.key)});
+    }
+    await this.db.batch(batchWithKeys, this.dbReqOpts);
+  }
+
   /**
    * Transforms opts from I to Uint8Array
    */
@@ -215,37 +234,6 @@ export abstract class Repository<I extends Id, T> extends BinaryRepository<I> {
       })),
       this.dbReqOpts
     );
-  }
-
-  async batchDelete(ids: I[]): Promise<void> {
-    if (ids.length === 1) {
-      return this.delete(ids[0]);
-    }
-
-    await this.db.batchDelete(
-      Array.from({length: ids.length}, (_, i) => this.encodeKey(ids[i])),
-      this.dbReqOpts
-    );
-  }
-
-  async batch(batch: DbBatch<I, T>): Promise<void> {
-    const batchWithKeys: DbBatch<Uint8Array, Uint8Array> = [];
-    for (const b of batch) {
-      if (b.type === "del") {
-        batchWithKeys.push({...b, key: this.encodeKey(b.key)});
-      } else {
-        batchWithKeys.push({...b, key: this.encodeKey(b.key), value: this.encodeValue(b.value)});
-      }
-    }
-    await this.db.batch(batchWithKeys, this.dbReqOpts);
-  }
-
-  async batchBinary(batch: DbBatch<I, Uint8Array>): Promise<void> {
-    const batchWithKeys: DbBatch<Uint8Array, Uint8Array> = [];
-    for (const b of batch) {
-      batchWithKeys.push({...b, key: this.encodeKey(b.key)});
-    }
-    await this.db.batch(batchWithKeys, this.dbReqOpts);
   }
 
   async batchAdd(values: T[]): Promise<void> {
