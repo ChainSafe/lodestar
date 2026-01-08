@@ -327,6 +327,8 @@ export function getExpectedWithdrawals(
   let withdrawalIndex = state.nextWithdrawalIndex;
 
   const expectedWithdrawals: capella.Withdrawal[] = [];
+  // Map to track balances after applying withdrawals
+  // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/capella/beacon-chain.md#new-get_balance_after_withdrawals
   const balanceAfterWithdrawals = new Map<ValidatorIndex, number>();
   // partialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
   let processedPartialWithdrawalsCount = 0;
