@@ -128,7 +128,7 @@ function getBuilderWithdrawals(
       ? allBuilderPendingWithdrawals[i]
       : state.builderPendingWithdrawals.getReadonly(i);
 
-    if (withdrawal.withdrawableEpoch > epoch || builderWithdrawals.length + 1 === MAX_WITHDRAWALS_PER_PAYLOAD) {
+    if (withdrawal.withdrawableEpoch > epoch || builderWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
       break;
     }
 
@@ -197,7 +197,10 @@ function getPendingPartialWithdrawals(
     const withdrawal = allPendingPartialWithdrawals
       ? allPendingPartialWithdrawals[i]
       : state.pendingPartialWithdrawals.getReadonly(i);
-    if (withdrawal.withdrawableEpoch > epoch || pendingPartialWithdrawals.length === partialWithdrawalBound) {
+    if (
+      withdrawal.withdrawableEpoch > epoch ||
+      pendingPartialWithdrawals.length + numPriorWithdrawal === partialWithdrawalBound
+    ) {
       break;
     }
 
@@ -368,7 +371,7 @@ export function getExpectedWithdrawals(
     fork,
     state,
     withdrawalIndex,
-    0,
+    expectedWithdrawals.length,
     balanceAfterWithdrawals
   );
 
