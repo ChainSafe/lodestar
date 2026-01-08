@@ -70,9 +70,9 @@ describe("getExpectedWithdrawals", () => {
         return opts.cache ? state : state.clone(true);
       },
       fn: (state) => {
-        const {sampledValidators} = getExpectedWithdrawals(ForkSeq.capella, state); // TODO Electra: Do test for electra
-        if (sampledValidators !== opts.sampled) {
-          throw Error(`Wrong sampledValidators ${sampledValidators} != ${opts.sampled}`);
+        const {processedValidatorSweepCount} = getExpectedWithdrawals(ForkSeq.capella, state); // TODO Electra: Do test for electra
+        if (processedValidatorSweepCount !== opts.sampled) {
+          throw Error(`Wrong sampledValidators ${processedValidatorSweepCount} != ${opts.sampled}`);
         }
       },
     });

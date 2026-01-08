@@ -39,9 +39,9 @@ describe("getExpectedWithdrawals", () => {
 
     // TODO Electra: Add test for electra
     it(`getExpectedWithdrawals ${vc} ${caseID}`, () => {
-      const {sampledValidators, withdrawals} = getExpectedWithdrawals(ForkSeq.capella, state.value);
-      expect(sampledValidators).toBe(opts.sampled);
-      expect(withdrawals.length).toBe(opts.withdrawals);
+      const {processedValidatorSweepCount, expectedWithdrawals} = getExpectedWithdrawals(ForkSeq.capella, state.value);
+      expect(processedValidatorSweepCount).toBe(opts.sampled);
+      expect(expectedWithdrawals.length).toBe(opts.withdrawals);
     });
   }
 });

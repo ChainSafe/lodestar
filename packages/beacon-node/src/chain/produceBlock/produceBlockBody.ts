@@ -623,7 +623,7 @@ function preparePayloadAttributes(
     (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
       ForkSeq[fork],
       prepareState as CachedBeaconStateCapella
-    ).withdrawals;
+    ).expectedWithdrawals;
   }
 
   if (ForkSeq[fork] >= ForkSeq.deneb) {
