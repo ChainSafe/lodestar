@@ -122,8 +122,8 @@ function getBuilderWithdrawals(
       ? state.builderPendingWithdrawals.getAllReadonly()
       : null;
 
-  let i = 0;
-  for (i = 0; i < state.builderPendingWithdrawals.length; i++) {
+  let processedCount = 0;
+  for (let i = 0; i < state.builderPendingWithdrawals.length; i++) {
     const withdrawal = allBuilderPendingWithdrawals
       ? allBuilderPendingWithdrawals[i]
       : state.builderPendingWithdrawals.getReadonly(i);
@@ -162,9 +162,10 @@ function getBuilderWithdrawals(
         balanceAfterWithdrawals.set(builderIndex, balance - withdrawableBalance);
       }
     }
+    processedCount++;
   }
 
-  return {builderWithdrawals, withdrawalIndex, processedCount: i};
+  return {builderWithdrawals, withdrawalIndex, processedCount};
 }
 
 function getPendingPartialWithdrawals(
@@ -192,8 +193,8 @@ function getPendingPartialWithdrawals(
       : null;
 
   // EIP-7002: Execution layer triggerable withdrawals
-  let i = 0;
-  for (i = 0; i < state.pendingPartialWithdrawals.length; i++) {
+  let processedCount = 0;
+  for (let i = 0; i < state.pendingPartialWithdrawals.length; i++) {
     const withdrawal = allPendingPartialWithdrawals
       ? allPendingPartialWithdrawals[i]
       : state.pendingPartialWithdrawals.getReadonly(i);
@@ -229,9 +230,10 @@ function getPendingPartialWithdrawals(
       withdrawalIndex++;
       balanceAfterWithdrawals.set(withdrawal.validatorIndex, balance - Number(withdrawableBalance));
     }
+    processedCount++;
   }
 
-  return {pendingPartialWithdrawals, withdrawalIndex, processedCount: i};
+  return {pendingPartialWithdrawals, withdrawalIndex, processedCount};
 }
 
 function getValidatorsSweepWithdrawals(
@@ -247,10 +249,10 @@ function getValidatorsSweepWithdrawals(
   const isPostElectra = fork >= ForkSeq.electra;
 
   const validatorsLimit = Math.min(state.validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
-  let n = 0;
+  let processedCount = 0;
   // Just run a bounded loop max iterating over all withdrawals
   // however breaks out once we have MAX_WITHDRAWALS_PER_PAYLOAD
-  for (n = 0; n < validatorsLimit; n++) {
+  for (let n = 0; n < validatorsLimit; n++) {
     if (sweepWithdrawals.length + numPriorWithdrawal === MAX_WITHDRAWALS_PER_PAYLOAD) {
       break;
     }
@@ -272,6 +274,7 @@ function getValidatorsSweepWithdrawals(
     // early skip for balance = 0 as its now more likely that validator has exited/slashed with
     // balance zero than not have withdrawal credentials set
     if (balance === 0 || !hasWithdrawableCredentials) {
+      processedCount++;
       continue;
     }
 
@@ -300,9 +303,10 @@ function getValidatorsSweepWithdrawals(
       withdrawalIndex++;
       balanceAfterWithdrawals.set(validatorIndex, balance - partialAmount);
     }
+    processedCount++;
   }
 
-  return {sweepWithdrawals: sweepWithdrawals, processedCount: n};
+  return {sweepWithdrawals: sweepWithdrawals, processedCount};
 }
 
 function applyWithdrawals(
