@@ -105,7 +105,8 @@ export function processWithdrawals(
   }
 
   // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/capella/beacon-chain.md#new-update_next_withdrawal_validator_index
-  const nextIndex = state.nextWithdrawalValidatorIndex + processedValidatorSweepCount;
+  const nextIndex =
+    state.nextWithdrawalValidatorIndex + Math.max(processedValidatorSweepCount, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
   const nextValidatorIndex = nextIndex % state.validators.length;
   state.nextWithdrawalValidatorIndex = nextValidatorIndex;
 }
