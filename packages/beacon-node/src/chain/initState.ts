@@ -50,28 +50,6 @@ export function createGenesisBlock(config: ChainForkConfig, genesisState: Beacon
 }
 
 /**
- * Restore the latest beacon state from db
- */
-export async function initStateFromDb(
-  _config: ChainForkConfig,
-  db: IBeaconDb,
-  logger: Logger
-): Promise<BeaconStateAllForks> {
-  const state = await db.stateArchive.lastValue();
-  if (!state) {
-    throw new Error("No state exists in database");
-  }
-
-  logger.info("Initializing beacon state from db", {
-    slot: state.slot,
-    epoch: computeEpochAtSlot(state.slot),
-    stateRoot: toRootHex(state.hashTreeRoot()),
-  });
-
-  return state;
-}
-
-/**
  * Initialize and persist an anchor state (either weak subjectivity or genesis)
  */
 export async function checkAndPersistAnchorState(
