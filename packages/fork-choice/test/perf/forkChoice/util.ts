@@ -32,7 +32,8 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     } as Omit<ProtoBlock, "targetRoot">,
-    genesisSlot
+    genesisSlot,
+    {GLOAS_FORK_EPOCH: Infinity}
   );
 
   const balances = new Uint16Array(Array.from({length: opts.initialValidatorCount}, () => 32));

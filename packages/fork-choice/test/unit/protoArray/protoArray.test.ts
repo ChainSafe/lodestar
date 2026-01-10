@@ -35,7 +35,8 @@ describe("ProtoArray", () => {
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
-      genesisSlot
+      genesisSlot,
+      {GLOAS_FORK_EPOCH: Infinity}
     );
 
     // Add block that is a finalized descendant.

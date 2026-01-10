@@ -76,7 +76,8 @@ function setupForkChoice(): ProtoArray {
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
     } as Omit<ProtoBlock, "targetRoot">,
-    0
+    0,
+    {GLOAS_FORK_EPOCH: Infinity}
   );
 
   for (const block of blocks) {

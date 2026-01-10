@@ -46,7 +46,8 @@ describe("getCommonAncestor", () => {
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     },
-    0
+    0,
+    {GLOAS_FORK_EPOCH: Infinity}
   );
 
   for (const block of blocks) {

@@ -211,7 +211,7 @@ describe("Forkchoice / GetProposerHead", () => {
   ];
 
   beforeEach(() => {
-    protoArr = ProtoArray.initialize(genesisBlock, genesisSlot);
+    protoArr = ProtoArray.initialize(genesisBlock, genesisSlot, {GLOAS_FORK_EPOCH: Infinity});
   });
 
   for (const {

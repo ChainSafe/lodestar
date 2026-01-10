@@ -145,7 +145,8 @@ export function initializeForkChoiceFromFinalizedState(
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
-      currentSlot
+      currentSlot,
+      config,
     ),
     state.validators.length,
     metrics,
@@ -265,7 +266,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     targetRoot: toRootHex(finalizedCheckpoint.root),
   };
 
-  const protoArray = ProtoArray.initialize(finalizedBlock, currentSlot);
+  const protoArray = ProtoArray.initialize(finalizedBlock, currentSlot, config);
   protoArray.onBlock(justifiedBlock, currentSlot);
   protoArray.onBlock(parentBlock, currentSlot);
   protoArray.onBlock(headBlock, currentSlot);

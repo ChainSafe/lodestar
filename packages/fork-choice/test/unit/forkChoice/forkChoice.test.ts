@@ -42,7 +42,8 @@ describe("Forkchoice", () => {
         executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       } as Omit<ProtoBlock, "targetRoot">,
-      genesisSlot
+      genesisSlot,
+      {GLOAS_FORK_EPOCH: Infinity}
     );
   });
 

@@ -25,33 +25,44 @@ export class ProtoArray {
 
   private previousProposerBoost: ProposerBoost | null = null;
 
+  /**
+   * First epoch of Gloas fork (when ePBS activates)
+   * Blocks with slot >= gloasForkSlot use ePBS (PENDING/EMPTY/FULL variants)
+   * Blocks with slot < gloasForkSlot use pre-Gloas (PENDING only)
+   */
+  private gloasForkEpoch: Epoch;
+
   constructor({
     pruneThreshold,
     justifiedEpoch,
     justifiedRoot,
     finalizedEpoch,
     finalizedRoot,
+    config,
   }: {
     pruneThreshold: number;
     justifiedEpoch: Epoch;
     justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
     finalizedRoot: RootHex;
+    config: {GLOAS_FORK_EPOCH: number};
   }) {
     this.pruneThreshold = pruneThreshold;
     this.justifiedEpoch = justifiedEpoch;
     this.justifiedRoot = justifiedRoot;
     this.finalizedEpoch = finalizedEpoch;
     this.finalizedRoot = finalizedRoot;
+    this.gloasForkEpoch = config.GLOAS_FORK_EPOCH;
   }
 
-  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot): ProtoArray {
+  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot, config: {GLOAS_FORK_EPOCH: number}): ProtoArray {
     const protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
       justifiedEpoch: block.justifiedEpoch,
       justifiedRoot: block.justifiedRoot,
       finalizedEpoch: block.finalizedEpoch,
       finalizedRoot: block.finalizedRoot,
+      config,
     });
     protoArray.onBlock(
       {
@@ -63,6 +74,14 @@ export class ProtoArray {
     );
     return protoArray;
   }
+
+  /**
+   * Check if a block is in the Gloas fork (ePBS enabled)
+   */
+  private isGloasBlock(block: {slot: Slot}): boolean {
+    return computeEpochAtSlot(block.slot) >= this.gloasForkEpoch;
+  }
+
 
   /**
    * Iterate backwards through the array, touching all nodes and their parents and potentially
