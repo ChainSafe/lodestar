@@ -63,14 +63,16 @@ export async function applyStateRegenPlan(
     tillSlot: plan.blockReplay.tillSlot,
   });
 
-  const blockReplayTimer = ctx.metrics?.blockReplayTime.startTimer();
-  const replayed = await replayBlocks(ctx, {
-    stateBytes,
-    fromSlot: plan.blockReplay.fromSlot,
-    toSlot: plan.blockReplay.tillSlot,
-  });
-  blockReplayTimer?.();
   ctx.metrics?.blockReplayCount.observe(plan.blockReplay.tillSlot - plan.blockReplay.fromSlot);
-
-  return beaconStateBytesToSnapshot({config: ctx.config}, plan.blockReplay.tillSlot, replayed);
+  const blockReplayTimer = ctx.metrics?.blockReplayTime.startTimer();
+  try {
+    const replayed = await replayBlocks(ctx, {
+      stateBytes,
+      fromSlot: plan.blockReplay.fromSlot,
+      toSlot: plan.blockReplay.tillSlot,
+    });
+    return beaconStateBytesToSnapshot({config: ctx.config}, plan.blockReplay.tillSlot, replayed);
+  } finally {
+    blockReplayTimer?.();
+  }
 }

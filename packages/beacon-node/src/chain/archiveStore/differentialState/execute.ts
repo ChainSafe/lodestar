@@ -17,18 +17,20 @@ export async function regenerateState(
   ctx.logger?.verbose("Regenerating state via state differential", {
     slot: target,
   });
-  const regenTimer = ctx.metrics?.regenTime.startTimer();
   ctx.metrics?.regenRequestCount.inc();
+  const regenTimer = ctx.metrics?.regenTime.startTimer();
 
-  const plan = buildStateRegenPlan(ctx.layers, target);
-  const artifacts = await fetchStateRegenArtifacts(ctx, plan, opts);
-  const finalState = await applyStateRegenPlan(ctx, plan, artifacts);
-  const state = snapshotToBeaconState(ctx, finalState);
+  try {
+    const plan = buildStateRegenPlan(ctx.layers, target);
+    const artifacts = await fetchStateRegenArtifacts(ctx, plan, opts);
+    const finalState = await applyStateRegenPlan(ctx, plan, artifacts);
+    const state = snapshotToBeaconState(ctx, finalState);
 
-  regenTimer?.();
-  ctx.metrics?.regenSuccessCount.inc();
-
-  return state;
+    ctx.metrics?.regenSuccessCount.inc();
+    return state;
+  } finally {
+    regenTimer?.();
+  }
 }
 
 export async function storeDifferentialState(

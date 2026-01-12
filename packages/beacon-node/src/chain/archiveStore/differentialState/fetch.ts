@@ -41,11 +41,6 @@ export async function fetchStateRegenArtifacts(
     diff ? diffs.push(diff) : missingDiffs.push(edge);
   }
 
-  if (diffs.length + missingDiffs.length !== plan.diffSlots.length) {
-    modules.metrics?.regenErrorCount.inc({reason: DiffStateRegenErrorType.loadDiffState});
-    throw new Error(`Can not find required state diffs ${plan.diffSlots.join(",")}`);
-  }
-
   if (plan.blockReplay && diffs.at(-1)?.slot !== plan.blockReplay.fromSlot - 1) {
     modules.metrics?.regenErrorCount.inc({reason: DiffStateRegenErrorType.loadDiffState});
     throw new Error(`Can not replay blocks due to missing state diffs ${missingDiffs.join(",")}`);
