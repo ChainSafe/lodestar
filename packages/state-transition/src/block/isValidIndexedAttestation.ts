@@ -21,7 +21,7 @@ export function isValidIndexedAttestation(
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationSignatureSet(config, index2pubkey, state, indexedAttestation));
+    return verifySignatureSet(getIndexedAttestationSignatureSet(config, index2pubkey, state.slot, indexedAttestation));
   }
   return true;
 }
@@ -38,7 +38,9 @@ export function isValidIndexedAttestationBigint(
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(config, index2pubkey, state, indexedAttestation));
+    return verifySignatureSet(
+      getIndexedAttestationBigintSignatureSet(config, index2pubkey, state.slot, indexedAttestation)
+    );
   }
   return true;
 }

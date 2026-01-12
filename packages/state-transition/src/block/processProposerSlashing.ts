@@ -80,7 +80,7 @@ export function assertValidProposerSlashing(
     const signatureSets = getProposerSlashingSignatureSets(
       state.config,
       state.epochCtx.index2pubkey,
-      state,
+      state.slot,
       proposerSlashing
     );
     for (let i = 0; i < signatureSets.length; i++) {

@@ -245,6 +245,18 @@ async function validateAggregateAndProof(
     });
   }
 
+  // Same race-condition check as above for seen aggregators
+  if (
+    !skipValidationKnownAttesters &&
+    chain.seenAggregatedAttestations.isKnown(targetEpoch, attIndex, attDataRootHex, aggregationBits)
+  ) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
+      targetEpoch,
+      aggregateRoot: attDataRootHex,
+    });
+  }
+
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
   chain.seenAggregatedAttestations.add(
     targetEpoch,

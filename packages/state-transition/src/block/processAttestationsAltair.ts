@@ -67,7 +67,7 @@ export function processAttestationsAltair(
       const sigSet = getAttestationWithIndicesSignatureSet(
         state.config,
         epochCtx.index2pubkey,
-        state,
+        state.slot,
         attestation,
         attestingIndices
       );

@@ -469,17 +469,30 @@ export class AttestationDutiesService {
 
     const res = await this.api.validator.submitBeaconCommitteeSelections({selections: partialSelections});
 
-    const combinedSelections = res.value();
-    this.logger.debug("Received combined beacon committee selection proofs", {epoch, count: combinedSelections.length});
+    const combinedSelections = new Map<ValidatorIndex, routes.validator.BeaconCommitteeSelection>();
+    for (const selection of res.value()) {
+      combinedSelections.set(selection.validatorIndex, selection);
+    }
+    this.logger.debug("Received combined beacon committee selection proofs", {epoch, count: combinedSelections.size});
 
     for (const dutyAndProof of duties) {
       const {slot, validatorIndex, committeeIndex, committeeLength} = dutyAndProof.duty;
       const logCtxValidator = {slot, index: committeeIndex, validatorIndex};
 
-      const combinedSelection = combinedSelections.find((s) => s.validatorIndex === validatorIndex && s.slot === slot);
+      const combinedSelection = combinedSelections.get(validatorIndex);
 
       if (!combinedSelection) {
         this.logger.debug("Did not receive combined beacon committee selection proof", logCtxValidator);
+        continue;
+      }
+
+      if (combinedSelection.slot !== slot) {
+        this.logger.debug("Received combined beacon committee selection proof for different slot", {
+          expected: slot,
+          actual: combinedSelection.slot,
+          index: committeeIndex,
+          validatorIndex,
+        });
         continue;
       }
 

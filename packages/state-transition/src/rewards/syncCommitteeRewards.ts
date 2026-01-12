@@ -1,10 +1,9 @@
-import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, Index2PubkeyCache} from "@lodestar/state-transition";
-import {BeaconBlock, ValidatorIndex, altair} from "@lodestar/types";
+import {BeaconBlock, ValidatorIndex, altair, rewards} from "@lodestar/types";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../cache/stateCache.js";
 
-export type SyncCommitteeRewards = routes.beacon.SyncCommitteeRewards;
 type BalanceRecord = {val: number}; // Use val for convenient way to increment/decrement balance
 
 export async function computeSyncCommitteeRewards(
@@ -13,7 +12,7 @@ export async function computeSyncCommitteeRewards(
   block: BeaconBlock,
   preState: CachedBeaconStateAllForks,
   validatorIds: (ValidatorIndex | string)[] = []
-): Promise<SyncCommitteeRewards> {
+): Promise<rewards.SyncCommitteeRewards> {
   const fork = config.getForkName(block.slot);
   if (fork === ForkName.phase0) {
     throw Error("Cannot get sync rewards as phase0 block does not have sync committee");

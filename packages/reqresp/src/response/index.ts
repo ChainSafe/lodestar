@@ -1,6 +1,5 @@
 import {PeerId, Stream} from "@libp2p/interface";
 import {pipe} from "it-pipe";
-import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
@@ -78,7 +77,7 @@ export async function handleRequest({
         const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method: protocol.method});
 
         const requestBody = await withTimeout(
-          () => pipe(stream.source as AsyncIterable<Uint8ArrayList>, requestDecode(protocol)),
+          () => pipe(stream.source, requestDecode(protocol)),
           REQUEST_TIMEOUT,
           signal
         ).catch((e: unknown) => {

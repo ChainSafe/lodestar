@@ -11,7 +11,6 @@ lodestar-config.toml
 validator-db
 keys/
 test-db
-yarn-error.log
 package-lock.json
 LodestarValidatorDB/
 benchmark-reports/

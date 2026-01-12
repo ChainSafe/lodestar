@@ -25,11 +25,11 @@ To start a new release, one of the Lodestar developers will communicate this via
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
   - NOTE: In some rare circumstances, the team may select a commit from `stable`. This may happen if a tight deadline needs to be met and `unstable` can't be stabilized in time. We should avoid doing this unless absolutely necessary as merge conflicts and unintended consequences of cherry-picking commits may arise.
-- `yarn release:create-rc 1.1.0 9fceb02`
+- `pnpm release:create-rc 1.1.0 9fceb02`
   - Must be run locally from a write-access account capable of triggering CI.
   - This script may alternatively be run on the checked out `HEAD`:
     - `git checkout 9fceb02`
-    - `yarn release:create-rc 1.1.0`
+    - `pnpm release:create-rc 1.1.0`
 - Open draft PR from `rc/v1.1.0` to `stable` with title `chore: v1.1.0 release`.
 
 #### Manual steps (for example version `v1.1.0`, commit `9fceb02`):
@@ -51,11 +51,11 @@ Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Gi
 #### All-in-one script (for example version `v1.1.0`, commit `8ab7cef`):
 
 - The team selects a commit from `rc/v1.1.0` as a commit to tag and publish.
-- `yarn release:tag-rc 1.1.0 8ab7cef`
+- `pnpm release:tag-rc 1.1.0 8ab7cef`
   - Must be run locally from a write-access account capable of triggering CI.
   - This script may alternatively be run on the checked out `HEAD`:
     - `git checkout 8ab7cef`
-    - `yarn release:tag-rc 1.1.0`
+    - `pnpm release:tag-rc 1.1.0`
 
 #### Manual steps (for example version `v1.1.0`, commit `8ab7cef`):
 
@@ -92,7 +92,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 #### All-in-one script (for example version `v1.1.0`):
 
 - `git checkout stable`
-- `yarn release:tag-stable 1.1.0`
+- `pnpm release:tag-stable 1.1.0`
   - Must be run locally from a write-access account capable of triggering CI.
 
 #### Manual steps (for example version `v1.1.0`):
@@ -125,7 +125,7 @@ A similar process for a stable release is used, with the three differences.
 - Select the latest commit from `stable` as the "hotfix release candidate" for a new hotfix version release.
 - `git fetch origin stable`
 - `git checkout stable`
-- `yarn release:create-rc 1.1.1`
+- `pnpm release:create-rc 1.1.1`
   - Must be run locally from a write-access account capable of triggering CI.
 - Switch to the hotfix release branch and cherrypick the inclusion(s) from the `unstable` branch to the hotfix release.
   - `git checkout rc/v1.1.1`
@@ -153,7 +153,7 @@ Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Gi
 #### All-in-one script (for example version `v1.1.1`, commit `f3df9f8`):
 
 - Select the latest commit from `rc/v1.1.1` to tag and publish.
-- `yarn release:tag-rc 1.1.1`
+- `pnpm release:tag-rc 1.1.1`
   - Must be run locally from a write-access account capable of triggering CI.
 
 #### Manual steps (for example version `v1.1.1`, commit `f3df9f8`):
@@ -203,7 +203,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 #### All-in-one script (for example version `v1.1.1`):
 
 - `git checkout stable`
-- `yarn release:tag-stable 1.1.1`
+- `pnpm release:tag-stable 1.1.1`
   - Must be run locally from a write-access account capable of triggering CI.
 
 #### Manual steps (for example version `v1.1.1`):

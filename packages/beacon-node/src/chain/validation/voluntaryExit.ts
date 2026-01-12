@@ -59,7 +59,7 @@ async function validateVoluntaryExit(
     });
   }
 
-  const signatureSet = getVoluntaryExitSignatureSet(chain.config, chain.index2pubkey, state, voluntaryExit);
+  const signatureSet = getVoluntaryExitSignatureSet(chain.config, chain.index2pubkey, state.slot, voluntaryExit);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID_SIGNATURE,

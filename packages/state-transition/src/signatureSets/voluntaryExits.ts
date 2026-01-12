@@ -1,7 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
-import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 import {
   ISignatureSet,
   SignatureSetType,
@@ -13,10 +12,10 @@ import {
 export function verifyVoluntaryExitSignature(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
+  stateSlot: Slot,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, index2pubkey, state, signedVoluntaryExit));
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, index2pubkey, stateSlot, signedVoluntaryExit));
 }
 
 /**
@@ -25,11 +24,11 @@ export function verifyVoluntaryExitSignature(
 export function getVoluntaryExitSignatureSet(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
+  stateSlot: Slot,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
-  const slot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = config.getDomainForVoluntaryExit(state.slot, slot);
+  const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
+  const domain = config.getDomainForVoluntaryExit(stateSlot, messageSlot);
 
   return {
     type: SignatureSetType.single,
@@ -42,10 +41,12 @@ export function getVoluntaryExitSignatureSet(
 export function getVoluntaryExitsSignatureSets(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
+  // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
+  // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
+  const blockSlot = signedBlock.message.slot;
   return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
-    getVoluntaryExitSignatureSet(config, index2pubkey, state, voluntaryExit)
+    getVoluntaryExitSignatureSet(config, index2pubkey, blockSlot, voluntaryExit)
   );
 }

@@ -14,9 +14,12 @@ import {
   EpochShuffling,
   Index2PubkeyCache,
   computeAnchorCheckpoint,
+  computeAttestationsRewards,
+  computeBlockRewards,
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeSyncCommitteeRewards,
   getEffectiveBalanceIncrementsZeroInactive,
   getEffectiveBalancesFromStateBytes,
   processSlots,
@@ -36,6 +39,7 @@ import {
   Wei,
   isBlindedBeaconBlock,
   phase0,
+  rewards,
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -77,9 +81,6 @@ import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
-import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
-import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
-import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {
   SeenAggregators,
   SeenAttesters,
@@ -1285,7 +1286,7 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards> {
+  async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {
     let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
@@ -1302,7 +1303,7 @@ export class BeaconChain implements IBeaconChain {
   async getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}> {
+  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}> {
     // We use end slot of (epoch + 1) to ensure we have seen all attestations. On-time or late. Any late attestation beyond this slot is not considered
     const slot = computeEndSlotAtEpoch(epoch + 1);
     const stateResult = await this.getStateBySlot(slot, {allowRegen: false}); // No regen if state not in cache
@@ -1328,7 +1329,7 @@ export class BeaconChain implements IBeaconChain {
   async getSyncCommitteeRewards(
     block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<SyncCommitteeRewards> {
+  ): Promise<rewards.SyncCommitteeRewards> {
     let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {

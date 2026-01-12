@@ -9,20 +9,21 @@ import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signa
 export function verifyProposerSignature(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): boolean {
-  const signatureSet = getBlockProposerSignatureSet(config, index2pubkey, state, signedBlock);
+  const signatureSet = getBlockProposerSignatureSet(config, index2pubkey, signedBlock);
   return verifySignatureSet(signatureSet);
 }
 
 export function getBlockProposerSignatureSet(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): ISignatureSet {
-  const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
+  // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
+  // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
+  const blockSlot = signedBlock.message.slot;
+  const domain = config.getDomain(blockSlot, DOMAIN_BEACON_PROPOSER, blockSlot);
 
   const blockType = isBlindedBeaconBlock(signedBlock.message)
     ? config.getPostBellatrixForkTypes(signedBlock.message.slot).BlindedBeaconBlock
