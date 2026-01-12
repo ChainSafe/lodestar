@@ -58,9 +58,9 @@ export function applyStateDifferential(
   };
 
   logger?.verbose("Applying state differential", logInfo);
+  const timer = modules.metrics?.applyDiffStateTime.startTimer();
 
   try {
-    const timer = modules.metrics?.applyDiffStateTime.startTimer();
     const stateBytes = codec.apply(base.stateBytes, diff.stateDiffBytes);
     const balancesBytes = codec.apply(base.balancesBytes, diff.balancesDiffBytes);
     timer?.();
@@ -82,6 +82,8 @@ export function applyStateDifferential(
     modules.metrics?.regenErrorCount.inc({reason: DiffStateRegenErrorType.diffReplay});
     logger?.error("Failed to apply state differential", logInfo);
     throw error;
+  } finally {
+    timer?.();
   }
 }
 
@@ -105,9 +107,11 @@ export async function getStateDifferential(
 ): Promise<BeaconStateDifferential | null> {
   const {db} = modules;
   const timer = modules.metrics?.loadDiffStateTime.startTimer();
-  const state = await db.beaconStateDifferentialArchive.get(slot);
-  timer?.();
-  return state;
+  try {
+    return await db.beaconStateDifferentialArchive.get(slot);
+  } finally {
+    timer?.();
+  }
 }
 
 export async function getStateDifferentials(
