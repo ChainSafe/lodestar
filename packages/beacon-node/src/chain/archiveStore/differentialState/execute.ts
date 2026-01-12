@@ -25,8 +25,8 @@ export async function regenerateState(
   const finalState = await applyStateRegenPlan(ctx, plan, artifacts);
   const state = snapshotToBeaconState(ctx, finalState);
 
-  ctx.metrics?.regenSuccessCount.inc();
   regenTimer?.();
+  ctx.metrics?.regenSuccessCount.inc();
 
   return state;
 }
