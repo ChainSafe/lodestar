@@ -74,8 +74,12 @@ export async function getStateSnapshot(
   const {db} = modules;
 
   const timer = modules.metrics?.loadSnapshotStateTime.startTimer();
-  const state = await db.beaconStateSnapshotArchive.get(slot);
-  timer?.();
+  let state: BeaconStateSnapshot | null;
+  try {
+    state = await db.beaconStateSnapshotArchive.get(slot);
+  } finally {
+    timer?.();
+  }
 
   if (state) return state;
   if (!state && !fallback) return null;

@@ -78,7 +78,7 @@ export function createDifferentialStateRegenMetrics(
     }),
     loadDiffStateTime: metricsRegister.histogram({
       name: "lodestar_differential_state_load_diff_state_time_seconds",
-      help: "Time to load a differential diff state from the database in seconds",
+      help: "Time to load a differential state from the database in seconds",
       // 30s, 1m, 2m, 4m
       buckets: [30, 60, 120, 240],
     }),
@@ -115,7 +115,7 @@ export function createDifferentialStateRegenMetrics(
     }),
     applyDiffStateTime: metricsRegister.histogram({
       name: "lodestar_differential_state_apply_diff_state_time_seconds",
-      help: "Time to compute a differential state from two states",
+      help: "Time to apply a differential state to a base state",
       // 30s, 1m, 2m, 4m
       buckets: [30, 60, 120, 240],
     }),
