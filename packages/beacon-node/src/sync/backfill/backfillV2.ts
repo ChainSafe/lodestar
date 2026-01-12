@@ -68,28 +68,24 @@ export enum BackfillSyncStatus {
 
 // Assumptions:
 //  BackfillBlock type exists purely as a convenience helper type to store a block along with its own root
-//  lastBackSyncedBlock and anchorBlock are almost always the same, except some cases (ex: when BackfillSyncErrorCode.NOT_LINEAR)
 type BackFillSyncAnchor =
   | {
       anchorBlockParentRoot: Root;
       anchorBlock: SignedBeaconBlock;
       anchorBlockRoot: Root;
       anchorSlot: Slot;
-      lastBackSyncedBlock: BackfillBlock;
     }
   | {
       anchorBlockParentRoot: Root;
       anchorBlock: null;
       anchorBlockRoot: Root;
       anchorSlot: null;
-      lastBackSyncedBlock: BackfillBlock;
     }
   | {
       anchorBlockParentRoot: Root;
       anchorBlock: null;
       anchorBlockRoot: Root;
       anchorSlot: Slot;
-      lastBackSyncedBlock: null;
     };
 
 // Updating peer score:
@@ -205,7 +201,6 @@ export class BackfillSync {
           anchorBlock,
           anchorBlockRoot: blockRoot, // this may help
           anchorSlot: anchorBlock?.message.slot,
-          lastBackSyncedBlock: {slot: anchorBlock.message.slot, root: blockRoot, block: anchorBlock},
         };
       }
       // Todo: Review this handling placement and when multiple consecutive blocks are missed
@@ -221,7 +216,6 @@ export class BackfillSync {
           anchorBlock: anchorChildBlock,
           anchorBlockRoot: blockRoot, // this may help
           anchorSlot: anchorChildBlock?.message.slot,
-          lastBackSyncedBlock: {slot: anchorChildBlock.message.slot, root: blockRoot, block: anchorChildBlock},
         };
       } else {
         // handle more gracefully, most prob by resetting the backfillrange using anchorState
@@ -236,7 +230,6 @@ export class BackfillSync {
           anchorBlock: null,
           anchorBlockRoot: anchorCp.root, // this may help
           anchorSlot,
-          lastBackSyncedBlock: null,
         };
         // Initialize backfill states to maintain point of reference for future
         await modules.db.backfillRange.put({beginningEpoch: anchorCp.epoch, endingEpoch: anchorCp.epoch});
@@ -258,7 +251,6 @@ export class BackfillSync {
         anchorBlock: null,
         anchorBlockRoot: anchorCp.root, // this may help
         anchorSlot,
-        lastBackSyncedBlock: null,
       };
       // Initialize backfill states to maintain point of reference for future
       await modules.db.backfillRange.put({beginningEpoch: anchorCp.epoch, endingEpoch: anchorCp.epoch});
@@ -342,7 +334,6 @@ export class BackfillSync {
             anchorBlock: newAnchorBlock,
             anchorBlockRoot: blockRoot, // this may help
             anchorSlot,
-            lastBackSyncedBlock: {slot: anchorSlot, root: blockRoot, block: newAnchorBlock},
           };
         }
         this.logger.verbose("Merging previous filled range with current BackFillRange. Previous Range: ", {
@@ -369,7 +360,6 @@ export class BackfillSync {
       // send beacon_blocks_by_range request
       // validate blocks
       // store blocks in db blockarchive
-      // update lastBackSyncedBlock
       // update BackfillRange and BackfillState
       // update earliestAvailableSlot
       try {
@@ -602,7 +592,6 @@ export class BackfillSync {
         count: req.count,
         epoch: computeEpochAtSlot(req.startSlot),
         anchorSlot,
-        lastBackSyncedBlockSlot: this.syncAnchor.lastBackSyncedBlock?.slot,
         backfillStartFromSlot: this.backfillStartFromSlot,
       });
 
@@ -676,7 +665,7 @@ export class BackfillSync {
         count: req.count,
         endSlot: req.startSlot + req.count * req.step - 1,
         epoch: computeEpochAtSlot(req.startSlot),
-        lastBackSyncedBlockSlot: this.syncAnchor.lastBackSyncedBlock?.slot,
+        anchorSlot: this.syncAnchor.anchorSlot,
         backfillStartFromSlot: this.backfillStartFromSlot,
       });
       // Update Metadata
@@ -875,9 +864,8 @@ export class BackfillSync {
       if (!nextAnchor) {
         throw Error;
       }
-      // Update lastBackSyncedBlock
+      // Update syncAnchor
       this.syncAnchor = {
-        lastBackSyncedBlock: nextAnchor,
         anchorBlock: nextAnchor?.block,
         anchorBlockParentRoot: nextAnchor?.block.message.parentRoot,
         anchorBlockRoot: nextAnchor?.root,
@@ -885,7 +873,6 @@ export class BackfillSync {
       };
 
       this.logger.debug("Updated syncAnchor: ", {
-        lastBackSyncedBlockSlot: nextAnchor?.slot,
         anchorBlockSlot: nextAnchor?.block.message.slot,
         anchorBlockParentRoot: toHex(nextAnchor?.block.message.parentRoot),
         anchorBlockRoot: toHex(nextAnchor?.root),
@@ -1109,7 +1096,6 @@ export class BackfillSync {
             anchorBlock: newAnchorBlock,
             anchorBlockRoot: blockRoot,
             anchorSlot: newAnchorSlot,
-            lastBackSyncedBlock: {slot: newAnchorSlot, root: blockRoot, block: newAnchorBlock},
           };
           this.logger.verbose(
             "Updated syncAnchor to match actual DB state while merging backfill ranges and updating nextRangeToSkip:",
@@ -1159,7 +1145,6 @@ export class BackfillSync {
             anchorBlock: newAnchorBlock,
             anchorBlockRoot: blockRoot,
             anchorSlot: newAnchorSlot,
-            lastBackSyncedBlock: {slot: newAnchorSlot, root: blockRoot, block: newAnchorBlock},
           };
           this.logger.verbose(
             "Updated syncAnchor to match actual DB state while merging backfill ranges and updating nextRangeToSkip:",
