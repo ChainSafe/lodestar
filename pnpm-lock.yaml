@@ -237,6 +237,9 @@ importers:
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
+      '@chainsafe/xdelta3-node':
+        specifier: ^1.0.2
+        version: 1.0.2
       '@crate-crypto/node-eth-kzg':
         specifier: 0.9.1
         version: 0.9.1
@@ -1589,6 +1592,56 @@ packages:
 
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
+
+  '@chainsafe/xdelta3-node-darwin-arm64@1.0.2':
+    resolution: {integrity: sha512-sgfhUZg87b/7JpBWLIPKv2tXzamLZNzEZnRDyCIR48r/VLZbslHSNz8m4qNWcsbflt81X9G4QxTz/gqdpSNxHA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@chainsafe/xdelta3-node-darwin-x64@1.0.2':
+    resolution: {integrity: sha512-mOwZTgMqujBTl7gkYX+yoVL4eiM1NvS8cvb9fpLv4kvc9e9T0yMYP1QieDHuLEc2xk27ddZYAzYIXO9c8iDbDQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@chainsafe/xdelta3-node-linux-arm64-gnu@1.0.2':
+    resolution: {integrity: sha512-/K5oZoMmf1WvcKQAL4lozU7kVxQ+NFtjBOsWQNm61weHRkiv4hBx7Fo7fQ71LIESu7Kyvs44zogrViR9bHn31A==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@chainsafe/xdelta3-node-linux-arm64-musl@1.0.2':
+    resolution: {integrity: sha512-GuAgRIUXZFGmAUz/bDAOEuFIexU4EcObIuoqijJWWGmdJYuLQsFkyEtr3YpANQJ0RT6EKYgK6AVHczzuG917AQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@chainsafe/xdelta3-node-linux-x64-gnu@1.0.2':
+    resolution: {integrity: sha512-sL/UjocpJHLI1W+rqUxaOmlP4+nUUjQQCJuaReV1nDErgeQuUfPhYU8wQYRbwA+uCVR2eP2D64V5yehpFyNtcA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@chainsafe/xdelta3-node-linux-x64-musl@1.0.2':
+    resolution: {integrity: sha512-iwl17R2731jCVNfNJFLd3dXw7g4B0wR4AQYf/hUtG6xfxcF3fF75zuTfDbgXq3rH6x0vJv7Bn5Vtm+7w1PQtWg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@chainsafe/xdelta3-node-win32-x64-msvc@1.0.2':
+    resolution: {integrity: sha512-aRsLH7Pxq+hVvhCXwYWmlvtTa07f1btKSejK64yOlptIVrL0PEqlI0ocIYFyHPd1oDsfgBW6645/572ASlYOTw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@chainsafe/xdelta3-node@1.0.2':
+    resolution: {integrity: sha512-zVuznkGTJ2tq1BJktRtc54zyPBZIHKoAf0cQWyoXs0dCju8PimKS5T8I7uwSRV36OkejxCIzFzYOqAlrnNnKGg==}
+    engines: {node: '>= 10'}
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -7803,6 +7856,37 @@ snapshots:
       tiny-worker: 2.3.0
     transitivePeerDependencies:
       - supports-color
+
+  '@chainsafe/xdelta3-node-darwin-arm64@1.0.2':
+    optional: true
+
+  '@chainsafe/xdelta3-node-darwin-x64@1.0.2':
+    optional: true
+
+  '@chainsafe/xdelta3-node-linux-arm64-gnu@1.0.2':
+    optional: true
+
+  '@chainsafe/xdelta3-node-linux-arm64-musl@1.0.2':
+    optional: true
+
+  '@chainsafe/xdelta3-node-linux-x64-gnu@1.0.2':
+    optional: true
+
+  '@chainsafe/xdelta3-node-linux-x64-musl@1.0.2':
+    optional: true
+
+  '@chainsafe/xdelta3-node-win32-x64-msvc@1.0.2':
+    optional: true
+
+  '@chainsafe/xdelta3-node@1.0.2':
+    optionalDependencies:
+      '@chainsafe/xdelta3-node-darwin-arm64': 1.0.2
+      '@chainsafe/xdelta3-node-darwin-x64': 1.0.2
+      '@chainsafe/xdelta3-node-linux-arm64-gnu': 1.0.2
+      '@chainsafe/xdelta3-node-linux-arm64-musl': 1.0.2
+      '@chainsafe/xdelta3-node-linux-x64-gnu': 1.0.2
+      '@chainsafe/xdelta3-node-linux-x64-musl': 1.0.2
+      '@chainsafe/xdelta3-node-win32-x64-msvc': 1.0.2
 
   '@colors/colors@1.5.0': {}
 
