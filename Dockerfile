@@ -1,4 +1,3 @@
-
 # --platform=$BUILDPLATFORM is used build javascript source with host arch
 # Otherwise TS builds on emulated archs and can be extremely slow (+1h)
 FROM --platform=${BUILDPLATFORM:-amd64} node:24-slim AS build_src
@@ -8,9 +7,11 @@ RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools
 
 COPY . .
 
-RUN pnpm install --non-interactive --frozen-lockfile && \
+ENV CI=true
+RUN corepack enable && corepack prepare --activate && \
+  pnpm install --frozen-lockfile && \
   pnpm build && \
-  pnpm install --non-interactive --frozen-lockfile --production
+  pnpm install --frozen-lockfile --prod
 
 # To have access to the specific branch and commit used to build this source,
 # a git-data.json file is created by persisting git data at build time. Then,
@@ -28,7 +29,7 @@ RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools
 COPY --from=build_src /usr/app .
 
 # Rebuild native deps
-RUN pnpm rebuild
+RUN corepack enable && pnpm rebuild
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
