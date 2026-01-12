@@ -1,7 +1,6 @@
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {BeaconState, Slot} from "@lodestar/types";
 import {formatBytes} from "@lodestar/utils";
-import {RegenErrorType} from "../historicalState/types.ts";
 import {StateRegenContext, applyStateRegenPlan} from "./apply.ts";
 import {fetchStateRegenArtifacts} from "./fetch.ts";
 import {HierarchicalLayers} from "./hierarchicalLayers.ts";
@@ -21,20 +20,15 @@ export async function regenerateState(
   const regenTimer = ctx.metrics?.regenTime.startTimer();
   ctx.metrics?.regenRequestCount.inc();
 
-  try {
-    const plan = buildStateRegenPlan(ctx.layers, target);
-    const artifacts = await fetchStateRegenArtifacts({db: ctx.db, metrics: ctx.metrics}, plan, opts);
-    const finalState = await applyStateRegenPlan(ctx, plan, artifacts);
-    const state = snapshotToBeaconState(ctx, finalState);
+  const plan = buildStateRegenPlan(ctx.layers, target);
+  const artifacts = await fetchStateRegenArtifacts(ctx, plan, opts);
+  const finalState = await applyStateRegenPlan(ctx, plan, artifacts);
+  const state = snapshotToBeaconState(ctx, finalState);
 
-    ctx.metrics?.regenSuccessCount.inc();
-    regenTimer?.();
+  ctx.metrics?.regenSuccessCount.inc();
+  regenTimer?.();
 
-    return state;
-  } catch (err) {
-    ctx.metrics?.regenErrorCount.inc({reason: RegenErrorType.loadState});
-    throw err;
-  }
+  return state;
 }
 
 export async function storeDifferentialState(

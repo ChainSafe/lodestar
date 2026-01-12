@@ -3,7 +3,7 @@ import {BeaconState, Slot} from "@lodestar/types";
 import {Logger, formatBytes} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
 import {IStateDiffCodec} from "../interface.js";
-import {DifferentialStateRegenMetrics} from "./metrics.ts";
+import {DiffStateRegenErrorType, DifferentialStateRegenMetrics} from "./metrics.ts";
 import {BeaconStateDifferential, BeaconStateSnapshot} from "./ssz.js";
 
 /**
@@ -65,12 +65,21 @@ export function applyStateDifferential(
     const balancesBytes = codec.apply(base.balancesBytes, diff.balancesDiffBytes);
     timer?.();
 
+    if (stateBytes.byteLength === 0 || balancesBytes.byteLength === 0) {
+      throw new Error(
+        `Invalid state after applying diffs: 
+          stateBytesSize=${stateBytes.byteLength},
+          balancesBytesSize=${balancesBytes.byteLength}`
+      );
+    }
+
     return {
       slot: diff.slot,
       stateBytes,
       balancesBytes,
     };
   } catch (error) {
+    modules.metrics?.regenErrorCount.inc({reason: DiffStateRegenErrorType.diffReplay});
     logger?.error("Failed to apply state differential", logInfo);
     throw error;
   }

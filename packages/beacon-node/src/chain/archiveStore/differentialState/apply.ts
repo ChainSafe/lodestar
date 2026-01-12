@@ -42,13 +42,6 @@ export async function applyStateRegenPlan(
       missingDiffs: artifacts.missingDiffs.join(","),
     });
   }
-  if (artifacts.diffs.length + artifacts.missingDiffs.length !== plan.diffSlots.length) {
-    throw new Error(`Can not find required state diffs ${plan.diffSlots.join(",")}`);
-  }
-
-  if (plan.blockReplay && artifacts.diffs.at(-1)?.slot !== plan.blockReplay.fromSlot - 1) {
-    throw new Error(`Can not replay blocks due to missing state diffs ${artifacts.missingDiffs.join(",")}`);
-  }
 
   ctx.logger?.verbose("Replaying state diffs", {
     snapshotSlot: plan.snapshotSlot,
@@ -60,14 +53,6 @@ export async function applyStateRegenPlan(
     {codec: ctx.codec, logger: ctx.logger},
     {stateDifferentials: artifacts.diffs, stateSnapshot: artifacts.snapshot}
   );
-
-  if (stateWithDiffApplied.stateBytes.byteLength === 0 || stateWithDiffApplied.balancesBytes.byteLength === 0) {
-    throw new Error(
-      `Invalid state after applying diffs: 
-      stateBytesSize=${stateWithDiffApplied.stateBytes.byteLength},
-      balancesBytesSize=${stateWithDiffApplied.balancesBytes.byteLength}`
-    );
-  }
 
   if (!plan.blockReplay) return stateWithDiffApplied;
 
