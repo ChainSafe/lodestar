@@ -746,6 +746,9 @@ importers:
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
+      triple-beam:
+        specifier: ^1.3.0
+        version: 1.3.0
       winston:
         specifier: ^3.8.2
         version: 3.8.2
@@ -768,9 +771,6 @@ importers:
       '@types/triple-beam':
         specifier: ^1.3.2
         version: 1.3.2
-      triple-beam:
-        specifier: ^1.3.0
-        version: 1.3.0
 
   packages/params:
     devDependencies:
