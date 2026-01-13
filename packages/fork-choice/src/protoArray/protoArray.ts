@@ -1,10 +1,30 @@
-import {GENESIS_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {MapDef, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
-import {ExecutionStatus, HEX_ZERO_HASH, LVHExecResponse, ProtoBlock, ProtoNode} from "./interface.js";
+import {
+  ExecutionStatus,
+  generateProtoNodeKey,
+  generateProtoNodeKey as getProtoNodeKey,
+  HEX_ZERO_HASH,
+  LVHExecResponse,
+  PayloadStatus,
+  ProtoBlock,
+  ProtoNode,
+  ProtoNodeKey,
+  protoNodeKey,
+} from "./interface.js";
+
+/**
+ * Threshold for payload timeliness (>50% of PTC must vote)
+ * Spec: gloas/fork-choice.md (PAYLOAD_TIMELY_THRESHOLD = PTC_SIZE // 2)
+ */
+const PAYLOAD_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
@@ -40,6 +60,16 @@ export class ProtoArray {
    * Blocks with slot < gloasForkSlot use pre-Gloas (PENDING only)
    */
   private gloasForkEpoch: Epoch;
+
+  /**
+   * PTC (Payload Timeliness Committee) votes per block
+   * Maps block root to boolean array of size PTC_SIZE (from params: 512 mainnet, 2 minimal)
+   * Spec: gloas/fork-choice.md#modified-store (line 148)
+   *
+   * ptcVote[blockRoot][i] = true if PTC member i voted payload_present=true
+   * Used by is_payload_timely() to determine if payload is timely
+   */
+  private ptcVote = new Map<RootHex, boolean[]>();
 
   constructor({
     pruneThreshold,
@@ -288,6 +318,32 @@ export class ProtoArray {
           this.propagateValidExecutionStatusByIndex(node.parent);
         }
       }
+
+  /**
+   * Update PTC votes for multiple validators attesting to a block
+   * Spec: gloas/fork-choice.md#new-on_payload_attestation_message
+   *
+   * @param blockRoot - The beacon block root being attested
+   * @param ptcIndices - Array of PTC committee indices that voted (0..PTC_SIZE-1)
+   * @param payloadPresent - Whether the validators attest the payload is present
+   */
+  notifyPtcMessage(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void {
+    const votes = this.ptcVote.get(blockRoot);
+    if (votes === undefined) {
+      // Block not found or not a Gloas block, ignore
+      return;
+    }
+
+    for (const ptcIndex of ptcIndices) {
+      if (ptcIndex < 0 || ptcIndex >= PTC_SIZE) {
+        throw new Error(`Invalid PTC index: ${ptcIndex}, must be 0..${PTC_SIZE - 1}`);
+      }
+
+      // Update the vote
+      votes[ptcIndex] = payloadPresent;
+    }
+  }
+
   }
 
   /**

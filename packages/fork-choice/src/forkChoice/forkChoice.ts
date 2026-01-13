@@ -854,6 +854,16 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Process a PTC (Payload Timeliness Committee) message
+   * Updates the PTC votes for multiple validators attesting to a block
+   * Spec: gloas/fork-choice.md#new-on_payload_attestation_message
+   */
+  notifyPtcMessage(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void {
+    this.protoArray.notifyPtcMessage(blockRoot, ptcIndices, payloadPresent);
+  }
+
+
+  /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    * This should only be called once per slot because:
    *   - calling this multiple times in the same slot does not update `votes`
