@@ -105,10 +105,16 @@ export function processWithdrawals(
   }
 
   // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/capella/beacon-chain.md#new-update_next_withdrawal_validator_index
-  const nextIndex =
-    state.nextWithdrawalValidatorIndex + Math.max(processedValidatorSweepCount, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
-  const nextValidatorIndex = nextIndex % state.validators.length;
-  state.nextWithdrawalValidatorIndex = nextValidatorIndex;
+  // Update the nextWithdrawalValidatorIndex
+  if (latestWithdrawal && expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
+     // All slots filled, nextWithdrawalValidatorIndex should be validatorIndex having next turn
+    state.nextWithdrawalValidatorIndex = (latestWithdrawal.validatorIndex + 1) % state.validators.length;
+  } else {
+    // expected withdrawals came up short in the bound, so we move nextWithdrawalValidatorIndex to
+    // the next post the bound
+    state.nextWithdrawalValidatorIndex =
+      (state.nextWithdrawalValidatorIndex + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) % state.validators.length;
+  }
 }
 
 function getBuilderWithdrawals(
