@@ -33,12 +33,8 @@ export function processWithdrawals(
   // processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas (EIP-7732)
   // processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
   // processedValidatorSweepCount is withdrawals coming from validator sweep
-  const {
-    expectedWithdrawals,
-    processedBuilderWithdrawalsCount,
-    processedPartialWithdrawalsCount,
-    processedValidatorSweepCount,
-  } = getExpectedWithdrawals(fork, state);
+  const {expectedWithdrawals, processedBuilderWithdrawalsCount, processedPartialWithdrawalsCount} =
+    getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
   // After gloas, withdrawals are verified later in processExecutionPayloadEnvelope
@@ -107,7 +103,7 @@ export function processWithdrawals(
   // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/capella/beacon-chain.md#new-update_next_withdrawal_validator_index
   // Update the nextWithdrawalValidatorIndex
   if (latestWithdrawal && expectedWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
-     // All slots filled, nextWithdrawalValidatorIndex should be validatorIndex having next turn
+    // All slots filled, nextWithdrawalValidatorIndex should be validatorIndex having next turn
     state.nextWithdrawalValidatorIndex = (latestWithdrawal.validatorIndex + 1) % state.validators.length;
   } else {
     // expected withdrawals came up short in the bound, so we move nextWithdrawalValidatorIndex to
