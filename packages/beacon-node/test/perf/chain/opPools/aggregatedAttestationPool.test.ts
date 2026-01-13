@@ -68,7 +68,8 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           timeliness: false,
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         },
-        originalState.slot
+        originalState.slot,
+        {GLOAS_FORK_EPOCH: Infinity}
       );
 
       for (let slot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch); slot < originalState.slot; slot++) {
