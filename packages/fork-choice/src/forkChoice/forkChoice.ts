@@ -190,7 +190,7 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_ancestor
    */
-  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex {
+  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): ProtoNode {
     return this.protoArray.getAncestor(blockRoot, ancestorSlot);
   }
 
@@ -640,15 +640,15 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Check block is a descendant of the finalized block at the checkpoint finalized slot.
-    const blockAncestorRoot = this.getAncestor(parentRootHex, finalizedSlot);
+    const blockAncestorNode = this.getAncestor(parentRootHex, finalizedSlot);
     const finalizedRoot = this.fcStore.finalizedCheckpoint.rootHex;
-    if (blockAncestorRoot !== finalizedRoot) {
+    if (blockAncestorNode.blockRoot !== finalizedRoot) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT,
           finalizedRoot,
-          blockAncestor: blockAncestorRoot,
+          blockAncestor: blockAncestorNode.blockRoot,
         },
       });
     }

@@ -20,7 +20,16 @@ export class ProtoArray {
   finalizedEpoch: Epoch;
   finalizedRoot: RootHex;
   nodes: ProtoNode[] = [];
-  indices = new Map<RootHex, number>();
+  /**
+   * Maps ForkChoiceNode key (root:payloadStatus) to node index
+   *
+   * Unified approach for both Fulu and Gloas:
+   * - Fulu (pre-Gloas): All nodes use payloadStatus = PAYLOAD_STATUS_FULL (payload embedded)
+   * - Gloas: Nodes can be PENDING/EMPTY/FULL based on payload availability
+   */
+  indices = new Map<ProtoNodeKey, number>();
+  // Given a PENDING index, maps to its EMPTY and FULL variant indices
+  variantIndices = new MapDef<number, Map<PayloadStatus, number>>(() => new Map<PayloadStatus, number>());
   lvhError?: LVHExecError;
 
   private previousProposerBoost: ProposerBoost | null = null;
@@ -82,6 +91,35 @@ export class ProtoArray {
     return computeEpochAtSlot(block.slot) >= this.gloasForkEpoch;
   }
 
+  /**
+   * Get node index for a node identifier
+   * Spec: gloas/fork-choice.md (helper for node lookup)
+   */
+  getNodeIndex(node: ProtoNode): number | undefined {
+    return this.indices.get(protoNodeKey(node));
+  }
+
+  /**
+   * Get node index for a block root
+   * Pre-Gloas blocks only exist as FULL (payload embedded in block)
+   * Gloas blocks exist as PENDING/EMPTY/FULL variants
+   *
+   * Try FULL first (for pre-Gloas), fallback to PENDING (for Gloas)
+   */
+  private getNodeIndexByRoot(root: RootHex): number | undefined {
+    // Try FULL first (pre-Gloas blocks are FULL)
+    const fullIndex = this.getNodeIndexByKey(generateProtoNodeKey(root, PayloadStatus.FULL));
+    if (fullIndex !== undefined) {
+      return fullIndex;
+    }
+    // Fallback to PENDING (Gloas blocks have PENDING variant)
+    return this.getNodeIndexByKey(generateProtoNodeKey(root, PayloadStatus.PENDING));
+  }
+
+  getNodeIndexByKey(key: ProtoNodeKey): number | undefined {
+    return this.indices.get(key);
+  }
+
 
   /**
    * Iterate backwards through the array, touching all nodes and their parents and potentially
@@ -115,11 +153,11 @@ export class ProtoArray {
     finalizedRoot: RootHex;
     currentSlot: Slot;
   }): void {
-    if (deltas.length !== this.indices.size) {
+    if (deltas.length !== this.nodes.length) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_DELTA_LEN,
         deltas: deltas.length,
-        indices: this.indices.size,
+        indices: this.nodes.length,
       });
     }
 
@@ -216,7 +254,7 @@ export class ProtoArray {
    */
   onBlock(block: ProtoBlock, currentSlot: Slot): void {
     // If the block is already known, simply ignore it
-    if (this.indices.has(block.blockRoot)) {
+    if (this.hasBlock(block.blockRoot)) {
       return;
     }
     if (block.executionStatus === ExecutionStatus.Invalid) {
@@ -226,28 +264,30 @@ export class ProtoArray {
       });
     }
 
-    const node: ProtoNode = {
-      ...block,
-      parent: this.indices.get(block.parentRoot),
-      weight: 0,
-      bestChild: undefined,
-      bestDescendant: undefined,
-    };
+      // Pre-Gloas (Fulu): Only create FULL node (payload embedded in block)
+      const node: ProtoNode = {
+        ...block,
+        parent: this.getNodeIndexByRoot(block.parentRoot),
+        payloadStatus: PayloadStatus.FULL,
+        weight: 0,
+        bestChild: undefined,
+        bestDescendant: undefined,
+      };
 
-    const nodeIndex = this.nodes.length;
+      const nodeIndex = this.nodes.length;
+      const nodeKey = getProtoNodeKey(block.blockRoot, PayloadStatus.FULL);
+      this.indices.set(nodeKey, nodeIndex);
+      this.nodes.push(node);
 
-    this.indices.set(node.blockRoot, nodeIndex);
-    this.nodes.push(node);
+      // If this node is valid, lets propagate the valid status up the chain
+      // and throw error if we counter invalid, as this breaks consensus
+      if (node.parent !== undefined) {
+        this.maybeUpdateBestChildAndDescendant(node.parent, nodeIndex, currentSlot);
 
-    // If this node is valid, lets propagate the valid status up the chain
-    // and throw error if we counter invalid, as this breaks consensus
-    if (node.parent !== undefined) {
-      this.maybeUpdateBestChildAndDescendant(node.parent, nodeIndex, currentSlot);
-
-      if (node.executionStatus === ExecutionStatus.Valid) {
-        this.propagateValidExecutionStatusByIndex(node.parent);
+        if (node.executionStatus === ExecutionStatus.Valid) {
+          this.propagateValidExecutionStatusByIndex(node.parent);
+        }
       }
-    }
   }
 
   /**
@@ -298,7 +338,7 @@ export class ProtoArray {
       // if its in fcU.
       //
       const {invalidateFromParentBlockRoot, latestValidExecHash} = execResponse;
-      const invalidateFromParentIndex = this.indices.get(invalidateFromParentBlockRoot);
+      const invalidateFromParentIndex = this.getNodeIndexByRoot(invalidateFromParentBlockRoot);
       if (invalidateFromParentIndex === undefined) {
         throw Error(`Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} in forkChoice`);
       }
@@ -459,8 +499,12 @@ export class ProtoArray {
 
   /**
    * Follows the best-descendant links to find the best-block (i.e., head-block).
+   *
+   * Returns the compound key (root:payloadStatus) to identify the exact node variant.
+   * For pre-Gloas forks, only FULL variants exist (payload embedded).
+   * For Gloas, may return PENDING/EMPTY/FULL variants.
    */
-  findHead(justifiedRoot: RootHex, currentSlot: Slot): RootHex {
+  findHead(justifiedRoot: RootHex, currentSlot: Slot): ProtoNodeKey {
     if (this.lvhError) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
@@ -468,7 +512,7 @@ export class ProtoArray {
       });
     }
 
-    const justifiedIndex = this.indices.get(justifiedRoot);
+    const justifiedIndex = this.getNodeIndexByRoot(justifiedRoot);
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN,
@@ -520,7 +564,7 @@ export class ProtoArray {
       });
     }
 
-    return bestNode.blockRoot;
+    return protoNodeKey(bestNode);
   }
 
   /**
@@ -780,13 +824,14 @@ export class ProtoArray {
     }
 
     const finalizedSlot = computeStartSlotAtEpoch(this.finalizedEpoch);
-    return this.finalizedEpoch === 0 || this.finalizedRoot === this.getAncestorOrNull(node.blockRoot, finalizedSlot);
+    const ancestorNode = this.getAncestorOrNull(node.blockRoot, finalizedSlot);
+    return this.finalizedEpoch === 0 || (ancestorNode !== null && this.finalizedRoot === ancestorNode.blockRoot);
   }
 
   /**
    * Same to getAncestor but it may return null instead of throwing error
    */
-  getAncestorOrNull(blockRoot: RootHex, ancestorSlot: Slot): RootHex | null {
+  getAncestorOrNull(blockRoot: RootHex, ancestorSlot: Slot): ProtoNode | null {
     try {
       return this.getAncestor(blockRoot, ancestorSlot);
     } catch (_) {
@@ -795,32 +840,34 @@ export class ProtoArray {
   }
 
   /**
-   * Returns the block root of an ancestor of `blockRoot` at the given `slot`.
+   * Returns the node identifier of an ancestor of `blockRoot` at the given `slot`.
    * (Note: `slot` refers to the block that is *returned*, not the one that is supplied.)
    *
    * NOTE: May be expensive: potentially walks through the entire fork of head to finalized block
    *
    * ### Specification
    *
-   * Equivalent to:
+   * Modified for Gloas to return node identifier instead of just root:
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#modified-get_ancestor
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_ancestor
+   * Pre-Gloas: Returns (root, PAYLOAD_STATUS_FULL)
+   * Gloas: Returns (root, payloadStatus) based on actual node state
    */
-  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex {
-    const block = this.getBlock(blockRoot);
-    if (!block) {
+  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): ProtoNode {
+    const node = this.getNode(blockRoot);
+    if (!node) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: blockRoot,
       });
     }
 
-    if (block.slot > ancestorSlot) {
+    if (node.slot > ancestorSlot) {
       // Search for a slot that is lte the target slot.
       // We check for lower slots to account for skip slots.
-      for (const node of this.iterateAncestorNodes(blockRoot)) {
-        if (node.slot <= ancestorSlot) {
-          return node.blockRoot;
+      for (const ancestorNode of this.iterateAncestorNodes(blockRoot)) {
+        if (ancestorNode.slot <= ancestorSlot) {
+          return ancestorNode;
         }
       }
       throw new ForkChoiceError({
@@ -830,14 +877,14 @@ export class ProtoArray {
       });
     }
     // Root is older or equal than queried slot, thus a skip slot. Return most recent root prior to slot.
-    return blockRoot;
+    return node;
   }
 
   /**
    * Iterate from a block root backwards over nodes
    */
   *iterateAncestorNodes(blockRoot: RootHex): IterableIterator<ProtoNode> {
-    const startIndex = this.indices.get(blockRoot);
+    const startIndex = this.getNodeIndexByRoot(blockRoot);
     if (startIndex === undefined) {
       return;
     }
@@ -867,7 +914,7 @@ export class ProtoArray {
    * Get all nodes from a block root backwards
    */
   getAllAncestorNodes(blockRoot: RootHex): ProtoNode[] {
-    const startIndex = this.indices.get(blockRoot);
+    const startIndex = this.getNodeIndexByRoot(blockRoot);
     if (startIndex === undefined) {
       return [];
     }
@@ -896,7 +943,7 @@ export class ProtoArray {
    * this is to find non-ancestor nodes of a blockRoot.
    */
   getAllNonAncestorNodes(blockRoot: RootHex): ProtoNode[] {
-    const startIndex = this.indices.get(blockRoot);
+    const startIndex = this.getNodeIndexByRoot(blockRoot);
     if (startIndex === undefined) {
       return [];
     }
@@ -925,7 +972,7 @@ export class ProtoArray {
    * Returns both ancestor and non-ancestor nodes in a single traversal.
    */
   getAllAncestorAndNonAncestorNodes(blockRoot: RootHex): {ancestors: ProtoNode[]; nonAncestors: ProtoNode[]} {
-    const startIndex = this.indices.get(blockRoot);
+    const startIndex = this.getNodeIndexByRoot(blockRoot);
     if (startIndex === undefined) {
       return {ancestors: [], nonAncestors: []};
     }
@@ -960,11 +1007,11 @@ export class ProtoArray {
   }
 
   hasBlock(blockRoot: RootHex): boolean {
-    return this.indices.has(blockRoot);
+    return this.getNodeIndexByRoot(blockRoot) !== undefined;
   }
 
   getNode(blockRoot: RootHex): ProtoNode | undefined {
-    const blockIndex = this.indices.get(blockRoot);
+    const blockIndex = this.getNodeIndexByRoot(blockRoot);
     if (blockIndex === undefined) {
       return undefined;
     }
@@ -1058,7 +1105,8 @@ export class ProtoArray {
   }
 
   length(): number {
-    return this.indices.size;
+    // Note: this is number of nodes and not number of unique block root
+    return this.indices.size;;
   }
 
   private getNodeFromIndex(index: number): ProtoNode {
