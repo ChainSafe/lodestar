@@ -21,8 +21,6 @@ export {
 } from "./cache/effectiveBalanceIncrements.js";
 export {
   EpochCache,
-  EpochCacheError,
-  EpochCacheErrorCode,
   type EpochCacheImmutableData,
   createEmptyEpochCacheImmutableData,
 } from "./cache/epochCache.js";
@@ -67,3 +65,4 @@ export type {
   CachedBeaconStatePhase0,
 } from "./types.js";
 export * from "./util/index.js";
+export {ShufflingError, ShufflingErrorCode} from "./util/shufflingUtils.js";
