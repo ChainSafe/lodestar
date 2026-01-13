@@ -26,6 +26,7 @@ import {
   FLAG_UNSLASHED,
   hasMarkers,
 } from "../util/attesterStatus.js";
+import {EpochShuffling} from "../util/epochShuffling.js";
 
 export type EpochTransitionCacheOpts = {
   /**
@@ -161,6 +162,12 @@ export interface EpochTransitionCache {
    * Shuffling decision root that gets set on the EpochCache in afterProcessEpoch
    */
   nextShufflingDecisionRoot: RootHex;
+
+  /**
+   * Pre-computed shuffling for epoch N+2, populated by processProposerLookahead (Fulu+).
+   * Used by afterProcessEpoch to avoid recomputing the same shuffling.
+   */
+  nextShuffling: EpochShuffling | null;
 
   /**
    * Altair specific, this is total active balances for the next epoch.
@@ -510,6 +517,7 @@ export function beforeProcessEpoch(
     indicesToEject,
     nextShufflingDecisionRoot,
     nextShufflingActiveIndices,
+    nextShuffling: null,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActivePrevEpoch,

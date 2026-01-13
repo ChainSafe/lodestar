@@ -23,6 +23,8 @@ export function processProposerLookahead(
   const epoch = state.epochCtx.epoch + MIN_SEED_LOOKAHEAD + 1;
 
   const shuffling = computeEpochShuffling(state, cache.nextShufflingActiveIndices, epoch);
+  // Save shuffling to cache so afterProcessEpoch can reuse it instead of recomputing
+  cache.nextShuffling = shuffling;
 
   const lastEpochProposerLookahead = computeProposerIndices(fork, state, shuffling, epoch);
 

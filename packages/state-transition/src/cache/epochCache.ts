@@ -152,7 +152,7 @@ export class EpochCache {
   /** Same as previousShuffling */
   currentShuffling: EpochShuffling;
   /** Same as previousShuffling */
-  nextShuffling: EpochShuffling | null;
+  nextShuffling: EpochShuffling;
   /**
    * Cache nextActiveIndices so that in afterProcessEpoch the next shuffling can be build synchronously
    * in case it is not built or the ShufflingCache is not available
@@ -253,7 +253,7 @@ export class EpochCache {
     nextDecisionRoot: RootHex;
     previousShuffling: EpochShuffling;
     currentShuffling: EpochShuffling;
-    nextShuffling: EpochShuffling | null;
+    nextShuffling: EpochShuffling;
     nextActiveIndices: Uint32Array;
     effectiveBalanceIncrements: EffectiveBalanceIncrements;
     totalSlashingsByIncrement: number;
@@ -385,15 +385,15 @@ export class EpochCache {
 
     const nextActiveIndices = new Uint32Array(nextActiveIndicesAsNumberArray);
 
-    const previousShuffling = computeEpochShuffling(
+    const currentShuffling = computeEpochShuffling(
       state,
-      new Uint32Array(previousActiveIndicesAsNumberArray),
-      previousEpoch
+      new Uint32Array(currentActiveIndicesAsNumberArray),
+      currentEpoch
     );
 
-    const currentShuffling = isGenesis
-      ? previousShuffling
-      : computeEpochShuffling(state, new Uint32Array(currentActiveIndicesAsNumberArray), currentEpoch);
+    const previousShuffling = isGenesis
+      ? currentShuffling
+      : computeEpochShuffling(state, new Uint32Array(previousActiveIndicesAsNumberArray), previousEpoch);
 
     const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
@@ -603,14 +603,9 @@ export class EpochCache {
     this.previousShuffling = this.currentShuffling;
     this.previousDecisionRoot = this.currentDecisionRoot;
 
-    // move next to current or calculate upcoming
+    // move next to current
     this.currentDecisionRoot = this.nextDecisionRoot;
-    if (this.nextShuffling) {
-      // was already pulled to the EpochCache
-      this.currentShuffling = this.nextShuffling;
-    } else {
-      this.currentShuffling = computeEpochShuffling(state, this.nextActiveIndices, upcomingEpoch);
-    }
+    this.currentShuffling = this.nextShuffling;
 
     // Compute shuffling for epoch n+2
     //
@@ -619,15 +614,15 @@ export class EpochCache {
     // At each epoch boundary, processProposerLookahead() shifts out the current epoch's proposers
     // and appends new proposers for epoch n + MIN_SEED_LOOKAHEAD + 1 (i.e., epoch n+2).
     //
-    // processProposerLookahead() computes its own shuffling for epoch n+2 using computeEpochShuffling()
-    // with cache.nextShufflingActiveIndices. We also cache the n+2 shuffling here in nextShuffling so that:
-    // 1. It becomes currentShuffling in the next epoch transition to avoiding recomputation
-    // 2. beacon-node can populate its ShufflingCache for attestation verification
+    // processProposerLookahead() already computes the n+2 shuffling and stores it in
+    // epochTransitionCache.nextShuffling. Reuse it here to avoid duplicate computation.
+    // Pre-Fulu, we need to compute it here since processProposerLookahead doesn't run.
     //
     // See: https://eips.ethereum.org/EIPS/eip-7917
     this.nextDecisionRoot = epochTransitionCache.nextShufflingDecisionRoot;
     this.nextActiveIndices = epochTransitionCache.nextShufflingActiveIndices;
-    this.nextShuffling = computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
+    this.nextShuffling =
+      epochTransitionCache.nextShuffling ?? computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);
 
     // TODO: DEDUPLICATE from createEpochCache
     //
