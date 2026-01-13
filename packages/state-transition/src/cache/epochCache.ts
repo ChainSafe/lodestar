@@ -70,6 +70,10 @@ export type EpochCacheImmutableData = {
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
+  /** Pre-computed shufflings from beacon-node's ShufflingCache, if available */
+  previousShuffling?: EpochShuffling;
+  currentShuffling?: EpochShuffling;
+  nextShuffling?: EpochShuffling;
 };
 
 /** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
@@ -385,17 +389,19 @@ export class EpochCache {
 
     const nextActiveIndices = new Uint32Array(nextActiveIndicesAsNumberArray);
 
-    const currentShuffling = computeEpochShuffling(
-      state,
-      new Uint32Array(currentActiveIndicesAsNumberArray),
-      currentEpoch
-    );
+    // Use shufflings from opts if provided (from beacon-node's ShufflingCache), otherwise compute
+    const currentShuffling =
+      opts?.currentShuffling ??
+      computeEpochShuffling(state, new Uint32Array(currentActiveIndicesAsNumberArray), currentEpoch);
 
-    const previousShuffling = isGenesis
-      ? currentShuffling
-      : computeEpochShuffling(state, new Uint32Array(previousActiveIndicesAsNumberArray), previousEpoch);
+    const previousShuffling =
+      opts?.previousShuffling ??
+      (isGenesis
+        ? currentShuffling
+        : computeEpochShuffling(state, new Uint32Array(previousActiveIndicesAsNumberArray), previousEpoch));
 
-    const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+    const nextShuffling =
+      opts?.nextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
