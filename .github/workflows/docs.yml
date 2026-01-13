@@ -29,11 +29,14 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_REF }}
 
-      - uses: actions/setup-node@v4
+      - name: Install pnpm before setup node
+        uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           check-latest: true
-          cache: yarn
+          cache: pnpm
 
       - name: Node.js version
         id: node
@@ -46,25 +49,25 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/pnpm-lock.yaml', '**/package.json') }}
 
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
+        run: pnpm install --frozen-lockfile && pnpm build
 
       - name: Build
-        run: yarn build
+        run: pnpm build
         if: steps.cache-deps.outputs.cache-hit == 'true'
 
       - name: Build and collect docs
-        run: yarn docs:build
+        run: pnpm docs:build
 
       - name: Lint built docs
-        run: yarn docs:lint:fix
+        run: pnpm docs:lint:fix
 
       - name: Build docs
         working-directory: docs
-        run: yarn && yarn build
+        run: pnpm && pnpm build
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3

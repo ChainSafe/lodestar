@@ -95,7 +95,7 @@ jobs:
         # This "temp" commit doesn't change the actually release commit which is captured above.
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
-          yarn lerna version ${{ needs.tag.outputs.version }} \
+          pnpm lerna version ${{ needs.tag.outputs.version }} \
           --force-publish \
           --exact \
           --yes \
@@ -106,7 +106,7 @@ jobs:
           git commit -am "${{ needs.tag.outputs.version }}"
 
       - name: Publish to npm registry
-        run: yarn run release:publish --dist-tag rc
+        run: pnpm run release:publish --dist-tag rc
 
       # In case of failure
       - name: Rollback on failure
