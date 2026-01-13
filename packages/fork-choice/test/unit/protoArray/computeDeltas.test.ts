@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
-import {NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
+import {NULL_VOTE_INDEX, PayloadStatus} from "../../../src/protoArray/interface.js";
 
 describe("computeDeltas", () => {
   it("zero hash", () => {
@@ -10,6 +10,8 @@ describe("computeDeltas", () => {
     const indices = new Map();
     const voteCurrentIndices = [];
     const voteNextIndices = [];
+    const voteCurrentPayloadStatus = [];
+    const voteNextPayloadStatus = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
@@ -17,6 +19,8 @@ describe("computeDeltas", () => {
       indices.set(i.toString(), i);
       voteCurrentIndices.push(0);
       voteNextIndices.push(0);
+      voteCurrentPayloadStatus.push(PayloadStatus.FULL);
+      voteNextPayloadStatus.push(PayloadStatus.FULL);
       oldBalances[i] = 0;
       newBalances[i] = 0;
     }
@@ -24,10 +28,13 @@ describe("computeDeltas", () => {
     const {deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
+      voteCurrentPayloadStatus,
       voteNextIndices,
+      voteNextPayloadStatus,
       oldBalances,
       newBalances,
-      new Set()
+      new Set(),
+      new Map()
     );
 
     expect(deltas.length).toEqual(validatorCount);
@@ -44,6 +51,8 @@ describe("computeDeltas", () => {
     const indices = new Map();
     const voteCurrentIndices = [];
     const voteNextIndices = [];
+    const voteCurrentPayloadStatus = [];
+    const voteNextPayloadStatus = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
@@ -51,6 +60,8 @@ describe("computeDeltas", () => {
       indices.set((i + 1).toString(), i);
       voteCurrentIndices.push(NULL_VOTE_INDEX);
       voteNextIndices.push(0);
+      voteCurrentPayloadStatus.push(PayloadStatus.FULL);
+      voteNextPayloadStatus.push(PayloadStatus.FULL);
       oldBalances[i] = balance;
       newBalances[i] = balance;
     }
@@ -58,10 +69,13 @@ describe("computeDeltas", () => {
     const {deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
+      voteCurrentPayloadStatus,
       voteNextIndices,
+      voteNextPayloadStatus,
       oldBalances,
       newBalances,
-      new Set()
+      new Set(),
+      new Map()
     );
 
     expect(deltas.length).toEqual(validatorCount);
@@ -82,6 +96,8 @@ describe("computeDeltas", () => {
     const indices = new Map();
     const voteCurrentIndices = [];
     const voteNextIndices = [];
+    const voteCurrentPayloadStatus = [];
+    const voteNextPayloadStatus = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
@@ -89,6 +105,8 @@ describe("computeDeltas", () => {
       indices.set((i + 1).toString(), i);
       voteCurrentIndices.push(NULL_VOTE_INDEX);
       voteNextIndices.push(i);
+      voteCurrentPayloadStatus.push(PayloadStatus.FULL);
+      voteNextPayloadStatus.push(PayloadStatus.FULL);
       oldBalances[i] = balance;
       newBalances[i] = balance;
     }
@@ -96,10 +114,13 @@ describe("computeDeltas", () => {
     const {deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
+      voteCurrentPayloadStatus,
       voteNextIndices,
+      voteNextPayloadStatus,
       oldBalances,
       newBalances,
-      new Set()
+      new Set(),
+      new Map()
     );
 
     expect(deltas.length).toEqual(validatorCount);
@@ -116,6 +137,8 @@ describe("computeDeltas", () => {
     const indices = new Map();
     const voteCurrentIndices = [];
     const voteNextIndices = [];
+    const voteCurrentPayloadStatus = [];
+    const voteNextPayloadStatus = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
@@ -123,6 +146,8 @@ describe("computeDeltas", () => {
       indices.set((i + 1).toString(), i);
       voteCurrentIndices.push(0);
       voteNextIndices.push(1);
+      voteCurrentPayloadStatus.push(PayloadStatus.FULL);
+      voteNextPayloadStatus.push(PayloadStatus.FULL);
       oldBalances[i] = balance;
       newBalances[i] = balance;
     }
@@ -130,10 +155,13 @@ describe("computeDeltas", () => {
     const {deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
+      voteCurrentPayloadStatus,
       voteNextIndices,
+      voteNextPayloadStatus,
       oldBalances,
       newBalances,
-      new Set()
+      new Set(),
+      new Map()
     );
 
     expect(deltas.length).toEqual(validatorCount);
@@ -159,6 +187,8 @@ describe("computeDeltas", () => {
     const indices = new Map();
     const voteCurrentIndices = [];
     const voteNextIndices = [];
+    const voteCurrentPayloadStatus = [];
+    const voteNextPayloadStatus = [];
     const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
     const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
@@ -166,6 +196,8 @@ describe("computeDeltas", () => {
       indices.set((i + 1).toString(), i);
       voteCurrentIndices.push(0);
       voteNextIndices.push(1);
+      voteCurrentPayloadStatus.push(PayloadStatus.FULL);
+      voteNextPayloadStatus.push(PayloadStatus.FULL);
       oldBalances[i] = oldBalance;
       newBalances[i] = newBalance;
     }
@@ -173,10 +205,13 @@ describe("computeDeltas", () => {
     const {deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
+      voteCurrentPayloadStatus,
       voteNextIndices,
+      voteNextPayloadStatus,
       oldBalances,
       newBalances,
-      new Set()
+      new Set(),
+      new Map()
     );
 
     expect(deltas.length).toEqual(validatorCount);
@@ -203,6 +238,8 @@ describe("computeDeltas", () => {
     // Both validators move votes from block1 to block2
     const voteCurrentIndices = Array.from({length: 2}, () => 0);
     const voteNextIndices = Array.from({length: 2}, () => 1);
+    const voteCurrentPayloadStatus = Array.from({length: 2}, () => PayloadStatus.FULL);
+    const voteNextPayloadStatus = Array.from({length: 2}, () => PayloadStatus.FULL);
 
     // There is only one validator in the old balances.
     const oldBalances = getEffectiveBalanceIncrementsZeroed(1);
@@ -215,10 +252,13 @@ describe("computeDeltas", () => {
     const {deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
+      voteCurrentPayloadStatus,
       voteNextIndices,
+      voteNextPayloadStatus,
       oldBalances,
       newBalances,
-      new Set()
+      new Set(),
+      new Map()
     );
 
     expect(deltas.length).toEqual(2);
@@ -242,6 +282,8 @@ describe("computeDeltas", () => {
     // Both validators move votes from block1 to block2
     const voteCurrentIndices = Array.from({length: 2}, () => 0);
     const voteNextIndices = Array.from({length: 2}, () => 1);
+    const voteCurrentPayloadStatus = Array.from({length: 2}, () => PayloadStatus.FULL);
+    const voteNextPayloadStatus = Array.from({length: 2}, () => PayloadStatus.FULL);
     // There are two validators in the old balances.
     const oldBalances = getEffectiveBalanceIncrementsZeroed(2);
     oldBalances[0] = balance;
@@ -253,10 +295,13 @@ describe("computeDeltas", () => {
     const {deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
+      voteCurrentPayloadStatus,
       voteNextIndices,
+      voteNextPayloadStatus,
       oldBalances,
       newBalances,
-      new Set()
+      new Set(),
+      new Map()
     );
 
     expect(deltas.length).toEqual(2);
@@ -281,6 +326,8 @@ describe("computeDeltas", () => {
     // Both validators move votes from block1 to block2
     const voteCurrentIndices = Array.from({length: 2}, () => 0);
     const voteNextIndices = Array.from({length: 2}, () => 1);
+    const voteCurrentPayloadStatus = Array.from({length: 2}, () => PayloadStatus.FULL);
+    const voteNextPayloadStatus = Array.from({length: 2}, () => PayloadStatus.FULL);
 
     const balances = new Uint16Array([firstBalance, secondBalance]);
     // 1st validator is part of an attester slashing
@@ -288,10 +335,13 @@ describe("computeDeltas", () => {
     let {deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
+      voteCurrentPayloadStatus,
       voteNextIndices,
+      voteNextPayloadStatus,
       balances,
       balances,
-      equivocatingIndices
+      equivocatingIndices,
+      new Map()
     );
     expect(deltas[0]).toBeWithMessage(
       -1 * (firstBalance + secondBalance),
@@ -301,10 +351,13 @@ describe("computeDeltas", () => {
     deltas = computeDeltas(
       indices.size,
       voteCurrentIndices,
+      voteCurrentPayloadStatus,
       voteNextIndices,
+      voteNextPayloadStatus,
       balances,
       balances,
-      equivocatingIndices
+      equivocatingIndices,
+      new Map()
     ).deltas;
     expect(deltas).toEqualWithMessage([0, 0], "calling computeDeltas again should not have any affect on the weight");
   });

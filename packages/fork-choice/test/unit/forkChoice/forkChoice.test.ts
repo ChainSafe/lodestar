@@ -125,7 +125,14 @@ describe("Forkchoice", () => {
     const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1));
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries).toHaveLength(1);
-    expect(summaries[0]).toEqual({...block, bestChild: undefined, bestDescendant: undefined, parent: 0, weight: 0});
+    expect(summaries[0]).toEqual({
+      ...block,
+      bestChild: undefined,
+      bestDescendant: undefined,
+      parent: 0,
+      weight: 0,
+      payloadStatus: 2, // Pre-Gloas blocks always have PAYLOAD_STATUS_FULL
+    });
   });
 
   it("getAllAncestorAndNonAncestorBlocks equals getAllAncestorBlocks + getAllNonAncestorBlocks", () => {

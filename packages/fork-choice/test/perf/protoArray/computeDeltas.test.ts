@@ -1,7 +1,7 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
-import {NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
+import {NULL_VOTE_INDEX, PayloadStatus} from "../../../src/protoArray/interface.js";
 
 describe("computeDeltas", () => {
   let oldBalances: EffectiveBalanceIncrements;
@@ -35,6 +35,8 @@ describe("computeDeltas", () => {
         inainactiveValidatorsPercentage === 0 ? null : Math.floor(1 / inainactiveValidatorsPercentage);
       const voteCurrentIndices = Array.from({length: numValidator}, () => NULL_VOTE_INDEX);
       const voteNextIndices = Array.from({length: numValidator}, () => NULL_VOTE_INDEX);
+      const voteCurrentPayloadStatus = Array.from({length: numValidator}, () => PayloadStatus.FULL);
+      const voteNextPayloadStatus = Array.from({length: numValidator}, () => PayloadStatus.FULL);
       bench({
         id: `computeDeltas ${numValidator} validators ${inainactiveValidatorsPercentage * 100}% inactive`,
         beforeEach: () => {
@@ -43,16 +45,19 @@ describe("computeDeltas", () => {
             voteCurrentIndices[i] = Math.floor(numProtoNode / 2);
             voteNextIndices[i] = Math.floor(numProtoNode / 2) + 1;
           }
-          return {voteCurrentIndices, voteNextIndices};
+          return {voteCurrentIndices, voteCurrentPayloadStatus, voteNextIndices, voteNextPayloadStatus};
         },
-        fn: ({voteCurrentIndices, voteNextIndices}) => {
+        fn: ({voteCurrentIndices, voteCurrentPayloadStatus, voteNextIndices, voteNextPayloadStatus}) => {
           computeDeltas(
             numProtoNode,
             voteCurrentIndices,
+            voteCurrentPayloadStatus,
             voteNextIndices,
+            voteNextPayloadStatus,
             oldBalances,
             newBalances,
-            new Set([1, 2, 3, 4, 5])
+            new Set([1, 2, 3, 4, 5]),
+            new Map()
           );
         },
       });
