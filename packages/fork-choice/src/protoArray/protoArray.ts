@@ -930,26 +930,51 @@ export class ProtoArray {
    * - There is some internal error relating to invalid indices inside `this`.
    */
   maybePrune(finalizedRoot: RootHex): ProtoBlock[] {
-    const finalizedIndex = this.indices.get(finalizedRoot);
-    if (finalizedIndex === undefined) {
+    const finalizedPendingKey = getProtoNodeKey(finalizedRoot, PayloadStatus.PENDING);
+    const finalizedFullKey = getProtoNodeKey(finalizedRoot, PayloadStatus.FULL);
+
+    const finalizedPendingIndex = this.getNodeIndexByKey(finalizedPendingKey);
+    const finalizedFullIndex = this.getNodeIndexByKey(finalizedFullKey);
+
+    // If finalizedRoot exists in pre-gloas, FULL will be defined and PENDING undefined
+    // If finalizedRoot exists in gloas, PENDING will be defined and FULL may or may not be defined
+    if (finalizedPendingIndex === undefined && finalizedFullIndex === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN,
         root: finalizedRoot,
       });
     }
 
+    // We take the minimum index of the two variants to ensure we don't prune too much
+    const finalizedIndex = Math.min(
+      finalizedPendingIndex !== undefined ? finalizedPendingIndex : Number.MAX_SAFE_INTEGER,
+      finalizedFullIndex !== undefined ? finalizedFullIndex : Number.MAX_SAFE_INTEGER
+    );
+
     if (finalizedIndex < this.pruneThreshold) {
       // Pruning at small numbers incurs more cost than benefit
       return [];
     }
 
-    // Remove the this.indices key/values for all the to-be-deleted nodes
+    // Remove the indices key/values for all the to-be-deleted nodes
+    // Also remove PTC votes for pruned blocks (Gloas)
+    // Also remove variants (EMPTY, FULL) of finalized blocks
+    const nodesToPrune = Array.from({ length: finalizedIndex + 1 }, (_, i) => i);
+    const variants = this.variantIndices.get(finalizedIndex);
+    if (variants) nodesToPrune.push(...variants.values());
+
     for (let nodeIndex = 0; nodeIndex < finalizedIndex; nodeIndex++) {
       const node = this.nodes[nodeIndex];
       if (node === undefined) {
         throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: nodeIndex});
       }
-      this.indices.delete(node.blockRoot);
+      const nodeKey = generateProtoNodeKey(node.blockRoot, node.payloadStatus);
+      this.indices.delete(nodeKey);
+      this.variantIndices.delete(nodeIndex);
+
+      // Prune PTC votes for this block to prevent memory leak
+      // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
+      this.ptcVote.delete(node.blockRoot);
     }
 
     // Store nodes prior to finalization
@@ -958,6 +983,7 @@ export class ProtoArray {
     this.nodes = this.nodes.slice(finalizedIndex);
 
     // Adjust the indices map
+    const newIndices = new Map<string, number>();
     for (const [key, value] of this.indices.entries()) {
       if (value < finalizedIndex) {
         throw new ProtoArrayError({
@@ -965,8 +991,30 @@ export class ProtoArray {
           value: "indices",
         });
       }
-      this.indices.set(key, value - finalizedIndex);
+      newIndices.set(key, value - finalizedIndex);
     }
+    this.indices = newIndices;
+
+    // Adjust variantIndices map
+    const newVariantIndices = new MapDef<number, Map<PayloadStatus, number>>(() => new Map<PayloadStatus, number>());
+    for (const [pendingIndex, variants] of this.variantIndices.entries()) {
+      if (pendingIndex < finalizedIndex) {
+        // Skip - this PENDING node was pruned
+        continue;
+      }
+      const newPendingIndex = pendingIndex - finalizedIndex;
+      const newVariants = new Map<PayloadStatus, number>();
+      for (const [status, variantIndex] of variants.entries()) {
+        if (variantIndex >= finalizedIndex) {
+          newVariants.set(status, variantIndex - finalizedIndex);
+        }
+        // else: variant was pruned, don't include
+      }
+      if (newVariants.size > 0) {
+        newVariantIndices.set(newPendingIndex, newVariants);
+      }
+    }
+    this.variantIndices = newVariantIndices;
 
     // Iterate through all the existing nodes and adjust their indices to match the new layout of this.nodes
     for (let i = 0, len = this.nodes.length; i < len; i++) {
