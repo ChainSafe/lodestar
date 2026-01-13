@@ -129,28 +129,10 @@ export class ShufflingCache {
   }
 
   /**
-   * Gets a cached shuffling synchronously via the epoch and decision root.
-   * Returns null if not found in cache.
-   */
-  getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
-    if (!cacheItem) {
-      this.metrics?.shufflingCache.miss.inc();
-      return null;
-    }
-    if (isShufflingCacheItem(cacheItem)) {
-      this.metrics?.shufflingCache.hit.inc();
-      return cacheItem.shuffling;
-    }
-    this.metrics?.shufflingCache.shufflingPromiseNotResolved.inc();
-    return null;
-  }
-
-  /**
    * Add an EpochShuffling to the ShufflingCache. If a promise for the shuffling is present it will
    * resolve the promise with the built shuffling
    */
-  set(shuffling: EpochShuffling, decisionRoot: string): void {
+  private set(shuffling: EpochShuffling, decisionRoot: string): void {
     const shufflingAtEpoch = this.itemsByDecisionRootByEpoch.getOrDefault(shuffling.epoch);
     // if a pending shuffling promise exists, resolve it
     const cacheItem = shufflingAtEpoch.get(decisionRoot);

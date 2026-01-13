@@ -1004,10 +1004,7 @@ export class BeaconChain implements IBeaconChain {
       state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
     }
 
-    // Get shuffling from the regenerated state and populate the cache
-    const shuffling = state.epochCtx.getShufflingAtEpoch(attEpoch);
-    this.shufflingCache.set(shuffling, shufflingDependentRoot);
-    return shuffling;
+    return state.epochCtx.getShufflingAtEpoch(attEpoch);
   }
 
   /**
