@@ -817,10 +817,36 @@ export class ForkChoice implements IForkChoice {
 
     this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch, attDataRoot, forceImport);
 
+    // Pre-gloas: payload is always present
+    // Post-gloas:
+    // - always add weight to PENDING
+    // - if message.slot > block.slot, it also add weights to FULL or EMPTY
+    let payloadStatus: PayloadStatus;
+    if (computeEpochAtSlot(slot) < this.config.GLOAS_FORK_EPOCH) {
+      payloadStatus = PayloadStatus.FULL;
+    } else {
+      // We need to retrieve block to compare slot
+      // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
+      const block = this.getBlockHex(blockRootHex);
+
+      // If slot > block.slot, we can determine FULL or EMPTY. Else always PENDING
+      if (block && slot > block.slot) {
+        if (attestationData.index === 1) {
+          payloadStatus = PayloadStatus.FULL;
+        } else if (attestationData.index === 0) {
+          payloadStatus = PayloadStatus.EMPTY;
+        } else {
+          payloadStatus = PayloadStatus.PENDING;
+        }
+      } else {
+        payloadStatus = PayloadStatus.PENDING;
+      }
+    }
+
     if (slot < this.fcStore.currentSlot) {
       for (const validatorIndex of attestation.attestingIndices) {
         if (!this.fcStore.equivocatingIndices.has(validatorIndex)) {
-          this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
+          this.addLatestMessage(validatorIndex, slot, blockRootHex, payloadStatus);
         }
       }
     } else {
@@ -1473,27 +1499,48 @@ export class ForkChoice implements IForkChoice {
   /**
    * Add a validator's latest message to the tracked votes.
    * Always sync voteCurrentIndices and voteNextIndices so that it'll not throw in computeDeltas()
+   *
+   * Modified for Gloas to accept slot and payloadPresent.
+   * Spec: gloas/fork-choice.md#modified-update_latest_messages
+   *
+   * For backward compatibility with Fulu (pre-Gloas):
+   * - Accepts both epoch-derived and slot parameters
+   * - payloadPresent defaults to true for Fulu (payloads embedded in blocks)
    */
-  private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: RootHex): void {
+  private addLatestMessage(
+    validatorIndex: ValidatorIndex,
+    nextSlot: Slot,
+    nextRoot: RootHex,
+    nextPayloadStatus: PayloadStatus,
+  ): void {
     // should not happen, attestation is validated before this step
-    const nextIndex = this.protoArray.indices.get(nextRoot);
+    // For pre-Gloas blocks: use FULL (payload embedded in block)
+    // For Gloas blocks: use PENDING (all Gloas blocks have PENDING variant)
+    const lookupStatus = computeEpochAtSlot(nextSlot) < this.config.GLOAS_FORK_EPOCH
+      ? PayloadStatus.FULL
+      : PayloadStatus.PENDING;
+    const key = generateProtoNodeKey(nextRoot, lookupStatus);
+    const nextIndex = this.protoArray.getNodeIndexByKey(key);
     if (nextIndex === undefined) {
       throw new Error(`Could not find proto index for nextRoot ${nextRoot}`);
     }
 
     // ensure there is no undefined entries in Votes arrays
-    if (this.voteNextEpochs.length < validatorIndex + 1) {
-      for (let i = this.voteNextEpochs.length; i < validatorIndex + 1; i++) {
-        this.voteNextEpochs[i] = INIT_VOTE_EPOCH;
+    if (this.voteNextSlots.length < validatorIndex + 1) {
+      for (let i = this.voteNextSlots.length; i < validatorIndex + 1; i++) {
+        this.voteNextSlots[i] = INIT_VOTE_SLOT;
+        this.voteNextPayloadStatus[i] = PayloadStatus.FULL;
+        this.voteCurrentPayloadStatus[i] = PayloadStatus.FULL;
         this.voteCurrentIndices[i] = this.voteNextIndices[i] = NULL_VOTE_INDEX;
       }
     }
 
-    const existingNextEpoch = this.voteNextEpochs[validatorIndex];
-    if (existingNextEpoch === INIT_VOTE_EPOCH || nextEpoch > existingNextEpoch) {
+    const existingNextSlot = this.voteNextSlots[validatorIndex];
+    if (existingNextSlot === INIT_VOTE_SLOT || computeEpochAtSlot(nextSlot) > computeEpochAtSlot(existingNextSlot)) {
       // nextIndex is transfered to currentIndex in computeDeltas()
       this.voteNextIndices[validatorIndex] = nextIndex;
-      this.voteNextEpochs[validatorIndex] = nextEpoch;
+      this.voteNextSlots[validatorIndex] = nextSlot;
+      this.voteNextPayloadStatus[validatorIndex] = nextPayloadStatus;
     }
     // else its an old vote, don't count it
   }
@@ -1505,18 +1552,17 @@ export class ForkChoice implements IForkChoice {
   private processAttestationQueue(): void {
     const currentSlot = this.fcStore.currentSlot;
     for (const [slot, byRoot] of this.queuedAttestations.entries()) {
-      const targetEpoch = computeEpochAtSlot(slot);
       if (slot < currentSlot) {
         this.queuedAttestations.delete(slot);
-        for (const [blockRoot, validatorIndices] of byRoot.entries()) {
+        for (const [blockRoot, validatorVotes] of byRoot.entries()) {
           const blockRootHex = blockRoot;
-          for (const validatorIndex of validatorIndices) {
+          for (const [validatorIndex, payloadStatus] of validatorVotes.entries()) {
             // equivocatingIndices was checked in onAttestation
-            this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
+            this.addLatestMessage(validatorIndex, slot, blockRootHex, payloadStatus);
           }
 
           if (slot === currentSlot - 1) {
-            this.queuedAttestationsPreviousSlot += validatorIndices.size;
+            this.queuedAttestationsPreviousSlot += validatorVotes.size;
           }
         }
       } else {
