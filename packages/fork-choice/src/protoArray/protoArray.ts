@@ -294,6 +294,76 @@ export class ProtoArray {
       });
     }
 
+    const isGloas = this.isGloasBlock(block);
+
+    if (isGloas) {
+      // Gloas: Create PENDING + EMPTY nodes with correct parent relationships
+      // Parent of new PENDING node = parent block's EMPTY or FULL (inter-block edge)
+      // Parent of new EMPTY node = own PENDING node (intra-block edge)
+
+      // For fork transition: if parent is Fulu (pre-Gloas), point to parent's FULL
+      // Otherwise, determine which parent payload status this block extends
+      let parentIndex: number | undefined;
+      let key: ProtoNodeKey;
+      const parentNode = this.getNode(block.parentRoot);
+
+      if (parentNode && !this.isGloasBlock(parentNode)) {
+        // Fork transition: parent is Fulu, so it only has FULL variant
+        key = getProtoNodeKey(block.parentRoot, PayloadStatus.FULL);
+      } else {
+        // Both blocks are Gloas: determine which parent payload status to extend
+        const parentPayloadStatus = this.getParentPayloadStatus(block);
+        key = getProtoNodeKey(block.parentRoot, parentPayloadStatus);
+      }
+      parentIndex = this.getNodeIndexByKey(key);
+
+      // Create PENDING node
+      const pendingNode: ProtoNode = {
+        ...block,
+        parent: parentIndex, // Points to parent's EMPTY/FULL or FULL (for transition)
+        payloadStatus: PayloadStatus.PENDING,
+        weight: 0,
+        bestChild: undefined,
+        bestDescendant: undefined,
+      };
+
+      const pendingIndex = this.nodes.length;
+      const pendingKey = generateProtoNodeKey(block.blockRoot, PayloadStatus.PENDING);
+      this.indices.set(pendingKey, pendingIndex);
+      this.nodes.push(pendingNode);
+
+      // Create EMPTY variant as a child of PENDING
+      const emptyNode: ProtoNode = {
+        ...block,
+        parent: pendingIndex, // Points to own PENDING
+        payloadStatus: PayloadStatus.EMPTY,
+        weight: 0,
+        bestChild: undefined,
+        bestDescendant: undefined,
+      };
+
+      const emptyIndex = this.nodes.length;
+      const emptyKey = generateProtoNodeKey(block.blockRoot, PayloadStatus.EMPTY);
+      this.indices.set(emptyKey, emptyIndex);
+      this.nodes.push(emptyNode);
+      this.variantIndices.getOrDefault(pendingIndex).set(PayloadStatus.EMPTY, emptyIndex);
+
+      // Update bestChild pointers
+      if (parentIndex !== undefined) {
+        this.maybeUpdateBestChildAndDescendant(parentIndex, pendingIndex, currentSlot);
+
+        if (pendingNode.executionStatus === ExecutionStatus.Valid) {
+          this.propagateValidExecutionStatusByIndex(parentIndex);
+        }
+      }
+
+      // Update bestChild for PENDING → EMPTY edge
+      this.maybeUpdateBestChildAndDescendant(pendingIndex, emptyIndex, currentSlot);
+
+      // Initialize PTC votes for this block (all false initially)
+      // Spec: gloas/fork-choice.md#modified-on_block (line 645)
+      this.ptcVote.set(block.blockRoot, new Array(PTC_SIZE).fill(false));
+    } else {
       // Pre-Gloas (Fulu): Only create FULL node (payload embedded in block)
       const node: ProtoNode = {
         ...block,
