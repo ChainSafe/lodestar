@@ -525,23 +525,24 @@ export class ForkChoice implements IForkChoice {
       currentSlot,
     });
 
-    const headRoot = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
-    const headIndex = this.protoArray.indices.get(headRoot);
+    // findHead returns compound key (root:payloadStatus) for Gloas, or (root:FULL) for pre-Gloas
+    const headKey = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
+    const headIndex = this.protoArray.indices.get(headKey);
     if (headIndex === undefined) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
-        root: headRoot,
+        root: headKey,
       });
     }
-    const headNode = this.protoArray.nodes[headIndex];
-    if (headNode === undefined) {
+    const head = this.protoArray.nodes[headIndex];
+    if (head === undefined) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
-        root: headRoot,
+        root: headKey,
       });
     }
 
-    this.head = headNode;
+    this.head = head;
     return this.head;
   }
 
@@ -865,10 +866,10 @@ export class ForkChoice implements IForkChoice {
       // Delay consideration in the fork choice until their slot is in the past.
       // ```
       const byRoot = this.queuedAttestations.getOrDefault(slot);
-      const validatorIndices = byRoot.getOrDefault(blockRootHex);
+      const validatorVotes = byRoot.getOrDefault(blockRootHex);
       for (const validatorIndex of attestation.attestingIndices) {
         if (!this.fcStore.equivocatingIndices.has(validatorIndex)) {
-          validatorIndices.add(validatorIndex);
+          validatorVotes.set(validatorIndex, payloadStatus);
         }
       }
     }
