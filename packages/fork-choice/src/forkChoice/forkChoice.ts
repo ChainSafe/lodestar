@@ -479,10 +479,13 @@ export class ForkChoice implements IForkChoice {
     } = computeDeltas(
       this.protoArray.nodes.length,
       this.voteCurrentIndices,
+      this.voteCurrentPayloadStatus,
       this.voteNextIndices,
+      this.voteNextPayloadStatus,
       oldBalances,
       newBalances,
-      this.fcStore.equivocatingIndices
+      this.fcStore.equivocatingIndices,
+      this.protoArray.variantIndices,
     );
     timer?.();
 
