@@ -428,6 +428,65 @@ export class ProtoArray {
           this.propagateValidExecutionStatusByIndex(node.parent);
         }
       }
+    }
+  }
+
+  /**
+   * Called when an execution payload is received for a block (Gloas only)
+   * Creates a FULL variant node as a sibling to the existing EMPTY variant
+   * Both EMPTY and FULL have parent = own PENDING node
+   *
+   * Spec: gloas/fork-choice.md (on_execution_payload event)
+   */
+  onExecutionPayload(blockRoot: RootHex, currentSlot: Slot): void {
+    // First find FULL variant. If it exists, nothing to do. Block is always full pre-fulu
+    const fullKey = getProtoNodeKey(blockRoot, PayloadStatus.FULL);
+    const existedFullIndex = this.getNodeIndexByKey(fullKey);
+    if (existedFullIndex !== undefined) {
+      const existedFullNode = this.nodes[existedFullIndex];
+      if (existedFullNode) {
+        // Pre-Gloas: execution payloads are part of the block, no separate event
+        return;
+      }
+    }
+
+    // Get PENDING node for Gloas blocks
+    const pendingKey = getProtoNodeKey(blockRoot, PayloadStatus.PENDING);
+    const pendingIndex = this.getNodeIndexByKey(pendingKey);
+
+    if (pendingIndex === undefined) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.UNKNOWN_BLOCK,
+        root: blockRoot,
+      });
+    }
+
+    const pendingNode = this.nodes[pendingIndex];
+    if (!pendingNode) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+        index: pendingIndex,
+      });
+    }
+
+    // Create FULL variant as a child of PENDING (sibling to EMPTY)
+    const fullNode: ProtoNode = {
+      ...pendingNode,
+      parent: pendingIndex, // Points to own PENDING (same as EMPTY)
+      payloadStatus: PayloadStatus.FULL,
+      weight: 0,
+      bestChild: undefined,
+      bestDescendant: undefined,
+    };
+
+    const fullIndex = this.nodes.length;
+    this.indices.set(fullKey, fullIndex);
+    this.variantIndices.getOrDefault(pendingIndex).set(PayloadStatus.FULL, fullIndex);
+    this.nodes.push(fullNode);
+
+    // Update bestChild for PENDING node (may now prefer FULL over EMPTY)
+    this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot);
+  }
 
   /**
    * Update PTC votes for multiple validators attesting to a block

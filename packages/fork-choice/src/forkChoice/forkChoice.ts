@@ -896,6 +896,14 @@ export class ForkChoice implements IForkChoice {
     this.protoArray.notifyPtcMessage(blockRoot, ptcIndices, payloadPresent);
   }
 
+  /**
+   * Notify fork choice that an execution payload has arrived (Gloas fork)
+   * Creates the FULL variant of a Gloas block when the payload becomes available
+   * Spec: gloas/fork-choice.md#new-on_execution_payload
+   */
+  onExecutionPayload(blockRoot: RootHex): void {
+    this.protoArray.onExecutionPayload(blockRoot, this.fcStore.currentSlot);
+  }
 
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
