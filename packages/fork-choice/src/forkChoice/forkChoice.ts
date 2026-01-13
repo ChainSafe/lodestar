@@ -23,6 +23,7 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
+  isGloasBeaconBlock,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -72,7 +73,7 @@ export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
 
 // the initial vote epoch for all validators
-const INIT_VOTE_EPOCH: Epoch = 0;
+const INIT_VOTE_SLOT: Slot = 0;
 
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
