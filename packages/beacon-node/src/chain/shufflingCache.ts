@@ -1,6 +1,6 @@
-import {EpochShuffling} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, EpochShuffling, attesterShufflingDecisionRoot} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
-import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {LodestarError, Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 
 /**
@@ -126,6 +126,18 @@ export class ShufflingCache {
     }
     this.metrics?.shufflingCache.shufflingPromiseNotResolved.inc();
     return cacheItem.promise;
+  }
+
+  /**
+   * Process a post state to extract and cache the shuffling for the given epoch.
+   * Extracts the decision root from the state internally.
+   */
+  processState(state: CachedBeaconStateAllForks, epoch: Epoch): void {
+    const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
+    const decisionRoot = attesterShufflingDecisionRoot(state, epoch);
+    if (decisionRoot !== null) {
+      this.set(shuffling, toRootHex(decisionRoot));
+    }
   }
 
   /**
