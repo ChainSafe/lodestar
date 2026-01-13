@@ -33,7 +33,6 @@ import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
   ExecutionStatus,
-  generateProtoNodeKey,
   HEX_ZERO_HASH,
   LVHExecResponse,
   MaybeValidExecutionStatus,
@@ -42,6 +41,7 @@ import {
   ProtoBlock,
   ProtoNode,
   VoteIndex,
+  generateProtoNodeKey,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
@@ -485,7 +485,7 @@ export class ForkChoice implements IForkChoice {
       oldBalances,
       newBalances,
       this.fcStore.equivocatingIndices,
-      this.protoArray.variantIndices,
+      this.protoArray.variantIndices
     );
     timer?.();
 
@@ -776,7 +776,9 @@ export class ForkChoice implements IForkChoice {
       // Extract parentBlockHash for Gloas blocks (ePBS)
       // Spec: gloas/fork-choice.md#new-get_parent_payload_status
       // Gloas blocks have signedExecutionPayloadBid with parentBlockHash
-      parentBlockHash: isGloasBeaconBlock(block) ? toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash) : undefined,
+      parentBlockHash: isGloasBeaconBlock(block)
+        ? toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
+        : undefined,
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
@@ -1528,14 +1530,13 @@ export class ForkChoice implements IForkChoice {
     validatorIndex: ValidatorIndex,
     nextSlot: Slot,
     nextRoot: RootHex,
-    nextPayloadStatus: PayloadStatus,
+    nextPayloadStatus: PayloadStatus
   ): void {
     // should not happen, attestation is validated before this step
     // For pre-Gloas blocks: use FULL (payload embedded in block)
     // For Gloas blocks: use PENDING (all Gloas blocks have PENDING variant)
-    const lookupStatus = computeEpochAtSlot(nextSlot) < this.config.GLOAS_FORK_EPOCH
-      ? PayloadStatus.FULL
-      : PayloadStatus.PENDING;
+    const lookupStatus =
+      computeEpochAtSlot(nextSlot) < this.config.GLOAS_FORK_EPOCH ? PayloadStatus.FULL : PayloadStatus.PENDING;
     const key = generateProtoNodeKey(nextRoot, lookupStatus);
     const nextIndex = this.protoArray.getNodeIndexByKey(key);
     if (nextIndex === undefined) {

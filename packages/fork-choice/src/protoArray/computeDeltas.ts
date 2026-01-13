@@ -36,7 +36,7 @@ export function computeDeltas(
   oldBalances: EffectiveBalanceIncrements,
   newBalances: EffectiveBalanceIncrements,
   equivocatingIndices: Set<ValidatorIndex>,
-  variantIndices: Map<number, Map<PayloadStatus, number>>,
+  variantIndices: Map<number, Map<PayloadStatus, number>>
 ): DeltasResult {
   if (voteCurrentIndices.length !== voteNextIndices.length) {
     throw new Error(
@@ -54,7 +54,10 @@ export function computeDeltas(
 
   // avoid creating new variables in the loop to potentially reduce GC pressure
   let oldBalance: number, newBalance: number;
-  let currentIndex: VoteIndex, nextIndex: VoteIndex, currentVariantIndex: number | undefined, nextVariantIndex: number | undefined;
+  let currentIndex: VoteIndex,
+    nextIndex: VoteIndex,
+    currentVariantIndex: number | undefined,
+    nextVariantIndex: number | undefined;
   let currentPayloadStatus: PayloadStatus, nextPayloadStatus: PayloadStatus;
   // sort equivocating indices to avoid Set.has() in the loop
   const equivocatingArray = Array.from(equivocatingIndices).sort((a, b) => a - b);

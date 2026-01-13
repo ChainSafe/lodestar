@@ -1,22 +1,19 @@
 import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
   ExecutionStatus,
-  generateProtoNodeKey,
-  generateProtoNodeKey as getProtoNodeKey,
   HEX_ZERO_HASH,
   LVHExecResponse,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
   ProtoNodeKey,
+  generateProtoNodeKey,
+  generateProtoNodeKey as getProtoNodeKey,
   protoNodeKey,
 } from "./interface.js";
 
@@ -94,7 +91,11 @@ export class ProtoArray {
     this.gloasForkEpoch = config.GLOAS_FORK_EPOCH;
   }
 
-  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot, config: {GLOAS_FORK_EPOCH: number}): ProtoArray {
+  static initialize(
+    block: Omit<ProtoBlock, "targetRoot">,
+    currentSlot: Slot,
+    config: {GLOAS_FORK_EPOCH: number}
+  ): ProtoArray {
     const protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
       justifiedEpoch: block.justifiedEpoch,
@@ -186,9 +187,7 @@ export class ProtoArray {
     // Match means child extends FULL variant (parent has payload)
     // No match means child extends EMPTY variant (parent has no payload)
     const parentExecutionHash = parentNode.executionPayloadBlockHash;
-    return parentBlockHash === parentExecutionHash
-      ? PayloadStatus.FULL
-      : PayloadStatus.EMPTY;
+    return parentBlockHash === parentExecutionHash ? PayloadStatus.FULL : PayloadStatus.EMPTY;
   }
 
   /**
@@ -821,7 +820,6 @@ export class ProtoArray {
     proposerBoostRoot: RootHex | null,
     executionPayloadStates?: Map<RootHex, unknown>
   ): number {
-
     // For Fulu: simple return payload status
     // PENDING=0, EMPTY=1, FULL=2
     if (node.payloadStatus === PayloadStatus.PENDING) {
@@ -837,11 +835,10 @@ export class ProtoArray {
     // based on should_extend_payload
     if (node.payloadStatus === PayloadStatus.EMPTY) {
       return 1; // EMPTY
-    } else {
-      // FULL - check should_extend_payload
-      const shouldExtend = this.shouldExtendPayload(node.blockRoot, proposerBoostRoot, executionPayloadStates);
-      return shouldExtend ? 2 : 1; // Return 2 if extending, else 1 to prefer EMPTY
     }
+    // FULL - check should_extend_payload
+    const shouldExtend = this.shouldExtendPayload(node.blockRoot, proposerBoostRoot, executionPayloadStates);
+    return shouldExtend ? 2 : 1; // Return 2 if extending, else 1 to prefer EMPTY
   }
 
   /**
@@ -959,7 +956,7 @@ export class ProtoArray {
     // Remove the indices key/values for all the to-be-deleted nodes
     // Also remove PTC votes for pruned blocks (Gloas)
     // Also remove variants (EMPTY, FULL) of finalized blocks
-    const nodesToPrune = Array.from({ length: finalizedIndex + 1 }, (_, i) => i);
+    const nodesToPrune = Array.from({length: finalizedIndex + 1}, (_, i) => i);
     const variants = this.variantIndices.get(finalizedIndex);
     if (variants) nodesToPrune.push(...variants.values());
 
@@ -1074,11 +1071,7 @@ export class ProtoArray {
    *
    * @returns true if this is the EMPTY vs FULL edge case, false otherwise
    */
-  private isEmptyVsFullEdgeCase(
-    childNode: ProtoNode,
-    bestChildNode: ProtoNode,
-    currentSlot: Slot
-  ): boolean {
+  private isEmptyVsFullEdgeCase(childNode: ProtoNode, bestChildNode: ProtoNode, currentSlot: Slot): boolean {
     // Check if both nodes are:
     // 1. The same block root (different payload status variants)
     // 2. Both EMPTY or FULL (not PENDING)
@@ -1131,7 +1124,7 @@ export class ProtoArray {
 
     let newChildAndDescendant: ChildAndDescendant;
     const bestChildIndex = parentNode.bestChild;
-    blk: {
+    outer: {
       if (bestChildIndex !== undefined) {
         if (bestChildIndex === childIndex && !childLeadsToViableHead) {
           // the child is already the best-child of the parent but its not viable for the head
@@ -1155,67 +1148,62 @@ export class ProtoArray {
           if (childLeadsToViableHead && !bestChildLeadsToViableHead) {
             // the child leads to a viable head, but the current best-child doesn't
             newChildAndDescendant = changeToChild;
-            break blk;
-          } else if (!childLeadsToViableHead && bestChildLeadsToViableHead) {
+            break outer;
+          }
+          if (!childLeadsToViableHead && bestChildLeadsToViableHead) {
             // the best child leads to a viable head but the child doesn't
             newChildAndDescendant = noChange;
-            break blk;
-          } else {
-            // Both nodes lead to viable heads (or both don't), need to pick winner
+            break outer;
+          }
+          // Both nodes lead to viable heads (or both don't), need to pick winner
 
-            // Pre-fulu we pick whichever has higher weight, tie-breaker by root
-            // Post-fulu we pick whichever has higher weight, then tie-breaker by root, then tie-breaker by `getPayloadStatusTiebreaker`
-            // Edge case: when comparing EMPTY vs FULL variants of the same block from slot n-1 or n, weights are hardcoded to 0
-            // https://github.com/ethereum/consensus-specs/blob/69a2582d5d62c914b24894bdb65f4bd5d4e49ae4/specs/gloas/fork-choice.md?plain=1#L442
-            // in this case we use `get_payload_status_tiebreaker()` directly because weights(0) and roots are equal
+          // Pre-fulu we pick whichever has higher weight, tie-breaker by root
+          // Post-fulu we pick whichever has higher weight, then tie-breaker by root, then tie-breaker by `getPayloadStatusTiebreaker`
+          // Edge case: when comparing EMPTY vs FULL variants of the same block from slot n-1 or n, weights are hardcoded to 0
+          // https://github.com/ethereum/consensus-specs/blob/69a2582d5d62c914b24894bdb65f4bd5d4e49ae4/specs/gloas/fork-choice.md?plain=1#L442
+          // in this case we use `get_payload_status_tiebreaker()` directly because weights(0) and roots are equal
 
-            // Gloas: Check if this is the EMPTY vs FULL edge case for slot n or n-1
-            // If true, skip weight and root comparison (weights are 0, roots are equal)
-            const isEdgeCase = this.isEmptyVsFullEdgeCase(childNode, bestChildNode, currentSlot);
+          // Gloas: Check if this is the EMPTY vs FULL edge case for slot n or n-1
+          // If true, skip weight and root comparison (weights are 0, roots are equal)
+          const isEdgeCase = this.isEmptyVsFullEdgeCase(childNode, bestChildNode, currentSlot);
 
-            if (!isEdgeCase && childNode.weight !== bestChildNode.weight) {
-              // Different weights, choose the winner by weight
-              if (childNode.weight >= bestChildNode.weight) {
-                newChildAndDescendant = changeToChild;
-              } else {
-                newChildAndDescendant = noChange;
-              }
-              break blk;
-            }
-
-            if (!isEdgeCase && childNode.blockRoot !== bestChildNode.blockRoot) {
-              // Different blocks, tie-breaker by root
-              if (childNode.blockRoot >= bestChildNode.blockRoot) {
-                newChildAndDescendant = changeToChild;
-              } else {
-                newChildAndDescendant = noChange;
-              }
-              break blk;
-            }
-
-            // Same weight and same root (or edge case), tie-breaker by payload status
-            const childTiebreaker = this.getPayloadStatusTiebreaker(
-              childNode,
-              currentSlot,
-              null, // proposerBoostRoot
-              undefined // executionPayloadStates
-            );
-
-            const bestChildTiebreaker = this.getPayloadStatusTiebreaker(
-              bestChildNode,
-              currentSlot,
-              null,
-              undefined
-            );
-
-            if (childTiebreaker > bestChildTiebreaker) {
+          if (!isEdgeCase && childNode.weight !== bestChildNode.weight) {
+            // Different weights, choose the winner by weight
+            if (childNode.weight >= bestChildNode.weight) {
               newChildAndDescendant = changeToChild;
-            } else if (childTiebreaker < bestChildTiebreaker) {
-              newChildAndDescendant = noChange;
             } else {
-              // Equal in all aspects, noChange
               newChildAndDescendant = noChange;
             }
+            break outer;
+          }
+
+          if (!isEdgeCase && childNode.blockRoot !== bestChildNode.blockRoot) {
+            // Different blocks, tie-breaker by root
+            if (childNode.blockRoot >= bestChildNode.blockRoot) {
+              newChildAndDescendant = changeToChild;
+            } else {
+              newChildAndDescendant = noChange;
+            }
+            break outer;
+          }
+
+          // Same weight and same root (or edge case), tie-breaker by payload status
+          const childTiebreaker = this.getPayloadStatusTiebreaker(
+            childNode,
+            currentSlot,
+            null, // proposerBoostRoot
+            undefined // executionPayloadStates
+          );
+
+          const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, null, undefined);
+
+          if (childTiebreaker > bestChildTiebreaker) {
+            newChildAndDescendant = changeToChild;
+          } else if (childTiebreaker < bestChildTiebreaker) {
+            newChildAndDescendant = noChange;
+          } else {
+            // Equal in all aspects, noChange
+            newChildAndDescendant = noChange;
           }
         }
       } else if (childLeadsToViableHead) {
@@ -1226,7 +1214,7 @@ export class ProtoArray {
         newChildAndDescendant = noChange;
       }
     }
-      
+
     parentNode.bestChild = newChildAndDescendant[0];
     parentNode.bestDescendant = newChildAndDescendant[1];
   }
@@ -1586,7 +1574,7 @@ export class ProtoArray {
 
   length(): number {
     // Note: this is number of nodes and not number of unique block root
-    return this.indices.size;;
+    return this.indices.size;
   }
 
   private getNodeFromIndex(index: number): ProtoNode {

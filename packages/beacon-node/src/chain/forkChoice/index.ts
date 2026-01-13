@@ -146,7 +146,7 @@ export function initializeForkChoiceFromFinalizedState(
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       currentSlot,
-      config,
+      config
     ),
     state.validators.length,
     metrics,

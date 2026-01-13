@@ -131,7 +131,7 @@ export type ProtoBlock = BlockExtraMeta & {
 /**
  * A block root with additional metadata required to form a DAG
  * with vote weights and best blocks stored as metadata
- * 
+ *
  * It is also used as ForkChoiceNode in fork choice spec
  */
 export type ProtoNode = ProtoBlock & {
