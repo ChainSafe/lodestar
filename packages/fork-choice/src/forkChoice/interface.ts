@@ -4,7 +4,12 @@ import {
   EffectiveBalanceIncrements,
 } from "@lodestar/state-transition";
 import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
-import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
+import {
+  LVHExecResponse,
+  MaybeValidExecutionStatus,
+  ProtoBlock,
+  ProtoNode,
+} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
 
@@ -72,16 +77,18 @@ export interface IForkChoice {
   irrecoverableError?: Error;
 
   /**
-   * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
+   * Returns the ancestor node of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
    *
    * ## Specification
    *
-   * Equivalent to:
+   * Modified for Gloas to return ProtoNode instead of just root:
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#modified-get_ancestor
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_ancestor
+   * Pre-Gloas: Returns (root, PAYLOAD_STATUS_FULL)
+   * Gloas: Returns (root, payloadStatus) based on actual node state
    */
-  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex;
+  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): ProtoNode;
   /**
    * Run the fork choice rule to determine the head.
    *
@@ -169,6 +176,30 @@ export interface IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0-rc.3/specs/phase0/fork-choice.md#on_attester_slashing
    */
   onAttesterSlashing(slashing: AttesterSlashing): void;
+  /**
+   * Process PTC (Payload Timeliness Committee) messages from a block
+   * Updates the PTC votes for the attested beacon block
+   *
+   * ## Specification
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/gloas/fork-choice.md#new-notify_ptc_messages
+   *
+   * @param blockRoot - The beacon block root being attested
+   * @param ptcIndices - Array of PTC committee indices that voted
+   * @param payloadPresent - Whether validators attest the payload is present
+   */
+  notifyPtcMessage(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void;
+  /**
+   * Notify fork choice that an execution payload has arrived (Gloas fork)
+   * Creates the FULL variant of a Gloas block when the payload becomes available
+   *
+   * ## Specification
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-on_execution_payload
+   *
+   * @param blockRoot - The beacon block root for which the payload arrived
+   */
+  onExecutionPayload(blockRoot: RootHex): void;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */

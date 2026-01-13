@@ -24,6 +24,35 @@ export enum ExecutionStatus {
   Invalid = "Invalid",
 }
 
+/**
+ * Payload status for ePBS (Gloas fork)
+ * Spec: gloas/fork-choice.md#constants
+ */
+export enum PayloadStatus {
+  PENDING = 0,
+  EMPTY = 1,
+  FULL = 2,
+}
+
+/**
+ * Unique key for indexing ProtoNodes in the fork choice tree
+ * Format: "${root}:${payloadStatus}"
+ * Used to identify specific variants (PENDING/EMPTY/FULL) of a block
+ */
+export type ProtoNodeKey = string;
+
+/**
+ * Helper to convert ProtoNode to a unique key for indexing
+ * Format: "${blockRoot}:${payloadStatus}"
+ */
+export function protoNodeKey(node: ProtoNode): ProtoNodeKey {
+  return `${node.blockRoot}:${node.payloadStatus}`;
+}
+
+export function generateProtoNodeKey(root: RootHex, payloadStatus: PayloadStatus): ProtoNodeKey {
+  return `${root}:${payloadStatus}`;
+}
+
 export type LVHValidResponse = {
   executionStatus: ExecutionStatus.Valid;
   latestValidExecHash: RootHex;
@@ -89,14 +118,26 @@ export type ProtoBlock = BlockExtraMeta & {
 
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
+
+  /**
+   * Parent block hash from SignedExecutionPayloadBid (Gloas fork only)
+   * Extracted from: signedExecutionPayloadBid.message.parentBlockHash
+   * Used to determine if this block extends EMPTY or FULL parent variant
+   * Spec: gloas/fork-choice.md#new-get_parent_payload_status
+   */
+  parentBlockHash?: RootHex;
 };
 
 /**
  * A block root with additional metadata required to form a DAG
  * with vote weights and best blocks stored as metadata
+ * 
+ * It is also used as ForkChoiceNode in fork choice spec
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;
+  /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
+  payloadStatus: PayloadStatus;
   weight: number;
   bestChild?: number;
   bestDescendant?: number;
