@@ -29,7 +29,7 @@ import {
 } from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
-import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
+import {AttesterDuty, calculateCommitteeAssignments} from "../util/shufflingUtils.js";
 import {
   EpochShuffling,
   calculateDecisionRoot,
