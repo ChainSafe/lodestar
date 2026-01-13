@@ -150,6 +150,46 @@ export class ProtoArray {
     return this.indices.get(key);
   }
 
+  /**
+   * Determine which parent payload status a block extends
+   * Spec: gloas/fork-choice.md#new-get_parent_payload_status
+   *
+   * Compares parent_block_hash in child's bid with executionPayloadBlockHash in parent:
+   * - Match → child extends FULL parent (parent has payload)
+   * - No match → child extends EMPTY parent (parent has no payload)
+   *
+   * For pre-Gloas blocks: always returns FULL (payloads embedded in block)
+   */
+  private getParentPayloadStatus(block: ProtoBlock): PayloadStatus {
+    // Pre-Gloas blocks have payloads embedded, so parents are always FULL
+    if (!this.isGloasBlock(block)) {
+      return PayloadStatus.FULL;
+    }
+
+    // Gloas block must have parentBlockHash from its SignedExecutionPayloadBid
+    const parentBlockHash = block.parentBlockHash;
+    if (!parentBlockHash) {
+      // If parentBlockHash is not provided, default to FULL
+      // This can only happen in fulu
+      return PayloadStatus.FULL;
+    }
+
+    // Get parent node to compare execution payload hash
+    const parentNode = this.getNode(block.parentRoot);
+    if (!parentNode) {
+      // Parent not found, default to EMPTY
+      // TODO GLOAS: verify this
+      return PayloadStatus.EMPTY;
+    }
+
+    // Compare parent_block_hash from child's bid with parent's execution payload hash
+    // Match means child extends FULL variant (parent has payload)
+    // No match means child extends EMPTY variant (parent has no payload)
+    const parentExecutionHash = parentNode.executionPayloadBlockHash;
+    return parentBlockHash === parentExecutionHash
+      ? PayloadStatus.FULL
+      : PayloadStatus.EMPTY;
+  }
 
   /**
    * Iterate backwards through the array, touching all nodes and their parents and potentially
@@ -414,6 +454,92 @@ export class ProtoArray {
     }
   }
 
+  /**
+   * Check if execution payload for a block is timely
+   * Spec: gloas/fork-choice.md#new-is_payload_timely
+   *
+   * Returns true if:
+   * 1. Block has PTC votes tracked
+   * 2. Payload is locally available (in executionPayloadStates)
+   * 3. More than PAYLOAD_TIMELY_THRESHOLD (>50% of PTC) members voted payload_present=true
+   *
+   * @param blockRoot - The beacon block root to check
+   * @param executionPayloadStates - Map of blocks with available execution payloads
+   */
+  isPayloadTimely(blockRoot: RootHex, executionPayloadStates?: Map<RootHex, unknown>): boolean {
+    const votes = this.ptcVote.get(blockRoot);
+    if (votes === undefined) {
+      // Block not found or not a Gloas block
+      return false;
+    }
+
+    // If payload is not locally available, it's not timely
+    if (!executionPayloadStates?.has(blockRoot)) {
+      return false;
+    }
+
+    // Count votes for payload_present=true
+    const yesVotes = votes.filter((v) => v).length;
+    return yesVotes > PAYLOAD_TIMELY_THRESHOLD;
+  }
+
+  /**
+   * Check if parent node is FULL
+   * Spec: gloas/fork-choice.md#new-is_parent_node_full
+   *
+   * Returns true if the parent payload status (determined by block.parentBlockHash) is FULL
+   */
+  isParentNodeFull(block: ProtoBlock): boolean {
+    return this.getParentPayloadStatus(block) === PayloadStatus.FULL;
+  }
+
+  /**
+   * Determine if we should extend the payload (prefer FULL over EMPTY)
+   * Spec: gloas/fork-choice.md#new-should_extend_payload
+   *
+   * Returns true if:
+   * 1. Payload is timely, OR
+   * 2. No proposer boost root (empty/zero hash), OR
+   * 3. Proposer boost root's parent is not this block, OR
+   * 4. Proposer boost root extends FULL parent
+   *
+   * @param blockRoot - The block root to check
+   * @param proposerBoostRoot - Current proposer boost root (from ForkChoice)
+   * @param executionPayloadStates - Map of blocks with available execution payloads
+   */
+  shouldExtendPayload(
+    blockRoot: RootHex,
+    proposerBoostRoot: RootHex | null,
+    executionPayloadStates?: Map<RootHex, unknown>
+  ): boolean {
+    // Condition 1: Payload is timely
+    if (this.isPayloadTimely(blockRoot, executionPayloadStates)) {
+      return true;
+    }
+
+    // Condition 2: No proposer boost root
+    if (proposerBoostRoot === null || proposerBoostRoot === HEX_ZERO_HASH) {
+      return true;
+    }
+
+    // Get proposer boost block
+    const proposerBoostBlock = this.getNode(proposerBoostRoot);
+    if (!proposerBoostBlock) {
+      // Proposer boost block not found, default to extending payload
+      return true;
+    }
+
+    // Condition 3: Proposer boost root's parent is not this block
+    if (proposerBoostBlock.parentRoot !== blockRoot) {
+      return true;
+    }
+
+    // Condition 4: Proposer boost root extends FULL parent
+    if (this.isParentNodeFull(proposerBoostBlock)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -624,6 +750,42 @@ export class ProtoArray {
   }
 
   /**
+   * Get payload status tiebreaker for fork choice comparison
+   * Spec: gloas/fork-choice.md#new-get_payload_status_tiebreaker
+   *
+   * For Fulu: always returns node.payloadStatus (PENDING)
+   * For Gloas: implements tiebreaker logic based on should_extend_payload
+   */
+  private getPayloadStatusTiebreaker(
+    node: ProtoNode,
+    currentSlot: Slot,
+    proposerBoostRoot: RootHex | null,
+    executionPayloadStates?: Map<RootHex, unknown>
+  ): number {
+
+    // For Fulu: simple return payload status
+    // PENDING=0, EMPTY=1, FULL=2
+    if (node.payloadStatus === PayloadStatus.PENDING) {
+      return node.payloadStatus;
+    }
+
+    // For Gloas: check if from previous slot
+    if (node.slot + 1 !== currentSlot) {
+      return node.payloadStatus;
+    }
+
+    // For previous slot blocks in Gloas, decide between FULL and EMPTY
+    // based on should_extend_payload
+    if (node.payloadStatus === PayloadStatus.EMPTY) {
+      return 1; // EMPTY
+    } else {
+      // FULL - check should_extend_payload
+      const shouldExtend = this.shouldExtendPayload(node.blockRoot, proposerBoostRoot, executionPayloadStates);
+      return shouldExtend ? 2 : 1; // Return 2 if extending, else 1 to prefer EMPTY
+    }
+  }
+
+  /**
    * Follows the best-descendant links to find the best-block (i.e., head-block).
    *
    * Returns the compound key (root:payloadStatus) to identify the exact node variant.
@@ -793,6 +955,45 @@ export class ProtoArray {
    * - The child is not the best child but becomes the best child.
    * - The child is not the best child and does not become the best child.
    */
+
+  /**
+   * Check if we're comparing EMPTY vs FULL variants of the same block from slot n or n-1.
+   *
+   * This is a special case where the spec requires using `get_payload_status_tiebreaker()`
+   * directly without weight comparison.
+   *
+   * Spec: gloas/fork-choice.md#modified-get_weight (lines 413-446) and
+   *       gloas/fork-choice.md#get_payload_status_tiebreaker (lines 331-343)
+   *
+   * @returns true if this is the EMPTY vs FULL edge case, false otherwise
+   */
+  private isEmptyVsFullEdgeCase(
+    childNode: ProtoNode,
+    bestChildNode: ProtoNode,
+    currentSlot: Slot
+  ): boolean {
+    // Check if both nodes are:
+    // 1. The same block root (different payload status variants)
+    // 2. Both EMPTY or FULL (not PENDING)
+    // 3. From slot n-1 or slot n (current slot or previous slot)
+    if (childNode.blockRoot !== bestChildNode.blockRoot) {
+      return false; // Different blocks
+    }
+
+    const childIsEmptyOrFull = childNode.payloadStatus !== PayloadStatus.PENDING;
+    const bestChildIsEmptyOrFull = bestChildNode.payloadStatus !== PayloadStatus.PENDING;
+
+    if (!childIsEmptyOrFull || !bestChildIsEmptyOrFull) {
+      return false; // At least one is PENDING
+    }
+
+    // Check if from slot n-1 or slot n
+    const isFromPreviousSlot = childNode.slot + 1 === currentSlot;
+    const isFromCurrentSlot = childNode.slot === currentSlot;
+
+    return isFromPreviousSlot || isFromCurrentSlot;
+  }
+
   maybeUpdateBestChildAndDescendant(parentIndex: number, childIndex: number, currentSlot: Slot): void {
     const childNode = this.nodes[childIndex];
     if (childNode === undefined) {
@@ -823,56 +1024,102 @@ export class ProtoArray {
 
     let newChildAndDescendant: ChildAndDescendant;
     const bestChildIndex = parentNode.bestChild;
-    if (bestChildIndex !== undefined) {
-      if (bestChildIndex === childIndex && !childLeadsToViableHead) {
-        // the child is already the best-child of the parent but its not viable for the head
-        // so remove it
-        newChildAndDescendant = changeToNull;
-      } else if (bestChildIndex === childIndex) {
-        // the child is the best-child already
-        // set it again to ensure that the best-descendent of the parent is updated
+    blk: {
+      if (bestChildIndex !== undefined) {
+        if (bestChildIndex === childIndex && !childLeadsToViableHead) {
+          // the child is already the best-child of the parent but its not viable for the head
+          // so remove it
+          newChildAndDescendant = changeToNull;
+        } else if (bestChildIndex === childIndex) {
+          // the child is the best-child already
+          // set it again to ensure that the best-descendent of the parent is updated
+          newChildAndDescendant = changeToChild;
+        } else {
+          const bestChildNode = this.nodes[bestChildIndex];
+          if (bestChildNode === undefined) {
+            throw new ProtoArrayError({
+              code: ProtoArrayErrorCode.INVALID_BEST_CHILD_INDEX,
+              index: bestChildIndex,
+            });
+          }
+
+          const bestChildLeadsToViableHead = this.nodeLeadsToViableHead(bestChildNode, currentSlot);
+
+          if (childLeadsToViableHead && !bestChildLeadsToViableHead) {
+            // the child leads to a viable head, but the current best-child doesn't
+            newChildAndDescendant = changeToChild;
+            break blk;
+          } else if (!childLeadsToViableHead && bestChildLeadsToViableHead) {
+            // the best child leads to a viable head but the child doesn't
+            newChildAndDescendant = noChange;
+            break blk;
+          } else {
+            // Both nodes lead to viable heads (or both don't), need to pick winner
+
+            // Pre-fulu we pick whichever has higher weight, tie-breaker by root
+            // Post-fulu we pick whichever has higher weight, then tie-breaker by root, then tie-breaker by `getPayloadStatusTiebreaker`
+            // Edge case: when comparing EMPTY vs FULL variants of the same block from slot n-1 or n, weights are hardcoded to 0
+            // https://github.com/ethereum/consensus-specs/blob/69a2582d5d62c914b24894bdb65f4bd5d4e49ae4/specs/gloas/fork-choice.md?plain=1#L442
+            // in this case we use `get_payload_status_tiebreaker()` directly because weights(0) and roots are equal
+
+            // Gloas: Check if this is the EMPTY vs FULL edge case for slot n or n-1
+            // If true, skip weight and root comparison (weights are 0, roots are equal)
+            const isEdgeCase = this.isEmptyVsFullEdgeCase(childNode, bestChildNode, currentSlot);
+
+            if (!isEdgeCase && childNode.weight !== bestChildNode.weight) {
+              // Different weights, choose the winner by weight
+              if (childNode.weight >= bestChildNode.weight) {
+                newChildAndDescendant = changeToChild;
+              } else {
+                newChildAndDescendant = noChange;
+              }
+              break blk;
+            }
+
+            if (!isEdgeCase && childNode.blockRoot !== bestChildNode.blockRoot) {
+              // Different blocks, tie-breaker by root
+              if (childNode.blockRoot >= bestChildNode.blockRoot) {
+                newChildAndDescendant = changeToChild;
+              } else {
+                newChildAndDescendant = noChange;
+              }
+              break blk;
+            }
+
+            // Same weight and same root (or edge case), tie-breaker by payload status
+            const childTiebreaker = this.getPayloadStatusTiebreaker(
+              childNode,
+              currentSlot,
+              null, // proposerBoostRoot
+              undefined // executionPayloadStates
+            );
+
+            const bestChildTiebreaker = this.getPayloadStatusTiebreaker(
+              bestChildNode,
+              currentSlot,
+              null,
+              undefined
+            );
+
+            if (childTiebreaker > bestChildTiebreaker) {
+              newChildAndDescendant = changeToChild;
+            } else if (childTiebreaker < bestChildTiebreaker) {
+              newChildAndDescendant = noChange;
+            } else {
+              // Equal in all aspects, noChange
+              newChildAndDescendant = noChange;
+            }
+          }
+        }
+      } else if (childLeadsToViableHead) {
+        // There is no current best-child and the child is viable.
         newChildAndDescendant = changeToChild;
       } else {
-        const bestChildNode = this.nodes[bestChildIndex];
-        if (bestChildNode === undefined) {
-          throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.INVALID_BEST_CHILD_INDEX,
-            index: bestChildIndex,
-          });
-        }
-
-        const bestChildLeadsToViableHead = this.nodeLeadsToViableHead(bestChildNode, currentSlot);
-
-        if (childLeadsToViableHead && !bestChildLeadsToViableHead) {
-          // the child leads to a viable head, but the current best-child doesn't
-          newChildAndDescendant = changeToChild;
-        } else if (!childLeadsToViableHead && bestChildLeadsToViableHead) {
-          // the best child leads to a viable head but the child doesn't
-          newChildAndDescendant = noChange;
-        } else if (childNode.weight === bestChildNode.weight) {
-          // tie-breaker of equal weights by root
-          if (childNode.blockRoot >= bestChildNode.blockRoot) {
-            newChildAndDescendant = changeToChild;
-          } else {
-            newChildAndDescendant = noChange;
-          }
-        } else {
-          // choose the winner by weight
-          if (childNode.weight >= bestChildNode.weight) {
-            newChildAndDescendant = changeToChild;
-          } else {
-            newChildAndDescendant = noChange;
-          }
-        }
+        // There is no current best-child but the child is not viable.
+        newChildAndDescendant = noChange;
       }
-    } else if (childLeadsToViableHead) {
-      // There is no current best-child and the child is viable.
-      newChildAndDescendant = changeToChild;
-    } else {
-      // There is no current best-child but the child is not viable.
-      newChildAndDescendant = noChange;
     }
-
+      
     parentNode.bestChild = newChildAndDescendant[0];
     parentNode.bestDescendant = newChildAndDescendant[1];
   }
