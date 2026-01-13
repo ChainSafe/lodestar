@@ -960,7 +960,7 @@ export class ProtoArray {
     const variants = this.variantIndices.get(finalizedIndex);
     if (variants) nodesToPrune.push(...variants.values());
 
-    for (let nodeIndex = 0; nodeIndex < finalizedIndex; nodeIndex++) {
+    for (const nodeIndex of nodesToPrune) {
       const node = this.nodes[nodeIndex];
       if (node === undefined) {
         throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: nodeIndex});
