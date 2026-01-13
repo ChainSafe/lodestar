@@ -1321,6 +1321,11 @@ export function createLodestarMetrics(
         help: "Time from promise insertion until promise resolution when shuffling was ready in seconds",
         buckets: [0.5, 1, 1.5, 2],
       }),
+      shufflingCalculationTime: register.histogram({
+        name: "lodestar_shuffling_cache_shuffling_calculation_time_seconds",
+        help: "Run time of shuffling calculation",
+        buckets: [0.5, 0.75, 1, 1.25, 1.5],
+      }),
     },
 
     seenCache: {
