@@ -32,10 +32,12 @@ import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
   ExecutionStatus,
+  generateProtoNodeKey,
   HEX_ZERO_HASH,
   LVHExecResponse,
   MaybeValidExecutionStatus,
   NULL_VOTE_INDEX,
+  PayloadStatus,
   ProtoBlock,
   ProtoNode,
   VoteIndex,
@@ -93,18 +95,26 @@ export class ForkChoice implements IForkChoice {
   irrecoverableError?: Error;
   /**
    * Votes currently tracked in the protoArray. Instead of tracking a VoteTracker of currentIndex, nextIndex and epoch,
-   * we decompose the struct and track them in 3 separate arrays for performance reason.
+   * we decompose the struct and track them in separate arrays for performance reason.
+   *
+   * For Gloas (ePBS), LatestMessage tracks slot instead of epoch and includes payload_present flag.
+   * Spec: gloas/fork-choice.md#modified-latestmessage
    */
   private readonly voteCurrentIndices: VoteIndex[];
   private readonly voteNextIndices: VoteIndex[];
-  private readonly voteNextEpochs: Epoch[];
+  private readonly voteNextSlots: Slot[];
+  private readonly voteNextPayloadStatus: PayloadStatus[];
+  private readonly voteCurrentPayloadStatus: PayloadStatus[];
 
   /**
    * Attestations that arrived at the current slot and must be queued for later processing.
    * NOT currently tracked in the protoArray
+   *
+   * Modified for Gloas to track PayloadStatus per validator.
+   * Maps: Slot -> BlockRoot -> ValidatorIndex -> PayloadStatus
    */
-  private readonly queuedAttestations: MapDef<Slot, MapDef<RootHex, Set<ValidatorIndex>>> = new MapDef(
-    () => new MapDef(() => new Set())
+  private readonly queuedAttestations: MapDef<Slot, MapDef<RootHex, Map<ValidatorIndex, PayloadStatus>>> = new MapDef(
+    () => new MapDef(() => new Map())
   );
 
   /**
@@ -149,13 +159,16 @@ export class ForkChoice implements IForkChoice {
     this.voteCurrentIndices = new Array(validatorCount).fill(NULL_VOTE_INDEX);
     this.voteNextIndices = new Array(validatorCount).fill(NULL_VOTE_INDEX);
     // when compute deltas, we ignore epoch if voteNextIndex is NULL_VOTE_INDEX anyway
-    this.voteNextEpochs = new Array(validatorCount).fill(INIT_VOTE_EPOCH);
+
+    this.voteNextSlots = new Array(validatorCount).fill(0);
+    this.voteNextPayloadStatus = new Array(validatorCount).fill(PayloadStatus.FULL);
+    this.voteCurrentPayloadStatus = new Array(validatorCount).fill(PayloadStatus.FULL);
 
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
 
     metrics?.forkChoice.votes.addCollect(() => {
-      metrics.forkChoice.votes.set(this.voteNextEpochs.length);
+      metrics.forkChoice.votes.set(this.voteNextSlots.length);
       metrics.forkChoice.queuedAttestations.set(this.queuedAttestationsPreviousSlot);
       metrics.forkChoice.validatedAttestationDatas.set(this.validatedAttestationDatas.size);
       metrics.forkChoice.balancesLength.set(this.balances.length);
@@ -961,7 +974,7 @@ export class ForkChoice implements IForkChoice {
   prune(finalizedRoot: RootHex): ProtoBlock[] {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
     const prunedCount = prunedNodes.length;
-    for (let i = 0; i < this.voteNextEpochs.length; i++) {
+    for (let i = 0; i < this.voteNextSlots.length; i++) {
       const currentIndex = this.voteCurrentIndices[i];
 
       if (currentIndex !== NULL_VOTE_INDEX) {
