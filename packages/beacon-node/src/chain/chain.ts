@@ -1003,8 +1003,8 @@ export class BeaconChain implements IBeaconChain {
       this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
       state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
     }
-
-    return state.epochCtx.getShufflingAtEpoch(attEpoch);
+    // resolve the promise to unblock other calls of the same epoch and dependent root
+    return this.shufflingCache.processState(state, attEpoch);
   }
 
   /**

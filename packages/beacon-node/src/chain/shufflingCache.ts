@@ -131,13 +131,15 @@ export class ShufflingCache {
   /**
    * Process a post state to extract and cache the shuffling for the given epoch.
    * Extracts the decision root from the state internally.
+   * Returns the shuffling for use by callers that need it immediately.
    */
-  processState(state: CachedBeaconStateAllForks, epoch: Epoch): void {
+  processState(state: CachedBeaconStateAllForks, epoch: Epoch): EpochShuffling {
     const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
     const decisionRoot = attesterShufflingDecisionRoot(state, epoch);
     if (decisionRoot !== null) {
       this.set(shuffling, toRootHex(decisionRoot));
     }
+    return shuffling;
   }
 
   /**
