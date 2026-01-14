@@ -12,16 +12,12 @@ import {
   CheckpointHeaderRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
-  DepositDataRootRepository,
-  DepositEventRepository,
-  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -48,16 +44,7 @@ export interface IBeaconDb {
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
   attesterSlashing: AttesterSlashingRepository;
-  depositEvent: DepositEventRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
-
-  // eth1 processing
-  preGenesisState: PreGenesisState;
-  preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
-
-  // all deposit data roots and merkle tree
-  depositDataRoot: DepositDataRootRepository;
-  eth1Data: Eth1DataRepository;
 
   // lightclient
   bestLightClientUpdate: BestLightClientUpdateRepository;
@@ -68,6 +55,8 @@ export interface IBeaconDb {
   backfilledRanges: BackfilledRanges;
 
   pruneHotDb(): Promise<void>;
+
+  deleteDeprecatedEth1Data(): Promise<void>;
 
   /**  Close the connection to the db instance and close the db store. */
   close(): Promise<void>;

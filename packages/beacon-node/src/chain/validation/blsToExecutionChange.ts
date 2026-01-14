@@ -41,7 +41,7 @@ async function validateBlsToExecutionChange(
   // NOTE: No need to advance head state since the signature's fork is handled with `broadcastedOnFork`,
   // and chanes relevant to `isValidBlsToExecutionChange()` happen only on processBlock(), not processEpoch()
   const state = chain.getHeadState();
-  const {config} = state;
+  const {config} = chain;
 
   // [REJECT] All of the conditions within process_bls_to_execution_change pass validation.
   // verifySignature = false, verified in batch below

@@ -218,19 +218,6 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"eth1DataAndDeposits\"}[$rate_interval])",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "{{step}}",
-          "range": true,
-          "refId": "eth1DataAndDeposits"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
           "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"syncAggregate\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"syncAggregate\"}[$rate_interval])",
           "hide": false,
           "instant": false,
@@ -387,19 +374,6 @@
           "legendFormat": "{{step}}",
           "range": true,
           "refId": "attestations"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(beacon_block_production_builder_steps_seconds_sum{step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds_count{step=\"eth1DataAndDeposits\"}[$rate_interval])",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "{{step}}",
-          "range": true,
-          "refId": "eth1DataAndDeposits"
         },
         {
           "datasource": {
@@ -4145,7 +4119,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "unstable-lg1k-hzax41-dkr"
+            "value": "unstable-super"
           }
         ],
         "hide": 0,

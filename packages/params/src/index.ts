@@ -271,6 +271,7 @@ export const MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES = 128;
 
 /**
  * Optimistic sync
+ * @deprecated All networks have completed the merge transition, blocks are always safe to import optimistically.
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
 /** @deprecated */

@@ -2,6 +2,7 @@ import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostElectra, ForkPreElectra, isForkPostElectra} from "@lodestar/params";
 import {
+  ArrayOf,
   AttesterSlashing,
   CommitteeIndex,
   SingleAttestation,
@@ -12,7 +13,6 @@ import {
   ssz,
 } from "@lodestar/types";
 import {
-  ArrayOf,
   EmptyArgs,
   EmptyMeta,
   EmptyMetaCodec,

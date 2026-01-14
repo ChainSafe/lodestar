@@ -9,9 +9,8 @@ import {
   ForkSeq,
 } from "@lodestar/params";
 import {ExecutionPayload, RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
-import {fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {quantityToNum} from "../../eth1/provider/utils.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {kzg} from "../../util/kzg.js";
@@ -29,7 +28,7 @@ import {
   serializeExecutionPayload,
   serializeExecutionRequests,
 } from "./types.js";
-import {JsonRpcBackend} from "./utils.js";
+import {JsonRpcBackend, quantityToNum} from "./utils.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
 const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
@@ -70,7 +69,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   finalizedBlockHash = ZERO_HASH_HEX;
   readonly payloadIdCache = new PayloadIdCache();
 
-  /** Known valid blocks, both pre-merge and post-merge */
+  /** Known valid blocks */
   private readonly validBlocks = new Map<RootHex, ExecutionBlock>();
   /** Preparing payloads to be retrieved via engine_getPayloadV1 */
   private readonly preparingPayloads = new Map<number, PreparedPayload>();
@@ -133,18 +132,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     _count: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][1]
   ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByRangeV1"] {
     return [] as ExecutionPayloadBodyRpc[];
-  }
-
-  /**
-   * Mock manipulator to add more known blocks to this mock.
-   */
-  addPowBlock(powBlock: bellatrix.PowBlock): void {
-    this.validBlocks.set(toHex(powBlock.blockHash), {
-      parentHash: toHex(powBlock.parentHash),
-      blockHash: toHex(powBlock.blockHash),
-      timestamp: 0,
-      blockNumber: 0,
-    });
   }
 
   /**
@@ -258,7 +245,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     //    section of the EIP. Additionally, if this validation fails, client software MUST NOT update the forkchoice
     //    state and MUST NOT begin a payload build process.
     //
-    // > TODO
+    // > N/A: All networks have completed the merge transition
 
     // 4. Before updating the forkchoice state, client software MUST ensure the validity of the payload referenced by
     //    forkchoiceState.headBlockHash, and MAY validate the payload while processing the call. The validation process

@@ -1,5 +1,6 @@
 import {ForkSeq} from "@lodestar/params";
 import {AttesterSlashing} from "@lodestar/types";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
 import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
@@ -17,7 +18,8 @@ export function processAttesterSlashing(
   attesterSlashing: AttesterSlashing,
   verifySignatures = true
 ): void {
-  assertValidAttesterSlashing(state, attesterSlashing, verifySignatures);
+  const {epochCtx} = state;
+  assertValidAttesterSlashing(epochCtx.index2pubkey, state, attesterSlashing, verifySignatures);
 
   const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
 
@@ -25,7 +27,7 @@ export function processAttesterSlashing(
   const validators = state.validators; // Get the validators sub tree once for all indices
   // Spec requires to sort indexes beforehand
   for (const index of intersectingIndices.sort((a, b) => a - b)) {
-    if (isSlashableValidator(validators.getReadonly(index), state.epochCtx.epoch)) {
+    if (isSlashableValidator(validators.getReadonly(index), epochCtx.epoch)) {
       slashValidator(fork, state, index);
       slashedAny = true;
     }
@@ -37,6 +39,7 @@ export function processAttesterSlashing(
 }
 
 export function assertValidAttesterSlashing(
+  index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   attesterSlashing: AttesterSlashing,
   verifySignatures = true
@@ -52,7 +55,7 @@ export function assertValidAttesterSlashing(
   // be higher than the clock and the slashing would still be valid. Same applies to attestation data index, which
   // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
   for (const [i, attestation] of [attestation1, attestation2].entries()) {
-    if (!isValidIndexedAttestationBigint(state, attestation, verifySignatures)) {
+    if (!isValidIndexedAttestationBigint(state.config, index2pubkey, state, attestation, verifySignatures)) {
       throw new Error(`AttesterSlashing attestation${i} is invalid`);
     }
   }

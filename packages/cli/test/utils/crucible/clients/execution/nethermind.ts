@@ -16,7 +16,6 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
 
   const {
     id,
-    mode,
     ttd,
     address,
     mining,
@@ -59,7 +58,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
       await writeFile(
         chainSpecPath,
         JSON.stringify(
-          getNethermindChainSpec(mode, {
+          getNethermindChainSpec({
             ttd,
             cliqueSealingPeriod,
             shanghaiTime,

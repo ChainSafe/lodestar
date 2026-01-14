@@ -2,14 +2,13 @@ import {fastify} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {Logger} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
-import {RpcPayload} from "../../../src/eth1/interface.js";
-import {numToQuantity} from "../../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {
   parseExecutionPayload,
   serializeExecutionPayload,
   serializeExecutionPayloadBody,
 } from "../../../src/execution/engine/types.js";
+import {RpcPayload, numToQuantity} from "../../../src/execution/engine/utils.js";
 import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
 
 describe("ExecutionEngine / http", () => {

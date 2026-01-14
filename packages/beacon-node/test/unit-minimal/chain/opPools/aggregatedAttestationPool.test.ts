@@ -1,7 +1,8 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@chainsafe/blst";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {chainConfig as chainConfigDefault} from "@lodestar/config/default";
 import {
   ACTIVE_PRESET,
   FAR_FUTURE_EPOCH,
@@ -48,9 +49,6 @@ describe("AggregatedAttestationPool - Altair", () => {
 
   let pool: AggregatedAttestationPool;
   const fork = ForkName.altair;
-  const config = createChainForkConfig({
-    ...defaultChainConfig,
-  });
   const altairForkEpoch = 2020;
   const currentEpoch = altairForkEpoch + 10;
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
@@ -93,6 +91,10 @@ describe("AggregatedAttestationPool - Altair", () => {
   let altairState: CachedBeaconStateAllForks;
 
   let forkchoiceStub: MockedForkChoice;
+  const config = createBeaconConfig(
+    createChainForkConfig({...chainConfigDefault, ALTAIR_FORK_EPOCH: altairForkEpoch}),
+    originalState.genesisValidatorsRoot
+  );
 
   beforeEach(() => {
     pool = new AggregatedAttestationPool(config);
@@ -107,7 +109,7 @@ describe("AggregatedAttestationPool - Altair", () => {
   it("getNotSeenValidatorsFn", () => {
     // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
     // 0 and 1 are fully participated
-    const notSeenValidatorFn = getNotSeenValidatorsFn(altairState);
+    const notSeenValidatorFn = getNotSeenValidatorsFn(config, altairState);
     // seen attesting indices are 0, 1 => not seen are 2, 3
     expect(notSeenValidatorFn(currentEpoch, currentSlot - 1, committeeIndex)).toEqual(new Set([2, 3]));
     // attestations in current slot are always included (since altairState.slot = currentSlot + 1)
@@ -169,14 +171,15 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
   let pool: AggregatedAttestationPool;
   const fork = ForkName.electra;
   const electraForkEpoch = 2020;
-  const config = createChainForkConfig({
-    ...defaultChainConfig,
+  const chainConfig = createChainForkConfig({
+    ...chainConfigDefault,
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 0,
     CAPELLA_FORK_EPOCH: 0,
     DENEB_FORK_EPOCH: 0,
     ELECTRA_FORK_EPOCH: electraForkEpoch,
   });
+  const config = createBeaconConfig(chainConfig, Buffer.alloc(32, 0xaa));
   const currentEpoch = electraForkEpoch + 10;
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
 
@@ -393,9 +396,7 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
 });
 
 describe("MatchingDataAttestationGroup.add()", () => {
-  const config = createChainForkConfig({
-    ...defaultChainConfig,
-  });
+  const config = createBeaconConfig(chainConfigDefault, Buffer.alloc(32, 0xaa));
 
   const testCases: {id: string; attestationsToAdd: {bits: number[]; res: InsertOutcome; isKept: boolean}[]}[] = [
     {
@@ -465,9 +466,7 @@ describe("MatchingDataAttestationGroup.add()", () => {
 });
 
 describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
-  const config = createChainForkConfig({
-    ...defaultChainConfig,
-  });
+  const config = createBeaconConfig(chainConfigDefault, Buffer.alloc(32, 0xaa));
 
   const maxAttestations = 2;
   const testCases: {

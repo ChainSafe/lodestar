@@ -15,8 +15,11 @@ export type ChainConfig = {
   CONFIG_NAME: string;
 
   // Transition
+  /** @deprecated All networks have completed the merge transition */
   TERMINAL_TOTAL_DIFFICULTY: bigint;
+  /** @deprecated All networks have completed the merge transition */
   TERMINAL_BLOCK_HASH: Uint8Array;
+  /** @deprecated All networks have completed the merge transition */
   TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: number;
 
   // Genesis

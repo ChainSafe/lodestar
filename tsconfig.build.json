@@ -39,6 +39,6 @@
       "${configDir}/types",
       "../../node_modules/@types",
       "../../types", 
-    ],
+    ]
   }
 }

@@ -17,6 +17,7 @@ import {
 } from "./types.js";
 
 export type BeaconStateCache = {
+  /** @deprecated should not access config outside of state-transition package */
   config: BeaconConfig;
   epochCtx: EpochCache;
   /** Count of clones created from this BeaconStateCache instance. readonly to prevent accidental usage downstream */

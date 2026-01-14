@@ -1,4 +1,4 @@
-import type {PeerId, PeerInfo, PrivateKey} from "@libp2p/interface";
+import type {PeerId, PeerInfo, PendingDial, PrivateKey} from "@libp2p/interface";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {BeaconConfig} from "@lodestar/config";
@@ -217,7 +217,7 @@ export class PeerDiscovery {
     const pendingDials = new Set(
       this.libp2p.services.components.connectionManager
         .getDialQueue()
-        .map((pendingDial) => pendingDial.peerId?.toString())
+        .map((pendingDial: PendingDial) => pendingDial.peerId?.toString())
     );
     for (const [id, cachedENR] of this.cachedENRs.entries()) {
       if (
@@ -458,7 +458,7 @@ export class PeerDiscovery {
       if (
         this.libp2p.services.components.connectionManager
           .getDialQueue()
-          .find((pendingDial) => pendingDial.peerId?.equals(peerId))
+          .find((pendingDial: PendingDial) => pendingDial.peerId?.equals(peerId))
       ) {
         return DiscoveredPeerStatus.already_dialing;
       }

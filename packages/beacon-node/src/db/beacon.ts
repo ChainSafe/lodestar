@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, LevelDbControllerMetrics} from "@lodestar/db";
+import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
+import {Bucket} from "./buckets.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
@@ -14,16 +15,12 @@ import {
   CheckpointHeaderRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
-  DepositDataRootRepository,
-  DepositEventRepository,
-  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 export type BeaconDbModules = {
   config: ChainForkConfig;
@@ -45,13 +42,7 @@ export class BeaconDb implements IBeaconDb {
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
   attesterSlashing: AttesterSlashingRepository;
-  depositEvent: DepositEventRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
-
-  depositDataRoot: DepositDataRootRepository;
-  eth1Data: Eth1DataRepository;
-  preGenesisState: PreGenesisState;
-  preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
   // lightclient
   bestLightClientUpdate: BestLightClientUpdateRepository;
@@ -80,11 +71,6 @@ export class BeaconDb implements IBeaconDb {
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);
     this.proposerSlashing = new ProposerSlashingRepository(config, db);
     this.attesterSlashing = new AttesterSlashingRepository(config, db);
-    this.depositEvent = new DepositEventRepository(config, db);
-    this.depositDataRoot = new DepositDataRootRepository(config, db);
-    this.eth1Data = new Eth1DataRepository(config, db);
-    this.preGenesisState = new PreGenesisState(config, db);
-    this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(config, db);
 
     // lightclient
     this.bestLightClientUpdate = new BestLightClientUpdateRepository(config, db);
@@ -109,5 +95,41 @@ export class BeaconDb implements IBeaconDb {
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());
+  }
+
+  async deleteDeprecatedEth1Data(): Promise<void> {
+    const deprecatedBuckets = [
+      Bucket.phase0_eth1Data,
+      Bucket.index_depositDataRoot,
+      Bucket.phase0_depositData,
+      Bucket.phase0_depositEvent,
+      Bucket.phase0_preGenesisState,
+      Bucket.phase0_preGenesisStateLastProcessedBlock,
+    ];
+
+    for (const bucket of deprecatedBuckets) {
+      await this.deleteBucketData(bucket);
+    }
+  }
+
+  private async deleteBucketData(bucket: Bucket): Promise<void> {
+    const minKey = encodeKey(bucket, Buffer.alloc(0));
+    const maxKey = encodeKey(bucket + 1, Buffer.alloc(0));
+
+    // Batch delete to avoid loading all keys into memory at once
+    const BATCH_DELETE_SIZE = 1000;
+    let keysBatch: Uint8Array[] = [];
+
+    for await (const key of this.db.keysStream({gte: minKey, lt: maxKey})) {
+      keysBatch.push(key);
+      if (keysBatch.length >= BATCH_DELETE_SIZE) {
+        await this.db.batchDelete(keysBatch);
+        keysBatch = [];
+      }
+    }
+
+    if (keysBatch.length > 0) {
+      await this.db.batchDelete(keysBatch);
+    }
   }
 }

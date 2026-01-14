@@ -9,7 +9,7 @@
 
 ## Prerequisites
 
-- [Yarn](https://classic.yarnpkg.com/lang/en/)
+- [pnpm](https://pnpm.io/)
 
 ## What you need
 

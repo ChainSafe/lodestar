@@ -1,4 +1,5 @@
-import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
+import {BeaconConfig} from "@lodestar/config";
+import {CachedBeaconStateAllForks, Index2PubkeyCache, getBlockSignatureSets} from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -15,6 +16,8 @@ import {ImportBlockOpts} from "./types.js";
  * Since all data is known in advance all signatures are verified at once in parallel.
  */
 export async function verifyBlocksSignatures(
+  config: BeaconConfig,
+  index2pubkey: Index2PubkeyCache,
   bls: IBlsVerifier,
   logger: Logger,
   metrics: Metrics | null,
@@ -25,6 +28,7 @@ export async function verifyBlocksSignatures(
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const currentSyncCommitteeIndexed = preState0.epochCtx.currentSyncCommitteeIndexed;
 
   // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
   // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
@@ -38,9 +42,16 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(preState0, block, indexedAttestationsByBlock[i], {
-            skipProposerSignature: opts.validProposerSignature,
-          })
+          getBlockSignatureSets(
+            config,
+            index2pubkey,
+            currentSyncCommitteeIndexed,
+            block,
+            indexedAttestationsByBlock[i],
+            {
+              skipProposerSignature: opts.validProposerSignature,
+            }
+          )
         );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
