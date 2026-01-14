@@ -53,6 +53,13 @@ export function generateProtoNodeKey(root: RootHex, payloadStatus: PayloadStatus
   return `${root}:${payloadStatus}`;
 }
 
+/**
+ * Check if a block is in the Gloas fork (ePBS enabled)
+ */
+export function isGloasBlock(block: ProtoBlock): boolean {
+  return block.parentBlockHash !== null;
+}
+
 export type LVHValidResponse = {
   executionStatus: ExecutionStatus.Valid;
   latestValidExecHash: RootHex;
@@ -124,8 +131,12 @@ export type ProtoBlock = BlockExtraMeta & {
    * Extracted from: signedExecutionPayloadBid.message.parentBlockHash
    * Used to determine if this block extends EMPTY or FULL parent variant
    * Spec: gloas/fork-choice.md#new-get_parent_payload_status
+   *
+   * In pre-Gloas forks, this will be null
    */
-  parentBlockHash?: RootHex;
+  parentBlockHash: RootHex | null;
+  /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
+  payloadStatus: PayloadStatus;
 };
 
 /**
@@ -136,8 +147,6 @@ export type ProtoBlock = BlockExtraMeta & {
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;
-  /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
-  payloadStatus: PayloadStatus;
   weight: number;
   bestChild?: number;
   bestDescendant?: number;

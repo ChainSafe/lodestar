@@ -6,7 +6,14 @@ import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
+import {
+  ExecutionStatus,
+  ForkChoice,
+  IForkChoiceStore,
+  PayloadStatus,
+  ProtoArray,
+  ProtoBlock,
+} from "../../../src/index.js";
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
@@ -42,6 +49,9 @@ describe("Forkchoice / GetProposerHead", () => {
 
     timeliness: false,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: PayloadStatus.FULL,
   };
 
   const baseHeadBlock: ProtoBlockWithWeight = {
@@ -67,6 +77,9 @@ describe("Forkchoice / GetProposerHead", () => {
 
     weight: 29,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: PayloadStatus.FULL,
   };
 
   const baseParentHeadBlock: ProtoBlockWithWeight = {
@@ -91,6 +104,9 @@ describe("Forkchoice / GetProposerHead", () => {
     timeliness: false,
     weight: 212, // 240 - 29 + 1
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: PayloadStatus.FULL,
   };
 
   const fcStore: IForkChoiceStore = {
@@ -211,7 +227,7 @@ describe("Forkchoice / GetProposerHead", () => {
   ];
 
   beforeEach(() => {
-    protoArr = ProtoArray.initialize(genesisBlock, genesisSlot, {GLOAS_FORK_EPOCH: Infinity});
+    protoArr = ProtoArray.initialize(genesisBlock, genesisSlot);
   });
 
   for (const {

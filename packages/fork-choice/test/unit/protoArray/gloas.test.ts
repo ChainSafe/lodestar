@@ -60,7 +60,8 @@ describe("Gloas Fork Choice", () => {
       executionPayloadNumber: slot,
       executionStatus: ExecutionStatus.Valid,
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
-      parentBlockHash, // For Gloas blocks
+      parentBlockHash: parentBlockHash === undefined ? null : parentBlockHash,
+      payloadStatus: PayloadStatus.FULL,
     };
   }
 
@@ -120,14 +121,13 @@ describe("Gloas Fork Choice", () => {
     let protoArray: ProtoArray;
 
     beforeEach(() => {
-      // Initialize with GLOAS_FORK_EPOCH = Infinity (never activate Gloas)
+      // Test pre-Gloas behavior by creating blocks with parentBlockHash: null
       protoArray = new ProtoArray({
         pruneThreshold: 0,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,
         finalizedEpoch: genesisEpoch,
         finalizedRoot: genesisRoot,
-        config: {GLOAS_FORK_EPOCH: Infinity},
       });
     });
 
@@ -176,7 +176,6 @@ describe("Gloas Fork Choice", () => {
         justifiedRoot: genesisRoot,
         finalizedEpoch: genesisEpoch,
         finalizedRoot: genesisRoot,
-        config: {GLOAS_FORK_EPOCH: gloasForkEpoch},
       });
     });
 
@@ -241,7 +240,6 @@ describe("Gloas Fork Choice", () => {
         justifiedRoot: genesisRoot,
         finalizedEpoch: genesisEpoch,
         finalizedRoot: genesisRoot,
-        config: {GLOAS_FORK_EPOCH: gloasForkEpoch},
       });
     });
 
@@ -289,7 +287,6 @@ describe("Gloas Fork Choice", () => {
         justifiedRoot: genesisRoot,
         finalizedEpoch: genesisEpoch,
         finalizedRoot: genesisRoot,
-        config: {GLOAS_FORK_EPOCH: gloasForkEpoch},
       });
     });
 
@@ -362,7 +359,6 @@ describe("Gloas Fork Choice", () => {
         justifiedRoot: genesisRoot,
         finalizedEpoch: genesisEpoch,
         finalizedRoot: genesisRoot,
-        config: {GLOAS_FORK_EPOCH: gloasForkEpoch},
       });
     });
 
@@ -496,7 +492,6 @@ describe("Gloas Fork Choice", () => {
         justifiedRoot: genesisRoot,
         finalizedEpoch: genesisEpoch,
         finalizedRoot: genesisRoot,
-        config: {GLOAS_FORK_EPOCH: gloasForkEpoch},
       });
     });
 
@@ -544,7 +539,6 @@ describe("Gloas Fork Choice", () => {
         justifiedRoot: genesisRoot,
         finalizedEpoch: genesisEpoch,
         finalizedRoot: genesisRoot,
-        config: {GLOAS_FORK_EPOCH: gloasForkEpoch},
       });
     });
 

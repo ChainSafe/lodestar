@@ -2,7 +2,7 @@ import {SecretKey} from "@chainsafe/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -179,4 +179,6 @@ export const zeroProtoBlock: ProtoBlock = {
 
   ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+  parentBlockHash: null,
+  payloadStatus: PayloadStatus.FULL,
 };

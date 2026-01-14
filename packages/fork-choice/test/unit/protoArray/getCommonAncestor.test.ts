@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, PayloadStatus, ProtoArray} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [
@@ -45,9 +45,11 @@ describe("getCommonAncestor", () => {
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     },
-    0,
-    {GLOAS_FORK_EPOCH: Infinity}
+    0
   );
 
   for (const block of blocks) {
@@ -72,6 +74,9 @@ describe("getCommonAncestor", () => {
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
       },
       block.slot
     );

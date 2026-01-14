@@ -42,6 +42,7 @@ import {
   ProtoNode,
   VoteIndex,
   generateProtoNodeKey,
+  isGloasBlock,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
@@ -778,7 +779,8 @@ export class ForkChoice implements IForkChoice {
       // Gloas blocks have signedExecutionPayloadBid with parentBlockHash
       parentBlockHash: isGloasBeaconBlock(block)
         ? toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
-        : undefined,
+        : null,
+      payloadStatus: isGloasBeaconBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL,
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
@@ -833,15 +835,15 @@ export class ForkChoice implements IForkChoice {
     // - always add weight to PENDING
     // - if message.slot > block.slot, it also add weights to FULL or EMPTY
     let payloadStatus: PayloadStatus;
-    if (computeEpochAtSlot(slot) < this.config.GLOAS_FORK_EPOCH) {
-      payloadStatus = PayloadStatus.FULL;
-    } else {
-      // We need to retrieve block to compare slot
-      // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
-      const block = this.getBlockHex(blockRootHex);
 
+    // We need to retrieve block to check if it's Gloas and to compare slot
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
+    const block = this.getBlockHex(blockRootHex);
+
+    if (block && isGloasBlock(block)) {
+      // Post-Gloas block: determine FULL/EMPTY/PENDING based on slot and committee index
       // If slot > block.slot, we can determine FULL or EMPTY. Else always PENDING
-      if (block && slot > block.slot) {
+      if (slot > block.slot) {
         if (attestationData.index === 1) {
           payloadStatus = PayloadStatus.FULL;
         } else if (attestationData.index === 0) {
@@ -852,6 +854,9 @@ export class ForkChoice implements IForkChoice {
       } else {
         payloadStatus = PayloadStatus.PENDING;
       }
+    } else {
+      // Pre-Gloas block or block not found: always FULL
+      payloadStatus = PayloadStatus.FULL;
     }
 
     if (slot < this.fcStore.currentSlot) {
@@ -1535,8 +1540,8 @@ export class ForkChoice implements IForkChoice {
     // should not happen, attestation is validated before this step
     // For pre-Gloas blocks: use FULL (payload embedded in block)
     // For Gloas blocks: use PENDING (all Gloas blocks have PENDING variant)
-    const lookupStatus =
-      computeEpochAtSlot(nextSlot) < this.config.GLOAS_FORK_EPOCH ? PayloadStatus.FULL : PayloadStatus.PENDING;
+    const block = this.getBlockHex(nextRoot);
+    const lookupStatus = block && isGloasBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL;
     const key = generateProtoNodeKey(nextRoot, lookupStatus);
     const nextIndex = this.protoArray.getNodeIndexByKey(key);
     if (nextIndex === undefined) {

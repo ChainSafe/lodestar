@@ -4,6 +4,7 @@ import {
   ForkChoice,
   ForkChoiceStore,
   JustifiedBalancesGetter,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
@@ -11,6 +12,7 @@ import {
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
@@ -103,6 +105,8 @@ export function initializeForkChoiceFromFinalizedState(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
+  const isForkPostGloas = (state as CachedBeaconStateGloas).latestBlockHash !== undefined;
+
   return new forkchoiceConstructor(
     config,
 
@@ -144,6 +148,8 @@ export function initializeForkChoiceFromFinalizedState(
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        parentBlockHash: isForkPostGloas ? toRootHex((state as CachedBeaconStateGloas).latestBlockHash) : null,
+        payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
       },
       currentSlot,
       config
@@ -199,6 +205,8 @@ export function initializeForkChoiceFromUnfinalizedState(
     }
   );
 
+  const isForkPostGloas = (unfinalizedState as CachedBeaconStateGloas).latestBlockHash !== undefined;
+
   // this is the same to the finalized state
   const headBlock: ProtoBlock = {
     slot: blockHeader.slot,
@@ -226,6 +234,8 @@ export function initializeForkChoiceFromUnfinalizedState(
       : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+    parentBlockHash: isForkPostGloas ? toRootHex((unfinalizedState as CachedBeaconStateGloas).latestBlockHash) : null,
+    payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
   };
 
   const parentSlot = blockHeader.slot - 1;

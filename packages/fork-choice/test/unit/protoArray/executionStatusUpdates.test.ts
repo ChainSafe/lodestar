@@ -4,6 +4,7 @@ import {
   BlockExtraMeta,
   ExecutionStatus,
   MaybeValidExecutionStatus,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
@@ -74,10 +75,14 @@ function setupForkChoice(): ProtoArray {
       finalizedEpoch: 0,
       finalizedRoot: "-",
 
-      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      executionPayloadBlockHash: null,
+      executionStatus: ExecutionStatus.PreMerge,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
-    0,
-    {GLOAS_FORK_EPOCH: Infinity}
+    0
   );
 
   for (const block of blocks) {
@@ -116,6 +121,9 @@ function setupForkChoice(): ProtoArray {
         timeliness: false,
 
         ...executionData,
+
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
       },
       block.slot
     );

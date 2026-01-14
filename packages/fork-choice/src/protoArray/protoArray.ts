@@ -14,6 +14,7 @@ import {
   ProtoNodeKey,
   generateProtoNodeKey,
   generateProtoNodeKey as getProtoNodeKey,
+  isGloasBlock,
   protoNodeKey,
 } from "./interface.js";
 
@@ -52,13 +53,6 @@ export class ProtoArray {
   private previousProposerBoost: ProposerBoost | null = null;
 
   /**
-   * First epoch of Gloas fork (when ePBS activates)
-   * Blocks with slot >= gloasForkSlot use ePBS (PENDING/EMPTY/FULL variants)
-   * Blocks with slot < gloasForkSlot use pre-Gloas (PENDING only)
-   */
-  private gloasForkEpoch: Epoch;
-
-  /**
    * PTC (Payload Timeliness Committee) votes per block
    * Maps block root to boolean array of size PTC_SIZE (from params: 512 mainnet, 2 minimal)
    * Spec: gloas/fork-choice.md#modified-store (line 148)
@@ -74,35 +68,27 @@ export class ProtoArray {
     justifiedRoot,
     finalizedEpoch,
     finalizedRoot,
-    config,
   }: {
     pruneThreshold: number;
     justifiedEpoch: Epoch;
     justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
     finalizedRoot: RootHex;
-    config: {GLOAS_FORK_EPOCH: number};
   }) {
     this.pruneThreshold = pruneThreshold;
     this.justifiedEpoch = justifiedEpoch;
     this.justifiedRoot = justifiedRoot;
     this.finalizedEpoch = finalizedEpoch;
     this.finalizedRoot = finalizedRoot;
-    this.gloasForkEpoch = config.GLOAS_FORK_EPOCH;
   }
 
-  static initialize(
-    block: Omit<ProtoBlock, "targetRoot">,
-    currentSlot: Slot,
-    config: {GLOAS_FORK_EPOCH: number}
-  ): ProtoArray {
+  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot): ProtoArray {
     const protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
       justifiedEpoch: block.justifiedEpoch,
       justifiedRoot: block.justifiedRoot,
       finalizedEpoch: block.finalizedEpoch,
       finalizedRoot: block.finalizedRoot,
-      config,
     });
     protoArray.onBlock(
       {
@@ -113,13 +99,6 @@ export class ProtoArray {
       currentSlot
     );
     return protoArray;
-  }
-
-  /**
-   * Check if a block is in the Gloas fork (ePBS enabled)
-   */
-  private isGloasBlock(block: {slot: Slot}): boolean {
-    return computeEpochAtSlot(block.slot) >= this.gloasForkEpoch;
   }
 
   /**
@@ -163,13 +142,13 @@ export class ProtoArray {
    */
   private getParentPayloadStatus(block: ProtoBlock): PayloadStatus {
     // Pre-Gloas blocks have payloads embedded, so parents are always FULL
-    if (!this.isGloasBlock(block)) {
+    if (!isGloasBlock(block)) {
       return PayloadStatus.FULL;
     }
 
     // Gloas block must have parentBlockHash from its SignedExecutionPayloadBid
     const parentBlockHash = block.parentBlockHash;
-    if (!parentBlockHash) {
+    if (parentBlockHash === null) {
       // If parentBlockHash is not provided, default to FULL
       // This can only happen in fulu
       return PayloadStatus.FULL;
@@ -333,7 +312,7 @@ export class ProtoArray {
       });
     }
 
-    const isGloas = this.isGloasBlock(block);
+    const isGloas = isGloasBlock(block);
 
     if (isGloas) {
       // Gloas: Create PENDING + EMPTY nodes with correct parent relationships
@@ -346,7 +325,7 @@ export class ProtoArray {
       let key: ProtoNodeKey;
       const parentNode = this.getNode(block.parentRoot);
 
-      if (parentNode && !this.isGloasBlock(parentNode)) {
+      if (parentNode && !isGloasBlock(parentNode)) {
         // Fork transition: parent is Fulu, so it only has FULL variant
         key = getProtoNodeKey(block.parentRoot, PayloadStatus.FULL);
       } else {

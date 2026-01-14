@@ -10,6 +10,7 @@ import {
   ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
@@ -42,8 +43,7 @@ describe("Forkchoice", () => {
         executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       } as Omit<ProtoBlock, "targetRoot">,
-      genesisSlot,
-      {GLOAS_FORK_EPOCH: Infinity}
+      genesisSlot
     );
   });
 
@@ -105,6 +105,9 @@ describe("Forkchoice", () => {
 
       timeliness: false,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     };
   };
 
