@@ -30,67 +30,111 @@ export async function updateBackfillRange(
 
     // Mark the sequence in backfill db from finalized block's slot till anchor slot as
     // filled.
-    const finalizedBlockFC = chain.forkChoice.getBlockHex(finalized.rootHex);
+    const finalizedBlockFC = chain.forkChoice.getBlock(finalized.root);
     const previousBackfillRange = await db.backfillRange.get();
 
     const finalizedPostDeneb = finalized.epoch >= chain.config.DENEB_FORK_EPOCH;
     const finalizedPostFulu = finalized.epoch >= chain.config.FULU_FORK_EPOCH;
 
-    if (
-      finalizedBlockFC &&
-      (finalizedBlockFC.slot > chain.anchorStateLatestBlockSlot ||
-        (previousBackfillRange && finalizedBlockFC.slot > previousBackfillRange?.endingEpoch * SLOTS_PER_EPOCH))
-    ) {
-      await db.backfillRange.put({
-        beginningEpoch: computeEpochAtSlot(finalizedBlockFC.slot),
-        endingEpoch: previousBackfillRange?.endingEpoch || computeEpochAtSlot(chain.anchorStateLatestBlockSlot),
-      });
-      // DEBUG_CODE
-      logger.info("Updated backfillRange while migrating from hot to cold db", {
-        beginningEpoch: computeEpochAtSlot(finalizedBlockFC.slot),
-        endingEpoch: previousBackfillRange?.endingEpoch || computeEpochAtSlot(chain.anchorStateLatestBlockSlot),
-        previousBackfillRangeBeginningEpoch: previousBackfillRange?.beginningEpoch,
-        previousBackfillRangeEndingEpoch: previousBackfillRange?.endingEpoch,
-        chainAnchorStateLatestBlockSlotEpoch: computeEpochAtSlot(chain.anchorStateLatestBlockSlot),
-      });
-      // DEBUG_CODE
+    if (!finalizedBlockFC) {
+      logger.error("finalizedBlockFC not present");
+      throw new Error("finalizedBlockFC not present");
+    }
 
-      // const custodyColumns = chain.custodyConfig.custodyColumns;
-      await db.backfillState.put(finalized.epoch, {
+    /**
+     * Update with the epoch whose blocks were actually downloaded and stored in blockArchive.
+     * These blocks are the ones prior to and including the finalized slot
+     * (i.e., the first slot of the finalized epoch).
+     */
+
+    if (previousBackfillRange) {
+      // Todo: Also think about it when blocks of more than 1 epoch are archived
+      const newBeginningEpoch = computeEpochAtSlot(finalizedBlockFC.slot - 1);
+      const newBackfillRange = {
+        beginningEpoch:
+          newBeginningEpoch > previousBackfillRange.beginningEpoch
+            ? newBeginningEpoch
+            : previousBackfillRange.beginningEpoch,
+        endingEpoch: previousBackfillRange.endingEpoch,
+      };
+      const newBackfillStateEpoch = computeEpochAtSlot(finalizedBlockFC.slot - 1);
+      const newBackfillState = {
         hasBlock: true,
         // check if blobs & columns are filled in live chain
         hasBlobs: finalizedPostDeneb ? true : null,
         columnIndices: finalizedPostFulu ? [] : null,
-      });
+      };
 
-      // DEBUG_CODE
-      logger.info("Updated backfillState while migrating from hot to cold db", {
+      await db.backfillRange.put(newBackfillRange);
+      await db.backfillState.put(newBackfillStateEpoch, newBackfillState);
+
+      logger.verbose("Updated backfillState while migrating from hot to cold db", {
         finalizedEpoch: finalized.epoch,
         hasBlock: true,
         hasBlobs: finalizedPostDeneb ? true : null,
         columnIndices: finalizedPostFulu ? prettyPrintIndices([]) : null,
+        backfillRangeBeginningEpoch: newBackfillRange.beginningEpoch,
+        backfillStateEpoch: newBackfillStateEpoch,
       });
-      // DEBUG_CODE
-
-      // Todo: verify if this function runs every epoch, else intermediate epoch backfill states will be empty.
-      // Below could be a possible solution to this issue.
-
-      // // In case of long unfinality, this needs to be done to save multiple epochs
-      // // First, find all *unique* epochs from the list of finalized blocks
-      // const uniqueEpochs = Array.from(new Set(finalizedCanonicalBlocks.map((block) => block.finalizedEpoch)));
-      // const backfillStates: KeyValue<number, EpochBackfillState>[] = uniqueEpochs.map((epoch) => {
-      //   return {
-      //     key: epoch,
-      //     value: {
-      //       hasBlock: true,
-      //       // check if blobs & columns are filled in live chain
-      //       hasBlobs: finalizedPostDeneb ? true : null,
-      //       columnIndices: finalizedPostFulu ? [] : null,
-      //     },
-      //   };
-      // });
-      // await db.backfillState.batchPut(backfillStates);
     }
+    // most probably this wont be hitted
+    else {
+      /**
+       * We initialize this only when `finalizedBlockFC.slot`
+       * is exactly one epoch ahead of `anchorStateLatestBlockSlot`.
+       * This guarantees that all blocks from the epoch preceding the finalized epoch
+       * have already been migrated to the blockArchive DB.
+       */
+      if (finalizedBlockFC.slot > chain.anchorStateLatestBlockSlot) {
+        const initEpoch = computeEpochAtSlot(finalizedBlockFC.slot - 1);
+        const initBackfillRange = {
+          beginningEpoch: initEpoch,
+          endingEpoch: initEpoch,
+        };
+        const initBackfillState = {
+          hasBlock: true,
+          // check if blobs & columns are filled in live chain
+          hasBlobs: finalizedPostDeneb ? true : null,
+          columnIndices: finalizedPostFulu ? [] : null,
+        };
+
+        await db.backfillRange.put(initBackfillRange);
+        await db.backfillState.put(initEpoch, initBackfillState);
+
+        logger.verbose("Initialized backfillState while migrating from hot to cold db", {
+          finalizedEpoch: finalized.epoch,
+          initEpoch,
+        });
+      } else {
+        logger.debug(
+          "Skipped initialization of backfillState while migrating from hot to cold db (slot not ahead of anchor)",
+          {
+            finalizedBlockSlot: finalizedBlockFC.slot,
+            anchorStateLatestBlockSlot: chain.anchorStateLatestBlockSlot,
+          }
+        );
+      }
+    }
+    // DEBUG_CODE
+
+    // Todo: verify if this function runs every epoch, else intermediate epoch backfill states will be empty.
+    // Below could be a possible solution to this issue.
+
+    // // In case of long unfinality, this needs to be done to save multiple epochs
+    // // First, find all *unique* epochs from the list of finalized blocks
+    // const uniqueEpochs = Array.from(new Set(finalizedCanonicalBlocks.map((block) => block.finalizedEpoch)));
+    // const backfillStates: KeyValue<number, EpochBackfillState>[] = uniqueEpochs.map((epoch) => {
+    //   return {
+    //     key: epoch,
+    //     value: {
+    //       hasBlock: true,
+    //       // check if blobs & columns are filled in live chain
+    //       hasBlobs: finalizedPostDeneb ? true : null,
+    //       columnIndices: finalizedPostFulu ? [] : null,
+    //     },
+    //   };
+    // });
+    // await db.backfillState.batchPut(backfillStates);
   } catch (e) {
     logger.error("Error updating backfilledRanges on finalization", {epoch: finalized.epoch}, e as Error);
   }
