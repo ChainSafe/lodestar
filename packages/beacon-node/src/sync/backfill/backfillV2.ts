@@ -66,8 +66,6 @@ export enum BackfillSyncStatus {
   aborted = "aborted",
 }
 
-// Assumptions:
-//  BackfillBlock type exists purely as a convenience helper type to store a block along with its own root
 type BackFillSyncAnchor =
   | {
       anchorBlockParentRoot: Root;
@@ -89,7 +87,8 @@ type BackFillSyncAnchor =
     };
 
 // Updating peer score:
-// We can update it on certain events, such as request fulfilled, batch successfully imported, response times.
+// We can update it on certain events, such as request fulfilled,
+// batch successfully imported, response times.
 type PeerBackfillSyncMeta =
   | (PeerSyncMeta & {
       score: number;
@@ -101,7 +100,12 @@ type PeerBackfillSyncMeta =
     })
   | null;
 
-// This assumes we'll be backfilling only for the current and prev fork. If we are backfilling shorter that MIN_EPOCHS_FOR_BLOCK_REQUESTS and we are across 2 prev forks, getBlockProposerSignatureSet (inside validation) will wrongly calculate the signing domain
+/*
+ * This assumes we'll be backfilling only for the current and prev fork.
+ * If we are backfilling shorter than MIN_EPOCHS_FOR_BLOCK_REQUESTS
+ * and we are across 2 prev forks, getBlockProposerSignatureSet
+ * (inside validation) will wrongly calculate the signing domain.
+ */
 export class BackfillSync {
   syncAnchor: BackFillSyncAnchor;
 
@@ -119,24 +123,26 @@ export class BackfillSync {
   private processor = new ItTrigger();
   readonly emitter: BackfillSyncEventEmitter = new EventEmitter();
 
-  // TODO: Consider implementing more efficient data structures and explore using util fns from network.ts (getConnectedPeerSyncMeta, getConnectedPeers, etc.)
+  // TODO: Consider implementing more efficient data structures and explore
+  // using util fns from network.ts (getConnectedPeerSyncMeta, getConnectedPeers, etc.)
   // - Adding selectivity to peers: we already have earliestAvailableSlot via PeerSyncMeta,
   // For delegating batch requests to different peers, we have following considerations:
   // - distribute requests evnely to avoid overwhelming a peer (use round-robin, etc.)
   // - keep track of valid responses, upscore peer
   // - keep track of failed responses, downscore peer, disconnect over threshold
-  // - grouping by earliestAvailableSlot value, a peer irrelevant now can be relevant in later stage of backfill
+  // - grouping by earliestAvailableSlot value, a peer irrelevant now
+  //   can be relevant in later stage of backfill
   // - explore if any other pruning reqd
   private peers = new Set<PeerIdStr>();
   // To store relevant, good quality peers.
   // Rethink about this data structure as we need to store peers sorted acc to score, peers could be ~100
   private peersMeta: Map<PeerIdStr, PeerBackfillSyncMeta>;
-  // private peersSortedByScore: PeerIdStr[] = [];
 
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
   private signal: AbortSignal;
 
-  private readonly BACKFILL_BATCH_SIZE = SLOTS_PER_EPOCH; // 32; // Todo: Discuss if we need some flexibility for this
+  // Todo: Discuss if we need some flexibility for this
+  private readonly BACKFILL_BATCH_SIZE = SLOTS_PER_EPOCH; // 32;
   private readonly MAX_RETRY_ATTEMPTS_FOR_EMPTY_RESPONSE = 3;
   private currentAttempt = 1;
 
@@ -257,10 +263,10 @@ export class BackfillSync {
       await modules.db.backfillState.put(anchorCp.epoch, {hasBlock: true, hasBlobs: true, columnIndices: []});
     }
 
-    // ***************
-    // Already present: anchorState, anchorCp.epoch, anchorCp.root, anchorSlot, wsCheckpoint, anchorBlockHeader
-    // Might be present: anchorBlock
-    // Must be present: anchorChildBlock
+    // Note:
+    // From modules we have: anchorState, anchorCp.epoch, anchorCp.root,
+    // anchorSlot, wsCheckpoint, anchorBlockHeader
+    // May/May not be present: anchorBlock, anchorChildBlock (depends on db state)
 
     const backfillStartFromSlot = syncAnchor?.anchorSlot;
     logger.debug("Initializing BackfillSync class", {
@@ -285,8 +291,9 @@ export class BackfillSync {
   private async sync(): Promise<void> {
     this.processor.trigger();
 
-    // there might be multiple ranges but we will store the most recent
-    // Todo: Directly use the prev range before resetting in init fn so as to avoid unnecessary call to this fn
+    // there might be multiple saved ranges but we will consider the most recent range as nextRangeToSkip
+    // Todo: Directly use the prev range before resetting in init
+    // fn, so as to avoid unnecessary call to this fn here
     await this.updateNextRangeToSkip();
 
     this.logger.debug("Starting sync loop.");
@@ -382,7 +389,8 @@ export class BackfillSync {
         };
         const res: WithBytes<SignedBeaconBlock>[] = await this.fetchBlocks(goodPeer, goodPeerMetaData, anchorSlot, req);
 
-        // In the case when first slot is missed, and the request contains only that slot, retry upto 3 times with different peers and then ignore
+        // In the case when first slot is missed, and the request contains only that slot,
+        // retry upto 3 times with different peers and then ignore
         if (res.length === 0 && this.currentAttempt < this.MAX_RETRY_ATTEMPTS_FOR_EMPTY_RESPONSE) {
           this.currentAttempt += 1;
           // Todo: Consider using a missedSlot flag for better handling
@@ -393,7 +401,8 @@ export class BackfillSync {
         const validationRes = await this.validateBlocks(res);
 
         if (!validationRes.nextAnchor && res.length === 0) {
-          // Missed slot case: we've already updated the backfillDB in prev iteration (ie while filling rest 31 blocks of the epoch).
+          // Missed slot case: we've already updated the backfillDB in prev iteration
+          // (ie while filling rest 31 blocks of the epoch).
           // Now, update anchorSlot to proceed further.
           anchorSlot -= 1;
           this.syncAnchor.anchorSlot = anchorSlot;
@@ -424,32 +433,6 @@ export class BackfillSync {
           error: (error as Error).message,
           errorStack: (error as Error).stack,
         });
-        // Todo
-        // if (error instanceof BackfillSyncError) {
-        //   switch (error.type.code) {
-        //     // case BackfillSyncErrorCode.INTERNAL_ERROR:
-        //     //   // Break it out of the loop and throw error
-        //     //   this.status = BackfillSyncStatus.aborted;
-        //     //   break;
-        //     // case BackfillSyncErrorCode.NOT_ANCHORED:
-        //     // // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
-        //     // case BackfillSyncErrorCode.NOT_LINEAR:
-        //     //   // Lets try to jump directly to the parent of this anchorBlock as previous
-        //     //   // (segment) of blocks could be orphaned/missed
-        //     //   if (this.syncAnchor.anchorBlock) {
-        //     //     this.syncAnchor = {
-        //     //       anchorBlock: null,
-        //     //       anchorBlockRoot: this.syncAnchor.anchorBlock.message.parentRoot,
-        //     //       anchorSlot: null,
-        //     //       lastBackSyncedBlock: this.syncAnchor.lastBackSyncedBlock,
-        //     //     };
-        //     //   }
-
-        //     //     // falls through
-        //     case BackfillSyncErrorCode.INVALID_SIGNATURE:
-        //       this.network.reportPeer("goodPeer", PeerAction.LowToleranceError, "BadSyncBlocks");
-        //   }
-        // }
       } finally {
         await sleep(5000, this.signal);
       }
@@ -893,13 +876,13 @@ export class BackfillSync {
   }
 
   private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
-    // TODO: use db singleton object: BackfillRange to get anchorSlot
     const anchorSlot = this.syncAnchor.anchorSlot ?? this.backfillStartFromSlot;
 
     const peerMetaData = this.network.getConnectedPeerSyncMeta(data.peer);
     const earliestAvailableSlot = (data.status as fulu.Status).earliestAvailableSlot;
 
-    // Reconsider logic for earliestAvailableSlot value, a peer irrelevant now can be relevant in later stage of backfill.
+    // Reconsider logic for earliestAvailableSlot value, a peer irrelevant now
+    // can be relevant in later stage of backfill.
     // Assuming short lived connections for now, and hence ignoring above comment.
     if (data.status.headSlot < anchorSlot) {
       this.logger.debug("Peer head too far behind", {
@@ -970,7 +953,8 @@ export class BackfillSync {
       lastSlotRequested: meta?.lastSlotRequested,
     });
     this.peers.delete(data.peer);
-    // need to remove metadata to maintain less selectivity and fair chance, or else cumulative downscoring/upscoring may lead to very high selectivity
+    // need to remove metadata to maintain less selectivity and fair chance,
+    // or else cumulative downscoring/upscoring may lead to very high selectivity
     this.peersMeta.delete(data.peer);
   };
 
@@ -978,7 +962,6 @@ export class BackfillSync {
   // return weighted random peer
   private getGoodSyncPeer = (): PeerIdStr | null => {
     const eligiblePeers: PeerIdStr[] = [];
-    // TODO: use db singleton object: BackfillRange to get requiredSlot
     const anchorSlot = this.syncAnchor.anchorSlot ?? this.backfillStartFromSlot;
 
     this.logger.debug("Selecting peer for backfill", {
@@ -1024,13 +1007,11 @@ export class BackfillSync {
           meta.lastSlotRequested !== 0 &&
           Math.abs(meta.lastSlotRequested - anchorSlot) < 2 * this.BACKFILL_BATCH_SIZE
         ) {
-          // DEBUG_CODE
-          // this.logger.info("Skipping recently used peer", {
-          //   peerId,
-          //   lastSlotRequested: meta.lastSlotRequested,
-          //   anchorSlot,
-          // });
-          // DEBUG_CODE
+          this.logger.debug("Skipping recently used peer", {
+            peerId,
+            lastSlotRequested: meta.lastSlotRequested,
+            anchorSlot,
+          });
           return false;
         }
         return true;
@@ -1047,8 +1028,6 @@ export class BackfillSync {
         totalPeers: this.peers.size,
         anchorSlot,
       });
-      // throw to catch in sync loop
-      // throw Error("No eligible peers for backfill");
       return null;
     }
 
