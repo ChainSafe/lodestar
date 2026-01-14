@@ -151,8 +151,7 @@ export function initializeForkChoiceFromFinalizedState(
         parentBlockHash: isForkPostGloas ? toRootHex((state as CachedBeaconStateGloas).latestBlockHash) : null,
         payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
       },
-      currentSlot,
-      config
+      currentSlot
     ),
     state.validators.length,
     metrics,
@@ -276,7 +275,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     targetRoot: toRootHex(finalizedCheckpoint.root),
   };
 
-  const protoArray = ProtoArray.initialize(finalizedBlock, currentSlot, config);
+  const protoArray = ProtoArray.initialize(finalizedBlock, currentSlot);
   protoArray.onBlock(justifiedBlock, currentSlot);
   protoArray.onBlock(parentBlock, currentSlot);
   protoArray.onBlock(headBlock, currentSlot);
