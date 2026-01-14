@@ -56,7 +56,7 @@ import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
 } from "./syncCommitteeCache.js";
-import {BeaconStateAllForks, BeaconStateAltair, BeaconStateGloas} from "./types.js";
+import {BeaconStateAllForks, BeaconStateAltair, BeaconStateGloas, ShufflingGetter} from "./types.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -70,10 +70,7 @@ export type EpochCacheImmutableData = {
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
-  /** Pre-computed shufflings from beacon-node's ShufflingCache, if available */
-  previousShuffling?: EpochShuffling;
-  currentShuffling?: EpochShuffling;
-  nextShuffling?: EpochShuffling;
+  shufflingGetter?: ShufflingGetter;
 };
 
 /** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
@@ -344,10 +341,15 @@ export class EpochCache {
     const currentActiveIndicesAsNumberArray: ValidatorIndex[] = [];
     const nextActiveIndicesAsNumberArray: ValidatorIndex[] = [];
 
-    // Decision roots for shuffling, beacon-node will use these to populate its ShufflingCache
+    // BeaconChain could provide a shuffling getter to avoid re-computing shuffling every epoch
+    // in that case, we don't need to compute shufflings again
+    const shufflingGetter = opts?.shufflingGetter;
     const previousDecisionRoot = calculateShufflingDecisionRoot(config, state, previousEpoch);
+    const cachedPreviousShuffling = shufflingGetter?.(previousEpoch, previousDecisionRoot);
     const currentDecisionRoot = calculateShufflingDecisionRoot(config, state, currentEpoch);
+    const cachedCurrentShuffling = shufflingGetter?.(currentEpoch, currentDecisionRoot);
     const nextDecisionRoot = calculateShufflingDecisionRoot(config, state, nextEpoch);
+    const cachedNextShuffling = shufflingGetter?.(nextEpoch, nextDecisionRoot);
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -356,15 +358,17 @@ export class EpochCache {
       effectiveBalanceIncrements[i] = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
 
       // Collect active indices for each epoch to compute shufflings
-      if (isActiveValidator(validator, previousEpoch)) {
+      if (cachedPreviousShuffling == null && isActiveValidator(validator, previousEpoch)) {
         previousActiveIndicesAsNumberArray.push(i);
       }
       if (isActiveValidator(validator, currentEpoch)) {
-        currentActiveIndicesAsNumberArray.push(i);
+        if (cachedCurrentShuffling == null) {
+          currentActiveIndicesAsNumberArray.push(i);
+        }
         // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
         totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
       }
-      if (isActiveValidator(validator, nextEpoch)) {
+      if (cachedNextShuffling == null && isActiveValidator(validator, nextEpoch)) {
         nextActiveIndicesAsNumberArray.push(i);
       }
 
@@ -389,19 +393,18 @@ export class EpochCache {
 
     const nextActiveIndices = new Uint32Array(nextActiveIndicesAsNumberArray);
 
-    // Use shufflings from opts if provided (from beacon-node's ShufflingCache), otherwise compute
+    // Use cached shufflings if available, otherwise compute
     const currentShuffling =
-      opts?.currentShuffling ??
+      cachedCurrentShuffling ??
       computeEpochShuffling(state, new Uint32Array(currentActiveIndicesAsNumberArray), currentEpoch);
 
     const previousShuffling =
-      opts?.previousShuffling ??
+      cachedPreviousShuffling ??
       (isGenesis
         ? currentShuffling
         : computeEpochShuffling(state, new Uint32Array(previousActiveIndicesAsNumberArray), previousEpoch));
 
-    const nextShuffling =
-      opts?.nextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+    const nextShuffling = cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
