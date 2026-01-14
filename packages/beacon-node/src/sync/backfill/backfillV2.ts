@@ -435,6 +435,7 @@ export class BackfillSync {
         });
       } finally {
         await sleep(5000, this.signal);
+        this.processor.trigger();
       }
     }
 
