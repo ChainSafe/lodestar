@@ -10,6 +10,7 @@ import {
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
 import {
@@ -27,7 +28,7 @@ import {
   gloas,
   phase0,
 } from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, toRootHex} from "@lodestar/utils";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
 import {EpochShuffling, calculateShufflingDecisionRoot, computeEpochShuffling} from "../util/epochShuffling.js";
@@ -625,7 +626,7 @@ export class EpochCache {
     // Pre-Fulu, we need to compute it here since processProposerLookahead doesn't run.
     //
     // See: https://eips.ethereum.org/EIPS/eip-7917
-    this.nextDecisionRoot = epochTransitionCache.nextShufflingDecisionRoot;
+    this.nextDecisionRoot = toRootHex(state.blockRoots.get(state.slot % SLOTS_PER_HISTORICAL_ROOT));
     this.nextActiveIndices = epochTransitionCache.nextShufflingActiveIndices;
     this.nextShuffling =
       epochTransitionCache.nextShuffling ?? computeEpochShuffling(state, this.nextActiveIndices, epochAfterUpcoming);

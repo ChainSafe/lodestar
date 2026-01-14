@@ -1,12 +1,6 @@
-import {
-  EPOCHS_PER_SLASHINGS_VECTOR,
-  FAR_FUTURE_EPOCH,
-  ForkSeq,
-  MIN_ACTIVATION_BALANCE,
-  SLOTS_PER_HISTORICAL_ROOT,
-} from "@lodestar/params";
-import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {intDiv, toRootHex} from "@lodestar/utils";
+import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {intDiv} from "@lodestar/utils";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 import {
   CachedBeaconStateAllForks,
@@ -157,11 +151,6 @@ export interface EpochTransitionCache {
    * | afterEpochTransitionCache                | read it                            |
    */
   nextShufflingActiveIndices: Uint32Array;
-
-  /**
-   * Shuffling decision root that gets set on the EpochCache in afterProcessEpoch
-   */
-  nextShufflingDecisionRoot: RootHex;
 
   /**
    * Pre-computed shuffling for epoch N+2, populated by processProposerLookahead (Fulu+).
@@ -377,10 +366,6 @@ export function beforeProcessEpoch(
   });
 
   // Prepare shuffling data for epoch after next (nextShuffling post epoch transition)
-  // cannot call calculateShufflingDecisionRoot here because spec prevent getting current slot
-  // as a decision block.  we are part way through the transition though and this was added in
-  // process slot beforeProcessEpoch happens so it available and valid
-  const nextShufflingDecisionRoot = toRootHex(state.blockRoots.get(state.slot % SLOTS_PER_HISTORICAL_ROOT));
   const nextShufflingActiveIndices = new Uint32Array(nextEpochShufflingActiveIndicesLength);
   if (nextEpochShufflingActiveIndicesLength > nextEpochShufflingActiveValidatorIndices.length) {
     throw new Error(
@@ -515,7 +500,6 @@ export function beforeProcessEpoch(
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation: indicesEligibleForActivation.map(({validatorIndex}) => validatorIndex),
     indicesToEject,
-    nextShufflingDecisionRoot,
     nextShufflingActiveIndices,
     nextShuffling: null,
     // to be updated in processEffectiveBalanceUpdates

@@ -20,8 +20,10 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeSyncCommitteeRewards,
+  createCachedBeaconState,
   getEffectiveBalanceIncrementsZeroInactive,
   getEffectiveBalancesFromStateBytes,
+  isCachedBeaconState,
   processSlots,
 } from "@lodestar/state-transition";
 import {
@@ -296,9 +298,9 @@ export class BeaconChain implements IBeaconChain {
     // When the BeaconStateCache is created in eth1 genesis builder it may be incorrect. Until we can ensure that
     // it's safe to re-use _ANY_ BeaconStateCache, this option is disabled by default and only used in tests.
     const cachedState =
-      isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
+      isCachedBeaconState(anchorState as BeaconStateAllForks) && opts.skipCreateStateCacheIfAvailable
         ? anchorState
-        : createCachedBeaconState(anchorState, {
+        : createCachedBeaconState(anchorState as BeaconStateAllForks, {
             config,
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
