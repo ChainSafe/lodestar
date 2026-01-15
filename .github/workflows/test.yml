@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24.13.x]
+        node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24.13.x]
+        node: [24]
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
@@ -68,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24.13.x]
+        node: [24]
     steps:
       - uses: actions/checkout@v4
 
@@ -89,7 +89,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24.13.x]
+        node: [24]
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
@@ -128,7 +128,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24.13.x]
+        node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -165,7 +165,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24.13.x]
+        node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
@@ -187,7 +187,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [24.13.x]
+        node: [24]
     steps:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
