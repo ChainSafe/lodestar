@@ -296,7 +296,7 @@ type TypesByFork = {
     ExecutionPayloadHeader: gloas.ExecutionPayloadHeader;
     BuilderBid: gloas.BuilderBid;
     SignedBuilderBid: gloas.SignedBuilderBid;
-    SSEPayloadAttributes: electra.SSEPayloadAttributes;
+    SSEPayloadAttributes: gloas.SSEPayloadAttributes;
     BlockContents: gloas.BlockContents;
     SignedBlockContents: gloas.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
