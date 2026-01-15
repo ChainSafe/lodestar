@@ -40,9 +40,9 @@ async function validateBlsToExecutionChange(
   const {config} = chain;
   const addressChange = blsToExecutionChange.message;
   if (addressChange.validatorIndex >= state.validators.length) {
-    throw Error(
-      `withdrawalValidatorIndex ${addressChange.validatorIndex} > state.validators len ${state.validators.length}`
-    );
+    throw new BlsToExecutionChangeError(GossipAction.REJECT, {
+      code: BlsToExecutionChangeErrorCode.INVALID,
+    });
   }
   const validator = state.validators.get(addressChange.validatorIndex);
   // [REJECT] All of the conditions within process_bls_to_execution_change pass validation.
