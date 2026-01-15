@@ -1308,9 +1308,9 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_miss_count",
         help: "Count of shuffling cache miss",
       }),
-      shufflingBuiltMultipleTimes: register.gauge({
-        name: "lodestar_shuffling_cache_recalculated_shuffling_count",
-        help: "Count of shuffling that were build multiple times",
+      shufflingSetMultipleTimes: register.gauge({
+        name: "lodestar_shuffling_cache_set_multiple_times_count",
+        help: "Count of shuffling that were set multiple times",
       }),
       shufflingPromiseNotResolved: register.gauge({
         name: "lodestar_shuffling_cache_promise_not_resolved_count",

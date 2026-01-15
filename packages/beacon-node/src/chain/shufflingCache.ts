@@ -157,7 +157,8 @@ export class ShufflingCache {
           (Date.now() - cacheItem.timeInsertedMs) / 1000
         );
       } else {
-        this.metrics?.shufflingCache.shufflingBuiltMultipleTimes.inc();
+        this.metrics?.shufflingCache.shufflingSetMultipleTimes.inc();
+        return;
       }
     }
     // set the shuffling
