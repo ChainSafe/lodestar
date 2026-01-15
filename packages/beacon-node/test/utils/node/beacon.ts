@@ -42,7 +42,7 @@ export async function getDevBeaconNode(
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb(config, await LevelDbController.create({name: tmpDir.name}, {logger}));
+  const db = new BeaconDb(config, await LevelDbController.create({name: options.db?.name ?? tmpDir.name}, {logger}));
 
   let anchorState = opts.anchorState;
   if (!anchorState) {
