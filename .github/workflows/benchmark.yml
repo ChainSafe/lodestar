@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 24
+          node: 24.13.x
       # </common-build>
 
       # Restore performance downloaded states
