@@ -4,6 +4,7 @@ import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   computeEpochAtSlot,
+  getIndexedAttestation,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, deneb} from "@lodestar/types";
@@ -105,9 +106,11 @@ export async function verifyBlocksInEpoch(
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
     for (const [i, block] of blocks.entries()) {
-      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) =>
-        preState0.epochCtx.getIndexedAttestation(fork, attestation)
-      );
+      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
+        const attEpoch = computeEpochAtSlot(attestation.data.slot);
+        const decisionRoot = preState0.epochCtx.getShufflingDecisionRoot(attEpoch);
+        return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
+      });
     }
 
     // batch all I/O operations to reduce overhead

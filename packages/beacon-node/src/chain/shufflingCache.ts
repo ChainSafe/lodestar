@@ -1,5 +1,12 @@
-import {CachedBeaconStateAllForks, EpochShuffling} from "@lodestar/state-transition";
-import {Epoch, RootHex} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
+import {
+  CachedBeaconStateAllForks,
+  EpochShuffling,
+  getAttestingIndices,
+  getBeaconCommittees,
+  getIndexedAttestation,
+} from "@lodestar/state-transition";
+import {Attestation, CommitteeIndex, Epoch, IndexedAttestation, RootHex, Slot} from "@lodestar/types";
 import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 
@@ -143,6 +150,54 @@ export class ShufflingCache {
 
     // Cache next shuffling
     this.set(epochCtx.nextShuffling, epochCtx.nextDecisionRoot);
+  }
+
+  getIndexedAttestation(
+    epoch: number,
+    decisionRoot: string,
+    fork: ForkSeq,
+    attestation: Attestation
+  ): IndexedAttestation {
+    const shuffling = this.getSync(epoch, decisionRoot);
+    if (shuffling === null) {
+      throw new ShufflingCacheError({
+        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
+        epoch,
+        decisionRoot,
+      });
+    }
+
+    return getIndexedAttestation(shuffling, fork, attestation);
+  }
+
+  getAttestingIndices(epoch: number, decisionRoot: string, fork: ForkSeq, attestation: Attestation): number[] {
+    const shuffling = this.getSync(epoch, decisionRoot);
+    if (shuffling === null) {
+      throw new ShufflingCacheError({
+        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
+        epoch,
+        decisionRoot,
+      });
+    }
+
+    return getAttestingIndices(shuffling, fork, attestation);
+  }
+
+  getBeaconCommittee(epoch: number, decisionRoot: string, slot: Slot, index: CommitteeIndex): Uint32Array {
+    return this.getBeaconCommittees(epoch, decisionRoot, slot, [index])[0];
+  }
+
+  getBeaconCommittees(epoch: number, decisionRoot: string, slot: Slot, indices: CommitteeIndex[]): Uint32Array[] {
+    const shuffling = this.getSync(epoch, decisionRoot);
+    if (shuffling === null) {
+      throw new ShufflingCacheError({
+        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
+        epoch,
+        decisionRoot,
+      });
+    }
+
+    return getBeaconCommittees(shuffling, slot, indices);
   }
 
   /**

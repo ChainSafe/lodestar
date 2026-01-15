@@ -1,12 +1,5 @@
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  Attestation,
-  CommitteeIndex,
-  IndexedAttestation,
-  Slot,
-  ValidatorIndex,
-  electra,
-} from "@lodestar/types";
+import {Attestation, CommitteeIndex, IndexedAttestation, Slot, ValidatorIndex, electra} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {EpochShuffling} from "./epochShuffling.js";
 

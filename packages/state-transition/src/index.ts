@@ -65,4 +65,3 @@ export type {
   CachedBeaconStatePhase0,
 } from "./types.js";
 export * from "./util/index.js";
-export {ShufflingError, ShufflingErrorCode} from "./util/shufflingUtils.js";
