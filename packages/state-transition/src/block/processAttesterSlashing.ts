@@ -1,5 +1,6 @@
+import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
-import {AttesterSlashing} from "@lodestar/types";
+import {AttesterSlashing, Slot} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
@@ -19,7 +20,14 @@ export function processAttesterSlashing(
   verifySignatures = true
 ): void {
   const {epochCtx} = state;
-  assertValidAttesterSlashing(epochCtx.index2pubkey, state, attesterSlashing, verifySignatures);
+  assertValidAttesterSlashing(
+    state.config,
+    epochCtx.index2pubkey,
+    state.slot,
+    state.validators.length,
+    attesterSlashing,
+    verifySignatures
+  );
 
   const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
 
@@ -39,8 +47,10 @@ export function processAttesterSlashing(
 }
 
 export function assertValidAttesterSlashing(
+  config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
+  stateSlot: Slot,
+  validatorsLen: number,
   attesterSlashing: AttesterSlashing,
   verifySignatures = true
 ): void {
@@ -55,7 +65,9 @@ export function assertValidAttesterSlashing(
   // be higher than the clock and the slashing would still be valid. Same applies to attestation data index, which
   // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
   for (const [i, attestation] of [attestation1, attestation2].entries()) {
-    if (!isValidIndexedAttestationBigint(state.config, index2pubkey, state, attestation, verifySignatures)) {
+    if (
+      !isValidIndexedAttestationBigint(config, index2pubkey, stateSlot, validatorsLen, attestation, verifySignatures)
+    ) {
       throw new Error(`AttesterSlashing attestation${i} is invalid`);
     }
   }
