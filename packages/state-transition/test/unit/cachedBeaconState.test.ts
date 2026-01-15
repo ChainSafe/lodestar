@@ -160,12 +160,6 @@ describe("CachedBeaconState", () => {
 
         // confirm loadState() result
         const stateBytes = state.serialize();
-        const newCachedState = loadCachedBeaconState(seedState, stateBytes, {
-          skipSyncCommitteeCache: true,
-        });
-        const newStateBytes = newCachedState.serialize();
-        expect(newStateBytes).toEqual(stateBytes);
-        expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
         const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex): EpochShuffling | null => {
           if (
             shufflingEpoch === seedState.epochCtx.epoch - 1 &&
@@ -190,6 +184,13 @@ describe("CachedBeaconState", () => {
 
           return null;
         };
+        const newCachedState = loadCachedBeaconState(seedState, stateBytes, {
+          skipSyncCommitteeCache: true,
+          shufflingGetter,
+        });
+        const newStateBytes = newCachedState.serialize();
+        expect(newStateBytes).toEqual(stateBytes);
+        expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
         const cachedState = createCachedBeaconState(
           state,
           {

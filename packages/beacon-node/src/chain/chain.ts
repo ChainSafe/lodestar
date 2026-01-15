@@ -418,6 +418,7 @@ export class BeaconChain implements IBeaconChain {
     clock.addListener(ClockEvent.epoch, this.onClockEpoch.bind(this));
     emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
+    emitter.addListener(ChainEvent.checkpoint, this.onCheckpoint.bind(this));
   }
 
   async init(): Promise<void> {
@@ -1163,6 +1164,15 @@ export class BeaconChain implements IBeaconChain {
 
   private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
+  }
+
+  private onCheckpoint(this: BeaconChain, _checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
+    const {epochCtx} = state;
+    this.shufflingCache["set"](epochCtx.previousShuffling, epochCtx.previousDecisionRoot);
+    this.shufflingCache["set"](epochCtx.currentShuffling, epochCtx.currentDecisionRoot);
+    if (epochCtx.nextShuffling !== null) {
+      this.shufflingCache["set"](epochCtx.nextShuffling, epochCtx.nextDecisionRoot);
+    }
   }
 
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
