@@ -1,5 +1,4 @@
 import {
-  CachedBeaconStateCapella,
   getBlsToExecutionChangeSignatureSet,
   isValidBlsToExecutionChange,
 } from "@lodestar/state-transition";
@@ -42,10 +41,16 @@ async function validateBlsToExecutionChange(
   // and chanes relevant to `isValidBlsToExecutionChange()` happen only on processBlock(), not processEpoch()
   const state = chain.getHeadState();
   const {config} = chain;
-
+  const addressChange = blsToExecutionChange.message;
+  if (addressChange.validatorIndex >= state.validators.length) {
+    throw Error(
+      `withdrawalValidatorIndex ${addressChange.validatorIndex} > state.validators len ${state.validators.length}`
+    );
+  }
+  const validator = state.validators.get(addressChange.validatorIndex);
   // [REJECT] All of the conditions within process_bls_to_execution_change pass validation.
   // verifySignature = false, verified in batch below
-  const {valid} = isValidBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange, false);
+  const {valid} = isValidBlsToExecutionChange(config, validator, blsToExecutionChange, false);
   if (!valid) {
     throw new BlsToExecutionChangeError(GossipAction.REJECT, {
       code: BlsToExecutionChangeErrorCode.INVALID,
