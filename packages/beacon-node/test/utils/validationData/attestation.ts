@@ -76,8 +76,12 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
     timeliness: false,
 
-    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+    executionPayloadBlockHash: null,
+    executionStatus: ExecutionStatus.PreMerge,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: 2, // PayloadStatus.FULL
   };
 
   const shufflingCache = new ShufflingCache(null, null, {}, [

@@ -67,9 +67,11 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
 
           timeliness: false,
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+          parentBlockHash: null,
+          payloadStatus: 2, // PayloadStatus.FULL
         },
-        originalState.slot,
-        {GLOAS_FORK_EPOCH: Infinity}
+        originalState.slot
       );
 
       for (let slot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch); slot < originalState.slot; slot++) {
@@ -93,6 +95,9 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+            parentBlockHash: null,
+            payloadStatus: 2, // PayloadStatus.FULL
           },
           slot
         );
