@@ -29,7 +29,7 @@ describe("ShufflingCache", () => {
     shufflingCache.insertPromise(currentEpoch, "0x00");
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toEqual(state.epochCtx.currentShuffling);
     // insert shuffling at other epochs does prune the cache
-    shufflingCache.set(state.epochCtx.previousShuffling, state.epochCtx.previousDecisionRoot);
+    shufflingCache["set"](state.epochCtx.previousShuffling, state.epochCtx.previousDecisionRoot);
     // the current shuffling is not available anymore
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toBeNull();
   });
@@ -40,7 +40,7 @@ describe("ShufflingCache", () => {
     shufflingCache.insertPromise(previousEpoch, previousDecisionRoot);
     const shufflingRequest0 = shufflingCache.get(previousEpoch, previousDecisionRoot);
     const shufflingRequest1 = shufflingCache.get(previousEpoch, previousDecisionRoot);
-    shufflingCache.set(state.epochCtx.previousShuffling, previousDecisionRoot);
+    shufflingCache["set"](state.epochCtx.previousShuffling, previousDecisionRoot);
     expect(await shufflingRequest0).toEqual(state.epochCtx.previousShuffling);
     expect(await shufflingRequest1).toEqual(state.epochCtx.previousShuffling);
   });
