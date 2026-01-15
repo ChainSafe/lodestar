@@ -231,7 +231,7 @@ function getPendingPartialWithdrawals(
         amount: withdrawableBalance,
       });
       withdrawalIndex++;
-      balanceAfterWithdrawals.set(withdrawal.validatorIndex, balance - Number(withdrawableBalance));
+      balanceAfterWithdrawals.set(validatorIndex, balance - Number(withdrawableBalance));
     }
     processedCount++;
   }
@@ -309,7 +309,7 @@ function getValidatorsSweepWithdrawals(
     processedCount++;
   }
 
-  return {sweepWithdrawals: sweepWithdrawals, processedCount};
+  return {sweepWithdrawals, processedCount};
 }
 
 function applyWithdrawals(
