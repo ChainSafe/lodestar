@@ -8,8 +8,6 @@ import {
   ProtoArray,
   ProtoBlock,
   ProtoNode,
-  generateProtoNodeKey,
-  protoNodeKey,
 } from "../../../src/index.js";
 
 describe("Gloas Fork Choice", () => {
@@ -29,8 +27,21 @@ describe("Gloas Fork Choice", () => {
     blockRoot: RootHex,
     payloadStatus: PayloadStatus
   ): ProtoNode | undefined {
-    const key = protoNodeKey({blockRoot, payloadStatus} as any);
-    const index = (protoArray as any).indices.get(key);
+    const variants = (protoArray as any).indices.get(blockRoot);
+    if (!variants) return undefined;
+
+    // For pre-Gloas, variants[0] contains FULL index
+    if (variants.length === 1) {
+      // Pre-Gloas block only has FULL variant
+      // Only return if requested payloadStatus is FULL
+      if (payloadStatus === PayloadStatus.FULL) {
+        return (protoArray as any).nodes[variants[0]];
+      }
+      return undefined;
+    }
+
+    // For post-Gloas, variants[payloadStatus] contains the index for that status
+    const index = variants[payloadStatus];
     if (index === undefined) return undefined;
     return (protoArray as any).nodes[index];
   }
@@ -65,55 +76,46 @@ describe("Gloas Fork Choice", () => {
     };
   }
 
-  describe("ForkChoiceNode helpers", () => {
-    it("protoNodeKey() creates correct compound key", () => {
-      const key = protoNodeKey({blockRoot: "0xabc", payloadStatus: PayloadStatus.FULL} as any);
-      expect(key).toBe("0xabc:2");
+  describe("ProtoArray indices lookup", () => {
+    it("indices map stores variants correctly for pre-Gloas blocks", () => {
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(0, genesisRoot, "0x00"),
+        0
+      );
+      const variants = (protoArray as any).indices.get(genesisRoot);
+      expect(variants).toBeDefined();
+      // Pre-Gloas: variants[0] contains FULL index
+      expect(variants.length).toBe(1);
+      expect(variants[0]).toBe(0);
     });
 
-    it("protoNodeKey() handles all payload statuses", () => {
-      expect(protoNodeKey({blockRoot: "0xabc", payloadStatus: PayloadStatus.PENDING} as any)).toBe("0xabc:0");
-      expect(protoNodeKey({blockRoot: "0xabc", payloadStatus: PayloadStatus.EMPTY} as any)).toBe("0xabc:1");
-      expect(protoNodeKey({blockRoot: "0xabc", payloadStatus: PayloadStatus.FULL} as any)).toBe("0xabc:2");
+    it("getNodeByPayloadStatus() retrieves correct variants", () => {
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(0, genesisRoot, "0x00"),
+        0
+      );
+      const node = getNodeByPayloadStatus(protoArray, genesisRoot, PayloadStatus.FULL);
+      expect(node).toBeDefined();
+      expect(node?.blockRoot).toBe(genesisRoot);
+      expect(node?.payloadStatus).toBe(PayloadStatus.FULL);
     });
 
-    it("generateProtoNodeKey() creates correct compound key", () => {
-      const key = generateProtoNodeKey("0xabc", PayloadStatus.FULL);
-      expect(key).toBe("0xabc:2");
-    });
+    it("indices map stores multiple variants for Gloas blocks", () => {
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(0, genesisRoot, "0x00"),
+        0
+      );
 
-    it("generateProtoNodeKey() handles all payload statuses", () => {
-      expect(generateProtoNodeKey("0xabc", PayloadStatus.PENDING)).toBe("0xabc:0");
-      expect(generateProtoNodeKey("0xabc", PayloadStatus.EMPTY)).toBe("0xabc:1");
-      expect(generateProtoNodeKey("0xabc", PayloadStatus.FULL)).toBe("0xabc:2");
-    });
+      // Add a Gloas block
+      const gloasBlock = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(gloasBlock, gloasForkSlot);
 
-    it("generateProtoNodeKey() and protoNodeKey() produce same output", () => {
-      const root = "0x123abc";
-
-      const pendingKey1 = protoNodeKey({blockRoot: root, payloadStatus: PayloadStatus.PENDING} as any);
-      const pendingKey2 = generateProtoNodeKey(root, PayloadStatus.PENDING);
-      expect(pendingKey1).toBe(pendingKey2);
-
-      const emptyKey1 = protoNodeKey({blockRoot: root, payloadStatus: PayloadStatus.EMPTY} as any);
-      const emptyKey2 = generateProtoNodeKey(root, PayloadStatus.EMPTY);
-      expect(emptyKey1).toBe(emptyKey2);
-
-      const fullKey1 = protoNodeKey({blockRoot: root, payloadStatus: PayloadStatus.FULL} as any);
-      const fullKey2 = generateProtoNodeKey(root, PayloadStatus.FULL);
-      expect(fullKey1).toBe(fullKey2);
-    });
-
-    it("generateProtoNodeKey() handles different root formats", () => {
-      // Short hex
-      expect(generateProtoNodeKey("0x1", PayloadStatus.PENDING)).toBe("0x1:0");
-
-      // Long hex (64 chars)
-      const longRoot = "0x" + "a".repeat(64);
-      expect(generateProtoNodeKey(longRoot, PayloadStatus.FULL)).toBe(`${longRoot}:2`);
-
-      // Empty root edge case
-      expect(generateProtoNodeKey("0x", PayloadStatus.EMPTY)).toBe("0x:1");
+      const variants = (protoArray as any).indices.get("0x02");
+      expect(variants).toBeDefined();
+      // Gloas: variants[PENDING] and variants[EMPTY] should be defined
+      expect(variants[PayloadStatus.PENDING]).toBeDefined();
+      expect(variants[PayloadStatus.EMPTY]).toBeDefined();
+      expect(variants[PayloadStatus.FULL]).toBeUndefined();
     });
   });
 
@@ -203,7 +205,7 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, gloasForkSlot);
 
       const emptyNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY);
-      const pendingIndex = protoArray.getNodeIndex({blockRoot: "0x02", payloadStatus: PayloadStatus.PENDING} as any);
+      const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
 
       expect(emptyNode?.parent).toBe(pendingIndex);
     });
@@ -253,7 +255,7 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(gloasBlock, gloasForkSlot);
 
       const gloasPendingNode = getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.PENDING);
-      const fuluFullIndex = protoArray.getNodeIndex({blockRoot: "0x02", payloadStatus: PayloadStatus.FULL} as any);
+      const fuluFullIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
 
       // First Gloas block's PENDING should point to parent's FULL
       expect(gloasPendingNode?.parent).toBe(fuluFullIndex);
@@ -313,7 +315,7 @@ describe("Gloas Fork Choice", () => {
       protoArray.onExecutionPayload("0x02", gloasForkSlot);
 
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
-      const pendingIndex = protoArray.getNodeIndex({blockRoot: "0x02", payloadStatus: PayloadStatus.PENDING} as any);
+      const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
 
       expect(fullNode?.parent).toBe(pendingIndex);
     });
@@ -500,7 +502,7 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, gloasForkSlot);
       protoArray.onExecutionPayload("0x02", gloasForkSlot);
 
-      const pendingIndex = protoArray.getNodeIndex({blockRoot: "0x02", payloadStatus: PayloadStatus.PENDING} as any);
+      const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
       const emptyNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY);
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
 
@@ -518,8 +520,8 @@ describe("Gloas Fork Choice", () => {
       const blockB = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02");
       protoArray.onBlock(blockB, gloasForkSlot + 1);
 
-      const blockAPending = protoArray.getNodeIndex({blockRoot: "0x02", payloadStatus: PayloadStatus.PENDING} as any);
-      const blockAFull = protoArray.getNodeIndex({blockRoot: "0x02", payloadStatus: PayloadStatus.FULL} as any);
+      const blockAPending = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
+      const blockAFull = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
       const blockBPending = getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.PENDING);
 
       // Block B's PENDING should NOT point to A's PENDING
@@ -533,13 +535,11 @@ describe("Gloas Fork Choice", () => {
     let protoArray: ProtoArray;
 
     beforeEach(() => {
-      protoArray = new ProtoArray({
-        pruneThreshold: 0,
-        justifiedEpoch: genesisEpoch,
-        justifiedRoot: genesisRoot,
-        finalizedEpoch: genesisEpoch,
-        finalizedRoot: genesisRoot,
-      });
+      // Initialize with genesis block to avoid INVALID_PARENT_DELTA errors
+      protoArray = ProtoArray.initialize(
+        createTestBlock(0, genesisRoot, "0x00"),
+        0
+      );
     });
 
     it("EMPTY vs FULL comparison uses explicit tiebreaker for slot n-1 blocks", () => {
@@ -548,14 +548,8 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, blockSlot);
       protoArray.onExecutionPayload("0x02", blockSlot);
 
-      const emptyIndex = protoArray.getNodeIndex({
-        blockRoot: "0x02",
-        payloadStatus: PayloadStatus.EMPTY,
-      } as any)!;
-      const fullIndex = protoArray.getNodeIndex({
-        blockRoot: "0x02",
-        payloadStatus: PayloadStatus.FULL,
-      } as any)!;
+      const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)!;
+      const fullIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL)!;
 
       // Give EMPTY more weight than FULL
       const deltas = new Array(protoArray.length()).fill(0);
@@ -593,14 +587,8 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(blockA, blockSlot);
       protoArray.onBlock(blockB, blockSlot);
 
-      const emptyAIndex = protoArray.getNodeIndex({
-        blockRoot: "0x02",
-        payloadStatus: PayloadStatus.EMPTY,
-      } as any)!;
-      const emptyBIndex = protoArray.getNodeIndex({
-        blockRoot: "0x03",
-        payloadStatus: PayloadStatus.EMPTY,
-      } as any)!;
+      const emptyAIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)!;
+      const emptyBIndex = protoArray.getNodeIndexByRootAndStatus("0x03", PayloadStatus.EMPTY)!;
 
       // Give A more votes than B
       const deltas = new Array(protoArray.length()).fill(0);
@@ -632,14 +620,8 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, blockSlot);
       protoArray.onExecutionPayload("0x02", blockSlot);
 
-      const emptyIndex = protoArray.getNodeIndex({
-        blockRoot: "0x02",
-        payloadStatus: PayloadStatus.EMPTY,
-      } as any)!;
-      const fullIndex = protoArray.getNodeIndex({
-        blockRoot: "0x02",
-        payloadStatus: PayloadStatus.FULL,
-      } as any)!;
+      const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)!;
+      const fullIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL)!;
 
       const deltas = new Array(protoArray.length()).fill(0);
       deltas[emptyIndex] = 100;

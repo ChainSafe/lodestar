@@ -298,9 +298,10 @@ describe("executionStatus / invalidate all postmerge chain", () => {
 
   const fcHead = fc.findHead("0", 3);
   it("pre merge block should be the FC head", () => {
-    // findHead returns compound key "root:payloadStatus"
-    // For pre-Gloas blocks, this should be "0:2" (PAYLOAD_STATUS_FULL)
-    expect(fcHead).toBe("0:2");
+    // findHead returns ProtoNode
+    // For pre-Gloas blocks, this should have blockRoot "0" and payloadStatus FULL (2)
+    expect(fcHead.blockRoot).toBe("0");
+    expect(fcHead.payloadStatus).toBe(2); // PayloadStatus.FULL
   });
 });
 

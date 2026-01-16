@@ -42,6 +42,11 @@ describe("Forkchoice", () => {
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+        // Pre-Gloas block fields (required to avoid being treated as Gloas)
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
+        timeliness: false,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
     );
