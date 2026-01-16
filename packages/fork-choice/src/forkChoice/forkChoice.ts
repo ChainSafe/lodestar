@@ -41,7 +41,6 @@ import {
   ProtoBlock,
   ProtoNode,
   VoteIndex,
-  generateProtoNodeKey,
   isGloasBlock,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
@@ -101,12 +100,14 @@ export class ForkChoice implements IForkChoice {
    *
    * For Gloas (ePBS), LatestMessage tracks slot instead of epoch and includes payload_present flag.
    * Spec: gloas/fork-choice.md#modified-latestmessage
+   *
+   * IMPORTANT: voteCurrentIndices and voteNextIndices point to the EXACT variant node index.
+   * The payload status is encoded in the node index itself (different variants have different indices).
+   * For example, if a validator votes for the EMPTY variant, voteNextIndices[i] points to that specific EMPTY node.
    */
   private readonly voteCurrentIndices: VoteIndex[];
   private readonly voteNextIndices: VoteIndex[];
   private readonly voteNextSlots: Slot[];
-  private readonly voteNextPayloadStatus: PayloadStatus[];
-  private readonly voteCurrentPayloadStatus: PayloadStatus[];
 
   /**
    * Attestations that arrived at the current slot and must be queued for later processing.
@@ -163,8 +164,6 @@ export class ForkChoice implements IForkChoice {
     // when compute deltas, we ignore epoch if voteNextIndex is NULL_VOTE_INDEX anyway
 
     this.voteNextSlots = new Array(validatorCount).fill(0);
-    this.voteNextPayloadStatus = new Array(validatorCount).fill(PayloadStatus.FULL);
-    this.voteCurrentPayloadStatus = new Array(validatorCount).fill(PayloadStatus.FULL);
 
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
@@ -480,13 +479,10 @@ export class ForkChoice implements IForkChoice {
     } = computeDeltas(
       this.protoArray.nodes.length,
       this.voteCurrentIndices,
-      this.voteCurrentPayloadStatus,
       this.voteNextIndices,
-      this.voteNextPayloadStatus,
       oldBalances,
       newBalances,
-      this.fcStore.equivocatingIndices,
-      this.protoArray.variantIndices
+      this.fcStore.equivocatingIndices
     );
     timer?.();
 
@@ -526,22 +522,8 @@ export class ForkChoice implements IForkChoice {
       currentSlot,
     });
 
-    // findHead returns compound key (root:payloadStatus) for Gloas, or (root:FULL) for pre-Gloas
-    const headKey = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
-    const headIndex = this.protoArray.indices.get(headKey);
-    if (headIndex === undefined) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
-        root: headKey,
-      });
-    }
-    const head = this.protoArray.nodes[headIndex];
-    if (head === undefined) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
-        root: headKey,
-      });
-    }
+    // findHead returns the ProtoNode representing the head
+    const head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
 
     this.head = head;
     return this.head;
@@ -1141,13 +1123,16 @@ export class ForkChoice implements IForkChoice {
   *forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock> {
     const rootsInChain = new Set([blockRoot]);
 
-    const blockIndex = this.protoArray.indices.get(blockRoot);
-    if (blockIndex === undefined) {
+    const blockVariants = this.protoArray.indices.get(blockRoot);
+    if (blockVariants === undefined) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: blockRoot,
       });
     }
+
+    // Find the minimum index among all variants to start iteration
+    const blockIndex = Math.min(...blockVariants.filter((idx) => idx !== undefined));
 
     for (let i = blockIndex + 1; i < this.protoArray.nodes.length; i++) {
       const node = this.protoArray.nodes[i];
@@ -1538,22 +1523,16 @@ export class ForkChoice implements IForkChoice {
     nextPayloadStatus: PayloadStatus
   ): void {
     // should not happen, attestation is validated before this step
-    // For pre-Gloas blocks: use FULL (payload embedded in block)
-    // For Gloas blocks: use PENDING (all Gloas blocks have PENDING variant)
-    const block = this.getBlockHex(nextRoot);
-    const lookupStatus = block && isGloasBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL;
-    const key = generateProtoNodeKey(nextRoot, lookupStatus);
-    const nextIndex = this.protoArray.getNodeIndexByKey(key);
+    // Get the node index for the voted block
+    const nextIndex = this.protoArray.getNodeIndexByRootAndStatus(nextRoot, nextPayloadStatus);
     if (nextIndex === undefined) {
-      throw new Error(`Could not find proto index for nextRoot ${nextRoot}`);
+      throw new Error(`Could not find proto index for nextRoot ${nextRoot} with payloadStatus ${nextPayloadStatus}`);
     }
 
     // ensure there is no undefined entries in Votes arrays
     if (this.voteNextSlots.length < validatorIndex + 1) {
       for (let i = this.voteNextSlots.length; i < validatorIndex + 1; i++) {
         this.voteNextSlots[i] = INIT_VOTE_SLOT;
-        this.voteNextPayloadStatus[i] = PayloadStatus.FULL;
-        this.voteCurrentPayloadStatus[i] = PayloadStatus.FULL;
         this.voteCurrentIndices[i] = this.voteNextIndices[i] = NULL_VOTE_INDEX;
       }
     }
@@ -1563,7 +1542,6 @@ export class ForkChoice implements IForkChoice {
       // nextIndex is transfered to currentIndex in computeDeltas()
       this.voteNextIndices[validatorIndex] = nextIndex;
       this.voteNextSlots[validatorIndex] = nextSlot;
-      this.voteNextPayloadStatus[validatorIndex] = nextPayloadStatus;
     }
     // else its an old vote, don't count it
   }

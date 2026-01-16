@@ -1,7 +1,7 @@
 import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
@@ -11,11 +11,7 @@ import {
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
-  ProtoNodeKey,
-  generateProtoNodeKey,
-  generateProtoNodeKey as getProtoNodeKey,
   isGloasBlock,
-  protoNodeKey,
 } from "./interface.js";
 
 /**
@@ -39,15 +35,21 @@ export class ProtoArray {
   finalizedRoot: RootHex;
   nodes: ProtoNode[] = [];
   /**
-   * Maps ForkChoiceNode key (root:payloadStatus) to node index
+   * Maps block root to array of node indices for each payload status variant
    *
-   * Unified approach for both Fulu and Gloas:
-   * - Fulu (pre-Gloas): All nodes use payloadStatus = PAYLOAD_STATUS_FULL (payload embedded)
-   * - Gloas: Nodes can be PENDING/EMPTY/FULL based on payload availability
+   * Array structure: [PENDING, EMPTY, FULL] where indices correspond to PayloadStatus enum values
+   * - number[0] = PENDING variant index (PayloadStatus.PENDING = 0)
+   * - number[1] = EMPTY variant index (PayloadStatus.EMPTY = 1)
+   * - number[2] = FULL variant index (PayloadStatus.FULL = 2)
+   *
+   * Pre-Gloas: array length is 1, number[0] contains FULL index (for backward compatibility)
+   * Post-Gloas: array length is 2 or 3
+   *   - Length 2: [PENDING_INDEX, EMPTY_INDEX] when payload hasn't arrived yet
+   *   - Length 3: [PENDING_INDEX, EMPTY_INDEX, FULL_INDEX] when payload has arrived
+   *
+   * Note: undefined array elements indicate that variant doesn't exist for this block
    */
-  indices = new Map<ProtoNodeKey, number>();
-  // Given a PENDING index, maps to its EMPTY and FULL variant indices
-  variantIndices = new MapDef<number, Map<PayloadStatus, number>>(() => new Map<PayloadStatus, number>());
+  indices = new Map<RootHex, number[]>();
   lvhError?: LVHExecError;
 
   private previousProposerBoost: ProposerBoost | null = null;
@@ -102,32 +104,25 @@ export class ProtoArray {
   }
 
   /**
-   * Get node index for a node identifier
-   * Spec: gloas/fork-choice.md (helper for node lookup)
-   */
-  getNodeIndex(node: ProtoNode): number | undefined {
-    return this.indices.get(protoNodeKey(node));
-  }
-
-  /**
-   * Get node index for a block root
-   * Pre-Gloas blocks only exist as FULL (payload embedded in block)
-   * Gloas blocks exist as PENDING/EMPTY/FULL variants
+   * Get node index for a block root and payload status
    *
-   * Try FULL first (for pre-Gloas), fallback to PENDING (for Gloas)
+   * For pre-Gloas blocks: always returns the FULL variant (variants[0])
+   * For Gloas blocks: returns the specified payload status variant
+   *
+   * Usage guidelines:
+   * - Use PayloadStatus.FULL when you need the FULL variant specifically (e.g., pre-Gloas parent lookups)
+   * - Use PayloadStatus.PENDING when checking if a block exists (any variant)
+   *   - For pre-Gloas: returns the FULL variant (only variant that exists)
+   *   - For Gloas: returns the PENDING variant (always exists if block exists)
    */
-  private getNodeIndexByRoot(root: RootHex): number | undefined {
-    // Try FULL first (pre-Gloas blocks are FULL)
-    const fullIndex = this.getNodeIndexByKey(generateProtoNodeKey(root, PayloadStatus.FULL));
-    if (fullIndex !== undefined) {
-      return fullIndex;
+  getNodeIndexByRootAndStatus(root: RootHex, payloadStatus: PayloadStatus): number | undefined {
+    const variants = this.indices.get(root);
+    if (!variants) {
+      return undefined;
     }
-    // Fallback to PENDING (Gloas blocks have PENDING variant)
-    return this.getNodeIndexByKey(generateProtoNodeKey(root, PayloadStatus.PENDING));
-  }
-
-  getNodeIndexByKey(key: ProtoNodeKey): number | undefined {
-    return this.indices.get(key);
+    // For pre-Gloas, variants[0] contains FULL index
+    // For post-Gloas, variants[payloadStatus] contains the index for that status
+    return variants.length === 1 ? variants[0] : variants[payloadStatus];
   }
 
   /**
@@ -319,21 +314,19 @@ export class ProtoArray {
       // Parent of new PENDING node = parent block's EMPTY or FULL (inter-block edge)
       // Parent of new EMPTY node = own PENDING node (intra-block edge)
 
-      // For fork transition: if parent is Fulu (pre-Gloas), point to parent's FULL
+      // For fork transition: if parent is pre-Gloas, point to parent's FULL
       // Otherwise, determine which parent payload status this block extends
       let parentIndex: number | undefined;
-      let key: ProtoNodeKey;
       const parentNode = this.getNode(block.parentRoot);
 
       if (parentNode && !isGloasBlock(parentNode)) {
-        // Fork transition: parent is Fulu, so it only has FULL variant
-        key = getProtoNodeKey(block.parentRoot, PayloadStatus.FULL);
+        // Fork transition: parent is pre-Gloas, so it only has FULL variant
+        parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, PayloadStatus.FULL);
       } else {
         // Both blocks are Gloas: determine which parent payload status to extend
         const parentPayloadStatus = this.getParentPayloadStatus(block);
-        key = getProtoNodeKey(block.parentRoot, parentPayloadStatus);
+        parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, parentPayloadStatus);
       }
-      parentIndex = this.getNodeIndexByKey(key);
 
       // Create PENDING node
       const pendingNode: ProtoNode = {
@@ -346,8 +339,6 @@ export class ProtoArray {
       };
 
       const pendingIndex = this.nodes.length;
-      const pendingKey = generateProtoNodeKey(block.blockRoot, PayloadStatus.PENDING);
-      this.indices.set(pendingKey, pendingIndex);
       this.nodes.push(pendingNode);
 
       // Create EMPTY variant as a child of PENDING
@@ -361,10 +352,14 @@ export class ProtoArray {
       };
 
       const emptyIndex = this.nodes.length;
-      const emptyKey = generateProtoNodeKey(block.blockRoot, PayloadStatus.EMPTY);
-      this.indices.set(emptyKey, emptyIndex);
       this.nodes.push(emptyNode);
-      this.variantIndices.getOrDefault(pendingIndex).set(PayloadStatus.EMPTY, emptyIndex);
+
+      // Store both variants in the indices array
+      // [PENDING, EMPTY, undefined] - FULL will be added later if payload arrives
+      const variants: number[] = [];
+      variants[PayloadStatus.PENDING] = pendingIndex;
+      variants[PayloadStatus.EMPTY] = emptyIndex;
+      this.indices.set(block.blockRoot, variants);
 
       // Update bestChild pointers
       if (parentIndex !== undefined) {
@@ -382,10 +377,10 @@ export class ProtoArray {
       // Spec: gloas/fork-choice.md#modified-on_block (line 645)
       this.ptcVote.set(block.blockRoot, new Array(PTC_SIZE).fill(false));
     } else {
-      // Pre-Gloas (Fulu): Only create FULL node (payload embedded in block)
+      // Pre-Gloas: Only create FULL node (payload embedded in block)
       const node: ProtoNode = {
         ...block,
-        parent: this.getNodeIndexByRoot(block.parentRoot),
+        parent: this.getNodeIndexByRootAndStatus(block.parentRoot, PayloadStatus.FULL),
         payloadStatus: PayloadStatus.FULL,
         weight: 0,
         bestChild: undefined,
@@ -393,9 +388,11 @@ export class ProtoArray {
       };
 
       const nodeIndex = this.nodes.length;
-      const nodeKey = getProtoNodeKey(block.blockRoot, PayloadStatus.FULL);
-      this.indices.set(nodeKey, nodeIndex);
       this.nodes.push(node);
+
+      // Store FULL variant in indices array
+      // Pre-Gloas: variants[0] contains FULL index
+      this.indices.set(block.blockRoot, [nodeIndex]);
 
       // If this node is valid, lets propagate the valid status up the chain
       // and throw error if we counter invalid, as this breaks consensus
@@ -417,21 +414,27 @@ export class ProtoArray {
    * Spec: gloas/fork-choice.md (on_execution_payload event)
    */
   onExecutionPayload(blockRoot: RootHex, currentSlot: Slot): void {
-    // First find FULL variant. If it exists, nothing to do. Block is always full pre-fulu
-    const fullKey = getProtoNodeKey(blockRoot, PayloadStatus.FULL);
-    const existedFullIndex = this.getNodeIndexByKey(fullKey);
-    if (existedFullIndex !== undefined) {
-      const existedFullNode = this.nodes[existedFullIndex];
-      if (existedFullNode) {
-        // Pre-Gloas: execution payloads are part of the block, no separate event
-        return;
-      }
+    // First check if FULL variant already exists
+    const variants = this.indices.get(blockRoot);
+    if (!variants) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.UNKNOWN_BLOCK,
+        root: blockRoot,
+      });
+    }
+
+    // Pre-Gloas: variants[0] contains FULL, nothing to do
+    if (variants.length === 1) {
+      return;
+    }
+
+    // Check if FULL already exists for Gloas blocks
+    if (variants[PayloadStatus.FULL] !== undefined) {
+      return;
     }
 
     // Get PENDING node for Gloas blocks
-    const pendingKey = getProtoNodeKey(blockRoot, PayloadStatus.PENDING);
-    const pendingIndex = this.getNodeIndexByKey(pendingKey);
-
+    const pendingIndex = variants[PayloadStatus.PENDING];
     if (pendingIndex === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.UNKNOWN_BLOCK,
@@ -458,9 +461,10 @@ export class ProtoArray {
     };
 
     const fullIndex = this.nodes.length;
-    this.indices.set(fullKey, fullIndex);
-    this.variantIndices.getOrDefault(pendingIndex).set(PayloadStatus.FULL, fullIndex);
     this.nodes.push(fullNode);
+
+    // Add FULL variant to the indices array
+    variants[PayloadStatus.FULL] = fullIndex;
 
     // Update bestChild for PENDING node (may now prefer FULL over EMPTY)
     this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot);

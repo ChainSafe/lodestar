@@ -35,25 +35,6 @@ export enum PayloadStatus {
 }
 
 /**
- * Unique key for indexing ProtoNodes in the fork choice tree
- * Format: "${root}:${payloadStatus}"
- * Used to identify specific variants (PENDING/EMPTY/FULL) of a block
- */
-export type ProtoNodeKey = string;
-
-/**
- * Helper to convert ProtoNode to a unique key for indexing
- * Format: "${blockRoot}:${payloadStatus}"
- */
-export function protoNodeKey(node: ProtoNode): ProtoNodeKey {
-  return `${node.blockRoot}:${node.payloadStatus}`;
-}
-
-export function generateProtoNodeKey(root: RootHex, payloadStatus: PayloadStatus): ProtoNodeKey {
-  return `${root}:${payloadStatus}`;
-}
-
-/**
  * Check if a block is in the Gloas fork (ePBS enabled)
  */
 export function isGloasBlock(block: ProtoBlock): boolean {

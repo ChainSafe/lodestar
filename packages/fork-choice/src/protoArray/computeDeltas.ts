@@ -1,7 +1,7 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {ValidatorIndex} from "@lodestar/types";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
-import {NULL_VOTE_INDEX, PayloadStatus, VoteIndex} from "./interface.js";
+import {NULL_VOTE_INDEX, VoteIndex} from "./interface.js";
 
 // reuse arrays to avoid memory reallocation and gc
 const deltas = new Array<number>();
@@ -30,13 +30,10 @@ export type DeltasResult = {
 export function computeDeltas(
   numProtoNodes: number,
   voteCurrentIndices: VoteIndex[],
-  voteCurrentPayloadStatus: PayloadStatus[],
   voteNextIndices: VoteIndex[],
-  voteNextPayloadStatus: PayloadStatus[],
   oldBalances: EffectiveBalanceIncrements,
   newBalances: EffectiveBalanceIncrements,
-  equivocatingIndices: Set<ValidatorIndex>,
-  variantIndices: Map<number, Map<PayloadStatus, number>>
+  equivocatingIndices: Set<ValidatorIndex>
 ): DeltasResult {
   if (voteCurrentIndices.length !== voteNextIndices.length) {
     throw new Error(
@@ -55,10 +52,7 @@ export function computeDeltas(
   // avoid creating new variables in the loop to potentially reduce GC pressure
   let oldBalance: number, newBalance: number;
   let currentIndex: VoteIndex,
-    nextIndex: VoteIndex,
-    currentVariantIndex: number | undefined,
-    nextVariantIndex: number | undefined;
-  let currentPayloadStatus: PayloadStatus, nextPayloadStatus: PayloadStatus;
+    nextIndex: VoteIndex;
   // sort equivocating indices to avoid Set.has() in the loop
   const equivocatingArray = Array.from(equivocatingIndices).sort((a, b) => a - b);
   let equivocatingIndex = 0;
@@ -73,13 +67,6 @@ export function computeDeltas(
   for (let vIndex = 0; vIndex < voteNextIndices.length; vIndex++) {
     currentIndex = voteCurrentIndices[vIndex];
     nextIndex = voteNextIndices[vIndex];
-
-    currentPayloadStatus = voteCurrentPayloadStatus[vIndex];
-    nextPayloadStatus = voteNextPayloadStatus[vIndex];
-
-    // If status is pending, current or next variant index is undefined because variantIndices only tracks EMPTY and FULL
-    currentVariantIndex = variantIndices.get(currentIndex)?.get(currentPayloadStatus);
-    nextVariantIndex = variantIndices.get(nextIndex)?.get(nextPayloadStatus);
 
     // There is no need to create a score change if the validator has never voted or both of their
     // votes are for the zero hash (genesis block)
@@ -109,7 +96,6 @@ export function computeDeltas(
           });
         }
         deltas[currentIndex] -= oldBalance;
-        if (currentVariantIndex !== undefined) deltas[currentVariantIndex] -= oldBalance;
       }
       voteCurrentIndices[vIndex] = NULL_VOTE_INDEX;
       equivocatingIndex++;
@@ -122,15 +108,10 @@ export function computeDeltas(
       continue;
     }
 
-    const indexChanged = currentIndex !== nextIndex;
-    const payloadStatusChanged = currentPayloadStatus !== nextPayloadStatus;
-    const balanceChanged = oldBalance !== newBalance;
-
-    // Pre-gloas: deduct old balance from current index, add new balance to next index
-    // Post-gloas: deduct old balance from current variant of current index, add new balance to next variant of next index.
-    // If variant index is undefined, it means the payload status is PENDING, so we update current/next index instead.
-    // It is possible that index did not change, but payload status changed (e.g., PENDING -> FULL for skipped slot)
-    if (indexChanged || payloadStatusChanged || balanceChanged) {
+    // Deduct old balance from current index, add new balance to next index
+    // currentIndex and nextIndex already point to the correct node variants
+    // Note: If a validator changes from EMPTY to FULL variant of the same block, indexChanged will be true
+    if (currentIndex !== nextIndex || oldBalance !== newBalance) {
       // We ignore the vote if it is not known in `indices .
       // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
       if (currentIndex !== NULL_VOTE_INDEX) {
@@ -141,11 +122,7 @@ export function computeDeltas(
           });
         }
 
-        if (currentVariantIndex !== undefined) {
-          deltas[currentVariantIndex] -= oldBalance;
-        } else {
-          deltas[currentIndex] -= oldBalance;
-        }
+        deltas[currentIndex] -= oldBalance;
       }
 
       // We ignore the vote if it is not known in `indices .
@@ -158,14 +135,9 @@ export function computeDeltas(
           });
         }
 
-        if (nextVariantIndex !== undefined) {
-          deltas[nextVariantIndex] += newBalance;
-        } else {
-          deltas[nextIndex] += newBalance;
-        }
+        deltas[nextIndex] += newBalance;
       }
       voteCurrentIndices[vIndex] = nextIndex;
-      voteCurrentPayloadStatus[vIndex] = nextPayloadStatus;
       newVoteValidators++;
     } else {
       unchangedVoteValidators++;
