@@ -123,7 +123,7 @@ export async function computeEpochShufflingAsync(
   };
 }
 
-function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
+export function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
   return toRootHex(getBlockRootAtSlot(state, pivotSlot));
 }
