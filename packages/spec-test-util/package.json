@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/spec-test-util",
-  "version": "1.38.0",
+  "version": "1.39.0",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",

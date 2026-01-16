@@ -1,7 +1,7 @@
 {
   "name": "@lodestar/test-utils",
   "private": true,
-  "version": "1.38.0",
+  "version": "1.39.0",
   "description": "Test utilities reused across other packages",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
