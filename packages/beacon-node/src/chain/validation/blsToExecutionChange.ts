@@ -44,7 +44,7 @@ async function validateBlsToExecutionChange(
       code: BlsToExecutionChangeErrorCode.INVALID,
     });
   }
-  const validator = state.validators.get(addressChange.validatorIndex);
+  const validator = state.validators.getReadonly(addressChange.validatorIndex);
   // [REJECT] All of the conditions within process_bls_to_execution_change pass validation.
   // verifySignature = false, verified in batch below
   const {valid} = isValidBlsToExecutionChange(config, validator, blsToExecutionChange, false);
