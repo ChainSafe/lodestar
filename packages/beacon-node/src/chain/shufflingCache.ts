@@ -141,10 +141,8 @@ export class ShufflingCache {
     // Cache current shuffling
     this.set(epochCtx.currentShuffling, epochCtx.currentDecisionRoot);
 
-    // Cache next shuffling if it exists
-    if (epochCtx.nextShuffling !== null) {
-      this.set(epochCtx.nextShuffling, epochCtx.nextDecisionRoot);
-    }
+    // Cache next shuffling
+    this.set(epochCtx.nextShuffling, epochCtx.nextDecisionRoot);
   }
 
   /**
