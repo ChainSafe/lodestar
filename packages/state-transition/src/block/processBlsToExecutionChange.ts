@@ -16,7 +16,7 @@ export function processBlsToExecutionChange(
 
   if (addressChange.validatorIndex >= state.validators.length) {
     throw Error(
-      `withdrawalValidatorIndex ${addressChange.validatorIndex} > state.validators len ${state.validators.length}`
+      `withdrawalValidatorIndex ${addressChange.validatorIndex} >= state.validators len ${state.validators.length}`
     );
   }
 
