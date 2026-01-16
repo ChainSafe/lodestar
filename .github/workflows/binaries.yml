@@ -42,7 +42,7 @@ jobs:
       - run: |
           mkdir -p dist
           pnpm add -g @chainsafe/caxa@3.0.6
-          npx caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -D -p "pnpm install --frozen-lockfile --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
+          npx caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -D -p "pnpm install --frozen-lockfile --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/packages/cli/bin/lodestar.js"
           tar -czf "dist/lodestar-${{ inputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz" "lodestar"
       - name: Upload binaries
         uses: actions/upload-artifact@v4

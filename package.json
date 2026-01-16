@@ -87,7 +87,6 @@
     "wait-port": "^1.1.0"
   },
   "dependencies": {
-    "@chainsafe/lodestar": "workspace:",
     "debug": "^4.4.3"
   },
   "resolutions": {

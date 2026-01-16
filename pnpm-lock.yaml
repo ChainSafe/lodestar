@@ -28,9 +28,6 @@ importers:
 
   .:
     dependencies:
-      '@chainsafe/lodestar':
-        specifier: 'workspace:'
-        version: link:packages/cli
       debug:
         specifier: ^4.4.3
         version: 4.4.3
