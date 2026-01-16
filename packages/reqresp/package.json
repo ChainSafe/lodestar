@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.38.0",
+  "version": "1.39.0",
   "type": "module",
   "exports": {
     ".": {
@@ -58,9 +58,9 @@
   },
   "devDependencies": {
     "@chainsafe/ssz": "^1.2.2",
-    "@libp2p/peer-id": "^5.1.8",
-    "@libp2p/logger": "^5.1.21",
     "@libp2p/crypto": "^5.1.7",
+    "@libp2p/logger": "^5.1.21",
+    "@libp2p/peer-id": "^5.1.8",
     "@lodestar/logger": "workspace:^",
     "@lodestar/types": "workspace:^",
     "it-stream-types": "^2.0.2",
