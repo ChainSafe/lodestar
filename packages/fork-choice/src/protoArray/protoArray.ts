@@ -133,7 +133,7 @@ export class ProtoArray {
    * - Match → child extends FULL parent (parent has payload)
    * - No match → child extends EMPTY parent (parent has no payload)
    *
-   * For pre-Gloas blocks: always returns FULL (payloads embedded in block)
+   * For pre-Gloas blocks: always returns FULL
    */
   private getParentPayloadStatus(block: ProtoBlock): PayloadStatus {
     // Pre-Gloas blocks have payloads embedded, so parents are always FULL
@@ -144,23 +144,25 @@ export class ProtoArray {
     // Gloas block must have parentBlockHash from its SignedExecutionPayloadBid
     const parentBlockHash = block.parentBlockHash;
     if (parentBlockHash === null) {
-      // If parentBlockHash is not provided, default to FULL
-      // This can only happen in fulu
+      // should not happen for Gloas blocks
       return PayloadStatus.FULL;
     }
 
     // Get parent node to compare execution payload hash
-    const parentNode = this.getNode(block.parentRoot);
-    if (!parentNode) {
-      // Parent not found, default to EMPTY
+    // Use variants[0] which works for both pre-Gloas (FULL) and Gloas (PENDING)
+    const parentVariants = this.indices.get(block.parentRoot);
+    if (!parentVariants) {
+      // Parent not found
       // TODO GLOAS: verify this
       return PayloadStatus.EMPTY;
     }
 
+    const parentIndex = parentVariants[0];
+    const parentExecutionHash = this.nodes[parentIndex].executionPayloadBlockHash;
+
     // Compare parent_block_hash from child's bid with parent's execution payload hash
     // Match means child extends FULL variant (parent has payload)
     // No match means child extends EMPTY variant (parent has no payload)
-    const parentExecutionHash = parentNode.executionPayloadBlockHash;
     return parentBlockHash === parentExecutionHash ? PayloadStatus.FULL : PayloadStatus.EMPTY;
   }
 
@@ -317,16 +319,23 @@ export class ProtoArray {
       // For fork transition: if parent is pre-Gloas, point to parent's FULL
       // Otherwise, determine which parent payload status this block extends
       let parentIndex: number | undefined;
-      const parentNode = this.getNode(block.parentRoot);
 
-      if (parentNode && !isGloasBlock(parentNode)) {
-        // Fork transition: parent is pre-Gloas, so it only has FULL variant
-        parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, PayloadStatus.FULL);
-      } else {
-        // Both blocks are Gloas: determine which parent payload status to extend
-        const parentPayloadStatus = this.getParentPayloadStatus(block);
-        parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, parentPayloadStatus);
+      // Check if parent exists by getting variants array
+      const parentVariants = this.indices.get(block.parentRoot);
+      if (parentVariants) {
+        const anyParentIndex = parentVariants[0];
+        const anyParentNode = this.nodes[anyParentIndex];
+
+        if (!isGloasBlock(anyParentNode)) {
+          // Fork transition: parent is pre-Gloas, so it only has FULL variant
+          parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, PayloadStatus.FULL);
+        } else {
+          // Both blocks are Gloas: determine which parent payload status to extend
+          const parentPayloadStatus = this.getParentPayloadStatus(block);
+          parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, parentPayloadStatus);
+        }
       }
+      // else: parent doesn't exist, parentIndex remains undefined (orphan block)
 
       // Create PENDING node
       const pendingNode: ProtoNode = {
@@ -794,8 +803,11 @@ export class ProtoArray {
    * Get payload status tiebreaker for fork choice comparison
    * Spec: gloas/fork-choice.md#new-get_payload_status_tiebreaker
    *
-   * For Fulu: always returns node.payloadStatus (PENDING)
-   * For Gloas: implements tiebreaker logic based on should_extend_payload
+   * For PENDING nodes: always returns 0 
+   * For EMPTY/FULL variants from slot n-1: implements tiebreaker logic based on should_extend_payload
+   * For older blocks: returns node.payloadStatus
+   * 
+   * Note: pre-gloas logic won't reach here. Since it is impossible to have two nodes with same weight and root
    */
   private getPayloadStatusTiebreaker(
     node: ProtoNode,
@@ -803,7 +815,7 @@ export class ProtoArray {
     proposerBoostRoot: RootHex | null,
     executionPayloadStates?: Map<RootHex, unknown>
   ): number {
-    // For Fulu: simple return payload status
+    // PENDING nodes always return PENDING (no tiebreaker needed)
     // PENDING=0, EMPTY=1, FULL=2
     if (node.payloadStatus === PayloadStatus.PENDING) {
       return node.payloadStatus;
@@ -821,17 +833,17 @@ export class ProtoArray {
     }
     // FULL - check should_extend_payload
     const shouldExtend = this.shouldExtendPayload(node.blockRoot, proposerBoostRoot, executionPayloadStates);
-    return shouldExtend ? 2 : 1; // Return 2 if extending, else 1 to prefer EMPTY
+    return shouldExtend ? 2 : 0; // Return 2 if extending, else 0
   }
 
   /**
    * Follows the best-descendant links to find the best-block (i.e., head-block).
    *
-   * Returns the compound key (root:payloadStatus) to identify the exact node variant.
+   * Returns the ProtoNode representing the head.
    * For pre-Gloas forks, only FULL variants exist (payload embedded).
    * For Gloas, may return PENDING/EMPTY/FULL variants.
    */
-  findHead(justifiedRoot: RootHex, currentSlot: Slot): ProtoNodeKey {
+  findHead(justifiedRoot: RootHex, currentSlot: Slot): ProtoNode {
     if (this.lvhError) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE,
@@ -839,7 +851,7 @@ export class ProtoArray {
       });
     }
 
-    const justifiedIndex = this.getNodeIndexByRoot(justifiedRoot);
+    const justifiedIndex = this.getNodeIndexByRootAndStatus(justifiedRoot, PayloadStatus.PENDING);
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN,
@@ -910,51 +922,38 @@ export class ProtoArray {
    * - There is some internal error relating to invalid indices inside `this`.
    */
   maybePrune(finalizedRoot: RootHex): ProtoBlock[] {
-    const finalizedPendingKey = getProtoNodeKey(finalizedRoot, PayloadStatus.PENDING);
-    const finalizedFullKey = getProtoNodeKey(finalizedRoot, PayloadStatus.FULL);
-
-    const finalizedPendingIndex = this.getNodeIndexByKey(finalizedPendingKey);
-    const finalizedFullIndex = this.getNodeIndexByKey(finalizedFullKey);
-
-    // If finalizedRoot exists in pre-gloas, FULL will be defined and PENDING undefined
-    // If finalizedRoot exists in gloas, PENDING will be defined and FULL may or may not be defined
-    if (finalizedPendingIndex === undefined && finalizedFullIndex === undefined) {
+    const variants = this.indices.get(finalizedRoot);
+    if (!variants) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN,
         root: finalizedRoot,
       });
     }
 
-    // We take the minimum index of the two variants to ensure we don't prune too much
-    const finalizedIndex = Math.min(
-      finalizedPendingIndex !== undefined ? finalizedPendingIndex : Number.MAX_SAFE_INTEGER,
-      finalizedFullIndex !== undefined ? finalizedFullIndex : Number.MAX_SAFE_INTEGER
-    );
+    // Find the minimum index among all variants to ensure we don't prune too much
+    const finalizedIndex = Math.min(...variants.filter((idx) => idx !== undefined));
 
     if (finalizedIndex < this.pruneThreshold) {
       // Pruning at small numbers incurs more cost than benefit
       return [];
     }
 
-    // Remove the indices key/values for all the to-be-deleted nodes
-    // Also remove PTC votes for pruned blocks (Gloas)
-    // Also remove variants (EMPTY, FULL) of finalized blocks
-    const nodesToPrune = Array.from({length: finalizedIndex + 1}, (_, i) => i);
-    const variants = this.variantIndices.get(finalizedIndex);
-    if (variants) nodesToPrune.push(...variants.values());
-
-    for (const nodeIndex of nodesToPrune) {
-      const node = this.nodes[nodeIndex];
+    // Collect all block roots that will be pruned
+    const prunedRoots = new Set<RootHex>();
+    for (let i = 0; i <= finalizedIndex; i++) {
+      const node = this.nodes[i];
       if (node === undefined) {
-        throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: nodeIndex});
+        throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: i});
       }
-      const nodeKey = generateProtoNodeKey(node.blockRoot, node.payloadStatus);
-      this.indices.delete(nodeKey);
-      this.variantIndices.delete(nodeIndex);
+      prunedRoots.add(node.blockRoot);
+    }
 
+    // Remove indices for pruned blocks and PTC votes
+    for (const root of prunedRoots) {
+      this.indices.delete(root);
       // Prune PTC votes for this block to prevent memory leak
       // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
-      this.ptcVote.delete(node.blockRoot);
+      this.ptcVote.delete(root);
     }
 
     // Store nodes prior to finalization
@@ -962,39 +961,25 @@ export class ProtoArray {
     // Drop all the nodes prior to finalization
     this.nodes = this.nodes.slice(finalizedIndex);
 
-    // Adjust the indices map
-    const newIndices = new Map<string, number>();
-    for (const [key, value] of this.indices.entries()) {
-      if (value < finalizedIndex) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INDEX_OVERFLOW,
-          value: "indices",
-        });
+    // Adjust the indices map - subtract finalizedIndex from all node indices
+    const newIndices = new Map<RootHex, number[]>();
+    for (const [root, variantIndices] of this.indices.entries()) {
+      const adjustedVariants: number[] = [];
+      for (let i = 0; i < variantIndices.length; i++) {
+        const idx = variantIndices[i];
+        if (idx !== undefined) {
+          if (idx < finalizedIndex) {
+            throw new ProtoArrayError({
+              code: ProtoArrayErrorCode.INDEX_OVERFLOW,
+              value: "indices",
+            });
+          }
+          adjustedVariants[i] = idx - finalizedIndex;
+        }
       }
-      newIndices.set(key, value - finalizedIndex);
+      newIndices.set(root, adjustedVariants);
     }
     this.indices = newIndices;
-
-    // Adjust variantIndices map
-    const newVariantIndices = new MapDef<number, Map<PayloadStatus, number>>(() => new Map<PayloadStatus, number>());
-    for (const [pendingIndex, variants] of this.variantIndices.entries()) {
-      if (pendingIndex < finalizedIndex) {
-        // Skip - this PENDING node was pruned
-        continue;
-      }
-      const newPendingIndex = pendingIndex - finalizedIndex;
-      const newVariants = new Map<PayloadStatus, number>();
-      for (const [status, variantIndex] of variants.entries()) {
-        if (variantIndex >= finalizedIndex) {
-          newVariants.set(status, variantIndex - finalizedIndex);
-        }
-        // else: variant was pruned, don't include
-      }
-      if (newVariants.size > 0) {
-        newVariantIndices.set(newPendingIndex, newVariants);
-      }
-    }
-    this.variantIndices = newVariantIndices;
 
     // Iterate through all the existing nodes and adjust their indices to match the new layout of this.nodes
     for (let i = 0, len = this.nodes.length; i < len; i++) {
@@ -1556,8 +1541,7 @@ export class ProtoArray {
   }
 
   length(): number {
-    // Note: this is number of nodes and not number of unique block root
-    return this.indices.size;
+    return this.indices.keys.length;
   }
 
   private getNodeFromIndex(index: number): ProtoNode {
