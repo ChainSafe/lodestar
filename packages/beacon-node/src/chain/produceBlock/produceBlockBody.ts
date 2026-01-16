@@ -7,6 +7,7 @@ import {
   ForkSeq,
   isForkPostAltair,
   isForkPostBellatrix,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -41,6 +42,7 @@ import {
   deneb,
   electra,
   fulu,
+  gloas,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -713,6 +715,10 @@ function preparePayloadAttributes(
 
   if (ForkSeq[fork] >= ForkSeq.deneb) {
     (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
+  }
+
+  if (isForkPostGloas(fork)) {
+    (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).slotNumber = prepareSlot;
   }
 
   return payloadAttributes;

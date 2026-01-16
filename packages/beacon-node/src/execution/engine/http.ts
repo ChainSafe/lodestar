@@ -1,5 +1,13 @@
 import {Logger} from "@lodestar/logger";
-import {ForkName, ForkPostFulu, ForkPreFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPreFulu,
+  ForkSeq,
+  SLOTS_PER_EPOCH,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
@@ -356,8 +364,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<PayloadId | null> {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
-    const method =
-      ForkSeq[fork] >= ForkSeq.deneb
+    const method = isForkPostGloas(fork)
+      ? "engine_forkchoiceUpdatedV4"
+      : ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_forkchoiceUpdatedV3"
         : ForkSeq[fork] >= ForkSeq.capella
           ? "engine_forkchoiceUpdatedV2"

@@ -9,7 +9,9 @@ import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
-const {BLSPubkey, BLSSignature, Root, UintNum64, UintBn256, UintBn64, Gwei, Epoch} = primitiveSsz;
+import {ssz as bellatrixSsz} from "../bellatrix/index.js";
+
+const {BLSPubkey, BLSSignature, Root, Slot, UintNum64, UintBn256, UintBn64, Gwei, Epoch} = primitiveSsz;
 
 export const BlockAccessList = new ByteListType(MAX_BYTES_PER_TRANSACTION);
 
@@ -192,4 +194,21 @@ export const SignedBlockContents = new ContainerType(
     blobs: fuluSsz.SignedBlockContents.fields.blobs,
   },
   {typeName: "SignedBlockContents", jsonCase: "eth2"}
+);
+
+// PayloadAttributes primarily for SSE event - New in GLOAS:EIP-7843
+export const PayloadAttributes = new ContainerType(
+  {
+    ...denebSsz.PayloadAttributes.fields,
+    slotNumber: Slot,
+  },
+  {typeName: "PayloadAttributes", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributes = new ContainerType(
+  {
+    ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
+    payloadAttributes: PayloadAttributes,
+  },
+  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );

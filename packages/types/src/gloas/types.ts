@@ -15,4 +15,6 @@ export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
 export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
 export type BlockContents = ValueOf<typeof ssz.BlockContents>;
 export type SignedBlockContents = ValueOf<typeof ssz.SignedBlockContents>;
+export type PayloadAttributes = ValueOf<typeof ssz.PayloadAttributes>;
+export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;
 export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;

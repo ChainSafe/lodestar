@@ -70,6 +70,10 @@ export type EngineApiRpcParamTypes = {
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
   ];
+  engine_forkchoiceUpdatedV4: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
+  ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
@@ -125,6 +129,10 @@ export type EngineApiRpcReturnTypes = {
     payloadId: QUANTITY | null;
   };
   engine_forkchoiceUpdatedV3: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
+  engine_forkchoiceUpdatedV4: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
@@ -235,6 +243,8 @@ export type PayloadAttributesRpc = {
   withdrawals?: WithdrawalRpc[];
   /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
   parentBeaconBlockRoot?: DATA;
+  /** QUANTITY, 64 Bits - value for the slot number field of the new payload (EIP-7843) */
+  slotNumber?: QUANTITY;
 };
 
 export type ClientVersionRpc = {
@@ -409,6 +419,7 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
+    slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
   };
 }
 
@@ -425,6 +436,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
+    slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
   };
 }
 
