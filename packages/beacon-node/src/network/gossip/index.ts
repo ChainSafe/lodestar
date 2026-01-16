@@ -2,4 +2,8 @@ export {getGossipHandlers} from "../processor/gossipHandlers.js";
 export * from "./gossipsub.js";
 export * from "./interface.js";
 export * from "./partialColumns.js";
+export * from "./columnAvailability.js";
+export * from "./columnAvailabilityStore.js";
+export * from "./reconstructionState.js";
+export * from "./partialColumnNetwork.js";
 export {getCoreTopicsAtFork} from "./topic.js";

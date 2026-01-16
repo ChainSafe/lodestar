@@ -17,7 +17,12 @@ import {PeerIdStr, peerIdFromString, peerIdToString} from "../../util/peerId.js"
 import {Discv5Worker} from "../discv5/index.js";
 import {NetworkEventBus} from "../events.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForkBoundaries} from "../forks.js";
-import {Eth2Gossipsub, PartialColumnBroadcaster, getCoreTopicsAtFork} from "../gossip/index.js";
+import {
+  Eth2Gossipsub,
+  PartialColumnBroadcaster,
+  InMemoryColumnAvailabilityStore,
+  getCoreTopicsAtFork,
+} from "../gossip/index.js";
 import {getDataColumnSidecarTopics} from "../gossip/topic.js";
 import {Libp2p} from "../interface.js";
 import {createNodeJsLibp2p} from "../libp2p/index.js";
@@ -186,7 +191,14 @@ export class NetworkCore implements INetworkCore {
     );
 
     // Create partial column broadcaster for PeerDAS data column propagation
-    const partialColumnBroadcaster = new PartialColumnBroadcaster(config, networkConfig, logger);
+    const columnAvailabilityStore = new InMemoryColumnAvailabilityStore();
+    const partialColumnBroadcaster = new PartialColumnBroadcaster(
+      config,
+      networkConfig,
+      logger,
+      columnAvailabilityStore,
+      networkConfig.custodyConfig.custodyColumns
+    );
 
     const gossip = new Eth2Gossipsub(
       {

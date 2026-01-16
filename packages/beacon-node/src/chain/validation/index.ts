@@ -3,6 +3,7 @@ export * from "./attestation.js";
 export * from "./attesterSlashing.js";
 export * from "./block.js";
 export * from "./blsToExecutionChange.js";
+export * from "./partialDataColumn.js";
 export * from "./proposerSlashing.js";
 export * from "./syncCommittee.js";
 export * from "./syncCommitteeContributionAndProof.js";

@@ -42,6 +42,9 @@ export interface NetworkOptions
    * We need to increase this only for the testing purpose
    */
   disconnectThreshold?: number;
+
+  /** Enable partial messages for data columns */
+  enablePartialMessages?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -66,4 +69,5 @@ export const defaultNetworkOptions: NetworkOptions = {
   //   - for fusaka-devnets, we have 25-30 peers per subnet
   //   - for public testnets or mainnet, average number of peers per group is SAMPLES_PER_SLOT * targetPeers / NUMBER_OF_CUSTODY_GROUPS = 6.25 so this should not be an issue
   targetGroupPeers: 6,
+  enablePartialMessages: false,
 };

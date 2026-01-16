@@ -37,6 +37,7 @@ export type NetworkArgs = {
   "network.useWorker"?: boolean;
   "network.maxYoungGenerationSizeMb"?: number;
   "network.targetGroupPeers"?: number;
+  "network.partialMessages"?: boolean;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit"?: number;
@@ -156,6 +157,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     useWorker: args["network.useWorker"],
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
+    enablePartialMessages: args["network.partialMessages"],
   };
 }
 
@@ -397,5 +399,12 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
     description: "Target number of peers per sampling group",
     defaultDescription: String(defaultOptions.network.targetGroupPeers),
+  },
+
+  "network.partialMessages": {
+    type: "boolean",
+    description: "Enable partial message support for PeerDAS data column propagation",
+    default: false,
+    group: "network",
   },
 };

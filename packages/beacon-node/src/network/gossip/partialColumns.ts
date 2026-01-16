@@ -11,8 +11,10 @@ import {BeaconConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {Root, fulu, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
+import {ColumnAvailabilityStore} from "./columnAvailability.js";
 import {NetworkConfig} from "../networkConfig.js";
 import {GossipType} from "./interface.js";
+import {ReconstructionStateManager} from "./reconstructionState.js";
 
 /**
  * Number of bytes in the parts metadata bitmap.
@@ -108,6 +110,118 @@ export class PartialDataColumn implements PartialMessage {
 }
 
 /**
+ * Partial message implementation that aggregates ALL columns we have for a block.
+ *
+ * Unlike the single-column PartialDataColumn approach, this tracks our complete HAVE set
+ * via ColumnAvailabilityStore and sends only the columns the peer is missing.
+ *
+ * Key differences from PartialDataColumn:
+ * - OLD (PartialDataColumn): Only knew about one column at a time
+ * - NEW (AggregatedPartialDataColumn): Tracks ALL columns via ColumnAvailabilityStore
+ */
+export class AggregatedPartialDataColumn implements PartialMessage {
+  constructor(
+    private readonly blockRoot: Root,
+    private readonly columnStore: ColumnAvailabilityStore,
+    private readonly getColumnData: (columnIndex: number) => fulu.DataColumnSidecar | null
+  ) {}
+
+  /**
+   * Group ID is the block root - all columns for a block form a group.
+   */
+  groupId(): Uint8Array {
+    return this.blockRoot;
+  }
+
+  /**
+   * Returns bitmap of ALL columns we have for this block (aggregated HAVE set).
+   */
+  partsMetadata(): Uint8Array {
+    return this.columnStore.getAvailableColumns(this.blockRoot) ?? new Uint8Array(PARTS_METADATA_SIZE);
+  }
+
+  /**
+   * Produces bytes to send based on what the peer already has.
+   *
+   * Determines which columns the peer is missing and sends one of them.
+   * Returns updated metadata showing the union of columns.
+   *
+   * @param requestedMeta - Bitmap of columns the peer already has
+   */
+  partialMessageBytes(requestedMeta: Uint8Array | null): PartialPublishAction {
+    const ourMeta = this.partsMetadata();
+    const theirMeta = requestedMeta ?? new Uint8Array(PARTS_METADATA_SIZE);
+
+    // Find columns we have that they don't
+    const columnsToSend: number[] = [];
+    for (let col = 0; col < NUMBER_OF_COLUMNS; col++) {
+      const byteIdx = Math.floor(col / 8);
+      const bitIdx = col % 8;
+      const weHave = (ourMeta[byteIdx] & (1 << bitIdx)) !== 0;
+      const theyHave = (theirMeta[byteIdx] & (1 << bitIdx)) !== 0;
+
+      if (weHave && !theyHave) {
+        columnsToSend.push(col);
+      }
+    }
+
+    if (columnsToSend.length === 0) {
+      // Nothing to send - check if we need more from them
+      const needMore = this.checkNeedMore(ourMeta, theirMeta);
+      return {
+        needMore,
+        bytesToSend: null,
+        updatedPartsMetadata: ourMeta,
+      };
+    }
+
+    // Send one column at a time to keep messages small
+    const columnIndex = columnsToSend[0];
+    const columnData = this.getColumnData(columnIndex);
+
+    if (columnData === null) {
+      // Column not available (race condition) - just send metadata
+      return {
+        needMore: this.checkNeedMore(ourMeta, theirMeta),
+        bytesToSend: null,
+        updatedPartsMetadata: ourMeta,
+      };
+    }
+
+    const serialized = ssz.fulu.DataColumnSidecar.serialize(columnData);
+
+    // Updated metadata = union of theirs + ours
+    const updatedMeta = new Uint8Array(PARTS_METADATA_SIZE);
+    for (let i = 0; i < PARTS_METADATA_SIZE; i++) {
+      updatedMeta[i] = theirMeta[i] | ourMeta[i];
+    }
+
+    return {
+      needMore: columnsToSend.length > 1 || this.checkNeedMore(ourMeta, theirMeta),
+      bytesToSend: serialized,
+      updatedPartsMetadata: updatedMeta,
+    };
+  }
+
+  /**
+   * Checks if the peer has columns we don't have.
+   */
+  private checkNeedMore(ourMeta: Uint8Array, theirMeta: Uint8Array): boolean {
+    for (let col = 0; col < NUMBER_OF_COLUMNS; col++) {
+      const byteIdx = Math.floor(col / 8);
+      const bitIdx = col % 8;
+      const weHave = (ourMeta[byteIdx] & (1 << bitIdx)) !== 0;
+      const theyHave = (theirMeta[byteIdx] & (1 << bitIdx)) !== 0;
+
+      if (theyHave && !weHave) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+/**
  * Result of processing a partial column RPC.
  */
 export interface PartialColumnResult {
@@ -128,22 +242,84 @@ export interface PartialColumnBroadcasterOpts {
 }
 
 /**
+ * Metrics interface for partial column broadcasting.
+ * This is a subset of the full Metrics type to avoid circular dependencies.
+ */
+export interface PartialColumnMetrics {
+  partialColumnsReceived?: {
+    inc(labels: {result: string}): void;
+  };
+  partialColumnsRebroadcast?: {
+    inc(): void;
+  };
+}
+
+/**
+ * Callback type for when we need to fetch missing columns via req/resp.
+ */
+export type NeedColumnsCallback = (blockRoot: Root, columns: number[], peers: PeerId[]) => void;
+
+/**
+ * Interface for publishing partial messages to gossipsub.
+ * This matches the GossipSub.publishPartial method signature.
+ */
+export interface PartialPublisher {
+  publishPartial(partialMsg: PartialMessage, topic: string): Promise<void>;
+}
+
+/**
  * Handles partial data column message broadcasting and reception.
+ *
+ * Flow:
+ * 1. Receive partial RPC via onIncomingRpc
+ * 2. Process and extract new columns via ReconstructionStateManager
+ * 3. If new columns received, rebroadcast to mesh peers
+ * 4. Check if we need to fetch missing custody columns
+ *
  * Integrates with js-libp2p-gossipsub partial messages extension.
  */
 export class PartialColumnBroadcaster implements PartialMessageExtension {
   private readonly logger: Logger;
   private readonly merger: PartsMetadataMerger;
   private readonly stateByTopic = new Map<string, PartialMessageState>();
+  private readonly columnStore: ColumnAvailabilityStore;
+  private readonly reconstructionState: ReconstructionStateManager;
+  private readonly custodyColumns: number[];
+  private readonly metrics: PartialColumnMetrics | null;
+
+  private publisher: PartialPublisher | null = null;
+  private onNeedColumns: NeedColumnsCallback | null = null;
 
   constructor(
     _config: BeaconConfig,
     _networkConfig: NetworkConfig,
     logger: Logger,
+    columnStore: ColumnAvailabilityStore,
+    custodyColumns: number[],
+    metrics: PartialColumnMetrics | null = null,
     _opts?: PartialColumnBroadcasterOpts
   ) {
     this.logger = logger;
     this.merger = new BitwiseOrMerger();
+    this.columnStore = columnStore;
+    this.custodyColumns = custodyColumns;
+    this.metrics = metrics;
+    this.reconstructionState = new ReconstructionStateManager(columnStore, logger, metrics);
+  }
+
+  /**
+   * Set the publisher for rebroadcasting partial messages.
+   * Must be called before rebroadcasting can occur.
+   */
+  setPublisher(publisher: PartialPublisher): void {
+    this.publisher = publisher;
+  }
+
+  /**
+   * Set callback for when we need to fetch missing columns via req/resp.
+   */
+  setNeedColumnsCallback(callback: NeedColumnsCallback): void {
+    this.onNeedColumns = callback;
   }
 
   /**
@@ -163,7 +339,8 @@ export class PartialColumnBroadcaster implements PartialMessageExtension {
       return;
     }
 
-    const blockRoot = groupID;
+    const blockRoot = groupID as Root;
+
     this.logger.debug("Received partial column RPC", {
       topic: topicStr,
       peer: peerId.toString(),
@@ -172,6 +349,73 @@ export class PartialColumnBroadcaster implements PartialMessageExtension {
       hasData: partialMessage !== undefined,
       partsCount: partsMetadata !== undefined ? this.countParts(partsMetadata) : 0,
     });
+
+    // Process the incoming RPC via ReconstructionStateManager
+    const results = this.reconstructionState.onPartialRpc(peerId, blockRoot, partsMetadata, partialMessage);
+
+    // If we received new columns, rebroadcast to mesh
+    if (results.length > 0) {
+      this.rebroadcastToMesh(topicStr, blockRoot);
+    }
+
+    // Check if we need to fetch missing custody columns
+    this.checkAndFetchMissingColumns(blockRoot);
+  }
+
+  /**
+   * Publish our available columns to mesh peers.
+   */
+  async publishAvailableColumns(blockRoot: Root, topic: string): Promise<void> {
+    if (this.publisher === null) {
+      this.logger.debug("Cannot publish partial columns: no publisher set");
+      return;
+    }
+
+    const partialMsg = new AggregatedPartialDataColumn(blockRoot, this.columnStore, (colIdx) =>
+      this.reconstructionState.getColumn(blockRoot, colIdx)
+    );
+
+    await this.publisher.publishPartial(partialMsg, topic);
+  }
+
+  /**
+   * Called when a full column is received via regular gossip.
+   * Updates our availability tracking.
+   */
+  onFullColumnReceived(blockRoot: Root, columnIndex: number): void {
+    this.columnStore.markColumnAvailable(blockRoot, columnIndex);
+  }
+
+  /**
+   * Called when block is finalized - clean up state.
+   */
+  onBlockFinalized(blockRoot: Root): void {
+    this.reconstructionState.pruneBlock(blockRoot);
+    // Also clean up state for this block across all topics
+    for (const state of this.stateByTopic.values()) {
+      state.removeGroup(blockRoot);
+    }
+  }
+
+  /**
+   * Get count of available columns for a block.
+   */
+  getColumnCount(blockRoot: Root): number {
+    return this.columnStore.getColumnCount(blockRoot);
+  }
+
+  /**
+   * Check if we have all custody columns for a block.
+   */
+  hasCustodyColumns(blockRoot: Root): boolean {
+    return this.reconstructionState.hasCustodyColumns(blockRoot, this.custodyColumns);
+  }
+
+  /**
+   * Get the reconstruction state manager for advanced operations.
+   */
+  getReconstructionState(): ReconstructionStateManager {
+    return this.reconstructionState;
   }
 
   /**
@@ -223,6 +467,52 @@ export class PartialColumnBroadcaster implements PartialMessageExtension {
       state.stop();
     }
     this.stateByTopic.clear();
+  }
+
+  /**
+   * Rebroadcast our updated HAVE set to mesh peers.
+   */
+  private rebroadcastToMesh(topic: string, blockRoot: Root): void {
+    const ourMeta = this.columnStore.getAvailableColumns(blockRoot);
+    if (ourMeta === null) return;
+
+    this.metrics?.partialColumnsRebroadcast?.inc();
+
+    // Send updated metadata to all mesh peers for this topic
+    this.publishAvailableColumns(blockRoot, topic).catch((e) => {
+      this.logger.debug("Failed to rebroadcast partial columns", {
+        blockRoot: toRootHex(blockRoot),
+        error: (e as Error).message,
+      });
+    });
+  }
+
+  /**
+   * Check if we're missing custody columns and trigger fetch.
+   */
+  private checkAndFetchMissingColumns(blockRoot: Root): void {
+    const missing = this.reconstructionState.getMissingCustodyColumns(blockRoot, this.custodyColumns);
+
+    if (missing.length === 0) {
+      this.logger.debug("All custody columns available", {
+        blockRoot: toRootHex(blockRoot),
+        custodyCount: this.custodyColumns.length,
+      });
+      return;
+    }
+
+    // Find peers who have the columns we need
+    const peers = this.reconstructionState.getPeersWithColumns(blockRoot, missing);
+
+    if (peers.length > 0 && this.onNeedColumns !== null) {
+      this.logger.debug("Requesting missing custody columns", {
+        blockRoot: toRootHex(blockRoot),
+        missingColumns: missing.join(","),
+        peerCount: peers.length,
+      });
+
+      this.onNeedColumns(blockRoot, missing, peers);
+    }
   }
 
   /**
