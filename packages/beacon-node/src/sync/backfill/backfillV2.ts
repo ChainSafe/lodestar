@@ -294,6 +294,11 @@ export class BackfillSync {
 
     this.logger.debug("Starting sync loop.");
 
+    // Fetch missing checkpoint/anchor block if not present
+    if (this.syncAnchor.anchorBlock === null) {
+      await this.fetchAndPersistAnchorBlock();
+    }
+
     for await (const _ of this.processor) {
       this.status = BackfillSyncStatus.syncing;
 
@@ -809,6 +814,94 @@ export class BackfillSync {
         epoch: computeEpochAtSlot(verifiedBlocks[0].data.message.slot),
       });
       throw error as Error;
+    }
+  }
+
+  /**
+   * Fetch the checkpoint/anchor block via beaconBlocksByRoot and persist to blockArchive.
+   * This is needed because checkpoint sync only downloads the state and the anchorBlockRoot, not the block.
+   */
+  private async fetchAndPersistAnchorBlock(): Promise<void> {
+    const anchorBlockRoot = this.syncAnchor.anchorBlockRoot;
+    const anchorSlot = this.syncAnchor.anchorSlot;
+
+    const MAX_RETRY_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 3000;
+
+    for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+      try {
+        this.logger.debug("Fetching anchor block via beaconBlocksByRoot", {
+          root: toRootHex(anchorBlockRoot),
+          expectedSlot: anchorSlot,
+          attempt,
+        });
+
+        if (this.peers.size === 0) {
+          this.logger.debug("Waiting for peers to fetch anchor block...", {attempt});
+          throw new Error("No peers available");
+        }
+
+        const peer = this.getGoodSyncPeer();
+        if (!peer) {
+          throw new Error("No good peer available to fetch anchor block");
+        }
+
+        const res = await this.network.sendBeaconBlocksByRoot(peer, [anchorBlockRoot]);
+
+        if (res.length === 0) {
+          throw new Error("Failed to fetch anchor block from peer");
+        }
+
+        const anchorBlock = res[0].data;
+
+        // Verify block root matches
+        const blockRoot = this.config
+          .getForkTypes(anchorBlock.message.slot)
+          .BeaconBlock.hashTreeRoot(anchorBlock.message);
+
+        if (!ssz.Root.equals(blockRoot, anchorBlockRoot)) {
+          throw new Error("Fetched block root does not match anchor block root");
+        }
+
+        // Note: If checkpoint slot was skipped, the block will be at an earlier slot
+        // This is expected behavior - the state's latestBlockHeader points to the
+        // last actual block, not necessarily at first slot of the finalized checkpoint
+        if (anchorSlot && anchorBlock.message.slot !== anchorSlot) {
+          this.logger.verbose("Checkpoint slot was likely skipped, block is at earlier slot", {
+            expectedSlot: anchorSlot,
+            actualBlockSlot: anchorBlock.message.slot,
+          });
+        }
+
+        await this.db.blockArchive.add(anchorBlock);
+
+        // Update syncAnchor with the fetched block and other data (changes if checkpoint slot was skipped)
+        this.syncAnchor = {
+          anchorBlock,
+          anchorBlockRoot: blockRoot,
+          anchorBlockParentRoot: anchorBlock.message.parentRoot,
+          anchorSlot: anchorBlock.message.slot,
+        };
+
+        this.logger.debug("Successfully fetched and persisted anchor block", {
+          slot: anchorBlock.message.slot,
+          root: toRootHex(blockRoot),
+        });
+
+        return;
+      } catch (error) {
+        this.logger.verbose("Failed to fetch anchor block", {
+          attempt,
+          maxAttempts: MAX_RETRY_ATTEMPTS,
+          error: (error as Error).message,
+        });
+        if (attempt === MAX_RETRY_ATTEMPTS) {
+          throw new Error(
+            `Failed to fetch anchor block after ${MAX_RETRY_ATTEMPTS} attempts: ${(error as Error).message}`
+          );
+        }
+        await sleep(RETRY_DELAY_MS, this.signal);
+      }
     }
   }
 
