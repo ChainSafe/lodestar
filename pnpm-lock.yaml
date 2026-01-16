@@ -92,6 +92,9 @@ importers:
       https-browserify:
         specifier: ^1.0.0
         version: 1.0.0
+      inquirer:
+        specifier: 9.1.5
+        version: 9.1.5
       jsdom:
         specifier: ^23.0.1
         version: 23.0.1
@@ -3648,10 +3651,6 @@ packages:
   cli-table3@0.6.5:
     resolution: {integrity: sha512-+W/5efTR7y5HRD7gACw9yQjqMVvEMLBHmboM/kPWam+H+Hmyrgjh6YncVKK122YZkXrLudzTuAukUw9FnMf7IQ==}
     engines: {node: 10.* || >= 12.*}
-
-  cli-width@4.0.0:
-    resolution: {integrity: sha512-ZksGS2xpa/bYkNzN3BAw1wEjsLV/ZKOf/CCrJ/QOBsxx6fOARIkwTutxp1XIOIohi6HKmOFjMoK/XaqDVUpEEw==}
-    engines: {node: '>= 12'}
 
   cli-width@4.1.0:
     resolution: {integrity: sha512-ouuZd4/dm2Sw5Gmqy6bGyNNNe1qt9RpmxveLSO7KcgsTnU7RXfsw+/bukWGo1abgBiMAic068rclZsO4IWmmxQ==}
@@ -10491,8 +10490,6 @@ snapshots:
     optionalDependencies:
       '@colors/colors': 1.5.0
 
-  cli-width@4.0.0: {}
-
   cli-width@4.1.0: {}
 
   cliui@8.0.1:
@@ -11670,7 +11667,7 @@ snapshots:
       ansi-escapes: 6.1.0
       chalk: 5.2.0
       cli-cursor: 4.0.0
-      cli-width: 4.0.0
+      cli-width: 4.1.0
       external-editor: 3.1.0
       figures: 5.0.0
       lodash: 4.17.21
