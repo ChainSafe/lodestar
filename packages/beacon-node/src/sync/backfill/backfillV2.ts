@@ -312,7 +312,7 @@ export class BackfillSync {
       }
 
       const head = this.chain.forkChoice.getHead();
-      if (computeEpochAtSlot(anchorSlot) < computeEpochAtSlot(head.slot) - this.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS) {
+      if (computeEpochAtSlot(anchorSlot) <= computeEpochAtSlot(head.slot) - this.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS) {
         this.logger.verbose("Backfill sync success. Reached minimum backfill blocks serving window.");
         this.status = BackfillSyncStatus.completed;
         this.processor.end();
