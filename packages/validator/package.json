@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/validator",
-  "version": "1.38.0",
+  "version": "1.39.0",
   "description": "A Typescript implementation of the validator client",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
