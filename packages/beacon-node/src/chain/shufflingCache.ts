@@ -1,6 +1,6 @@
-import {CachedBeaconStateAllForks, EpochShuffling, attesterShufflingDecisionRoot} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, EpochShuffling} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
-import {LodestarError, Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 
 /**
@@ -129,17 +129,22 @@ export class ShufflingCache {
   }
 
   /**
-   * Process a post state to extract and cache the shuffling for the given epoch.
-   * Extracts the decision root from the state internally.
-   * Returns the shuffling for use by callers that need it immediately.
+   * Process a state to extract and cache all shufflings (previous, current, next).
+   * Uses the stored decision roots from epochCtx.
    */
-  processState(state: CachedBeaconStateAllForks, epoch: Epoch): EpochShuffling {
-    const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
-    const decisionRoot = attesterShufflingDecisionRoot(state, epoch);
-    if (decisionRoot !== null) {
-      this.set(shuffling, toRootHex(decisionRoot));
+  processState(state: CachedBeaconStateAllForks): void {
+    const {epochCtx} = state;
+
+    // Cache previous shuffling
+    this.set(epochCtx.previousShuffling, epochCtx.previousDecisionRoot);
+
+    // Cache current shuffling
+    this.set(epochCtx.currentShuffling, epochCtx.currentDecisionRoot);
+
+    // Cache next shuffling if it exists
+    if (epochCtx.nextShuffling !== null) {
+      this.set(epochCtx.nextShuffling, epochCtx.nextDecisionRoot);
     }
-    return shuffling;
   }
 
   /**

@@ -983,7 +983,8 @@ export class BeaconChain implements IBeaconChain {
       state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
     }
     // resolve the promise to unblock other calls of the same epoch and dependent root
-    return this.shufflingCache.processState(state, attEpoch);
+    this.shufflingCache.processState(state);
+    return state.epochCtx.getShufflingAtEpoch(attEpoch);
   }
 
   /**
@@ -1167,12 +1168,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onCheckpoint(this: BeaconChain, _checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
-    const {epochCtx} = state;
-    this.shufflingCache["set"](epochCtx.previousShuffling, epochCtx.previousDecisionRoot);
-    this.shufflingCache["set"](epochCtx.currentShuffling, epochCtx.currentDecisionRoot);
-    if (epochCtx.nextShuffling !== null) {
-      this.shufflingCache["set"](epochCtx.nextShuffling, epochCtx.nextDecisionRoot);
-    }
+    this.shufflingCache.processState(state);
   }
 
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
