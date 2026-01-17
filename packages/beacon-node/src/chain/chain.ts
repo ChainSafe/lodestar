@@ -1168,7 +1168,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onCheckpoint(this: BeaconChain, _checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
-    this.shufflingCache.processState(state);
+    setImmediate(() => {
+      this.shufflingCache.processState(state);
+    });
   }
 
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
