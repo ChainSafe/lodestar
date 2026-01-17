@@ -108,15 +108,35 @@ export class ProtoArray {
    *
    * Returns the index for the specified payload status variant, or undefined if not found.
    *
-   * Note: For pre-Gloas blocks, variants[0] contains FULL index.
-   * To access pre-Gloas blocks, use: this.indices.get(root)?.[0]
+   * If payloadStatus not provided:
+   * - Pre-Gloas blocks: returns FULL variant (canonical)
+   * - Gloas blocks: returns PENDING variant (canonical)
+   *
+   * If payloadStatus provided:
+   * - Pre-Gloas blocks: only FULL is valid, PENDING/EMPTY throw error
+   * - Gloas blocks: returns the specified variant
    */
-  getNodeIndexByRootAndStatus(root: RootHex, payloadStatus: PayloadStatus): number | undefined {
+  getNodeIndexByRootAndStatus(root: RootHex, payloadStatus?: PayloadStatus): number | undefined {
     const variants = this.indices.get(root);
     if (!variants) {
       return undefined;
     }
-    return variants[payloadStatus];
+
+    // Pre-Gloas: only one variant exists (FULL at index 0)
+    if (variants.length === 1) {
+      // Return FULL variant if no status specified or FULL explicitly requested
+      if (payloadStatus === undefined || payloadStatus === PayloadStatus.FULL) {
+        return variants[0];
+      }
+      // PENDING and EMPTY are invalid for pre-Gloas blocks
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+        index: payloadStatus,
+      });
+    }
+
+    // Gloas: return the specified variant, or PENDING if not specified
+    return variants[payloadStatus ?? PayloadStatus.PENDING];
   }
 
   /**
@@ -635,8 +655,7 @@ export class ProtoArray {
       // if its in fcU.
       //
       const {invalidateFromParentBlockRoot, latestValidExecHash} = execResponse;
-      // Use variants[0]: FULL for pre-Gloas, PENDING for post-Gloas
-      const invalidateFromParentIndex = this.indices.get(invalidateFromParentBlockRoot)?.[0];
+      const invalidateFromParentIndex = this.getNodeIndexByRootAndStatus(invalidateFromParentBlockRoot);
       if (invalidateFromParentIndex === undefined) {
         throw Error(`Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} in forkChoice`);
       }
@@ -799,10 +818,10 @@ export class ProtoArray {
    * Get payload status tiebreaker for fork choice comparison
    * Spec: gloas/fork-choice.md#new-get_payload_status_tiebreaker
    *
-   * For PENDING nodes: always returns 0 
+   * For PENDING nodes: always returns 0
    * For EMPTY/FULL variants from slot n-1: implements tiebreaker logic based on should_extend_payload
    * For older blocks: returns node.payloadStatus
-   * 
+   *
    * Note: pre-gloas logic won't reach here. Since it is impossible to have two nodes with same weight and root
    */
   private getPayloadStatusTiebreaker(
@@ -847,8 +866,8 @@ export class ProtoArray {
       });
     }
 
-    // Use variants[0]: FULL for pre-Gloas, PENDING for post-Gloas
-    const justifiedIndex = this.indices.get(justifiedRoot)?.[0];
+    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
+    const justifiedIndex = this.getNodeIndexByRootAndStatus(justifiedRoot);
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN,
@@ -1364,8 +1383,8 @@ export class ProtoArray {
    * Iterate from a block root backwards over nodes
    */
   *iterateAncestorNodes(blockRoot: RootHex): IterableIterator<ProtoNode> {
-    // Use variants[0]: FULL for pre-Gloas, PENDING for post-Gloas
-    const startIndex = this.indices.get(blockRoot)?.[0];
+    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot);
     if (startIndex === undefined) {
       return;
     }
@@ -1395,8 +1414,8 @@ export class ProtoArray {
    * Get all nodes from a block root backwards
    */
   getAllAncestorNodes(blockRoot: RootHex): ProtoNode[] {
-    // Use variants[0]: FULL for pre-Gloas, PENDING for post-Gloas
-    const startIndex = this.indices.get(blockRoot)?.[0];
+    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot);
     if (startIndex === undefined) {
       return [];
     }
@@ -1425,8 +1444,8 @@ export class ProtoArray {
    * this is to find non-ancestor nodes of a blockRoot.
    */
   getAllNonAncestorNodes(blockRoot: RootHex): ProtoNode[] {
-    // Use variants[0]: FULL for pre-Gloas, PENDING for post-Gloas
-    const startIndex = this.indices.get(blockRoot)?.[0];
+    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot);
     if (startIndex === undefined) {
       return [];
     }
@@ -1455,8 +1474,8 @@ export class ProtoArray {
    * Returns both ancestor and non-ancestor nodes in a single traversal.
    */
   getAllAncestorAndNonAncestorNodes(blockRoot: RootHex): {ancestors: ProtoNode[]; nonAncestors: ProtoNode[]} {
-    // Use variants[0]: FULL for pre-Gloas, PENDING for post-Gloas
-    const startIndex = this.indices.get(blockRoot)?.[0];
+    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot);
     if (startIndex === undefined) {
       return {ancestors: [], nonAncestors: []};
     }
@@ -1494,10 +1513,15 @@ export class ProtoArray {
     return this.indices.has(blockRoot);
   }
 
-  // Return any ProtoNode for blockRoot. PENDING variant for Gloas, FULL variant for pre-Gloas 
-  // TODO GLOAS: Review usages.
+  /**
+   * Return canonical ProtoNode for blockRoot
+   * - Pre-Gloas: FULL variant
+   * - Gloas: PENDING variant
+   *
+   * TODO GLOAS: Review usages.
+   */
   getNode(blockRoot: RootHex): ProtoNode | undefined {
-    const blockIndex = this.indices.get(blockRoot)?.[0];
+    const blockIndex = this.getNodeIndexByRootAndStatus(blockRoot);
     if (blockIndex === undefined) {
       return undefined;
     }
@@ -1591,7 +1615,7 @@ export class ProtoArray {
   }
 
   length(): number {
-    return this.indices.keys.length;
+    return this.indices.size;
   }
 
   private getNodeFromIndex(index: number): ProtoNode {

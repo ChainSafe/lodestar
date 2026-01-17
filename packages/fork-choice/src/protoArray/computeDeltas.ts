@@ -51,8 +51,7 @@ export function computeDeltas(
 
   // avoid creating new variables in the loop to potentially reduce GC pressure
   let oldBalance: number, newBalance: number;
-  let currentIndex: VoteIndex,
-    nextIndex: VoteIndex;
+  let currentIndex: VoteIndex, nextIndex: VoteIndex;
   // sort equivocating indices to avoid Set.has() in the loop
   const equivocatingArray = Array.from(equivocatingIndices).sort((a, b) => a - b);
   let equivocatingIndex = 0;
