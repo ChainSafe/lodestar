@@ -873,7 +873,7 @@ export class BackfillSync {
           });
         }
 
-        await this.db.blockArchive.add(anchorBlock);
+        await this.db.blockArchive.put(anchorBlock.message.slot, anchorBlock);
 
         // Update syncAnchor with the fetched block and other data (changes if checkpoint slot was skipped)
         this.syncAnchor = {
