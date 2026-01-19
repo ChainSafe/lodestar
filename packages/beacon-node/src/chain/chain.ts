@@ -52,6 +52,7 @@ import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
+import {callInNextEventLoop} from "../util/eventLoop.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {SerializedCache} from "../util/serializedCache.js";
@@ -1168,7 +1169,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onCheckpoint(this: BeaconChain, _checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
-    setImmediate(() => {
+    // Defer to not block other checkpoint event handlers, which can cause lightclient update delays
+    callInNextEventLoop(() => {
       this.shufflingCache.processState(state);
     });
   }
