@@ -33,6 +33,7 @@ const {
   BLSPubkey,
   Uint8,
   BuilderIndex,
+  EpochInf,
 } = primitiveSsz;
 
 export const Builder = new ContainerType(
@@ -41,8 +42,8 @@ export const Builder = new ContainerType(
     version: Uint8,
     executionAddress: ExecutionAddress,
     balance: UintNum64,
-    depositEpoch: Epoch,
-    withdrawableEpoch: Epoch,
+    depositEpoch: EpochInf,
+    withdrawableEpoch: EpochInf,
   },
   {typeName: "Builder", jsonCase: "eth2"}
 );

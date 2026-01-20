@@ -1,10 +1,15 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {DOMAIN_BEACON_BUILDER, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {
+  BUILDER_INDEX_SELF_BUILD,
+  DOMAIN_BEACON_BUILDER,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.ts";
-import {computeExitEpochAndUpdateChurn, computeSigningRoot, computeTimeAtSlot} from "../util/index.ts";
+import {computeSigningRoot, computeTimeAtSlot} from "../util/index.ts";
 import {processConsolidationRequest} from "./processConsolidationRequest.ts";
 import {processDepositRequest} from "./processDepositRequest.ts";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.ts";
@@ -20,10 +25,7 @@ export function processExecutionPayloadEnvelope(
   const fork = state.config.getForkSeq(envelope.slot);
 
   if (verify) {
-    const builderIndex = envelope.builderIndex;
-    const pubkey = state.validators.getReadonly(builderIndex).pubkey;
-
-    if (!verifyExecutionPayloadEnvelopeSignature(state, pubkey, signedEnvelope)) {
+    if (!verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
       throw new Error("Payload Envelope has invalid signature");
     }
   }
@@ -33,7 +35,7 @@ export function processExecutionPayloadEnvelope(
   const requests = envelope.executionRequests;
 
   for (const deposit of requests.deposits) {
-    processDepositRequest(state, deposit);
+    processDepositRequest(fork, state, deposit);
   }
 
   for (const withdrawal of requests.withdrawals) {
@@ -50,9 +52,6 @@ export function processExecutionPayloadEnvelope(
   const amount = payment.withdrawal.amount;
 
   if (amount > 0) {
-    const exitQueueEpoch = computeExitEpochAndUpdateChurn(state, BigInt(amount));
-
-    payment.withdrawal.withdrawableEpoch = exitQueueEpoch + state.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
     state.builderPendingWithdrawals.push(payment.withdrawal);
   }
 
@@ -108,14 +107,6 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // Verify the withdrawals root
-  const envelopeWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(envelope.payload.withdrawals);
-  if (!byteArrayEquals(state.latestWithdrawalsRoot, envelopeWithdrawalsRoot)) {
-    throw new Error(
-      `Withdrawals root mismatch between envelope and latest withdrawals root envelope=${toRootHex(envelopeWithdrawalsRoot)} latestWithdrawalRoot=${toRootHex(state.latestWithdrawalsRoot)}`
-    );
-  }
-
   // Verify the gas_limit
   if (Number(committedBid.gasLimit) !== payload.gasLimit) {
     throw new Error(
@@ -164,14 +155,22 @@ function validateExecutionPayloadEnvelope(
 
 function verifyExecutionPayloadEnvelopeSignature(
   state: CachedBeaconStateGloas,
-  pubkey: Uint8Array,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): boolean {
+  const builderIndex = signedEnvelope.message.builderIndex;
+
   const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_BUILDER);
   const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, signedEnvelope.message, domain);
 
   try {
-    const publicKey = PublicKey.fromBytes(pubkey);
+    let publicKey: PublicKey;
+    
+    if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
+      const validatorIndex = state.latestBlockHeader.proposerIndex;
+      publicKey = state.epochCtx.index2pubkey[validatorIndex];
+    } else {
+      publicKey = PublicKey.fromBytes(state.builders.getReadonly(builderIndex).pubkey);
+    }
     const signature = Signature.fromBytes(signedEnvelope.signature, true);
 
     return verify(signingRoot, publicKey, signature);

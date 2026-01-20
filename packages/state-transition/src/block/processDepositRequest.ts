@@ -1,21 +1,111 @@
-import {UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
-import {electra, ssz} from "@lodestar/types";
+import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
+import {BLSPubkey, Bytes32, UintNum64, electra, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
+import {isValidDepositSignature} from "./processDeposit.js";
+import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {computeEpochAtSlot} from "../util/index.js";
+
+/**
+ * Apply a deposit for a builder. Either increases balance for existing builder or adds new builder to registry.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/dev/specs/gloas/beacon-chain.md#new-apply_deposit_for_builder
+ */
+export function applyDepositForBuilder(
+  state: CachedBeaconStateGloas,
+  pubkey: BLSPubkey,
+  withdrawalCredentials: Bytes32,
+  amount: UintNum64,
+  signature: Bytes32
+): void {
+  const builderIndex = findBuilderIndexByPubkey(state, pubkey);
+
+  if (builderIndex !== null) {
+    // Existing builder - increase balance
+    const builder = state.builders.get(builderIndex);
+    builder.balance += amount;
+  } else {
+    // New builder - verify signature and add to registry
+    if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
+      addBuilderToRegistry(state, pubkey, withdrawalCredentials, amount);
+    }
+  }
+}
+
+/**
+ * Add a new builder to the builders registry.
+ * Reuses slots from exited and fully withdrawn builders if available.
+ */
+function addBuilderToRegistry(
+  state: CachedBeaconStateGloas,
+  pubkey: BLSPubkey,
+  withdrawalCredentials: Bytes32,
+  amount: UintNum64
+): void {
+  const currentEpoch = computeEpochAtSlot(state.slot);
+
+  // Try to find a reusable slot from an exited builder with zero balance
+  let builderIndex = state.builders.length;
+  for (let i = 0; i < state.builders.length; i++) {
+    const builder = state.builders.getReadonly(i);
+    if (builder.withdrawableEpoch <= currentEpoch && builder.balance === 0) {
+      builderIndex = i;
+      break;
+    }
+  }
+
+  // Create new builder
+  const newBuilder = ssz.gloas.Builder.toViewDU({
+    pubkey,
+    version: withdrawalCredentials[0],
+    executionAddress: withdrawalCredentials.subarray(12),
+    balance: amount,
+    depositEpoch: currentEpoch,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+  });
+
+  if (builderIndex < state.builders.length) {
+    // Reuse existing slot
+    state.builders.set(builderIndex, newBuilder);
+  } else {
+    // Append to end
+    state.builders.push(newBuilder);
+  }
+}
 
 export function processDepositRequest(
+  fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   depositRequest: electra.DepositRequest
 ): void {
-  if (state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+  const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
+
+  // Check if this is a builder or validator deposit
+  if (fork >= ForkSeq.gloas) {
+    const stateGloas = state as CachedBeaconStateGloas;
+    const builderIndex = findBuilderIndexByPubkey(stateGloas, pubkey);
+    const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
+
+    const isBuilder = builderIndex !== null;
+    const isValidator = validatorIndex !== null && validatorIndex < state.validators.length;
+    const isBuilderPrefix = isBuilderWithdrawalCredential(withdrawalCredentials);
+
+    // Route to builder if it's an existing builder OR has builder prefix and is not a validator
+    if (isBuilder || (isBuilderPrefix && !isValidator)) {
+      applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature);
+      return;
+    }
+  }
+
+  // Add validator deposit to queue (existing code)
+  // Only set deposit_requests_start_index in Electra fork, not Gloas
+  if (fork < ForkSeq.gloas && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
     state.depositRequestsStartIndex = depositRequest.index;
   }
 
-  // Create pending deposit
   const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
-    pubkey: depositRequest.pubkey,
-    withdrawalCredentials: depositRequest.withdrawalCredentials,
-    amount: depositRequest.amount,
-    signature: depositRequest.signature,
+    pubkey,
+    withdrawalCredentials,
+    amount,
+    signature,
     slot: state.slot,
   });
   state.pendingDeposits.push(pendingDeposit);
