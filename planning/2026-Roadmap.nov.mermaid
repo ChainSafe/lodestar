@@ -1,0 +1,29 @@
+```mermaid
+gantt
+    title Lodestar 2026 Development Roadmap
+    dateFormat YY-MM
+
+    section Zig R&D Roadmap
+        Metrics R&D:                    zr1, 2025-11, 60d
+        Benchmarking R&D:               zr2, after zr1, 30d
+        Napi Bindings (napi-z repo):    zr3, 2025-12, 30d
+
+    section State-Transition
+        Spec Tests:                     st1, 2025-12, 30d
+        Tree-View APIs:                 st2, after st1, 30d
+        Metrics Implementation:         st3, after st2, 30d
+        Bindings:                       st4, after st3, 30d
+        Debug Tree-View:                st5, after st4, 30d
+        Benchmarking:                   st6, after st5, 30d
+        Perf Improvements:              st7, after st6, 30d
+
+    section LodestarZ
+        Fork-Choice:                    lz1, 2026-07, 45d
+        Execution-Engine:               lz2, 2026-07, 45d
+        Clock:                          lz3, 2026-07, 45d
+        Database:                       lz3, 2026-07, 45d
+        Seen-Cache:                     lz3, 2026-07, 45d
+        Op-Pools:                       lz3, 2026-07, 45d
+        Peer:                           lz3, 2026-07, 45d
+        Peer Manager:                   lz3, 2026-07, 45d
+```
