@@ -750,13 +750,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     // GENESIS_SLOT doesn't has valid signature
     if (anchorBlock.message.slot === GENESIS_SLOT) return;
-    await verifyBlockProposerSignature(
-      this.chain.config,
-      this.chain.index2pubkey,
-      this.chain.bls,
-      this.chain.getHeadState(),
-      [anchorBlock]
-    );
+    await verifyBlockProposerSignature(this.chain.config, this.chain.index2pubkey, this.chain.bls, [anchorBlock]);
 
     // We can write to the disk if this is ahead of prevFinalizedCheckpointBlock otherwise
     // we will need to go make checks on the top of sync loop before writing as it might
@@ -821,13 +815,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     // If any of the block's proposer signature fail, we can't trust this peer at all
     if (verifiedBlocks.length > 0) {
-      await verifyBlockProposerSignature(
-        this.chain.config,
-        this.chain.index2pubkey,
-        this.chain.bls,
-        this.chain.getHeadState(),
-        verifiedBlocks
-      );
+      await verifyBlockProposerSignature(this.chain.config, this.chain.index2pubkey, this.chain.bls, verifiedBlocks);
 
       // This is bad, like super bad. Abort the backfill
       if (!nextAnchor)
