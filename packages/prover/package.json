@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.38.0",
+  "version": "1.39.0",
   "type": "module",
   "exports": {
     ".": {
@@ -80,8 +80,8 @@
     "@types/js-yaml": "^4.0.5",
     "@types/yargs": "^17.0.24",
     "axios": "^1.3.4",
-    "ethers": "^6.7.0",
     "deepmerge": "^4.3.1",
+    "ethers": "^6.7.0",
     "web3": "^4.0.3"
   },
   "keywords": [
