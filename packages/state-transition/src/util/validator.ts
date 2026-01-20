@@ -9,8 +9,8 @@ import {
 import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {BeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas, EpochCache} from "../types.js";
-import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "./electra.js";
 import {hasEth1WithdrawalCredential} from "./capella.js";
+import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "./electra.js";
 
 /**
  * Check if [[validator]] is active
@@ -100,11 +100,7 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
  * Check if validator is partially withdrawable.
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/electra/beacon-chain.md#modified-is_partially_withdrawable_validator
  */
-export function isPartiallyWithdrawableValidator(
-  fork: ForkSeq,
-  validator: phase0.Validator,
-  balance: number
-): boolean {
+export function isPartiallyWithdrawableValidator(fork: ForkSeq, validator: phase0.Validator, balance: number): boolean {
   const isPostElectra = fork >= ForkSeq.electra;
 
   // Check withdrawal credentials

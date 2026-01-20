@@ -114,7 +114,7 @@ export function initiateBuilderExit(state: CachedBeaconStateGloas, builderIndex:
 /**
  * Find the index of a builder by their public key.
  * Returns null if not found.
- * 
+ *
  * May consider builder pubkey cache if performance becomes an issue.
  */
 export function findBuilderIndexByPubkey(state: CachedBeaconStateGloas, pubkey: Uint8Array): number | null {

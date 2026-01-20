@@ -38,8 +38,8 @@ export {
 export * from "./externalData.js";
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
-export * from "./processOperations.js";
 export {applyDepositForBuilder} from "./processDepositRequest.js";
+export * from "./processOperations.js";
 
 export function processBlock(
   fork: ForkSeq,

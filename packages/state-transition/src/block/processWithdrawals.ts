@@ -41,8 +41,12 @@ export function processWithdrawals(
   // processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
   // processedBuildersSweepCount is withdrawals from builder sweep since gloas (EIP-7732)
   // processedValidatorSweepCount is withdrawals coming from validator sweep
-  const {expectedWithdrawals, processedBuilderWithdrawalsCount, processedPartialWithdrawalsCount, processedBuildersSweepCount} =
-    getExpectedWithdrawals(fork, state);
+  const {
+    expectedWithdrawals,
+    processedBuilderWithdrawalsCount,
+    processedPartialWithdrawalsCount,
+    processedBuildersSweepCount,
+  } = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
   // After gloas, withdrawals are verified later in processExecutionPayloadEnvelope
@@ -357,9 +361,7 @@ function getValidatorsSweepWithdrawals(
       validatorBalanceAfterWithdrawals.set(validatorIndex, 0);
     } else if (isPartiallyWithdrawableValidator(fork, validator, balance)) {
       // capella partial withdrawal
-      const maxEffectiveBalance = isPostElectra
-        ? getMaxEffectiveBalance(withdrawalCredentials)
-        : MAX_EFFECTIVE_BALANCE;
+      const maxEffectiveBalance = isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE;
       const partialAmount = balance - maxEffectiveBalance;
       sweepWithdrawals.push({
         index: withdrawalIndex,
@@ -427,8 +429,12 @@ export function getExpectedWithdrawals(
       builderWithdrawals,
       withdrawalIndex: newWithdrawalIndex,
       processedCount,
-    } = getBuilderWithdrawals(state as CachedBeaconStateGloas, withdrawalIndex, expectedWithdrawals, builderBalanceAfterWithdrawals);
-
+    } = getBuilderWithdrawals(
+      state as CachedBeaconStateGloas,
+      withdrawalIndex,
+      expectedWithdrawals,
+      builderBalanceAfterWithdrawals
+    );
 
     expectedWithdrawals.push(...builderWithdrawals);
     withdrawalIndex = newWithdrawalIndex;
@@ -447,7 +453,6 @@ export function getExpectedWithdrawals(
       validatorBalanceAfterWithdrawals
     );
 
-
     expectedWithdrawals.push(...pendingPartialWithdrawals);
     withdrawalIndex = newWithdrawalIndex;
     processedPartialWithdrawalsCount = processedCount;
@@ -465,7 +470,6 @@ export function getExpectedWithdrawals(
       builderBalanceAfterWithdrawals
     );
 
-
     expectedWithdrawals.push(...buildersSweepWithdrawals);
     withdrawalIndex = newWithdrawalIndex;
     processedBuildersSweepCount = processedCount;
@@ -478,7 +482,6 @@ export function getExpectedWithdrawals(
     expectedWithdrawals.length,
     validatorBalanceAfterWithdrawals
   );
-
 
   expectedWithdrawals.push(...sweepWithdrawals);
 

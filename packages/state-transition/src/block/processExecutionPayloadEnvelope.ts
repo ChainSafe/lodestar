@@ -24,10 +24,8 @@ export function processExecutionPayloadEnvelope(
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(envelope.slot);
 
-  if (verify) {
-    if (!verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
-      throw new Error("Payload Envelope has invalid signature");
-    }
+  if (verify && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
+    throw new Error("Payload Envelope has invalid signature");
   }
 
   validateExecutionPayloadEnvelope(state, envelope);
@@ -164,7 +162,7 @@ function verifyExecutionPayloadEnvelopeSignature(
 
   try {
     let publicKey: PublicKey;
-    
+
     if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
       const validatorIndex = state.latestBlockHeader.proposerIndex;
       publicKey = state.epochCtx.index2pubkey[validatorIndex];

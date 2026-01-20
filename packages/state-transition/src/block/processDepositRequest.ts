@@ -1,9 +1,9 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {BLSPubkey, Bytes32, UintNum64, electra, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
-import {isValidDepositSignature} from "./processDeposit.js";
 import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {computeEpochAtSlot} from "../util/index.js";
+import {isValidDepositSignature} from "./processDeposit.js";
 
 /**
  * Apply a deposit for a builder. Either increases balance for existing builder or adds new builder to registry.

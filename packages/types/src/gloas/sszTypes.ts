@@ -18,6 +18,8 @@ import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
 // biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want `Boolean` name to be imported
+const {Boolean} = primitiveSsz;
+
 const {
   Gwei,
   ExecutionAddress,
@@ -27,7 +29,6 @@ const {
   Bytes32,
   Root,
   Slot,
-  Boolean,
   UintBn64,
   UintNum64,
   BLSPubkey,
