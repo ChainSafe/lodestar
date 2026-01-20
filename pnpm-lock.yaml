@@ -44,6 +44,9 @@ importers:
       '@chainsafe/biomejs-config':
         specifier: ^1.0.0
         version: 1.0.0(@biomejs/biome@2.2.2)
+      '@chainsafe/lodestar':
+        specifier: workspace:*
+        version: link:packages/cli
       '@lerna-lite/cli':
         specifier: ^4.9.4
         version: 4.9.4(@lerna-lite/exec@4.10.3)(@lerna-lite/publish@4.9.4)(@lerna-lite/run@4.9.4)(@lerna-lite/version@4.9.4)(@types/node@24.10.1)

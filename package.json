@@ -45,6 +45,7 @@
     "@biomejs/biome": "^2.2.0",
     "@chainsafe/benchmark": "^1.2.3",
     "@chainsafe/biomejs-config": "^1.0.0",
+    "@chainsafe/lodestar": "workspace:*",
     "@lerna-lite/cli": "^4.9.4",
     "@lerna-lite/exec": "^4.9.4",
     "@lerna-lite/publish": "^4.9.4",
