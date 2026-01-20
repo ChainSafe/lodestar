@@ -52,7 +52,6 @@ export const BuilderPendingWithdrawal = new ContainerType(
     feeRecipient: ExecutionAddress,
     amount: UintNum64,
     builderIndex: BuilderIndex,
-    withdrawableEpoch: Epoch,
   },
   {typeName: "BuilderPendingWithdrawal", jsonCase: "eth2"}
 );
@@ -100,6 +99,24 @@ export const IndexedPayloadAttestation = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "IndexedPayloadAttestation", jsonCase: "eth2"}
+);
+
+export const ProposerPreferences = new ContainerType(
+  {
+    proposalSlot: Slot,
+    validatorIndex: ValidatorIndex,
+    feeRecipient: ExecutionAddress,
+    gasLimit: UintNum64,
+  },
+  {typeName: "ProposerPreferences", jsonCase: "eth2"}
+);
+
+export const SignedProposerPreferences = new ContainerType(
+  {
+    message: ProposerPreferences,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedProposerPreferences", jsonCase: "eth2"}
 );
 
 export const ExecutionPayloadBid = new ContainerType(
@@ -244,7 +261,6 @@ export const BeaconState = new ContainerType(
     builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH), // New in GLOAS:EIP7732
     builderPendingWithdrawals: new ListCompositeType(BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT), // New in GLOAS:EIP7732
     latestBlockHash: Bytes32, // New in GLOAS:EIP7732
-    latestWithdrawalsRoot: Root, // New in GLOAS:EIP7732
     payloadExpectedWithdrawals: capellaSsz.Withdrawals, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
