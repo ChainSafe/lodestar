@@ -23,6 +23,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloas.latestExecutionPayloadHeader = ssz.gloas.BeaconState.fields.latestExecutionPayloadHeader.toViewDU({
     ...stateFulu.latestExecutionPayloadHeader.toValue(),
     blockAccessListRoot: ssz.Root.defaultViewDU(),
+    slotNumber: stateFulu.latestBlockHeader.slot,
   });
 
   stateGloas.commit();

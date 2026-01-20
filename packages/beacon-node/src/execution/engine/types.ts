@@ -194,7 +194,8 @@ export type ExecutionPayloadRpc = {
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
-  blockAccessList?: DATA; // GLOAS
+  blockAccessList?: DATA; // GLOAS:EIP-7928
+  slotNumber?: QUANTITY; // GLOAS:EIP-7843
 };
 
 export type WithdrawalRpc = {
@@ -298,8 +299,9 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
   // No changes in Electra
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
-    const {blockAccessList} = data as gloas.ExecutionPayload;
+    const {blockAccessList, slotNumber} = data as gloas.ExecutionPayload;
     payload.blockAccessList = bytesToData(blockAccessList);
+    payload.slotNumber = numToQuantity(slotNumber);
   }
 
   return payload;
@@ -398,7 +400,7 @@ export function parseExecutionPayload(
   // No changes in Electra
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
-    const {blockAccessList} = data;
+    const {blockAccessList, slotNumber} = data;
 
     if (blockAccessList == null) {
       throw Error(
@@ -406,7 +408,14 @@ export function parseExecutionPayload(
       );
     }
 
+    if (slotNumber == null) {
+      throw Error(
+        `slotNumber missing for ${fork} >= gloas executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+
     (executionPayload as gloas.ExecutionPayload).blockAccessList = dataToBytes(blockAccessList, null);
+    (executionPayload as gloas.ExecutionPayload).slotNumber = quantityToNum(slotNumber);
   }
 
   return {executionPayload, executionPayloadValue, blobsBundle, executionRequests, shouldOverrideBuilder};
