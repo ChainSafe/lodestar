@@ -11,7 +11,8 @@ ENV CI=true
 RUN corepack enable && corepack prepare --activate && \
   pnpm install --frozen-lockfile && \
   pnpm build && \
-  pnpm prune --prod
+  pnpm clean:nm && \
+  pnpm install --frozen-lockfile --prod
 
 # To have access to the specific branch and commit used to build this source,
 # a git-data.json file is created by persisting git data at build time. Then,
