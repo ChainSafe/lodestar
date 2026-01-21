@@ -1,12 +1,13 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 
 export function getNodeApi(
   opts: ApiOptions,
-  {network, sync}: Pick<ApiModules, "network" | "sync">
+  {network, sync, chain}: Pick<ApiModules, "network" | "sync" | "chain">
 ): ApplicationMethods<routes.node.Endpoints> {
   return {
     async getNetworkIdentity() {
@@ -58,6 +59,23 @@ export function getNodeApi(
       return {
         data: {
           version: `Lodestar/${opts.version || "dev"}`,
+        },
+      };
+    },
+
+    async getNodeVersionV2() {
+      const beaconNode = getLodestarClientVersion(opts);
+      const executionClient = chain.executionEngine.clientVersion ?? {
+        code: routes.node.ClientCode.XX,
+        name: "Unknown",
+        version: "",
+        commit: "",
+      };
+
+      return {
+        data: {
+          beaconNode,
+          executionClient,
         },
       };
     },
