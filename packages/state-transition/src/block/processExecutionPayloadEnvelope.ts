@@ -133,6 +133,15 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
+  // Verify consistency with expected withdrawals
+  const payloadWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
+  const expectedWithdrawalsRoot = state.payloadExpectedWithdrawals.hashTreeRoot();
+  if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
+    throw new Error(
+      `Withdrawals mismatch between payload and expected withdrawals payload=${toRootHex(payloadWithdrawalsRoot)} expected=${toRootHex(expectedWithdrawalsRoot)}`
+    );
+  }
+
   // Verify timestamp
   if (payload.timestamp !== computeTimeAtSlot(state.config, state.slot, state.genesisTime)) {
     throw new Error(

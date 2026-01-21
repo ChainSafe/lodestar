@@ -160,24 +160,15 @@ function getBuilderWithdrawals(
       builderBalanceAfterWithdrawals.set(builderIndex, balance);
     }
 
-    // Calculate withdrawable amount
-    let withdrawableBalance = 0;
-    if (balance > MIN_ACTIVATION_BALANCE) {
-      withdrawableBalance =
-        balance - MIN_ACTIVATION_BALANCE < withdrawal.amount ? balance - MIN_ACTIVATION_BALANCE : withdrawal.amount;
-    }
-
-    if (withdrawableBalance > 0) {
-      // Use flagged index for builder withdrawals
-      builderWithdrawals.push({
-        index: withdrawalIndex,
-        validatorIndex: convertBuilderIndexToValidatorIndex(builderIndex),
-        address: withdrawal.feeRecipient,
-        amount: BigInt(withdrawableBalance),
-      });
-      withdrawalIndex++;
-      builderBalanceAfterWithdrawals.set(builderIndex, balance - withdrawableBalance);
-    }
+    // Use the withdrawal amount directly as specified in the spec
+    builderWithdrawals.push({
+      index: withdrawalIndex,
+      validatorIndex: convertBuilderIndexToValidatorIndex(builderIndex),
+      address: withdrawal.feeRecipient,
+      amount: BigInt(withdrawal.amount),
+    });
+    withdrawalIndex++;
+    builderBalanceAfterWithdrawals.set(builderIndex, balance - withdrawal.amount);
 
     processedCount++;
   }
