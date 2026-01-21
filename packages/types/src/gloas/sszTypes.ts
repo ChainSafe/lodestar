@@ -19,6 +19,7 @@ export const ExecutionPayload = new ContainerType(
   {
     ...denebSsz.ExecutionPayload.fields,
     blockAccessList: BlockAccessList, // New in GLOAS:EIP-7928
+    slotNumber: Slot, // New in GLOAS:EIP-7843
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -27,6 +28,7 @@ export const ExecutionPayloadHeader = new ContainerType(
   {
     ...denebSsz.ExecutionPayloadHeader.fields,
     blockAccessListRoot: Root, // New in GLOAS:EIP-7928
+    slotNumber: Slot, // New in GLOAS:EIP-7843
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );

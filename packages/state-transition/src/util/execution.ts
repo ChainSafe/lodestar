@@ -178,6 +178,9 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
   if (fork >= ForkSeq.gloas) {
     (bellatrixPayloadFields as gloas.ExecutionPayloadHeader).blockAccessListRoot =
       ssz.gloas.BlockAccessList.hashTreeRoot((payload as gloas.ExecutionPayload).blockAccessList);
+    (bellatrixPayloadFields as gloas.ExecutionPayloadHeader).slotNumber = (
+      payload as gloas.ExecutionPayload
+    ).slotNumber;
   }
 
   return bellatrixPayloadFields;
