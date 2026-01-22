@@ -34,9 +34,7 @@ describe("voluntaryExit using remote signer", () => {
     externalSigner.stop();
   });
 
-  // there seems to be an issue with exiting validators via remote signer
-  // TODO: https://github.com/ChainSafe/lodestar/issues/8722
-  it.skip("Perform a voluntary exit", async () => {
+  it("Perform a voluntary exit", async () => {
     const restPort = 9596;
     const devBnProc = await spawnCliCommand(
       "packages/cli/bin/lodestar.js",

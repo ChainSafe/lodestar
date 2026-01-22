@@ -1,6 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkPreBellatrix, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkPreBellatrix, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {blindedOrFullBlockToHeader, computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AggregateAndProof,
@@ -147,12 +147,12 @@ export async function externalSignerPostSignature(
   requestObj.signingRoot = toRootHex(signingRoot);
 
   if (requiresForkInfo[signableMessage.type]) {
-    const forkInfo = config.getForkInfo(signingSlot);
+    const forkInfo = getForkInfoForSigning(config, signingSlot, signableMessage.type);
     requestObj.fork_info = {
       fork: {
         previous_version: toHex(forkInfo.prevVersion),
         current_version: toHex(forkInfo.version),
-        epoch: String(computeEpochAtSlot(signingSlot)),
+        epoch: String(forkInfo.epoch),
       },
       genesis_validators_root: toRootHex(config.genesisValidatorsRoot),
     };
@@ -274,4 +274,38 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
     case SignableMessageType.BLS_TO_EXECUTION_CHANGE:
       return {BLS_TO_EXECUTION_CHANGE: ssz.capella.BLSToExecutionChange.toJson(payload.data)};
   }
+}
+
+function getForkInfoForSigning(
+  config: BeaconConfig,
+  signingSlot: Slot,
+  messageType: SignableMessageType
+): {version: Uint8Array; prevVersion: Uint8Array; epoch: number} {
+  const forkInfo = config.getForkInfo(signingSlot);
+
+  if (messageType === SignableMessageType.BLS_TO_EXECUTION_CHANGE) {
+    const phase0Fork = config.forks[ForkName.phase0];
+    return {
+      version: phase0Fork.version,
+      prevVersion: phase0Fork.prevVersion,
+      epoch: phase0Fork.epoch,
+    };
+  }
+
+  if (messageType === SignableMessageType.VOLUNTARY_EXIT && isForkPostDeneb(forkInfo.name)) {
+    // Always uses Capella fork post-Deneb (EIP-7044)
+    const capellaFork = config.forks[ForkName.capella];
+    return {
+      version: capellaFork.version,
+      prevVersion: capellaFork.prevVersion,
+      epoch: capellaFork.epoch,
+    };
+  }
+
+  // Use the fork at the signing slot by default
+  return {
+    version: forkInfo.version,
+    prevVersion: forkInfo.prevVersion,
+    epoch: computeEpochAtSlot(signingSlot),
+  };
 }
