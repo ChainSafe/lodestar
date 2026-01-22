@@ -74,7 +74,6 @@ export function isValidIndexedAttestationIndices(
   }
 
   // check if indices are out of bounds, by checking the highest index (since it is sorted)
-  // TODO - SLOW CODE - Does this .length check the tree and is expensive?
   const lastIndex = indices.at(-1);
   if (lastIndex && lastIndex >= validatorsLen) {
     return false;
