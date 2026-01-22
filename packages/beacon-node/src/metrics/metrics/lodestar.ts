@@ -1019,9 +1019,10 @@ export function createLodestarMetrics(
             help: "Total number of invalid attestation data when producing packed attestation",
             labelNames: ["reason"],
           }),
-          seenCommittees: register.gauge({
+          seenCommittees: register.gauge<{inclusionDistance: number}>({
             name: "lodestar_oppool_aggregated_attestation_pool_packed_attestations_seen_committees_total",
             help: "Total number of committees for which all members are seen when producing packed attestations",
+            labelNames: ["inclusionDistance"],
           }),
         },
       },
