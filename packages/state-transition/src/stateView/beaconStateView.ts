@@ -1,7 +1,7 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ByteViews} from "@chainsafe/ssz";
-import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {FINALIZED_ROOT_GINDEX, FINALIZED_ROOT_GINDEX_ELECTRA, ForkName, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
@@ -319,9 +319,21 @@ export class BeaconStateView implements IBeaconStateView {
     return new BeaconStateView(newState);
   }
 
-  loadOtherState(config: ChainForkConfig, stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView {
-    const state = loadState(config, this.cachedState, stateBytes, seedValidatorsBytes).state;
-    return createUncachedBeaconStateView(createBeaconConfig(config, state.genesisValidatorsRoot), state);
+  loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView {
+    const {state} = loadState(this.config, this.cachedState, stateBytes, seedValidatorsBytes);
+    return new BeaconStateView(
+      createCachedBeaconState(
+        state,
+        {
+          config: this.config,
+          pubkey2index: this.cachedState.epochCtx.pubkey2index,
+          index2pubkey: this.cachedState.epochCtx.index2pubkey,
+        },
+        {
+          skipSyncPubkeys: true,
+        }
+      )
+    );
   }
 
   getValidator(index: ValidatorIndex): phase0.Validator {
@@ -460,6 +472,7 @@ export class BeaconStateView implements IBeaconStateView {
       validatorIds
     );
   }
+
   getVoluntaryExitValidity(
     fork: ForkSeq,
     signedVoluntaryExit: phase0.SignedVoluntaryExit,
@@ -467,6 +480,7 @@ export class BeaconStateView implements IBeaconStateView {
   ): VoluntaryExitValidity {
     return getVoluntaryExitValidity(fork, this.cachedState, signedVoluntaryExit, verifySignature);
   }
+
   isValidVoluntaryExit(
     fork: ForkSeq,
     signedVoluntaryExit: phase0.SignedVoluntaryExit,
@@ -533,11 +547,14 @@ export class BeaconStateView implements IBeaconStateView {
   }
 }
 
-// TODO: consider also populate index2pubkey?
-export function createBeaconStateView(config: BeaconConfig, stateBytes: Uint8Array): IBeaconStateView {
+export function createBeaconStateViewForHistoricalRegen(
+  config: BeaconConfig,
+  stateBytes: Uint8Array
+): IBeaconStateView {
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
+
   const pubkey2index = new PubkeyIndexMap();
-  // TODO: dedup?
+  // no need to populate index2pubkey for historical regen
   syncPubkeyCache(state, pubkey2index);
   const cachedState = createCachedBeaconState(
     state,
@@ -552,22 +569,6 @@ export function createBeaconStateView(config: BeaconConfig, stateBytes: Uint8Arr
   );
 
   return new BeaconStateView(cachedState);
-}
-
-export function createUncachedBeaconStateView(config: BeaconConfig, state: BeaconStateAllForks): IBeaconStateView {
-  return new BeaconStateView(
-    createCachedBeaconState(
-      state,
-      {
-        config,
-        pubkey2index: new PubkeyIndexMap(),
-        index2pubkey: [],
-      },
-      {
-        skipSyncPubkeys: true,
-      }
-    )
-  );
 }
 
 /**

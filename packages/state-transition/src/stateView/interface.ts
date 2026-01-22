@@ -1,6 +1,5 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {ByteViews} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
@@ -89,7 +88,7 @@ export interface IBeaconStateView {
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
     modules?: StateTransitionModules
   ): IBeaconStateView;
-  loadOtherState(config: ChainForkConfig, stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
+  loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
 
   // this maps to getReadonly of CachedBeaconStateAllForks
   // we should not modify validator through this api, only state-transition should do that
