@@ -437,9 +437,10 @@ export class ProtoArray {
    * Spec: gloas/fork-choice.md (on_execution_payload event)
    */
   onExecutionPayload(blockRoot: RootHex, currentSlot: Slot): void {
-    // First check if FULL variant already exists
+    // First check if block exists
     const variants = this.indices.get(blockRoot);
     if (!variants) {
+      // Equivalent to `assert envelope.beacon_block_root in store.block_states`
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.UNKNOWN_BLOCK,
         root: blockRoot,
@@ -524,13 +525,12 @@ export class ProtoArray {
    *
    * Returns true if:
    * 1. Block has PTC votes tracked
-   * 2. Payload is locally available (in executionPayloadStates)
+   * 2. Payload is locally available (FULL variant exists in proto array)
    * 3. More than PAYLOAD_TIMELY_THRESHOLD (>50% of PTC) members voted payload_present=true
    *
    * @param blockRoot - The beacon block root to check
-   * @param executionPayloadStates - Map of blocks with available execution payloads
    */
-  isPayloadTimely(blockRoot: RootHex, executionPayloadStates?: Map<RootHex, unknown>): boolean {
+  isPayloadTimely(blockRoot: RootHex): boolean {
     const votes = this.ptcVote.get(blockRoot);
     if (votes === undefined) {
       // Block not found or not a Gloas block
@@ -538,7 +538,9 @@ export class ProtoArray {
     }
 
     // If payload is not locally available, it's not timely
-    if (!executionPayloadStates?.has(blockRoot)) {
+    // In our implementation, payload is locally available if proto array has FULL variant of the block
+    const fullNodeIndex = this.getNodeIndexByRootAndStatus(blockRoot, PayloadStatus.FULL);
+    if (fullNodeIndex === undefined) {
       return false;
     }
 
@@ -569,15 +571,10 @@ export class ProtoArray {
    *
    * @param blockRoot - The block root to check
    * @param proposerBoostRoot - Current proposer boost root (from ForkChoice)
-   * @param executionPayloadStates - Map of blocks with available execution payloads
    */
-  shouldExtendPayload(
-    blockRoot: RootHex,
-    proposerBoostRoot: RootHex | null,
-    executionPayloadStates?: Map<RootHex, unknown>
-  ): boolean {
+  shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {
     // Condition 1: Payload is timely
-    if (this.isPayloadTimely(blockRoot, executionPayloadStates)) {
+    if (this.isPayloadTimely(blockRoot)) {
       return true;
     }
 
@@ -824,12 +821,7 @@ export class ProtoArray {
    *
    * Note: pre-gloas logic won't reach here. Since it is impossible to have two nodes with same weight and root
    */
-  private getPayloadStatusTiebreaker(
-    node: ProtoNode,
-    currentSlot: Slot,
-    proposerBoostRoot: RootHex | null,
-    executionPayloadStates?: Map<RootHex, unknown>
-  ): number {
+  private getPayloadStatusTiebreaker(node: ProtoNode, currentSlot: Slot, proposerBoostRoot: RootHex | null): number {
     // PENDING nodes always return PENDING (no tiebreaker needed)
     // PENDING=0, EMPTY=1, FULL=2
     if (node.payloadStatus === PayloadStatus.PENDING) {
@@ -847,7 +839,7 @@ export class ProtoArray {
       return 1; // EMPTY
     }
     // FULL - check should_extend_payload
-    const shouldExtend = this.shouldExtendPayload(node.blockRoot, proposerBoostRoot, executionPayloadStates);
+    const shouldExtend = this.shouldExtendPayload(node.blockRoot, proposerBoostRoot);
     return shouldExtend ? 2 : 0; // Return 2 if extending, else 0
   }
 
@@ -1175,11 +1167,10 @@ export class ProtoArray {
           const childTiebreaker = this.getPayloadStatusTiebreaker(
             childNode,
             currentSlot,
-            null, // proposerBoostRoot
-            undefined // executionPayloadStates
+            null // proposerBoostRoot
           );
 
-          const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, null, undefined);
+          const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, null);
 
           if (childTiebreaker > bestChildTiebreaker) {
             newChildAndDescendant = changeToChild;
