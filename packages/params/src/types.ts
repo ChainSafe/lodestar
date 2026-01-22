@@ -110,7 +110,6 @@ export type BeaconPreset = {
   BUILDER_REGISTRY_LIMIT: number;
   BUILDER_PENDING_WITHDRAWALS_LIMIT: number;
   MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: number;
-  MIN_BUILDER_WITHDRAWABILITY_DELAY: number;
 };
 
 /**
@@ -226,7 +225,6 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   BUILDER_REGISTRY_LIMIT: "number",
   BUILDER_PENDING_WITHDRAWALS_LIMIT: "number",
   MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: "number",
-  MIN_BUILDER_WITHDRAWABILITY_DELAY: "number",
 };
 
 type BeaconPresetTypes = {

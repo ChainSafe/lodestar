@@ -6,7 +6,6 @@ import {
   BUILDER_WITHDRAWAL_PREFIX,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
-  MIN_BUILDER_WITHDRAWABILITY_DELAY,
   MIN_DEPOSIT_AMOUNT,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
@@ -108,7 +107,7 @@ export function canBuilderCoverBid(state: CachedBeaconStateGloas, builderIndex: 
 export function initiateBuilderExit(state: CachedBeaconStateGloas, builderIndex: number): void {
   const currentEpoch = computeEpochAtSlot(state.slot);
   const builder = state.builders.get(builderIndex);
-  builder.withdrawableEpoch = currentEpoch + MIN_BUILDER_WITHDRAWABILITY_DELAY;
+  builder.withdrawableEpoch = currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY;
 }
 
 /**

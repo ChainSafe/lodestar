@@ -120,7 +120,6 @@ export const {
   BUILDER_REGISTRY_LIMIT,
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
   MAX_BUILDERS_PER_WITHDRAWALS_SWEEP,
-  MIN_BUILDER_WITHDRAWABILITY_DELAY,
 } = activePreset;
 
 ////////////
@@ -162,6 +161,7 @@ export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
 export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
 export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
+export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 
 // Application specific domains
 
