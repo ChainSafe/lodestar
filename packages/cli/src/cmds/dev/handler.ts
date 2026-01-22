@@ -70,7 +70,7 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
   }
 
   // Note: recycle entire beacon handler
-  await beaconHandler({...args, "execution.engineMock": true});
+  await beaconHandler(args);
 
   if (args.startValidators) {
     // TODO: Map dev option to validator's option
