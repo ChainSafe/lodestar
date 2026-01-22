@@ -4,8 +4,6 @@ import {BeaconBlock, ValidatorIndex, altair, rewards} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../cache/stateCache.js";
 
-type BalanceRecord = {val: number}; // Use val for convenient way to increment/decrement balance
-
 export async function computeSyncCommitteeRewards(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
@@ -29,24 +27,23 @@ export async function computeSyncCommitteeRewards(
   const {syncParticipantReward} = preStateAltair.epochCtx;
   const {syncCommitteeBits} = altairBlock.body.syncAggregate;
 
-  // Use balance of each committee as starting point such that we cap the penalty to avoid balance dropping below 0
-  const balances: Map<ValidatorIndex, BalanceRecord> = new Map();
-  for (const i of syncCommitteeValidatorIndices) {
-    balances.set(i, {val: preStateAltair.balances.get(i)});
-  }
+  // Track reward deltas per validator (can appear multiple times in sync committee)
+  const rewardDeltas: Map<ValidatorIndex, number> = new Map();
 
-  for (const i of syncCommitteeValidatorIndices) {
-    const balanceRecord = balances.get(i) as BalanceRecord;
+  // Iterate by position index to correctly access syncCommitteeBits
+  for (let i = 0; i < syncCommitteeValidatorIndices.length; i++) {
+    const validatorIndex = syncCommitteeValidatorIndices[i];
+    const currentDelta = rewardDeltas.get(validatorIndex) ?? 0;
     if (syncCommitteeBits.get(i)) {
       // Positive rewards for participants
-      balanceRecord.val += syncParticipantReward;
+      rewardDeltas.set(validatorIndex, currentDelta + syncParticipantReward);
     } else {
       // Negative rewards for non participants
-      balanceRecord.val = Math.max(0, balanceRecord.val - syncParticipantReward);
+      rewardDeltas.set(validatorIndex, currentDelta - syncParticipantReward);
     }
   }
 
-  const rewards = Array.from(balances, ([validatorIndex, v]) => ({validatorIndex, reward: v.val}));
+  const rewards = Array.from(rewardDeltas, ([validatorIndex, reward]) => ({validatorIndex, reward}));
 
   if (validatorIds.length) {
     const filtersSet = new Set(validatorIds);
