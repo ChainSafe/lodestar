@@ -13,10 +13,18 @@ export async function regenerateState(
   ctx.logger?.verbose("Regenerating state via state differential", {
     slot: target,
   });
+  ctx.metrics?.regenRequestCount.inc();
+  const regenTimer = ctx.metrics?.regenTime.startTimer();
 
-  const plan = buildStateRegenPlan(ctx.layers, target);
-  const artifacts = await fetchStateRegenArtifacts(ctx.db, plan, opts);
-  const finalState = await applyStateRegenPlan(ctx, plan, artifacts);
+  try {
+    const plan = buildStateRegenPlan(ctx.layers, target);
+    const artifacts = await fetchStateRegenArtifacts(ctx, plan, opts);
+    const finalState = await applyStateRegenPlan(ctx, plan, artifacts);
+    const state = snapshotToBeaconState(ctx, finalState);
 
-  return snapshotToBeaconState(ctx, finalState);
+    ctx.metrics?.regenSuccessCount.inc();
+    return state;
+  } finally {
+    regenTimer?.();
+  }
 }

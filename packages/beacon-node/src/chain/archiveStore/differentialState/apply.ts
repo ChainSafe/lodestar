@@ -5,6 +5,7 @@ import {IBeaconDb} from "../../../db/index.ts";
 import {IStateDiffCodec} from "../interface.ts";
 import {replayBlocks} from "../utils/replayBlocks.ts";
 import {StateRegenArtifacts} from "./fetch.ts";
+import {DifferentialStateRegenMetrics} from "./metrics.ts";
 import {StateRegenPlan} from "./plan.ts";
 import {BeaconStateSnapshot} from "./ssz.ts";
 import {replayStateDifferentials} from "./stateDifferential.ts";
@@ -16,6 +17,7 @@ export type StateRegenContext = {
   logger?: Logger;
   pubkey2index: PubkeyIndexMap;
   db: IBeaconDb;
+  metrics?: DifferentialStateRegenMetrics | null;
 };
 
 export async function applyStateRegenPlan(
@@ -40,13 +42,6 @@ export async function applyStateRegenPlan(
       missingDiffs: artifacts.missingDiffs.join(","),
     });
   }
-  if (artifacts.diffs.length + artifacts.missingDiffs.length !== plan.diffSlots.length) {
-    throw new Error(`Can not find required state diffs ${plan.diffSlots.join(",")}`);
-  }
-
-  if (plan.blockReplay && artifacts.diffs.at(-1)?.slot !== plan.blockReplay.fromSlot - 1) {
-    throw new Error(`Can not replay blocks due to missing state diffs ${artifacts.missingDiffs.join(",")}`);
-  }
 
   ctx.logger?.verbose("Replaying state diffs", {
     snapshotSlot: plan.snapshotSlot,
@@ -59,14 +54,6 @@ export async function applyStateRegenPlan(
     {stateDifferentials: artifacts.diffs, stateSnapshot: artifacts.snapshot}
   );
 
-  if (stateWithDiffApplied.stateBytes.byteLength === 0 || stateWithDiffApplied.balancesBytes.byteLength === 0) {
-    throw new Error(
-      `Invalid state after applying diffs: 
-      stateBytesSize=${stateWithDiffApplied.stateBytes.byteLength},
-      balancesBytesSize=${stateWithDiffApplied.balancesBytes.byteLength}`
-    );
-  }
-
   if (!plan.blockReplay) return stateWithDiffApplied;
 
   const stateBytes = snapshotToBeaconStateBytes({config: ctx.config}, stateWithDiffApplied);
@@ -76,11 +63,16 @@ export async function applyStateRegenPlan(
     tillSlot: plan.blockReplay.tillSlot,
   });
 
-  const replayed = await replayBlocks(ctx, {
-    stateBytes,
-    fromSlot: plan.blockReplay.fromSlot,
-    toSlot: plan.blockReplay.tillSlot,
-  });
-
-  return beaconStateBytesToSnapshot({config: ctx.config}, plan.blockReplay.tillSlot, replayed);
+  ctx.metrics?.blockReplayCount.observe(plan.blockReplay.tillSlot - plan.blockReplay.fromSlot);
+  const blockReplayTimer = ctx.metrics?.blockReplayTime.startTimer();
+  try {
+    const replayed = await replayBlocks(ctx, {
+      stateBytes,
+      fromSlot: plan.blockReplay.fromSlot,
+      toSlot: plan.blockReplay.tillSlot,
+    });
+    return beaconStateBytesToSnapshot({config: ctx.config}, plan.blockReplay.tillSlot, replayed);
+  } finally {
+    blockReplayTimer?.();
+  }
 }

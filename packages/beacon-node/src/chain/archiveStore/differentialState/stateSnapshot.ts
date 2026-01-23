@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconState, Slot} from "@lodestar/types";
 import {IBeaconDb} from "../../../db/interface.js";
+import {DifferentialStateRegenMetrics} from "./metrics.ts";
 import {BeaconStateSnapshot} from "./ssz.js";
 
 /**
@@ -67,12 +68,18 @@ export function beaconStateBytesToSnapshot(
 }
 
 export async function getStateSnapshot(
-  modules: {db: IBeaconDb},
+  modules: {db: IBeaconDb; metrics?: DifferentialStateRegenMetrics | null},
   {slot, fallback}: {slot: Slot; fallback: boolean}
 ): Promise<BeaconStateSnapshot | null> {
   const {db} = modules;
 
-  const state = await db.beaconStateSnapshotArchive.get(slot);
+  const timer = modules.metrics?.loadSnapshotStateTime.startTimer();
+  let state: BeaconStateSnapshot | null;
+  try {
+    state = await db.beaconStateSnapshotArchive.get(slot);
+  } finally {
+    timer?.();
+  }
 
   if (state) return state;
   if (!state && !fallback) return null;
