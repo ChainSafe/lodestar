@@ -134,7 +134,7 @@ export function getBeaconCommittees(
 }
 
 export enum ShufflingErrorCode {
-  COMMITTEE_INDEX_OUT_OF_RANGE = "SHUFFLING_ERRORCOMMITTEE_INDEX_OUT_OF_RANGE",
+  COMMITTEE_INDEX_OUT_OF_RANGE = "SHUFFLING_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
 }
 
 type ShufflingErrorType = {

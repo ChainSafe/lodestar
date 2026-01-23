@@ -178,28 +178,12 @@ export class ShufflingCache {
     fork: ForkSeq,
     attestation: Attestation
   ): IndexedAttestation {
-    const shuffling = this.getSync(epoch, decisionRoot);
-    if (shuffling === null) {
-      throw new ShufflingCacheError({
-        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
-        epoch,
-        decisionRoot,
-      });
-    }
-
+    const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
     return getIndexedAttestation(shuffling, fork, attestation);
   }
 
   getAttestingIndices(epoch: number, decisionRoot: string, fork: ForkSeq, attestation: Attestation): number[] {
-    const shuffling = this.getSync(epoch, decisionRoot);
-    if (shuffling === null) {
-      throw new ShufflingCacheError({
-        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
-        epoch,
-        decisionRoot,
-      });
-    }
-
+    const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
     return getAttestingIndices(shuffling, fork, attestation);
   }
 
@@ -208,6 +192,11 @@ export class ShufflingCache {
   }
 
   getBeaconCommittees(epoch: number, decisionRoot: string, slot: Slot, indices: CommitteeIndex[]): Uint32Array[] {
+    const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
+    return getBeaconCommittees(shuffling, slot, indices);
+  }
+
+  private getShufflingOrThrow(epoch: number, decisionRoot: string): EpochShuffling {
     const shuffling = this.getSync(epoch, decisionRoot);
     if (shuffling === null) {
       throw new ShufflingCacheError({
@@ -216,8 +205,7 @@ export class ShufflingCache {
         decisionRoot,
       });
     }
-
-    return getBeaconCommittees(shuffling, slot, indices);
+    return shuffling;
   }
 
   /**
