@@ -720,6 +720,9 @@ export class BeaconChain implements IBeaconChain {
       if (!isBlockInputBlobs(blockInput)) {
         throw new Error("Expected block input to have blobs");
       }
+      if (!blockInput.hasAllData()) {
+        return null;
+      }
       return blockInput.getBlobs();
     }
     const unfinalizedBlobSidecars = (await this.db.blobSidecars.get(fromHex(blockRootHex)))?.blobSidecars ?? null;
@@ -736,8 +739,9 @@ export class BeaconChain implements IBeaconChain {
         throw new Error("Expected block input to have blobs");
       }
       if (!blockInput.hasAllData()) {
-        return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
+        return null;
       }
+      return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
     }
     const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex));
     if (unfinalizedBlobSidecarsWrapper) {
