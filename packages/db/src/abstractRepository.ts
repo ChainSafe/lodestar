@@ -155,7 +155,7 @@ export abstract class BinaryRepository<I extends Id> {
       optsBuff.lt = this.maxKey;
     }
 
-    // Set at least on max key
+    // Set at least one max key
     if (opts?.gt !== undefined) {
       optsBuff.gt = this.encodeKey(opts.gt);
     } else if (opts?.gte !== undefined) {
