@@ -215,20 +215,11 @@ export class AggregatedAttestationPool {
     state: CachedBeaconStateAllForks
   ): Attestation[] {
     const forkSeq = ForkSeq[fork];
-    return forkSeq >= ForkSeq.electra
-      ? this.getAttestationsForBlockElectra(fork, forkChoice, shufflingCache, state)
-      : this.getAttestationsForBlockPreElectra(fork, forkChoice, shufflingCache, state);
-  }
+    if (forkSeq < ForkSeq.electra) {
+      throw new Error("Does not support producing blocks for pre-electra forks anymore");
+    }
 
-  /**
-   * Get attestations to be included in a block pre-electra. Returns up to $MAX_ATTESTATIONS items
-   */
-  getAttestationsForBlockPreElectra(
-    _fork: ForkName,
-    _forkChoice: IForkChoice,
-    _state: CachedBeaconStateAllForks
-  ): phase0.Attestation[] {
-    throw new Error("Does not support producing blocks for pre-electra forks anymore");
+    return this.getAttestationsForBlockElectra(fork, forkChoice, shufflingCache, state);
   }
 
   /**

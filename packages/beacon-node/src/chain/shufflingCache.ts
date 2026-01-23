@@ -136,6 +136,26 @@ export class ShufflingCache {
   }
 
   /**
+   * Get a shuffling synchronously, return null if not present.
+   * The only time we have a promise cache item is when we regen shuffling for attestation, which never happens
+   * with default chain option.
+   */
+  getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
+    if (cacheItem === undefined) {
+      this.metrics?.shufflingCache.miss.inc();
+      return null;
+    }
+
+    if (isShufflingCacheItem(cacheItem)) {
+      this.metrics?.shufflingCache.hit.inc();
+      return cacheItem.shuffling;
+    }
+
+    return null;
+  }
+
+  /**
    * Process a state to extract and cache all shufflings (previous, current, next).
    * Uses the stored decision roots from epochCtx.
    */

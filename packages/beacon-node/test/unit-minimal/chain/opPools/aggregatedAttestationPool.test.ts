@@ -21,6 +21,7 @@ import {
   aggregateInto,
 } from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
+import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {linspace} from "../../../../src/util/numpy.js";
 import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
@@ -248,7 +249,9 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
       forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
 
-      const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, electraState);
+      const shufflingCache = new ShufflingCache();
+      shufflingCache.processState(electraState);
+      const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, shufflingCache, electraState);
       // make sure test data is correct
       expect(packedCommitteeBits.length).toBe(packedAggregationBitsLen.length);
       expect(blockAttestations.length).toBe(packedCommitteeBits.length);

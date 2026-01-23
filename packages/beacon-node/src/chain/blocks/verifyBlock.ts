@@ -4,7 +4,6 @@ import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   computeEpochAtSlot,
-  getIndexedAttestation,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, deneb} from "@lodestar/types";
