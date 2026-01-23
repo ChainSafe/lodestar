@@ -1,7 +1,7 @@
 import {LogData} from "@lodestar/logger";
 import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ColumnIndex, Slot} from "@lodestar/types";
-import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {prettyBytes, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -38,10 +38,11 @@ export async function handleColumnSidecarUnavailability({
 
   chain.logger.debug("dataColumnSidecar requested unavailable", logData);
 
+  const isFinalized = !blockRoot;
   const blockBytes = blockRoot ? await db.block.getBinary(blockRoot) : await db.blockArchive.getBinary(slot);
   if (!blockBytes) {
     chain.logger.verbose(
-      `Expected ${blockRoot ? "unfinalized" : "finalized"} block not found while handling unavailable dataColumnSidecar`,
+      `Expected ${isFinalized ? "finalized" : "unfinalized"} block not found while handling unavailable dataColumnSidecar`,
       {
         slot,
         blockRoot: blockRoot ? toRootHex(blockRoot) : "unknown",
@@ -52,7 +53,27 @@ export async function handleColumnSidecarUnavailability({
   }
 
   // Check for blob count in actual block
-  const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(chain.config, blockBytes);
+  let blobsCount: number;
+  try {
+    blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(chain.config, blockBytes);
+  } catch (e) {
+    // Log detailed info to diagnose why block bytes couldn't be parsed
+    // This should not happen for valid blocks, but we don't want to crash the RPC handler
+    const blockBytesPreview =
+      blockBytes.length > 0 ? toHex(blockBytes.subarray(0, Math.min(120, blockBytes.length))) : "empty";
+    chain.logger.error("Failed to parse block bytes for blob count check in dataColumnSidecar handler", {
+      slot,
+      blockRoot: blockRoot ? toRootHex(blockRoot) : "unknown",
+      isFinalized,
+      blockBytesLength: blockBytes.length,
+      blockBytesPreview,
+      forkName: chain.config.getForkName(slot),
+      error: (e as Error).message,
+    });
+    // Return without throwing - we can't determine blob count but shouldn't crash the RPC
+    // The peer will get an incomplete response but won't be penalized with SERVER_ERROR
+    return;
+  }
 
   // There are zero blobs for that column index, so we can safely return without any error
   if (blobsCount > 0) return;
