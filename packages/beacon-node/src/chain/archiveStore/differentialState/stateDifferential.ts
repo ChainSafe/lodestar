@@ -4,6 +4,7 @@ import {Logger, formatBytes} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
 import {IStateDiffCodec} from "../interface.js";
 import {BeaconStateDifferential, BeaconStateSnapshot} from "./ssz.js";
+import {beaconStateToSnapshot} from "./stateSnapshot.ts";
 
 /**
  * Compute the differential state between a base state and a target state view
@@ -14,20 +15,13 @@ export function computeStateDifferential(
   target: BeaconStateSnapshot
 ): BeaconStateDifferential {
   const {codec, config} = modules;
-  const state = config.getForkTypes(base.slot).BeaconState.clone(base);
-
-  const balances = [...state.balances];
-  state.balances = [];
-
-  const stateDiffBytes = codec.compute(config.getForkTypes(base.slot).BeaconState.serialize(base), target.stateBytes);
-  const balancesDiffBytes = codec.compute(
-    config.getForkTypes(base.slot).Balances.serialize(balances),
-    target.balancesBytes
-  );
+  const baseSnapshot = beaconStateToSnapshot({config}, base);
+  const stateDiffBytes = codec.compute(baseSnapshot.stateBytes, target.stateBytes);
+  const balancesDiffBytes = codec.compute(baseSnapshot.balancesBytes, target.balancesBytes);
 
   return {
     slot: target.slot,
-    baseSlot: state.slot,
+    baseSlot: baseSnapshot.slot,
     stateDiffBytes,
     balancesDiffBytes,
   };
