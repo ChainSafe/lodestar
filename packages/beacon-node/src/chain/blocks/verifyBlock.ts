@@ -149,13 +149,6 @@ export async function verifyBlocksInEpoch(
             opts
           )
         : Promise.resolve({verifySignaturesTime: Date.now()}),
-
-      // ideally we want to only persist blocks after verifying them however the reality is there are
-      // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
-      // an error, we'll remove blocks not in forkchoice
-      opts.verifyOnly !== true && opts.eagerPersistBlock
-        ? this.unfinalizedBlockWrites.push(blockInputs)
-        : Promise.resolve(),
     ]);
 
     if (opts.verifyOnly !== true) {

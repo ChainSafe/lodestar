@@ -423,8 +423,6 @@ export class BlockInputSync {
         // see https://github.com/ChainSafe/lodestar/issues/5650
         ignoreIfFinalized: true,
         blsVerifyOnMainThread: true,
-        // block is validated with correct root, we want to process it as soon as possible
-        eagerPersistBlock: true,
       })
     );
 

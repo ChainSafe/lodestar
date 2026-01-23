@@ -436,8 +436,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         blsVerifyOnMainThread: true,
         // to track block process steps
         seenTimestampSec,
-        // gossip block is validated, we want to process it asap
-        eagerPersistBlock: true,
       })
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`

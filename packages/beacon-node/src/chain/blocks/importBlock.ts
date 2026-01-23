@@ -91,10 +91,7 @@ export async function importBlock(
   }
 
   // 1. Persist block to hot DB (pre-emptively)
-  // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
-  if (!opts.eagerPersistBlock) {
-    await this.unfinalizedBlockWrites.push([blockInput]);
-  }
+  await this.unfinalizedBlockWrites.push([blockInput]);
 
   // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
   this.serializedCache.clear();

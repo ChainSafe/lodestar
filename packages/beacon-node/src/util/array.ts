@@ -240,25 +240,6 @@ export class LinkedList<T> {
     }
   }
 
-  filterInPlace(shouldKeep: (t: T) => boolean): void {
-    let newTail: Node<T> | null = null;
-    let node = this.head;
-    while (node) {
-      if (!shouldKeep(node.data)) {
-        if (node === this.head) this.head = node.next;
-        if (node.prev) node.prev.next = node.next;
-        if (node.next) node.next.prev = node.prev;
-        node.prev = node.next = null;
-        this._length--;
-      }
-      if (node.next) {
-        newTail = node.next;
-      }
-      node = node.next;
-    }
-    this.tail = newTail;
-  }
-
   next(): IteratorResult<T> {
     if (!this.pointer) {
       return {done: true, value: undefined};

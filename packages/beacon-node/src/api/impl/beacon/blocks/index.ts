@@ -285,7 +285,7 @@ export function getBeaconBlockApi({
       () =>
         // there is no rush to persist block since we published it to gossip anyway
         chain
-          .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
+          .processBlock(blockForImport, opts)
           .catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               chain.emitter.emit(ChainEvent.unknownParent, {

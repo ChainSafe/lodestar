@@ -80,10 +80,6 @@ export class JobItemQueue<Args extends any[], R> {
     this.jobs.clear();
   };
 
-  filterJobs = (shouldKeep: (args: Args) => boolean): void => {
-    this.jobs.filterInPlace((job) => shouldKeep(job.args));
-  };
-
   private runJob = async (): Promise<void> => {
     if (this.opts.signal.aborted || this.runningJobs >= this.opts.maxConcurrency) {
       return;
