@@ -79,7 +79,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   /**
    * Get a state from block state cache.
-   * This is not for block processing so don't transfer cache
    */
   getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null {
     return this.blockStateCache.get(stateRoot);
@@ -87,8 +86,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   /**
    * Get state for block processing.
-   * By default, do not transfer cache except for the block at clock slot
-   * which is usually the gossip block.
    */
   getPreStateSync(block: BeaconBlock): CachedBeaconStateAllForks | null {
     const parentRoot = toRootHex(block.parentRoot);
@@ -129,14 +126,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   /**
-   * Get checkpoint state from cache, this function is not for block processing so don't transfer cache
+   * Get checkpoint state from cache
    */
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null {
     return this.checkpointStateCache.get(cp);
   }
 
   /**
-   * Get state closest to head, this function is not for block processing so don't transfer cache
+   * Get state closest to head
    */
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null {
     return this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.blockStateCache.get(head.stateRoot);
