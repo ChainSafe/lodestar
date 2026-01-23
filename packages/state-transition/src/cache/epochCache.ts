@@ -51,7 +51,7 @@ import {
   getAttestingIndices,
   getBeaconCommittees,
   getIndexedAttestation,
-} from "../util/shufflingUtils.js";
+} from "../util/shuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";

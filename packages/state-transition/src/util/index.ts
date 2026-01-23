@@ -20,7 +20,7 @@ export * from "./loadState/index.js";
 export * from "./rootCache.js";
 export * from "./seed.js";
 export * from "./shufflingDecisionRoot.js";
-export * from "./shufflingUtils.js";
+export * from "./shuffling.js";
 export * from "./signatureSets.js";
 export * from "./signingRoot.js";
 export * from "./slot.js";
