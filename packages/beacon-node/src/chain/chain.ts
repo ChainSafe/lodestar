@@ -42,11 +42,13 @@ import {
   isBlindedBeaconBlock,
   phase0,
   rewards,
+  ssz,
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
+import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.ts";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -713,7 +715,6 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null> {
-    let blobSidecars: deneb.BlobSidecars | null = null;
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputBlobs(blockInput)) {
@@ -721,31 +722,103 @@ export class BeaconChain implements IBeaconChain {
       }
       return blockInput.getBlobs();
     }
-    blobSidecars = (await this.db.blobSidecars.get(fromHex(blockRootHex)))?.blobSidecars ?? null;
-    if (!blobSidecars) {
-      blobSidecars = (await this.db.blobSidecarsArchive.get(blockSlot))?.blobSidecars ?? null;
+    const unfinalizedBlobSidecars = (await this.db.blobSidecars.get(fromHex(blockRootHex)))?.blobSidecars ?? null;
+    if (unfinalizedBlobSidecars) {
+      return unfinalizedBlobSidecars;
     }
-    return blobSidecars;
+    return (await this.db.blobSidecarsArchive.get(blockSlot))?.blobSidecars ?? null;
   }
 
-  async getDataColumnSidecar(
+  async getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
+    const blockInput = this.seenBlockInputCache.get(blockRootHex);
+    if (blockInput) {
+      if (!isBlockInputBlobs(blockInput)) {
+        throw new Error("Expected block input to have blobs");
+      }
+      if (!blockInput.hasAllData()) {
+        return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
+      }
+    }
+    const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex));
+    if (unfinalizedBlobSidecarsWrapper) {
+      return unfinalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
+    }
+    const finalizedBlobSidecarsWrapper = await this.db.blobSidecarsArchive.getBinary(blockSlot);
+    if (finalizedBlobSidecarsWrapper) {
+      return finalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
+    }
+    return null;
+  }
+
+  async getDataColumnSidecars(
     blockSlot: Slot,
     blockRootHex: string,
-    index: number
-  ): Promise<fulu.DataColumnSidecar | null> {
-    let dataColumnSidecar: fulu.DataColumnSidecar | null = null;
+    indices?: number[]
+  ): Promise<fulu.DataColumnSidecars> {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputColumns(blockInput)) {
         throw new Error("Expected block input to have columns");
       }
-      return blockInput.getColumn(index) ?? null;
+      if (indices === undefined) {
+        return blockInput.getAllColumns();
+      }
+      return indices
+        .map((index) => blockInput.getColumn(index))
+        .filter((sidecar): sidecar is fulu.DataColumnSidecar => sidecar != null);
     }
-    dataColumnSidecar = await this.db.dataColumnSidecar.get(fromHex(blockRootHex), index);
-    if (!dataColumnSidecar) {
-      dataColumnSidecar = await this.db.dataColumnSidecarArchive.get(blockSlot, index);
+    const sidecarsUnfinalized =
+      indices === undefined
+        ? await this.db.dataColumnSidecar.values(fromHex(blockRootHex))
+        : (await this.db.dataColumnSidecar.getMany(fromHex(blockRootHex), indices)).filter(
+            (sidecar): sidecar is fulu.DataColumnSidecar => sidecar != null
+          );
+    if (sidecarsUnfinalized.length > 0) {
+      return sidecarsUnfinalized;
     }
-    return dataColumnSidecar;
+    const sidecarsFinalized =
+      indices === undefined
+        ? await this.db.dataColumnSidecarArchive.values(blockSlot)
+        : (await this.db.dataColumnSidecarArchive.getMany(blockSlot, indices)).filter(
+            (sidecar): sidecar is fulu.DataColumnSidecar => sidecar != null
+          );
+    return sidecarsFinalized;
+  }
+
+  async getSerializedDataColumnSidecars(
+    blockSlot: Slot,
+    blockRootHex: string,
+    indices: number[]
+  ): Promise<Uint8Array[]> {
+    const blockInput = this.seenBlockInputCache.get(blockRootHex);
+    if (blockInput) {
+      if (!isBlockInputColumns(blockInput)) {
+        throw new Error("Expected block input to have columns");
+      }
+      if (indices === undefined) {
+        return blockInput.getAllColumns().map(ssz.fulu.DataColumnSidecar.serialize);
+      }
+      return indices
+        .map((index) => blockInput.getColumn(index))
+        .filter((sidecar): sidecar is fulu.DataColumnSidecar => sidecar != null)
+        .map(ssz.fulu.DataColumnSidecar.serialize);
+    }
+    const sidecarsUnfinalized =
+      indices === undefined
+        ? await this.db.dataColumnSidecar.valuesBinary(fromHex(blockRootHex))
+        : (await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices)).filter(
+            (sidecar): sidecar is Uint8Array => sidecar != null
+          );
+    if (sidecarsUnfinalized.length > 0) {
+      return sidecarsUnfinalized;
+    }
+    const sidecarsFinalized =
+      indices === undefined
+        ? await this.db.dataColumnSidecarArchive.valuesBinary(blockSlot)
+        : (await this.db.dataColumnSidecarArchive.getManyBinary(blockSlot, indices)).filter(
+            (sidecar): sidecar is Uint8Array => sidecar != null
+          );
+    return sidecarsFinalized;
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {

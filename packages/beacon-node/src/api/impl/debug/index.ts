@@ -104,10 +104,7 @@ export function getDebugApi({
         : 0;
 
       if (isForkPostFulu(fork) && blobCount > 0) {
-        dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
-        if (dataColumnSidecars.length === 0) {
-          dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
-        }
+        dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, toRootHex(blockRoot));
 
         if (dataColumnSidecars.length === 0) {
           throw Error(

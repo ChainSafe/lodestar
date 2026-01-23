@@ -643,10 +643,7 @@ export function getBeaconBlockApi({
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
-          let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
-          if (dataColumnSidecars.length === 0) {
-            dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
-          }
+          const dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, blockRootHex);
 
           if (dataColumnSidecars.length === 0) {
             throw new ApiError(
@@ -683,18 +680,7 @@ export function getBeaconBlockApi({
           data = [];
         }
       } else if (isForkPostDeneb(fork)) {
-        let blobSidecars: deneb.BlobSidecars | undefined;
-        const blockInput = chain.seenBlockInputCache.get(blockRootHex);
-        if (blockInput) {
-          if (!isBlockInputBlobs(blockInput)) {
-            throw new Error("bad coding");
-          }
-          blobSidecars = blockInput.getBlobs();
-        }
-        blobSidecars = (await db.blobSidecars.get(blockRoot))?.blobSidecars;
-        if (!blobSidecars) {
-          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
-        }
+        const blobSidecars = await chain.getBlobSidecars(block.message.slot, blockRootHex);
 
         if (!blobSidecars) {
           throw new ApiError(
@@ -741,10 +727,7 @@ export function getBeaconBlockApi({
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
-          let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
-          if (dataColumnSidecars.length === 0) {
-            dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
-          }
+          const dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, blockRootHex);
 
           if (dataColumnSidecars.length === 0) {
             throw new ApiError(
@@ -776,18 +759,7 @@ export function getBeaconBlockApi({
           blobs = [];
         }
       } else if (isForkPostDeneb(fork)) {
-        let blobSidecars: deneb.BlobSidecars | undefined;
-        const blockInput = chain.seenBlockInputCache.get(blockRootHex);
-        if (blockInput) {
-          if (!isBlockInputBlobs(blockInput)) {
-            throw new Error("bad coding");
-          }
-          blobSidecars = blockInput.getBlobs();
-        }
-        blobSidecars = (await db.blobSidecars.get(blockRoot))?.blobSidecars;
-        if (!blobSidecars) {
-          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
-        }
+        const blobSidecars = await chain.getBlobSidecars(block.message.slot, blockRootHex);
 
         if (!blobSidecars) {
           throw new ApiError(
