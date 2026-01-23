@@ -55,7 +55,7 @@ export async function handleColumnSidecarUnavailability({
   const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(chain.config, blockBytes);
 
   // There are zero blobs for that column index, so we can safely return without any error
-  if (blobsCount > 0) return;
+  if (blobsCount === 0) return;
 
   // There are blobs for that column index so we should have synced for it
   // We need to inform to peers that we don't have that expected data
