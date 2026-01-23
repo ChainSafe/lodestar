@@ -26,7 +26,7 @@ When adding support for a new specification version, follow these steps:
 4. If there are errors, use the error message as a guide to fix the issue. If
    there are new specrefs with empty sources, implement/locate each item and
    update each specref source list. If you choose not to implement an item,
-   add an exception to the appropriate section the the `.ethspecify.yml`
+   add an exception to the appropriate section in the `.ethspecify.yml`
    configuration.
 5. Repeat steps 3 and 4 until `ethspecify check` passes.
 6. Run `git diff` to view updated specrefs. If an object/function/etc has
