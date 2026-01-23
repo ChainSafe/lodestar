@@ -21,6 +21,7 @@ vi.mock("@lodestar/db/controller/level", async (importOriginal) => {
         valuesStream: vi.fn(),
         batchDelete: vi.fn(),
         batchPut: vi.fn(),
+        batch: vi.fn(),
       };
     }),
   };
