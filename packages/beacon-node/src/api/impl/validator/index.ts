@@ -1,3 +1,4 @@
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
@@ -23,8 +24,10 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
+  createCachedBeaconState,
   getBlockRootAtSlot,
   getCurrentSlot,
+  loadState,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
@@ -1036,12 +1039,21 @@ export function getValidatorApi(
         } else {
           const res = await getStateResponseWithRegen(chain, startSlot);
 
-          if (res.state instanceof Uint8Array) {
-            // should not happen because we query a startSlot as a number in getStateResponseWithRegen() api
-            throw new Error(`Cannot load CachedBeaconState for slot ${startSlot} for proposer duties`);
-          }
+          const stateViewDU =
+            res.state instanceof Uint8Array
+              ? loadState(config, chain.getHeadState(), res.state).state
+              : res.state.clone();
 
-          state = res.state;
+          state = createCachedBeaconState(
+            stateViewDU,
+            {
+              config: chain.config,
+              // Not required to compute proposers
+              pubkey2index: new PubkeyIndexMap(),
+              index2pubkey: [],
+            },
+            {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
+          );
 
           if (state.epochCtx.epoch !== epoch) {
             throw Error(`Loaded state epoch ${state.epochCtx.epoch} does not match requested epoch ${epoch}`);
