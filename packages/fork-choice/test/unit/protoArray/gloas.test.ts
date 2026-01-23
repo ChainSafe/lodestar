@@ -402,20 +402,16 @@ describe("Gloas Fork Choice", () => {
       const indices = Array.from({length: threshold}, (_, i) => i);
       protoArray.notifyPtcMessage("0x02", indices, true);
 
-      // Without executionPayloadStates, should return false
+      // Without execution payload (no FULL variant), should return false
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
-
-      // With empty map, should return false
-      expect(protoArray.isPayloadTimely("0x02", new Map())).toBe(false);
     });
 
     it("isPayloadTimely() returns true when threshold met and payload available", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot);
 
-      // Create execution payload states map
-      const executionPayloadStates = new Map<RootHex, unknown>();
-      executionPayloadStates.set("0x02", {});
+      // Make execution payload available by creating FULL variant
+      protoArray.onExecutionPayload("0x02", gloasForkSlot);
 
       // Vote yes from majority of PTC (>50%)
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
@@ -423,15 +419,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.notifyPtcMessage("0x02", indices, true);
 
       // Should now be timely
-      expect(protoArray.isPayloadTimely("0x02", executionPayloadStates)).toBe(true);
+      expect(protoArray.isPayloadTimely("0x02")).toBe(true);
     });
 
     it("isPayloadTimely() returns false when threshold not met", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot);
 
-      const executionPayloadStates = new Map<RootHex, unknown>();
-      executionPayloadStates.set("0x02", {});
+      // Make execution payload available by creating FULL variant
+      protoArray.onExecutionPayload("0x02", gloasForkSlot);
 
       // Vote yes from exactly 50% (not >50%)
       const threshold = Math.floor(PTC_SIZE / 2);
@@ -439,15 +435,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.notifyPtcMessage("0x02", indices, true);
 
       // Should not be timely (need >50%, not >=50%)
-      expect(protoArray.isPayloadTimely("0x02", executionPayloadStates)).toBe(false);
+      expect(protoArray.isPayloadTimely("0x02")).toBe(false);
     });
 
     it("isPayloadTimely() counts only 'true' votes", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot);
 
-      const executionPayloadStates = new Map<RootHex, unknown>();
-      executionPayloadStates.set("0x02", {});
+      // Make execution payload available by creating FULL variant
+      protoArray.onExecutionPayload("0x02", gloasForkSlot);
 
       // Vote mixed yes/no
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
@@ -459,13 +455,13 @@ describe("Gloas Fork Choice", () => {
       protoArray.notifyPtcMessage("0x02", noIndices, false);
 
       // Should be timely (threshold met)
-      expect(protoArray.isPayloadTimely("0x02", executionPayloadStates)).toBe(true);
+      expect(protoArray.isPayloadTimely("0x02")).toBe(true);
 
       // Change some yes votes to no
       protoArray.notifyPtcMessage("0x02", [0, 1], false);
 
       // Should no longer be timely
-      expect(protoArray.isPayloadTimely("0x02", executionPayloadStates)).toBe(false);
+      expect(protoArray.isPayloadTimely("0x02")).toBe(false);
     });
 
     it("isPayloadTimely() returns false for unknown block", () => {
