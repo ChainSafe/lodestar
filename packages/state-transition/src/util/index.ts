@@ -19,7 +19,6 @@ export * from "./interop.js";
 export * from "./loadState/index.js";
 export * from "./rootCache.js";
 export * from "./seed.js";
-export * from "./shufflingDecisionRoot.js";
 export * from "./shuffling.js";
 export * from "./signatureSets.js";
 export * from "./signingRoot.js";
