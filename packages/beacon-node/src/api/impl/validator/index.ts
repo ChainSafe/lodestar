@@ -1040,9 +1040,7 @@ export function getValidatorApi(
           const res = await getStateResponseWithRegen(chain, startSlot);
 
           const stateViewDU =
-            res.state instanceof Uint8Array
-              ? loadState(config, chain.getHeadState(), res.state).state
-              : res.state.clone();
+            res.state instanceof Uint8Array ? loadState(config, chain.getHeadState(), res.state).state : res.state;
 
           state = createCachedBeaconState(
             stateViewDU,
