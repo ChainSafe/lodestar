@@ -75,6 +75,10 @@ export async function verifyBlocksInEpoch(
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
 
+  // in forky condition, make sure to populate ShufflingCache with regened state
+  // otherwise it's failed to get indexed attestations from shuffling cache later
+  this.shufflingCache.processState(preState0);
+
   if (!isStateValidatorsNodesPopulated(preState0)) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
       slot: preState0.slot,
