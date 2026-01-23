@@ -791,6 +791,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.columnsCache.has(columnIndex);
   }
 
+  getColumn(columnIndex: number): fulu.DataColumnSidecar | undefined {
+    return this.columnsCache.get(columnIndex)?.columnSidecar;
+  }
+
   getVersionedHashes(): VersionedHashes {
     return this.state.versionedHashes;
   }

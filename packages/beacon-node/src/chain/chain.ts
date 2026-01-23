@@ -37,6 +37,8 @@ import {
   UintNum64,
   ValidatorIndex,
   Wei,
+  deneb,
+  fulu,
   isBlindedBeaconBlock,
   phase0,
   rewards,
@@ -60,7 +62,7 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
-import {IBlockInput} from "./blocks/blockInput/index.js";
+import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {persistBlockInputs} from "./blocks/writeBlockInputToDb.ts";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
@@ -708,6 +710,42 @@ export class BeaconChain implements IBeaconChain {
 
     const data = await this.db.blockArchive.getByRoot(fromHex(root));
     return data && {block: data, executionOptimistic: false, finalized: true};
+  }
+
+  async getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null> {
+    let blobSidecars: deneb.BlobSidecars | null = null;
+    const blockInput = this.seenBlockInputCache.get(blockRootHex);
+    if (blockInput) {
+      if (!isBlockInputBlobs(blockInput)) {
+        throw new Error("Expected block input to have blobs");
+      }
+      return blockInput.getBlobs();
+    }
+    blobSidecars = (await this.db.blobSidecars.get(fromHex(blockRootHex)))?.blobSidecars ?? null;
+    if (!blobSidecars) {
+      blobSidecars = (await this.db.blobSidecarsArchive.get(blockSlot))?.blobSidecars ?? null;
+    }
+    return blobSidecars;
+  }
+
+  async getDataColumnSidecar(
+    blockSlot: Slot,
+    blockRootHex: string,
+    index: number
+  ): Promise<fulu.DataColumnSidecar | null> {
+    let dataColumnSidecar: fulu.DataColumnSidecar | null = null;
+    const blockInput = this.seenBlockInputCache.get(blockRootHex);
+    if (blockInput) {
+      if (!isBlockInputColumns(blockInput)) {
+        throw new Error("Expected block input to have columns");
+      }
+      return blockInput.getColumn(index) ?? null;
+    }
+    dataColumnSidecar = await this.db.dataColumnSidecar.get(fromHex(blockRootHex), index);
+    if (!dataColumnSidecar) {
+      dataColumnSidecar = await this.db.dataColumnSidecarArchive.get(blockSlot, index);
+    }
+    return dataColumnSidecar;
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
