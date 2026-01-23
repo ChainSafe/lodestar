@@ -339,6 +339,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
         continue;
       }
 
+      // Here we assume the data column sidecars are already in the hot db
       const dataColumnSidecarBytes = await fromAsync(db.dataColumnSidecar.valuesStreamBinary(block.root));
       // there could be 0 dataColumnSidecarBytes if block has no blob
       logger.verbose("migrateDataColumnSidecarsFromHotToColdDb", {
