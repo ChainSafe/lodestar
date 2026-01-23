@@ -173,7 +173,7 @@ export interface IBeaconChain {
   getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: CachedBeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Return serialized bytes of a persisted checkpoint state */
   getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
   /** Returns a cached state by checkpoint */

@@ -42,10 +42,10 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
 
   // Index Root -> Slot
 
-  async getByRoot(stateRoot: Root): Promise<BeaconStateAllForks | null> {
+  async getBinaryByRoot(stateRoot: Root): Promise<Uint8Array | null> {
     const slot = await this.getSlotByRoot(stateRoot);
     if (slot !== null && Number.isInteger(slot)) {
-      return this.get(slot);
+      return this.getBinary(slot);
     }
     return null;
   }

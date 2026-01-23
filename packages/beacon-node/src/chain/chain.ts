@@ -559,7 +559,7 @@ export class BeaconChain implements IBeaconChain {
   async getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: CachedBeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null> {
+  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
       const block = this.forkChoice.getBlock(state.latestBlockHeader.hashTreeRoot());
@@ -587,11 +587,9 @@ export class BeaconChain implements IBeaconChain {
       };
     }
 
-    // we can do a `this.db.stateArchive.getByRoot()` here, but
-    // returning 1 per 100s of states that are persisted in the archive state is not useful enough
-    // and it causes consumers having to loadState and createCachedBeaconState again
-    // if state is finalized, consumers need to use getHistoricalStateBySlot() api instead
-    return null;
+    // this is mostly useful for a node with `--chain.archiveStateEpochFrequency 1`
+    const data = await this.db.stateArchive.getBinaryByRoot(fromHex(stateRoot));
+    return data && {state: data, executionOptimistic: false, finalized: true};
   }
 
   async getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null> {
