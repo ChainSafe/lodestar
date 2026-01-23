@@ -76,7 +76,7 @@ export async function verifyBlocksInEpoch(
     });
 
   // in forky condition, make sure to populate ShufflingCache with regened state
-  // otherwise it's failed to get indexed attestations from shuffling cache later
+  // otherwise it may fail to get indexed attestations from shuffling cache later
   this.shufflingCache.processState(preState0);
 
   if (!isStateValidatorsNodesPopulated(preState0)) {

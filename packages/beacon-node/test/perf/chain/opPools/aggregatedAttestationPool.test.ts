@@ -168,7 +168,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         shufflingCache.processState(state);
         return {state, pool, shufflingCache};
       },
-      fn: async ({state, pool, shufflingCache}) => {
+      fn: ({state, pool, shufflingCache}) => {
         pool.getAttestationsForBlock(state.config.getForkName(state.slot), forkchoice, shufflingCache, state);
       },
     });
