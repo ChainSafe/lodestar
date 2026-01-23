@@ -218,9 +218,9 @@ export class AggregatedAttestationPool {
    * Get attestations to be included in a block pre-electra. Returns up to $MAX_ATTESTATIONS items
    */
   getAttestationsForBlockPreElectra(
-    fork: ForkName,
-    forkChoice: IForkChoice,
-    state: CachedBeaconStateAllForks
+    _fork: ForkName,
+    _forkChoice: IForkChoice,
+    _state: CachedBeaconStateAllForks
   ): phase0.Attestation[] {
     throw new Error("Does not support producing blocks for pre-electra forks anymore");
   }
