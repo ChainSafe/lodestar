@@ -1,8 +1,9 @@
 import {BLOB_SIDECAR_FIXED_SIZE} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
+import {RootHex, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
+import {isBlockInputBlobs} from "../../../chain/blocks/blockInput/blockInput.ts";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
@@ -34,6 +35,20 @@ export async function* onBlobSidecarsByRoot(
 
     // Check if we need to load sidecars for a new block root
     if (lastFetchedSideCars === null || lastFetchedSideCars.blockRoot !== blockRootHex) {
+      const blockInput = chain.seenBlockInputCache.get(blockRootHex);
+      if (blockInput) {
+        if (!isBlockInputBlobs(blockInput)) {
+          throw new Error("bad coding");
+        }
+        const blob = blockInput.getBlob(index);
+        if (blob) {
+          yield {
+            data: ssz.deneb.BlobSidecar.serialize(blob),
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
+          };
+          continue;
+        }
+      }
       const blobSideCarsBytesWrapped = await db.blobSidecars.getBinary(fromHex(block.blockRoot));
       if (!blobSideCarsBytesWrapped) {
         // Handle the same to onBeaconBlocksByRange

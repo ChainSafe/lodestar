@@ -288,6 +288,8 @@ async function migrateBlobSidecarsFromHotToColdDb(
           );
         })
         .map(async (block) => {
+          // Here we assume the blob sidecars are already in the hot db
+          // instead of checking first the block input cache
           const bytes = await db.blobSidecars.getBinary(block.root);
           if (!bytes) {
             throw Error(`No blobSidecars found for slot ${block.slot} root ${toRootHex(block.root)}`);

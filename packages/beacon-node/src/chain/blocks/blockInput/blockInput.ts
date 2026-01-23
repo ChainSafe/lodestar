@@ -412,6 +412,10 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     return this.blobsCache.has(blobIndex);
   }
 
+  getBlob(blobIndex: BlobIndex): deneb.BlobSidecar | undefined {
+    return this.blobsCache.get(blobIndex)?.blobSidecar;
+  }
+
   addBlob(
     {blockRootHex, blobSidecar, source, peerIdStr, seenTimestampSec}: AddBlob,
     opts = {throwOnDuplicateAdd: true}

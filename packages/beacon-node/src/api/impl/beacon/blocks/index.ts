@@ -626,6 +626,7 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
 
       let data: deneb.BlobSidecars;
 
@@ -682,7 +683,15 @@ export function getBeaconBlockApi({
           data = [];
         }
       } else if (isForkPostDeneb(fork)) {
-        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+        let blobSidecars: deneb.BlobSidecars | undefined;
+        const blockInput = chain.seenBlockInputCache.get(blockRootHex);
+        if (blockInput) {
+          if (!isBlockInputBlobs(blockInput)) {
+            throw new Error("bad coding");
+          }
+          blobSidecars = blockInput.getBlobs();
+        }
+        blobSidecars = (await db.blobSidecars.get(blockRoot))?.blobSidecars;
         if (!blobSidecars) {
           ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
         }
@@ -715,6 +724,7 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
 
       let blobs: deneb.Blobs;
 
@@ -766,7 +776,15 @@ export function getBeaconBlockApi({
           blobs = [];
         }
       } else if (isForkPostDeneb(fork)) {
-        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+        let blobSidecars: deneb.BlobSidecars | undefined;
+        const blockInput = chain.seenBlockInputCache.get(blockRootHex);
+        if (blockInput) {
+          if (!isBlockInputBlobs(blockInput)) {
+            throw new Error("bad coding");
+          }
+          blobSidecars = blockInput.getBlobs();
+        }
+        blobSidecars = (await db.blobSidecars.get(blockRoot))?.blobSidecars;
         if (!blobSidecars) {
           ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
         }
