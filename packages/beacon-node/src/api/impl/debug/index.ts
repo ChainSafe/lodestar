@@ -3,7 +3,7 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {BeaconState, deneb, fulu, sszTypesFor} from "@lodestar/types";
-import {fromAsync, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
@@ -14,7 +14,6 @@ import {assertUniqueItems} from "../utils.js";
 export function getDebugApi({
   chain,
   config,
-  db,
 }: Pick<ApiModules, "chain" | "config" | "db">): ApplicationMethods<routes.debug.Endpoints> {
   return {
     async getDebugChainHeadsV2() {
