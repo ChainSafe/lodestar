@@ -479,7 +479,7 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
   blockBytes: Uint8Array
 ): number {
   const slot = getSlotFromSignedBeaconBlockSerialized(blockBytes);
-  if (!slot) throw new Error("Can not parse the slot from block bytes");
+  if (slot === null) throw new Error("Can not parse the slot from block bytes");
 
   if (config.getForkSeq(slot) < ForkSeq.deneb) return 0;
 
