@@ -90,7 +90,7 @@ export async function importBlock(
     throw Error("Unavailable block can not be imported in forkchoice");
   }
 
-  // 1. Persist block to hot DB (pre-emptively)
+  // 1. Persist block to hot DB (performed asynchronously to avoid blocking head selection)
   await this.unfinalizedBlockWrites.push([blockInput]);
 
   // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
