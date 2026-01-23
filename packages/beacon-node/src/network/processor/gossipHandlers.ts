@@ -443,7 +443,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
-        chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       })
       .catch((e) => {
         // Adjust verbosity based on error type

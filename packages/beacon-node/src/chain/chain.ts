@@ -55,12 +55,14 @@ import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumn
 import {callInNextEventLoop} from "../util/eventLoop.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
+import {JobItemQueue} from "../util/queue/itemQueue.ts";
 import {SerializedCache} from "../util/serializedCache.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
+import {writeBlockInputToDb} from "./blocks/writeBlockInputToDb.ts";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
@@ -113,6 +115,11 @@ import {ValidatorMonitor} from "./validatorMonitor.js";
  */
 const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
 
+/**
+ * The maximum number of pending unfinalized block writes to the database before backpressure is applied.
+ */
+const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 32;
+
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
@@ -136,6 +143,7 @@ export class BeaconChain implements IBeaconChain {
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
+  readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput[]], void>;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -405,6 +413,11 @@ export class BeaconChain implements IBeaconChain {
       signal
     );
 
+    this.unfinalizedBlockWrites = new JobItemQueue(writeBlockInputToDb.bind(this), {
+      maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES,
+      signal,
+    });
+
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -652,6 +665,13 @@ export class BeaconChain implements IBeaconChain {
       // Unfinalized slot, attempt to find in fork-choice
       const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
       if (block) {
+        // Block found in fork-choice.
+        // It may be in the block input cache, awaiting full DA reconstruction, check there first
+        // Otherwise (most likely), check the hot db
+        const blockInput = this.seenBlockInputCache.get(block.blockRoot);
+        if (blockInput?.hasBlock()) {
+          return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized: false};
+        }
         const data = await this.db.block.get(fromHex(block.blockRoot));
         if (data) {
           return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
@@ -671,6 +691,13 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
     const block = this.forkChoice.getBlockHex(root);
     if (block) {
+      // Block found in fork-choice.
+      // It may be in the block input cache, awaiting full DA reconstruction, check there first
+      // Otherwise (most likely), check the hot db
+      const blockInput = this.seenBlockInputCache.get(block.blockRoot);
+      if (blockInput?.hasBlock()) {
+        return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized: false};
+      }
       const data = await this.db.block.get(fromHex(root));
       if (data) {
         return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};

@@ -21,7 +21,6 @@ import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
-import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Verifies 1 or more blocks are fully valid; from a linear sequence of blocks.
@@ -155,7 +154,7 @@ export async function verifyBlocksInEpoch(
       // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
       // an error, we'll remove blocks not in forkchoice
       opts.verifyOnly !== true && opts.eagerPersistBlock
-        ? writeBlockInputToDb.call(this, blockInputs)
+        ? this.unfinalizedBlockWrites.push(blockInputs)
         : Promise.resolve(),
     ]);
 
