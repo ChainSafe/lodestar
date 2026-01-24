@@ -269,7 +269,10 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
-    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot, this.protoArray.getParentPayloadStatus(headBlock));
+    const parentBlock = this.protoArray.getBlock(
+      headBlock.parentRoot,
+      this.protoArray.getParentPayloadStatus(headBlock)
+    );
     const proposalSlot = headBlock.slot + 1;
 
     // No reorg if parentBlock isn't available
@@ -294,7 +297,10 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
 
-    this.logger?.verbose("Block is weak. Should override forkchoice update", {blockRoot: headBlock.blockRoot, slot: currentSlot});
+    this.logger?.verbose("Block is weak. Should override forkchoice update", {
+      blockRoot: headBlock.blockRoot,
+      slot: currentSlot,
+    });
     return {shouldOverrideFcu: true, parentBlock};
   }
 
@@ -375,7 +381,10 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
-    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot, this.protoArray.getParentPayloadStatus(headBlock));
+    const parentBlock = this.protoArray.getBlock(
+      headBlock.parentRoot,
+      this.protoArray.getParentPayloadStatus(headBlock)
+    );
 
     // No reorg if parentBlock isn't available
     if (parentBlock === undefined) {
@@ -587,7 +596,8 @@ export class ForkChoice implements IForkChoice {
     // Parent block must be known
     // We do not care about the variant here, we just need to find the parent block
     const defaultStatus = this.protoArray.getDefaultVariant(parentRootHex);
-    const parentBlock = defaultStatus !== undefined ? this.protoArray.getBlock(parentRootHex, defaultStatus) : undefined;
+    const parentBlock =
+      defaultStatus !== undefined ? this.protoArray.getBlock(parentRootHex, defaultStatus) : undefined;
     if (!parentBlock) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
@@ -925,7 +935,7 @@ export class ForkChoice implements IForkChoice {
   /** Returns `true` if the block is known **and** a descendant of the finalized root. */
   hasBlock(blockRoot: Root): boolean {
     return this.hasBlockHex(toRootHex(blockRoot));
-  }  
+  }
   /** Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root. */
   getBlock(blockRoot: Root): ProtoBlock | null {
     return this.getBlockHex(toRootHex(blockRoot));

@@ -84,11 +84,11 @@ describe("getCommonAncestor", () => {
 
   for (const {nodeA, nodeB, ancestor} of testCases) {
     it(`${nodeA} & ${nodeB} -> ${ancestor}`, () => {
-      // biome-ignore lint/style/noNonNullAssertion: We know the node can not be null here
       const defaultStatusA = fc.getDefaultVariant(nodeA);
       const defaultStatusB = fc.getDefaultVariant(nodeB);
       const nodeAResult = defaultStatusA !== undefined ? fc.getNode(nodeA, defaultStatusA) : undefined;
       const nodeBResult = defaultStatusB !== undefined ? fc.getNode(nodeB, defaultStatusB) : undefined;
+      // biome-ignore lint/style/noNonNullAssertion: We know the node can not be null here
       const ancestorNode = fc.getCommonAncestor(nodeAResult!, nodeBResult!);
       if (ancestor) {
         expect(ancestorNode?.blockRoot).toBe(ancestor);

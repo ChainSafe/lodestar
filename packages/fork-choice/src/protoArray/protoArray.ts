@@ -679,7 +679,10 @@ export class ProtoArray {
       const {invalidateFromParentBlockRoot, latestValidExecHash} = execResponse;
       // TODO GLOAS: verify if getting default variant is correct here
       const defaultStatus = this.getDefaultVariant(invalidateFromParentBlockRoot);
-      const invalidateFromParentIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(invalidateFromParentBlockRoot, defaultStatus) : undefined;
+      const invalidateFromParentIndex =
+        defaultStatus !== undefined
+          ? this.getNodeIndexByRootAndStatus(invalidateFromParentBlockRoot, defaultStatus)
+          : undefined;
       if (invalidateFromParentIndex === undefined) {
         throw Error(`Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} in forkChoice`);
       }
@@ -887,7 +890,8 @@ export class ProtoArray {
 
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
     const defaultStatus = this.getDefaultVariant(justifiedRoot);
-    const justifiedIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(justifiedRoot, defaultStatus) : undefined;
+    const justifiedIndex =
+      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(justifiedRoot, defaultStatus) : undefined;
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN,
@@ -1404,7 +1408,8 @@ export class ProtoArray {
   *iterateAncestorNodes(blockRoot: RootHex): IterableIterator<ProtoNode> {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
     const defaultStatus = this.getDefaultVariant(blockRoot);
-    const startIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
+    const startIndex =
+      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
     if (startIndex === undefined) {
       return;
     }
@@ -1446,7 +1451,8 @@ export class ProtoArray {
   getAllAncestorNodes(blockRoot: RootHex): ProtoNode[] {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
     const defaultStatus = this.getDefaultVariant(blockRoot);
-    const startIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
+    const startIndex =
+      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
     if (startIndex === undefined) {
       return [];
     }
@@ -1484,7 +1490,7 @@ export class ProtoArray {
    * The opposite of iterateNodes.
    * iterateNodes is to find ancestor nodes of a blockRoot.
    * this is to find non-ancestor nodes of a blockRoot.
-   * 
+   *
    * Only default variant (FULL pre-gloas and PENDING post-gloas) are returned
    */
   getAllNonAncestorNodes(blockRoot: RootHex): ProtoNode[] {
@@ -1536,7 +1542,8 @@ export class ProtoArray {
   getAllAncestorAndNonAncestorNodes(blockRoot: RootHex): {ancestors: ProtoNode[]; nonAncestors: ProtoNode[]} {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
     const defaultStatus = this.getDefaultVariant(blockRoot);
-    const startIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
+    const startIndex =
+      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
     if (startIndex === undefined) {
       return {ancestors: [], nonAncestors: []};
     }

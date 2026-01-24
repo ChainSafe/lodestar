@@ -2,13 +2,7 @@ import {beforeEach, describe, expect, it} from "vitest";
 import {PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {
-  ExecutionStatus,
-  PayloadStatus,
-  ProtoArray,
-  ProtoBlock,
-  ProtoNode,
-} from "../../../src/index.js";
+import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode} from "../../../src/index.js";
 
 describe("Gloas Fork Choice", () => {
   const genesisEpoch = 0;
@@ -78,10 +72,7 @@ describe("Gloas Fork Choice", () => {
 
   describe("ProtoArray indices lookup", () => {
     it("indices map stores variants correctly for pre-Gloas blocks", () => {
-      const protoArray = ProtoArray.initialize(
-        createTestBlock(0, genesisRoot, "0x00"),
-        0
-      );
+      const protoArray = ProtoArray.initialize(createTestBlock(0, genesisRoot, "0x00"), 0);
       const variants = (protoArray as any).indices.get(genesisRoot);
       expect(variants).toBeDefined();
       // Pre-Gloas: variants[0] contains FULL index
@@ -90,10 +81,7 @@ describe("Gloas Fork Choice", () => {
     });
 
     it("getNodeByPayloadStatus() retrieves correct variants", () => {
-      const protoArray = ProtoArray.initialize(
-        createTestBlock(0, genesisRoot, "0x00"),
-        0
-      );
+      const protoArray = ProtoArray.initialize(createTestBlock(0, genesisRoot, "0x00"), 0);
       const node = getNodeByPayloadStatus(protoArray, genesisRoot, PayloadStatus.FULL);
       expect(node).toBeDefined();
       expect(node?.blockRoot).toBe(genesisRoot);
@@ -101,10 +89,7 @@ describe("Gloas Fork Choice", () => {
     });
 
     it("indices map stores multiple variants for Gloas blocks", () => {
-      const protoArray = ProtoArray.initialize(
-        createTestBlock(0, genesisRoot, "0x00"),
-        0
-      );
+      const protoArray = ProtoArray.initialize(createTestBlock(0, genesisRoot, "0x00"), 0);
 
       // Add a Gloas block
       const gloasBlock = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
@@ -538,10 +523,7 @@ describe("Gloas Fork Choice", () => {
 
     beforeEach(() => {
       // Initialize with genesis block to avoid INVALID_PARENT_DELTA errors
-      protoArray = ProtoArray.initialize(
-        createTestBlock(0, genesisRoot, "0x00"),
-        0
-      );
+      protoArray = ProtoArray.initialize(createTestBlock(0, genesisRoot, "0x00"), 0);
     });
 
     it("EMPTY vs FULL comparison uses explicit tiebreaker for slot n-1 blocks", () => {
