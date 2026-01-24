@@ -1425,7 +1425,17 @@ export class ProtoArray {
    */
   *iterateAncestorNodesFromNode(node: ProtoNode): IterableIterator<ProtoNode> {
     while (node.parent !== undefined) {
-      node = this.getNodeFromIndex(node.parent);
+      const pIndex = node.parent;
+      const parentRoot = this.getNodeFromIndex(pIndex).blockRoot;
+      const parentIndex = this.indices.get(parentRoot)?.[0];
+
+      if (parentIndex === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_PARENT_INDEX,
+          index: pIndex,
+        });
+      }
+      node = this.getNodeFromIndex(parentIndex);
       yield node;
     }
   }
@@ -1452,7 +1462,18 @@ export class ProtoArray {
     const nodes = [node];
 
     while (node.parent !== undefined) {
-      node = this.getNodeFromIndex(node.parent);
+      const pIndex = node.parent;
+      const parentRoot = this.getNodeFromIndex(pIndex).blockRoot;
+      const parentIndex = this.indices.get(parentRoot)?.[0];
+
+      if (parentIndex === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_PARENT_INDEX,
+          index: pIndex,
+        });
+      }
+
+      node = this.getNodeFromIndex(parentIndex);
       nodes.push(node);
     }
 
@@ -1733,5 +1754,9 @@ export class ProtoArray {
       result.push(node);
     }
     return result;
+  }
+
+  private isDefaultVariant(node: ProtoNode): boolean {
+    return node.payloadStatus === this.getDefaultVariant(node.blockRoot)
   }
 }
