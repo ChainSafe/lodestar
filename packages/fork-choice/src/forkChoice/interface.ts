@@ -4,7 +4,7 @@ import {
   EffectiveBalanceIncrements,
 } from "@lodestar/state-transition";
 import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
-import {LVHExecResponse, MaybeValidExecutionStatus, PayloadStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
+import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
 

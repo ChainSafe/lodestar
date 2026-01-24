@@ -154,7 +154,9 @@ describe("Gloas Fork Choice", () => {
       const block = createTestBlock(1, "0x02", genesisRoot);
       protoArray.onBlock(block, 1);
 
-      const node = protoArray.getNode("0x02");
+      const defaultStatus = protoArray.getDefaultVariant("0x02");
+      expect(defaultStatus).toBe(PayloadStatus.FULL);
+      const node = defaultStatus !== undefined ? protoArray.getNode("0x02", defaultStatus) : undefined;
       expect(node).toBeDefined();
       expect(node?.payloadStatus).toBe(PayloadStatus.FULL);
     });
@@ -270,11 +272,15 @@ describe("Gloas Fork Choice", () => {
       const gloasBlock = createTestBlock(gloasForkSlot, "0x03", "0x02", "0x02");
       protoArray.onBlock(gloasBlock, gloasForkSlot);
 
-      // Should find both blocks
-      const fuluNode = protoArray.getNode("0x02");
+      // Should find both blocks with correct default variants
+      const fuluDefaultStatus = protoArray.getDefaultVariant("0x02");
+      expect(fuluDefaultStatus).toBe(PayloadStatus.FULL);
+      const fuluNode = fuluDefaultStatus !== undefined ? protoArray.getNode("0x02", fuluDefaultStatus) : undefined;
       expect(fuluNode?.payloadStatus).toBe(PayloadStatus.FULL);
 
-      const gloasNode = protoArray.getNode("0x03");
+      const gloasDefaultStatus = protoArray.getDefaultVariant("0x03");
+      expect(gloasDefaultStatus).toBe(PayloadStatus.PENDING);
+      const gloasNode = gloasDefaultStatus !== undefined ? protoArray.getNode("0x03", gloasDefaultStatus) : undefined;
       expect(gloasNode?.payloadStatus).toBe(PayloadStatus.PENDING);
     });
   });
@@ -587,7 +593,8 @@ describe("Gloas Fork Choice", () => {
       const emptyBIndex = protoArray.getNodeIndexByRootAndStatus("0x03", PayloadStatus.EMPTY)!;
 
       // Give A more votes than B
-      const deltas = new Array(protoArray.length()).fill(0);
+      // Note: Use nodes.length (not protoArray.length()) since Gloas blocks have multiple nodes per root
+      const deltas = new Array(protoArray.nodes.length).fill(0);
       deltas[emptyAIndex] = 200;
       deltas[emptyBIndex] = 100;
 

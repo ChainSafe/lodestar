@@ -433,7 +433,8 @@ function collectProtoarrayValidationStatus(fcArray: ProtoArray): ValidationTestC
   const expectedForkChoice: ValidationTestCase[] = [];
 
   for (const fcRoot of fcRoots) {
-    const fcNode = fcArray.getNode(fcRoot);
+    const defaultStatus = fcArray.getDefaultVariant(fcRoot);
+    const fcNode = defaultStatus !== undefined ? fcArray.getNode(fcRoot, defaultStatus) : undefined;
     const bestChild =
       fcNode?.bestChild !== undefined ? fcArray["getNodeFromIndex"](fcNode.bestChild).blockRoot : undefined;
     const bestDescendant =

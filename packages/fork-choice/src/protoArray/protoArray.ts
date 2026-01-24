@@ -1756,7 +1756,7 @@ export class ProtoArray {
     return result;
   }
 
-  private isDefaultVariant(node: ProtoNode): boolean {
-    return node.payloadStatus === this.getDefaultVariant(node.blockRoot)
-  }
+  private isDefaultVariant = (node: ProtoNode): boolean => {
+    return node.payloadStatus === this.getDefaultVariant(node.blockRoot);
+  };
 }

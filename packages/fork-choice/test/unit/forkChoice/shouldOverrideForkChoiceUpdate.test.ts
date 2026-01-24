@@ -216,7 +216,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
         proposerBoostReorg: true,
       });
 
-      const result = forkChoice.shouldOverrideForkChoiceUpdate(headBlock.blockRoot, secFromSlot, currentSlot);
+      const result = forkChoice.shouldOverrideForkChoiceUpdate(headBlock, secFromSlot, currentSlot);
 
       expect(result.shouldOverrideFcu).toBe(expectReorg);
 
