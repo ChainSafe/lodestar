@@ -106,17 +106,17 @@ export class ProtoArray {
   /**
    * Get node index for a block root and payload status
    *
-   * Returns the index for the specified payload status variant, or undefined if not found.
+   * @param root - The block root to look up
+   * @param payloadStatus - The specific payload status variant (PENDING/EMPTY/FULL)
+   * @returns The node index for the specified variant, or undefined if not found
    *
-   * If payloadStatus not provided:
-   * - Pre-Gloas blocks: returns FULL variant (canonical)
-   * - Gloas blocks: returns PENDING variant (canonical)
-   *
-   * If payloadStatus provided:
+   * Behavior:
    * - Pre-Gloas blocks: only FULL is valid, PENDING/EMPTY throw error
-   * - Gloas blocks: returns the specified variant
+   * - Gloas blocks: returns the specified variant index, or undefined if that variant doesn't exist
+   *
+   * Note: payloadStatus is required. Use getDefaultVariant() to get the canonical variant.
    */
-  getNodeIndexByRootAndStatus(root: RootHex, payloadStatus?: PayloadStatus): number | undefined {
+  getNodeIndexByRootAndStatus(root: RootHex, payloadStatus: PayloadStatus): number | undefined {
     const variants = this.indices.get(root);
     if (!variants) {
       return undefined;
@@ -125,7 +125,7 @@ export class ProtoArray {
     // Pre-Gloas: only one variant exists (FULL at index 0)
     if (variants.length === 1) {
       // Return FULL variant if no status specified or FULL explicitly requested
-      if (payloadStatus === undefined || payloadStatus === PayloadStatus.FULL) {
+      if (payloadStatus === PayloadStatus.FULL) {
         return variants[0];
       }
       // PENDING and EMPTY are invalid for pre-Gloas blocks
@@ -136,7 +136,30 @@ export class ProtoArray {
     }
 
     // Gloas: return the specified variant, or PENDING if not specified
-    return variants[payloadStatus ?? PayloadStatus.PENDING];
+    return variants[payloadStatus];
+  }
+
+  /**
+   * Get the default/canonical payload status for a block root
+   * - Pre-Gloas blocks: Returns FULL (payload embedded in block)
+   * - Gloas blocks: Returns PENDING (canonical variant)
+   *
+   * @param blockRoot - The block root to check
+   * @returns PayloadStatus.FULL for pre-Gloas, PayloadStatus.PENDING for Gloas, undefined if block not found
+   */
+  getDefaultVariant(blockRoot: RootHex): PayloadStatus | undefined {
+    const variants = this.indices.get(blockRoot);
+    if (!variants) {
+      return undefined;
+    }
+
+    // Pre-Gloas: only one variant exists (FULL)
+    if (variants.length === 1) {
+      return PayloadStatus.FULL;
+    }
+
+    // Gloas: multiple variants exist, PENDING is canonical
+    return PayloadStatus.PENDING;
   }
 
   /**
@@ -149,7 +172,7 @@ export class ProtoArray {
    *
    * For pre-Gloas blocks: always returns FULL
    */
-  private getParentPayloadStatus(block: ProtoBlock): PayloadStatus {
+  getParentPayloadStatus(block: ProtoBlock): PayloadStatus {
     // Pre-Gloas blocks have payloads embedded, so parents are always FULL
     if (!isGloasBlock(block)) {
       return PayloadStatus.FULL;
@@ -584,7 +607,9 @@ export class ProtoArray {
     }
 
     // Get proposer boost block
-    const proposerBoostBlock = this.getNode(proposerBoostRoot);
+    // We don't care about variant here, just need proposer boost block info
+    const defaultStatus = this.getDefaultVariant(proposerBoostRoot);
+    const proposerBoostBlock = defaultStatus !== undefined ? this.getNode(proposerBoostRoot, defaultStatus) : undefined;
     if (!proposerBoostBlock) {
       // Proposer boost block not found, default to extending payload
       return true;
@@ -652,7 +677,9 @@ export class ProtoArray {
       // if its in fcU.
       //
       const {invalidateFromParentBlockRoot, latestValidExecHash} = execResponse;
-      const invalidateFromParentIndex = this.getNodeIndexByRootAndStatus(invalidateFromParentBlockRoot);
+      // TODO GLOAS: verify if getting default variant is correct here
+      const defaultStatus = this.getDefaultVariant(invalidateFromParentBlockRoot);
+      const invalidateFromParentIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(invalidateFromParentBlockRoot, defaultStatus) : undefined;
       if (invalidateFromParentIndex === undefined) {
         throw Error(`Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} in forkChoice`);
       }
@@ -859,7 +886,8 @@ export class ProtoArray {
     }
 
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const justifiedIndex = this.getNodeIndexByRootAndStatus(justifiedRoot);
+    const defaultStatus = this.getDefaultVariant(justifiedRoot);
+    const justifiedIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(justifiedRoot, defaultStatus) : undefined;
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN,
@@ -1375,7 +1403,8 @@ export class ProtoArray {
    */
   *iterateAncestorNodes(blockRoot: RootHex): IterableIterator<ProtoNode> {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot);
+    const defaultStatus = this.getDefaultVariant(blockRoot);
+    const startIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
     if (startIndex === undefined) {
       return;
     }
@@ -1406,7 +1435,8 @@ export class ProtoArray {
    */
   getAllAncestorNodes(blockRoot: RootHex): ProtoNode[] {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot);
+    const defaultStatus = this.getDefaultVariant(blockRoot);
+    const startIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
     if (startIndex === undefined) {
       return [];
     }
@@ -1433,10 +1463,16 @@ export class ProtoArray {
    * The opposite of iterateNodes.
    * iterateNodes is to find ancestor nodes of a blockRoot.
    * this is to find non-ancestor nodes of a blockRoot.
+   * 
+   * Only default variant (FULL pre-gloas and PENDING post-gloas) are returned
    */
   getAllNonAncestorNodes(blockRoot: RootHex): ProtoNode[] {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot);
+    const defaultStatus = this.getDefaultVariant(blockRoot);
+    if (defaultStatus === undefined) {
+      return [];
+    }
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus);
     if (startIndex === undefined) {
       return [];
     }
@@ -1451,22 +1487,35 @@ export class ProtoArray {
     const result: ProtoNode[] = [];
     let nodeIndex = startIndex;
     while (node.parent !== undefined) {
-      const parentIndex = node.parent;
+      const pIndex = node.parent;
+      const parentRoot = this.getNodeFromIndex(pIndex).blockRoot;
+      const parentIndex = this.indices.get(parentRoot)?.[0];
+
+      if (parentIndex === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_PARENT_INDEX,
+          index: pIndex,
+        });
+      }
+
       node = this.getNodeFromIndex(parentIndex);
       // nodes between nodeIndex and parentIndex means non-ancestor nodes
-      result.push(...this.getNodesBetween(nodeIndex, parentIndex));
+      // Excludes all EMPTY/FULL variant post-gloas
+      result.push(...this.getNodesBetween(nodeIndex, parentIndex).filter(this.isDefaultVariant));
       nodeIndex = parentIndex;
     }
-    result.push(...this.getNodesBetween(nodeIndex, 0));
+    result.push(...this.getNodesBetween(nodeIndex, 0).filter(this.isDefaultVariant));
     return result;
   }
 
   /**
    * Returns both ancestor and non-ancestor nodes in a single traversal.
+   * Only default variant (FULL pre-gloas and PENDING post-gloas) are returned
    */
   getAllAncestorAndNonAncestorNodes(blockRoot: RootHex): {ancestors: ProtoNode[]; nonAncestors: ProtoNode[]} {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot);
+    const defaultStatus = this.getDefaultVariant(blockRoot);
+    const startIndex = defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
     if (startIndex === undefined) {
       return {ancestors: [], nonAncestors: []};
     }
@@ -1486,42 +1535,74 @@ export class ProtoArray {
     while (node.parent !== undefined) {
       ancestors.push(node);
 
-      const parentIndex = node.parent;
+      // Parent could be FULL/EMPTY, need to use `indices` to look up PENDING variant of parent
+      const pIndex = node.parent;
+      const parentRoot = this.getNodeFromIndex(pIndex).blockRoot;
+      const parentIndex = this.indices.get(parentRoot)?.[0];
+
+      if (parentIndex === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_PARENT_INDEX,
+          index: pIndex,
+        });
+      }
       node = this.getNodeFromIndex(parentIndex);
 
       // Nodes between nodeIndex and parentIndex are non-ancestor nodes
-      nonAncestors.push(...this.getNodesBetween(nodeIndex, parentIndex));
+      // Filter out all FULL/EMPTY variants post-gloas
+      nonAncestors.push(...this.getNodesBetween(nodeIndex, parentIndex).filter(this.isDefaultVariant));
       nodeIndex = parentIndex;
     }
 
     ancestors.push(node);
-    nonAncestors.push(...this.getNodesBetween(nodeIndex, 0));
+    nonAncestors.push(...this.getNodesBetween(nodeIndex, 0).filter(this.isDefaultVariant));
 
     return {ancestors, nonAncestors};
   }
 
+  /**
+   * Check if a block exists in the proto array
+   * Uses default variant (PENDING for Gloas, FULL for pre-Gloas)
+   */
   hasBlock(blockRoot: RootHex): boolean {
-    return this.indices.has(blockRoot);
+    const defaultVariant = this.getDefaultVariant(blockRoot);
+    if (defaultVariant === undefined) {
+      return false;
+    }
+    const index = this.getNodeIndexByRootAndStatus(blockRoot, defaultVariant);
+    return index !== undefined;
   }
 
   /**
-   * Return canonical ProtoNode for blockRoot
-   * - Pre-Gloas: FULL variant
-   * - Gloas: PENDING variant
+   * Return ProtoNode for blockRoot with explicit payload status
    *
-   * TODO GLOAS: Review usages.
+   * @param blockRoot - The block root to look up
+   * @param payloadStatus - The specific payload status variant (PENDING/EMPTY/FULL)
+   * @returns The ProtoNode for the specified variant, or undefined if not found
+   *
+   * Note: Callers must explicitly specify which variant they need.
+   * Use getDefaultVariant() to get the canonical variant for a block.
    */
-  getNode(blockRoot: RootHex): ProtoNode | undefined {
-    const blockIndex = this.getNodeIndexByRootAndStatus(blockRoot);
+  getNode(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoNode | undefined {
+    const blockIndex = this.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
     if (blockIndex === undefined) {
       return undefined;
     }
     return this.getNodeByIndex(blockIndex);
   }
 
-  /** Return MUTABLE ProtoBlock for blockRoot (spreads properties) */
-  getBlock(blockRoot: RootHex): ProtoBlock | undefined {
-    const node = this.getNode(blockRoot);
+  /**
+   * Return MUTABLE ProtoBlock for blockRoot with explicit payload status
+   *
+   * @param blockRoot - The block root to look up
+   * @param payloadStatus - The specific payload status variant (PENDING/EMPTY/FULL)
+   * @returns The ProtoBlock for the specified variant (spreads properties), or undefined if not found
+   *
+   * Note: Callers must explicitly specify which variant they need.
+   * Use getDefaultVariant() to get the canonical variant for a block.
+   */
+  getBlock(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | undefined {
+    const node = this.getNode(blockRoot, payloadStatus);
     if (!node) {
       return undefined;
     }
@@ -1530,9 +1611,19 @@ export class ProtoArray {
     };
   }
 
-  /** Return NON-MUTABLE ProtoBlock for blockRoot (does not spread properties) */
-  getBlockReadonly(blockRoot: RootHex): ProtoBlock {
-    const node = this.getNode(blockRoot);
+  /**
+   * Return NON-MUTABLE ProtoBlock for blockRoot with explicit payload status
+   *
+   * @param blockRoot - The block root to look up
+   * @param payloadStatus - The specific payload status variant (PENDING/EMPTY/FULL)
+   * @returns The ProtoBlock for the specified variant (does not spread properties)
+   * @throws Error if block not found
+   *
+   * Note: Callers must explicitly specify which variant they need.
+   * Use getDefaultVariant() to get the canonical variant for a block.
+   */
+  getBlockReadonly(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock {
+    const node = this.getNode(blockRoot, payloadStatus);
     if (!node) {
       throw Error(`No block for root ${blockRoot}`);
     }
@@ -1545,7 +1636,10 @@ export class ProtoArray {
    * Still returns `true` if `ancestorRoot` === `descendantRoot` (and the roots are known)
    */
   isDescendant(ancestorRoot: RootHex, descendantRoot: RootHex): boolean {
-    const ancestorNode = this.getNode(ancestorRoot);
+    // We use the default variant (PENDING for Gloas, FULL for pre-Gloas)
+    // We cannot use FULL/EMPTY variants for Gloas because they may not be canonical
+    const defaultStatus = this.getDefaultVariant(ancestorRoot);
+    const ancestorNode = defaultStatus !== undefined ? this.getNode(ancestorRoot, defaultStatus) : undefined;
     if (!ancestorNode) {
       return false;
     }

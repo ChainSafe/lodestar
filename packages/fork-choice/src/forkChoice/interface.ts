@@ -4,7 +4,7 @@ import {
   EffectiveBalanceIncrements,
 } from "@lodestar/state-transition";
 import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
-import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
+import {LVHExecResponse, MaybeValidExecutionStatus, PayloadStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 import {CheckpointWithHex} from "./store.js";
 
@@ -106,7 +106,7 @@ export interface IForkChoice {
    * called by `predictProposerHead()` during `prepareNextSlot()`.
    */
   shouldOverrideForkChoiceUpdate(
-    blockRoot: RootHex,
+    headBlock: ProtoBlock,
     secFromSlot: number,
     currentSlot: Slot
   ): ShouldOverrideForkChoiceUpdateResult;
@@ -215,9 +215,6 @@ export interface IForkChoice {
   hasBlockUnsafe(blockRoot: Root): boolean;
   hasBlockHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
-  /**
-   * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
-   */
   getBlock(blockRoot: Root): ProtoBlock | null;
   getBlockHex(blockRoot: RootHex): ProtoBlock | null;
   getFinalizedBlock(): ProtoBlock;
