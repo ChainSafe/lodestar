@@ -236,6 +236,18 @@ export abstract class Repository<I extends Id, T> extends BinaryRepository<I> {
     );
   }
 
+  async batch(batch: DbBatch<I, T>): Promise<void> {
+    const batchWithKeys: DbBatch<Uint8Array, Uint8Array> = [];
+    for (const b of batch) {
+      if (b.type === "del") {
+        batchWithKeys.push({...b, key: this.encodeKey(b.key)});
+      } else {
+        batchWithKeys.push({...b, key: this.encodeKey(b.key), value: this.encodeValue(b.value)});
+      }
+    }
+    await this.db.batch(batchWithKeys, this.dbReqOpts);
+  }
+
   async batchAdd(values: T[]): Promise<void> {
     // handle single value in batchPut
     await this.batchPut(
