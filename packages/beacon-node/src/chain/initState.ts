@@ -6,6 +6,7 @@ import {Logger, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
+import {getStateTypeFromBytes} from "../util/multifork.js";
 
 export async function persistAnchorState(
   config: ChainForkConfig,
@@ -47,6 +48,29 @@ export function createGenesisBlock(config: ChainForkConfig, genesisState: Beacon
   const stateRoot = genesisState.hashTreeRoot();
   genesisBlock.message.stateRoot = stateRoot;
   return genesisBlock;
+}
+
+/**
+ * Restore the latest beacon state from db
+ */
+export async function initStateFromDb(
+  config: ChainForkConfig,
+  db: IBeaconDb,
+  logger: Logger
+): Promise<BeaconStateAllForks> {
+  const stateBytes = await db.stateArchive.lastBinary();
+  if (stateBytes == null) {
+    throw new Error("No state exists in database");
+  }
+  const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
+
+  logger.info("Initializing beacon state from db", {
+    slot: state.slot,
+    epoch: computeEpochAtSlot(state.slot),
+    stateRoot: toRootHex(state.hashTreeRoot()),
+  });
+
+  return state;
 }
 
 /**
