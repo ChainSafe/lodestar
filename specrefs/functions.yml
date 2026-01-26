@@ -780,13 +780,6 @@
         return matrix
     </spec>
 
-- name: compute_merkle_proof#altair
-  sources: []
-  spec: |
-    <spec fn="compute_merkle_proof" fork="altair" hash="073d848c">
-    def compute_merkle_proof(object: SSZObject, index: GeneralizedIndex) -> Sequence[Bytes32]: ...
-    </spec>
-
 - name: compute_new_state_root#phase0
   sources:
     - file: packages/beacon-node/src/chain/produceBlock/computeNewStateRoot.ts
