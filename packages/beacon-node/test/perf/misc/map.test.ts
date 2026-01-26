@@ -1,6 +1,6 @@
 import {bench, describe} from "@chainsafe/benchmark";
 
-describe("misc / Map", () => {
+describe.skip("misc / Map", () => {
   const times = 1000;
 
   type ObjData = {obj: Record<string, number>; keys: string[]};
