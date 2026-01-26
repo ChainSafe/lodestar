@@ -122,7 +122,7 @@ function charCodeToByte(charCode: number): number {
   throw new Error(`Invalid hex character code: ${charCode}`);
 }
 
-import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "bigint-buffer";
+import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "@vekexasia/bigint-buffer2";
 
 type Endianness = "le" | "be";
 
