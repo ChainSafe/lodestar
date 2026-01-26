@@ -3,7 +3,6 @@ import {ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getAttestationParticipationStatus} from "../block/processAttestationsAltair.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
-import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../types.js";
 import {RootCache, newZeroedArray} from "../util/index.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
@@ -126,7 +125,7 @@ function translateParticipation(
   pendingAttesations: CompositeViewDU<typeof ssz.phase0.EpochAttestations>
 ): void {
   const {epochCtx} = state;
-  const rootCache = new RootCache(new BeaconStateView(state));
+  const rootCache = new RootCache(state);
   const epochParticipation = state.previousEpochParticipation;
 
   for (const attestation of pendingAttesations.getAllReadonly()) {
