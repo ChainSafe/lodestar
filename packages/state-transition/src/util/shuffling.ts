@@ -11,7 +11,6 @@ import {
 } from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "../cache/stateCache.js";
-import {IBeaconStateView} from "../stateView/interface.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {EpochShuffling} from "./epochShuffling.js";
@@ -23,21 +22,21 @@ import {EpochShuffling} from "./epochShuffling.js";
  * Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
  * It should be set to the latest block applied to this `state` or the genesis block root.
  */
-export function proposerShufflingDecisionRoot(fork: ForkName, state: IBeaconStateView): Root | null {
+export function proposerShufflingDecisionRoot(fork: ForkName, state: CachedBeaconStateAllForks): Root | null {
   const decisionSlot = proposerShufflingDecisionSlot(fork, state);
   if (state.slot === decisionSlot) {
     return null;
   }
-  return state.getBlockRootAtSlot(decisionSlot);
+  return getBlockRootAtSlot(state, decisionSlot);
 }
 
 /**
  * Returns the slot at which the proposer shuffling was decided. The block root at this slot
  * can be used to key the proposer shuffling for the current epoch.
  */
-function proposerShufflingDecisionSlot(fork: ForkName, state: IBeaconStateView): Slot {
+function proposerShufflingDecisionSlot(fork: ForkName, state: CachedBeaconStateAllForks): Slot {
   // After fulu, the decision slot is in previous epoch due to deterministic proposer lookahead
-  const epoch = isForkPostFulu(fork) ? state.epoch - 1 : state.epoch;
+  const epoch = isForkPostFulu(fork) ? state.epochCtx.epoch - 1 : state.epochCtx.epoch;
   const startSlot = computeStartSlotAtEpoch(epoch);
   return Math.max(startSlot - 1, 0);
 }

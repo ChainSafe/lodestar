@@ -1,5 +1,6 @@
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
-import {IBeaconStateView} from "../stateView/interface.js";
+import {CachedBeaconStateAllForks} from "../types.js";
+import {getBlockRoot, getBlockRootAtSlot} from "./blockRoot.js";
 
 /**
  * Cache to prevent accessing the state tree to fetch block roots repeteadly.
@@ -11,7 +12,7 @@ export class RootCache {
   private readonly blockRootEpochCache = new Map<Epoch, Root>();
   private readonly blockRootSlotCache = new Map<Slot, Root>();
 
-  constructor(private readonly state: IBeaconStateView) {
+  constructor(private readonly state: CachedBeaconStateAllForks) {
     this.currentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
     this.previousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
   }
@@ -19,7 +20,7 @@ export class RootCache {
   getBlockRoot(epoch: Epoch): Root {
     let root = this.blockRootEpochCache.get(epoch);
     if (!root) {
-      root = this.state.getBlockRoot(epoch);
+      root = getBlockRoot(this.state, epoch);
       this.blockRootEpochCache.set(epoch, root);
     }
     return root;
@@ -28,7 +29,7 @@ export class RootCache {
   getBlockRootAtSlot(slot: Slot): Root {
     let root = this.blockRootSlotCache.get(slot);
     if (!root) {
-      root = this.state.getBlockRootAtSlot(slot);
+      root = getBlockRootAtSlot(this.state, slot);
       this.blockRootSlotCache.set(slot, root);
     }
     return root;

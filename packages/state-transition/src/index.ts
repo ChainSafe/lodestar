@@ -33,6 +33,7 @@ export {
   isCachedBeaconState,
   isStateBalancesNodesPopulated,
   isStateValidatorsNodesPopulated,
+  loadCachedBeaconState,
 } from "./cache/stateCache.js";
 export {type SyncCommitteeCache} from "./cache/syncCommitteeCache.js";
 export * from "./constants/index.js";
