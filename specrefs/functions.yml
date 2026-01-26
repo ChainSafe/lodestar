@@ -1,4 +1,4 @@
-- name: add_flag
+- name: add_flag#altair
   sources: []
   spec: |
     <spec fn="add_flag" fork="altair" hash="0e22f6e5">
@@ -128,7 +128,7 @@
         )
     </spec>
 
-- name: apply_light_client_update
+- name: apply_light_client_update#altair
   sources: []
   spec: |
     <spec fn="apply_light_client_update" fork="altair" hash="211a52c9">
@@ -151,7 +151,7 @@
                 store.optimistic_header = store.finalized_header
     </spec>
 
-- name: apply_pending_deposit
+- name: apply_pending_deposit#electra
   sources:
     - file: packages/state-transition/src/epoch/processPendingDeposits.ts
       search: function applyPendingDeposit(
@@ -303,7 +303,7 @@
         )
     </spec>
 
-- name: bytes_to_uint64
+- name: bytes_to_uint64#phase0
   sources: []
   spec: |
     <spec fn="bytes_to_uint64" fork="phase0" hash="3099d397">
@@ -314,7 +314,7 @@
         return uint64(int.from_bytes(data, ENDIANNESS))
     </spec>
 
-- name: calculate_committee_fraction
+- name: calculate_committee_fraction#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: export function getCommitteeFraction(
@@ -325,7 +325,7 @@
         return Gwei((committee_weight * committee_percent) // 100)
     </spec>
 
-- name: check_if_validator_active
+- name: check_if_validator_active#phase0
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function isActiveValidator(
@@ -336,7 +336,7 @@
         return is_active_validator(validator, get_current_epoch(state))
     </spec>
 
-- name: compute_activation_exit_epoch
+- name: compute_activation_exit_epoch#phase0
   sources:
     - file: packages/state-transition/src/util/epoch.ts
       search: export function computeActivationExitEpoch(
@@ -349,7 +349,7 @@
         return Epoch(epoch + 1 + MAX_SEED_LOOKAHEAD)
     </spec>
 
-- name: compute_balance_weighted_acceptance
+- name: compute_balance_weighted_acceptance#gloas
   sources: []
   spec: |
     <spec fn="compute_balance_weighted_acceptance" fork="gloas" hash="9954dcd0">
@@ -368,7 +368,7 @@
         return effective_balance * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_ELECTRA * random_value
     </spec>
 
-- name: compute_balance_weighted_selection
+- name: compute_balance_weighted_selection#gloas
   sources: []
   spec: |
     <spec fn="compute_balance_weighted_selection" fork="gloas" hash="2c9f1c23">
@@ -400,7 +400,7 @@
         return selected
     </spec>
 
-- name: compute_columns_for_custody_group
+- name: compute_columns_for_custody_group#fulu
   sources:
     - file: packages/beacon-node/src/util/dataColumns.ts
       search: export function computeColumnsForCustodyGroup(
@@ -414,7 +414,7 @@
         ]
     </spec>
 
-- name: compute_committee
+- name: compute_committee#phase0
   sources:
     - file: packages/state-transition/src/util/epochShuffling.ts
       search: function buildCommitteesFromShuffling(
@@ -434,7 +434,7 @@
         ]
     </spec>
 
-- name: compute_consolidation_epoch_and_update_churn
+- name: compute_consolidation_epoch_and_update_churn#electra
   sources:
     - file: packages/state-transition/src/util/epoch.ts
       search: export function computeConsolidationEpochAndUpdateChurn(
@@ -469,7 +469,7 @@
         return state.earliest_consolidation_epoch
     </spec>
 
-- name: compute_domain
+- name: compute_domain#phase0
   sources:
     - file: packages/state-transition/src/util/domain.ts
       search: export function computeDomain(
@@ -489,7 +489,7 @@
         return Domain(domain_type + fork_data_root[:28])
     </spec>
 
-- name: compute_epoch_at_slot
+- name: compute_epoch_at_slot#phase0
   sources:
     - file: packages/state-transition/src/util/epoch.ts
       search: export function computeEpochAtSlot(
@@ -502,7 +502,7 @@
         return Epoch(slot // SLOTS_PER_EPOCH)
     </spec>
 
-- name: compute_exit_epoch_and_update_churn
+- name: compute_exit_epoch_and_update_churn#electra
   sources:
     - file: packages/state-transition/src/util/epoch.ts
       search: export function computeExitEpochAndUpdateChurn(
@@ -533,7 +533,7 @@
         return state.earliest_exit_epoch
     </spec>
 
-- name: compute_fork_data_root
+- name: compute_fork_data_root#phase0
   sources:
     - file: packages/state-transition/src/util/domain.ts
       search: export function computeForkDataRoot(
@@ -752,7 +752,7 @@
         return GENESIS_FORK_VERSION
     </spec>
 
-- name: compute_matrix
+- name: compute_matrix#fulu
   sources:
     - file: packages/beacon-node/src/util/dataColumns.ts
       search: export async function getCellsAndProofs(
@@ -780,14 +780,14 @@
         return matrix
     </spec>
 
-- name: compute_merkle_proof
+- name: compute_merkle_proof#altair
   sources: []
   spec: |
     <spec fn="compute_merkle_proof" fork="altair" hash="073d848c">
     def compute_merkle_proof(object: SSZObject, index: GeneralizedIndex) -> Sequence[Bytes32]: ...
     </spec>
 
-- name: compute_new_state_root
+- name: compute_new_state_root#phase0
   sources:
     - file: packages/beacon-node/src/chain/produceBlock/computeNewStateRoot.ts
       search: export function computeNewStateRoot(
@@ -800,7 +800,7 @@
         return hash_tree_root(temp_state)
     </spec>
 
-- name: compute_on_chain_aggregate
+- name: compute_on_chain_aggregate#electra
   sources: []
   spec: |
     <spec fn="compute_on_chain_aggregate" fork="electra" hash="128055d6">
@@ -920,7 +920,7 @@
         ]
     </spec>
 
-- name: compute_pulled_up_tip
+- name: compute_pulled_up_tip#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: // same logic to compute_pulled_up_tip in the spec
@@ -943,7 +943,7 @@
             update_checkpoints(store, state.current_justified_checkpoint, state.finalized_checkpoint)
     </spec>
 
-- name: compute_shuffled_index
+- name: compute_shuffled_index#phase0
   sources:
     - file: packages/state-transition/src/util/seed.ts
       search: export function computeShuffledIndex(
@@ -971,7 +971,7 @@
         return index
     </spec>
 
-- name: compute_signed_block_header
+- name: compute_signed_block_header#deneb
   sources:
     - file: packages/state-transition/src/util/blockRoot.ts
       search: export function signedBlockToSignedHeader(
@@ -989,7 +989,7 @@
         return SignedBeaconBlockHeader(message=block_header, signature=signed_block.signature)
     </spec>
 
-- name: compute_signing_root
+- name: compute_signing_root#phase0
   sources:
     - file: packages/state-transition/src/util/signingRoot.ts
       search: export function computeSigningRoot<T>(
@@ -1007,7 +1007,7 @@
         )
     </spec>
 
-- name: compute_slots_since_epoch_start
+- name: compute_slots_since_epoch_start#phase0
   sources:
     - file: packages/state-transition/src/util/slot.ts
       search: export function computeSlotsSinceEpochStart(
@@ -1017,7 +1017,7 @@
         return slot - compute_start_slot_at_epoch(compute_epoch_at_slot(slot))
     </spec>
 
-- name: compute_start_slot_at_epoch
+- name: compute_start_slot_at_epoch#phase0
   sources:
     - file: packages/state-transition/src/util/epoch.ts
       search: export function computeStartSlotAtEpoch(
@@ -1030,7 +1030,7 @@
         return Slot(epoch * SLOTS_PER_EPOCH)
     </spec>
 
-- name: compute_subnet_for_attestation
+- name: compute_subnet_for_attestation#phase0
   sources:
     - file: packages/beacon-node/src/chain/validation/attestation.ts
       search: export function computeSubnetForSlot(
@@ -1069,7 +1069,7 @@
         return SubnetID(blob_index % BLOB_SIDECAR_SUBNET_COUNT_ELECTRA)
     </spec>
 
-- name: compute_subnet_for_data_column_sidecar
+- name: compute_subnet_for_data_column_sidecar#fulu
   sources:
     - file: packages/beacon-node/src/chain/validation/dataColumnSidecar.ts
       search: export function computeSubnetForDataColumnSidecar(
@@ -1079,7 +1079,7 @@
         return SubnetID(column_index % DATA_COLUMN_SIDECAR_SUBNET_COUNT)
     </spec>
 
-- name: compute_subnets_for_sync_committee
+- name: compute_subnets_for_sync_committee#altair
   sources: []
   spec: |
     <spec fn="compute_subnets_for_sync_committee" fork="altair" hash="637ad33a">
@@ -1106,7 +1106,7 @@
         )
     </spec>
 
-- name: compute_subscribed_subnet
+- name: compute_subscribed_subnet#phase0
   sources:
     - file: packages/beacon-node/src/network/subnets/util.ts
       search: export function computeSubscribedSubnetByIndex(
@@ -1126,7 +1126,7 @@
         return SubnetID((permutated_prefix + index) % ATTESTATION_SUBNET_COUNT)
     </spec>
 
-- name: compute_subscribed_subnets
+- name: compute_subscribed_subnets#phase0
   sources:
     - file: packages/beacon-node/src/network/subnets/util.ts
       search: export function computeSubscribedSubnet(
@@ -1136,7 +1136,7 @@
         return [compute_subscribed_subnet(node_id, epoch, index) for index in range(SUBNETS_PER_NODE)]
     </spec>
 
-- name: compute_sync_committee_period
+- name: compute_sync_committee_period#altair
   sources:
     - file: packages/state-transition/src/util/epoch.ts
       search: export function computeSyncPeriodAtEpoch(
@@ -1146,7 +1146,7 @@
         return epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     </spec>
 
-- name: compute_sync_committee_period_at_slot
+- name: compute_sync_committee_period_at_slot#altair
   sources:
     - file: packages/state-transition/src/util/epoch.ts
       search: export function computeSyncPeriodAtSlot(
@@ -1156,7 +1156,7 @@
         return compute_sync_committee_period(compute_epoch_at_slot(slot))
     </spec>
 
-- name: compute_time_at_slot
+- name: compute_time_at_slot#phase0
   sources:
     - file: packages/state-transition/src/util/slot.ts
       search: export function computeTimeAtSlot(
@@ -1222,7 +1222,7 @@
         return MIN_VALIDATOR_WITHDRAWABILITY_DELAY + epochs_for_validator_set_churn
     </spec>
 
-- name: create_light_client_bootstrap
+- name: create_light_client_bootstrap#altair
   sources: []
   spec: |
     <spec fn="create_light_client_bootstrap" fork="altair" hash="54e41304">
@@ -1245,7 +1245,7 @@
         )
     </spec>
 
-- name: create_light_client_finality_update
+- name: create_light_client_finality_update#altair
   sources: []
   spec: |
     <spec fn="create_light_client_finality_update" fork="altair" hash="21956507">
@@ -1259,7 +1259,7 @@
         )
     </spec>
 
-- name: create_light_client_optimistic_update
+- name: create_light_client_optimistic_update#altair
   sources: []
   spec: |
     <spec fn="create_light_client_optimistic_update" fork="altair" hash="5a993ad2">
@@ -1271,7 +1271,7 @@
         )
     </spec>
 
-- name: create_light_client_update
+- name: create_light_client_update#altair
   sources: []
   spec: |
     <spec fn="create_light_client_update" fork="altair" hash="cde7d86c">
@@ -1358,7 +1358,7 @@
         return CURRENT_SYNC_COMMITTEE_GINDEX
     </spec>
 
-- name: decrease_balance
+- name: decrease_balance#phase0
   sources:
     - file: packages/state-transition/src/util/balance.ts
       search: export function decreaseBalance(
@@ -1371,7 +1371,7 @@
         state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
     </spec>
 
-- name: eth_aggregate_pubkeys
+- name: eth_aggregate_pubkeys#altair
   sources: []
   spec: |
     <spec fn="eth_aggregate_pubkeys" fork="altair" hash="bfb5ddd0">
@@ -1394,7 +1394,7 @@
         return result
     </spec>
 
-- name: eth_fast_aggregate_verify
+- name: eth_fast_aggregate_verify#altair
   sources: []
   spec: |
     <spec fn="eth_fast_aggregate_verify" fork="altair" hash="452a1740">
@@ -1409,7 +1409,7 @@
         return bls.FastAggregateVerify(pubkeys, message, signature)
     </spec>
 
-- name: filter_block_tree
+- name: filter_block_tree#phase0
   sources:
     - file: packages/fork-choice/src/protoArray/protoArray.ts
       search: '^\s+nodeIsViableForHead\(node:'
@@ -1483,7 +1483,7 @@
         return FINALIZED_ROOT_GINDEX
     </spec>
 
-- name: get_activation_exit_churn_limit
+- name: get_activation_exit_churn_limit#electra
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function getActivationExitChurnLimit(
@@ -1496,7 +1496,7 @@
         return min(MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, get_balance_churn_limit(state))
     </spec>
 
-- name: get_active_validator_indices
+- name: get_active_validator_indices#phase0
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function getActiveValidatorIndices(
@@ -1511,7 +1511,7 @@
         ]
     </spec>
 
-- name: get_aggregate_and_proof
+- name: get_aggregate_and_proof#phase0
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signAggregateAndProof(
@@ -1527,7 +1527,7 @@
         )
     </spec>
 
-- name: get_aggregate_and_proof_signature
+- name: get_aggregate_and_proof_signature#phase0
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signAggregateAndProof(
@@ -1567,7 +1567,7 @@
         return get_slot_component_duration_ms(AGGREGATE_DUE_BPS)
     </spec>
 
-- name: get_aggregate_signature
+- name: get_aggregate_signature#phase0
   sources: []
   spec: |
     <spec fn="get_aggregate_signature" fork="phase0" hash="1797b223">
@@ -1614,7 +1614,7 @@
             )
     </spec>
 
-- name: get_attestation_component_deltas
+- name: get_attestation_component_deltas#phase0
   sources: []
   spec: |
     <spec fn="get_attestation_component_deltas" fork="phase0" hash="c6d7c444">
@@ -1644,7 +1644,7 @@
         return rewards, penalties
     </spec>
 
-- name: get_attestation_deltas
+- name: get_attestation_deltas#phase0
   sources:
     - file: packages/state-transition/src/epoch/getAttestationDeltas.ts
       search: export function getAttestationDeltas(
@@ -1831,7 +1831,7 @@
         return participation_flag_indices
     </spec>
 
-- name: get_attestation_signature
+- name: get_attestation_signature#phase0
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signAttestation(
@@ -1845,7 +1845,7 @@
         return bls.Sign(privkey, signing_root)
     </spec>
 
-- name: get_attesting_balance
+- name: get_attesting_balance#phase0
   sources: []
   spec: |
     <spec fn="get_attesting_balance" fork="phase0" hash="bc7890c1">
@@ -1898,7 +1898,7 @@
         return output
     </spec>
 
-- name: get_balance_churn_limit
+- name: get_balance_churn_limit#electra
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function getBalanceChurnLimit(
@@ -1941,7 +1941,7 @@
         return Gwei(increments * get_base_reward_per_increment(state))
     </spec>
 
-- name: get_base_reward_per_increment
+- name: get_base_reward_per_increment#altair
   sources:
     - file: packages/state-transition/src/util/syncCommittee.ts
       search: export function computeBaseRewardPerIncrement(
@@ -1955,7 +1955,7 @@
         )
     </spec>
 
-- name: get_beacon_committee
+- name: get_beacon_committee#phase0
   sources:
     - file: packages/state-transition/src/cache/epochCache.ts
       search: "getBeaconCommittee(slot: Slot, index: CommitteeIndex)"
@@ -2006,7 +2006,7 @@
         return state.proposer_lookahead[state.slot % SLOTS_PER_EPOCH]
     </spec>
 
-- name: get_beacon_proposer_indices
+- name: get_beacon_proposer_indices#fulu
   sources: []
   spec: |
     <spec fn="get_beacon_proposer_indices" fork="fulu" hash="f5866a8f">
@@ -2021,7 +2021,7 @@
         return compute_proposer_indices(state, epoch, seed, indices)
     </spec>
 
-- name: get_blob_parameters
+- name: get_blob_parameters#fulu
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getBlobParameters(epoch: Epoch): BlobParameters {"
@@ -2037,7 +2037,7 @@
         return BlobParameters(ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK_ELECTRA)
     </spec>
 
-- name: get_blob_sidecars
+- name: get_blob_sidecars#deneb
   sources:
     - file: packages/beacon-node/src/util/blobs.ts
       search: export function getBlobSidecars(
@@ -2064,7 +2064,7 @@
         ]
     </spec>
 
-- name: get_block_root
+- name: get_block_root#phase0
   sources:
     - file: packages/state-transition/src/util/blockRoot.ts
       search: export function getBlockRoot(
@@ -2077,7 +2077,7 @@
         return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
     </spec>
 
-- name: get_block_root_at_slot
+- name: get_block_root_at_slot#phase0
   sources:
     - file: packages/state-transition/src/util/blockRoot.ts
       search: export function getBlockRootAtSlot(
@@ -2091,7 +2091,7 @@
         return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
     </spec>
 
-- name: get_block_signature
+- name: get_block_signature#phase0
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signBlock(
@@ -2103,7 +2103,7 @@
         return bls.Sign(privkey, signing_root)
     </spec>
 
-- name: get_builder_payment_quorum_threshold
+- name: get_builder_payment_quorum_threshold#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
       search: export function getBuilderPaymentQuorumThreshold(
@@ -2142,7 +2142,7 @@
         return get_ancestor(store, root, epoch_first_slot).root
     </spec>
 
-- name: get_committee_assignment
+- name: get_committee_assignment#phase0
   sources:
     - file: packages/state-transition/src/cache/epochCache.ts
       search: getCommitteeAssignments(
@@ -2172,7 +2172,7 @@
         return None
     </spec>
 
-- name: get_committee_count_per_slot
+- name: get_committee_count_per_slot#phase0
   sources:
     - file: packages/state-transition/src/util/epochShuffling.ts
       search: export function computeCommitteeCount(
@@ -2193,7 +2193,7 @@
         )
     </spec>
 
-- name: get_committee_indices
+- name: get_committee_indices#electra
   sources: []
   spec: |
     <spec fn="get_committee_indices" fork="electra" hash="fa701795">
@@ -2201,7 +2201,7 @@
         return [CommitteeIndex(index) for index, bit in enumerate(committee_bits) if bit]
     </spec>
 
-- name: get_consolidation_churn_limit
+- name: get_consolidation_churn_limit#electra
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function getConsolidationChurnLimit(
@@ -2211,7 +2211,7 @@
         return get_balance_churn_limit(state) - get_activation_exit_churn_limit(state)
     </spec>
 
-- name: get_contribution_and_proof
+- name: get_contribution_and_proof#altair
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signContributionAndProof(
@@ -2236,7 +2236,7 @@
         )
     </spec>
 
-- name: get_contribution_and_proof_signature
+- name: get_contribution_and_proof_signature#altair
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signContributionAndProof(
@@ -2276,7 +2276,7 @@
         return get_slot_component_duration_ms(CONTRIBUTION_DUE_BPS)
     </spec>
 
-- name: get_current_epoch
+- name: get_current_epoch#phase0
   sources:
     - file: packages/state-transition/src/util/epoch.ts
       search: export function getCurrentEpoch(
@@ -2289,7 +2289,7 @@
         return compute_epoch_at_slot(state.slot)
     </spec>
 
-- name: get_current_slot
+- name: get_current_slot#phase0
   sources:
     - file: packages/state-transition/src/util/slot.ts
       search: export function getCurrentSlot(
@@ -2299,7 +2299,7 @@
         return Slot(GENESIS_SLOT + get_slots_since_genesis(store))
     </spec>
 
-- name: get_current_store_epoch
+- name: get_current_store_epoch#phase0
   sources: []
   spec: |
     <spec fn="get_current_store_epoch" fork="phase0" hash="4d86e690">
@@ -2307,7 +2307,7 @@
         return compute_epoch_at_slot(get_current_slot(store))
     </spec>
 
-- name: get_custody_groups
+- name: get_custody_groups#fulu
   sources:
     - file: packages/beacon-node/src/util/dataColumns.ts
       search: export function getCustodyGroups(
@@ -2525,7 +2525,7 @@
         )
     </spec>
 
-- name: get_domain
+- name: get_domain#phase0
   sources:
     - file: packages/config/src/genesisConfig/index.ts
       search: "getDomain(domainSlot: Slot, domainType: DomainType, messageSlot?: Slot)"
@@ -2542,7 +2542,7 @@
         return compute_domain(domain_type, fork_version, state.genesis_validators_root)
     </spec>
 
-- name: get_eligible_validator_indices
+- name: get_eligible_validator_indices#phase0
   sources: []
   spec: |
     <spec fn="get_eligible_validator_indices" fork="phase0" hash="22a24ce4">
@@ -2556,7 +2556,7 @@
         ]
     </spec>
 
-- name: get_epoch_signature
+- name: get_epoch_signature#phase0
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signRandao(
@@ -2568,7 +2568,7 @@
         return bls.Sign(privkey, signing_root)
     </spec>
 
-- name: get_eth1_pending_deposit_count
+- name: get_eth1_pending_deposit_count#electra
   sources: []
   spec: |
     <spec fn="get_eth1_pending_deposit_count" fork="electra" hash="5dc54930">
@@ -2662,7 +2662,7 @@
         )
     </spec>
 
-- name: get_execution_payload
+- name: get_execution_payload#bellatrix
   sources: []
   spec: |
     <spec fn="get_execution_payload" fork="bellatrix" hash="abcc202e">
@@ -2676,7 +2676,7 @@
             return execution_engine.get_payload(payload_id).execution_payload
     </spec>
 
-- name: get_execution_payload_bid_signature
+- name: get_execution_payload_bid_signature#gloas
   sources: []
   spec: |
     <spec fn="get_execution_payload_bid_signature" fork="gloas" hash="c09cbb78">
@@ -2688,7 +2688,7 @@
         return bls.Sign(privkey, signing_root)
     </spec>
 
-- name: get_execution_payload_envelope_signature
+- name: get_execution_payload_envelope_signature#gloas
   sources: []
   spec: |
     <spec fn="get_execution_payload_envelope_signature" fork="gloas" hash="7291faa5">
@@ -2700,7 +2700,7 @@
         return bls.Sign(privkey, signing_root)
     </spec>
 
-- name: get_execution_requests
+- name: get_execution_requests#electra
   sources: []
   spec: |
     <spec fn="get_execution_requests" fork="electra" hash="2c0fb728">
@@ -2748,7 +2748,7 @@
         )
     </spec>
 
-- name: get_execution_requests_list
+- name: get_execution_requests_list#electra
   sources:
     - file: packages/beacon-node/src/execution/engine/types.ts
       search: export function serializeExecutionRequests(
@@ -3005,7 +3005,7 @@
         )
     </spec>
 
-- name: get_filtered_block_tree
+- name: get_filtered_block_tree#phase0
   sources: []
   spec: |
     <spec fn="get_filtered_block_tree" fork="phase0" hash="31b703b4">
@@ -3020,7 +3020,7 @@
         return blocks
     </spec>
 
-- name: get_finality_delay
+- name: get_finality_delay#phase0
   sources:
     - file: packages/state-transition/src/util/finality.ts
       search: export function getFinalityDelay(
@@ -3030,7 +3030,7 @@
         return get_previous_epoch(state) - state.finalized_checkpoint.epoch
     </spec>
 
-- name: get_flag_index_deltas
+- name: get_flag_index_deltas#altair
   sources:
     - file: packages/state-transition/src/epoch/getRewardsAndPenalties.ts
       search: // same logic to getFlagIndexDeltas
@@ -3171,7 +3171,7 @@
             )
     </spec>
 
-- name: get_head_deltas
+- name: get_head_deltas#phase0
   sources: []
   spec: |
     <spec fn="get_head_deltas" fork="phase0" hash="3e9b5111">
@@ -3269,7 +3269,7 @@
         return rewards, penalties
     </spec>
 
-- name: get_inclusion_delay_deltas
+- name: get_inclusion_delay_deltas#phase0
   sources: []
   spec: |
     <spec fn="get_inclusion_delay_deltas" fork="phase0" hash="aa690a2f">
@@ -3297,7 +3297,7 @@
         return rewards, penalties
     </spec>
 
-- name: get_index_for_new_validator
+- name: get_index_for_new_validator#altair
   sources:
     - file: packages/state-transition/src/block/processDeposit.ts
       search: export function addValidatorToRegistry(
@@ -3307,7 +3307,7 @@
         return ValidatorIndex(len(state.validators))
     </spec>
 
-- name: get_indexed_attestation
+- name: get_indexed_attestation#phase0
   sources:
     - file: packages/state-transition/src/cache/epochCache.ts
       search: "getIndexedAttestation(fork: ForkSeq, attestation: Attestation)"
@@ -3326,7 +3326,7 @@
         )
     </spec>
 
-- name: get_indexed_payload_attestation
+- name: get_indexed_payload_attestation#gloas
   sources:
     - file: packages/state-transition/src/cache/epochCache.ts
       search: '^\s+getIndexedPayloadAttestation\('
@@ -3455,7 +3455,7 @@
         return Root()
     </spec>
 
-- name: get_matching_head_attestations
+- name: get_matching_head_attestations#phase0
   sources: []
   spec: |
     <spec fn="get_matching_head_attestations" fork="phase0" hash="9e3ca171">
@@ -3469,7 +3469,7 @@
         ]
     </spec>
 
-- name: get_matching_source_attestations
+- name: get_matching_source_attestations#phase0
   sources: []
   spec: |
     <spec fn="get_matching_source_attestations" fork="phase0" hash="4771b4df">
@@ -3484,7 +3484,7 @@
         )
     </spec>
 
-- name: get_matching_target_attestations
+- name: get_matching_target_attestations#phase0
   sources: []
   spec: |
     <spec fn="get_matching_target_attestations" fork="phase0" hash="811f3459">
@@ -3498,7 +3498,7 @@
         ]
     </spec>
 
-- name: get_max_effective_balance
+- name: get_max_effective_balance#electra
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function getMaxEffectiveBalance(
@@ -3514,7 +3514,7 @@
             return MIN_ACTIVATION_BALANCE
     </spec>
 
-- name: get_next_sync_committee
+- name: get_next_sync_committee#altair
   sources:
     - file: packages/state-transition/src/util/syncCommittee.ts
       search: export function getNextSyncCommittee(
@@ -3613,7 +3613,7 @@
         )
     </spec>
 
-- name: get_node_children
+- name: get_node_children#gloas
   sources: []
   spec: |
     <spec fn="get_node_children" fork="gloas" hash="b6012515">
@@ -3636,7 +3636,7 @@
             ]
     </spec>
 
-- name: get_parent_payload_status
+- name: get_parent_payload_status#gloas
   sources: []
   spec: |
     <spec fn="get_parent_payload_status" fork="gloas" hash="4ab82d16">
@@ -3647,7 +3647,7 @@
         return PAYLOAD_STATUS_FULL if parent_block_hash == message_block_hash else PAYLOAD_STATUS_EMPTY
     </spec>
 
-- name: get_payload_attestation_due_ms
+- name: get_payload_attestation_due_ms#gloas
   sources: []
   spec: |
     <spec fn="get_payload_attestation_due_ms" fork="gloas" hash="16f3b9cb">
@@ -3655,7 +3655,7 @@
         return get_slot_component_duration_ms(PAYLOAD_ATTESTATION_DUE_BPS)
     </spec>
 
-- name: get_payload_attestation_message_signature
+- name: get_payload_attestation_message_signature#gloas
   sources: []
   spec: |
     <spec fn="get_payload_attestation_message_signature" fork="gloas" hash="e2a06b4b">
@@ -3667,7 +3667,7 @@
         return bls.Sign(privkey, signing_root)
     </spec>
 
-- name: get_payload_status_tiebreaker
+- name: get_payload_status_tiebreaker#gloas
   sources: []
   spec: |
     <spec fn="get_payload_status_tiebreaker" fork="gloas" hash="5ca841c3">
@@ -3725,7 +3725,7 @@
         )
     </spec>
 
-- name: get_pow_block_at_terminal_total_difficulty
+- name: get_pow_block_at_terminal_total_difficulty#bellatrix
   sources: []
   spec: |
     <spec fn="get_pow_block_at_terminal_total_difficulty" fork="bellatrix" hash="7b6668d2">
@@ -3747,7 +3747,7 @@
         return None
     </spec>
 
-- name: get_previous_epoch
+- name: get_previous_epoch#phase0
   sources:
     - file: packages/state-transition/src/util/epoch.ts
       search: export function getPreviousEpoch(
@@ -3761,7 +3761,7 @@
         return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
     </spec>
 
-- name: get_proposer_head
+- name: get_proposer_head#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "* Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head"
@@ -3817,7 +3817,7 @@
             return head_root
     </spec>
 
-- name: get_proposer_reorg_cutoff_ms
+- name: get_proposer_reorg_cutoff_ms#phase0
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getProposerReorgCutoffMs(_fork: ForkName): number {"
@@ -3827,7 +3827,7 @@
         return get_slot_component_duration_ms(PROPOSER_REORG_CUTOFF_BPS)
     </spec>
 
-- name: get_proposer_reward
+- name: get_proposer_reward#phase0
   sources: []
   spec: |
     <spec fn="get_proposer_reward" fork="phase0" hash="2ccc4963">
@@ -3835,7 +3835,7 @@
         return Gwei(get_base_reward(state, attesting_index) // PROPOSER_REWARD_QUOTIENT)
     </spec>
 
-- name: get_proposer_score
+- name: get_proposer_score#phase0
   sources: []
   spec: |
     <spec fn="get_proposer_score" fork="phase0" hash="164b8de0">
@@ -3845,7 +3845,7 @@
         return (committee_weight * PROPOSER_SCORE_BOOST) // 100
     </spec>
 
-- name: get_ptc
+- name: get_ptc#gloas
   sources:
     - file: packages/state-transition/src/cache/epochCache.ts
       search: '^\s+getPayloadTimelinessCommittee\('
@@ -3869,7 +3869,7 @@
         )
     </spec>
 
-- name: get_ptc_assignment
+- name: get_ptc_assignment#gloas
   sources: []
   spec: |
     <spec fn="get_ptc_assignment" fork="gloas" hash="817acb90">
@@ -3891,7 +3891,7 @@
         return None
     </spec>
 
-- name: get_randao_mix
+- name: get_randao_mix#phase0
   sources:
     - file: packages/state-transition/src/util/seed.ts
       search: export function getRandaoMix(
@@ -3904,7 +3904,7 @@
         return state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
     </spec>
 
-- name: get_safety_threshold
+- name: get_safety_threshold#altair
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function getSafetyThreshold(
@@ -3920,7 +3920,7 @@
         )
     </spec>
 
-- name: get_seed
+- name: get_seed#phase0
   sources:
     - file: packages/state-transition/src/util/seed.ts
       search: export function getSeed(
@@ -3936,7 +3936,7 @@
         return hash(domain_type + uint_to_bytes(epoch) + mix)
     </spec>
 
-- name: get_slot_component_duration_ms
+- name: get_slot_component_duration_ms#phase0
   sources:
     - file: packages/config/src/forkConfig/index.ts
       search: "getSlotComponentDurationMs(basisPoints: number): number {"
@@ -3949,7 +3949,7 @@
         return basis_points * SLOT_DURATION_MS // BASIS_POINTS
     </spec>
 
-- name: get_slot_signature
+- name: get_slot_signature#phase0
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signAttestationSelectionProof(
@@ -3961,7 +3961,7 @@
         return bls.Sign(privkey, signing_root)
     </spec>
 
-- name: get_slots_since_genesis
+- name: get_slots_since_genesis#phase0
   sources:
     - file: packages/state-transition/src/util/slot.ts
       search: export function getSlotsSinceGenesis(
@@ -3971,7 +3971,7 @@
         return (store.time - store.genesis_time) // SECONDS_PER_SLOT
     </spec>
 
-- name: get_source_deltas
+- name: get_source_deltas#phase0
   sources: []
   spec: |
     <spec fn="get_source_deltas" fork="phase0" hash="af1e0223">
@@ -3985,7 +3985,7 @@
         return get_attestation_component_deltas(state, matching_source_attestations)
     </spec>
 
-- name: get_subtree_index
+- name: get_subtree_index#altair
   sources: []
   spec: |
     <spec fn="get_subtree_index" fork="altair" hash="74962089">
@@ -3993,7 +3993,7 @@
         return uint64(generalized_index % 2 ** (floorlog2(generalized_index)))
     </spec>
 
-- name: get_sync_committee_message
+- name: get_sync_committee_message#altair
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signSyncCommitteeSignature(
@@ -4015,7 +4015,7 @@
         )
     </spec>
 
-- name: get_sync_committee_selection_proof
+- name: get_sync_committee_selection_proof#altair
   sources:
     - file: packages/validator/src/services/validatorStore.ts
       search: async signSyncCommitteeSelectionProof(
@@ -4056,7 +4056,7 @@
         return get_slot_component_duration_ms(SYNC_MESSAGE_DUE_BPS)
     </spec>
 
-- name: get_sync_subcommittee_pubkeys
+- name: get_sync_subcommittee_pubkeys#altair
   sources: []
   spec: |
     <spec fn="get_sync_subcommittee_pubkeys" fork="altair" hash="772addda">
@@ -4079,7 +4079,7 @@
         return sync_committee.pubkeys[i : i + sync_subcommittee_size]
     </spec>
 
-- name: get_target_deltas
+- name: get_target_deltas#phase0
   sources: []
   spec: |
     <spec fn="get_target_deltas" fork="phase0" hash="2e16c38d">
@@ -4093,7 +4093,7 @@
         return get_attestation_component_deltas(state, matching_target_attestations)
     </spec>
 
-- name: get_terminal_pow_block
+- name: get_terminal_pow_block#bellatrix
   sources: []
   spec: |
     <spec fn="get_terminal_pow_block" fork="bellatrix" hash="90e145ca">
@@ -4108,7 +4108,7 @@
         return get_pow_block_at_terminal_total_difficulty(pow_chain)
     </spec>
 
-- name: get_total_active_balance
+- name: get_total_active_balance#phase0
   sources: []
   spec: |
     <spec fn="get_total_active_balance" fork="phase0" hash="500e8576">
@@ -4122,7 +4122,7 @@
         )
     </spec>
 
-- name: get_total_balance
+- name: get_total_balance#phase0
   sources:
     - file: packages/state-transition/src/util/balance.ts
       search: export function getTotalBalance(
@@ -4142,7 +4142,7 @@
         )
     </spec>
 
-- name: get_unslashed_attesting_indices
+- name: get_unslashed_attesting_indices#phase0
   sources: []
   spec: |
     <spec fn="get_unslashed_attesting_indices" fork="phase0" hash="21c7dd12">
@@ -4155,7 +4155,7 @@
         return set(filter(lambda index: not state.validators[index].slashed, output))
     </spec>
 
-- name: get_unslashed_participating_indices
+- name: get_unslashed_participating_indices#altair
   sources: []
   spec: |
     <spec fn="get_unslashed_participating_indices" fork="altair" hash="8a8aae5f">
@@ -4177,7 +4177,7 @@
         return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
     </spec>
 
-- name: get_validator_activation_churn_limit
+- name: get_validator_activation_churn_limit#deneb
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function getActivationChurnLimit(
@@ -4190,7 +4190,7 @@
         return min(MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT, get_validator_churn_limit(state))
     </spec>
 
-- name: get_validator_churn_limit
+- name: get_validator_churn_limit#phase0
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function getChurnLimit(
@@ -4258,7 +4258,7 @@
         return validator
     </spec>
 
-- name: get_validators_custody_requirement
+- name: get_validators_custody_requirement#fulu
   sources:
     - file: packages/beacon-node/src/util/dataColumns.ts
       search: export function getValidatorsCustodyRequirement(
@@ -4274,7 +4274,7 @@
         return min(max(count, VALIDATOR_CUSTODY_REQUIREMENT), NUMBER_OF_CUSTODY_GROUPS)
     </spec>
 
-- name: get_voting_source
+- name: get_voting_source#phase0
   sources: []
   spec: |
     <spec fn="get_voting_source" fork="phase0" hash="0af91bae">
@@ -4378,7 +4378,7 @@
             return Gwei(0)
     </spec>
 
-- name: has_builder_withdrawal_credential
+- name: has_builder_withdrawal_credential#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
       search: export function hasBuilderWithdrawalCredential(
@@ -4419,7 +4419,7 @@
         return False
     </spec>
 
-- name: has_eth1_withdrawal_credential
+- name: has_eth1_withdrawal_credential#capella
   sources:
     - file: packages/state-transition/src/util/capella.ts
       search: export function hasEth1WithdrawalCredential(
@@ -4432,7 +4432,7 @@
         return validator.withdrawal_credentials[:1] == ETH1_ADDRESS_WITHDRAWAL_PREFIX
     </spec>
 
-- name: has_execution_withdrawal_credential
+- name: has_execution_withdrawal_credential#electra
   sources:
     - file: packages/state-transition/src/util/electra.ts
       search: export function hasExecutionWithdrawalCredential(
@@ -4448,7 +4448,7 @@
         )
     </spec>
 
-- name: has_flag
+- name: has_flag#altair
   sources:
     - file: packages/state-transition/src/util/attesterStatus.ts
       search: "/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */"
@@ -4462,7 +4462,7 @@
         return flags & flag == flag
     </spec>
 
-- name: increase_balance
+- name: increase_balance#phase0
   sources:
     - file: packages/state-transition/src/util/balance.ts
       search: export function increaseBalance(
@@ -4475,7 +4475,7 @@
         state.balances[index] += delta
     </spec>
 
-- name: initialize_beacon_state_from_eth1
+- name: initialize_beacon_state_from_eth1#phase0
   sources:
     - file: packages/state-transition/src/util/genesis.ts
       search: export function initializeBeaconStateFromEth1(
@@ -4521,7 +4521,7 @@
         return state
     </spec>
 
-- name: initialize_light_client_store
+- name: initialize_light_client_store#altair
   sources:
     - file: packages/light-client/src/spec/store.ts
       search: export class LightClientStore
@@ -4551,7 +4551,7 @@
         )
     </spec>
 
-- name: initialize_proposer_lookahead
+- name: initialize_proposer_lookahead#fulu
   sources:
     - file: packages/state-transition/src/util/fulu.ts
       search: export function initializeProposerLookahead(
@@ -4621,7 +4621,7 @@
         validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
     </spec>
 
-- name: integer_squareroot
+- name: integer_squareroot#phase0
   sources:
     - file: packages/utils/src/math.ts
       search: export function intSqrt(
@@ -4641,7 +4641,7 @@
         return x
     </spec>
 
-- name: is_active_validator
+- name: is_active_validator#phase0
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function isActiveValidator(
@@ -4654,7 +4654,7 @@
         return validator.activation_epoch <= epoch < validator.exit_epoch
     </spec>
 
-- name: is_aggregator
+- name: is_aggregator#phase0
   sources:
     - file: packages/state-transition/src/util/aggregator.ts
       search: export function isAggregatorFromCommitteeLength(
@@ -4668,7 +4668,7 @@
         return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == 0
     </spec>
 
-- name: is_assigned_to_sync_committee
+- name: is_assigned_to_sync_committee#altair
   sources: []
   spec: |
     <spec fn="is_assigned_to_sync_committee" fork="altair" hash="b83187d8">
@@ -4688,7 +4688,7 @@
             return pubkey in state.next_sync_committee.pubkeys
     </spec>
 
-- name: is_attestation_same_slot
+- name: is_attestation_same_slot#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
       search: export function isAttestationSameSlot(
@@ -4708,7 +4708,7 @@
         return blockroot == slot_blockroot and blockroot != prev_blockroot
     </spec>
 
-- name: is_better_update
+- name: is_better_update#altair
   sources:
     - file: packages/light-client/src/spec/isBetterUpdate.ts
       search: export function isBetterUpdate(
@@ -4767,7 +4767,7 @@
         return new_update.signature_slot < old_update.signature_slot
     </spec>
 
-- name: is_builder_payment_withdrawable
+- name: is_builder_payment_withdrawable#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
       search: export function isBuilderPaymentWithdrawable(
@@ -4784,7 +4784,7 @@
         return builder.withdrawable_epoch >= current_epoch or not builder.slashed
     </spec>
 
-- name: is_builder_withdrawal_credential
+- name: is_builder_withdrawal_credential#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
       search: export function hasBuilderWithdrawalCredential(
@@ -4794,7 +4794,7 @@
         return withdrawal_credentials[:1] == BUILDER_WITHDRAWAL_PREFIX
     </spec>
 
-- name: is_candidate_block
+- name: is_candidate_block#phase0
   sources: []
   spec: |
     <spec fn="is_candidate_block" fork="phase0" hash="c588dc0a">
@@ -4805,7 +4805,7 @@
         )
     </spec>
 
-- name: is_compounding_withdrawal_credential
+- name: is_compounding_withdrawal_credential#electra
   sources:
     - file: packages/state-transition/src/util/electra.ts
       search: export function hasCompoundingWithdrawalCredential(
@@ -4853,7 +4853,7 @@
         )
     </spec>
 
-- name: is_eligible_for_activation
+- name: is_eligible_for_activation#phase0
   sources:
     - file: packages/state-transition/src/cache/epochTransitionCache.ts
       search: "// def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool:"
@@ -4904,7 +4904,7 @@
         )
     </spec>
 
-- name: is_execution_block
+- name: is_execution_block#bellatrix
   sources: []
   spec: |
     <spec fn="is_execution_block" fork="bellatrix" hash="26be0b84">
@@ -4912,7 +4912,7 @@
         return block.body.execution_payload != ExecutionPayload()
     </spec>
 
-- name: is_execution_enabled
+- name: is_execution_enabled#bellatrix
   sources:
     - file: packages/state-transition/src/util/execution.ts
       search: export function isExecutionEnabled(
@@ -4922,7 +4922,7 @@
         return is_merge_transition_block(state, body) or is_merge_transition_complete(state)
     </spec>
 
-- name: is_ffg_competitive
+- name: is_ffg_competitive#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "// https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_ffg_competitive"
@@ -4934,7 +4934,7 @@
         )
     </spec>
 
-- name: is_finality_update
+- name: is_finality_update#altair
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function isFinalityUpdate(
@@ -4944,7 +4944,7 @@
         return update.finality_branch != FinalityBranch()
     </spec>
 
-- name: is_finalization_ok
+- name: is_finalization_ok#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "// https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_finalization_ok"
@@ -4986,7 +4986,7 @@
         )
     </spec>
 
-- name: is_head_late
+- name: is_head_late#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "// https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_late"
@@ -4996,7 +4996,7 @@
         return not store.block_timeliness[head_root]
     </spec>
 
-- name: is_head_weak
+- name: is_head_weak#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "// https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak"
@@ -5009,7 +5009,7 @@
         return head_weight < reorg_threshold
     </spec>
 
-- name: is_in_inactivity_leak
+- name: is_in_inactivity_leak#phase0
   sources:
     - file: packages/state-transition/src/util/finality.ts
       search: export function isInInactivityLeak(
@@ -5019,7 +5019,7 @@
         return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
     </spec>
 
-- name: is_merge_transition_block
+- name: is_merge_transition_block#bellatrix
   sources: []
   spec: |
     <spec fn="is_merge_transition_block" fork="bellatrix" hash="f0b5e2a0">
@@ -5027,7 +5027,7 @@
         return not is_merge_transition_complete(state) and body.execution_payload != ExecutionPayload()
     </spec>
 
-- name: is_merge_transition_complete
+- name: is_merge_transition_complete#bellatrix
   sources:
     - file: packages/state-transition/src/util/execution.ts
       search: export function isMergeTransitionComplete(
@@ -5037,7 +5037,7 @@
         return state.latest_execution_payload_header != ExecutionPayloadHeader()
     </spec>
 
-- name: is_next_sync_committee_known
+- name: is_next_sync_committee_known#altair
   sources: []
   spec: |
     <spec fn="is_next_sync_committee_known" fork="altair" hash="f5d3196e">
@@ -5045,7 +5045,7 @@
         return store.next_sync_committee != SyncCommittee()
     </spec>
 
-- name: is_optimistic
+- name: is_optimistic#bellatrix
   sources: []
   spec: |
     <spec fn="is_optimistic" fork="bellatrix" hash="d5afd615">
@@ -5053,7 +5053,7 @@
         return hash_tree_root(block) in opt_store.optimistic_roots
     </spec>
 
-- name: is_optimistic_candidate_block
+- name: is_optimistic_candidate_block#bellatrix
   sources: []
   spec: |
     <spec fn="is_optimistic_candidate_block" fork="bellatrix" hash="fdb54007">
@@ -5069,7 +5069,7 @@
         return False
     </spec>
 
-- name: is_parent_block_full
+- name: is_parent_block_full#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
       search: export function isParentBlockFull(
@@ -5079,7 +5079,7 @@
         return state.latest_execution_payload_bid.block_hash == state.latest_block_hash
     </spec>
 
-- name: is_parent_node_full
+- name: is_parent_node_full#gloas
   sources: []
   spec: |
     <spec fn="is_parent_node_full" fork="gloas" hash="4fc2d12c">
@@ -5087,7 +5087,7 @@
         return get_parent_payload_status(store, block) == PAYLOAD_STATUS_FULL
     </spec>
 
-- name: is_parent_strong
+- name: is_parent_strong#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#is_parent_strong"
@@ -5138,7 +5138,7 @@
         )
     </spec>
 
-- name: is_payload_timely
+- name: is_payload_timely#gloas
   sources: []
   spec: |
     <spec fn="is_payload_timely" fork="gloas" hash="ae36e125">
@@ -5158,7 +5158,7 @@
         return sum(store.ptc_vote[root]) > PAYLOAD_TIMELY_THRESHOLD
     </spec>
 
-- name: is_proposer
+- name: is_proposer#phase0
   sources: []
   spec: |
     <spec fn="is_proposer" fork="phase0" hash="d9e66d76">
@@ -5166,7 +5166,7 @@
         return get_beacon_proposer_index(state) == validator_index
     </spec>
 
-- name: is_proposing_on_time
+- name: is_proposing_on_time#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "* https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/phase0/fork-choice.md#is_proposing_on_time"
@@ -5180,7 +5180,7 @@
         return time_into_slot_ms <= proposer_reorg_cutoff_ms
     </spec>
 
-- name: is_shuffling_stable
+- name: is_shuffling_stable#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "// https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_shuffling_stable"
@@ -5190,7 +5190,7 @@
         return slot % SLOTS_PER_EPOCH != 0
     </spec>
 
-- name: is_slashable_attestation_data
+- name: is_slashable_attestation_data#phase0
   sources:
     - file: packages/state-transition/src/util/attestation.ts
       search: export function isSlashableAttestationData(
@@ -5209,7 +5209,7 @@
         )
     </spec>
 
-- name: is_slashable_validator
+- name: is_slashable_validator#phase0
   sources:
     - file: packages/state-transition/src/util/validator.ts
       search: export function isSlashableValidator(
@@ -5224,7 +5224,7 @@
         )
     </spec>
 
-- name: is_supporting_vote
+- name: is_supporting_vote#gloas
   sources: []
   spec: |
     <spec fn="is_supporting_vote" fork="gloas" hash="c65a637a">
@@ -5252,7 +5252,7 @@
             )
     </spec>
 
-- name: is_sync_committee_aggregator
+- name: is_sync_committee_aggregator#altair
   sources:
     - file: packages/state-transition/src/util/aggregator.ts
       search: export function isSyncCommitteeAggregator(
@@ -5268,7 +5268,7 @@
         return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
     </spec>
 
-- name: is_sync_committee_update
+- name: is_sync_committee_update#altair
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function isSyncCommitteeUpdate(
@@ -5278,7 +5278,7 @@
         return update.next_sync_committee_branch != NextSyncCommitteeBranch()
     </spec>
 
-- name: is_valid_deposit_signature
+- name: is_valid_deposit_signature#electra
   sources:
     - file: packages/state-transition/src/block/processDeposit.ts
       search: export function isValidDepositSignature(
@@ -5298,7 +5298,7 @@
         return bls.Verify(pubkey, signing_root, signature)
     </spec>
 
-- name: is_valid_genesis_state
+- name: is_valid_genesis_state#phase0
   sources:
     - file: packages/state-transition/src/util/genesis.ts
       search: export function isValidGenesisState(
@@ -5312,7 +5312,7 @@
         return True
     </spec>
 
-- name: is_valid_indexed_attestation
+- name: is_valid_indexed_attestation#phase0
   sources:
     - file: packages/state-transition/src/block/isValidIndexedAttestation.ts
       search: export function isValidIndexedAttestation(
@@ -5335,7 +5335,7 @@
         return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
     </spec>
 
-- name: is_valid_indexed_payload_attestation
+- name: is_valid_indexed_payload_attestation#gloas
   sources:
     - file: packages/state-transition/src/block/isValidIndexedPayloadAttestation.ts
       search: export function isValidIndexedPayloadAttestation(
@@ -5425,7 +5425,7 @@
         )
     </spec>
 
-- name: is_valid_merkle_branch
+- name: is_valid_merkle_branch#phase0
   sources:
     - file: packages/light-client/src/utils/verifyMerkleBranch.ts
       search: export function isValidMerkleBranch(
@@ -5446,7 +5446,7 @@
         return value == root
     </spec>
 
-- name: is_valid_normalized_merkle_branch
+- name: is_valid_normalized_merkle_branch#altair
   sources: []
   spec: |
     <spec fn="is_valid_normalized_merkle_branch" fork="altair" hash="ef32cdea">
@@ -5462,7 +5462,7 @@
         return is_valid_merkle_branch(leaf, branch[num_extra:], depth, index, root)
     </spec>
 
-- name: is_valid_switch_to_compounding_request
+- name: is_valid_switch_to_compounding_request#electra
   sources: []
   spec: |
     <spec fn="is_valid_switch_to_compounding_request" fork="electra" hash="91aa69bb">
@@ -5501,7 +5501,7 @@
         return True
     </spec>
 
-- name: is_valid_terminal_pow_block
+- name: is_valid_terminal_pow_block#bellatrix
   sources: []
   spec: |
     <spec fn="is_valid_terminal_pow_block" fork="bellatrix" hash="96a7d581">
@@ -5550,7 +5550,7 @@
         return current_epoch <= ws_state_epoch + ws_period
     </spec>
 
-- name: kzg_commitment_to_versioned_hash
+- name: kzg_commitment_to_versioned_hash#deneb
   sources:
     - file: packages/beacon-node/src/util/blobs.ts
       search: export function kzgCommitmentToVersionedHash(
@@ -5560,7 +5560,7 @@
         return VERSIONED_HASH_VERSION_KZG + hash(kzg_commitment)[1:]
     </spec>
 
-- name: latest_verified_ancestor
+- name: latest_verified_ancestor#bellatrix
   sources: []
   spec: |
     <spec fn="latest_verified_ancestor" fork="bellatrix" hash="c2ee2c55">
@@ -5572,7 +5572,7 @@
             block = opt_store.blocks[block.parent_root]
     </spec>
 
-- name: max_compressed_len
+- name: max_compressed_len#phase0
   sources: []
   spec: |
     <spec fn="max_compressed_len" fork="phase0" hash="2e531709">
@@ -5582,7 +5582,7 @@
         return uint64(32 + n + n / 6)
     </spec>
 
-- name: max_message_size
+- name: max_message_size#phase0
   sources: []
   spec: |
     <spec fn="max_message_size" fork="phase0" hash="8abedfdb">
@@ -5612,7 +5612,7 @@
         return NEXT_SYNC_COMMITTEE_GINDEX
     </spec>
 
-- name: normalize_merkle_branch
+- name: normalize_merkle_branch#electra
   sources:
     - file: packages/light-client/src/utils/normalizeMerkleBranch.ts
       search: export function normalizeMerkleBranch(
@@ -5626,7 +5626,7 @@
         return [Bytes32()] * num_extra + [*branch]
     </spec>
 
-- name: notify_ptc_messages
+- name: notify_ptc_messages#gloas
   sources: []
   spec: |
     <spec fn="notify_ptc_messages" fork="gloas" hash="2245929f">
@@ -5655,7 +5655,7 @@
                 )
     </spec>
 
-- name: on_attestation
+- name: on_attestation#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: '^\s+onAttestation\('
@@ -5682,7 +5682,7 @@
         update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
     </spec>
 
-- name: on_attester_slashing
+- name: on_attester_slashing#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: '^\s+onAttesterSlashing\('
@@ -6094,7 +6094,7 @@
         compute_pulled_up_tip(store, block_root)
     </spec>
 
-- name: on_execution_payload
+- name: on_execution_payload#gloas
   sources: []
   spec: |
     <spec fn="on_execution_payload" fork="gloas" hash="49b534de">
@@ -6120,7 +6120,7 @@
         store.execution_payload_states[envelope.beacon_block_root] = state
     </spec>
 
-- name: on_payload_attestation_message
+- name: on_payload_attestation_message#gloas
   sources: []
   spec: |
     <spec fn="on_payload_attestation_message" fork="gloas" hash="71fe48d3">
@@ -6160,7 +6160,7 @@
         ptc_vote[ptc_index] = data.payload_present
     </spec>
 
-- name: on_tick
+- name: on_tick#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: '^\s+private onTick\('
@@ -6177,7 +6177,7 @@
         on_tick_per_slot(store, time)
     </spec>
 
-- name: on_tick_per_slot
+- name: on_tick_per_slot#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: '^\s+private onTick\('
@@ -6662,7 +6662,7 @@
             state.builder_pending_payments[data.slot % SLOTS_PER_EPOCH] = payment
     </spec>
 
-- name: process_attester_slashing
+- name: process_attester_slashing#phase0
   sources:
     - file: packages/state-transition/src/block/processAttesterSlashing.ts
       search: export function processAttesterSlashing(
@@ -6789,7 +6789,7 @@
         process_sync_aggregate(state, block.body.sync_aggregate)
     </spec>
 
-- name: process_block_header
+- name: process_block_header#phase0
   sources:
     - file: packages/state-transition/src/block/processBlockHeader.ts
       search: export function processBlockHeader(
@@ -6818,7 +6818,7 @@
         assert not proposer.slashed
     </spec>
 
-- name: process_bls_to_execution_change
+- name: process_bls_to_execution_change#capella
   sources:
     - file: packages/state-transition/src/block/processBlsToExecutionChange.ts
       search: export function processBlsToExecutionChange(
@@ -6848,7 +6848,7 @@
         )
     </spec>
 
-- name: process_builder_pending_payments
+- name: process_builder_pending_payments#gloas
   sources:
     - file: packages/state-transition/src/epoch/processBuilderPendingPayments.ts
       search: export function processBuilderPendingPayments(
@@ -6872,7 +6872,7 @@
         state.builder_pending_payments = old_payments + new_payments
     </spec>
 
-- name: process_consolidation_request
+- name: process_consolidation_request#electra
   sources:
     - file: packages/state-transition/src/block/processConsolidationRequest.ts
       search: export function processConsolidationRequest(
@@ -7012,7 +7012,7 @@
         )
     </spec>
 
-- name: process_deposit_request
+- name: process_deposit_request#electra
   sources:
     - file: packages/state-transition/src/block/processDepositRequest.ts
       search: export function processDepositRequest(
@@ -7227,7 +7227,7 @@
         process_proposer_lookahead(state)
     </spec>
 
-- name: process_eth1_data
+- name: process_eth1_data#phase0
   sources:
     - file: packages/state-transition/src/block/processEth1Data.ts
       search: export function processEth1Data
@@ -7242,7 +7242,7 @@
             state.eth1_data = body.eth1_data
     </spec>
 
-- name: process_eth1_data_reset
+- name: process_eth1_data_reset#phase0
   sources:
     - file: packages/state-transition/src/epoch/processEth1DataReset.ts
       search: export function processEth1DataReset(
@@ -7617,7 +7617,7 @@
             assert envelope.state_root == hash_tree_root(state)
     </spec>
 
-- name: process_execution_payload_bid
+- name: process_execution_payload_bid#gloas
   sources:
     - file: packages/state-transition/src/block/processExecutionPayloadBid.ts
       search: export function processExecutionPayloadBid(
@@ -7685,7 +7685,7 @@
         state.latest_execution_payload_bid = bid
     </spec>
 
-- name: process_historical_roots_update
+- name: process_historical_roots_update#phase0
   sources:
     - file: packages/state-transition/src/epoch/processHistoricalRootsUpdate.ts
       search: export function processHistoricalRootsUpdate(
@@ -7701,7 +7701,7 @@
             state.historical_roots.append(hash_tree_root(historical_batch))
     </spec>
 
-- name: process_historical_summaries_update
+- name: process_historical_summaries_update#capella
   sources:
     - file: packages/state-transition/src/epoch/processHistoricalSummariesUpdate.ts
       search: export function processHistoricalSummariesUpdate(
@@ -7718,7 +7718,7 @@
             state.historical_summaries.append(historical_summary)
     </spec>
 
-- name: process_inactivity_updates
+- name: process_inactivity_updates#altair
   sources:
     - file: packages/state-transition/src/epoch/processInactivityUpdates.ts
       search: export function processInactivityUpdates(
@@ -7790,7 +7790,7 @@
         )
     </spec>
 
-- name: process_light_client_finality_update
+- name: process_light_client_finality_update#altair
   sources: []
   spec: |
     <spec fn="process_light_client_finality_update" fork="altair" hash="befaba5b">
@@ -7812,7 +7812,7 @@
         process_light_client_update(store, update, current_slot, genesis_validators_root)
     </spec>
 
-- name: process_light_client_optimistic_update
+- name: process_light_client_optimistic_update#altair
   sources: []
   spec: |
     <spec fn="process_light_client_optimistic_update" fork="altair" hash="06c0365a">
@@ -7834,7 +7834,7 @@
         process_light_client_update(store, update, current_slot, genesis_validators_root)
     </spec>
 
-- name: process_light_client_store_force_update
+- name: process_light_client_store_force_update#altair
   sources: []
   spec: |
     <spec fn="process_light_client_store_force_update" fork="altair" hash="fbb77069">
@@ -7856,7 +7856,7 @@
             store.best_valid_update = None
     </spec>
 
-- name: process_light_client_update
+- name: process_light_client_update#altair
   sources:
     - file: packages/light-client/src/spec/processLightClientUpdate.ts
       search: export function processLightClientUpdate(
@@ -8033,7 +8033,7 @@
         for_ops(body.payload_attestations, process_payload_attestation)
     </spec>
 
-- name: process_participation_flag_updates
+- name: process_participation_flag_updates#altair
   sources:
     - file: packages/state-transition/src/epoch/processParticipationFlagUpdates.ts
       search: export function processParticipationFlagUpdates(
@@ -8046,7 +8046,7 @@
         ]
     </spec>
 
-- name: process_participation_record_updates
+- name: process_participation_record_updates#phase0
   sources:
     - file: packages/state-transition/src/epoch/processParticipationRecordUpdates.ts
       search: export function processParticipationRecordUpdates(
@@ -8058,7 +8058,7 @@
         state.current_epoch_attestations = []
     </spec>
 
-- name: process_payload_attestation
+- name: process_payload_attestation#gloas
   sources:
     - file: packages/state-transition/src/block/processPayloadAttestation.ts
       search: export function processPayloadAttestation(
@@ -8080,7 +8080,7 @@
         assert is_valid_indexed_payload_attestation(state, indexed_payload_attestation)
     </spec>
 
-- name: process_pending_consolidations
+- name: process_pending_consolidations#electra
   sources:
     - file: packages/state-transition/src/epoch/processPendingConsolidations.ts
       search: export function processPendingConsolidations(
@@ -8110,7 +8110,7 @@
         state.pending_consolidations = state.pending_consolidations[next_pending_consolidation:]
     </spec>
 
-- name: process_pending_deposits
+- name: process_pending_deposits#electra
   sources:
     - file: packages/state-transition/src/epoch/processPendingDeposits.ts
       search: export function processPendingDeposits(
@@ -8183,7 +8183,7 @@
             state.deposit_balance_to_consume = Gwei(0)
     </spec>
 
-- name: process_proposer_lookahead
+- name: process_proposer_lookahead#fulu
   sources:
     - file: packages/state-transition/src/epoch/processProposerLookahead.ts
       search: export function processProposerLookahead(
@@ -8270,7 +8270,7 @@
         slash_validator(state, header_1.proposer_index)
     </spec>
 
-- name: process_randao
+- name: process_randao#phase0
   sources:
     - file: packages/state-transition/src/block/processRandao.ts
       search: export function processRandao(
@@ -8287,7 +8287,7 @@
         state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
     </spec>
 
-- name: process_randao_mixes_reset
+- name: process_randao_mixes_reset#phase0
   sources:
     - file: packages/state-transition/src/epoch/processRandaoMixesReset.ts
       search: export function processRandaoMixesReset(
@@ -8542,7 +8542,7 @@
                 decrease_balance(state, ValidatorIndex(index), penalty)
     </spec>
 
-- name: process_slashings_reset
+- name: process_slashings_reset#phase0
   sources:
     - file: packages/state-transition/src/epoch/processSlashingsReset.ts
       search: export function processSlashingsReset(
@@ -8591,7 +8591,7 @@
         state.execution_payload_availability[(state.slot + 1) % SLOTS_PER_HISTORICAL_ROOT] = 0b0
     </spec>
 
-- name: process_slots
+- name: process_slots#phase0
   sources:
     - file: packages/state-transition/src/stateTransition.ts
       search: export function processSlots(
@@ -8607,7 +8607,7 @@
             state.slot = Slot(state.slot + 1)
     </spec>
 
-- name: process_sync_aggregate
+- name: process_sync_aggregate#altair
   sources:
     - file: packages/state-transition/src/block/processSyncCommittee.ts
       search: export function processSyncAggregate(
@@ -8676,7 +8676,7 @@
                 decrease_balance(state, participant_index, participant_reward)
     </spec>
 
-- name: process_sync_committee_contributions
+- name: process_sync_committee_contributions#altair
   sources:
     - file: packages/beacon-node/src/chain/opPools/syncContributionAndProofPool.ts
       search: "* This is for producing blocks, the same to process_sync_committee_contributions in the spec."
@@ -8702,7 +8702,7 @@
         block.body.sync_aggregate = sync_aggregate
     </spec>
 
-- name: process_sync_committee_updates
+- name: process_sync_committee_updates#altair
   sources:
     - file: packages/state-transition/src/epoch/processSyncCommitteeUpdates.ts
       search: export function processSyncCommitteeUpdates(
@@ -8798,7 +8798,7 @@
         initiate_validator_exit(state, voluntary_exit.validator_index)
     </spec>
 
-- name: process_withdrawal_request
+- name: process_withdrawal_request#electra
   sources:
     - file: packages/state-transition/src/block/processWithdrawalRequest.ts
       search: export function processWithdrawalRequest(
@@ -9001,7 +9001,7 @@
             state.next_withdrawal_validator_index = next_validator_index
     </spec>
 
-- name: queue_excess_active_balance
+- name: queue_excess_active_balance#electra
   sources:
     - file: packages/state-transition/src/util/electra.ts
       search: export function queueExcessActiveBalance(
@@ -9026,7 +9026,7 @@
             )
     </spec>
 
-- name: recover_matrix
+- name: recover_matrix#fulu
   sources:
     - file: packages/beacon-node/src/util/blobs.ts
       search: export async function dataColumnMatrixRecovery(
@@ -9058,7 +9058,7 @@
         return matrix
     </spec>
 
-- name: saturating_sub
+- name: saturating_sub#phase0
   sources: []
   spec: |
     <spec fn="saturating_sub" fork="phase0" hash="ab62a392">
@@ -9069,7 +9069,7 @@
         return a - b if a > b else 0
     </spec>
 
-- name: seconds_to_milliseconds
+- name: seconds_to_milliseconds#phase0
   sources: []
   spec: |
     <spec fn="seconds_to_milliseconds" fork="phase0" hash="b2cc9743">
@@ -9083,7 +9083,7 @@
         return seconds * 1000
     </spec>
 
-- name: set_or_append_list
+- name: set_or_append_list#altair
   sources: []
   spec: |
     <spec fn="set_or_append_list" fork="altair" hash="a48f6f4c">
@@ -9094,7 +9094,7 @@
             list[index] = value
     </spec>
 
-- name: should_extend_payload
+- name: should_extend_payload#gloas
   sources: []
   spec: |
     <spec fn="should_extend_payload" fork="gloas" hash="cbdd2370">
@@ -9108,7 +9108,7 @@
         )
     </spec>
 
-- name: should_override_forkchoice_update
+- name: should_override_forkchoice_update#bellatrix
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "// See https://github.com/ethereum/consensus-specs/blob/v1.5.0/specs/bellatrix/fork-choice.md#should_override_forkchoice_update"
@@ -9312,7 +9312,7 @@
         increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
     </spec>
 
-- name: state_transition
+- name: state_transition#phase0
   sources:
     - file: packages/state-transition/src/stateTransition.ts
       search: export function stateTransition(
@@ -9334,7 +9334,7 @@
             assert block.state_root == hash_tree_root(state)
     </spec>
 
-- name: store_target_checkpoint_state
+- name: store_target_checkpoint_state#phase0
   sources: []
   spec: |
     <spec fn="store_target_checkpoint_state" fork="phase0" hash="2e4ff2b7">
@@ -9347,7 +9347,7 @@
             store.checkpoint_states[target] = base_state
     </spec>
 
-- name: switch_to_compounding_validator
+- name: switch_to_compounding_validator#electra
   sources:
     - file: packages/state-transition/src/util/electra.ts
       search: export function switchToCompoundingValidator(
@@ -9361,7 +9361,7 @@
         queue_excess_active_balance(state, index)
     </spec>
 
-- name: translate_participation
+- name: translate_participation#altair
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToAltair.ts
       search: function translateParticipation(
@@ -9385,7 +9385,7 @@
                     epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
     </spec>
 
-- name: update_checkpoints
+- name: update_checkpoints#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: '^\s+private updateCheckpoints\('
@@ -9446,7 +9446,7 @@
                 )
     </spec>
 
-- name: update_unrealized_checkpoints
+- name: update_unrealized_checkpoints#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: '^\s+private updateUnrealizedCheckpoints\('
@@ -9470,7 +9470,7 @@
             store.unrealized_finalized_checkpoint = unrealized_finalized_checkpoint
     </spec>
 
-- name: upgrade_lc_bootstrap_to_capella
+- name: upgrade_lc_bootstrap_to_capella#capella
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientHeader(
@@ -9484,7 +9484,7 @@
         )
     </spec>
 
-- name: upgrade_lc_bootstrap_to_deneb
+- name: upgrade_lc_bootstrap_to_deneb#deneb
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientHeader(
@@ -9498,7 +9498,7 @@
         )
     </spec>
 
-- name: upgrade_lc_bootstrap_to_electra
+- name: upgrade_lc_bootstrap_to_electra#electra
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientHeader(
@@ -9514,7 +9514,7 @@
         )
     </spec>
 
-- name: upgrade_lc_finality_update_to_capella
+- name: upgrade_lc_finality_update_to_capella#capella
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientFinalityUpdate(
@@ -9532,7 +9532,7 @@
         )
     </spec>
 
-- name: upgrade_lc_finality_update_to_deneb
+- name: upgrade_lc_finality_update_to_deneb#deneb
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientFinalityUpdate(
@@ -9550,7 +9550,7 @@
         )
     </spec>
 
-- name: upgrade_lc_finality_update_to_electra
+- name: upgrade_lc_finality_update_to_electra#electra
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientFinalityUpdate(
@@ -9568,7 +9568,7 @@
         )
     </spec>
 
-- name: upgrade_lc_header_to_capella
+- name: upgrade_lc_header_to_capella#capella
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientHeader(
@@ -9582,7 +9582,7 @@
         )
     </spec>
 
-- name: upgrade_lc_header_to_deneb
+- name: upgrade_lc_header_to_deneb#deneb
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientHeader(
@@ -9616,7 +9616,7 @@
         )
     </spec>
 
-- name: upgrade_lc_header_to_electra
+- name: upgrade_lc_header_to_electra#electra
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientHeader(
@@ -9630,7 +9630,7 @@
         )
     </spec>
 
-- name: upgrade_lc_optimistic_update_to_capella
+- name: upgrade_lc_optimistic_update_to_capella#capella
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientOptimisticUpdate(
@@ -9646,7 +9646,7 @@
         )
     </spec>
 
-- name: upgrade_lc_optimistic_update_to_deneb
+- name: upgrade_lc_optimistic_update_to_deneb#deneb
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientOptimisticUpdate(
@@ -9662,7 +9662,7 @@
         )
     </spec>
 
-- name: upgrade_lc_optimistic_update_to_electra
+- name: upgrade_lc_optimistic_update_to_electra#electra
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientOptimisticUpdate(
@@ -9678,7 +9678,7 @@
         )
     </spec>
 
-- name: upgrade_lc_store_to_capella
+- name: upgrade_lc_store_to_capella#capella
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientStore(
@@ -9700,7 +9700,7 @@
         )
     </spec>
 
-- name: upgrade_lc_store_to_deneb
+- name: upgrade_lc_store_to_deneb#deneb
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientStore(
@@ -9722,7 +9722,7 @@
         )
     </spec>
 
-- name: upgrade_lc_store_to_electra
+- name: upgrade_lc_store_to_electra#electra
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientStore(
@@ -9744,7 +9744,7 @@
         )
     </spec>
 
-- name: upgrade_lc_update_to_capella
+- name: upgrade_lc_update_to_capella#capella
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientUpdate(
@@ -9762,7 +9762,7 @@
         )
     </spec>
 
-- name: upgrade_lc_update_to_deneb
+- name: upgrade_lc_update_to_deneb#deneb
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientUpdate(
@@ -9780,7 +9780,7 @@
         )
     </spec>
 
-- name: upgrade_lc_update_to_electra
+- name: upgrade_lc_update_to_electra#electra
   sources:
     - file: packages/light-client/src/spec/utils.ts
       search: export function upgradeLightClientUpdate(
@@ -9800,7 +9800,7 @@
         )
     </spec>
 
-- name: upgrade_to_altair
+- name: upgrade_to_altair#altair
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToAltair.ts
       search: export function upgradeStateToAltair(
@@ -9850,7 +9850,7 @@
         return post
     </spec>
 
-- name: upgrade_to_bellatrix
+- name: upgrade_to_bellatrix#bellatrix
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToBellatrix.ts
       search: export function upgradeStateToBellatrix(
@@ -9895,7 +9895,7 @@
         return post
     </spec>
 
-- name: upgrade_to_capella
+- name: upgrade_to_capella#capella
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToCapella.ts
       search: export function upgradeStateToCapella(
@@ -9962,7 +9962,7 @@
         return post
     </spec>
 
-- name: upgrade_to_deneb
+- name: upgrade_to_deneb#deneb
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToDeneb.ts
       search: export function upgradeStateToDeneb(
@@ -10031,7 +10031,7 @@
         return post
     </spec>
 
-- name: upgrade_to_electra
+- name: upgrade_to_electra#electra
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToElectra.ts
       search: export function upgradeStateToElectra(
@@ -10141,7 +10141,7 @@
         return post
     </spec>
 
-- name: upgrade_to_fulu
+- name: upgrade_to_fulu#fulu
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToFulu.ts
       search: export function upgradeStateToFulu(
@@ -10199,7 +10199,7 @@
         return post
     </spec>
 
-- name: upgrade_to_gloas
+- name: upgrade_to_gloas#gloas
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
       search: export function upgradeStateToGloas(
@@ -10272,7 +10272,7 @@
         return post
     </spec>
 
-- name: validate_light_client_update
+- name: validate_light_client_update#altair
   sources:
     - file: packages/light-client/src/spec/validateLightClientUpdate.ts
       search: export function validateLightClientUpdate(
@@ -10496,7 +10496,7 @@
         assert get_current_slot(store) >= attestation.data.slot + 1
     </spec>
 
-- name: validate_target_epoch_against_current_time
+- name: validate_target_epoch_against_current_time#phase0
   sources: []
   spec: |
     <spec fn="validate_target_epoch_against_current_time" fork="phase0" hash="f7352056">
@@ -10511,7 +10511,7 @@
         assert target.epoch in [current_epoch, previous_epoch]
     </spec>
 
-- name: verify_blob_sidecar_inclusion_proof
+- name: verify_blob_sidecar_inclusion_proof#deneb
   sources:
     - file: packages/beacon-node/src/chain/validation/blobSidecar.ts
       search: export function validateBlobSidecarInclusionProof(
@@ -10530,7 +10530,7 @@
         )
     </spec>
 
-- name: verify_block_signature
+- name: verify_block_signature#phase0
   sources:
     - file: packages/state-transition/src/signatureSets/proposer.ts
       search: export function verifyProposerSignature(
@@ -10607,7 +10607,7 @@
         return True
     </spec>
 
-- name: verify_data_column_sidecar_inclusion_proof
+- name: verify_data_column_sidecar_inclusion_proof#fulu
   sources:
     - file: packages/beacon-node/src/chain/validation/dataColumnSidecar.ts
       search: export function verifyDataColumnSidecarInclusionProof(
@@ -10626,7 +10626,7 @@
         )
     </spec>
 
-- name: verify_data_column_sidecar_kzg_proofs
+- name: verify_data_column_sidecar_kzg_proofs#fulu
   sources:
     - file: packages/beacon-node/src/chain/validation/dataColumnSidecar.ts
       search: export async function verifyDataColumnSidecarKzgProofs(
@@ -10648,7 +10648,7 @@
         )
     </spec>
 
-- name: verify_execution_payload_bid_signature
+- name: verify_execution_payload_bid_signature#gloas
   sources:
     - file: packages/state-transition/src/block/processExecutionPayloadBid.ts
       search: function verifyExecutionPayloadBidSignature(
@@ -10664,7 +10664,7 @@
         return bls.Verify(builder.pubkey, signing_root, signed_bid.signature)
     </spec>
 
-- name: verify_execution_payload_envelope_signature
+- name: verify_execution_payload_envelope_signature#gloas
   sources:
     - file: packages/state-transition/src/block/processExecutionPayloadEnvelope.ts
       search: function verifyExecutionPayloadEnvelopeSignature(
@@ -10680,7 +10680,7 @@
         return bls.Verify(builder.pubkey, signing_root, signed_envelope.signature)
     </spec>
 
-- name: voting_period_start_time
+- name: voting_period_start_time#phase0
   sources: []
   spec: |
     <spec fn="voting_period_start_time" fork="phase0" hash="4eb8d0ca">
@@ -10691,7 +10691,7 @@
         return compute_time_at_slot(state, eth1_voting_period_start_slot)
     </spec>
 
-- name: weigh_justification_and_finalization
+- name: weigh_justification_and_finalization#phase0
   sources:
     - file: packages/state-transition/src/epoch/processJustificationAndFinalization.ts
       search: export function weighJustificationAndFinalization(
@@ -10739,7 +10739,7 @@
             state.finalized_checkpoint = old_current_justified_checkpoint
     </spec>
 
-- name: xor
+- name: xor#phase0
   sources:
     - file: packages/utils/src/bytes/browser.ts
       search: export function xor(

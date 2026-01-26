@@ -50,7 +50,7 @@
         committee_bits: Bitvector[MAX_COMMITTEES_PER_SLOT]
     </spec>
 
-- name: AttestationData
+- name: AttestationData#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const AttestationData =
@@ -88,7 +88,7 @@
         attestation_2: IndexedAttestation
     </spec>
 
-- name: BLSToExecutionChange
+- name: BLSToExecutionChange#capella
   sources:
     - file: packages/types/src/capella/sszTypes.ts
       search: export const BLSToExecutionChange =
@@ -100,7 +100,7 @@
         to_execution_address: ExecutionAddress
     </spec>
 
-- name: BeaconBlock
+- name: BeaconBlock#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const BeaconBlock =
@@ -268,7 +268,7 @@
         payload_attestations: List[PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS]
     </spec>
 
-- name: BeaconBlockHeader
+- name: BeaconBlockHeader#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const BeaconBlockHeader =
@@ -627,7 +627,7 @@
         latest_withdrawals_root: Root
     </spec>
 
-- name: BlobIdentifier
+- name: BlobIdentifier#deneb
   sources:
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const BlobIdentifier =
@@ -638,7 +638,7 @@
         index: BlobIndex
     </spec>
 
-- name: BlobSidecar
+- name: BlobSidecar#deneb
   sources:
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const BlobSidecar =
@@ -653,7 +653,7 @@
         kzg_commitment_inclusion_proof: Vector[Bytes32, KZG_COMMITMENT_INCLUSION_PROOF_DEPTH]
     </spec>
 
-- name: BuilderPendingPayment
+- name: BuilderPendingPayment#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const BuilderPendingPayment =
@@ -664,7 +664,7 @@
         withdrawal: BuilderPendingWithdrawal
     </spec>
 
-- name: BuilderPendingWithdrawal
+- name: BuilderPendingWithdrawal#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const BuilderPendingWithdrawal =
@@ -677,7 +677,7 @@
         withdrawable_epoch: Epoch
     </spec>
 
-- name: Checkpoint
+- name: Checkpoint#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Checkpoint =
@@ -688,7 +688,7 @@
         root: Root
     </spec>
 
-- name: ConsolidationRequest
+- name: ConsolidationRequest#electra
   sources:
     - file: packages/types/src/electra/sszTypes.ts
       search: export const ConsolidationRequest =
@@ -700,7 +700,7 @@
         target_pubkey: BLSPubkey
     </spec>
 
-- name: ContributionAndProof
+- name: ContributionAndProof#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
       search: export const ContributionAndProof =
@@ -748,7 +748,7 @@
         beacon_block_root: Root
     </spec>
 
-- name: DataColumnsByRootIdentifier
+- name: DataColumnsByRootIdentifier#fulu
   sources:
     - file: packages/types/src/fulu/sszTypes.ts
       search: export const DataColumnsByRootIdentifier =
@@ -759,7 +759,7 @@
         columns: List[ColumnIndex, NUMBER_OF_COLUMNS]
     </spec>
 
-- name: Deposit
+- name: Deposit#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Deposit =
@@ -770,7 +770,7 @@
         data: DepositData
     </spec>
 
-- name: DepositData
+- name: DepositData#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const DepositData =
@@ -783,7 +783,7 @@
         signature: BLSSignature
     </spec>
 
-- name: DepositMessage
+- name: DepositMessage#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const DepositMessage =
@@ -795,7 +795,7 @@
         amount: Gwei
     </spec>
 
-- name: DepositRequest
+- name: DepositRequest#electra
   sources:
     - file: packages/types/src/electra/sszTypes.ts
       search: export const DepositRequest =
@@ -809,7 +809,7 @@
         index: uint64
     </spec>
 
-- name: Eth1Block
+- name: Eth1Block#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Eth1Block =
@@ -821,7 +821,7 @@
         deposit_count: uint64
     </spec>
 
-- name: Eth1Data
+- name: Eth1Data#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Eth1Data =
@@ -909,7 +909,7 @@
         excess_blob_gas: uint64
     </spec>
 
-- name: ExecutionPayloadBid
+- name: ExecutionPayloadBid#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayloadBid =
@@ -929,7 +929,7 @@
         blob_kzg_commitments_root: Root
     </spec>
 
-- name: ExecutionPayloadEnvelope
+- name: ExecutionPayloadEnvelope#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayloadEnvelope =
@@ -1021,7 +1021,7 @@
         excess_blob_gas: uint64
     </spec>
 
-- name: ExecutionRequests
+- name: ExecutionRequests#electra
   sources:
     - file: packages/types/src/electra/sszTypes.ts
       search: export const ExecutionRequests =
@@ -1036,7 +1036,7 @@
         consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
     </spec>
 
-- name: Fork
+- name: Fork#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Fork =
@@ -1048,7 +1048,7 @@
         epoch: Epoch
     </spec>
 
-- name: ForkChoiceNode
+- name: ForkChoiceNode#gloas
   sources: []
   spec: |
     <spec container="ForkChoiceNode" fork="gloas" hash="755a4b34">
@@ -1057,7 +1057,7 @@
         payload_status: PayloadStatus  # One of PAYLOAD_STATUS_* values
     </spec>
 
-- name: ForkData
+- name: ForkData#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const ForkData =
@@ -1068,7 +1068,7 @@
         genesis_validators_root: Root
     </spec>
 
-- name: HistoricalBatch
+- name: HistoricalBatch#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const HistoricalBatch =
@@ -1079,7 +1079,7 @@
         state_roots: Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
     </spec>
 
-- name: HistoricalSummary
+- name: HistoricalSummary#capella
   sources:
     - file: packages/types/src/capella/sszTypes.ts
       search: export const HistoricalSummary =
@@ -1115,7 +1115,7 @@
         signature: BLSSignature
     </spec>
 
-- name: IndexedPayloadAttestation
+- name: IndexedPayloadAttestation#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const IndexedPayloadAttestation =
@@ -1279,7 +1279,7 @@
         signature_slot: Slot
     </spec>
 
-- name: MatrixEntry
+- name: MatrixEntry#fulu
   sources:
     - file: packages/types/src/fulu/sszTypes.ts
       search: export const MatrixEntry =
@@ -1292,7 +1292,7 @@
         row_index: RowIndex
     </spec>
 
-- name: PayloadAttestation
+- name: PayloadAttestation#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const PayloadAttestation =
@@ -1304,7 +1304,7 @@
         signature: BLSSignature
     </spec>
 
-- name: PayloadAttestationData
+- name: PayloadAttestationData#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const PayloadAttestationData =
@@ -1317,7 +1317,7 @@
         blob_data_available: boolean
     </spec>
 
-- name: PayloadAttestationMessage
+- name: PayloadAttestationMessage#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const PayloadAttestationMessage =
@@ -1329,7 +1329,7 @@
         signature: BLSSignature
     </spec>
 
-- name: PendingAttestation
+- name: PendingAttestation#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const PendingAttestation =
@@ -1342,7 +1342,7 @@
         proposer_index: ValidatorIndex
     </spec>
 
-- name: PendingConsolidation
+- name: PendingConsolidation#electra
   sources:
     - file: packages/types/src/electra/sszTypes.ts
       search: export const PendingConsolidation =
@@ -1353,7 +1353,7 @@
         target_index: ValidatorIndex
     </spec>
 
-- name: PendingDeposit
+- name: PendingDeposit#electra
   sources:
     - file: packages/types/src/electra/sszTypes.ts
       search: export const PendingDeposit =
@@ -1367,7 +1367,7 @@
         slot: Slot
     </spec>
 
-- name: PendingPartialWithdrawal
+- name: PendingPartialWithdrawal#electra
   sources:
     - file: packages/types/src/electra/sszTypes.ts
       search: export const PendingPartialWithdrawal =
@@ -1379,7 +1379,7 @@
         withdrawable_epoch: Epoch
     </spec>
 
-- name: PowBlock
+- name: PowBlock#bellatrix
   sources:
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: export const PowBlock =
@@ -1391,7 +1391,7 @@
         total_difficulty: uint256
     </spec>
 
-- name: ProposerSlashing
+- name: ProposerSlashing#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const ProposerSlashing =
@@ -1425,7 +1425,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SignedBLSToExecutionChange
+- name: SignedBLSToExecutionChange#capella
   sources:
     - file: packages/types/src/capella/sszTypes.ts
       search: export const SignedBLSToExecutionChange =
@@ -1436,7 +1436,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SignedBeaconBlock
+- name: SignedBeaconBlock#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const SignedBeaconBlock =
@@ -1447,7 +1447,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SignedBeaconBlockHeader
+- name: SignedBeaconBlockHeader#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const SignedBeaconBlockHeader =
@@ -1458,7 +1458,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SignedContributionAndProof
+- name: SignedContributionAndProof#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SignedContributionAndProof =
@@ -1469,7 +1469,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SignedExecutionPayloadBid
+- name: SignedExecutionPayloadBid#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const SignedExecutionPayloadBid =
@@ -1480,7 +1480,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SignedExecutionPayloadEnvelope
+- name: SignedExecutionPayloadEnvelope#gloas
   sources:
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const SignedExecutionPayloadEnvelope =
@@ -1491,7 +1491,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SignedVoluntaryExit
+- name: SignedVoluntaryExit#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const SignedVoluntaryExit =
@@ -1502,7 +1502,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SigningData
+- name: SigningData#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const SigningData =
@@ -1513,7 +1513,7 @@
         domain: Domain
     </spec>
 
-- name: SingleAttestation
+- name: SingleAttestation#electra
   sources:
     - file: packages/types/src/electra/sszTypes.ts
       search: export const SingleAttestation =
@@ -1526,7 +1526,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SyncAggregate
+- name: SyncAggregate#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SyncAggregate =
@@ -1537,7 +1537,7 @@
         sync_committee_signature: BLSSignature
     </spec>
 
-- name: SyncAggregatorSelectionData
+- name: SyncAggregatorSelectionData#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SyncAggregatorSelectionData =
@@ -1548,7 +1548,7 @@
         subcommittee_index: uint64
     </spec>
 
-- name: SyncCommittee
+- name: SyncCommittee#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SyncCommittee =
@@ -1559,7 +1559,7 @@
         aggregate_pubkey: BLSPubkey
     </spec>
 
-- name: SyncCommitteeContribution
+- name: SyncCommitteeContribution#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SyncCommitteeContribution =
@@ -1573,7 +1573,7 @@
         signature: BLSSignature
     </spec>
 
-- name: SyncCommitteeMessage
+- name: SyncCommitteeMessage#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SyncCommitteeMessage =
@@ -1586,7 +1586,7 @@
         signature: BLSSignature
     </spec>
 
-- name: Validator
+- name: Validator#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Validator =
@@ -1603,7 +1603,7 @@
         withdrawable_epoch: Epoch
     </spec>
 
-- name: VoluntaryExit
+- name: VoluntaryExit#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const VoluntaryExit =
@@ -1614,7 +1614,7 @@
         validator_index: ValidatorIndex
     </spec>
 
-- name: Withdrawal
+- name: Withdrawal#capella
   sources:
     - file: packages/types/src/capella/sszTypes.ts
       search: export const Withdrawal =
@@ -1627,7 +1627,7 @@
         amount: Gwei
     </spec>
 
-- name: WithdrawalRequest
+- name: WithdrawalRequest#electra
   sources:
     - file: packages/types/src/electra/sszTypes.ts
       search: export const WithdrawalRequest =

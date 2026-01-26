@@ -1,4 +1,4 @@
-- name: BLSPubkey
+- name: BLSPubkey#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const BLSPubkey =
@@ -7,7 +7,7 @@
     BLSPubkey = Bytes48
     </spec>
 
-- name: BLSSignature
+- name: BLSSignature#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const BLSSignature =
@@ -16,7 +16,7 @@
     BLSSignature = Bytes96
     </spec>
 
-- name: Blob
+- name: Blob#deneb
   sources:
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const Blob =
@@ -25,7 +25,7 @@
     Blob = ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB]
     </spec>
 
-- name: BlobIndex
+- name: BlobIndex#deneb
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const BlobIndex =
@@ -34,7 +34,7 @@
     BlobIndex = uint64
     </spec>
 
-- name: Cell
+- name: Cell#fulu
   sources:
     - file: packages/types/src/fulu/sszTypes.ts
       search: export const Cell =
@@ -43,14 +43,14 @@
     Cell = ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL]
     </spec>
 
-- name: CellIndex
+- name: CellIndex#fulu
   sources: []
   spec: |
     <spec custom_type="CellIndex" fork="fulu" hash="b9217d91">
     CellIndex = uint64
     </spec>
 
-- name: ColumnIndex
+- name: ColumnIndex#fulu
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const ColumnIndex =
@@ -59,14 +59,14 @@
     ColumnIndex = uint64
     </spec>
 
-- name: CommitmentIndex
+- name: CommitmentIndex#fulu
   sources: []
   spec: |
     <spec custom_type="CommitmentIndex" fork="fulu" hash="bb33608a">
     CommitmentIndex = uint64
     </spec>
 
-- name: CommitteeIndex
+- name: CommitteeIndex#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const CommitteeIndex =
@@ -93,7 +93,7 @@
     CurrentSyncCommitteeBranch = Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA)]
     </spec>
 
-- name: CustodyIndex
+- name: CustodyIndex#fulu
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const CustodyIndex =
@@ -102,7 +102,7 @@
     CustodyIndex = uint64
     </spec>
 
-- name: Domain
+- name: Domain#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const Domain =
@@ -111,7 +111,7 @@
     Domain = Bytes32
     </spec>
 
-- name: DomainType
+- name: DomainType#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const DomainType =
@@ -120,7 +120,7 @@
     DomainType = Bytes4
     </spec>
 
-- name: Epoch
+- name: Epoch#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const Epoch =
@@ -129,14 +129,14 @@
     Epoch = uint64
     </spec>
 
-- name: Ether
+- name: Ether#phase0
   sources: []
   spec: |
     <spec custom_type="Ether" fork="phase0" hash="9b026dbe">
     Ether = uint64
     </spec>
 
-- name: ExecutionAddress
+- name: ExecutionAddress#bellatrix
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const ExecutionAddress =
@@ -145,7 +145,7 @@
     ExecutionAddress = Bytes20
     </spec>
 
-- name: ExecutionBranch
+- name: ExecutionBranch#capella
   sources:
     - file: packages/types/src/capella/sszTypes.ts
       search: export const ExecutionBranch =
@@ -172,7 +172,7 @@
     FinalityBranch = Vector[Bytes32, floorlog2(FINALIZED_ROOT_GINDEX_ELECTRA)]
     </spec>
 
-- name: ForkDigest
+- name: ForkDigest#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const ForkDigest =
@@ -181,7 +181,7 @@
     ForkDigest = Bytes4
     </spec>
 
-- name: G1Point
+- name: G1Point#deneb
   sources:
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const G1Point =
@@ -190,7 +190,7 @@
     G1Point = Bytes48
     </spec>
 
-- name: G2Point
+- name: G2Point#deneb
   sources:
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const G2Point =
@@ -199,7 +199,7 @@
     G2Point = Bytes96
     </spec>
 
-- name: Gwei
+- name: Gwei#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const Gwei =
@@ -208,14 +208,14 @@
     Gwei = uint64
     </spec>
 
-- name: Hash32
+- name: Hash32#phase0
   sources: []
   spec: |
     <spec custom_type="Hash32" fork="phase0" hash="5bbcda76">
     Hash32 = Bytes32
     </spec>
 
-- name: KZGCommitment
+- name: KZGCommitment#deneb
   sources:
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const KZGCommitment =
@@ -224,7 +224,7 @@
     KZGCommitment = Bytes48
     </spec>
 
-- name: KZGProof
+- name: KZGProof#deneb
   sources:
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const KZGProof =
@@ -251,14 +251,14 @@
     NextSyncCommitteeBranch = Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA)]
     </spec>
 
-- name: NodeID
+- name: NodeID#phase0
   sources: []
   spec: |
     <spec custom_type="NodeID" fork="phase0" hash="e557d650">
     NodeID = uint256
     </spec>
 
-- name: ParticipationFlags
+- name: ParticipationFlags#altair
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const ParticipationFlags =
@@ -267,21 +267,21 @@
     ParticipationFlags = uint8
     </spec>
 
-- name: PayloadId
+- name: PayloadId#bellatrix
   sources: []
   spec: |
     <spec custom_type="PayloadId" fork="bellatrix" hash="0787a76c">
     PayloadId = Bytes8
     </spec>
 
-- name: PayloadStatus
+- name: PayloadStatus#gloas
   sources: []
   spec: |
     <spec custom_type="PayloadStatus" fork="gloas" hash="ccbcacae">
     PayloadStatus = uint8
     </spec>
 
-- name: Root
+- name: Root#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const Root =
@@ -290,7 +290,7 @@
     Root = Bytes32
     </spec>
 
-- name: RowIndex
+- name: RowIndex#fulu
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const RowIndex =
@@ -299,7 +299,7 @@
     RowIndex = uint64
     </spec>
 
-- name: Slot
+- name: Slot#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const Slot =
@@ -308,14 +308,14 @@
     Slot = uint64
     </spec>
 
-- name: SubnetID
+- name: SubnetID#phase0
   sources: []
   spec: |
     <spec custom_type="SubnetID" fork="phase0" hash="55bb7b76">
     SubnetID = uint64
     </spec>
 
-- name: Transaction
+- name: Transaction#bellatrix
   sources:
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: export const Transaction =
@@ -324,7 +324,7 @@
     Transaction = ByteList[MAX_BYTES_PER_TRANSACTION]
     </spec>
 
-- name: ValidatorIndex
+- name: ValidatorIndex#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const ValidatorIndex =
@@ -333,7 +333,7 @@
     ValidatorIndex = uint64
     </spec>
 
-- name: Version
+- name: Version#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const Version =
@@ -342,7 +342,7 @@
     Version = Bytes4
     </spec>
 
-- name: VersionedHash
+- name: VersionedHash#deneb
   sources:
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const VersionedHash =
@@ -351,7 +351,7 @@
     VersionedHash = Bytes32
     </spec>
 
-- name: WithdrawalIndex
+- name: WithdrawalIndex#capella
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const WithdrawalIndex =

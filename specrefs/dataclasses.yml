@@ -1,4 +1,4 @@
-- name: BlobParameters
+- name: BlobParameters#fulu
   sources:
     - file: packages/config/src/forkConfig/types.ts
       search: export type BlobParameters =
@@ -203,7 +203,7 @@
         execution_requests: ExecutionRequests
     </spec>
 
-- name: OptimisticStore
+- name: OptimisticStore#bellatrix
   sources: []
   spec: |
     <spec dataclass="OptimisticStore" fork="bellatrix" hash="a2b2182c">
