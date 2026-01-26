@@ -2145,7 +2145,7 @@
 - name: get_committee_assignment
   sources:
     - file: packages/state-transition/src/cache/epochCache.ts
-      search: "getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex)"
+      search: getCommitteeAssignments(
   spec: |
     <spec fn="get_committee_assignment" fork="phase0" hash="8b41515e">
     def get_committee_assignment(
