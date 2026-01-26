@@ -53,6 +53,7 @@ import {StateTransitionModules, StateTransitionOpts, processSlots, stateTransiti
 import {getEffectiveBalanceIncrementsZeroInactive} from "../util/balance.js";
 import {getBlockRoot, getBlockRootAtSlot} from "../util/blockRoot.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
+import {EpochShuffling} from "../util/epochShuffling.js";
 import {isExecutionEnabled, isExecutionStateType, isMergeTransitionComplete} from "../util/execution.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
@@ -379,6 +380,22 @@ export class BeaconStateView implements IBeaconStateView {
 
   getShufflingDecisionRoot(epoch: Epoch): RootHex {
     return this.cachedState.epochCtx.getShufflingDecisionRoot(epoch);
+  }
+
+  getPreviousShuffling(): EpochShuffling {
+    return this.cachedState.epochCtx.previousShuffling;
+  }
+
+  getCurrentShuffling(): EpochShuffling {
+    return this.cachedState.epochCtx.currentShuffling;
+  }
+
+  getNextShuffling(): EpochShuffling {
+    return this.cachedState.epochCtx.nextShuffling;
+  }
+
+  getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
+    return this.cachedState.epochCtx.getShufflingAtEpoch(epoch);
   }
 
   getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache {

@@ -28,6 +28,7 @@ import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
+import {EpochShuffling} from "../util/epochShuffling.js";
 
 /**
  * A read-only view of the BeaconState.
@@ -102,6 +103,10 @@ export interface IBeaconStateView {
   getBeaconProposersPrevEpoch(): ValidatorIndex[] | null;
   getBeaconProposersNextEpoch(): ValidatorIndex[];
   getShufflingDecisionRoot(epoch: Epoch): RootHex;
+  getPreviousShuffling(): EpochShuffling;
+  getCurrentShuffling(): EpochShuffling;
+  getNextShuffling(): EpochShuffling;
+  getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
   getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
   getBlockRootAtSlot(slot: Slot): Root;
   getBlockRoot(epoch: Epoch): Root;
