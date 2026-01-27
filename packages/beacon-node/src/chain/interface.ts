@@ -198,6 +198,12 @@ export interface IBeaconChain {
   /**
    * Get local block by root, does not fetch from the network
    */
+  getSerializedBlockByRoot(
+    root: RootHex
+  ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null>;
+  /**
+   * Get local block by root, does not fetch from the network
+   */
   getBlockByRoot(
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;

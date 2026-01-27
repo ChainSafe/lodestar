@@ -38,7 +38,6 @@ export async function* onDataColumnSidecarsByRange(
   }
 
   const finalized = db.dataColumnSidecarArchive;
-  const unfinalized = db.dataColumnSidecar;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
   // Finalized range of columns
@@ -92,7 +91,11 @@ export async function* onDataColumnSidecarsByRange(
         // at the time of the start of the request. Spec is clear the chain of columns must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/ad36024441cf910d428d03f87f331fbbd2b3e5f1/specs/fulu/p2p-interface.md#L425-L429
-        const dataColumnSidecars = await unfinalized.getManyBinary(fromHex(block.blockRoot), availableColumns);
+        const dataColumnSidecars = await chain.getSerializedDataColumnSidecars(
+          block.slot,
+          block.blockRoot,
+          availableColumns
+        );
 
         const unavailableColumnIndices: ColumnIndex[] = [];
         for (let i = 0; i < dataColumnSidecars.length; i++) {

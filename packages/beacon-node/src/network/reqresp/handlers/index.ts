@@ -42,7 +42,7 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     [ReqRespMethod.BeaconBlocksByRoot]: (req) => {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
       const body = BeaconBlocksByRootRequestType(fork, chain.config).deserialize(req.data);
-      return onBeaconBlocksByRoot(body, chain, db);
+      return onBeaconBlocksByRoot(body, chain);
     },
     [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
