@@ -2,6 +2,10 @@ version: v1.6.1
 style: full
 
 specrefs:
+  auto_add_missing_entries: true
+  auto_standardize_names: true
+  require_exceptions_have_fork: true
+
   files:
     - configs.yml
     - constants.yml
