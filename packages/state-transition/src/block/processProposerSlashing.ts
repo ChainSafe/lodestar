@@ -1,5 +1,8 @@
+import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
+import {Slot, phase0, ssz} from "@lodestar/types";
+import {Validator} from "@lodestar/types/phase0";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {getProposerSlashingSignatureSets} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot, isSlashableValidator} from "../util/index.js";
@@ -18,7 +21,15 @@ export function processProposerSlashing(
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
-  assertValidProposerSlashing(state, proposerSlashing, verifySignatures);
+  const proposer = state.validators.getReadonly(proposerSlashing.signedHeader1.message.proposerIndex);
+  assertValidProposerSlashing(
+    state.config,
+    state.epochCtx.index2pubkey,
+    state.slot,
+    proposerSlashing,
+    proposer,
+    verifySignatures
+  );
 
   if (fork >= ForkSeq.gloas) {
     const slot = Number(proposerSlashing.signedHeader1.message.slot);
@@ -45,8 +56,11 @@ export function processProposerSlashing(
 }
 
 export function assertValidProposerSlashing(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
+  index2pubkey: Index2PubkeyCache,
+  stateSlot: Slot,
   proposerSlashing: phase0.ProposerSlashing,
+  proposer: Validator,
   verifySignatures = true
 ): void {
   const header1 = proposerSlashing.signedHeader1.message;
@@ -70,19 +84,15 @@ export function assertValidProposerSlashing(
   }
 
   // verify the proposer is slashable
-  const proposer = state.validators.getReadonly(header1.proposerIndex);
-  if (!isSlashableValidator(proposer, state.epochCtx.epoch)) {
+  // ideally we would get the proposer from state.validators using proposerIndex but that requires access to state
+  // instead of that we pass in the proposer directly from the consumer side
+  if (!isSlashableValidator(proposer, computeEpochAtSlot(stateSlot))) {
     throw new Error("ProposerSlashing proposer is not slashable");
   }
 
   // verify signatures
   if (verifySignatures) {
-    const signatureSets = getProposerSlashingSignatureSets(
-      state.config,
-      state.epochCtx.index2pubkey,
-      state.slot,
-      proposerSlashing
-    );
+    const signatureSets = getProposerSlashingSignatureSets(config, index2pubkey, stateSlot, proposerSlashing);
     for (let i = 0; i < signatureSets.length; i++) {
       if (!verifySignatureSet(signatureSets[i])) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);

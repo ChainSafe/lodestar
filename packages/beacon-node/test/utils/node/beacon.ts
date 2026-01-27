@@ -9,16 +9,18 @@ import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/
 import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq, GENESIS_SLOT, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   Index2PubkeyCache,
-  computeTimeAtSlot,
+  computeAnchorCheckpoint,
+  computeEpochAtSlot,
   createCachedBeaconState,
   syncPubkeys,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {RecursivePartial, isPlainObject, toRootHex} from "@lodestar/utils";
+import {RecursivePartial, isPlainObject} from "@lodestar/utils";
+import {initStateFromDb} from "../../../src/chain/initState.js";
 import {BeaconDb} from "../../../src/db/index.js";
 import {BeaconNode} from "../../../src/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
@@ -37,6 +39,11 @@ export async function getDevBeaconNode(
     peerStoreDir?: string;
     anchorState?: BeaconStateAllForks;
     wsCheckpoint?: phase0.Checkpoint;
+    /**
+     * When true, load anchor state from existing DB instead of creating fresh genesis.
+     * Requires `options.db.name` to be set explicitly.
+     */
+    resumeFromDb?: boolean;
   } & InteropStateOpts
 ): Promise<BeaconNode> {
   setHasher(hasher);
@@ -48,20 +55,44 @@ export async function getDevBeaconNode(
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb(config, await LevelDbController.create({name: tmpDir.name}, {logger}));
+  const db = new BeaconDb(config, await LevelDbController.create({name: options.db?.name ?? tmpDir.name}, {logger}));
 
   let anchorState = opts.anchorState;
+  let wsCheckpoint = opts.wsCheckpoint;
+
   if (!anchorState) {
-    anchorState = initDevState(config, validatorCount, opts);
+    if (opts.resumeFromDb) {
+      if (!options.db?.name) {
+        throw new Error("resumeFromDb requires explicit options.db.name to be set");
+      }
 
-    const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
-    block.message.stateRoot = anchorState.hashTreeRoot();
-    await db.blockArchive.add(block);
+      // reuse production code for state loading from DB
+      anchorState = await initStateFromDb(config, db, logger);
+      const resumedEpoch = computeEpochAtSlot(anchorState.slot);
 
-    if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.deneb) {
-      const blobSidecars = ssz.deneb.BlobSidecars.defaultValue();
-      const blockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
-      await db.blobSidecars.add({blobSidecars, slot: GENESIS_SLOT, blockRoot});
+      // resuming from epoch 0 defeats the purpose of resuming
+      if (resumedEpoch === 0) {
+        logger.warn("Resumed state from epoch 0. Range Sync may trigger from genesis");
+      }
+
+      // derive wsCheckpoint if not provided
+      if (!wsCheckpoint) {
+        const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
+        wsCheckpoint = {root: checkpoint.root, epoch: checkpoint.epoch};
+        logger.debug("Derived wsCheckpoint", {epoch: checkpoint.epoch});
+      }
+    } else {
+      anchorState = initDevState(config, validatorCount, opts);
+
+      const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
+      block.message.stateRoot = anchorState.hashTreeRoot();
+      await db.blockArchive.add(block);
+
+      if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.deneb) {
+        const blobSidecars = ssz.deneb.BlobSidecars.defaultValue();
+        const blockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
+        await db.blobSidecars.add({blobSidecars, slot: GENESIS_SLOT, blockRoot});
+      }
     }
   }
 
@@ -89,29 +120,8 @@ export async function getDevBeaconNode(
           initialCustodyGroupCount: config.NUMBER_OF_CUSTODY_GROUPS,
         },
         executionEngine: {
+          // options for mock EL will be provided in Beacon.init() entry point
           mode: "mock",
-          genesisBlockHash: ZERO_HASH_HEX,
-          eth1BlockHash: opts.eth1BlockHash ? toRootHex(opts.eth1BlockHash) : undefined,
-          fuluForkTimestamp: computeTimeAtSlot(
-            config,
-            config.FULU_FORK_EPOCH * SLOTS_PER_EPOCH,
-            anchorState.genesisTime
-          ),
-          electraForkTimestamp: computeTimeAtSlot(
-            config,
-            config.ELECTRA_FORK_EPOCH * SLOTS_PER_EPOCH,
-            anchorState.genesisTime
-          ),
-          denebForkTimestamp: computeTimeAtSlot(
-            config,
-            config.DENEB_FORK_EPOCH * SLOTS_PER_EPOCH,
-            anchorState.genesisTime
-          ),
-          capellaForkTimestamp: computeTimeAtSlot(
-            config,
-            config.CAPELLA_FORK_EPOCH * SLOTS_PER_EPOCH,
-            anchorState.genesisTime
-          ),
         },
       } as Partial<IBeaconNodeOptions>,
       options
@@ -148,7 +158,7 @@ export async function getDevBeaconNode(
     dataDir: ".",
     peerStoreDir,
     anchorState: cachedState,
-    wsCheckpoint: opts.wsCheckpoint,
+    wsCheckpoint,
     isAnchorStateFinalized: true,
   });
 }

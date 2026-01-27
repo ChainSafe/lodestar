@@ -1,9 +1,8 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {IndexedAttestation, IndexedAttestationBigint} from "@lodestar/types";
+import {IndexedAttestation, IndexedAttestationBigint, Slot} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
 import {verifySignatureSet} from "../util/index.js";
 
 /**
@@ -12,16 +11,17 @@ import {verifySignatureSet} from "../util/index.js";
 export function isValidIndexedAttestation(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
+  stateSlot: Slot,
+  validatorsLen: number,
   indexedAttestation: IndexedAttestation,
   verifySignature: boolean
 ): boolean {
-  if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
+  if (!isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, indexedAttestation.attestingIndices)) {
     return false;
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationSignatureSet(config, index2pubkey, state.slot, indexedAttestation));
+    return verifySignatureSet(getIndexedAttestationSignatureSet(config, index2pubkey, stateSlot, indexedAttestation));
   }
   return true;
 }
@@ -29,17 +29,18 @@ export function isValidIndexedAttestation(
 export function isValidIndexedAttestationBigint(
   config: BeaconConfig,
   index2pubkey: Index2PubkeyCache,
-  state: CachedBeaconStateAllForks,
+  stateSlot: Slot,
+  validatorsLen: number,
   indexedAttestation: IndexedAttestationBigint,
   verifySignature: boolean
 ): boolean {
-  if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
+  if (!isValidIndexedAttestationIndices(config, stateSlot, validatorsLen, indexedAttestation.attestingIndices)) {
     return false;
   }
 
   if (verifySignature) {
     return verifySignatureSet(
-      getIndexedAttestationBigintSignatureSet(config, index2pubkey, state.slot, indexedAttestation)
+      getIndexedAttestationBigintSignatureSet(config, index2pubkey, stateSlot, indexedAttestation)
     );
   }
   return true;
@@ -48,10 +49,15 @@ export function isValidIndexedAttestationBigint(
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
  */
-export function isValidIndexedAttestationIndices(state: CachedBeaconStateAllForks, indices: number[]): boolean {
+export function isValidIndexedAttestationIndices(
+  config: BeaconConfig,
+  stateSlot: Slot,
+  validatorsLen: number,
+  indices: number[]
+): boolean {
   // verify max number of indices
   const maxIndices =
-    state.config.getForkSeq(state.slot) >= ForkSeq.electra
+    config.getForkSeq(stateSlot) >= ForkSeq.electra
       ? MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
       : MAX_VALIDATORS_PER_COMMITTEE;
   if (!(indices.length > 0 && indices.length <= maxIndices)) {
@@ -68,9 +74,8 @@ export function isValidIndexedAttestationIndices(state: CachedBeaconStateAllFork
   }
 
   // check if indices are out of bounds, by checking the highest index (since it is sorted)
-  // TODO - SLOW CODE - Does this .length check the tree and is expensive?
   const lastIndex = indices.at(-1);
-  if (lastIndex && lastIndex >= state.validators.length) {
+  if (lastIndex && lastIndex >= validatorsLen) {
     return false;
   }
 

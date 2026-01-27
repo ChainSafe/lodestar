@@ -24,7 +24,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker yarn vitest run test/sim/electra-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker pnpm vitest run test/sim/electra-interop.test.ts
 // ```
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";

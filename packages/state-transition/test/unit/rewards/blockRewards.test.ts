@@ -151,13 +151,13 @@ describe("chain / rewards / blockRewards", () => {
 
     // Set postState's reward cache
     const rewardCache = postState.proposerRewards; // Grab original reward cache before overwritten
-    postState.proposerRewards = {attestations: 1000, syncAggregate: 1001, slashing: 1002};
+    const proposerRewards = {attestations: 1000, syncAggregate: 1001, slashing: 1002};
 
     const calculatedBlockReward = await computeBlockRewards(
       config,
       block.message,
       preState as CachedBeaconStateAllForks,
-      postState
+      proposerRewards
     );
     const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} =
       calculatedBlockReward;

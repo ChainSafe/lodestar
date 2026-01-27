@@ -27,15 +27,15 @@
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "tsc -p tsconfig.build.json",
-    "build:release": "yarn run clean && yarn run build",
-    "build:watch": "yarn run build --watch",
+    "build:release": "pnpm run clean && pnpm run build",
+    "build:watch": "pnpm run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" flare --help",
     "check-types": "tsc",
     "lint": "biome check src/",
-    "lint:fix": "yarn run lint --write",
-    "test": "yarn test:unit",
+    "lint:fix": "pnpm run lint --write",
+    "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
-    "check-readme": "typescript-docs-verifier"
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",
@@ -50,12 +50,12 @@
   "dependencies": {
     "@chainsafe/bls-keygen": "^0.4.0",
     "@chainsafe/blst": "^2.2.0",
-    "@lodestar/api": "^1.38.0",
-    "@lodestar/config": "^1.38.0",
-    "@lodestar/params": "^1.38.0",
-    "@lodestar/state-transition": "^1.38.0",
-    "@lodestar/types": "^1.38.0",
-    "@lodestar/utils": "^1.38.0",
+    "@lodestar/api": "workspace:^",
+    "@lodestar/config": "workspace:^",
+    "@lodestar/params": "workspace:^",
+    "@lodestar/state-transition": "workspace:^",
+    "@lodestar/types": "workspace:^",
+    "@lodestar/utils": "workspace:^",
     "source-map-support": "^0.5.21",
     "yargs": "^17.7.1"
   },

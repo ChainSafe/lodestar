@@ -76,6 +76,53 @@ describe("abstractRepository", () => {
     expect(await repo.get(b)).toBeNull();
   });
 
+  it("batch mixes put and del operations atomically", async () => {
+    const a = Buffer.from([10]);
+    const b = Buffer.from([11]);
+    const c = Buffer.from([12]);
+
+    // Setup initial state
+    await repo.put(a, "a");
+    await repo.put(b, "b");
+    expect(await repo.get(a)).toBe("a");
+    expect(await repo.get(b)).toBe("b");
+    expect(await repo.get(c)).toBeNull();
+
+    // Mix put and del in a single batch
+    await repo.batch([
+      {type: "del", key: a},
+      {type: "put", key: c, value: "c"},
+      {type: "del", key: b},
+    ]);
+
+    expect(await repo.get(a)).toBeNull();
+    expect(await repo.get(b)).toBeNull();
+    expect(await repo.get(c)).toBe("c");
+  });
+
+  it("batchBinary stores raw Uint8Array values without encoding", async () => {
+    const a = Buffer.from([20]);
+    const b = Buffer.from([21]);
+    const rawValue1 = Buffer.from("raw1", "utf8");
+    const rawValue2 = Buffer.from("raw2", "utf8");
+
+    await repo.batchBinary([
+      {type: "put", key: a, value: rawValue1},
+      {type: "put", key: b, value: rawValue2},
+    ]);
+
+    // Values should be stored as-is (raw), not encoded via the type serializer
+    const binA = await repo.getBinary(a);
+    const binB = await repo.getBinary(b);
+    expect(Buffer.from(binA!)).toEqual(rawValue1);
+    expect(Buffer.from(binB!)).toEqual(rawValue2);
+
+    // batchBinary can also delete
+    await repo.batchBinary([{type: "del", key: a}]);
+    expect(await repo.getBinary(a)).toBeNull();
+    expect(await repo.getBinary(b)).not.toBeNull();
+  });
+
   it("keys/values/entries and filters", async () => {
     const k10 = Buffer.from([10]);
     const k15 = Buffer.from([15]);

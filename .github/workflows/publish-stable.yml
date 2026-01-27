@@ -96,7 +96,7 @@ jobs:
           prerelease: false
 
       - name: Publish to npm registry (release)
-        run: yarn run release:publish
+        run: pnpm run release:publish
 
       # In case of failure
       - name: Rollback on failure

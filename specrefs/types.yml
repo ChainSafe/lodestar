@@ -1,0 +1,361 @@
+- name: BLSPubkey
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const BLSPubkey =
+  spec: |
+    <spec custom_type="BLSPubkey" fork="phase0" hash="54c92759">
+    BLSPubkey = Bytes48
+    </spec>
+
+- name: BLSSignature
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const BLSSignature =
+  spec: |
+    <spec custom_type="BLSSignature" fork="phase0" hash="a4136588">
+    BLSSignature = Bytes96
+    </spec>
+
+- name: Blob
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: export const Blob =
+  spec: |
+    <spec custom_type="Blob" fork="deneb" hash="ad6dd66e">
+    Blob = ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB]
+    </spec>
+
+- name: BlobIndex
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const BlobIndex =
+  spec: |
+    <spec custom_type="BlobIndex" fork="deneb" hash="93fde5eb">
+    BlobIndex = uint64
+    </spec>
+
+- name: Cell
+  sources:
+    - file: packages/types/src/fulu/sszTypes.ts
+      search: export const Cell =
+  spec: |
+    <spec custom_type="Cell" fork="fulu" hash="d7af27c2">
+    Cell = ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL]
+    </spec>
+
+- name: CellIndex
+  sources: []
+  spec: |
+    <spec custom_type="CellIndex" fork="fulu" hash="b9217d91">
+    CellIndex = uint64
+    </spec>
+
+- name: ColumnIndex
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const ColumnIndex =
+  spec: |
+    <spec custom_type="ColumnIndex" fork="fulu" hash="4bcbe6e2">
+    ColumnIndex = uint64
+    </spec>
+
+- name: CommitmentIndex
+  sources: []
+  spec: |
+    <spec custom_type="CommitmentIndex" fork="fulu" hash="bb33608a">
+    CommitmentIndex = uint64
+    </spec>
+
+- name: CommitteeIndex
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const CommitteeIndex =
+  spec: |
+    <spec custom_type="CommitteeIndex" fork="phase0" hash="a438f3da">
+    CommitteeIndex = uint64
+    </spec>
+
+- name: CurrentSyncCommitteeBranch#altair
+  sources:
+    - file: packages/types/src/altair/sszTypes.ts
+      search: export const CurrentSyncCommitteeBranch =
+  spec: |
+    <spec custom_type="CurrentSyncCommitteeBranch" fork="altair" hash="f19e3670">
+    CurrentSyncCommitteeBranch = Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX)]
+    </spec>
+
+- name: CurrentSyncCommitteeBranch#electra
+  sources:
+    - file: packages/types/src/electra/sszTypes.ts
+      search: export const CurrentSyncCommitteeBranch =
+  spec: |
+    <spec custom_type="CurrentSyncCommitteeBranch" fork="electra" hash="f530f78f">
+    CurrentSyncCommitteeBranch = Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA)]
+    </spec>
+
+- name: CustodyIndex
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const CustodyIndex =
+  spec: |
+    <spec custom_type="CustodyIndex" fork="fulu" hash="dc544cf4">
+    CustodyIndex = uint64
+    </spec>
+
+- name: Domain
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const Domain =
+  spec: |
+    <spec custom_type="Domain" fork="phase0" hash="c7ed8c13">
+    Domain = Bytes32
+    </spec>
+
+- name: DomainType
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const DomainType =
+  spec: |
+    <spec custom_type="DomainType" fork="phase0" hash="52ff34d2">
+    DomainType = Bytes4
+    </spec>
+
+- name: Epoch
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const Epoch =
+  spec: |
+    <spec custom_type="Epoch" fork="phase0" hash="f4ad4edb">
+    Epoch = uint64
+    </spec>
+
+- name: Ether
+  sources: []
+  spec: |
+    <spec custom_type="Ether" fork="phase0" hash="9b026dbe">
+    Ether = uint64
+    </spec>
+
+- name: ExecutionAddress
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const ExecutionAddress =
+  spec: |
+    <spec custom_type="ExecutionAddress" fork="bellatrix" hash="c21cdbfb">
+    ExecutionAddress = Bytes20
+    </spec>
+
+- name: ExecutionBranch
+  sources:
+    - file: packages/types/src/capella/sszTypes.ts
+      search: export const ExecutionBranch =
+  spec: |
+    <spec custom_type="ExecutionBranch" fork="capella" hash="c07ece0a">
+    ExecutionBranch = Vector[Bytes32, floorlog2(EXECUTION_PAYLOAD_GINDEX)]
+    </spec>
+
+- name: FinalityBranch#altair
+  sources:
+    - file: packages/types/src/altair/sszTypes.ts
+      search: export const FinalityBranch =
+  spec: |
+    <spec custom_type="FinalityBranch" fork="altair" hash="b16f24b7">
+    FinalityBranch = Vector[Bytes32, floorlog2(FINALIZED_ROOT_GINDEX)]
+    </spec>
+
+- name: FinalityBranch#electra
+  sources:
+    - file: packages/types/src/electra/sszTypes.ts
+      search: export const FinalityBranch =
+  spec: |
+    <spec custom_type="FinalityBranch" fork="electra" hash="3ec55c30">
+    FinalityBranch = Vector[Bytes32, floorlog2(FINALIZED_ROOT_GINDEX_ELECTRA)]
+    </spec>
+
+- name: ForkDigest
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const ForkDigest =
+  spec: |
+    <spec custom_type="ForkDigest" fork="phase0" hash="ef05830a">
+    ForkDigest = Bytes4
+    </spec>
+
+- name: G1Point
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: export const G1Point =
+  spec: |
+    <spec custom_type="G1Point" fork="deneb" hash="0bf8682c">
+    G1Point = Bytes48
+    </spec>
+
+- name: G2Point
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: export const G2Point =
+  spec: |
+    <spec custom_type="G2Point" fork="deneb" hash="d4d7ed78">
+    G2Point = Bytes96
+    </spec>
+
+- name: Gwei
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const Gwei =
+  spec: |
+    <spec custom_type="Gwei" fork="phase0" hash="16aa7098">
+    Gwei = uint64
+    </spec>
+
+- name: Hash32
+  sources: []
+  spec: |
+    <spec custom_type="Hash32" fork="phase0" hash="5bbcda76">
+    Hash32 = Bytes32
+    </spec>
+
+- name: KZGCommitment
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: export const KZGCommitment =
+  spec: |
+    <spec custom_type="KZGCommitment" fork="deneb" hash="83c82060">
+    KZGCommitment = Bytes48
+    </spec>
+
+- name: KZGProof
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: export const KZGProof =
+  spec: |
+    <spec custom_type="KZGProof" fork="deneb" hash="cd122a70">
+    KZGProof = Bytes48
+    </spec>
+
+- name: NextSyncCommitteeBranch#altair
+  sources:
+    - file: packages/types/src/altair/sszTypes.ts
+      search: export const NextSyncCommitteeBranch =
+  spec: |
+    <spec custom_type="NextSyncCommitteeBranch" fork="altair" hash="efe158e9">
+    NextSyncCommitteeBranch = Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX)]
+    </spec>
+
+- name: NextSyncCommitteeBranch#electra
+  sources:
+    - file: packages/types/src/electra/sszTypes.ts
+      search: export const NextSyncCommitteeBranch =
+  spec: |
+    <spec custom_type="NextSyncCommitteeBranch" fork="electra" hash="7f5e5585">
+    NextSyncCommitteeBranch = Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA)]
+    </spec>
+
+- name: NodeID
+  sources: []
+  spec: |
+    <spec custom_type="NodeID" fork="phase0" hash="e557d650">
+    NodeID = uint256
+    </spec>
+
+- name: ParticipationFlags
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const ParticipationFlags =
+  spec: |
+    <spec custom_type="ParticipationFlags" fork="altair" hash="e72bab11">
+    ParticipationFlags = uint8
+    </spec>
+
+- name: PayloadId
+  sources: []
+  spec: |
+    <spec custom_type="PayloadId" fork="bellatrix" hash="0787a76c">
+    PayloadId = Bytes8
+    </spec>
+
+- name: PayloadStatus
+  sources: []
+  spec: |
+    <spec custom_type="PayloadStatus" fork="gloas" hash="ccbcacae">
+    PayloadStatus = uint8
+    </spec>
+
+- name: Root
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const Root =
+  spec: |
+    <spec custom_type="Root" fork="phase0" hash="3c277be7">
+    Root = Bytes32
+    </spec>
+
+- name: RowIndex
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const RowIndex =
+  spec: |
+    <spec custom_type="RowIndex" fork="fulu" hash="ee304720">
+    RowIndex = uint64
+    </spec>
+
+- name: Slot
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const Slot =
+  spec: |
+    <spec custom_type="Slot" fork="phase0" hash="d0056c55">
+    Slot = uint64
+    </spec>
+
+- name: SubnetID
+  sources: []
+  spec: |
+    <spec custom_type="SubnetID" fork="phase0" hash="55bb7b76">
+    SubnetID = uint64
+    </spec>
+
+- name: Transaction
+  sources:
+    - file: packages/types/src/bellatrix/sszTypes.ts
+      search: export const Transaction =
+  spec: |
+    <spec custom_type="Transaction" fork="bellatrix" hash="816d420e">
+    Transaction = ByteList[MAX_BYTES_PER_TRANSACTION]
+    </spec>
+
+- name: ValidatorIndex
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const ValidatorIndex =
+  spec: |
+    <spec custom_type="ValidatorIndex" fork="phase0" hash="3bab44f1">
+    ValidatorIndex = uint64
+    </spec>
+
+- name: Version
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const Version =
+  spec: |
+    <spec custom_type="Version" fork="phase0" hash="898da610">
+    Version = Bytes4
+    </spec>
+
+- name: VersionedHash
+  sources:
+    - file: packages/types/src/deneb/sszTypes.ts
+      search: export const VersionedHash =
+  spec: |
+    <spec custom_type="VersionedHash" fork="deneb" hash="01120c4d">
+    VersionedHash = Bytes32
+    </spec>
+
+- name: WithdrawalIndex
+  sources:
+    - file: packages/types/src/primitive/sszTypes.ts
+      search: export const WithdrawalIndex =
+  spec: |
+    <spec custom_type="WithdrawalIndex" fork="capella" hash="53fe9b45">
+    WithdrawalIndex = uint64
+    </spec>

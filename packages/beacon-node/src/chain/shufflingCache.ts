@@ -1,12 +1,12 @@
+import {ForkSeq} from "@lodestar/params";
 import {
-  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
   EpochShuffling,
-  IShufflingCache,
-  ShufflingBuildProps,
-  computeEpochShuffling,
-  computeEpochShufflingAsync,
+  getAttestingIndices,
+  getBeaconCommittees,
+  getIndexedAttestation,
 } from "@lodestar/state-transition";
-import {Epoch, RootHex} from "@lodestar/types";
+import {Attestation, CommitteeIndex, Epoch, IndexedAttestation, RootHex, Slot} from "@lodestar/types";
 import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 
@@ -53,7 +53,7 @@ export type ShufflingCacheOpts = {
  * - if a shuffling is not available (which does not happen with default chain option of maxSkipSlots = 32), track a promise to make sure we don't compute the same shuffling twice
  * - skip computing shuffling when loading state bytes from disk
  */
-export class ShufflingCache implements IShufflingCache {
+export class ShufflingCache {
   /** LRU cache implemented as a map, pruned every time we add an item */
   private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, CacheItem>> = new MapDef(
     () => new Map<RootHex, CacheItem>()
@@ -136,60 +136,76 @@ export class ShufflingCache implements IShufflingCache {
   }
 
   /**
-   * Gets a cached shuffling via the epoch and decision root.  If the shuffling is not
-   * available it will build it synchronously and return the shuffling.
-   *
-   * NOTE: If a shuffling is already queued and not calculated it will build and resolve
-   * the promise but the already queued build will happen at some later time
+   * Get a shuffling synchronously, return null if not present.
+   * The only time we have a promise cache item is when we regen shuffling for attestation, which never happens
+   * with default chain option.
    */
-  getSync<T extends ShufflingBuildProps | undefined>(
-    epoch: Epoch,
-    decisionRoot: RootHex,
-    buildProps?: T
-  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null {
+  getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
-    if (!cacheItem) {
+    if (cacheItem === undefined) {
       this.metrics?.shufflingCache.miss.inc();
-    } else if (isShufflingCacheItem(cacheItem)) {
-      this.metrics?.shufflingCache.hit.inc();
-      return cacheItem.shuffling;
-    } else if (buildProps) {
-      // TODO: (@matthewkeil) This should possible log a warning??
-      this.metrics?.shufflingCache.shufflingPromiseNotResolvedAndThrownAway.inc();
-    } else {
-      this.metrics?.shufflingCache.shufflingPromiseNotResolved.inc();
+      return null;
     }
 
-    let shuffling: EpochShuffling | null = null;
-    if (buildProps) {
-      const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer({source: "getSync"});
-      shuffling = computeEpochShuffling(buildProps.state, buildProps.activeIndices, epoch);
-      timer?.();
-      this.set(shuffling, decisionRoot);
+    if (isShufflingCacheItem(cacheItem)) {
+      this.metrics?.shufflingCache.hit.inc();
+      return cacheItem.shuffling;
     }
-    return shuffling as T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
+
+    return null;
   }
 
   /**
-   * Queue asynchronous build for an EpochShuffling, triggered from state-transition
+   * Process a state to extract and cache all shufflings (previous, current, next).
+   * Uses the stored decision roots from epochCtx.
    */
-  build(epoch: number, decisionRoot: string, state: BeaconStateAllForks, activeIndices: Uint32Array): void {
-    this.insertPromise(epoch, decisionRoot);
-    /**
-     * TODO: (@matthewkeil) This will get replaced by a proper build queue and a worker to do calculations
-     * on a NICE thread
-     */
-    const timer = this.metrics?.shufflingCache.shufflingCalculationTime.startTimer({source: "build"});
-    computeEpochShufflingAsync(state, activeIndices, epoch)
-      .then((shuffling) => {
-        this.set(shuffling, decisionRoot);
-      })
-      .catch((err) =>
-        this.logger?.error(`error building shuffling for epoch ${epoch} at decisionRoot ${decisionRoot}`, {}, err)
-      )
-      .finally(() => {
-        timer?.();
+  processState(state: CachedBeaconStateAllForks): void {
+    const {epochCtx} = state;
+
+    // Cache previous shuffling
+    this.set(epochCtx.previousShuffling, epochCtx.previousDecisionRoot);
+
+    // Cache current shuffling
+    this.set(epochCtx.currentShuffling, epochCtx.currentDecisionRoot);
+
+    // Cache next shuffling
+    this.set(epochCtx.nextShuffling, epochCtx.nextDecisionRoot);
+  }
+
+  getIndexedAttestation(
+    epoch: number,
+    decisionRoot: string,
+    fork: ForkSeq,
+    attestation: Attestation
+  ): IndexedAttestation {
+    const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
+    return getIndexedAttestation(shuffling, fork, attestation);
+  }
+
+  getAttestingIndices(epoch: number, decisionRoot: string, fork: ForkSeq, attestation: Attestation): number[] {
+    const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
+    return getAttestingIndices(shuffling, fork, attestation);
+  }
+
+  getBeaconCommittee(epoch: number, decisionRoot: string, slot: Slot, index: CommitteeIndex): Uint32Array {
+    return this.getBeaconCommittees(epoch, decisionRoot, slot, [index])[0];
+  }
+
+  getBeaconCommittees(epoch: number, decisionRoot: string, slot: Slot, indices: CommitteeIndex[]): Uint32Array[] {
+    const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
+    return getBeaconCommittees(shuffling, slot, indices);
+  }
+
+  private getShufflingOrThrow(epoch: number, decisionRoot: string): EpochShuffling {
+    const shuffling = this.getSync(epoch, decisionRoot);
+    if (shuffling === null) {
+      throw new ShufflingCacheError({
+        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
+        epoch,
+        decisionRoot,
       });
+    }
+    return shuffling;
   }
 
   /**
@@ -207,7 +223,8 @@ export class ShufflingCache implements IShufflingCache {
           (Date.now() - cacheItem.timeInsertedMs) / 1000
         );
       } else {
-        this.metrics?.shufflingCache.shufflingBuiltMultipleTimes.inc();
+        this.metrics?.shufflingCache.shufflingSetMultipleTimes.inc();
+        return;
       }
     }
     // set the shuffling

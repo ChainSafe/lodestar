@@ -1308,32 +1308,18 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_miss_count",
         help: "Count of shuffling cache miss",
       }),
-      shufflingBuiltMultipleTimes: register.gauge({
-        name: "lodestar_shuffling_cache_recalculated_shuffling_count",
-        help: "Count of shuffling that were build multiple times",
-      }),
-      shufflingPromiseNotResolvedAndThrownAway: register.gauge({
-        name: "lodestar_shuffling_cache_promise_not_resolved_and_thrown_away_count",
-        help: "Count of shuffling cache promises that were discarded and the shuffling was built synchronously",
+      shufflingSetMultipleTimes: register.gauge({
+        name: "lodestar_shuffling_cache_set_multiple_times_count",
+        help: "Count of shuffling that were set multiple times",
       }),
       shufflingPromiseNotResolved: register.gauge({
         name: "lodestar_shuffling_cache_promise_not_resolved_count",
         help: "Count of shuffling cache promises that were requested before the promise was resolved",
       }),
-      nextShufflingNotOnEpochCache: register.gauge({
-        name: "lodestar_shuffling_cache_next_shuffling_not_on_epoch_cache",
-        help: "The next shuffling was not on the epoch cache before the epoch transition",
-      }),
       shufflingPromiseResolutionTime: register.histogram({
         name: "lodestar_shuffling_cache_promise_resolution_time_seconds",
         help: "Time from promise insertion until promise resolution when shuffling was ready in seconds",
         buckets: [0.5, 1, 1.5, 2],
-      }),
-      shufflingCalculationTime: register.histogram<{source: "build" | "getSync"}>({
-        name: "lodestar_shuffling_cache_shuffling_calculation_time_seconds",
-        help: "Run time of shuffling calculation",
-        buckets: [0.5, 0.75, 1, 1.25, 1.5],
-        labelNames: ["source"],
       }),
     },
 

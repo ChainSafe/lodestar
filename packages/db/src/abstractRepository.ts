@@ -2,7 +2,7 @@ import {Type} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH} from "./const.js";
 import {FilterOptions, KeyValue} from "./controller/index.js";
-import {Db, DbReqOpts} from "./controller/interface.js";
+import {Db, DbBatch, DbReqOpts} from "./controller/interface.js";
 import {encodeKey as _encodeKey} from "./util.js";
 
 export type Id = Uint8Array | string | number | bigint;
@@ -128,6 +128,26 @@ export abstract class Repository<I extends Id, T> {
       Array.from({length: ids.length}, (_, i) => this.encodeKey(ids[i])),
       this.dbReqOpts
     );
+  }
+
+  async batch(batch: DbBatch<I, T>): Promise<void> {
+    const batchWithKeys: DbBatch<Uint8Array, Uint8Array> = [];
+    for (const b of batch) {
+      if (b.type === "del") {
+        batchWithKeys.push({...b, key: this.encodeKey(b.key)});
+      } else {
+        batchWithKeys.push({...b, key: this.encodeKey(b.key), value: this.encodeValue(b.value)});
+      }
+    }
+    await this.db.batch(batchWithKeys, this.dbReqOpts);
+  }
+
+  async batchBinary(batch: DbBatch<I, Uint8Array>): Promise<void> {
+    const batchWithKeys: DbBatch<Uint8Array, Uint8Array> = [];
+    for (const b of batch) {
+      batchWithKeys.push({...b, key: this.encodeKey(b.key)});
+    }
+    await this.db.batch(batchWithKeys, this.dbReqOpts);
   }
 
   async batchAdd(values: T[]): Promise<void> {

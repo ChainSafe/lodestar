@@ -2,13 +2,13 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 import {CompactMultiProof, computeDescriptor} from "@chainsafe/persistent-merkle-tree";
 import {JsonPath, fromHexString, toHexString} from "@chainsafe/ssz";
 import {ApiClient, getClient, routes} from "@lodestar/api";
-import {ChainConfig} from "@lodestar/config";
+import {BeaconConfig, ChainConfig} from "@lodestar/config";
 import {Lightclient} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {altair, ssz} from "@lodestar/types";
+import {LightClientHeader} from "@lodestar/types";
 import {HeadEventData} from "../../../src/chain/index.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
@@ -33,9 +33,23 @@ describe("chain / lightclient", () => {
   const targetSlotToReach = computeStartSlotAtEpoch(finalizedEpochToReach + 2) - 1;
   const restPort = 9000;
 
-  const testParams: Pick<ChainConfig, "SLOT_DURATION_MS" | "ALTAIR_FORK_EPOCH"> = {
-    SLOT_DURATION_MS: 1000,
-    ALTAIR_FORK_EPOCH: 0,
+  const ELECTRA_FORK_EPOCH = 0;
+  const FULU_FORK_EPOCH = 1;
+  const SLOT_DURATION_MS = 1000;
+  const testParams: Partial<ChainConfig> = {
+    SLOT_DURATION_MS,
+    ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    ELECTRA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    FULU_FORK_EPOCH: FULU_FORK_EPOCH,
+    BLOB_SCHEDULE: [
+      {
+        EPOCH: 1,
+        MAX_BLOBS_PER_BLOCK: 3,
+      },
+    ],
   };
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -50,7 +64,7 @@ describe("chain / lightclient", () => {
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // also delay to allow bls workers to be transpiled/initialized
     const genesisSlotsDelay = 7;
-    const genesisTime = Math.floor(Date.now() / 1000) + (genesisSlotsDelay * testParams.SLOT_DURATION_MS) / 1000;
+    const genesisTime = Math.floor(Date.now() / 1000) + (genesisSlotsDelay * SLOT_DURATION_MS) / 1000;
 
     const testLoggerOpts: TestLoggerOpts = {
       level: LogLevel.info,
@@ -58,7 +72,7 @@ describe("chain / lightclient", () => {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
         slotsPerEpoch: SLOTS_PER_EPOCH,
-        secondsPerSlot: testParams.SLOT_DURATION_MS / 1000,
+        secondsPerSlot: SLOT_DURATION_MS / 1000,
       },
     };
 
@@ -136,14 +150,19 @@ describe("chain / lightclient", () => {
         bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
           try {
             // Test fetching proofs
-            const {proof, header} = await getHeadStateProof(lightclient, api, [["latestBlockHeader", "bodyRoot"]]);
+            const {proof, header} = await getHeadStateProof(bn.config, lightclient, api, [
+              ["latestBlockHeader", "bodyRoot"],
+            ]);
             const stateRootHex = toHexString(header.beacon.stateRoot);
             const lcHeadState = bn.chain.regen.getStateSync(stateRootHex);
             if (!lcHeadState) {
               throw Error(`LC head state not in cache ${stateRootHex}`);
             }
 
-            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(proof, header.beacon.stateRoot);
+            const slot = header.beacon.slot;
+            const stateLcFromProof = bn.config
+              .getForkTypes(slot)
+              .BeaconState.createFromProof(proof, header.beacon.stateRoot);
             expect(toHexString(stateLcFromProof.latestBlockHeader.bodyRoot)).toBe(
               toHexString(lcHeadState.latestBlockHeader.bodyRoot)
             );
@@ -183,13 +202,15 @@ describe("chain / lightclient", () => {
 
 // TODO: Re-incorporate for REST-only light-client
 async function getHeadStateProof(
+  config: BeaconConfig,
   lightclient: Lightclient,
   api: ApiClient,
   paths: JsonPath[]
-): Promise<{proof: CompactMultiProof; header: altair.LightClientHeader}> {
+): Promise<{proof: CompactMultiProof; header: LightClientHeader}> {
   const header = lightclient.getHead();
   const stateId = toHexString(header.beacon.stateRoot);
-  const gindices = paths.map((path) => ssz.bellatrix.BeaconState.getPathInfo(path).gindex);
+  const slot = header.beacon.slot;
+  const gindices = paths.map((path) => config.getForkTypes(slot).BeaconState.getPathInfo(path).gindex);
   const descriptor = computeDescriptor(gindices);
   const proof = (await api.proof.getStateProof({stateId, descriptor})).value();
   return {proof, header};

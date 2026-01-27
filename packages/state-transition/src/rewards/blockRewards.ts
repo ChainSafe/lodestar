@@ -7,6 +7,7 @@ import {
 } from "@lodestar/params";
 import {BeaconBlock, altair, phase0, rewards} from "@lodestar/types";
 import {processAttestationsAltair} from "../block/processAttestationsAltair.js";
+import {RewardCache} from "../cache/rewardCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../cache/stateCache.js";
 import {getAttesterSlashableIndices} from "../util/attestation.js";
 
@@ -23,12 +24,14 @@ type SubRewardValue = number; // All reward values should be integer
 export async function computeBlockRewards(
   config: BeaconConfig,
   block: BeaconBlock,
-  preState: CachedBeaconStateAllForks,
-  postState?: CachedBeaconStateAllForks
+  preStateIn: CachedBeaconStateAllForks,
+  proposerRewards?: RewardCache
 ): Promise<rewards.BlockRewards> {
+  const preState = preStateIn.clone();
+
   const fork = config.getForkName(block.slot);
   const {attestations: cachedAttestationsReward = 0, syncAggregate: cachedSyncAggregateReward = 0} =
-    postState?.proposerRewards ?? {};
+    proposerRewards ?? {};
   let blockAttestationReward = cachedAttestationsReward;
   let syncAggregateReward = cachedSyncAggregateReward;
 

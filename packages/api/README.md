@@ -29,7 +29,7 @@ console.log("The validator balance is: ", validator.balance);
 ## Prerequisites
 
 - [NodeJS](https://nodejs.org/) (LTS)
-- [Yarn](https://classic.yarnpkg.com/lang/en/)
+- [pnpm](https://pnpm.io/)
 
 ## What you need
 
