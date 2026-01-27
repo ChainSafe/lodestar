@@ -75,6 +75,10 @@ export async function verifyBlocksInEpoch(
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
 
+  // in forky condition, make sure to populate ShufflingCache with regened state
+  // otherwise it may fail to get indexed attestations from shuffling cache later
+  this.shufflingCache.processState(preState0);
+
   if (!isStateValidatorsNodesPopulated(preState0)) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
       slot: preState0.slot,
@@ -105,9 +109,11 @@ export async function verifyBlocksInEpoch(
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
     for (const [i, block] of blocks.entries()) {
-      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) =>
-        preState0.epochCtx.getIndexedAttestation(fork, attestation)
-      );
+      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
+        const attEpoch = computeEpochAtSlot(attestation.data.slot);
+        const decisionRoot = preState0.epochCtx.getShufflingDecisionRoot(attEpoch);
+        return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
+      });
     }
 
     // batch all I/O operations to reduce overhead

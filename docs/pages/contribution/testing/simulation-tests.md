@@ -34,10 +34,6 @@ This tests that various endpoints of the beacon node and validator client are wo
 pnpm -r test:sim:endpoints --filter @chainsafe/lodestar
 ```
 
-### `test:sim:deneb`
-
-This test is still included in our CI but is no longer as important as it once was. Lodestar is often the first client to implement new features and this test was created before geth was upgraded with the features required to support the Deneb fork. To test that Lodestar was ready this test uses mocked geth instances. It is left as a placeholder for when the next fork comes along that requires a similar approach.
-
 ### `test:sim:mixedcleint`
 
 Checks that Lodestar is compatible with other consensus validators and vice-versa. All tests use Geth as the EL.

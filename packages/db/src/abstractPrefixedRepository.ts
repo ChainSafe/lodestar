@@ -2,7 +2,7 @@ import {Type} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH} from "./const.js";
 import {KeyValue} from "./controller/index.js";
-import {Db, DbReqOpts, FilterOptions} from "./controller/interface.js";
+import {Db, DbBatch, DbReqOpts, FilterOptions} from "./controller/interface.js";
 import {encodeKey} from "./util.js";
 
 type Id = Uint8Array | string | number | bigint;
@@ -146,6 +146,30 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     }
 
     await this.db.batchDelete(keys.flat(), this.dbReqOpts);
+  }
+
+  async batch(prefix: P, batch: DbBatch<I, T>): Promise<void> {
+    const batchWithKeys = [];
+    for (const b of batch) {
+      if (b.type === "del") {
+        batchWithKeys.push({type: b.type, key: this.wrapKey(this.encodeKeyRaw(prefix, b.key))});
+      } else {
+        batchWithKeys.push({
+          type: b.type,
+          key: this.wrapKey(this.encodeKeyRaw(prefix, b.key)),
+          value: this.encodeValue(b.value),
+        });
+      }
+    }
+    await this.db.batch(batchWithKeys, this.dbReqOpts);
+  }
+
+  async batchBinary(prefix: P, batch: DbBatch<I, Uint8Array>): Promise<void> {
+    const batchWithKeys = [];
+    for (const b of batch) {
+      batchWithKeys.push({...b, key: this.wrapKey(this.encodeKeyRaw(prefix, b.key))});
+    }
+    await this.db.batch(batchWithKeys, this.dbReqOpts);
   }
 
   async *valuesStream(prefix: P | P[]): AsyncIterable<T> {

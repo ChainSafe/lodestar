@@ -15,9 +15,9 @@ export type ExecutionEngineArgs = {
 
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
   if (args["execution.engineMock"]) {
+    // mock EL options will be provided later by Beacon.init() entry point
     return {
       mode: "mock",
-      genesisBlockHash: "",
     };
   }
 

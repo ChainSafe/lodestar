@@ -117,12 +117,7 @@ export class PrepareNextSlotScheduler {
         // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
         // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
         // for other slots dontTransferCached=true because we don't run state transition on this state
-        //
-        // Shuffling calculation will be done asynchronously when passing asyncShufflingCalculation=true.  Shuffling will be queued in
-        // beforeProcessEpoch and should theoretically be ready immediately after the synchronous epoch transition finished and the
-        // event loop is free.  In long periods of non-finality too many forks will cause the shufflingCache to throw an error for
-        // too many queued shufflings so only run async during normal epoch transition. See issue ChainSafe/lodestar#7244
-        {dontTransferCache: !isEpochTransition, asyncShufflingCalculation: true},
+        {dontTransferCache: !isEpochTransition},
         RegenCaller.precomputeEpoch
       );
 
@@ -148,6 +143,7 @@ export class PrepareNextSlotScheduler {
             updatedPrepareState = (await this.chain.regen.getBlockSlotState(
               proposerHeadRoot,
               prepareSlot,
+              // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
             )) as CachedBeaconStateExecutions;

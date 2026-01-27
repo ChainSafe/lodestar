@@ -11,6 +11,7 @@ ENV CI=true
 RUN corepack enable && corepack prepare --activate && \
   pnpm install --frozen-lockfile && \
   pnpm build && \
+  pnpm clean:nm && \
   pnpm install --frozen-lockfile --prod
 
 # To have access to the specific branch and commit used to build this source,

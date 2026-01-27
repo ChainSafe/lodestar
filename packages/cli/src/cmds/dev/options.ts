@@ -99,6 +99,10 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     ...beaconNodeOptions["rest.swaggerUI"],
     default: true,
   },
+  "execution.engineMock": {
+    ...beaconNodeOptions["execution.engineMock"],
+    default: true,
+  },
 };
 
 export const devOptions = {

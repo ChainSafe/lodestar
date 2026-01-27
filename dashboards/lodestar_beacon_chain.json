@@ -948,25 +948,12 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_shuffling_cache_recalculated_shuffling_count[32m]) * 384",
+          "expr": "rate(lodestar_shuffling_cache_set_multiple_times_count[32m]) * 384",
           "hide": false,
           "instant": false,
-          "legendFormat": "built_multiple_times",
+          "legendFormat": "set_multiple_times",
           "range": true,
           "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_shuffling_cache_promise_not_resolved_and_thrown_away_count[32m]) * 384",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "not_resolved_thrown_away",
-          "range": true,
-          "refId": "E"
         },
         {
           "datasource": {
@@ -980,19 +967,6 @@
           "legendFormat": "not_resolved",
           "range": true,
           "refId": "F"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_shuffling_cache_next_shuffling_not_on_epoch_cache[32m]) * 384",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "next_shuffling_not_on_cache",
-          "range": true,
-          "refId": "G"
         }
       ],
       "title": "Insert vs Hit vs Miss",
@@ -1076,19 +1050,6 @@
           "legendFormat": "resolution",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_shuffling_cache_shuffling_calculation_time_seconds_sum[32m])\n/\nrate(lodestar_shuffling_cache_shuffling_calculation_time_seconds_count[32m])",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "calculation_{{source}}",
-          "range": true,
-          "refId": "B"
         }
       ],
       "title": "Timing",

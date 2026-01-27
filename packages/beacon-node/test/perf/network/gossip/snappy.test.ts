@@ -4,7 +4,10 @@ import * as snappyJs from "snappyjs";
 import {bench, describe} from "@chainsafe/benchmark";
 import snappyWasm from "@chainsafe/snappy-wasm";
 
-describe("network / gossip / snappy", () => {
+/**
+ * Enable this benchmark only when we enhance snappy libraries.
+ */
+describe.skip("network / gossip / snappy", () => {
   const msgLens = [
     // ->
     100,
