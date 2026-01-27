@@ -134,6 +134,9 @@ export async function validateGossipBlock(
       throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
     });
 
+  // in forky condition, make sure to populate ShufflingCache with regened state
+  chain.shufflingCache.processState(blockState);
+
   // Extra conditions for merge fork blocks
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).

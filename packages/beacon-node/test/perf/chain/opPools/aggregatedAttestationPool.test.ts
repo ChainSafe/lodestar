@@ -15,6 +15,7 @@ import {
 import {ssz} from "@lodestar/types";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
+import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
 const vc = 1_500_000;
 
@@ -163,10 +164,12 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
       },
       beforeEach: (state) => {
         const pool = getAggregatedAttestationPool(state, numMissedVotes, numBadVotes);
-        return {state, pool};
+        const shufflingCache = new ShufflingCache();
+        shufflingCache.processState(state);
+        return {state, pool, shufflingCache};
       },
-      fn: ({state, pool}) => {
-        pool.getAttestationsForBlock(state.config.getForkName(state.slot), forkchoice, state);
+      fn: ({state, pool, shufflingCache}) => {
+        pool.getAttestationsForBlock(state.config.getForkName(state.slot), forkchoice, shufflingCache, state);
       },
     });
   }
