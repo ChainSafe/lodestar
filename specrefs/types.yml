@@ -34,6 +34,13 @@
     BlobIndex = uint64
     </spec>
 
+- name: BuilderIndex#gloas
+  sources: []
+  spec: |
+    <spec custom_type="BuilderIndex" fork="gloas" hash="1b01f5a2">
+    BuilderIndex = uint64
+    </spec>
+
 - name: Cell#fulu
   sources:
     - file: packages/types/src/fulu/sszTypes.ts
