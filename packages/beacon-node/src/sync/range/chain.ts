@@ -585,7 +585,6 @@ export class SyncChain {
 
     if (!res.err) {
       batch.processingSuccess();
-      this.pruneBlockInputs(batch.getBlocks());
 
       // If the processed batch is not empty, validate previous AwaitingValidation blocks.
       if (blocks.length > 0) {
