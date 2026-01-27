@@ -19,10 +19,11 @@ import {
   SignedBeaconBlockHeader,
   deneb,
   fulu,
+  gloas,
   ssz,
 } from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
-import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {BlockInputColumns, BlockInputEpbs} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -350,7 +351,7 @@ export function getDataColumnSidecarsFromColumnSidecar(
  * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns
  */
 export async function recoverDataColumnSidecars(
-  blockInput: BlockInputColumns,
+  blockInput: BlockInputColumns | BlockInputEpbs,
   emitter: ChainEventEmitter,
   metrics: Metrics | null
 ): Promise<DataColumnReconstructionCode> {
@@ -367,7 +368,7 @@ export async function recoverDataColumnSidecars(
   }
 
   metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(columnCount);
-  const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
+  const partialSidecars = new Map<number, fulu.DataColumnSidecar | gloas.DataColumnSidecar>();
   for (const columnSidecar of existingColumns) {
     // the more columns we put, the slower the recover
     if (partialSidecars.size >= NUMBER_OF_COLUMNS / 2) {
@@ -406,7 +407,8 @@ export async function recoverDataColumnSidecars(
         seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.recovery,
       });
-      sidecarsToPublish.push(columnSidecar);
+      // TODO GLOAS: Address all data column side car types in the codebase
+      sidecarsToPublish.push(columnSidecar as fulu.DataColumnSidecar);
     }
   }
   emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);

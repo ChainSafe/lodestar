@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Logger, sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 import {DataColumnReconstructionCode, recoverDataColumnSidecars} from "../util/dataColumns.js";
-import {BlockInputColumns} from "./blocks/blockInput/index.js";
+import {BlockInputColumns, BlockInputEpbs} from "./blocks/blockInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
 /**
@@ -48,7 +48,7 @@ export class ColumnReconstructionTracker {
     this.config = init.config;
   }
 
-  triggerColumnReconstruction(blockInput: BlockInputColumns): void {
+  triggerColumnReconstruction(blockInput: BlockInputColumns | BlockInputEpbs): void {
     if (this.running) {
       return;
     }

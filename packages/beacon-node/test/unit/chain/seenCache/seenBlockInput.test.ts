@@ -1,14 +1,14 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
-import {ForkName, ForkPostFulu, ForkPreGloas} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {SignedBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
   IBlockInput,
   isBlockInputBlobs,
   isBlockInputColumns,
+  isBlockInputEpbs,
   isBlockInputPreDeneb,
 } from "../../../../src/chain/blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
@@ -280,6 +280,17 @@ describe("SeenBlockInputCache", async () => {
         });
         expect(isBlockInputColumns(blockInput)).toBeTruthy();
       });
+
+      it("should return a BlockInputEpbs", () => {
+        const {block, rootHex} = generateBlock({forkName: ForkName.gloas});
+        const blockInput = cache.getByBlock({
+          block,
+          blockRootHex: rootHex,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+        });
+        expect(isBlockInputEpbs(blockInput)).toBeTruthy();
+      });
     });
 
     it("should return the same BlockInput for an existing block root", () => {
@@ -309,8 +320,9 @@ describe("SeenBlockInputCache", async () => {
         seenTimestampSec: Date.now() / 1000,
       });
       expect(() =>
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         blockInput.addBlock({
-          block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
+          block: block as any,
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now() / 1000,

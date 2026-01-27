@@ -1,5 +1,5 @@
-import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas} from "@lodestar/params";
-import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ForkName, ForkPostFulu, ForkPostGloas, ForkPreDeneb, ForkPreGloas} from "@lodestar/params";
+import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
 import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -8,23 +8,27 @@ import {
   AddBlob,
   AddBlock,
   AddColumn,
+  AddPayloadEnvelope,
   BlobMeta,
   BlobWithSource,
   BlockInputInit,
+  ColumnConfig,
   ColumnWithSource,
   CreateBlockInputMeta,
   DAData,
   DAType,
+  GloasDAData,
   IBlockInput,
   LogMetaBasic,
   LogMetaBlobs,
   LogMetaColumns,
+  LogMetaEpbs,
   MissingColumnMeta,
   PromiseParts,
   SourceMeta,
 } from "./types.js";
 
-export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns;
+export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns | BlockInputEpbs;
 
 export function isBlockInputPreDeneb(blockInput: IBlockInput): blockInput is BlockInputPreData {
   return blockInput.type === DAType.PreData;
@@ -35,6 +39,10 @@ export function isBlockInputBlobs(blockInput: IBlockInput): blockInput is BlockI
 
 export function isBlockInputColumns(blockInput: IBlockInput): blockInput is BlockInputColumns {
   return blockInput.type === DAType.Columns;
+}
+
+export function isBlockInputEpbs(blockInput: IBlockInput): blockInput is BlockInputEpbs {
+  return blockInput.type === DAType.Epbs;
 }
 
 function createPromise<T>(): PromiseParts<T> {
@@ -611,10 +619,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.columnsCache.size;
   }
 
-  static createFromBlock(
-    props: AddBlock<ForkColumnsDA> &
-      CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
-  ): BlockInputColumns {
+  static createFromBlock(props: AddBlock<ForkColumnsDA> & CreateBlockInputMeta & ColumnConfig): BlockInputColumns {
     const hasAllData =
       props.daOutOfRange ||
       props.block.message.body.blobKzgCommitments.length === 0 ||
@@ -649,9 +654,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return blockInput;
   }
 
-  static createFromColumn(
-    props: AddColumn & CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
-  ): BlockInputColumns {
+  static createFromColumn(props: AddColumn & CreateBlockInputMeta & ColumnConfig): BlockInputColumns {
     const hasAllData =
       props.daOutOfRange || props.columnSidecar.kzgCommitments.length === 0 || props.sampledColumns.length === 0;
     const state: BlockInputColumnsState = {
@@ -659,13 +662,14 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       hasAllData,
       versionedHashes: props.columnSidecar.kzgCommitments.map(kzgCommitmentToVersionedHash),
     };
+    const fuluColumn = props.columnSidecar as fulu.DataColumnSidecar;
     const init: BlockInputInit = {
       daOutOfRange: false,
       timeCreated: props.seenTimestampSec,
       forkName: props.forkName,
       blockRootHex: props.blockRootHex,
-      parentRootHex: toRootHex(props.columnSidecar.signedBlockHeader.message.parentRoot),
-      slot: props.columnSidecar.signedBlockHeader.message.slot,
+      parentRootHex: toRootHex(fuluColumn.signedBlockHeader.message.parentRoot),
+      slot: fuluColumn.signedBlockHeader.message.slot,
     };
     const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
     if (hasAllData) {
@@ -796,7 +800,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     for (const index of this.custodyColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
-        columns.push(column.columnSidecar);
+        columns.push(column.columnSidecar as fulu.DataColumnSidecar);
       }
     }
     return columns;
@@ -818,7 +822,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     for (const index of this.sampledColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
-        columns.push(column.columnSidecar);
+        columns.push(column.columnSidecar as fulu.DataColumnSidecar);
       }
     }
     return columns;
@@ -829,7 +833,543 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   }
 
   getAllColumns(): fulu.DataColumnSidecars {
-    return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar);
+    return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar as fulu.DataColumnSidecar);
+  }
+
+  getMissingSampledColumnMeta(): MissingColumnMeta {
+    if (this.state.hasAllData) {
+      return {
+        missing: [],
+        versionedHashes: this.state.versionedHashes,
+      };
+    }
+
+    const missing: number[] = [];
+    for (const index of this.sampledColumns) {
+      if (!this.columnsCache.has(index)) {
+        missing.push(index);
+      }
+    }
+    return {
+      missing,
+      versionedHashes: this.state.versionedHashes,
+    };
+  }
+}
+
+// Gloas ePBS
+
+type BlockInputEpbsState =
+  | {
+      // Complete: Have everything needed
+      hasBlock: true;
+      // Note: hasAllData means all data requirement is satisified.
+      // If payloadAvailable === true, this means all data columns + payload are present
+      // If payloadAvailable === false, this means no payload and no columns since we don't need them
+      hasAllData: true;
+      block: SignedBeaconBlock<ForkPostGloas>;
+      versionedHashes: VersionedHashes;
+      source: SourceMeta;
+      timeCompleteSec: number;
+      payloadAvailable: boolean;
+    }
+  | {
+      // Have block, missing payload and/or columns
+      hasBlock: true;
+      hasAllData: false;
+      block: SignedBeaconBlock<ForkPostGloas>;
+      versionedHashes: VersionedHashes;
+      source: SourceMeta;
+    }
+  | {
+      // Have both payload and all columns, but no block yet (rare)
+      hasBlock: false;
+      hasAllData: true;
+      versionedHashes: VersionedHashes;
+      timeCompleteSec: number;
+    }
+  | {
+      // Missing block, and missing payload or columns or both
+      hasBlock: false;
+      hasAllData: false;
+      versionedHashes: VersionedHashes;
+    };
+
+/**
+ * With Gloas ePBS, BlockInput has several states:
+ * - The block is seen, execution payload envelope is seen, and all required sampled columns are seen
+ * - The block is seen but missing payload envelope and/or columns
+ * - The block is not yet seen but payload envelope and all columns are seen
+ * - The block is not yet seen and missing payload envelope and/or columns
+ *
+ * In Gloas ePBS:
+ * - Beacon blocks contain SignedExecutionPayloadBid but NOT the actual payload
+ * - Execution payloads arrive separately as SignedExecutionPayloadEnvelope
+ * - Data columns provide DA proof required by is_data_available()
+ * - Both payload envelope AND all sampled columns are required for completion
+ * - Builder may not reveal: Valid for beacon block to proceed without execution payload
+ */
+export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDAData | null> {
+  type = DAType.Epbs as const;
+
+  state: BlockInputEpbsState;
+
+  private payloadEnvelope: gloas.SignedExecutionPayloadEnvelope | null = null;
+  private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
+  private readonly sampledColumns: ColumnIndex[];
+  private readonly custodyColumns: ColumnIndex[];
+  private payloadAvailable = true;
+
+  private constructor(
+    init: BlockInputInit,
+    state: BlockInputEpbsState,
+    sampledColumns: ColumnIndex[],
+    custodyColumns: ColumnIndex[]
+  ) {
+    super(init);
+    this.state = state;
+    this.sampledColumns = sampledColumns;
+    this.custodyColumns = custodyColumns;
+  }
+
+  get columnCount(): number {
+    return this.columnsCache.size;
+  }
+
+  static createFromBlock(props: AddBlock<ForkPostGloas> & CreateBlockInputMeta & ColumnConfig): BlockInputEpbs {
+    // VersionedHashes can only be determined from the execution payload envelope, not from the block
+    // Block only contains SignedExecutionPayloadBid (commitment), not the actual blobKzgCommitments
+    const versionedHashes: VersionedHashes = [];
+    // When block arrives first without payload, we can't determine if data is complete yet
+    const hasAllData = props.daOutOfRange || props.sampledColumns.length === 0;
+
+    const state: BlockInputEpbsState = hasAllData
+      ? {
+          hasBlock: true,
+          hasAllData: true,
+          versionedHashes,
+          block: props.block,
+          source: {
+            source: props.source,
+            seenTimestampSec: props.seenTimestampSec,
+            peerIdStr: props.peerIdStr,
+          },
+          timeCompleteSec: props.seenTimestampSec,
+          payloadAvailable: false, // No payload needed (daOutOfRange or no columns)
+        }
+      : {
+          hasBlock: true,
+          hasAllData: false,
+          versionedHashes,
+          block: props.block,
+          source: {
+            source: props.source,
+            seenTimestampSec: props.seenTimestampSec,
+            peerIdStr: props.peerIdStr,
+          },
+        };
+
+    const init: BlockInputInit = {
+      daOutOfRange: props.daOutOfRange,
+      timeCreated: props.seenTimestampSec,
+      forkName: props.forkName,
+      blockRootHex: props.blockRootHex,
+      parentRootHex: toRootHex(props.block.message.parentRoot),
+      slot: props.block.message.slot,
+    };
+
+    const blockInput = new BlockInputEpbs(init, state, props.sampledColumns, props.custodyColumns);
+    blockInput.blockPromise.resolve(props.block);
+    if (hasAllData) {
+      blockInput.payloadAvailable = false;
+      blockInput.dataPromise.resolve(null);
+    }
+    return blockInput;
+  }
+
+  static createFromPayload(props: AddPayloadEnvelope & CreateBlockInputMeta & ColumnConfig): BlockInputEpbs {
+    // Extract versioned hashes from payload envelope (the only source of blobKzgCommitments)
+    const versionedHashes = props.payloadEnvelope.message.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
+    const hasAllData = props.daOutOfRange || versionedHashes.length === 0 || props.sampledColumns.length === 0;
+
+    const state: BlockInputEpbsState = hasAllData
+      ? {
+          hasBlock: false,
+          hasAllData: true,
+          versionedHashes,
+          timeCompleteSec: props.seenTimestampSec,
+        }
+      : {
+          hasBlock: false,
+          hasAllData: false,
+          versionedHashes,
+        };
+
+    const init: BlockInputInit = {
+      daOutOfRange: props.daOutOfRange,
+      timeCreated: props.seenTimestampSec,
+      forkName: props.forkName,
+      blockRootHex: props.blockRootHex,
+      // Payload envelope doesn't contain parent root - use empty placeholder until block arrives
+      parentRootHex: "0x" + "0".repeat(64),
+      slot: props.payloadEnvelope.message.slot,
+    };
+
+    const blockInput = new BlockInputEpbs(init, state, props.sampledColumns, props.custodyColumns);
+    blockInput.payloadEnvelope = props.payloadEnvelope;
+    if (hasAllData) {
+      // DA not needed (daOutOfRange, no columns to sample)
+      blockInput.payloadAvailable = false;
+      blockInput.dataPromise.resolve(null);
+    }
+    return blockInput;
+  }
+
+  static createFromColumn(props: AddColumn & CreateBlockInputMeta & ColumnConfig): BlockInputEpbs {
+    const versionedHashes = props.columnSidecar.kzgCommitments.map(kzgCommitmentToVersionedHash);
+    const hasAllData = props.daOutOfRange || versionedHashes.length === 0 || props.sampledColumns.length === 0;
+
+    const state: BlockInputEpbsState = hasAllData
+      ? {
+          hasBlock: false,
+          hasAllData: true,
+          versionedHashes,
+          timeCompleteSec: props.seenTimestampSec,
+        }
+      : {
+          hasBlock: false,
+          hasAllData: false,
+          versionedHashes,
+        };
+
+    const init: BlockInputInit = {
+      daOutOfRange: props.daOutOfRange,
+      timeCreated: props.seenTimestampSec,
+      forkName: props.forkName,
+      blockRootHex: props.blockRootHex,
+      // Gloas DataColumnSidecar doesn't contain parent root, will be set when block arrives
+      parentRootHex: "0x" + "0".repeat(64),
+      slot: (props.columnSidecar as gloas.DataColumnSidecar).slot,
+    };
+
+    const blockInput = new BlockInputEpbs(init, state, props.sampledColumns, props.custodyColumns);
+    blockInput.addColumn(props, {throwOnDuplicateAdd: false});
+    if (hasAllData) {
+      // DA not needed (daOutOfRange, no columns to sample)
+      blockInput.payloadAvailable = false;
+      blockInput.dataPromise.resolve(null);
+    }
+    return blockInput;
+  }
+
+  getLogMeta(): LogMetaEpbs {
+    return {
+      slot: this.slot,
+      blockRoot: prettyBytes(this.blockRootHex),
+      timeCreatedSec: this.timeCreatedSec,
+      hasPayload: this.payloadEnvelope !== null,
+      payloadAvailable: this.payloadAvailable,
+      expectedColumns: this.sampledColumns.length,
+      receivedColumns: this.getSampledColumns().length,
+    };
+  }
+
+  addBlock(props: AddBlock<ForkPostGloas>, opts = {throwOnDuplicateAdd: true}): void {
+    if (props.blockRootHex !== this.blockRootHex) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
+          blockInputRoot: this.blockRootHex,
+          mismatchedRoot: props.blockRootHex,
+          source: props.source,
+          peerId: `${props.peerIdStr}`,
+        },
+        "addBlock blockRootHex does not match BlockInput.blockRootHex"
+      );
+    }
+
+    if (!opts.throwOnDuplicateAdd) {
+      return;
+    }
+
+    if (this.state.hasBlock) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlock to BlockInputEpbs after it already has a block"
+      );
+    }
+
+    // Check if we already have all data (payload + columns OR payload unavailable)
+    const hasPayloadEnvelope = this.payloadEnvelope !== null;
+    const hasAllColumns = this.getSampledColumns().length === this.sampledColumns.length;
+    const hasAllData = !this.payloadAvailable || (hasPayloadEnvelope && hasAllColumns) || this.state.hasAllData;
+
+    this.state = {
+      ...this.state,
+      hasBlock: true,
+      hasAllData,
+      block: props.block,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: hasAllData ? props.seenTimestampSec : undefined,
+      payloadAvailable: this.payloadAvailable,
+    } as BlockInputEpbsState;
+
+    this.blockPromise.resolve(props.block);
+  }
+
+  addPayloadEnvelope(props: AddPayloadEnvelope, opts = {throwOnDuplicateAdd: true}): void {
+    if (props.blockRootHex !== this.blockRootHex) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
+          blockInputRoot: this.blockRootHex,
+          mismatchedRoot: props.blockRootHex,
+          source: props.source,
+          peerId: `${props.peerIdStr}`,
+        },
+        "Payload envelope blockRootHex does not match BlockInput.blockRootHex"
+      );
+    }
+
+    // Validate beacon block root matches
+    const payloadBlockRoot = toRootHex(props.payloadEnvelope.message.beaconBlockRoot);
+    if (payloadBlockRoot !== this.blockRootHex) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
+          blockInputRoot: this.blockRootHex,
+          mismatchedRoot: payloadBlockRoot,
+          source: props.source,
+          peerId: `${props.peerIdStr}`,
+        },
+        "Payload envelope beacon_block_root does not match BlockInput.blockRootHex"
+      );
+    }
+
+    if (!this.payloadAvailable) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.PAYLOAD_UNAVAILABLE_MARKED,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot add payload envelope after marking payload unavailable"
+      );
+    }
+
+    const isDuplicate = this.payloadEnvelope !== null;
+    if (isDuplicate && opts.throwOnDuplicateAdd) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.PAYLOAD_ENVELOPE_ALREADY_SET,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addPayloadEnvelope to BlockInputEpbs with existing payload envelope"
+      );
+    }
+
+    if (isDuplicate) {
+      return;
+    }
+
+    this.payloadEnvelope = props.payloadEnvelope;
+
+    // Extract versioned hashes from payload envelope
+    const versionedHashes = props.payloadEnvelope.message.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
+
+    // Check if we now have all data (payload + all columns)
+    const sampledColumns = this.getSampledColumns();
+    const hasAllColumns = sampledColumns.length === this.sampledColumns.length;
+    const hasAllData = hasAllColumns;
+
+    if (hasAllData && this.payloadEnvelope) {
+      this.state = {
+        ...this.state,
+        hasAllData: true,
+        versionedHashes,
+        timeCompleteSec: props.seenTimestampSec,
+      } as BlockInputEpbsState;
+      this.dataPromise.resolve({
+        payloadEnvelope: this.payloadEnvelope,
+        columns: sampledColumns,
+      });
+    } else {
+      // Update versionedHashes even if not complete yet
+      this.state = {
+        ...this.state,
+        versionedHashes,
+      } as BlockInputEpbsState;
+    }
+  }
+
+  addColumn(
+    {blockRootHex, columnSidecar, source, seenTimestampSec, peerIdStr}: AddColumn,
+    opts = {throwOnDuplicateAdd: true}
+  ): void {
+    if (blockRootHex !== this.blockRootHex) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.MISMATCHED_ROOT_HEX,
+          blockInputRoot: this.blockRootHex,
+          mismatchedRoot: blockRootHex,
+          source: source,
+          peerId: `${peerIdStr}`,
+        },
+        "Column BeaconBlockHeader blockRootHex does not match BlockInput.blockRootHex"
+      );
+    }
+
+    if (!this.payloadAvailable) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.PAYLOAD_UNAVAILABLE_MARKED,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot add column after marking payload unavailable"
+      );
+    }
+
+    const isDuplicate = this.columnsCache.has(columnSidecar.index);
+    if (isDuplicate && opts.throwOnDuplicateAdd) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addColumn to BlockInputEpbs with duplicate column index"
+      );
+    }
+
+    if (isDuplicate) {
+      return;
+    }
+
+    this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
+
+    // Update versioned hashes from column if not set yet (happens when block arrives before payload/columns)
+    const currentVersionedHashes = this.state.versionedHashes;
+    const versionedHashes =
+      currentVersionedHashes.length === 0
+        ? columnSidecar.kzgCommitments.map(kzgCommitmentToVersionedHash)
+        : currentVersionedHashes;
+
+    // Check if we now have all data (payload + all columns)
+    const sampledColumns = this.getSampledColumns();
+    const hasAllColumns = sampledColumns.length === this.sampledColumns.length;
+    const hasPayloadEnvelope = this.payloadEnvelope !== null;
+    const hasAllData = hasPayloadEnvelope && hasAllColumns;
+
+    if (hasAllData && this.payloadEnvelope) {
+      this.state = {
+        ...this.state,
+        hasAllData: true,
+        versionedHashes,
+        timeCompleteSec: seenTimestampSec,
+      } as BlockInputEpbsState;
+      this.dataPromise.resolve({
+        payloadEnvelope: this.payloadEnvelope,
+        columns: sampledColumns,
+      });
+    } else if (versionedHashes !== currentVersionedHashes) {
+      // Update versionedHashes even if not complete yet
+      this.state = {
+        ...this.state,
+        versionedHashes,
+      } as BlockInputEpbsState;
+    }
+  }
+
+  // This may be potentially called every time we receive new PTC votes.
+  // If our fork choice decides EMPTY variant of the block. (> 50% PTC votes for payload absent)
+  markPayloadUnavailable(): void {
+    if (!this.payloadAvailable) {
+      return;
+    }
+
+    this.payloadAvailable = false;
+    this.state = {
+      ...this.state,
+      hasAllData: true,
+      timeCompleteSec: Date.now() / 1000,
+      payloadAvailable: false,
+    } as BlockInputEpbsState;
+    this.dataPromise.resolve(null);
+  }
+
+  hasPayloadEnvelope(): boolean {
+    return this.payloadEnvelope !== null;
+  }
+
+  getPayloadEnvelope(): gloas.SignedExecutionPayloadEnvelope {
+    if (!this.payloadEnvelope) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INCOMPLETE_DATA,
+          ...this.getLogMeta(),
+        },
+        "Cannot get payload envelope. Payload is not available"
+      );
+    }
+    return this.payloadEnvelope;
+  }
+
+  getPayloadEnvelopeOrNull(): gloas.SignedExecutionPayloadEnvelope | null {
+    return this.payloadEnvelope;
+  }
+
+  hasColumn(columnIndex: number): boolean {
+    return this.columnsCache.has(columnIndex);
+  }
+
+  getVersionedHashes(): VersionedHashes {
+    return this.state.versionedHashes;
+  }
+
+  getCustodyColumns(): gloas.DataColumnSidecars {
+    const columns: gloas.DataColumnSidecars = [];
+    for (const index of this.custodyColumns) {
+      const column = this.columnsCache.get(index);
+      if (column) {
+        columns.push(column.columnSidecar as gloas.DataColumnSidecar);
+      }
+    }
+    return columns;
+  }
+
+  getSampledColumnsWithSource(): ColumnWithSource[] {
+    const columns: ColumnWithSource[] = [];
+    for (const index of this.sampledColumns) {
+      const column = this.columnsCache.get(index);
+      if (column) {
+        columns.push(column);
+      }
+    }
+    return columns;
+  }
+
+  getSampledColumns(): gloas.DataColumnSidecars {
+    const columns: gloas.DataColumnSidecars = [];
+    for (const index of this.sampledColumns) {
+      const column = this.columnsCache.get(index);
+      if (column) {
+        columns.push(column.columnSidecar as gloas.DataColumnSidecar);
+      }
+    }
+    return columns;
+  }
+
+  getAllColumnsWithSource(): ColumnWithSource[] {
+    return [...this.columnsCache.values()];
+  }
+
+  getAllColumns(): gloas.DataColumnSidecars {
+    return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar as gloas.DataColumnSidecar);
   }
 
   getMissingSampledColumnMeta(): MissingColumnMeta {

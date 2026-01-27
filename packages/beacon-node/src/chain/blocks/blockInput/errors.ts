@@ -1,7 +1,7 @@
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {PeerIdStr} from "../../../util/peerId.js";
-import {BlockInputSource, LogMetaBlobs, LogMetaColumns} from "./types.js";
+import {BlockInputSource, LogMetaBlobs, LogMetaColumns, LogMetaEpbs} from "./types.js";
 
 export enum BlockInputErrorCode {
   // Bad Arguments
@@ -17,6 +17,10 @@ export enum BlockInputErrorCode {
   // Mismatched values
   MISMATCHED_ROOT_HEX = "BLOCK_INPUT_ERROR_MISMATCHED_ROOT_HEX",
   MISMATCHED_KZG_COMMITMENT = "BLOCK_INPUT_ERROR_MISMATCHED_KZG_COMMITMENT",
+
+  // Gloas ePBS specific errors
+  PAYLOAD_ENVELOPE_ALREADY_SET = "BLOCK_INPUT_ERROR_PAYLOAD_ENVELOPE_ALREADY_SET",
+  PAYLOAD_UNAVAILABLE_MARKED = "BLOCK_INPUT_ERROR_PAYLOAD_UNAVAILABLE_MARKED",
 }
 
 export type BlockInputErrorType =
@@ -42,7 +46,16 @@ export type BlockInputErrorType =
       sidecarIndex: number;
       commitmentIndex?: number;
     }
+  | {
+      code: BlockInputErrorCode.PAYLOAD_ENVELOPE_ALREADY_SET;
+      blockRoot: string;
+    }
+  | {
+      code: BlockInputErrorCode.PAYLOAD_UNAVAILABLE_MARKED;
+      blockRoot: string;
+    }
   | (LogMetaBlobs & {code: BlockInputErrorCode.INCOMPLETE_DATA})
-  | (LogMetaColumns & {code: BlockInputErrorCode.INCOMPLETE_DATA});
+  | (LogMetaColumns & {code: BlockInputErrorCode.INCOMPLETE_DATA})
+  | (LogMetaEpbs & {code: BlockInputErrorCode.INCOMPLETE_DATA});
 
 export class BlockInputError extends LodestarError<BlockInputErrorType> {}

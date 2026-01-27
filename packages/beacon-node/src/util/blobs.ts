@@ -13,10 +13,21 @@ import {
   VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
+import {BeaconBlockBody, SSZTypesFor, SignedBeaconBlock, deneb, fulu, gloas, ssz} from "@lodestar/types";
 import {kzg} from "./kzg.js";
 
 type VersionHash = Uint8Array;
+
+/**
+ * Type guard to check if a data column sidecar is from the Gloas fork.
+ * Gloas columns have slot and beaconBlockRoot.
+ * Fulu columns have signedBlockHeader and kzgCommitmentsInclusionProof instead.
+ */
+export function isGloasDataColumnSidecar(
+  sidecar: fulu.DataColumnSidecar | gloas.DataColumnSidecar
+): sidecar is gloas.DataColumnSidecar {
+  return (sidecar as gloas.DataColumnSidecar).slot !== undefined;
+}
 
 export function kzgCommitmentToVersionedHash(kzgCommitment: deneb.KZGCommitment): VersionHash {
   const hash = sha256Digest(kzgCommitment);
@@ -71,8 +82,8 @@ export function getBlobSidecars(
  * See https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#recover_matrix
  */
 export async function dataColumnMatrixRecovery(
-  partialSidecars: Map<number, fulu.DataColumnSidecar>
-): Promise<fulu.DataColumnSidecars | null> {
+  partialSidecars: Map<number, fulu.DataColumnSidecar | gloas.DataColumnSidecar>
+): Promise<(fulu.DataColumnSidecar | gloas.DataColumnSidecar)[] | null> {
   const columnCount = partialSidecars.size;
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
@@ -93,6 +104,9 @@ export async function dataColumnMatrixRecovery(
     throw new Error("No data column found in cache to recover from");
   }
   const blobCount = firstDataColumn.kzgCommitments.length;
+
+  // Detect if this is a Fulu or Gloas column
+  const isGloasColumn = isGloasDataColumnSidecar(firstDataColumn);
 
   const fullColumns: Array<Uint8Array[]> = Array.from(
     {length: NUMBER_OF_COLUMNS},
@@ -121,7 +135,7 @@ export async function dataColumnMatrixRecovery(
     }
   }
 
-  const result: fulu.DataColumnSidecars = new Array(NUMBER_OF_COLUMNS);
+  const result = new Array(NUMBER_OF_COLUMNS);
 
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     let sidecar = partialSidecars.get(columnIndex);
@@ -131,14 +145,29 @@ export async function dataColumnMatrixRecovery(
       continue;
     }
 
-    sidecar = {
-      index: columnIndex,
-      column: fullColumns[columnIndex],
-      kzgCommitments: firstDataColumn.kzgCommitments,
-      kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
-      signedBlockHeader: firstDataColumn.signedBlockHeader,
-      kzgCommitmentsInclusionProof: firstDataColumn.kzgCommitmentsInclusionProof,
-    };
+    if (isGloasColumn) {
+      // Construct Gloas column
+      const gloasColumn = firstDataColumn as gloas.DataColumnSidecar;
+      sidecar = {
+        index: columnIndex,
+        column: fullColumns[columnIndex],
+        kzgCommitments: firstDataColumn.kzgCommitments,
+        kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
+        slot: gloasColumn.slot,
+        beaconBlockRoot: gloasColumn.beaconBlockRoot,
+      } as gloas.DataColumnSidecar;
+    } else {
+      // Construct Fulu column
+      const fuluColumn = firstDataColumn as fulu.DataColumnSidecar;
+      sidecar = {
+        index: columnIndex,
+        column: fullColumns[columnIndex],
+        kzgCommitments: firstDataColumn.kzgCommitments,
+        kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
+        signedBlockHeader: fuluColumn.signedBlockHeader,
+        kzgCommitmentsInclusionProof: fuluColumn.kzgCommitmentsInclusionProof,
+      } as fulu.DataColumnSidecar;
+    }
     result[columnIndex] = sidecar;
   }
 

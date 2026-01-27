@@ -144,6 +144,7 @@ describe("KZG", () => {
       throw new Error("Recovered sidecars should not be null");
     }
     expect(recoveredSidecars.length).toBe(NUMBER_OF_COLUMNS);
-    expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars, sidecars)).toBeTruthy();
+    // Cast to fulu.DataColumnSidecars since input was Fulu columns
+    expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars as fulu.DataColumnSidecars, sidecars)).toBeTruthy();
   });
 });

@@ -1,14 +1,20 @@
 import {ForkName} from "@lodestar/params";
-import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
   PreData = "pre-data",
   Blobs = "blobs",
   Columns = "columns",
+  Epbs = "epbs",
 }
 
-export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars;
+export type GloasDAData = {
+  payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
+  columns: gloas.DataColumnSidecars;
+};
+
+export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars | GloasDAData;
 
 /**
  * Represents were input originated. Blocks and Data can come from different
@@ -55,7 +61,7 @@ export type BlockWithSource = SourceMeta & {block: SignedBeaconBlock; blockRootH
 
 export type BlobWithSource = SourceMeta & {blobSidecar: deneb.BlobSidecar};
 
-export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar};
+export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar | gloas.DataColumnSidecar};
 
 export type BlockHeaderMeta = {
   forkName: ForkName;
@@ -97,6 +103,26 @@ export type BlobMeta = {
 export type MissingColumnMeta = {
   missing: ColumnIndex[];
   versionedHashes: VersionedHashes;
+};
+
+export type LogMetaEpbs = LogMetaBasic & {
+  hasPayload: boolean; // Have we received the payload envelope?
+  payloadAvailable: boolean; // Is payload expected (true) or marked unavailable (false)?
+  expectedColumns: number;
+  receivedColumns: number;
+};
+
+export type PayloadEnvelopeWithSource = SourceMeta & {
+  payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
+};
+
+export type AddPayloadEnvelope = PayloadEnvelopeWithSource & {
+  blockRootHex: RootHex;
+};
+
+export type ColumnConfig = {
+  sampledColumns: ColumnIndex[];
+  custodyColumns: ColumnIndex[];
 };
 
 /**

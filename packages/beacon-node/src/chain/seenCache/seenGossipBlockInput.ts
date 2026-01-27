@@ -1,16 +1,26 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {ForkName, ForkPostFulu, ForkPreGloas, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPostGloas,
+  ForkPreGloas,
+  isForkPostDeneb,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
 import {LodestarError, Logger, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {isGloasDataColumnSidecar} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {
   BlockInput,
   BlockInputBlobs,
   BlockInputColumns,
+  BlockInputEpbs,
   BlockInputPreData,
   BlockWithSource,
   DAType,
@@ -19,9 +29,11 @@ import {
   LogMetaBasic,
   LogMetaBlobs,
   LogMetaColumns,
+  LogMetaEpbs,
   SourceMeta,
   isBlockInputBlobs,
   isBlockInputColumns,
+  isBlockInputEpbs,
   isDaOutOfRange,
 } from "../blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
@@ -160,10 +172,6 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // TODO GLOAS: Implement
-      if (isForkPostGloas(forkName)) {
-        throw Error("Not implemented");
-      }
       // Pre-deneb
       if (!isForkPostDeneb(forkName)) {
         blockInput = BlockInputPreData.createFromBlock({
@@ -171,6 +179,19 @@ export class SeenBlockInput {
           blockRootHex,
           daOutOfRange,
           forkName,
+          source,
+          seenTimestampSec,
+          peerIdStr,
+        });
+        // Gloas (ePBS)
+      } else if (isForkPostGloas(forkName)) {
+        blockInput = BlockInputEpbs.createFromBlock({
+          block: block as SignedBeaconBlock<ForkPostGloas>,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          custodyColumns: this.custodyConfig.custodyColumns,
+          sampledColumns: this.custodyConfig.sampledColumns,
           source,
           seenTimestampSec,
           peerIdStr,
@@ -273,7 +294,95 @@ export class SeenBlockInput {
     return blockInput;
   }
 
+  getByPayloadEnvelope(
+    {
+      blockRootHex,
+      payloadEnvelope,
+      source,
+      seenTimestampSec,
+      peerIdStr,
+    }: SourceMeta & {blockRootHex: RootHex; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope},
+    opts: GetByBlobOptions = {}
+  ): BlockInputEpbs {
+    let blockInput = this.blockInputs.get(blockRootHex);
+    let created = false;
+
+    if (!blockInput) {
+      created = true;
+      const {forkName, daOutOfRange} = this.buildCommonProps(payloadEnvelope.message.slot);
+      blockInput = BlockInputEpbs.createFromPayload({
+        payloadEnvelope,
+        blockRootHex,
+        daOutOfRange,
+        forkName,
+        source,
+        seenTimestampSec,
+        peerIdStr,
+        custodyColumns: this.custodyConfig.custodyColumns,
+        sampledColumns: this.custodyConfig.sampledColumns,
+      });
+      // TODO: Add metrics for payload envelope creation
+      // this.metrics?.seenCache.blockInput.createdByPayload.inc();
+      this.blockInputs.set(blockRootHex, blockInput);
+    }
+
+    if (!isBlockInputEpbs(blockInput)) {
+      throw new SeenBlockInputCacheError(
+        {
+          code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
+          cachedType: blockInput.type,
+          requestedType: DAType.Epbs,
+          ...blockInput.getLogMeta(),
+        },
+        "BlockInputType mismatch adding payload envelope"
+      );
+    }
+
+    if (!blockInput.hasPayloadEnvelope()) {
+      blockInput.addPayloadEnvelope({payloadEnvelope, blockRootHex, source, seenTimestampSec, peerIdStr});
+    } else if (!created) {
+      this.logger?.debug("Attempt to cache payload envelope but already cached", blockInput.getLogMeta());
+      if (opts.throwErrorIfAlreadyKnown) {
+        throw new SeenBlockInputCacheError({
+          code: SeenBlockInputCacheErrorCode.GOSSIP_PAYLOAD_ALREADY_KNOWN,
+          ...blockInput.getLogMeta(),
+        });
+      }
+    }
+
+    return blockInput;
+  }
+
   getByColumn(
+    {
+      blockRootHex,
+      columnSidecar,
+      seenTimestampSec,
+      source,
+      peerIdStr,
+    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: fulu.DataColumnSidecar | gloas.DataColumnSidecar},
+    opts: GetByBlobOptions = {}
+  ): BlockInputColumns | BlockInputEpbs {
+    // Extract slot based on fork type
+    const slot = isGloasDataColumnSidecar(columnSidecar)
+      ? columnSidecar.slot
+      : columnSidecar.signedBlockHeader.message.slot;
+    const {forkName} = this.buildCommonProps(slot);
+
+    // Route to appropriate handler based on fork
+    if (isForkPostGloas(forkName)) {
+      return this.getByColumnGloas(
+        {blockRootHex, columnSidecar: columnSidecar as gloas.DataColumnSidecar, seenTimestampSec, source, peerIdStr},
+        opts
+      );
+    }
+    return this.getByColumnFulu(
+      {blockRootHex, columnSidecar: columnSidecar as fulu.DataColumnSidecar, seenTimestampSec, source, peerIdStr},
+      opts
+    );
+  }
+
+  private getByColumnFulu(
     {
       blockRootHex,
       columnSidecar,
@@ -309,6 +418,67 @@ export class SeenBlockInput {
           code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
           cachedType: blockInput.type,
           requestedType: DAType.Columns,
+          ...blockInput.getLogMeta(),
+        },
+        `BlockInputType mismatch adding columnIndex=${columnSidecar.index}`
+      );
+    }
+
+    if (!blockInput.hasColumn(columnSidecar.index)) {
+      blockInput.addColumn({columnSidecar, blockRootHex, source, seenTimestampSec, peerIdStr});
+    } else if (!created) {
+      this.logger?.debug(
+        `Attempt to cache column index #${columnSidecar.index} but is already cached on BlockInput`,
+        blockInput.getLogMeta()
+      );
+      this.metrics?.seenCache.blockInput.duplicateColumnCount.inc({source});
+      if (opts.throwErrorIfAlreadyKnown) {
+        throw new SeenBlockInputCacheError({
+          code: SeenBlockInputCacheErrorCode.GOSSIP_COLUMN_ALREADY_KNOWN,
+          ...blockInput.getLogMeta(),
+        });
+      }
+    }
+
+    return blockInput;
+  }
+
+  private getByColumnGloas(
+    {
+      blockRootHex,
+      columnSidecar,
+      seenTimestampSec,
+      source,
+      peerIdStr,
+    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: gloas.DataColumnSidecar},
+    opts: GetByBlobOptions = {}
+  ): BlockInputEpbs {
+    let blockInput = this.blockInputs.get(blockRootHex);
+    let created = false;
+    if (!blockInput) {
+      created = true;
+      const {forkName, daOutOfRange} = this.buildCommonProps(columnSidecar.slot);
+      blockInput = BlockInputEpbs.createFromColumn({
+        columnSidecar,
+        blockRootHex,
+        daOutOfRange,
+        forkName,
+        source,
+        seenTimestampSec,
+        peerIdStr,
+        custodyColumns: this.custodyConfig.custodyColumns,
+        sampledColumns: this.custodyConfig.sampledColumns,
+      });
+      this.metrics?.seenCache.blockInput.createdByBlob.inc();
+      this.blockInputs.set(blockRootHex, blockInput);
+    }
+
+    if (!isBlockInputEpbs(blockInput)) {
+      throw new SeenBlockInputCacheError(
+        {
+          code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
+          cachedType: blockInput.type,
+          requestedType: DAType.Epbs,
           ...blockInput.getLogMeta(),
         },
         `BlockInputType mismatch adding columnIndex=${columnSidecar.index}`
@@ -394,6 +564,7 @@ enum SeenBlockInputCacheErrorCode {
   WRONG_BLOCK_INPUT_TYPE = "BLOCK_INPUT_CACHE_ERROR_WRONG_BLOCK_INPUT_TYPE",
   GOSSIP_BLOB_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_BLOB_ALREADY_KNOWN",
   GOSSIP_COLUMN_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_COLUMN_ALREADY_KNOWN",
+  GOSSIP_PAYLOAD_ALREADY_KNOWN = "BLOCK_INPUT_CACHE_ERROR_GOSSIP_PAYLOAD_ALREADY_KNOWN",
 }
 
 type SeenBlockInputCacheErrorType =
@@ -407,6 +578,9 @@ type SeenBlockInputCacheErrorType =
     })
   | (LogMetaColumns & {
       code: SeenBlockInputCacheErrorCode.GOSSIP_COLUMN_ALREADY_KNOWN;
+    })
+  | (LogMetaEpbs & {
+      code: SeenBlockInputCacheErrorCode.GOSSIP_PAYLOAD_ALREADY_KNOWN;
     });
 
 class SeenBlockInputCacheError extends LodestarError<SeenBlockInputCacheErrorType> {}

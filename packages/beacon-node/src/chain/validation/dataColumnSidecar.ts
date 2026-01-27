@@ -10,7 +10,7 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
+import {Root, Slot, SubnetID, fulu, gloas, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
@@ -464,7 +464,7 @@ export async function validateBlockDataColumnSidecars(
  */
 export function computeSubnetForDataColumnSidecar(
   config: ChainConfig,
-  columnSidecar: fulu.DataColumnSidecar
+  columnSidecar: fulu.DataColumnSidecar | gloas.DataColumnSidecar
 ): SubnetID {
   return columnSidecar.index % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
 }
