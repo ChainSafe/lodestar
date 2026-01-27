@@ -809,7 +809,13 @@ export class BeaconChain implements IBeaconChain {
       return indices
         .map((index) => blockInput.getColumn(index))
         .filter((sidecar): sidecar is fulu.DataColumnSidecar => sidecar != null)
-        .map(ssz.fulu.DataColumnSidecar.serialize);
+        .map((sidecar) => {
+          const serialized = this.serializedCache.get(sidecar);
+          if (serialized) {
+            return serialized;
+          }
+          return ssz.fulu.DataColumnSidecar.serialize(sidecar);
+        });
     }
     const sidecarsUnfinalized =
       indices === undefined
