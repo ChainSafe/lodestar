@@ -25,7 +25,7 @@ export function processExecutionPayloadEnvelope(
   const fork = state.config.getForkSeq(envelope.slot);
 
   if (verify && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
-    throw new Error("Execution payload envelope has invalid signature");
+    throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
   }
 
   validateExecutionPayloadEnvelope(state, envelope);
