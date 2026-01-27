@@ -91,7 +91,7 @@ export async function importBlock(
   }
 
   // 1. Persist block to hot DB (performed asynchronously to avoid blocking head selection)
-  await this.unfinalizedBlockWrites.push([blockInput]);
+  void this.unfinalizedBlockWrites.push([blockInput]);
 
   // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
   this.serializedCache.clear();
