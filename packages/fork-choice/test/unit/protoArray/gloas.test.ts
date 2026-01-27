@@ -532,8 +532,10 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, blockSlot);
       protoArray.onExecutionPayload("0x02", blockSlot);
 
-      const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)!;
-      const fullIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL)!;
+      const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
+      if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
+      const fullIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
+      if (fullIndex === undefined) throw new Error("Expected fullIndex to exist");
 
       // Give EMPTY more weight than FULL
       const deltas = new Array(protoArray.length()).fill(0);
@@ -571,8 +573,10 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(blockA, blockSlot);
       protoArray.onBlock(blockB, blockSlot);
 
-      const emptyAIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)!;
-      const emptyBIndex = protoArray.getNodeIndexByRootAndStatus("0x03", PayloadStatus.EMPTY)!;
+      const emptyAIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
+      if (emptyAIndex === undefined) throw new Error("Expected emptyAIndex to exist");
+      const emptyBIndex = protoArray.getNodeIndexByRootAndStatus("0x03", PayloadStatus.EMPTY);
+      if (emptyBIndex === undefined) throw new Error("Expected emptyBIndex to exist");
 
       // Give A more votes than B
       // Note: Use nodes.length (not protoArray.length()) since Gloas blocks have multiple nodes per root
@@ -605,8 +609,10 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, blockSlot);
       protoArray.onExecutionPayload("0x02", blockSlot);
 
-      const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)!;
-      const fullIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL)!;
+      const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
+      if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
+      const fullIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
+      if (fullIndex === undefined) throw new Error("Expected fullIndex to exist");
 
       const deltas = new Array(protoArray.length()).fill(0);
       deltas[emptyIndex] = 100;

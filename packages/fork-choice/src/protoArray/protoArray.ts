@@ -1132,6 +1132,7 @@ export class ProtoArray {
 
     let newChildAndDescendant: ChildAndDescendant;
     const bestChildIndex = parentNode.bestChild;
+    // biome-ignore lint/suspicious/noConfusingLabels: labeled block used for early exit from complex decision tree
     outer: {
       if (bestChildIndex !== undefined) {
         if (bestChildIndex === childIndex && !childLeadsToViableHead) {
