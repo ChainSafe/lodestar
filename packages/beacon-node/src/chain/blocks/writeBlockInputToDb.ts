@@ -99,9 +99,14 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
 }
 
 export async function persistBlockInputs(this: BeaconChain, blockInputs: IBlockInput[]): Promise<void> {
-  await writeBlockInputToDb.call(this, blockInputs).finally(() => {
-    for (const blockInput of blockInputs) {
-      this.seenBlockInputCache.prune(blockInput.blockRootHex);
-    }
-  });
+  await writeBlockInputToDb
+    .call(this, blockInputs)
+    .catch((e) => {
+      this.logger.debug("Error persisting block input in hot db", {}, e);
+    })
+    .finally(() => {
+      for (const blockInput of blockInputs) {
+        this.seenBlockInputCache.prune(blockInput.blockRootHex);
+      }
+    });
 }
