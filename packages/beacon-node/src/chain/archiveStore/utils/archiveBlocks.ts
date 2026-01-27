@@ -232,6 +232,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
     // load Buffer instead of SignedBeaconBlock to improve performance
     const canonicalBlockEntries: BlockArchiveBatchPutBinaryItem[] = await Promise.all(
       canonicalBlocks.map(async (block) => {
+        // Here we assume the blocks are already in the hot db
         const blockBuffer = await db.block.getBinary(block.root);
         if (!blockBuffer) {
           throw Error(`Block not found for slot ${block.slot} root ${toRootHex(block.root)}`);
