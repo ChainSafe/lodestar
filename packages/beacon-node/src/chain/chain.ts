@@ -722,7 +722,7 @@ export class BeaconChain implements IBeaconChain {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputBlobs(blockInput)) {
-        throw new Error("Expected block input to have blobs");
+        throw new Error(`Expected block input to have blobs: ${blockSlot} ${blockRootHex}`);
       }
       if (!blockInput.hasAllData()) {
         return null;
@@ -740,7 +740,7 @@ export class BeaconChain implements IBeaconChain {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputBlobs(blockInput)) {
-        throw new Error("Expected block input to have blobs");
+        throw new Error(`Expected block input to have blobs: ${blockSlot} ${blockRootHex}`);
       }
       if (!blockInput.hasAllData()) {
         return null;
@@ -766,7 +766,7 @@ export class BeaconChain implements IBeaconChain {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputColumns(blockInput)) {
-        throw new Error("Expected block input to have columns");
+        throw new Error(`Expected block input to have columns: ${blockSlot} ${blockRootHex}`);
       }
       if (indices === undefined) {
         return blockInput.getAllColumns();
@@ -801,7 +801,7 @@ export class BeaconChain implements IBeaconChain {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputColumns(blockInput)) {
-        throw new Error("Expected block input to have columns");
+        throw new Error(`Expected block input to have columns: ${blockSlot} ${blockRootHex}`);
       }
       if (indices === undefined) {
         return blockInput.getAllColumns().map(ssz.fulu.DataColumnSidecar.serialize);
