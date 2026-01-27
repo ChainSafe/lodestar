@@ -478,6 +478,13 @@
     MESSAGE_DOMAIN_VALID_SNAPPY: DomainType = '0x01000000'
     </spec>
 
+- name: MIN_BUILDER_WITHDRAWABILITY_DELAY#gloas
+  sources: []
+  spec: |
+    <spec config_var="MIN_BUILDER_WITHDRAWABILITY_DELAY" fork="gloas" hash="d378428f">
+    MIN_BUILDER_WITHDRAWABILITY_DELAY: uint64 = 4096
+    </spec>
+
 - name: MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS#deneb
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
