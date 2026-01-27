@@ -25,7 +25,7 @@ export function processExecutionPayloadEnvelope(
   const fork = state.config.getForkSeq(envelope.slot);
 
   if (verify && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
-    throw new Error("Payload Envelope has invalid signature");
+    throw new Error("Execution payload envelope has invalid signature");
   }
 
   validateExecutionPayloadEnvelope(state, envelope);
@@ -72,6 +72,7 @@ function validateExecutionPayloadEnvelope(
 ): void {
   const payload = envelope.payload;
 
+  // Cache latest block header state root
   if (byteArrayEquals(state.latestBlockHeader.stateRoot, ssz.Root.defaultValue())) {
     const previousStateRoot = state.hashTreeRoot();
     state.latestBlockHeader.stateRoot = previousStateRoot;
@@ -84,24 +85,37 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // Verify consistency with the beacon block
   if (envelope.slot !== state.slot) {
     throw new Error(`Slot mismatch between envelope and state envelope=${envelope.slot} state=${state.slot}`);
   }
 
-  const committedBid = state.latestExecutionPayloadBid;
   // Verify consistency with the committed bid
+  const committedBid = state.latestExecutionPayloadBid;
   if (envelope.builderIndex !== committedBid.builderIndex) {
     throw new Error(
       `Builder index mismatch between envelope and committed bid envelope=${envelope.builderIndex} committedBid=${committedBid.builderIndex}`
     );
   }
 
-  // Verify consistency with the committed bid
   const envelopeKzgRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(envelope.blobKzgCommitments);
   if (!byteArrayEquals(committedBid.blobKzgCommitmentsRoot, envelopeKzgRoot)) {
     throw new Error(
       `Kzg commitment root mismatch between envelope and committed bid envelope=${toRootHex(envelopeKzgRoot)} committedBid=${toRootHex(committedBid.blobKzgCommitmentsRoot)}`
+    );
+  }
+
+  if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
+    throw new Error(
+      `Prev randao mismatch between committed bid and payload committedBid=${toHex(committedBid.prevRandao)} payload=${toHex(payload.prevRandao)}`
+    );
+  }
+
+  // Verify consistency with expected withdrawals
+  const payloadWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
+  const expectedWithdrawalsRoot = state.payloadExpectedWithdrawals.hashTreeRoot();
+  if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
+    throw new Error(
+      `Withdrawals mismatch between payload and expected withdrawals payload=${toRootHex(payloadWithdrawalsRoot)} expected=${toRootHex(expectedWithdrawalsRoot)}`
     );
   }
 
@@ -123,22 +137,6 @@ function validateExecutionPayloadEnvelope(
   if (!byteArrayEquals(payload.parentHash, state.latestBlockHash)) {
     throw new Error(
       `Parent hash mismatch between envelope's payload and state envelope=${toRootHex(payload.parentHash)} state=${toRootHex(state.latestBlockHash)}`
-    );
-  }
-
-  // Verify prev_randao matches committed bid
-  if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
-    throw new Error(
-      `Prev randao mismatch between committed bid and payload committedBid=${toHex(committedBid.prevRandao)} payload=${toHex(payload.prevRandao)}`
-    );
-  }
-
-  // Verify consistency with expected withdrawals
-  const payloadWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
-  const expectedWithdrawalsRoot = state.payloadExpectedWithdrawals.hashTreeRoot();
-  if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
-    throw new Error(
-      `Withdrawals mismatch between payload and expected withdrawals payload=${toRootHex(payloadWithdrawalsRoot)} expected=${toRootHex(expectedWithdrawalsRoot)}`
     );
   }
 

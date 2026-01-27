@@ -21,25 +21,24 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     if (!byteArrayEquals(signedBid.signature, G2_POINT_AT_INFINITY)) {
       throw Error("Invalid execution payload bid: self-build with non-zero signature");
     }
-    // Non-self builds require builder withdrawal credential
-  } else {
+  }
+  // Non-self builds require active builder with valid signature
+  else {
     const builder = state.builders.getReadonly(builderIndex);
 
-    // Construct withdrawal credentials from builder version and execution address
-    const withdrawalCredentials = new Uint8Array(32);
-    withdrawalCredentials[0] = builder.version;
-    withdrawalCredentials.set(builder.executionAddress, 12);
-
+    // Verify that the builder is active
     if (!isActiveBuilder(state, builderIndex)) {
       throw Error(`Invalid execution payload bid: builder ${builderIndex} is not active`);
     }
 
-    if (!verifyExecutionPayloadBidSignature(state, builder.pubkey, signedBid)) {
-      throw Error(`Invalid execution payload bid: invalid signature for builder ${builderIndex}`);
+    // Verify that the builder has funds to cover the bid
+    if (!canBuilderCoverBid(state, builderIndex, amount)) {
+      throw Error(`Invalid execution payload bid: builder ${builderIndex} has insufficient balance`);
     }
 
-    if (amount !== 0 && !canBuilderCoverBid(state, builderIndex, amount)) {
-      throw Error("Insufficient builder balance");
+    // Verify that the bid signature is valid
+    if (!verifyExecutionPayloadBidSignature(state, builder.pubkey, signedBid)) {
+      throw Error(`Invalid execution payload bid: invalid signature for builder ${builderIndex}`);
     }
   }
 

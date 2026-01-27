@@ -56,11 +56,11 @@ export const SyncPeriod = UintNum64;
 export const CommitteeIndex = UintNum64;
 /** @see CommitteeIndex */
 export const SubcommitteeIndex = UintNum64;
+export const BuilderIndex = UintNumInf64; // Builder index can be infinity in bid when self-build
 /**
  * Use JS Number for performance, values must be limited to 2**52-1.
  * ValidatorIndex is bounded by `VALIDATOR_REGISTRY_LIMIT`
  */
-export const BuilderIndex = UintNumInf64; // Builder index can be infinity in bid when self build
 export const ValidatorIndex = UintNum64;
 export const WithdrawalIndex = UintNum64;
 export const DepositIndex = UintBn64;

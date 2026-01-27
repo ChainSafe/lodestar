@@ -98,7 +98,7 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
 
 /**
  * Check if validator is partially withdrawable.
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/electra/beacon-chain.md#modified-is_partially_withdrawable_validator
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/electra/beacon-chain.md#modified-is_partially_withdrawable_validator
  */
 export function isPartiallyWithdrawableValidator(fork: ForkSeq, validator: phase0.Validator, balance: number): boolean {
   const isPostElectra = fork >= ForkSeq.electra;
