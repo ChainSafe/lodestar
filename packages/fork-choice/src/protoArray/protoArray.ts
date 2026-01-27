@@ -980,7 +980,7 @@ export class ProtoArray {
 
     // Collect all block roots that will be pruned
     const prunedRoots = new Set<RootHex>();
-    for (let i = 0; i <= finalizedIndex; i++) {
+    for (let i = 0; i < finalizedIndex; i++) {
       const node = this.nodes[i];
       if (node === undefined) {
         throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: i});
@@ -1430,18 +1430,14 @@ export class ProtoArray {
    */
   *iterateAncestorNodesFromNode(node: ProtoNode): IterableIterator<ProtoNode> {
     while (node.parent !== undefined) {
-      const pIndex = node.parent;
-      const parentRoot = this.getNodeFromIndex(pIndex).blockRoot;
-      const parentIndex = this.indices.get(parentRoot)?.[0];
+      // Traverse to parent node
+      // Note: node.parent may point to EMPTY or FULL variant, but we only want to yield default variants
+      node = this.getNodeFromIndex(node.parent);
 
-      if (parentIndex === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_PARENT_INDEX,
-          index: pIndex,
-        });
+      // Only yield default variants (PENDING for Gloas, FULL for pre-Gloas)
+      if (this.isDefaultVariant(node)) {
+        yield node;
       }
-      node = this.getNodeFromIndex(parentIndex);
-      yield node;
     }
   }
 
@@ -1468,19 +1464,14 @@ export class ProtoArray {
     const nodes = [node];
 
     while (node.parent !== undefined) {
-      const pIndex = node.parent;
-      const parentRoot = this.getNodeFromIndex(pIndex).blockRoot;
-      const parentIndex = this.indices.get(parentRoot)?.[0];
+      // Traverse to parent node
+      // Note: node.parent may point to EMPTY or FULL variant, but we only want to collect default variants
+      node = this.getNodeFromIndex(node.parent);
 
-      if (parentIndex === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_PARENT_INDEX,
-          index: pIndex,
-        });
+      // Only collect default variants (PENDING for Gloas, FULL for pre-Gloas)
+      if (this.isDefaultVariant(node)) {
+        nodes.push(node);
       }
-
-      node = this.getNodeFromIndex(parentIndex);
-      nodes.push(node);
     }
 
     return nodes;
@@ -1514,18 +1505,16 @@ export class ProtoArray {
     const result: ProtoNode[] = [];
     let nodeIndex = startIndex;
     while (node.parent !== undefined) {
-      const pIndex = node.parent;
-      const parentRoot = this.getNodeFromIndex(pIndex).blockRoot;
-      const parentIndex = this.indices.get(parentRoot)?.[0];
+      // Traverse to parent - may point to any variant
+      const parentIndex = node.parent;
+      node = this.getNodeFromIndex(parentIndex);
 
-      if (parentIndex === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_PARENT_INDEX,
-          index: pIndex,
-        });
+      if (!this.isDefaultVariant(node)) {
+        // Parent is non-default variant, need to find default variant
+        // Skip to next iteration to find the default variant
+        continue;
       }
 
-      node = this.getNodeFromIndex(parentIndex);
       // nodes between nodeIndex and parentIndex means non-ancestor nodes
       // Excludes all EMPTY/FULL variant post-gloas
       result.push(...this.getNodesBetween(nodeIndex, parentIndex).filter(this.isDefaultVariant));
@@ -1561,20 +1550,19 @@ export class ProtoArray {
 
     let nodeIndex = startIndex;
     while (node.parent !== undefined) {
-      ancestors.push(node);
-
-      // Parent could be FULL/EMPTY, need to use `indices` to look up PENDING variant of parent
-      const pIndex = node.parent;
-      const parentRoot = this.getNodeFromIndex(pIndex).blockRoot;
-      const parentIndex = this.indices.get(parentRoot)?.[0];
-
-      if (parentIndex === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_PARENT_INDEX,
-          index: pIndex,
-        });
+      // Only add default variants to ancestors
+      if (this.isDefaultVariant(node)) {
+        ancestors.push(node);
       }
+
+      // Traverse to parent - may point to any variant
+      const parentIndex = node.parent;
       node = this.getNodeFromIndex(parentIndex);
+
+      if (!this.isDefaultVariant(node)) {
+        // Parent is non-default variant, skip to next iteration to find default variant
+        continue;
+      }
 
       // Nodes between nodeIndex and parentIndex are non-ancestor nodes
       // Filter out all FULL/EMPTY variants post-gloas
@@ -1582,7 +1570,10 @@ export class ProtoArray {
       nodeIndex = parentIndex;
     }
 
-    ancestors.push(node);
+    // Add final node if it's a default variant
+    if (this.isDefaultVariant(node)) {
+      ancestors.push(node);
+    }
     nonAncestors.push(...this.getNodesBetween(nodeIndex, 0).filter(this.isDefaultVariant));
 
     return {ancestors, nonAncestors};
@@ -1763,7 +1754,15 @@ export class ProtoArray {
     return result;
   }
 
+  /**
+   * Check if a node is a default variant (PENDING for Gloas, FULL for pre-Gloas)
+   * Determines this directly from the node's properties without looking up indices map
+   */
   private isDefaultVariant = (node: ProtoNode): boolean => {
-    return node.payloadStatus === this.getDefaultVariant(node.blockRoot);
+    // For Gloas blocks (parentBlockHash !== null), default is PENDING
+    // For pre-Gloas blocks (parentBlockHash === null), default is FULL
+    return isGloasBlock(node)
+      ? node.payloadStatus === PayloadStatus.PENDING
+      : node.payloadStatus === PayloadStatus.FULL;
   };
 }
