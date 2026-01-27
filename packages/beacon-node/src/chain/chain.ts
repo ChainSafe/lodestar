@@ -417,10 +417,14 @@ export class BeaconChain implements IBeaconChain {
       signal
     );
 
-    this.unfinalizedBlockWrites = new JobItemQueue(persistBlockInputs.bind(this), {
-      maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES,
-      signal,
-    });
+    this.unfinalizedBlockWrites = new JobItemQueue(
+      persistBlockInputs.bind(this),
+      {
+        maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES,
+        signal,
+      },
+      metrics?.unfinalizedBlockWritesQueue
+    );
 
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
