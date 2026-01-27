@@ -36,7 +36,7 @@ describe("intToBytes", () => {
     const type = typeof input;
     const length = input[1];
     it(`should correctly serialize ${type} to bytes length ${length}`, () => {
-      expect(intToBytes(input[0], input[1])).toEqual(output);
+      expect(toHex(intToBytes(input[0], input[1]))).toEqual(toHex(output));
     });
   }
 });
