@@ -453,6 +453,12 @@ export class BeaconChain implements IBeaconChain {
   async close(): Promise<void> {
     await this.archiveStore.close();
     await this.bls.close();
+
+    // Since we don't persist unfinalized fork-choice,
+    // we can abort any ongoing unfinalized block writes.
+    // TODO: persist fork choice to disk and allow unfinalized block writes to complete.
+    this.unfinalizedBlockWrites.dropAllJobs();
+
     this.abortController.abort();
   }
 
