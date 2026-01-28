@@ -152,4 +152,5 @@ describe("ValidatorMonitor", () => {
       // Validator should still be there
       expect(monitor.getMonitoredValidatorIndices()).toContain(1);
     });
+  });
 });
