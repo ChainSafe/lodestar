@@ -2,7 +2,6 @@ import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0, ssz} from "@lodestar/types";
 import {Validator} from "@lodestar/types/phase0";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {getProposerSlashingSignatureSets} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot, isSlashableValidator} from "../util/index.js";
@@ -22,14 +21,7 @@ export function processProposerSlashing(
   verifySignatures = true
 ): void {
   const proposer = state.validators.getReadonly(proposerSlashing.signedHeader1.message.proposerIndex);
-  assertValidProposerSlashing(
-    state.config,
-    state.epochCtx.index2pubkey,
-    state.slot,
-    proposerSlashing,
-    proposer,
-    verifySignatures
-  );
+  assertValidProposerSlashing(state.config, state.slot, proposerSlashing, proposer, verifySignatures);
 
   if (fork >= ForkSeq.gloas) {
     const slot = Number(proposerSlashing.signedHeader1.message.slot);
@@ -57,7 +49,6 @@ export function processProposerSlashing(
 
 export function assertValidProposerSlashing(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   stateSlot: Slot,
   proposerSlashing: phase0.ProposerSlashing,
   proposer: Validator,
@@ -92,7 +83,7 @@ export function assertValidProposerSlashing(
 
   // verify signatures
   if (verifySignatures) {
-    const signatureSets = getProposerSlashingSignatureSets(config, index2pubkey, stateSlot, proposerSlashing);
+    const signatureSets = getProposerSlashingSignatureSets(config, stateSlot, proposerSlashing);
     for (let i = 0; i < signatureSets.length; i++) {
       if (!verifySignatureSet(signatureSets[i])) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);

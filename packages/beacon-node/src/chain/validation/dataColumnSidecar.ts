@@ -136,7 +136,6 @@ export async function validateGossipDataColumnSidecar(
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
     const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
       chain.config,
-      chain.index2pubkey,
       blockState.slot,
       dataColumnSidecar.signedBlockHeader
     );
@@ -337,11 +336,7 @@ export async function validateBlockDataColumnSidecars(
     const slot = firstSidecarSignedBlockHeader.message.slot;
     const signature = firstSidecarSignedBlockHeader.signature;
     if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, rootHex, signature)) {
-      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
-        chain.config,
-        chain.index2pubkey,
-        firstSidecarSignedBlockHeader
-      );
+      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(chain.config, firstSidecarSignedBlockHeader);
 
       if (
         !(await chain.bls.verifySignatureSets([signatureSet], {

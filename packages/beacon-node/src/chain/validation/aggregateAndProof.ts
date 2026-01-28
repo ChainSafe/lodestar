@@ -216,7 +216,6 @@ async function validateAggregateAndProof(
   // by the validator with index aggregate_and_proof.aggregator_index.
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
-  const aggregatorIndex = aggregateAndProof.aggregatorIndex;
   const signingRoot = cachedAttData ? cachedAttData.signingRoot : getAttestationDataSigningRoot(chain.config, attData);
   const indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
     indexedAttestation.attestingIndices,
