@@ -224,12 +224,12 @@ export function createLodestarMetrics(
       jobTime: register.histogram({
         name: "lodestar_unfinalized_block_writes_queue_job_time_seconds",
         help: "Time to process unfinalized block writes queue job in seconds",
-        buckets: [0.01, 0.1, 1, 10, 100],
+        buckets: [0.01, 0.1, 1, 4, 12],
       }),
       jobWaitTime: register.histogram({
         name: "lodestar_unfinalized_block_writes_queue_job_wait_time_seconds",
         help: "Time from job added to the unfinalized block writes queue to starting in seconds",
-        buckets: [0.01, 0.1, 1, 10, 100],
+        buckets: [0.01, 0.1, 1, 4, 12],
       }),
       concurrency: register.gauge({
         name: "lodestar_unfinalized_block_writes_queue_concurrency",
