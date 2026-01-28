@@ -12,7 +12,7 @@ describe("BlsVerifier ", () => {
   // Create a mock index2pubkey that maps indices to public keys
   const index2pubkey = secretKeys.map((sk) => sk.toPublicKey());
   const verifiers = [
-    new BlsSingleThreadVerifier({metrics: null}),
+    new BlsSingleThreadVerifier({metrics: null, index2pubkey}),
     new BlsMultiThreadWorkerPool({}, {metrics: null, logger: testLogger(), index2pubkey}),
   ];
 

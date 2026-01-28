@@ -69,7 +69,7 @@ describe("validateGossipAttestationsSameAttData", () => {
 
   beforeEach(() => {
     chain = {
-      bls: new BlsSingleThreadVerifier({metrics: null}),
+      bls: new BlsSingleThreadVerifier({metrics: null, index2pubkey}),
       seenAttesters: new SeenAttesters(),
       index2pubkey,
       opts: {
