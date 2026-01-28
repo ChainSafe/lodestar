@@ -57,6 +57,7 @@ export type ForkChoiceOpts = {
   proposerBoost?: boolean;
   proposerBoostReorg?: boolean;
   computeUnrealized?: boolean;
+  enableFastConfirmation?: boolean;
 };
 
 export enum UpdateHeadOpt {
