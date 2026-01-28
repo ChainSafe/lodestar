@@ -15,8 +15,8 @@ import {
 import {sleep} from "@lodestar/utils";
 import {ChainEvent} from "../../../src/chain/emitter.js";
 import {RegenCaller} from "../../../src/chain/regen/interface.js";
-import {BackfillRangeWrapper} from "../../../src/db/single/backfillRange.ts";
 import {BeaconNode} from "../../../src/index.ts";
+import {PeerAction} from "../../../src/network/peers/index.ts";
 import {BackfillSyncEvent} from "../../../src/sync/backfill/backfillV2.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
@@ -30,7 +30,7 @@ describe("sync / backfill sync", () => {
   const SECOND_NODE_START_EPOCH = 5;
   const SLOT_DURATION_MS = 1000;
   const validatorCount = 8;
-  const MIN_EPOCHS_FOR_BLOCK_REQUESTS = 15;
+  const MIN_EPOCHS_FOR_BLOCK_REQUESTS = 25;
   const backfillBatchSize = 8;
   const forceCheckpointSync = false;
   const NODE_A_FINALIZATION_TIMEOUT = 300_000;
@@ -766,12 +766,299 @@ describe("sync / backfill sync", () => {
   // - should backfill from checkpoint state on fresh startup
   // - should resume from existing backfill DB state
   // - should skip already filled ranges while backfilling with forcedCheckpointSync
-  // TODO:
   // - handle db blockArchive inconsistent wrt checkpoint sync state
+  // - handle invalid blocks (NOT_ANCHORED, NOT_LINEAR): throw error and penalise peer
+  // TODO:
   // - handle skipped slots
-  // - handle invalid blocks: throw error and penalise peer
   // - sync from multiple peers: as in the real case
-  // - handle init with wrong wsCheckpoint
   // - handle sync with high/low peers
   // - handle slow peer responses
+
+  it.each(backfillTestScenarios)(
+    "should detect and delete inconsistent historical range ($name)",
+    async ({secondNodeStartEpoch, sleepEpochs}) => {
+      // Flow:
+      // reset DB
+      // create independent proposer nodes A1, A2 (not connected, different chains)
+      // create backfill node B using checkpoint from A1
+      // partially backfill
+      // stop but dont delete db
+      // restart with forcedCheckpointSync flag, using checkpoint state from A2)
+      // backfill should detect blocks from A1 don't chain with A2's checkpoint
+      // verify the inconsistent range is deleted from blockArchive AND backfillState
+      // verify backfill completes
+
+      await removeDbDir(BACKFILL_DB_PATH);
+
+      const genesisTime = getGenesisTime();
+      const loggerNodeA1 = testLogger("Backfill-Node-A1", getTestLoggerOpts(genesisTime, "node-a1"));
+      const loggerNodeA2 = testLogger("Backfill-Node-A2", getTestLoggerOpts(genesisTime, "node-a2"));
+      const loggerNodeB = testLogger("Backfill-Node-B", getTestLoggerOpts(genesisTime, "node-b"));
+
+      const bnA1 = await initValidatorNode(genesisTime, loggerNodeA1);
+      const bnA2 = await initValidatorNode(genesisTime, loggerNodeA2);
+
+      await waitForEvent(
+        bnA1.chain.emitter,
+        ChainEvent.forkChoiceFinalized,
+        NODE_A_FINALIZATION_TIMEOUT,
+        (cp: CheckpointWithHex) => cp.epoch >= secondNodeStartEpoch
+      );
+
+      const {finalizedCp: cp1, checkpointState: state1} = await getFinalizedCheckpoint(bnA1);
+      let bnB = await initBackfillNode(genesisTime, loggerNodeB, cp1, state1, false, BACKFILL_DB_PATH);
+
+      await connectNodes(bnA1, bnB);
+      await sleep(sleepEpochs * SLOTS_PER_EPOCH * SLOT_DURATION_MS); // Partial backfill for parameterized duration
+
+      afterEachCallbacks.pop();
+      await bnB.close();
+
+      // Wait for A2's next finalization event to sync with fork choice
+      // A2 has already passed the target epoch by now, we just need to
+      // avoid it accessing the blocks in hotDB which have transitioned
+      // to archiveDB and access fresh checkpoint state
+      await waitForEvent(
+        bnA2.chain.emitter,
+        ChainEvent.forkChoiceFinalized,
+        NODE_A_FINALIZATION_TIMEOUT,
+        () => true // any finalization event
+      );
+      const {finalizedCp: cp2, checkpointState: state2} = await getFinalizedCheckpoint(bnA2);
+
+      bnB = await initBackfillNode(genesisTime, loggerNodeB, cp2, state2, true, BACKFILL_DB_PATH);
+
+      const blockArchiveDeleteSpy = vi.spyOn(bnB.db.blockArchive, "batchDelete");
+      const backfillStateDeleteSpy = vi.spyOn(bnB.db.backfillState, "batchDelete");
+
+      const backfillLoggerSpy = vi.spyOn((bnB.backfillSync as any).logger, "warn");
+
+      await connectNodes(bnA2, bnB);
+
+      const maxWaitMs = 180_000;
+      await waitForEvent(bnB.backfillSync!.emitter, BackfillSyncEvent.completed, maxWaitMs);
+
+      const inconsistentDBLog = backfillLoggerSpy.mock.calls.find(
+        (call) =>
+          call[0] ===
+          "Detected inconsistent historical block range wrt provided checkpoint. Deleting range from blockArchive."
+      );
+
+      expect(inconsistentDBLog).toBeDefined();
+
+      // workaround to get exact params from logs, as directly getting them seems difficult
+      const {rangeStartEpoch, rangeEndEpoch} = inconsistentDBLog?.[1] as {
+        rangeStartEpoch: number;
+        rangeEndEpoch: number;
+      };
+      const epochRangeToDelete = Array.from(
+        {length: rangeStartEpoch - rangeEndEpoch + 1},
+        (_, i) => rangeStartEpoch - i
+      );
+      const startSlot = computeEndSlotAtEpoch(rangeStartEpoch);
+      const endSlot = computeStartSlotAtEpoch(rangeEndEpoch);
+      const blockRangeToDelete = Array.from({length: startSlot - endSlot + 1}, (_, i) => startSlot - i);
+
+      expect(blockArchiveDeleteSpy).toHaveBeenCalled();
+      expect(blockArchiveDeleteSpy).toHaveBeenCalledWith(blockRangeToDelete);
+      expect(backfillStateDeleteSpy).toHaveBeenCalled();
+      expect(backfillStateDeleteSpy).toHaveBeenCalledWith(epochRangeToDelete);
+
+      loggerNodeB.info("Inconsistent range deletion verified", {
+        blockRangeToDelete: blockRangeToDelete.toString(),
+        epochRangeToDelete: epochRangeToDelete.toString(),
+      });
+
+      await removeDbDir(BACKFILL_DB_PATH);
+    }
+  );
+
+  it("should penalize peer for invalid blocks (NOT_LINEAR)", async () => {
+    // Flow:
+    // create proposer node A, wait for finalization
+    // create backfill node B from checkpoint state
+    // mock sendBeaconBlocksByRange to corrupt oldest block's parentRoot
+    // connect nodes, backfill starts
+    // verify NOT_LINEAR error is thrown and peer is penalized
+
+    const genesisTime = getGenesisTime();
+    const loggerNodeA = testLogger("Backfill-Node-A", getTestLoggerOpts(genesisTime, "node-a"));
+    const loggerNodeB = testLogger("Backfill-Node-B", getTestLoggerOpts(genesisTime, "node-b"));
+
+    const bnA = await initValidatorNode(genesisTime, loggerNodeA);
+
+    await waitForEvent(
+      bnA.chain.emitter,
+      ChainEvent.forkChoiceFinalized,
+      NODE_A_FINALIZATION_TIMEOUT,
+      (cp: CheckpointWithHex) => cp.epoch >= SECOND_NODE_START_EPOCH
+    );
+
+    const {finalizedCp, checkpointState} = await getFinalizedCheckpoint(bnA);
+    const bnB = await initBackfillNode(genesisTime, loggerNodeB, finalizedCp, checkpointState);
+
+    const reportPeerSpy = vi.spyOn(bnB.network, "reportPeer");
+    const backfillLoggerSpy = vi.spyOn((bnB.backfillSync as any).logger, "info");
+
+    let blockCorrupted = false;
+    const anchorSlot = checkpointState.slot;
+    const originalFn = bnB.network.sendBeaconBlocksByRange.bind(bnB.network);
+
+    vi.spyOn(bnB.network, "sendBeaconBlocksByRange").mockImplementation(async (peer, req) => {
+      const isBackfillRequest = req.startSlot < anchorSlot;
+      const realBlocks = await originalFn(peer, req);
+
+      // Corrupt oldest block's parentRoot to trigger NOT_LINEAR error
+      if (isBackfillRequest && !blockCorrupted && realBlocks.length > 0) {
+        realBlocks[0].data.message.parentRoot = Buffer.alloc(32, 0xff);
+        blockCorrupted = true;
+      }
+
+      return realBlocks;
+    });
+
+    await connectNodes(bnA, bnB);
+
+    // Wait for validation failure
+    const maxWaitMs = 120_000;
+    const startTime = Date.now();
+
+    while (Date.now() - startTime <= maxWaitMs) {
+      const validationFailed = backfillLoggerSpy.mock.calls.find(
+        (call) => call[0] === "Block Sequence validation failed"
+      );
+      if (validationFailed) break;
+      await sleep(2000);
+    }
+
+    const validationFailedLog = backfillLoggerSpy.mock.calls.find(
+      (call) => call[0] === "Block Sequence validation failed"
+    );
+    expect(validationFailedLog).toBeDefined();
+    expect((validationFailedLog?.[1] as {error?: string})?.error).toBe("not_linear");
+
+    expect(reportPeerSpy).toHaveBeenCalled();
+    expect(reportPeerSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      PeerAction.LowToleranceError,
+      "backfill_invalid_blocks"
+    );
+  });
+
+  it("should penalize peer for invalid blocks (NOT_ANCHORED)", async () => {
+    // Flow:
+    // create proposer node A, wait for finalization
+    // create backfill node B from checkpoint state
+    // mock sendBeaconBlocksByRange to corrupt newest block's parentRoot
+    // connect nodes, backfill starts
+    // verify NOT_ANCHORED error is thrown and peer is penalized
+
+    const genesisTime = getGenesisTime();
+    const loggerNodeA = testLogger("Backfill-Node-A", getTestLoggerOpts(genesisTime, "node-a"));
+    const loggerNodeB = testLogger("Backfill-Node-B", getTestLoggerOpts(genesisTime, "node-b"));
+
+    const bnA = await initValidatorNode(genesisTime, loggerNodeA);
+
+    await waitForEvent(
+      bnA.chain.emitter,
+      ChainEvent.forkChoiceFinalized,
+      NODE_A_FINALIZATION_TIMEOUT,
+      (cp: CheckpointWithHex) => cp.epoch >= SECOND_NODE_START_EPOCH
+    );
+
+    const {finalizedCp, checkpointState} = await getFinalizedCheckpoint(bnA);
+    const bnB = await initBackfillNode(genesisTime, loggerNodeB, finalizedCp, checkpointState);
+
+    const reportPeerSpy = vi.spyOn(bnB.network, "reportPeer");
+    const backfillLoggerSpy = vi.spyOn((bnB.backfillSync as any).logger, "info");
+
+    let blockCorrupted = false;
+    const anchorSlot = checkpointState.slot;
+    const originalFn = bnB.network.sendBeaconBlocksByRange.bind(bnB.network);
+
+    vi.spyOn(bnB.network, "sendBeaconBlocksByRange").mockImplementation(async (peer, req) => {
+      // Differentiate between backfill vs range sync request
+      const isBackfillRequest = req.startSlot < anchorSlot;
+      const realBlocks = await originalFn(peer, req);
+
+      // Corrupt newest block's parentRoot to trigger NOT_ANCHORED
+      if (isBackfillRequest && !blockCorrupted && realBlocks.length > 0) {
+        const newestBlock = realBlocks.at(-1)!;
+        newestBlock.data.message.parentRoot = Buffer.alloc(32, 0xff);
+        blockCorrupted = true;
+      }
+
+      return realBlocks;
+    });
+
+    await connectNodes(bnA, bnB);
+
+    // Wait for validation failure
+    const maxWaitMs = 120_000;
+    const startTime = Date.now();
+
+    while (Date.now() - startTime <= maxWaitMs) {
+      const validationFailed = backfillLoggerSpy.mock.calls.find(
+        (call) => call[0] === "Block Sequence validation failed"
+      );
+      if (validationFailed) break;
+      await sleep(2000);
+    }
+
+    const validationFailedLog = backfillLoggerSpy.mock.calls.find(
+      (call) => call[0] === "Block Sequence validation failed"
+    );
+    expect(validationFailedLog).toBeDefined();
+    expect((validationFailedLog?.[1] as {error?: string})?.error).toBe("not_anchored");
+
+    expect(reportPeerSpy).toHaveBeenCalled();
+    expect(reportPeerSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      PeerAction.LowToleranceError,
+      "backfill_invalid_blocks"
+    );
+  });
+
+  it("should remove peer after 5 failed requests", async () => {
+    // Flow:
+    // create proposer node A, wait for finalization
+    // create backfill node B from checkpoint state
+    // connect nodes, verify peer is registered
+    // mock sendBeaconBlocksByRange to fail all requests
+    // verify peer is removed after 5 consecutive failures
+
+    const genesisTime = getGenesisTime();
+    const loggerNodeA = testLogger("Backfill-Node-A", getTestLoggerOpts(genesisTime, "node-a"));
+    const loggerNodeB = testLogger("Backfill-Node-B", getTestLoggerOpts(genesisTime, "node-b"));
+
+    const bnA = await initValidatorNode(genesisTime, loggerNodeA);
+
+    await waitForEvent(
+      bnA.chain.emitter,
+      ChainEvent.forkChoiceFinalized,
+      NODE_A_FINALIZATION_TIMEOUT,
+      (cp: CheckpointWithHex) => cp.epoch >= SECOND_NODE_START_EPOCH
+    );
+
+    const {finalizedCp, checkpointState} = await getFinalizedCheckpoint(bnA);
+    const bnB = await initBackfillNode(genesisTime, loggerNodeB, finalizedCp, checkpointState);
+
+    await connectNodes(bnA, bnB);
+
+    const backfillSync = bnB.backfillSync as any;
+    expect(backfillSync.peers.size).toBe(1);
+
+    vi.spyOn(bnB.network, "sendBeaconBlocksByRange").mockRejectedValue(new Error("Simulated network failure"));
+
+    // Wait for peer to be removed after 5 failures
+    const maxWaitMs = 120_000;
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitMs) {
+      if (backfillSync.peers.size === 0) break;
+      await sleep(2000);
+    }
+
+    expect(backfillSync.peers.size).toBe(0);
+  });
 });
