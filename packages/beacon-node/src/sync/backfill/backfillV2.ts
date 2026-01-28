@@ -20,6 +20,7 @@ import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../networ
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
+import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 import {BackfillBlock, BackfillBlockHeader, verifyBlockProposerSignature, verifyBlockSequence} from "./verify.js";
 
 export type BackfillSyncModules = {
@@ -290,6 +291,7 @@ export class BackfillSync {
     // there might be multiple saved ranges but we will consider the most recent range as nextRangeToSkip
     // Todo: Directly use the prev range before resetting in init
     // fn, so as to avoid unnecessary call to this fn here
+    // Todo: use try-catch here
     await this.updateNextRangeToSkip();
 
     this.logger.debug("Starting sync loop.");
@@ -420,8 +422,10 @@ export class BackfillSync {
       // store blocks in db blockarchive
       // update BackfillRange and BackfillState
       // update earliestAvailableSlot
+      let currentPeer: PeerIdStr | null = null;
       try {
         const {goodPeer, goodPeerMetaData} = this.getGoodSyncPeerWithMeta();
+        currentPeer = goodPeer;
 
         // Todo: Allow users to configure batchSize
         // default: 32 slots (1 epoch)
@@ -484,6 +488,18 @@ export class BackfillSync {
           error: (error as Error).message,
           errorStack: (error as Error).stack,
         });
+
+        // Penalize peer for validation errors (invalid blocks: NOT_ANCHORED or NOT_LINEAR)
+        if (currentPeer) {
+          const isValidationError =
+            error instanceof BackfillSyncError &&
+            (error.type.code === BackfillSyncErrorCode.NOT_ANCHORED ||
+              error.type.code === BackfillSyncErrorCode.NOT_LINEAR);
+
+          if (isValidationError) {
+            this.network.reportPeer(currentPeer, PeerAction.LowToleranceError, "backfill_invalid_blocks");
+          }
+        }
       } finally {
         this.processor.trigger();
         await sleep(5000, this.signal);
@@ -727,7 +743,7 @@ export class BackfillSync {
           client: updatedMeta.client,
           failedRequests: updatedMeta.failedRequests,
         });
-        this.network.reportPeer(goodPeer, PeerAction.MidToleranceError, "backfill_repeated_failure");
+        this.network.reportPeer(goodPeer, PeerAction.LowToleranceError, "backfill_repeated_failure");
         this.peers.delete(goodPeer);
         this.peersMeta.delete(goodPeer);
       }
@@ -751,7 +767,11 @@ export class BackfillSync {
 
       const anchorParentRoot = this.syncAnchor.anchorBlockParentRoot;
       // nextAnchor is present in the sequence
-      const {nextAnchor, verifiedBlocks /* , error */} = verifyBlockSequence(this.config, res, anchorParentRoot);
+      const {nextAnchor, verifiedBlocks, error} = verifyBlockSequence(this.config, res, anchorParentRoot);
+
+      if (error === BackfillSyncErrorCode.NOT_LINEAR) {
+        throw new BackfillSyncError({code: BackfillSyncErrorCode.NOT_LINEAR});
+      }
       // Note that blocks in both res and verifiedBlocks are in reverse order now, because the
       // blocks.reverse() inside verifyBlockSequence() mutates the original data.
 
@@ -787,10 +807,15 @@ export class BackfillSync {
         // biome-ignore lint/style/useAtIndex: this is correct
         lastBlockSlot: res[res?.length - 1]?.data.message.slot,
         blockSequenceLength: res?.length,
-        error: (validErr as Error).message,
+        error: validErr instanceof BackfillSyncError ? validErr.type.code : (validErr as Error).message,
         stack: (validErr as Error).stack,
       });
-      throw Error("Validation Error");
+
+      // Re-throw BackfillSyncError as-is to preserve error type for peer penalization
+      if (validErr instanceof BackfillSyncError) {
+        throw validErr;
+      }
+      throw new BackfillSyncError({code: BackfillSyncErrorCode.INTERNAL_ERROR, reason: (validErr as Error).message});
     }
   }
 
@@ -1115,15 +1140,16 @@ export class BackfillSync {
       if (!this.peers.has(peerId)) {
         continue;
       }
-      if (meta?.failedRequests && meta.failedRequests >= 3) {
-        this.logger.debug("Skipping peer with too many failures", {
-          peerId,
-          client: meta.client,
-          failedRequests: meta.failedRequests,
-        });
 
-        continue;
-      }
+      // TODO: Rethink about if we need this. Skipping creates infinite futile iterations in the case of single peer. Anyways we are reporting & downscoring after 5 failures
+      // if (meta?.failedRequests && meta.failedRequests >= 3) {
+      //   this.logger.info("Skipping peer with too many failures", {
+      //     peerId,
+      //     client: meta.client,
+      //     failedRequests: meta.failedRequests,
+      //   });
+      //   continue;
+      // }
       if (meta?.earliestAvailableSlot !== undefined && meta.earliestAvailableSlot > anchorSlot) {
         this.logger.debug("Skipping peer without reqd data", {
           peerId,
@@ -1301,6 +1327,8 @@ export class BackfillSync {
               endingEpoch: updatedBackfillRange.endingEpoch,
             }
           );
+          // Todo: Handle this error. Try fetching newAnchorBlock and continuing OR do not merge (and delete this range)
+          // This traps when testing: should detect and delete inconsistent historical range ($name)
           // throw to continue
           throw Error(
             "Could not find anchor block at start of ending epoch while merging backfill ranges and updating nextRangeToSkip"
