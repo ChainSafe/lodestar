@@ -1,11 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_AGGREGATE_AND_PROOF, ForkSeq} from "@lodestar/params";
-import {
-  ISignatureSet,
-  SignatureSetType,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-} from "@lodestar/state-transition";
+import {ISignatureSet, SignatureSetType, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, SignedAggregateAndProof, ValidatorIndex, ssz} from "@lodestar/types";
 
 export function getAggregateAndProofSigningRoot(

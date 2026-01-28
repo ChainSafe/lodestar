@@ -21,10 +21,7 @@ export function verifyRandaoSignature(
 /**
  * Extract signatures to allow validating all block signatures at once
  */
-export function getRandaoRevealSignatureSet(
-  config: BeaconConfig,
-  block: BeaconBlock
-): ISignatureSet {
+export function getRandaoRevealSignatureSet(config: BeaconConfig, block: BeaconBlock): ISignatureSet {
   // should not get epoch from epochCtx
   const epoch = computeEpochAtSlot(block.slot);
   // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition

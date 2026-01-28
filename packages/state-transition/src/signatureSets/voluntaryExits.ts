@@ -37,10 +37,7 @@ export function getVoluntaryExitSignatureSet(
   };
 }
 
-export function getVoluntaryExitsSignatureSets(
-  config: BeaconConfig,
-  signedBlock: SignedBeaconBlock
-): ISignatureSet[] {
+export function getVoluntaryExitsSignatureSets(config: BeaconConfig, signedBlock: SignedBeaconBlock): ISignatureSet[] {
   // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
   // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
   const blockSlot = signedBlock.message.slot;

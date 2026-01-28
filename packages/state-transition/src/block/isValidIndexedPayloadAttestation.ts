@@ -16,7 +16,10 @@ export function isValidIndexedPayloadAttestation(
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedPayloadAttestationSignatureSet(state, indexedPayloadAttestation));
+    return verifySignatureSet(
+      getIndexedPayloadAttestationSignatureSet(state, indexedPayloadAttestation),
+      state.epochCtx.index2pubkey
+    );
   }
 
   return true;

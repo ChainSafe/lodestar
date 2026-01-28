@@ -51,10 +51,7 @@ export type ISignatureSet = SingleSignatureSet | IndexedSignatureSet | Aggregate
  * Get the pubkey for a signature set, performing aggregation if necessary.
  * Requires index2pubkey cache for indexed and aggregate sets.
  */
-export function getSignatureSetPubkey(
-  signatureSet: ISignatureSet,
-  index2pubkey: Index2PubkeyCache
-): PublicKey {
+export function getSignatureSetPubkey(signatureSet: ISignatureSet, index2pubkey: Index2PubkeyCache): PublicKey {
   switch (signatureSet.type) {
     case SignatureSetType.single:
       return signatureSet.pubkey;
@@ -72,6 +69,10 @@ export function getSignatureSetPubkey(
   }
 }
 
+export function verifySignatureSet(signatureSet: SingleSignatureSet, index2pubkey?: Index2PubkeyCache): boolean;
+export function verifySignatureSet(signatureSet: IndexedSignatureSet, index2pubkey: Index2PubkeyCache): boolean;
+export function verifySignatureSet(signatureSet: AggregatedSignatureSet, index2pubkey: Index2PubkeyCache): boolean;
+export function verifySignatureSet(signatureSet: ISignatureSet, index2pubkey: Index2PubkeyCache): boolean;
 export function verifySignatureSet(signatureSet: ISignatureSet, index2pubkey?: Index2PubkeyCache): boolean {
   // All signatures are not trusted and must be group checked (p2.subgroup_check)
   const signature = Signature.fromBytes(signatureSet.signature, true);

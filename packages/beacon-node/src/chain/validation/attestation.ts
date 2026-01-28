@@ -499,11 +499,7 @@ async function validateAttestationNoSignatureCheck(
     );
     attDataRootHex = attestationOrCache.cache.attDataRootHex;
   } else {
-    signatureSet = createIndexedSignatureSetFromComponents(
-      validatorIndex,
-      getSigningRoot(),
-      signature
-    );
+    signatureSet = createIndexedSignatureSetFromComponents(validatorIndex, getSigningRoot(), signature);
 
     // add cached attestation data before verifying signature
     attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
