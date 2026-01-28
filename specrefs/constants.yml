@@ -40,14 +40,18 @@
     </spec>
 
 - name: BUILDER_INDEX_FLAG#gloas
-  sources: []
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_INDEX_FLAG =
   spec: |
     <spec constant_var="BUILDER_INDEX_FLAG" fork="gloas" hash="e9dca70d">
     BUILDER_INDEX_FLAG: uint64 = 2**40
     </spec>
 
 - name: BUILDER_INDEX_SELF_BUILD#gloas
-  sources: []
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_INDEX_SELF_BUILD =
   spec: |
     <spec constant_var="BUILDER_INDEX_SELF_BUILD" fork="gloas" hash="622fd1b5">
     BUILDER_INDEX_SELF_BUILD: BuilderIndex = UINT64_MAX
@@ -212,7 +216,9 @@
     </spec>
 
 - name: DOMAIN_PROPOSER_PREFERENCES#gloas
-  sources: []
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_PROPOSER_PREFERENCES =
   spec: |
     <spec constant_var="DOMAIN_PROPOSER_PREFERENCES" fork="gloas" hash="9377ecfb">
     DOMAIN_PROPOSER_PREFERENCES: DomainType = '0x0D000000'

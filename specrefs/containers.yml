@@ -658,7 +658,9 @@
     </spec>
 
 - name: Builder#gloas
-  sources: []
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const Builder =
   spec: |
     <spec container="Builder" fork="gloas" hash="ae177179">
     class Builder(Container):
@@ -1408,7 +1410,9 @@
     </spec>
 
 - name: ProposerPreferences#gloas
-  sources: []
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const ProposerPreferences =
   spec: |
     <spec container="ProposerPreferences" fork="gloas" hash="2a38b149">
     class ProposerPreferences(Container):
@@ -1519,7 +1523,9 @@
     </spec>
 
 - name: SignedProposerPreferences#gloas
-  sources: []
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const SignedProposerPreferences =
   spec: |
     <spec container="SignedProposerPreferences" fork="gloas" hash="2142774c">
     class SignedProposerPreferences(Container):

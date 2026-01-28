@@ -42,25 +42,15 @@ exceptions:
 
     # gloas
     - ATTESTATION_TIMELINESS_INDEX#gloas
-    - BUILDER_INDEX_FLAG#gloas
-    - BUILDER_INDEX_SELF_BUILD#gloas
-    - DOMAIN_PROPOSER_PREFERENCES#gloas
     - NUM_BLOCK_TIMELINESS_DEADLINES#gloas
     - PAYLOAD_STATUS_EMPTY#gloas
     - PAYLOAD_STATUS_FULL#gloas
     - PAYLOAD_STATUS_PENDING#gloas
     - PTC_TIMELINESS_INDEX#gloas
 
-  configs:
-    # gloas
-    - MIN_BUILDER_WITHDRAWABILITY_DELAY#gloas
-
   containers:
     # gloas
-    - Builder#gloas
     - ForkChoiceNode#gloas
-    - ProposerPreferences#gloas
-    - SignedProposerPreferences#gloas
 
   dataclasses:
     # phase0
@@ -270,7 +260,6 @@ exceptions:
     - get_data_column_sidecars_from_column_sidecar#gloas
     - get_execution_payload_bid_signature#gloas
     - get_execution_payload_envelope_signature#gloas
-    - get_expected_withdrawals#gloas
     - get_forkchoice_store#gloas
     - get_head#gloas
     - get_index_for_new_builder#gloas
@@ -318,11 +307,6 @@ exceptions:
     - validate_on_attestation#gloas
     - verify_data_column_sidecar#gloas
 
-  presets:
-    # gloas
-    - BUILDER_REGISTRY_LIMIT#gloas
-    - MAX_BUILDERS_PER_WITHDRAWALS_SWEEP#gloas
-
   custom_types:
     # phase0
     - Ether#phase0
@@ -338,5 +322,4 @@ exceptions:
     - CommitmentIndex#fulu
 
     # gloas
-    - BuilderIndex#gloas
     - PayloadStatus#gloas

@@ -363,8 +363,7 @@
 - name: MAX_BLOBS_PER_BLOCK#deneb
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: '^  MAX_BLOBS_PER_BLOCK:'
-      regex: true
+      search: "MAX_BLOBS_PER_BLOCK: 6"
   spec: |
     <spec config_var="MAX_BLOBS_PER_BLOCK" fork="deneb" hash="3e0b5383">
     MAX_BLOBS_PER_BLOCK: uint64 = 6
@@ -479,7 +478,9 @@
     </spec>
 
 - name: MIN_BUILDER_WITHDRAWABILITY_DELAY#gloas
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MIN_BUILDER_WITHDRAWABILITY_DELAY:"
   spec: |
     <spec config_var="MIN_BUILDER_WITHDRAWABILITY_DELAY" fork="gloas" hash="d378428f">
     MIN_BUILDER_WITHDRAWABILITY_DELAY: uint64 = 4096

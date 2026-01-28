@@ -3085,7 +3085,9 @@
     </spec>
 
 - name: get_expected_withdrawals#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/block/processWithdrawals.ts
+      search: export function getExpectedWithdrawals(
   spec: |
     <spec fn="get_expected_withdrawals" fork="gloas" hash="8d0675cb">
     def get_expected_withdrawals(state: BeaconState) -> ExpectedWithdrawals:
