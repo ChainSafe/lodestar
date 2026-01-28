@@ -44,6 +44,13 @@ export interface IForkChoiceStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
+
+  // Fast Confirmation Rule fields
+  confirmedRoot: RootHex;
+  previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
+  currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
+  previousSlotHead: RootHex;
+  currentSlotHead: RootHex;
 }
 
 /**
@@ -57,6 +64,13 @@ export class ForkChoiceStore implements IForkChoiceStore {
   equivocatingIndices = new Set<ValidatorIndex>();
   justifiedBalancesGetter: JustifiedBalancesGetter;
   currentSlot: Slot;
+
+  // Fast Confirmation Rule fields
+  confirmedRoot: RootHex;
+  previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
+  currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
+  previousSlotHead: RootHex;
+  currentSlotHead: RootHex;
 
   constructor(
     currentSlot: Slot,
@@ -80,6 +94,14 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this.unrealizedJustified = justified;
     this._finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
     this.unrealizedFinalizedCheckpoint = this._finalizedCheckpoint;
+
+    // Initialize FCR fields according to spec (all start at anchor/finalized checkpoint)
+    const anchorRoot = toCheckpointWithHex(finalizedCheckpoint).rootHex;
+    this.confirmedRoot = anchorRoot;
+    this.previousEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
+    this.currentEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
+    this.previousSlotHead = anchorRoot;
+    this.currentSlotHead = anchorRoot;
   }
 
   get justified(): CheckpointHexWithTotalBalance {
