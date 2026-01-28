@@ -132,6 +132,9 @@ function getBuilderWithdrawals(
   builderBalanceAfterWithdrawals: Map<number, number>
 ): {builderWithdrawals: capella.Withdrawal[]; withdrawalIndex: number; processedCount: number} {
   const withdrawalsLimit = MAX_WITHDRAWALS_PER_PAYLOAD - 1;
+  if (priorWithdrawals.length > withdrawalsLimit) {
+    throw Error(`Prior withdrawals exceed limit: ${priorWithdrawals.length} > ${withdrawalsLimit}`);
+  }
   const builderWithdrawals: capella.Withdrawal[] = [];
   const allBuilderPendingWithdrawals =
     state.builderPendingWithdrawals.length <= MAX_WITHDRAWALS_PER_PAYLOAD
@@ -182,6 +185,9 @@ function getBuildersSweepWithdrawals(
   builderBalanceAfterWithdrawals: Map<number, number>
 ): {buildersSweepWithdrawals: capella.Withdrawal[]; withdrawalIndex: number; processedCount: number} {
   const withdrawalsLimit = MAX_WITHDRAWALS_PER_PAYLOAD - 1;
+  if (numPriorWithdrawal > withdrawalsLimit) {
+    throw Error(`Prior withdrawals exceed limit: ${numPriorWithdrawal} > ${withdrawalsLimit}`);
+  }
   const buildersSweepWithdrawals: capella.Withdrawal[] = [];
   const epoch = state.epochCtx.epoch;
   const builders = state.builders;
