@@ -1,5 +1,5 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
@@ -10,7 +10,7 @@ import {
   isActiveBuilder,
   isBuilderIndex,
 } from "../util/gloas.js";
-import {computeSigningRoot, getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
+import {computeSigningRoot, getCurrentEpoch, getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
 import {initiateValidatorExit} from "./index.js";
 
 export enum VoluntaryExitValidity {
@@ -35,6 +35,12 @@ export function processVoluntaryExit(
   verifySignature = true
 ): void {
   const voluntaryExit = signedVoluntaryExit.message;
+  const currentEpoch = getCurrentEpoch(state);
+
+  // Exits must specify an epoch when they become valid; they are not valid before then
+  if (currentEpoch < voluntaryExit.epoch) {
+    throw Error(`Voluntary exit epoch ${voluntaryExit.epoch} is after current epoch ${currentEpoch}`);
+  }
 
   // Check if this is a builder exit
   if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
@@ -44,26 +50,28 @@ export function processVoluntaryExit(
 
     // Verify the builder is active
     if (!isActiveBuilder(stateGloas, builderIndex)) {
-      throw Error("Builder is not active");
+      throw Error(`Builder ${builderIndex} is not active`);
     }
 
-    // Only exit builder if it has no pending withdrawals
+    // Only exit builder if it has no pending withdrawals in the queue
     if (getPendingBalanceToWithdrawForBuilder(stateGloas, builderIndex) !== 0) {
-      throw Error("Builder has pending withdrawals");
+      throw Error(`Builder ${builderIndex} has pending withdrawals`);
     }
 
     // Verify signature
     if (verifySignature) {
-      const domain = state.config.getDomain(state.slot, DOMAIN_VOLUNTARY_EXIT);
+      const domain = state.config.getDomainForVoluntaryExit(state.slot);
       const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
+
       try {
         const publicKey = PublicKey.fromBytes(builder.pubkey);
         const signature = Signature.fromBytes(signedVoluntaryExit.signature, true);
+
         if (!verify(signingRoot, publicKey, signature)) {
-          throw Error("Invalid builder exit signature");
+          throw Error("BLS verify failed");
         }
-      } catch (_e) {
-        throw Error("Invalid builder exit signature");
+      } catch (e) {
+        throw Error(`Builder ${builderIndex} invalid exit signature reason=${(e as Error).message}`);
       }
     }
 

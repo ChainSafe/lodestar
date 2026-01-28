@@ -29,7 +29,7 @@ export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas):
 
 /**
  * Check if a validator index represents a builder (has the builder flag set).
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#isbuilderindex
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-is_builder_index
  */
 export function isBuilderIndex(validatorIndex: number): boolean {
   return (validatorIndex & BUILDER_INDEX_FLAG) !== 0;
@@ -37,7 +37,7 @@ export function isBuilderIndex(validatorIndex: number): boolean {
 
 /**
  * Convert a builder index to a flagged validator index for use in Withdrawal containers.
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#convertbuilderindextovalidatorindex
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_builder_index_to_validator_index
  */
 export function convertBuilderIndexToValidatorIndex(builderIndex: number): number {
   return builderIndex | BUILDER_INDEX_FLAG;
@@ -45,7 +45,7 @@ export function convertBuilderIndexToValidatorIndex(builderIndex: number): numbe
 
 /**
  * Convert a flagged validator index back to a builder index.
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#convertvalidatorindextobuilderindex
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_validator_index_to_builder_index
  */
 export function convertValidatorIndexToBuilderIndex(validatorIndex: number): number {
   return validatorIndex & ~BUILDER_INDEX_FLAG;
@@ -64,14 +64,14 @@ export function isActiveBuilder(state: CachedBeaconStateGloas, builderIndex: num
 
 /**
  * Get the total pending balance to withdraw for a builder (from withdrawals + payments).
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#getpendingbalancetowithdrawforbuilder
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-get_pending_balance_to_withdraw_for_builder
  */
 export function getPendingBalanceToWithdrawForBuilder(state: CachedBeaconStateGloas, builderIndex: number): number {
   let pendingBalance = 0;
 
   // Sum pending withdrawals
   for (let i = 0; i < state.builderPendingWithdrawals.length; i++) {
-    const withdrawal = state.builderPendingWithdrawals.get(i);
+    const withdrawal = state.builderPendingWithdrawals.getReadonly(i);
     if (withdrawal.builderIndex === builderIndex) {
       pendingBalance += withdrawal.amount;
     }
@@ -79,7 +79,7 @@ export function getPendingBalanceToWithdrawForBuilder(state: CachedBeaconStateGl
 
   // Sum pending payments
   for (let i = 0; i < state.builderPendingPayments.length; i++) {
-    const payment = state.builderPendingPayments.get(i);
+    const payment = state.builderPendingPayments.getReadonly(i);
     if (payment.withdrawal.builderIndex === builderIndex) {
       pendingBalance += payment.withdrawal.amount;
     }
@@ -90,23 +90,34 @@ export function getPendingBalanceToWithdrawForBuilder(state: CachedBeaconStateGl
 
 /**
  * Check if a builder has sufficient balance to cover a bid amount.
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#canbuildercoverdata
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-can_builder_cover_bid
  */
 export function canBuilderCoverBid(state: CachedBeaconStateGloas, builderIndex: number, bidAmount: number): boolean {
   const builder = state.builders.getReadonly(builderIndex);
   const pendingBalance = getPendingBalanceToWithdrawForBuilder(state, builderIndex);
-  const availableBalance = builder.balance - MIN_DEPOSIT_AMOUNT - pendingBalance;
+  const minBalance = MIN_DEPOSIT_AMOUNT + pendingBalance;
 
-  return availableBalance >= bidAmount;
+  if (builder.balance < minBalance) {
+    return false;
+  }
+
+  return builder.balance - minBalance >= bidAmount;
 }
 
 /**
  * Initiate a builder exit by setting their withdrawable epoch.
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#initiatebuilderexitbuilder
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-initiate_builder_exit
  */
 export function initiateBuilderExit(state: CachedBeaconStateGloas, builderIndex: number): void {
-  const currentEpoch = computeEpochAtSlot(state.slot);
   const builder = state.builders.get(builderIndex);
+
+  // Return if builder already initiated exit
+  if (builder.withdrawableEpoch !== FAR_FUTURE_EPOCH) {
+    return;
+  }
+
+  // Set builder exit epoch
+  const currentEpoch = computeEpochAtSlot(state.slot);
   builder.withdrawableEpoch = currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY;
 }
 
