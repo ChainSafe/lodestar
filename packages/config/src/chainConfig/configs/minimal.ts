@@ -182,4 +182,8 @@ export const chainConfig: ChainConfig = {
   // Blob Scheduling
   // ---------------------------------------------------------------
   BLOB_SCHEDULE: [],
+
+  // Fast Confirmation Rule
+  // ---------------------------------------------------------------
+  CONFIRMATION_BYZANTINE_THRESHOLD: 25,
 };

@@ -128,6 +128,9 @@ export type ChainConfig = {
 
   // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
+
+  // Fast Confirmation Rule
+  CONFIRMATION_BYZANTINE_THRESHOLD: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -244,6 +247,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",
+
+  // Fast Confirmation Rule
+  CONFIRMATION_BYZANTINE_THRESHOLD: "number",
 };
 
 export type BlobScheduleEntry = {
