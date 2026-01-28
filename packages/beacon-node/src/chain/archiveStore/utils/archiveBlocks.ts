@@ -221,7 +221,6 @@ export async function archiveBlocks(
   logger.verbose("Archiving of finalized blocks complete", {
     ...logCtx,
     totalArchived: finalizedCanonicalBlocks.length,
-    finalizedEpoch: finalizedCheckpoint.epoch,
   });
 }
 
