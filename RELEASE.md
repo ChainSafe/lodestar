@@ -216,7 +216,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 
 ### 6. Announce
 
-- Double check that Github release is correct
+- Double check that Github release is correct and [add release notes to the Github release page](#edit-the-release)
 - Follow [Publish to Social Media](#publish-to-social-media) steps
 
 ## Dev release
