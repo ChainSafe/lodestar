@@ -102,11 +102,25 @@ export async function persistBlockInputs(this: BeaconChain, blockInputs: IBlockI
   await writeBlockInputToDb
     .call(this, blockInputs)
     .catch((e) => {
-      this.logger.debug("Error persisting block input in hot db", {}, e);
+      this.logger.debug(
+        "Error persisting block input in hot db",
+        {
+          count: blockInputs.length,
+          slot: blockInputs[0].slot,
+          root: blockInputs[0].blockRootHex,
+        },
+        e
+      );
     })
     .finally(() => {
       for (const blockInput of blockInputs) {
         this.seenBlockInputCache.prune(blockInput.blockRootHex);
+      }
+      if (blockInputs.length === 1) {
+        this.logger.debug("Pruned block input", {
+          slot: blockInputs[0].slot,
+          root: blockInputs[0].blockRootHex,
+        });
       }
     });
 }
