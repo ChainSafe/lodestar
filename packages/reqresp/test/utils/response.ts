@@ -1,23 +1,26 @@
-import {pipe} from "it-pipe";
-import {responseEncodeError, responseEncodeSuccess} from "../../src/encoders/responseEncode.js";
+import {Uint8ArrayList} from "uint8arraylist";
+import {encodeResponseChunk, encodeErrorResponse} from "../../src/encoders/responseEncode.js";
 import {RespStatus} from "../../src/interface.js";
 import {Protocol} from "../../src/types.js";
 import {ResponseChunk} from "../fixtures/encoders.js";
 import {beaconConfig} from "../fixtures/messages.js";
-import {arrToSource} from "../utils/index.js";
 
-export async function* responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): AsyncIterable<Buffer> {
+/**
+ * Encodes response chunks for testing.
+ * Returns array of Uint8ArrayList chunks.
+ */
+export function responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): Uint8ArrayList[] {
+  const result: Uint8ArrayList[] = [];
+
   for (const chunk of responseChunks) {
     if (chunk.status === RespStatus.SUCCESS) {
       const payload = chunk.payload;
-      yield* pipe(
-        arrToSource([
-          {...payload, boundary: beaconConfig.getForkBoundaryAtEpoch(beaconConfig.forks[payload.fork].epoch)},
-        ]),
-        responseEncodeSuccess(protocol, {onChunk: () => {}})
-      );
+      const boundary = beaconConfig.getForkBoundaryAtEpoch(beaconConfig.forks[payload.fork].epoch);
+      result.push(encodeResponseChunk(protocol, {...payload, boundary}));
     } else {
-      yield* responseEncodeError(protocol, chunk.status, chunk.errorMessage);
+      result.push(encodeErrorResponse(protocol, chunk.status, chunk.errorMessage));
     }
   }
+
+  return result;
 }

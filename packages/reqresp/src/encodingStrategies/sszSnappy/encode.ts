@@ -1,24 +1,25 @@
 import {encode as varintEncode} from "uint8-varint";
-import {encodeSnappy} from "../../utils/snappyIndex.js";
+import {Uint8ArrayList} from "uint8arraylist";
+import {encodeSnappyFrames} from "../../utils/snappyIndex.js";
 
 /**
- * ssz_snappy encoding strategy writer.
- * Yields byte chunks for encoded header and payload as defined in the spec:
+ * Encodes SSZ data with snappy framing.
+ * Wire format:
  * ```
- * <encoding-dependent-header> | <encoded-payload>
+ * <varint-length> | <snappy-frames(ssz-payload)>
  * ```
+ * Returns Uint8ArrayList ready for writing to stream.
  */
-export const writeSszSnappyPayload = encodeSszSnappy as (bytes: Uint8Array) => AsyncGenerator<Buffer>;
+export function encodeSszSnappyPayload(sszData: Uint8Array): Uint8ArrayList {
+  const result = new Uint8ArrayList();
 
-/**
- * Buffered Snappy writer
- */
-export async function* encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
   // MUST encode the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
-  const varint = varintEncode(bytes.length);
-  yield Buffer.from(varint.buffer, varint.byteOffset, varint.byteLength);
+  const varint = varintEncode(sszData.length);
+  result.append(new Uint8Array(varint.buffer, varint.byteOffset, varint.byteLength));
 
-  // By first computing and writing the SSZ byte length, the SSZ encoder can then directly
-  // write the chunk contents to the stream. Snappy writer compresses frame by frame
-  yield* encodeSnappy(bytes);
+  // Encode SSZ data with snappy frames
+  const snappyFrames = encodeSnappyFrames(sszData);
+  result.append(snappyFrames);
+
+  return result;
 }

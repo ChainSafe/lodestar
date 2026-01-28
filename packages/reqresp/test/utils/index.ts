@@ -42,8 +42,8 @@ export function expectInEqualByteChunks(chunks: Uint8Array[], expectedChunks: Ui
 }
 
 /**
- * Useful to simulate a LibP2P stream source emitting prepared bytes
- * and capture the response with a sink accessible via `this.resultChunks`
+ * Mock libp2p v3 stream for testing.
+ * Implements the EventTarget-based stream interface with message events.
  */
 export class MockLibP2pStream implements Stream {
   protocol: string;
@@ -57,26 +57,82 @@ export class MockLibP2pStream implements Stream {
     open: Date.now(),
   };
   metadata = {};
-  source: Stream["source"];
+
+  private inputChunks: Uint8ArrayList[];
+  private inputIndex = 0;
   resultChunks: Uint8Array[] = [];
 
   constructor(requestChunks: Uint8ArrayList[] | AsyncIterable<any> | AsyncGenerator<any>, protocol?: string) {
-    this.source = Array.isArray(requestChunks)
-      ? arrToSource(requestChunks)
-      : (requestChunks as AsyncGenerator<Uint8ArrayList>);
+    // Convert async iterable to array if needed
+    if (Array.isArray(requestChunks)) {
+      this.inputChunks = requestChunks;
+    } else {
+      // For backwards compatibility, store reference and handle async
+      this.inputChunks = [];
+      (async () => {
+        for await (const chunk of requestChunks) {
+          this.inputChunks.push(chunk instanceof Uint8ArrayList ? chunk : new Uint8ArrayList(chunk));
+        }
+      })();
+    }
     this.protocol = protocol ?? "mock";
   }
 
-  sink: Stream["sink"] = async (source) => {
+  // libp2p v3: Streams implement AsyncIterable
+  async *[Symbol.asyncIterator](): AsyncGenerator<Uint8ArrayList> {
+    for (const chunk of this.inputChunks) {
+      yield chunk;
+    }
+  }
+
+  // libp2p v3: send method for writing
+  send(data: Uint8Array | Uint8ArrayList): boolean {
+    const bytes = data instanceof Uint8ArrayList ? data.subarray() : data;
+    this.resultChunks.push(bytes);
+    return true;
+  }
+
+  // libp2p v3: onDrain for backpressure
+  async onDrain(): Promise<void> {
+    // No-op for tests
+  }
+
+  // For backwards compatibility with byteStream wrapper
+  get source(): AsyncIterable<Uint8ArrayList> {
+    return this[Symbol.asyncIterator]();
+  }
+
+  // Sink for backwards compatibility
+  sink = async (source: AsyncIterable<Uint8Array | Uint8ArrayList>): Promise<void> => {
     for await (const chunk of source) {
-      this.resultChunks.push(chunk.subarray());
+      const bytes = chunk instanceof Uint8ArrayList ? chunk.subarray() : chunk;
+      this.resultChunks.push(bytes);
     }
   };
 
-  close: Stream["close"] = async () => {};
-  closeRead = async (): Promise<void> => {};
-  closeWrite = async (): Promise<void> => {};
-  abort: Stream["abort"] = () => this.close();
+  close = async (): Promise<void> => {
+    this.status = "closed";
+  };
+  closeRead = async (): Promise<void> => {
+    this.readStatus = "closed";
+  };
+  closeWrite = async (): Promise<void> => {
+    this.writeStatus = "closed";
+  };
+  abort = (): void => {
+    this.status = "aborted";
+  };
+
+  // EventTarget methods (no-op for basic tests)
+  addEventListener(): void {}
+  removeEventListener(): void {}
+  dispatchEvent(): boolean {
+    return true;
+  }
+
+  // Pause/resume for backpressure
+  pause(): void {}
+  resume(): void {}
 }
 
 export function fromHexBuf(hex: string): Buffer {

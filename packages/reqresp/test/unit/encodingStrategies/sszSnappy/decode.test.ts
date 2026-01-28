@@ -1,19 +1,22 @@
+import {byteStream} from "@libp2p/utils/byte-stream";
 import {encode as varintEncode} from "uint8-varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {describe, expect, it} from "vitest";
-import {readSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
-import {BufferedSource} from "../../../../src/utils/index.js";
+import {decodeSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
 import {
   encodingStrategiesDecodingErrorCases,
   encodingStrategiesMainnetTestCases,
   encodingStrategiesTestCases,
 } from "../../../fixtures/index.js";
-import {arrToSource} from "../../../utils/index.js";
+import {MockLibP2pStream} from "../../../utils/index.js";
 
 describe("encodingStrategies / sszSnappy / decode", () => {
   it.each(encodingStrategiesTestCases)("$id", async ({type, binaryPayload, chunks}) => {
-    const bufferedSource = new BufferedSource(arrToSource(chunks));
-    const bodyResult = await readSszSnappyPayload(bufferedSource, type);
+    const inputChunks = chunks.map((c) => new Uint8ArrayList(c));
+    const mockStream = new MockLibP2pStream(inputChunks, "test");
+    const bytes = byteStream(mockStream);
+    
+    const bodyResult = await decodeSszSnappyPayload(bytes, type);
     expect(bodyResult).toEqual(binaryPayload.data);
   });
 
@@ -23,9 +26,10 @@ describe("encodingStrategies / sszSnappy / decode", () => {
       const streamedBytes = new Uint8ArrayList(Buffer.concat([Buffer.from(varintEncode(bodySize)), streamedBody]));
 
       it(id, async () => {
-        const bufferedSource = new BufferedSource(arrToSource([streamedBytes]));
-        const bodyResult = await readSszSnappyPayload(bufferedSource, serializer);
-
+        const mockStream = new MockLibP2pStream([streamedBytes], "test");
+        const bytes = byteStream(mockStream);
+        
+        const bodyResult = await decodeSszSnappyPayload(bytes, serializer);
         expect(bodyResult).toEqual(new Uint8Array(payload.data));
       });
     }
@@ -34,8 +38,11 @@ describe("encodingStrategies / sszSnappy / decode", () => {
   describe("error cases", () => {
     for (const {id, type, error, chunks} of encodingStrategiesDecodingErrorCases) {
       it(id, async () => {
-        const bufferedSource = new BufferedSource(arrToSource([new Uint8ArrayList(...chunks)]));
-        await expect(readSszSnappyPayload(bufferedSource, type)).rejects.toThrow(error);
+        const inputChunks = [new Uint8ArrayList(...chunks)];
+        const mockStream = new MockLibP2pStream(inputChunks, "test");
+        const bytes = byteStream(mockStream);
+        
+        await expect(decodeSszSnappyPayload(bytes, type)).rejects.toThrow(error);
       });
     }
   });

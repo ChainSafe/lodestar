@@ -1,7 +1,9 @@
+import type {MessageStream} from "@libp2p/interface";
+import type {ByteStream} from "@libp2p/utils";
+import {Uint8ArrayList} from "uint8arraylist";
 import {Encoding, TypeSizes} from "../types.js";
-import {BufferedSource} from "../utils/index.js";
-import {readSszSnappyPayload} from "./sszSnappy/decode.js";
-import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
+import {decodeSszSnappyPayload} from "./sszSnappy/decode.js";
+import {encodeSszSnappyPayload} from "./sszSnappy/encode.js";
 
 // For more info about Ethereum Consensus request/response encoding strategies, see:
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#encoding-strategies
@@ -9,19 +11,16 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
 // - ssz_snappy
 
 /**
- * Consumes a stream source to read encoded header and payload as defined in the spec:
+ * Encodes a payload (SSZ data) with the specified encoding strategy.
+ * Returns bytes ready for writing to stream:
  * ```
- * <encoding-dependent-header> | <encoded-payload>
+ * <varint-length> | <snappy-frames(ssz-payload)>
  * ```
  */
-export async function readEncodedPayload(
-  bufferedSource: BufferedSource,
-  encoding: Encoding,
-  type: TypeSizes
-): Promise<Uint8Array> {
+export function encodePayload(data: Uint8Array, encoding: Encoding): Uint8ArrayList {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
-      return readSszSnappyPayload(bufferedSource, type);
+      return encodeSszSnappyPayload(data);
 
     default:
       throw Error("Unsupported encoding");
@@ -29,16 +28,21 @@ export async function readEncodedPayload(
 }
 
 /**
- * Yields byte chunks for encoded header and payload as defined in the spec:
+ * Reads and decodes a payload from stream using byteStream.
+ * Expects wire format:
  * ```
- * <encoding-dependent-header> | <encoded-payload>
+ * <varint-length> | <snappy-frames(ssz-payload)>
  * ```
  */
-export async function* writeEncodedPayload(chunkData: Uint8Array, encoding: Encoding): AsyncGenerator<Buffer> {
+export async function decodePayload(
+  bytes: ByteStream<MessageStream>,
+  encoding: Encoding,
+  type: TypeSizes,
+  signal?: AbortSignal
+): Promise<Uint8Array> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
-      yield* writeSszSnappyPayload(chunkData);
-      break;
+      return decodeSszSnappyPayload(bytes, type, signal);
 
     default:
       throw Error("Unsupported encoding");

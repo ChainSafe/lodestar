@@ -1,71 +1,64 @@
-import {writeEncodedPayload} from "../encodingStrategies/index.js";
+import {Uint8ArrayList} from "uint8arraylist";
+import {encodePayload} from "../encodingStrategies/index.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 import {ContextBytesFactory, ContextBytesType, MixedProtocol, Protocol, ResponseOutgoing} from "../types.js";
 import {encodeErrorMessage} from "../utils/index.js";
 
-const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
-
 /**
- * Yields byte chunks for a `<response>` with a zero response code `<result>`
+ * Encodes a success response chunk to bytes ready for writing to stream.
+ * Wire format:
  * ```bnf
- * response        ::= <response_chunk>*
- * response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
+ * response_chunk  ::= <result> | <context-bytes> | <varint-length> | <snappy-frames(ssz-payload)>
  * result          ::= "0"
  * ```
- * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
-export function responseEncodeSuccess(
-  protocol: Protocol,
-  cbs: {onChunk: (chunkIndex: number) => void}
-): (source: AsyncIterable<ResponseOutgoing>) => AsyncIterable<Buffer> {
-  return async function* responseEncodeSuccessTransform(source) {
-    let chunkIndex = 0;
+export function encodeResponseChunk(protocol: Protocol, chunk: ResponseOutgoing): Uint8ArrayList {
+  const result = new Uint8ArrayList();
 
-    for await (const chunk of source) {
-      // Postfix increment, return 0 as first chunk
-      cbs.onChunk(chunkIndex++);
+  // <result> - success = 0
+  result.append(new Uint8Array([RespStatus.SUCCESS]));
 
-      // <result>
-      yield SUCCESS_BUFFER;
+  // <context-bytes> - from altair (optional based on protocol)
+  const contextBytes = getContextBytes(protocol.contextBytes, chunk);
+  if (contextBytes) {
+    result.append(contextBytes);
+  }
 
-      // <context-bytes> - from altair
-      const contextBytes = getContextBytes(protocol.contextBytes, chunk);
-      if (contextBytes) {
-        yield contextBytes as Buffer;
-      }
+  // <varint-length> | <snappy-frames(ssz-payload)>
+  result.append(encodePayload(chunk.data, protocol.encoding));
 
-      // <encoding-dependent-header> | <encoded-payload>
-      yield* writeEncodedPayload(chunk.data, protocol.encoding);
-    }
-  };
+  return result;
 }
 
 /**
- * Yields byte chunks for a `<response_chunk>` with a non-zero response code `<result>`
- * denoted as `<error_response>`
+ * Encodes an error response chunk to bytes ready for writing to stream.
+ * Wire format:
  * ```bnf
  * error_response  ::= <result> | <error_message>?
  * result          ::= "1" | "2" | ["128" ... "255"]
  * ```
- * Only the last `<response_chunk>` is allowed to have a non-zero error code, so this
- * fn yields exactly one `<error_response>` and afterwards the stream must be terminated
+ * Only the last `<response_chunk>` is allowed to have a non-zero error code.
  */
-export async function* responseEncodeError(
+export function encodeErrorResponse(
   protocol: Pick<MixedProtocol, "encoding">,
   status: RpcResponseStatusError,
   errorMessage: string
-): AsyncGenerator<Buffer> {
+): Uint8ArrayList {
+  const result = new Uint8ArrayList();
+
   // <result>
-  yield Buffer.from([status]);
+  result.append(new Uint8Array([status]));
 
   // <error_message>? is optional
   if (errorMessage) {
-    yield* encodeErrorMessage(errorMessage, protocol.encoding);
+    result.append(encodeErrorMessage(errorMessage, protocol.encoding));
   }
+
+  return result;
 }
 
 /**
- * Yields byte chunks for a `<context-bytes>`. See `ContextBytesType` for possible types.
+ * Returns bytes for `<context-bytes>`. See `ContextBytesType` for possible types.
  * This item is mandatory but may be empty.
  */
 function getContextBytes(contextBytes: ContextBytesFactory, chunk: ResponseOutgoing): Uint8Array | null {

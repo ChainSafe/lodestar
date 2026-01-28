@@ -1,29 +1,29 @@
-import type {Sink} from "it-stream-types";
-import {Uint8ArrayList} from "uint8arraylist";
-import {readEncodedPayload} from "../encodingStrategies/index.js";
+import type {MessageStream} from "@libp2p/interface";
+import type {ByteStream} from "@libp2p/utils";
+import {decodePayload} from "../encodingStrategies/index.js";
 import {MixedProtocol} from "../types.js";
-import {BufferedSource} from "../utils/index.js";
 
 const EMPTY_DATA = new Uint8Array();
 
 /**
- * Consumes a stream source to read a `<request>`
+ * Reads and decodes a request from a stream using byteStream.
+ * Wire format:
  * ```bnf
- * request  ::= <encoding-dependent-header> | <encoded-payload>
+ * request  ::= <varint-length> | <snappy-frames(ssz-payload)>
  * ```
+ * Returns empty Uint8Array if protocol has no request body.
  */
-export function requestDecode(
-  protocol: MixedProtocol
-): Sink<AsyncIterable<Uint8Array | Uint8ArrayList>, Promise<Uint8Array>> {
-  return async function requestDecodeSink(source) {
-    const type = protocol.requestSizes;
-    if (type === null) {
-      // method has no body
-      return EMPTY_DATA;
-    }
+export async function decodeRequest(
+  bytes: ByteStream<MessageStream>,
+  protocol: MixedProtocol,
+  signal?: AbortSignal
+): Promise<Uint8Array> {
+  const type = protocol.requestSizes;
+  if (type === null) {
+    // method has no body
+    return EMPTY_DATA;
+  }
 
-    // Request has a single payload, so return immediately
-    const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
-    return readEncodedPayload(bufferedSource, protocol.encoding, type);
-  };
+  // Request has a single payload
+  return decodePayload(bytes, protocol.encoding, type, signal);
 }
