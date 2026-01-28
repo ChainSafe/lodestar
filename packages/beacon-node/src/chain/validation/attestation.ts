@@ -13,13 +13,13 @@ import {
 } from "@lodestar/params";
 import {
   EpochShuffling,
+  IndexedSignatureSet,
   ShufflingError,
   ShufflingErrorCode,
-  SingleSignatureSet,
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  createSingleSignatureSetFromComponents,
+  createIndexedSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {
   CommitteeIndex,
@@ -89,7 +89,7 @@ export type GossipAttestation = {
 };
 
 export type Step0Result = AttestationValidationResult & {
-  signatureSet: SingleSignatureSet;
+  signatureSet: IndexedSignatureSet;
   validatorIndex: number;
 };
 
@@ -124,7 +124,7 @@ export async function validateGossipAttestationsSameAttData(
   // step1: verify signatures of all valid attestations
   // map new index to index in resultOrErrors
   const newIndexToOldIndex = new Map<number, number>();
-  const signatureSets: SingleSignatureSet[] = [];
+  const signatureSets: IndexedSignatureSet[] = [];
   let newIndex = 0;
   const step0Results: Step0Result[] = [];
   for (const [i, resultOrError] of step0ResultOrErrors.entries()) {
@@ -142,7 +142,7 @@ export async function validateGossipAttestationsSameAttData(
   if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
     signatureValids = await chain.bls.verifySignatureSetsSameMessage(
-      signatureSets.map((set) => ({publicKey: set.pubkey, signature: set.signature})),
+      signatureSets.map((set) => ({publicKey: chain.index2pubkey[set.index], signature: set.signature})),
       signatureSets[0].signingRoot
     );
   } else {
@@ -477,7 +477,7 @@ async function validateAttestationNoSignatureCheck(
 
   // [REJECT] The signature of attestation is valid.
   const attestingIndices = [validatorIndex];
-  let signatureSet: SingleSignatureSet;
+  let signatureSet: IndexedSignatureSet;
   let attDataRootHex: RootHex;
   const signature = attestationOrCache.attestation
     ? attestationOrCache.attestation.signature
@@ -492,15 +492,15 @@ async function validateAttestationNoSignatureCheck(
 
   if (attestationOrCache.cache) {
     // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
-    signatureSet = createSingleSignatureSetFromComponents(
-      chain.index2pubkey[validatorIndex],
+    signatureSet = createIndexedSignatureSetFromComponents(
+      validatorIndex,
       attestationOrCache.cache.signingRoot,
       signature
     );
     attDataRootHex = attestationOrCache.cache.attDataRootHex;
   } else {
-    signatureSet = createSingleSignatureSetFromComponents(
-      chain.index2pubkey[validatorIndex],
+    signatureSet = createIndexedSignatureSetFromComponents(
+      validatorIndex,
       getSigningRoot(),
       signature
     );

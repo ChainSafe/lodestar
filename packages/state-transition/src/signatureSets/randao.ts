@@ -15,7 +15,7 @@ export function verifyRandaoSignature(
   index2pubkey: Index2PubkeyCache,
   block: BeaconBlock
 ): boolean {
-  return verifySignatureSet(getRandaoRevealSignatureSet(config, index2pubkey, block));
+  return verifySignatureSet(getRandaoRevealSignatureSet(config, block), index2pubkey);
 }
 
 /**
@@ -23,7 +23,6 @@ export function verifyRandaoSignature(
  */
 export function getRandaoRevealSignatureSet(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   block: BeaconBlock
 ): ISignatureSet {
   // should not get epoch from epochCtx
@@ -33,8 +32,8 @@ export function getRandaoRevealSignatureSet(
   const domain = config.getDomain(block.slot, DOMAIN_RANDAO, block.slot);
 
   return {
-    type: SignatureSetType.single,
-    pubkey: index2pubkey[block.proposerIndex],
+    type: SignatureSetType.indexed,
+    index: block.proposerIndex,
     signingRoot: computeSigningRoot(ssz.Epoch, epoch, domain),
     signature: block.body.randaoReveal,
   };

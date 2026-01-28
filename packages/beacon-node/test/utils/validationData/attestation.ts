@@ -154,7 +154,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
     bls: blsVerifyAllMainThread
       ? new BlsSingleThreadVerifier({metrics: null})
-      : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
+      : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null, index2pubkey: state.epochCtx.index2pubkey}),
     waitForBlock: () => Promise.resolve(false),
     index2pubkey: state.epochCtx.index2pubkey,
     shufflingCache,

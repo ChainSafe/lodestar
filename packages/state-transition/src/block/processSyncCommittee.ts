@@ -28,13 +28,12 @@ export function processSyncAggregate(
     const participantIndices = block.body.syncAggregate.syncCommitteeBits.intersectValues(committeeIndices);
     const signatureSet = getSyncCommitteeSignatureSet(
       state.config,
-      state.epochCtx.index2pubkey,
       state.epochCtx.currentSyncCommitteeIndexed,
       block,
       participantIndices
     );
-    // When there's no participation we consider the signature valid and just ignore i
-    if (signatureSet !== null && !verifySignatureSet(signatureSet)) {
+    // When there's no participation we consider the signature valid and just ignore it
+    if (signatureSet !== null && !verifySignatureSet(signatureSet, state.epochCtx.index2pubkey)) {
       throw Error("Sync committee signature invalid");
     }
   }
@@ -73,7 +72,6 @@ export function processSyncAggregate(
 
 export function getSyncCommitteeSignatureSet(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   currentSyncCommitteeIndexed: SyncCommitteeCache,
   block: altair.BeaconBlock,
   /** Optional parameter to prevent computing it twice */
@@ -122,7 +120,7 @@ export function getSyncCommitteeSignatureSet(
 
   return {
     type: SignatureSetType.aggregate,
-    pubkeys: participantIndices.map((i) => index2pubkey[i]),
+    indices: participantIndices,
     signingRoot: computeSigningRoot(ssz.Root, rootSigned, domain),
     signature,
   };
