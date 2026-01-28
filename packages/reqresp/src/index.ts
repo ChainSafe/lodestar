@@ -7,4 +7,5 @@ export * from "./request/errors.js";
 export * from "./response/errors.js";
 export * from "./types.js";
 export {Encoding as ReqRespEncoding} from "./types.js"; // Expose enums renamed
-export {collectExactOne, collectMaxResponse, formatProtocolID, parseProtocolID} from "./utils/index.js";
+export {formatProtocolID} from "./utils/index.js";
+export {parseProtocolID} from "./utils/protocolId.js";

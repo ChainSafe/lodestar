@@ -5,7 +5,7 @@ import {Logger, MetricsRegisterExtra} from "@lodestar/utils";
 import {Metrics, getMetrics} from "./metrics.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
 import {SelfRateLimiter} from "./rate_limiter/selfRateLimiter.js";
-import {RequestError, RequestErrorCode, SendRequestOpts, sendRequest} from "./request/index.js";
+import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
 import {
   DialOnlyProtocol,
@@ -39,6 +39,8 @@ export interface ReqRespOpts extends SendRequestOpts, ReqRespRateLimiterOpts {
  * For the spec that this code is based on, see:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
+ *
+ * Updated for libp2p v3 stream API.
  */
 export class ReqResp {
   // protected to be usable by extending class
@@ -106,6 +108,7 @@ export class ReqResp {
       this.rateLimiter.setRateLimits(protocolID, inboundRateLimits);
     }
 
+    // libp2p v3: protocol handlers now have signature (stream, connection) => Promise<void>
     return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID), {force: true});
   }
 
@@ -220,8 +223,13 @@ export class ReqResp {
     }
   }
 
+  /**
+   * Get the request handler for a protocol.
+   * libp2p v3: handlers have signature `async (stream, connection) => Promise<void>`
+   */
   private getRequestHandler(protocol: MixedProtocol, protocolID: string) {
-    return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
+    // libp2p v3: handler signature changed from ({ stream, connection }) to (stream, connection)
+    return async (stream: Stream, connection: Connection): Promise<void> => {
       if (this.dialOnlyProtocols.get(protocolID)) {
         throw new Error(`Received request on dial only protocol '${protocolID}'`);
       }

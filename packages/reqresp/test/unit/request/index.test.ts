@@ -1,6 +1,5 @@
 import {PeerId} from "@libp2p/interface";
-import all from "it-all";
-import {pipe} from "it-pipe";
+import {Uint8ArrayList} from "uint8arraylist";
 import {Libp2p} from "libp2p";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEmptyLogger} from "@lodestar/logger/empty";
@@ -36,13 +35,6 @@ describe("request / sendRequest", () => {
       requestBody: sszSnappyPing.binaryPayload,
       expectedReturn: [{...sszSnappyPing.binaryPayload, data: Buffer.from(sszSnappyPing.binaryPayload.data)}],
     },
-    // limit to max responses is no longer the responsibility of this package
-    // {
-    //   id: "Return up to maxResponses for a multi-chunk method",
-    //   protocols: [customProtocol({})],
-    //   requestBody: sszSnappySignedBeaconBlockPhase0.binaryPayload,
-    //   expectedReturn: [sszSnappySignedBeaconBlockPhase0.binaryPayload],
-    // },
   ];
 
   beforeEach(() => {
@@ -57,28 +49,28 @@ describe("request / sendRequest", () => {
 
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
+      const encodedChunks = responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol);
       libp2p = {
         dialProtocol: vi
           .fn()
           .mockResolvedValue(
-            new MockLibP2pStream(
-              responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol),
-              protocols[0].method
-            )
+            new MockLibP2pStream(encodedChunks, protocols[0].method)
           ),
       } as unknown as Libp2p;
 
-      const responses = await pipe(
-        sendRequest(
-          {logger, libp2p, metrics: null},
-          peerId,
-          protocols,
-          protocols.map((p) => p.method),
-          EMPTY_REQUEST,
-          controller.signal
-        ),
-        all
-      );
+      // Collect responses
+      const responses: ResponseIncoming[] = [];
+      for await (const response of sendRequest(
+        {logger, libp2p, metrics: null},
+        peerId,
+        protocols,
+        protocols.map((p) => p.method),
+        EMPTY_REQUEST,
+        controller.signal
+      )) {
+        responses.push(response);
+      }
+
       expect(responses).toEqual(expectedReturn);
     });
   }
@@ -90,44 +82,25 @@ describe("request / sendRequest", () => {
     const timeoutTestCases: {
       id: string;
       opts?: SendRequestOpts;
-      source: () => AsyncGenerator<Uint8Array>;
+      source: () => AsyncGenerator<Uint8ArrayList>;
       error?: LodestarError<any>;
     }[] = [
       {
-        id: "trigger a TTFB_TIMEOUT",
-        opts: {ttfbTimeoutMs: 0},
+        // Note: TTFB tracking removed per spec relaxation. Now using single RESP_TIMEOUT
+        id: "trigger a RESP_TIMEOUT on slow response",
+        opts: {respTimeoutMs: 10},
         source: async function* () {
-          await sleep(30); // Pause for too long before first byte
-          yield sszSnappyPing.chunks[0];
-        },
-        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
-      },
-      {
-        id: "trigger a RESP_TIMEOUT",
-        opts: {respTimeoutMs: 0},
-        source: async function* () {
-          yield sszSnappyPing.chunks[0];
-          await sleep(30); // Pause for too long after first byte
-          yield sszSnappyPing.chunks[1];
+          await sleep(50); // Pause for too long
+          yield new Uint8ArrayList(sszSnappyPing.chunks[0]);
         },
         error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
       {
-        // Upstream "abortable-iterator" never throws with an infinite sleep.
-        id: "Infinite sleep on first byte",
-        opts: {ttfbTimeoutMs: 1, respTimeoutMs: 1},
+        id: "Infinite sleep should timeout",
+        opts: {respTimeoutMs: 10},
         source: async function* () {
           await sleep(100000, controller.signal);
-          yield sszSnappyPing.chunks[0];
-        },
-        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
-      },
-      {
-        id: "Infinite sleep on second chunk",
-        opts: {ttfbTimeoutMs: 1, respTimeoutMs: 1},
-        source: async function* () {
-          yield sszSnappyPing.chunks[0];
-          await sleep(100000, controller.signal);
+          yield new Uint8ArrayList(sszSnappyPing.chunks[0]);
         },
         error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
@@ -139,21 +112,24 @@ describe("request / sendRequest", () => {
           dialProtocol: vi.fn().mockResolvedValue(new MockLibP2pStream(source(), testMethod)),
         } as unknown as Libp2p;
 
-        await expectRejectedWithLodestarError(
-          pipe(
-            sendRequest(
-              {logger, libp2p, metrics: null},
-              peerId,
-              [emptyProtocol],
-              [testMethod],
-              EMPTY_REQUEST,
-              controller.signal,
-              opts
-            ),
-            all
-          ),
-          error as LodestarError<any>
-        );
+        // Collect responses and expect error
+        const collectAll = async (): Promise<ResponseIncoming[]> => {
+          const responses: ResponseIncoming[] = [];
+          for await (const response of sendRequest(
+            {logger, libp2p, metrics: null},
+            peerId,
+            [emptyProtocol],
+            [testMethod],
+            EMPTY_REQUEST,
+            controller.signal,
+            opts
+          )) {
+            responses.push(response);
+          }
+          return responses;
+        };
+
+        await expectRejectedWithLodestarError(collectAll(), error as LodestarError<any>);
       });
     }
   });

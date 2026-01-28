@@ -1,5 +1,3 @@
-import all from "it-all";
-import {pipe} from "it-pipe";
 import {describe, it} from "vitest";
 import {Protocol} from "../../../src/types.js";
 import {responseEncodersTestCases} from "../../fixtures/encoders.js";
@@ -11,10 +9,14 @@ describe("encoders / responseEncode", () => {
     it.each(responseEncodersTestCases.filter((f) => !f.skipEncoding))(
       "$id",
       async ({protocol, responseChunks, chunks}) => {
-        const encodedChunks = await pipe(responseEncode(responseChunks, protocol as Protocol), all);
+        // Encode response chunks using new synchronous API
+        const encodedChunks = responseEncode(responseChunks, protocol as Protocol);
+
+        // Flatten encoded chunks to compare with expected
+        const encodedBytes = encodedChunks.map((c) => c.subarray());
 
         expectEqualByteChunks(
-          encodedChunks as Uint8Array[],
+          encodedBytes,
           chunks.map((c) => c.subarray())
         );
       }
