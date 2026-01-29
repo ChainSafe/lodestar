@@ -856,7 +856,7 @@ export function createValidatorMonitor(
     },
 
     getMonitoredValidatorIndices() {
-      return Array.from(validators.keys());
+      return Array.from(validators.keys()).sort((a, b) => a - b);
     },
   };
 
