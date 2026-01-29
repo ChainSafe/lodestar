@@ -38,7 +38,7 @@ describe("gossip block validation", () => {
     chain = getMockedBeaconChain({config});
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
-    forkChoice.getBlockHex.mockReturnValue(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
     chain.forkChoice = forkChoice;
     regen = chain.regen;
 
@@ -80,7 +80,7 @@ describe("gossip block validation", () => {
 
   it("ALREADY_KNOWN", async () => {
     // Make the fork choice return a block summary for the proposed block
-    forkChoice.getBlockHex.mockReturnValue({} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValue({} as ProtoBlock);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -100,9 +100,9 @@ describe("gossip block validation", () => {
 
   it("PARENT_UNKNOWN (fork-choice)", async () => {
     // Return not known for proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Return not known for parent block too
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -112,9 +112,9 @@ describe("gossip block validation", () => {
 
   it("TOO_MANY_SKIPPED_SLOTS", async () => {
     // Return not known for proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Return parent block with 1 slot way back than maxSkipSlots
-    forkChoice.getBlockHex.mockReturnValueOnce({slot: block.slot - (maxSkipSlots + 1)} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: block.slot - (maxSkipSlots + 1)} as ProtoBlock);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -124,9 +124,9 @@ describe("gossip block validation", () => {
 
   it("NOT_LATER_THAN_PARENT", async () => {
     // Return not known for proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot + 1} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot + 1} as ProtoBlock);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -136,9 +136,9 @@ describe("gossip block validation", () => {
 
   it("PARENT_UNKNOWN (regen)", async () => {
     // Return not known for proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen not able to get the parent block state
     regen.getPreState.mockRejectedValue(undefined);
 
@@ -150,9 +150,9 @@ describe("gossip block validation", () => {
 
   it("PROPOSAL_SIGNATURE_INVALID", async () => {
     // Return not known for proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     regen.getPreState.mockResolvedValue(generateCachedState());
     // BLS signature verifier returns invalid
@@ -166,9 +166,9 @@ describe("gossip block validation", () => {
 
   it("INCORRECT_PROPOSER", async () => {
     // Return not known for proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
     regen.getPreState.mockResolvedValue(state);
@@ -185,9 +185,9 @@ describe("gossip block validation", () => {
 
   it("valid", async () => {
     // Return not known for proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
     regen.getPreState.mockResolvedValue(state);
@@ -206,9 +206,9 @@ describe("gossip block validation", () => {
       () => new Uint8Array([0])
     );
     // Return not known for proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
     regen.getPreState.mockResolvedValue(state);
@@ -232,9 +232,9 @@ describe("gossip block validation", () => {
       () => new Uint8Array([0])
     );
     // Return not known for proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
     regen.getPreState.mockResolvedValue(state);

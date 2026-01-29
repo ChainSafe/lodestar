@@ -96,7 +96,7 @@ describe("api/validator - produceBlockV3", () => {
         blockRoot: toHexString(fullBlock.parentRoot),
       } as ProtoBlock);
       modules.chain.getProposerHead.mockReturnValue({blockRoot: toHexString(fullBlock.parentRoot)} as ProtoBlock);
-      modules.chain.forkChoice.getBlock.mockReturnValue(zeroProtoBlock);
+      modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
       modules.chain.produceCommonBlockBody.mockResolvedValue({
         attestations: fullBlock.body.attestations,
         attesterSlashings: fullBlock.body.attesterSlashings,
@@ -188,7 +188,9 @@ describe("api/validator - produceBlockV3", () => {
     modules.chain.recomputeForkChoiceHead.mockReturnValue(
       generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
     );
-    modules.chain.forkChoice.getBlock.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
+    modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(
+      generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
+    );
     modules.chain.produceBlock.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue,

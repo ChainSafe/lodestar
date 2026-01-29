@@ -29,11 +29,11 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     clock = new ClockStopped(currentSlot);
     modules = {config, forkChoice, clock, opts: {} as IChainOptions, blacklistedBlocks: new Map()};
     // On first call, parentRoot is known
-    forkChoice.getBlockHex.mockReturnValue({} as ProtoBlock);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValue({} as ProtoBlock);
   });
 
   it("PARENT_UNKNOWN", () => {
-    forkChoice.getBlockHex.mockReturnValue(null);
+    forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
     expectThrowsLodestarError(() => verifyBlocksSanityChecks(modules, [block], {}), BlockErrorCode.PARENT_UNKNOWN);
   });
 
@@ -180,7 +180,7 @@ function getForkChoice(knownBlocks: SignedBeaconBlock[], finalizedEpoch = 0): IF
   }
 
   return {
-    getBlockHex(blockRoot) {
+    getBlockHexDefaultStatus(blockRoot) {
       return blocks.get(blockRoot) ?? null;
     },
     hasBlockHex(blockRoot) {
