@@ -209,8 +209,12 @@ export interface IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
-  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string, indices?: number[]): Promise<fulu.DataColumnSidecars>;
-  getSerializedDataColumnSidecars(blockSlot: Slot, blockRootHex: string, indices?: number[]): Promise<Uint8Array[]>;
+  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<fulu.DataColumnSidecars>;
+  getSerializedDataColumnSidecars(
+    blockSlot: Slot,
+    blockRootHex: string,
+    indices: number[]
+  ): Promise<(Uint8Array | undefined)[]>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{

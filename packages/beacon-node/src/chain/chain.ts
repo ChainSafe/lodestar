@@ -807,38 +807,19 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getDataColumnSidecars(
-    blockSlot: Slot,
-    blockRootHex: string,
-    indices?: number[]
-  ): Promise<fulu.DataColumnSidecars> {
+  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<fulu.DataColumnSidecars> {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputColumns(blockInput)) {
         throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
       }
-      if (indices === undefined) {
-        return blockInput.getAllColumns();
-      }
-      return indices
-        .map((index) => blockInput.getColumn(index))
-        .filter((sidecar): sidecar is fulu.DataColumnSidecar => sidecar != null);
+      return blockInput.getAllColumns();
     }
-    const sidecarsUnfinalized =
-      indices === undefined
-        ? await this.db.dataColumnSidecar.values(fromHex(blockRootHex))
-        : (await this.db.dataColumnSidecar.getMany(fromHex(blockRootHex), indices)).filter(
-            (sidecar): sidecar is fulu.DataColumnSidecar => sidecar != null
-          );
+    const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {
       return sidecarsUnfinalized;
     }
-    const sidecarsFinalized =
-      indices === undefined
-        ? await this.db.dataColumnSidecarArchive.values(blockSlot)
-        : (await this.db.dataColumnSidecarArchive.getMany(blockSlot, indices)).filter(
-            (sidecar): sidecar is fulu.DataColumnSidecar => sidecar != null
-          );
+    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
     return sidecarsFinalized;
   }
 
@@ -846,41 +827,29 @@ export class BeaconChain implements IBeaconChain {
     blockSlot: Slot,
     blockRootHex: string,
     indices: number[]
-  ): Promise<Uint8Array[]> {
+  ): Promise<(Uint8Array | undefined)[]> {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputColumns(blockInput)) {
         throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
       }
-      if (indices === undefined) {
-        return blockInput.getAllColumns().map(ssz.fulu.DataColumnSidecar.serialize);
-      }
-      return indices
-        .map((index) => blockInput.getColumn(index))
-        .filter((sidecar): sidecar is fulu.DataColumnSidecar => sidecar != null)
-        .map((sidecar) => {
-          const serialized = this.serializedCache.get(sidecar);
-          if (serialized) {
-            return serialized;
-          }
-          return ssz.fulu.DataColumnSidecar.serialize(sidecar);
-        });
+      return indices.map((index) => {
+        const sidecar = blockInput.getColumn(index);
+        if (!sidecar) {
+          return undefined;
+        }
+        const serialized = this.serializedCache.get(sidecar);
+        if (serialized) {
+          return serialized;
+        }
+        return ssz.fulu.DataColumnSidecar.serialize(sidecar);
+      });
     }
-    const sidecarsUnfinalized =
-      indices === undefined
-        ? await this.db.dataColumnSidecar.valuesBinary(fromHex(blockRootHex))
-        : (await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices)).filter(
-            (sidecar): sidecar is Uint8Array => sidecar != null
-          );
-    if (sidecarsUnfinalized.length > 0) {
+    const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
+    if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
       return sidecarsUnfinalized;
     }
-    const sidecarsFinalized =
-      indices === undefined
-        ? await this.db.dataColumnSidecarArchive.valuesBinary(blockSlot)
-        : (await this.db.dataColumnSidecarArchive.getManyBinary(blockSlot, indices)).filter(
-            (sidecar): sidecar is Uint8Array => sidecar != null
-          );
+    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.getManyBinary(blockSlot, indices);
     return sidecarsFinalized;
   }
 
