@@ -105,7 +105,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 
 ### 6. Announce
 
-- Double check that Github release is correct
+- Double check that Github release is correct and [add release notes to the Github release page](#edit-the-release)
 - Follow [Publish to Social Media](#publish-to-social-media) steps
 
 ## Hotfix release
@@ -216,7 +216,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 
 ### 6. Announce
 
-- Double check that Github release is correct
+- Double check that Github release is correct and [add release notes to the Github release page](#edit-the-release)
 - Follow [Publish to Social Media](#publish-to-social-media) steps
 
 ## Dev release
@@ -312,7 +312,7 @@ This section is to guide the Release Manager tasked with the next version releas
 - Release Manager can now complete Step 4: Merge release candidate.
 - Disable "Allow merge commits" under the Lodestar repository settings
 - Complete Step 5: Tag stable release
-- Double check that Github release is correct and inform the Project Manager of completion
+- Double check that Github release is correct, [add release notes to the Github release page](#edit-the-release), and inform the Project Manager of completion
 - Project Manager to follow up with Devops updating both `bn` and `vc` stable servers
 
 ## Alternatives considered

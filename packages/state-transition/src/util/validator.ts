@@ -2,13 +2,15 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
+  MAX_EFFECTIVE_BALANCE,
   MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 import {Epoch, ValidatorIndex, phase0} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {BeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas, EpochCache} from "../types.js";
-import {hasCompoundingWithdrawalCredential} from "./electra.js";
+import {hasEth1WithdrawalCredential} from "./capella.js";
+import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "./electra.js";
 
 /**
  * Check if [[validator]] is active
@@ -92,6 +94,34 @@ export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): numbe
     return MAX_EFFECTIVE_BALANCE_ELECTRA;
   }
   return MIN_ACTIVATION_BALANCE;
+}
+
+/**
+ * Check if validator is partially withdrawable.
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/electra/beacon-chain.md#modified-is_partially_withdrawable_validator
+ */
+export function isPartiallyWithdrawableValidator(fork: ForkSeq, validator: phase0.Validator, balance: number): boolean {
+  const isPostElectra = fork >= ForkSeq.electra;
+
+  // Check withdrawal credentials
+  const hasWithdrawableCredentials = isPostElectra
+    ? hasExecutionWithdrawalCredential(validator.withdrawalCredentials)
+    : hasEth1WithdrawalCredential(validator.withdrawalCredentials);
+
+  if (!hasWithdrawableCredentials) {
+    return false;
+  }
+
+  // Get max effective balance based on fork
+  const maxEffectiveBalance = isPostElectra
+    ? getMaxEffectiveBalance(validator.withdrawalCredentials)
+    : MAX_EFFECTIVE_BALANCE;
+
+  // Check if at max effective balance and has excess balance
+  const hasMaxEffectiveBalance = validator.effectiveBalance === maxEffectiveBalance;
+  const hasExcessBalance = balance > maxEffectiveBalance;
+
+  return hasMaxEffectiveBalance && hasExcessBalance;
 }
 
 export function getPendingBalanceToWithdraw(

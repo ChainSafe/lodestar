@@ -1,4 +1,4 @@
-version: v1.6.1
+version: v1.7.0-alpha.1
 style: full
 
 specrefs:
@@ -41,9 +41,12 @@ exceptions:
     - UINT256_MAX#fulu
 
     # gloas
+    - ATTESTATION_TIMELINESS_INDEX#gloas
+    - NUM_BLOCK_TIMELINESS_DEADLINES#gloas
     - PAYLOAD_STATUS_EMPTY#gloas
     - PAYLOAD_STATUS_FULL#gloas
     - PAYLOAD_STATUS_PENDING#gloas
+    - PTC_TIMELINESS_INDEX#gloas
 
   containers:
     # gloas
@@ -56,7 +59,14 @@ exceptions:
     # bellatrix
     - OptimisticStore#bellatrix
 
+    # capella
+    - ExpectedWithdrawals#capella
+
+    # electra
+    - ExpectedWithdrawals#electra
+
     # gloas
+    - ExpectedWithdrawals#gloas
     - LatestMessage#gloas
     - Store#gloas
 
@@ -64,8 +74,10 @@ exceptions:
     # phase0
     - bytes_to_uint64#phase0
     - compute_fork_version#phase0
+    - compute_proposer_score#phase0
     - get_aggregate_signature#phase0
     - get_attestation_component_deltas#phase0
+    - get_attestation_score#phase0
     - get_attesting_balance#phase0
     - get_base_reward#phase0
     - get_checkpoint_block#phase0
@@ -90,11 +102,14 @@ exceptions:
     - get_weight#phase0
     - is_candidate_block#phase0
     - is_proposer#phase0
+    - is_proposer_equivocation#phase0
     - max_compressed_len#phase0
     - max_message_size#phase0
+    - record_block_timeliness#phase0
     - saturating_sub#phase0
     - seconds_to_milliseconds#phase0
     - store_target_checkpoint_state#phase0
+    - update_proposer_boost_root#phase0
     - validate_target_epoch_against_current_time#phase0
     - voting_period_start_time#phase0
 
@@ -139,10 +154,15 @@ exceptions:
     - validate_merge_block#bellatrix
 
     # capella
+    - apply_withdrawals#capella
     - compute_fork_version#capella
+    - get_balance_after_withdrawals#capella
     - get_lc_execution_root#capella
+    - get_validators_sweep_withdrawals#capella
     - is_fully_withdrawable_validator#capella
     - is_partially_withdrawable_validator#capella
+    - update_next_withdrawal_index#capella
+    - update_next_withdrawal_validator_index#capella
 
     # deneb
     - bit_reversal_permutation#deneb
@@ -184,10 +204,14 @@ exceptions:
     - get_eth1_vote#electra
     - get_execution_requests#electra
     - get_lc_execution_root#electra
+    - get_pending_partial_withdrawals#electra
+    - get_validators_sweep_withdrawals#electra
+    - is_eligible_for_partial_withdrawals#electra
     - is_fully_withdrawable_validator#electra
     - is_partially_withdrawable_validator#electra
     - is_valid_switch_to_compounding_request#electra
     - next_sync_committee_gindex_at_slot#electra
+    - update_pending_partial_withdrawals#electra
 
     # fulu
     - _fft_field#fulu
@@ -218,21 +242,27 @@ exceptions:
     - verify_cell_kzg_proof_batch_impl#fulu
 
     # gloas
+    - add_builder_to_registry#gloas
+    - apply_withdrawals#gloas
     - compute_balance_weighted_acceptance#gloas
     - compute_balance_weighted_selection#gloas
     - compute_fork_version#gloas
     - compute_proposer_indices#gloas
     - get_ancestor#gloas
     - get_attestation_participation_flag_indices#gloas
+    - get_attestation_score#gloas
+    - get_builder_from_deposit#gloas
+    - get_builder_withdrawals#gloas
+    - get_builders_sweep_withdrawals#gloas
     - get_checkpoint_block#gloas
     - get_data_column_sidecars#gloas
     - get_data_column_sidecars_from_block#gloas
     - get_data_column_sidecars_from_column_sidecar#gloas
     - get_execution_payload_bid_signature#gloas
     - get_execution_payload_envelope_signature#gloas
-    - get_expected_withdrawals#gloas
     - get_forkchoice_store#gloas
     - get_head#gloas
+    - get_index_for_new_builder#gloas
     - get_next_sync_committee_indices#gloas
     - get_node_children#gloas
     - get_parent_payload_status#gloas
@@ -240,12 +270,18 @@ exceptions:
     - get_payload_attestation_message_signature#gloas
     - get_payload_status_tiebreaker#gloas
     - get_pending_balance_to_withdraw#gloas
+    - get_proposer_preferences_signature#gloas
     - get_ptc_assignment#gloas
+    - get_upcoming_proposal_slots#gloas
     - get_weight#gloas
     - has_compounding_withdrawal_credential#gloas
+    - is_head_late#gloas
+    - is_head_weak#gloas
     - is_parent_node_full#gloas
+    - is_parent_strong#gloas
     - is_payload_timely#gloas
     - is_supporting_vote#gloas
+    - is_valid_proposal_slot#gloas
     - notify_ptc_messages#gloas
     - on_block#gloas
     - on_execution_payload#gloas
@@ -259,8 +295,14 @@ exceptions:
     - process_proposer_slashing#gloas
     - process_slot#gloas
     - process_withdrawals#gloas
+    - record_block_timeliness#gloas
+    - should_apply_proposer_boost#gloas
     - should_extend_payload#gloas
+    - update_builder_pending_withdrawals#gloas
     - update_latest_messages#gloas
+    - update_next_withdrawal_builder_index#gloas
+    - update_payload_expected_withdrawals#gloas
+    - update_proposer_boost_root#gloas
     - validate_merge_block#gloas
     - validate_on_attestation#gloas
     - verify_data_column_sidecar#gloas
