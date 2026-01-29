@@ -29,11 +29,6 @@ describe("ValidatorMonitor", () => {
   }
 
   describe("registerLocalValidator", () => {
-    /**
-     * Intent: Verify that multiple validators can be registered and tracked
-     * How: Register 3 validators (indices 1, 2, 3), then call getMonitoredValidatorIndices()
-     *      and verify all 3 are present in the returned array
-     */
     it("should register new validators and track them", () => {
       const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
 
@@ -48,11 +43,6 @@ describe("ValidatorMonitor", () => {
       expect(indices).toContain(3);
     });
 
-    /**
-     * Intent: Verify that re-registering the same validator doesn't create duplicates
-     * How: Register validator index 1 twice, then verify getMonitoredValidatorIndices()
-     *      returns only 1 entry (not 2)
-     */
     it("should not duplicate validators on re-registration", () => {
       const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
 

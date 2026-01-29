@@ -240,7 +240,6 @@ export function getLodestarApi({
     },
 
     async getMonitoredValidatorIndices() {
-      // validatorMonitor is null when both metrics and validatorMonitorLogs are disabled
       return {
         data: chain.validatorMonitor?.getMonitoredValidatorIndices() ?? [],
       };
