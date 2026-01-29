@@ -23,13 +23,10 @@ import {
   SubnetID,
   SyncPeriod,
   ValidatorIndex,
-  electra,
   gloas,
-  phase0,
 } from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
-import {AttesterDuty, calculateCommitteeAssignments} from "../util/calculateCommitteeAssignments.js";
 import {
   EpochShuffling,
   calculateDecisionRoot,
@@ -40,7 +37,6 @@ import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
   computeProposers,
-  computeStartSlotAtEpoch,
   computeSyncPeriodAtEpoch,
   getActivationChurnLimit,
   getChurnLimit,
@@ -49,6 +45,13 @@ import {
   isAggregatorFromCommitteeLength,
   naiveGetPayloadTimlinessCommitteeIndices,
 } from "../util/index.js";
+import {
+  AttesterDuty,
+  calculateCommitteeAssignments,
+  getAttestingIndices,
+  getBeaconCommittees,
+  getIndexedAttestation,
+} from "../util/shuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
@@ -752,22 +755,7 @@ export class EpochCache {
     if (indices.length === 0) {
       throw new Error("Attempt to get committees without providing CommitteeIndex");
     }
-
-    const slotCommittees = this.getShufflingAtSlot(slot).committees[slot % SLOTS_PER_EPOCH];
-    const committees = [];
-
-    for (const index of indices) {
-      if (index >= slotCommittees.length) {
-        throw new EpochCacheError({
-          code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
-          index,
-          maxIndex: slotCommittees.length,
-        });
-      }
-      committees.push(slotCommittees[index]);
-    }
-
-    return committees;
+    return getBeaconCommittees(this.getShufflingAtSlot(slot), slot, indices);
   }
 
   getCommitteeCountPerSlot(epoch: Epoch): number {
@@ -865,50 +853,16 @@ export class EpochCache {
    * Return the indexed attestation corresponding to ``attestation``.
    */
   getIndexedAttestation(fork: ForkSeq, attestation: Attestation): IndexedAttestation {
-    const {data} = attestation;
-    const attestingIndices = this.getAttestingIndices(fork, attestation);
-
-    // sort in-place
-    attestingIndices.sort((a, b) => a - b);
-    return {
-      attestingIndices: attestingIndices,
-      data: data,
-      signature: attestation.signature,
-    };
+    const shuffling = this.getShufflingAtSlot(attestation.data.slot);
+    return getIndexedAttestation(shuffling, fork, attestation);
   }
 
   /**
    * Return indices of validators who attestested in `attestation`
    */
   getAttestingIndices(fork: ForkSeq, attestation: Attestation): number[] {
-    if (fork < ForkSeq.electra) {
-      const {aggregationBits, data} = attestation;
-      const validatorIndices = this.getBeaconCommittee(data.slot, data.index);
-
-      return aggregationBits.intersectValues(validatorIndices);
-    }
-    const {aggregationBits, committeeBits, data} = attestation as electra.Attestation;
-
-    // There is a naming conflict on the term `committeeIndices`
-    // In Lodestar it usually means a list of validator indices of participants in a committee
-    // In the spec it means a list of committee indices according to committeeBits
-    // This `committeeIndices` refers to the latter
-    // TODO Electra: resolve the naming conflicts
-    const committeeIndices = committeeBits.getTrueBitIndexes();
-
-    const validatorsByCommittee = this.getBeaconCommittees(data.slot, committeeIndices);
-
-    // Create a new Uint32Array to flatten `validatorsByCommittee`
-    const totalLength = validatorsByCommittee.reduce((acc, curr) => acc + curr.length, 0);
-    const committeeValidators = new Uint32Array(totalLength);
-
-    let offset = 0;
-    for (const committee of validatorsByCommittee) {
-      committeeValidators.set(committee, offset);
-      offset += committee.length;
-    }
-
-    return aggregationBits.intersectValues(committeeValidators);
+    const shuffling = this.getShufflingAtSlot(attestation.data.slot);
+    return getAttestingIndices(shuffling, fork, attestation);
   }
 
   getCommitteeAssignments(
@@ -917,38 +871,6 @@ export class EpochCache {
   ): Map<ValidatorIndex, AttesterDuty> {
     const shuffling = this.getShufflingAtEpoch(epoch);
     return calculateCommitteeAssignments(shuffling, requestedValidatorIndices);
-  }
-
-  /**
-   * Return the committee assignment in the ``epoch`` for ``validator_index``.
-   * ``assignment`` returned is a tuple of the following form:
-   * ``assignment[0]`` is the list of validators in the committee
-   * ``assignment[1]`` is the index to which the committee is assigned
-   * ``assignment[2]`` is the slot at which the committee is assigned
-   * Return null if no assignment..
-   */
-  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
-    if (epoch > this.currentShuffling.epoch + 1) {
-      throw Error(
-        `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`
-      );
-    }
-
-    const epochStartSlot = computeStartSlotAtEpoch(epoch);
-    const committeeCountPerSlot = this.getCommitteeCountPerSlot(epoch);
-    for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
-      for (let i = 0; i < committeeCountPerSlot; i++) {
-        const committee = this.getBeaconCommittee(slot, i);
-        if (committee.includes(validatorIndex)) {
-          return {
-            validators: Array.from(committee),
-            committeeIndex: i,
-            slot,
-          };
-        }
-      }
-    }
-    return null;
   }
 
   isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
@@ -1135,7 +1057,6 @@ function getEffectiveBalanceIncrementsByteLen(validatorCount: number): number {
 }
 
 export enum EpochCacheErrorCode {
-  COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
   COMMITTEE_EPOCH_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_EPOCH_OUT_OF_RANGE",
   DECISION_ROOT_EPOCH_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_DECISION_ROOT_EPOCH_OUT_OF_RANGE",
   NEXT_SHUFFLING_NOT_AVAILABLE = "EPOCH_CONTEXT_ERROR_NEXT_SHUFFLING_NOT_AVAILABLE",
@@ -1144,11 +1065,6 @@ export enum EpochCacheErrorCode {
 }
 
 type EpochCacheErrorType =
-  | {
-      code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
-      index: number;
-      maxIndex: number;
-    }
   | {
       code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE;
       requestedEpoch: Epoch;

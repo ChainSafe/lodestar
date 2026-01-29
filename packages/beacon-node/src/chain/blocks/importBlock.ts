@@ -591,7 +591,10 @@ export function addAttestationPostElectra(
       true
     );
   } else {
-    const committees = epochCtx.getBeaconCommittees(attestation.data.slot, committeeIndices);
+    const attSlot = attestation.data.slot;
+    const attEpoch = computeEpochAtSlot(attSlot);
+    const decisionRoot = epochCtx.getShufflingDecisionRoot(attEpoch);
+    const committees = this.shufflingCache.getBeaconCommittees(attEpoch, decisionRoot, attSlot, committeeIndices);
     const aggregationBools = attestation.aggregationBits.toBoolArray();
     let offset = 0;
     for (let i = 0; i < committees.length; i++) {

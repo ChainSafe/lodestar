@@ -1,7 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateGloas} from "../types.ts";
-import {computeExitEpochAndUpdateChurn} from "../util/epoch.ts";
 import {getBuilderPaymentQuorumThreshold} from "../util/gloas.ts";
 
 /**
@@ -12,10 +11,7 @@ export function processBuilderPendingPayments(state: CachedBeaconStateGloas): vo
 
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
     const payment = state.builderPendingPayments.get(i);
-    if (payment.weight > quorum) {
-      const exitQueueEpoch = computeExitEpochAndUpdateChurn(state, BigInt(payment.withdrawal.amount));
-      payment.withdrawal.withdrawableEpoch = exitQueueEpoch + state.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
-
+    if (payment.weight >= quorum) {
       state.builderPendingWithdrawals.push(payment.withdrawal);
     }
   }

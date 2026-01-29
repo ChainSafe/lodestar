@@ -661,7 +661,12 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(fork, this.forkChoice, currentState);
+  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
+    fork,
+    this.forkChoice,
+    this.shufflingCache,
+    currentState
+  );
   endAttestations?.({
     step: BlockProductionStep.attestations,
   });

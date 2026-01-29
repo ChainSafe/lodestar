@@ -1,66 +1,45 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {
-  DOMAIN_BEACON_BUILDER,
-  FAR_FUTURE_EPOCH,
-  ForkPostGloas,
-  MIN_ACTIVATION_BALANCE,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, DOMAIN_BEACON_BUILDER, ForkPostGloas, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.ts";
 import {CachedBeaconStateGloas} from "../types.ts";
-import {hasBuilderWithdrawalCredential} from "../util/gloas.ts";
-import {computeSigningRoot, getCurrentEpoch, getRandaoMix, isActiveValidator} from "../util/index.ts";
+import {canBuilderCoverBid, isActiveBuilder} from "../util/gloas.ts";
+import {computeSigningRoot, getCurrentEpoch, getRandaoMix} from "../util/index.ts";
 
 export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block: BeaconBlock<ForkPostGloas>): void {
   const signedBid = block.body.signedExecutionPayloadBid;
   const bid = signedBid.message;
   const {builderIndex, value: amount} = bid;
-  const builder = state.validators.getReadonly(builderIndex);
 
   // For self-builds, amount must be zero regardless of withdrawal credential prefix
-  if (builderIndex === block.proposerIndex) {
+  if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
     if (amount !== 0) {
       throw Error(`Invalid execution payload bid: self-build with non-zero amount ${amount}`);
     }
     if (!byteArrayEquals(signedBid.signature, G2_POINT_AT_INFINITY)) {
       throw Error("Invalid execution payload bid: self-build with non-zero signature");
     }
-    // Non-self builds require builder withdrawal credential
-  } else {
-    if (!hasBuilderWithdrawalCredential(builder.withdrawalCredentials)) {
-      throw Error(`Invalid execution payload bid: builder ${builderIndex} does not have builder withdrawal credential`);
+  }
+  // Non-self builds require active builder with valid signature
+  else {
+    const builder = state.builders.getReadonly(builderIndex);
+
+    // Verify that the builder is active
+    if (!isActiveBuilder(state, builderIndex)) {
+      throw Error(`Invalid execution payload bid: builder ${builderIndex} is not active`);
     }
 
+    // Verify that the builder has funds to cover the bid
+    if (!canBuilderCoverBid(state, builderIndex, amount)) {
+      throw Error(`Invalid execution payload bid: builder ${builderIndex} has insufficient balance`);
+    }
+
+    // Verify that the bid signature is valid
     if (!verifyExecutionPayloadBidSignature(state, builder.pubkey, signedBid)) {
       throw Error(`Invalid execution payload bid: invalid signature for builder ${builderIndex}`);
     }
-  }
-
-  if (!isActiveValidator(builder, getCurrentEpoch(state))) {
-    throw Error(`Invalid execution payload bid: builder ${builderIndex} is not active`);
-  }
-
-  if (builder.slashed) {
-    throw Error(`Invalid execution payload bid: builder ${builderIndex} is slashed`);
-  }
-
-  const pendingPayments = state.builderPendingPayments
-    .getAllReadonly()
-    .filter((payment) => payment.withdrawal.builderIndex === builderIndex)
-    .reduce((acc, payment) => acc + payment.withdrawal.amount, 0);
-  const pendingWithdrawals = state.builderPendingWithdrawals
-    .getAllReadonly()
-    .filter((withdrawal) => withdrawal.builderIndex === builderIndex)
-    .reduce((acc, withdrawal) => acc + withdrawal.amount, 0);
-
-  if (
-    amount !== 0 &&
-    state.balances.get(builderIndex) < amount + pendingPayments + pendingWithdrawals + MIN_ACTIVATION_BALANCE
-  ) {
-    throw Error("Insufficient builder balance");
   }
 
   if (bid.slot !== block.slot) {
@@ -91,7 +70,6 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
         feeRecipient: bid.feeRecipient,
         amount,
         builderIndex,
-        withdrawableEpoch: FAR_FUTURE_EPOCH,
       }),
     });
 

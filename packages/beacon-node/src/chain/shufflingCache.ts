@@ -1,5 +1,12 @@
-import {CachedBeaconStateAllForks, EpochShuffling} from "@lodestar/state-transition";
-import {Epoch, RootHex} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
+import {
+  CachedBeaconStateAllForks,
+  EpochShuffling,
+  getAttestingIndices,
+  getBeaconCommittees,
+  getIndexedAttestation,
+} from "@lodestar/state-transition";
+import {Attestation, CommitteeIndex, Epoch, IndexedAttestation, RootHex, Slot} from "@lodestar/types";
 import {LodestarError, Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 
@@ -129,6 +136,26 @@ export class ShufflingCache {
   }
 
   /**
+   * Get a shuffling synchronously, return null if not present.
+   * The only time we have a promise cache item is when we regen shuffling for attestation, which never happens
+   * with default chain option.
+   */
+  getSync(epoch: Epoch, decisionRoot: RootHex): EpochShuffling | null {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
+    if (cacheItem === undefined) {
+      this.metrics?.shufflingCache.miss.inc();
+      return null;
+    }
+
+    if (isShufflingCacheItem(cacheItem)) {
+      this.metrics?.shufflingCache.hit.inc();
+      return cacheItem.shuffling;
+    }
+
+    return null;
+  }
+
+  /**
    * Process a state to extract and cache all shufflings (previous, current, next).
    * Uses the stored decision roots from epochCtx.
    */
@@ -143,6 +170,42 @@ export class ShufflingCache {
 
     // Cache next shuffling
     this.set(epochCtx.nextShuffling, epochCtx.nextDecisionRoot);
+  }
+
+  getIndexedAttestation(
+    epoch: number,
+    decisionRoot: string,
+    fork: ForkSeq,
+    attestation: Attestation
+  ): IndexedAttestation {
+    const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
+    return getIndexedAttestation(shuffling, fork, attestation);
+  }
+
+  getAttestingIndices(epoch: number, decisionRoot: string, fork: ForkSeq, attestation: Attestation): number[] {
+    const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
+    return getAttestingIndices(shuffling, fork, attestation);
+  }
+
+  getBeaconCommittee(epoch: number, decisionRoot: string, slot: Slot, index: CommitteeIndex): Uint32Array {
+    return this.getBeaconCommittees(epoch, decisionRoot, slot, [index])[0];
+  }
+
+  getBeaconCommittees(epoch: number, decisionRoot: string, slot: Slot, indices: CommitteeIndex[]): Uint32Array[] {
+    const shuffling = this.getShufflingOrThrow(epoch, decisionRoot);
+    return getBeaconCommittees(shuffling, slot, indices);
+  }
+
+  private getShufflingOrThrow(epoch: number, decisionRoot: string): EpochShuffling {
+    const shuffling = this.getSync(epoch, decisionRoot);
+    if (shuffling === null) {
+      throw new ShufflingCacheError({
+        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
+        epoch,
+        decisionRoot,
+      });
+    }
+    return shuffling;
   }
 
   /**

@@ -73,9 +73,12 @@ export async function archiveBlocks(
     root: fromHex(block.blockRoot),
   }));
 
+  const logCtx = {currentEpoch, finalizedEpoch: finalizedCheckpoint.epoch, finalizedRoot: finalizedCheckpoint.rootHex};
+
   if (finalizedCanonicalBlockRoots.length > 0) {
     await migrateBlocksFromHotToColdDb(db, finalizedCanonicalBlockRoots);
     logger.verbose("Migrated blocks from hot DB to cold DB", {
+      ...logCtx,
       fromSlot: finalizedCanonicalBlockRoots[0].slot,
       toSlot: finalizedCanonicalBlockRoots.at(-1)?.slot,
       size: finalizedCanonicalBlockRoots.length,
@@ -88,7 +91,7 @@ export async function archiveBlocks(
         finalizedCanonicalBlockRoots,
         currentEpoch
       );
-      logger.verbose("Migrated blobSidecars from hot DB to cold DB", {migratedEntries});
+      logger.verbose("Migrated blobSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
     }
 
     if (finalizedPostFulu) {
@@ -99,7 +102,7 @@ export async function archiveBlocks(
         finalizedCanonicalBlockRoots,
         currentEpoch
       );
-      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {migratedEntries});
+      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
     }
   }
 
@@ -114,14 +117,14 @@ export async function archiveBlocks(
         nonCanonicalBlockRoots.map(async (root, index) => {
           const block = finalizedNonCanonicalBlocks[index];
           const blockBytes = await db.block.getBinary(root);
-          const logCtx = {slot: block.slot, root: block.blockRoot};
+          const blockLogCtx = {slot: block.slot, root: block.blockRoot};
           if (blockBytes) {
             await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
               persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
             });
-            logger.verbose("Persisted orphaned block", logCtx);
+            logger.verbose("Persisted orphaned block", {...logCtx, ...blockLogCtx});
           } else {
-            logger.warn("Tried to persist orphaned block but no block found", logCtx);
+            logger.warn("Tried to persist orphaned block but no block found", {...logCtx, ...blockLogCtx});
           }
         })
       );
@@ -129,17 +132,18 @@ export async function archiveBlocks(
 
     await db.block.batchDelete(nonCanonicalBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", {
+      ...logCtx,
       slots: finalizedNonCanonicalBlocks.map((summary) => summary.slot).join(","),
     });
 
     if (finalizedPostDeneb) {
       await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical blobSidecars from hot DB");
+      logger.verbose("Deleted non canonical blobSidecars from hot DB", logCtx);
     }
 
     if (finalizedPostFulu) {
       await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical dataColumnSidecars from hot DB");
+      logger.verbose("Deleted non canonical dataColumnSidecars from hot DB", logCtx);
     }
   }
 
@@ -154,13 +158,13 @@ export async function archiveBlocks(
         const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
         if (slotsToDelete.length > 0) {
           await db.blobSidecarsArchive.batchDelete(slotsToDelete);
-          logger.verbose(`blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`);
+          logger.verbose(`blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`, logCtx);
         } else {
-          logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`);
+          logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`, logCtx);
         }
       }
     } else {
-      logger.verbose("blobSidecars pruning skipped: archiveDataEpochs set to Infinity");
+      logger.verbose("blobSidecars pruning skipped: archiveDataEpochs set to Infinity", logCtx);
     }
   }
 
@@ -184,20 +188,22 @@ export async function archiveBlocks(
         if (slotsToDelete.length > 0) {
           await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
           logger.verbose("dataColumnSidecars prune", {
+            ...logCtx,
             slotRange: prettyPrintIndices(slotsToDelete),
             numOfSlots: slotsToDelete.length,
             totalNumOfSidecars: prefixedKeys.length,
           });
         } else {
-          logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`);
+          logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`, logCtx);
         }
       } else {
         logger.verbose(
-          `dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch ${config.FULU_FORK_EPOCH}`
+          `dataColumnSidecars pruning skipped: ${dataColumnSidecarsMinEpoch} is before fulu fork epoch ${config.FULU_FORK_EPOCH}`,
+          logCtx
         );
       }
     } else {
-      logger.verbose("dataColumnSidecars pruning skipped: archiveDataEpochs set to Infinity");
+      logger.verbose("dataColumnSidecars pruning skipped: archiveDataEpochs set to Infinity", logCtx);
     }
   }
 
@@ -213,8 +219,8 @@ export async function archiveBlocks(
   }
 
   logger.verbose("Archiving of finalized blocks complete", {
+    ...logCtx,
     totalArchived: finalizedCanonicalBlocks.length,
-    finalizedEpoch: finalizedCheckpoint.epoch,
   });
 }
 
@@ -340,6 +346,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
       const dataColumnSidecarBytes = await fromAsync(db.dataColumnSidecar.valuesStreamBinary(block.root));
       // there could be 0 dataColumnSidecarBytes if block has no blob
       logger.verbose("migrateDataColumnSidecarsFromHotToColdDb", {
+        currentEpoch,
         slot: block.slot,
         root: toRootHex(block.root),
         numSidecars: dataColumnSidecarBytes.length,
