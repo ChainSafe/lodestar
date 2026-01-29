@@ -322,19 +322,23 @@ export class BeaconStateView implements IBeaconStateView {
 
   loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView {
     const {state} = loadState(this.config, this.cachedState, stateBytes, seedValidatorsBytes);
-    return new BeaconStateView(
-      createCachedBeaconState(
-        state,
-        {
-          config: this.config,
-          pubkey2index: this.cachedState.epochCtx.pubkey2index,
-          index2pubkey: this.cachedState.epochCtx.index2pubkey,
-        },
-        {
-          skipSyncPubkeys: true,
-        }
-      )
+    const cachedState = createCachedBeaconState(
+      state,
+      {
+        config: this.config,
+        pubkey2index: this.cachedState.epochCtx.pubkey2index,
+        index2pubkey: this.cachedState.epochCtx.index2pubkey,
+      },
+      {
+        skipSyncPubkeys: true,
+      }
     );
+
+    // load all cache in order for consumers (usually regen.getState()) to process blocks faster
+    cachedState.validators.getAllReadonlyValues();
+    cachedState.balances.getAll();
+
+    return new BeaconStateView(cachedState);
   }
 
   getValidator(index: ValidatorIndex): phase0.Validator {
