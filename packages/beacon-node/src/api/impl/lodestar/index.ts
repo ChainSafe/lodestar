@@ -194,12 +194,6 @@ export function getLodestarApi({
       return {data: await db.stateArchive.dumpRootIndexEntries()};
     },
 
-    async getMonitoredValidatorIndices() {
-      return {
-        data: chain.validatorMonitor?.getMonitoredValidatorIndices() ?? [],
-      };
-    },
-
     async getHistoricalSummaries({stateId}) {
       const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
 
@@ -242,6 +236,12 @@ export function getLodestarApi({
         meta: {
           version: config.getForkName(slot),
         },
+      };
+    },
+
+    async getMonitoredValidatorIndices() {
+      return {
+        data: chain.validatorMonitor?.getMonitoredValidatorIndices() ?? [],
       };
     },
   };

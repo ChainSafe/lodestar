@@ -271,6 +271,19 @@ export type Endpoints = {
     VersionMeta
   >;
 
+  /**
+   * Returns the validator indices that are currently being monitored by the validator monitor.
+   * These are validators that have registered with this beacon node via the validator API.
+   */
+  getMonitoredValidatorIndices: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ValidatorIndex[],
+    EmptyMeta
+  >;
+
   /** Dump Discv5 Kad values */
   discv5GetKadValues: Endpoint<
     // ⏎
@@ -302,19 +315,6 @@ export type Endpoints = {
     EmptyArgs,
     EmptyRequest,
     {root: RootHex; slot: Slot}[],
-    EmptyMeta
-  >;
-
-  /**
-   * Returns the validator indices that are currently being monitored by the validator monitor.
-   * These are validators that have registered with this beacon node via the validator API.
-   */
-  getMonitoredValidatorIndices: Endpoint<
-    // ⏎
-    "GET",
-    EmptyArgs,
-    EmptyRequest,
-    ValidatorIndex[],
     EmptyMeta
   >;
 };
@@ -475,6 +475,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         timeoutMs: 5 * 60 * 1000,
       },
     },
+    getMonitoredValidatorIndices: {
+      url: "/eth/v1/lodestar/monitored_validators",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
     discv5GetKadValues: {
       url: "/eth/v1/debug/discv5_kad_values",
       method: "GET",
@@ -493,12 +499,6 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
     },
     dumpDbStateIndex: {
       url: "/eth/v1/debug/dump_db_state_index",
-      method: "GET",
-      req: EmptyRequestCodec,
-      resp: JsonOnlyResponseCodec,
-    },
-    getMonitoredValidatorIndices: {
-      url: "/eth/v1/lodestar/monitored_validators",
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
