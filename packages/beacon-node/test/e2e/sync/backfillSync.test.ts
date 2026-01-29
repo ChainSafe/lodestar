@@ -898,7 +898,7 @@ describe("sync / backfill sync", () => {
     const bnB = await initBackfillNode(genesisTime, loggerNodeB, finalizedCp, checkpointState);
 
     const reportPeerSpy = vi.spyOn(bnB.network, "reportPeer");
-    const backfillLoggerSpy = vi.spyOn((bnB.backfillSync as any).logger, "info");
+    const backfillLoggerSpy = vi.spyOn((bnB.backfillSync as any).logger, "verbose");
 
     let blockCorrupted = false;
     const anchorSlot = checkpointState.slot;
@@ -970,7 +970,7 @@ describe("sync / backfill sync", () => {
     const bnB = await initBackfillNode(genesisTime, loggerNodeB, finalizedCp, checkpointState);
 
     const reportPeerSpy = vi.spyOn(bnB.network, "reportPeer");
-    const backfillLoggerSpy = vi.spyOn((bnB.backfillSync as any).logger, "info");
+    const backfillLoggerSpy = vi.spyOn((bnB.backfillSync as any).logger, "verbose");
 
     let blockCorrupted = false;
     const anchorSlot = checkpointState.slot;
