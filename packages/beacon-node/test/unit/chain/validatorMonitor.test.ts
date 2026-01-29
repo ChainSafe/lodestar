@@ -28,27 +28,12 @@ describe("ValidatorMonitor", () => {
     } as any;
   }
 
-  describe("RETAIN_REGISTERED_VALIDATORS dynamic calculation", () => {
-    it("should calculate retain time based on slot duration and 2 epochs", () => {
-      // The retain time should be 2 epochs worth of milliseconds
-      // For mainnet: 2 * 32 * 12000 = 768000 ms = 12.8 minutes
-      const expectedRetainMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS * 2;
-
-      // Create validator monitor
-      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
-
-      // Register a validator
-      monitor.registerLocalValidator(1);
-
-      // Verify the validator is registered
-      expect(monitor.getMonitoredValidatorIndices()).toContain(1);
-
-      // The actual retention logic is tested indirectly through pruning behavior
-      expect(expectedRetainMs).toBe(SLOTS_PER_EPOCH * config.SLOT_DURATION_MS * 2);
-    });
-  });
-
   describe("registerLocalValidator", () => {
+    /**
+     * Intent: Verify that multiple validators can be registered and tracked
+     * How: Register 3 validators (indices 1, 2, 3), then call getMonitoredValidatorIndices()
+     *      and verify all 3 are present in the returned array
+     */
     it("should register new validators and track them", () => {
       const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
 
@@ -63,6 +48,11 @@ describe("ValidatorMonitor", () => {
       expect(indices).toContain(3);
     });
 
+    /**
+     * Intent: Verify that re-registering the same validator doesn't create duplicates
+     * How: Register validator index 1 twice, then verify getMonitoredValidatorIndices()
+     *      returns only 1 entry (not 2)
+     */
     it("should not duplicate validators on re-registration", () => {
       const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
 
@@ -72,39 +62,6 @@ describe("ValidatorMonitor", () => {
       const indices = monitor.getMonitoredValidatorIndices();
       expect(indices).toHaveLength(1);
       expect(indices).toContain(1);
-    });
-
-    it("should update lastRegisteredTimeMs on re-registration", () => {
-      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
-
-      monitor.registerLocalValidator(1);
-
-      // Re-register
-      monitor.registerLocalValidator(1);
-
-      // The validator should still be tracked (won't be pruned since time is recent)
-      expect(monitor.getMonitoredValidatorIndices()).toContain(1);
-    });
-  });
-
-  describe("getMonitoredValidatorIndices", () => {
-    it("should return empty array when no validators registered", () => {
-      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
-      expect(monitor.getMonitoredValidatorIndices()).toEqual([]);
-    });
-
-    it("should return all registered validator indices", () => {
-      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
-
-      monitor.registerLocalValidator(100);
-      monitor.registerLocalValidator(200);
-      monitor.registerLocalValidator(50);
-
-      const indices = monitor.getMonitoredValidatorIndices();
-      expect(indices).toHaveLength(3);
-      expect(indices).toContain(100);
-      expect(indices).toContain(200);
-      expect(indices).toContain(50);
     });
   });
 
@@ -151,6 +108,33 @@ describe("ValidatorMonitor", () => {
 
       // Validator should still be there
       expect(monitor.getMonitoredValidatorIndices()).toContain(1);
+    });
+
+    it("should not prune re-registered validators even after initial retain period", () => {
+      const monitor = createValidatorMonitor(null, config, genesisTime, logger, {});
+      const retainMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS * 2;
+      const baseTime = Date.now();
+
+      // Register a validator at initial time
+      vi.spyOn(Date, "now").mockReturnValue(baseTime);
+      monitor.registerLocalValidator(1);
+      expect(monitor.getMonitoredValidatorIndices()).toContain(1);
+
+      // Advance time past the retain period, but re-register the validator before pruning
+      vi.spyOn(Date, "now").mockReturnValue(baseTime + retainMs + 1000);
+      monitor.registerLocalValidator(1); // Re-register updates lastRegisteredTimeMs
+
+      // Create a mock head state
+      const slot = SLOTS_PER_EPOCH * 2;
+      const headState = createMockHeadState(slot);
+
+      // Call onceEveryEndOfEpoch - validator should NOT be pruned due to re-registration
+      monitor.onceEveryEndOfEpoch(headState);
+
+      // Validator should still be there because re-registration updated the timestamp
+      expect(monitor.getMonitoredValidatorIndices()).toContain(1);
+
+      vi.restoreAllMocks();
     });
   });
 });

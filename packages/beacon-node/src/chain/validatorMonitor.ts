@@ -693,24 +693,22 @@ export function createValidatorMonitor(
         }
       }
 
-      // Log validator changes once per epoch if there were any additions or removals
-      if (addedValidatorsInEpoch.size > 0 || removedValidatorsInEpoch.size > 0) {
-        const allIndices = Array.from(validators.keys()).sort((a, b) => a - b);
-        const addedIndices = Array.from(addedValidatorsInEpoch).sort((a, b) => a - b);
-        const removedIndices = Array.from(removedValidatorsInEpoch).sort((a, b) => a - b);
+      // Log validator monitor status every epoch
+      const allIndices = Array.from(validators.keys()).sort((a, b) => a - b);
+      const addedIndices = Array.from(addedValidatorsInEpoch).sort((a, b) => a - b);
+      const removedIndices = Array.from(removedValidatorsInEpoch).sort((a, b) => a - b);
 
-        logger.info("Validator monitor status", {
-          epoch: computeEpochAtSlot(headState.slot),
-          added: addedIndices.length > 0 ? prettyPrintIndices(addedIndices) : "none",
-          removed: removedIndices.length > 0 ? prettyPrintIndices(removedIndices) : "none",
-          total: validators.size,
-          indices: prettyPrintIndices(allIndices),
-        });
+      log("Validator monitor status", {
+        epoch: computeEpochAtSlot(headState.slot),
+        added: addedIndices.length > 0 ? prettyPrintIndices(addedIndices) : "none",
+        removed: removedIndices.length > 0 ? prettyPrintIndices(removedIndices) : "none",
+        total: validators.size,
+        indices: prettyPrintIndices(allIndices),
+      });
 
-        // Clear tracking sets for next epoch
-        addedValidatorsInEpoch.clear();
-        removedValidatorsInEpoch.clear();
-      }
+      // Clear tracking sets for next epoch
+      addedValidatorsInEpoch.clear();
+      removedValidatorsInEpoch.clear();
 
       // Compute summaries of previous epoch attestation performance
       const prevEpoch = computeEpochAtSlot(headState.slot) - 1;
@@ -1144,7 +1142,7 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
     }),
 
     validatorsConnectedIndices: register.gauge<{indices: string}>({
-      name: "lodestar_validator_monitor_indices",
+      name: "validator_monitor_indices",
       help: "Static metric with connected validator indices as label, value is always 1",
       labelNames: ["indices"],
     }),

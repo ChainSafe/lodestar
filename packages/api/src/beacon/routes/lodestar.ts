@@ -270,10 +270,9 @@ export type Endpoints = {
     BeaconState,
     VersionMeta
   >;
-
+  
   /**
    * Returns the validator indices that are currently being monitored by the validator monitor.
-   * These are validators that have registered with this beacon node via the validator API.
    */
   getMonitoredValidatorIndices: Endpoint<
     // ⏎
