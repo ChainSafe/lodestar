@@ -9,12 +9,14 @@ export interface Gauge<Labels extends LabelsGeneric = NoLabels> {
   inc: NoLabels extends Labels ? (value?: number) => void : (labels: Labels, value?: number) => void;
   dec: NoLabels extends Labels ? (value?: number) => void : (labels: Labels, value?: number) => void;
   set: NoLabels extends Labels ? (value: number) => void : (labels: Labels, value: number) => void;
+  reset(): void;
 
   collect?(): void;
 }
 
 export interface GaugeExtra<Labels extends LabelsGeneric = NoLabels> extends Omit<Gauge<Labels>, "collect"> {
   addCollect(collectFn: CollectFn<Labels>): void;
+  reset(): void;
 }
 
 export interface Histogram<Labels extends LabelsGeneric = NoLabels> {

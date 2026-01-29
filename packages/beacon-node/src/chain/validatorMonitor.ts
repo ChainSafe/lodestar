@@ -771,9 +771,8 @@ export function createValidatorMonitor(
       validatorMonitorMetrics?.validatorsConnected.set(validators.size);
 
       // Update static metric with connected validator indices
-      // Cast to access reset() from underlying prom-client Gauge
       if (validatorMonitorMetrics?.validatorsConnectedIndices) {
-        (validatorMonitorMetrics.validatorsConnectedIndices as unknown as {reset(): void}).reset();
+        validatorMonitorMetrics.validatorsConnectedIndices.reset();
         const allIndices = Array.from(validators.keys()).sort((a, b) => a - b);
         validatorMonitorMetrics.validatorsConnectedIndices.set({indices: prettyPrintIndices(allIndices)}, 1);
       }
