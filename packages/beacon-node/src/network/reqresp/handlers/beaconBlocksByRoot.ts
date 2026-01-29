@@ -14,7 +14,7 @@ export async function* onBeaconBlocksByRoot(
 ): AsyncIterable<ResponseOutgoing> {
   for (const blockRoot of requestBody) {
     const root = blockRoot;
-    const summary = chain.forkChoice.getBlock(root);
+    const summary = chain.forkChoice.getBlockDefaultStatus(root);
     let blockBytes: Uint8Array | null = null;
 
     // finalized block has summary in forkchoice but it stays in blockArchive db

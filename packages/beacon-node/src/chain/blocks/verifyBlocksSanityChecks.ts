@@ -90,7 +90,7 @@ export function verifyBlocksSanityChecks(
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toRootHex(block.message.parentRoot);
-      parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+      parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
       if (!parentBlock) {
         throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
       }

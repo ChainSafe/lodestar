@@ -465,7 +465,8 @@ export class ProtoArray {
     blockRoot: RootHex,
     currentSlot: Slot,
     executionPayloadBlockHash: RootHex,
-    executionPayloadNumber: number
+    executionPayloadNumber: number,
+    executionPayloadStateRoot: RootHex
   ): void {
     // First check if block exists
     const variants = this.indices.get(blockRoot);
@@ -518,6 +519,7 @@ export class ProtoArray {
       executionStatus: ExecutionStatus.Valid, // TODO GLOAS: Review execution status
       executionPayloadBlockHash,
       executionPayloadNumber,
+      stateRoot: executionPayloadStateRoot,
     };
 
     const fullIndex = this.nodes.length;

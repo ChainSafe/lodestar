@@ -55,7 +55,7 @@ export async function validateGossipBlock(
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
   const blockRoot = toRootHex(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
-  if (chain.forkChoice.getBlockHex(blockRoot) !== null) {
+  if (chain.forkChoice.getBlockHexDefaultStatus(blockRoot) !== null) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
@@ -71,7 +71,7 @@ export async function validateGossipBlock(
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   const parentRoot = toRootHex(block.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:

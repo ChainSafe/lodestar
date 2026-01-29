@@ -199,8 +199,16 @@ export interface IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-on_execution_payload
    *
    * @param blockRoot - The beacon block root for which the payload arrived
+   * @param executionPayloadBlockHash - The block hash of the execution payload
+   * @param executionPayloadNumber - The block number of the execution payload
+   * @param executionPayloadStateRoot - The execution payload state root ie. the root of post-state after processExecutionPayloadEnvelope()
    */
-  onExecutionPayload(blockRoot: RootHex, executionPayloadBlockHash: RootHex, executionPayloadNumber: number): void;
+  onExecutionPayload(
+    blockRoot: RootHex,
+    executionPayloadBlockHash: RootHex,
+    executionPayloadNumber: number,
+    executionPayloadStateRoot: RootHex
+  ): void;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
@@ -224,8 +232,11 @@ export interface IForkChoice {
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
-  getBlock(blockRoot: Root): ProtoBlock | null;
-  getBlockHex(blockRoot: RootHex): ProtoBlock | null;
+  getBlock(blockRoot: Root, payloadStatus: PayloadStatus): ProtoBlock | null;
+  getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null;
+  getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
+  getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
+  getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;

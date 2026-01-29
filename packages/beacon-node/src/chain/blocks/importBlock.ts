@@ -440,7 +440,7 @@ export async function importBlock(
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
     this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
-    const parentBlockSummary = this.forkChoice.getBlock(checkpointState.latestBlockHeader.parentRoot);
+    const parentBlockSummary = this.forkChoice.getBlockDefaultStatus(checkpointState.latestBlockHeader.parentRoot);
 
     if (parentBlockSummary) {
       const justifiedCheckpoint = checkpointState.currentJustifiedCheckpoint;

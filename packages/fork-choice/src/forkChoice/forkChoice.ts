@@ -838,7 +838,7 @@ export class ForkChoice implements IForkChoice {
 
     // We need to retrieve block to check if it's Gloas and to compare slot
     // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
-    const block = this.getBlockHex(blockRootHex);
+    const block = this.getBlockHexDefaultStatus(blockRootHex);
 
     if (block && isGloasBlock(block)) {
       // Post-Gloas block: determine FULL/EMPTY/PENDING based on slot and committee index
@@ -908,13 +908,21 @@ export class ForkChoice implements IForkChoice {
    * Notify fork choice that an execution payload has arrived (Gloas fork)
    * Creates the FULL variant of a Gloas block when the payload becomes available
    * Spec: gloas/fork-choice.md#new-on_execution_payload
+   *
+   *
    */
-  onExecutionPayload(blockRoot: RootHex, executionPayloadBlockHash: RootHex, executionPayloadNumber: number): void {
+  onExecutionPayload(
+    blockRoot: RootHex,
+    executionPayloadBlockHash: RootHex,
+    executionPayloadNumber: number,
+    executionPayloadStateRoot: RootHex
+  ): void {
     this.protoArray.onExecutionPayload(
       blockRoot,
       this.fcStore.currentSlot,
       executionPayloadBlockHash,
-      executionPayloadNumber
+      executionPayloadNumber,
+      executionPayloadStateRoot
     );
   }
 
@@ -949,8 +957,12 @@ export class ForkChoice implements IForkChoice {
     return this.hasBlockHex(toRootHex(blockRoot));
   }
   /** Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root. */
-  getBlock(blockRoot: Root): ProtoBlock | null {
-    return this.getBlockHex(toRootHex(blockRoot));
+  getBlock(blockRoot: Root, payloadStatus: PayloadStatus): ProtoBlock | null {
+    return this.getBlockHex(toRootHex(blockRoot), payloadStatus);
+  }
+
+  getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null {
+    return this.getBlockHexDefaultStatus(toRootHex(blockRoot));
   }
 
   /**
@@ -984,12 +996,8 @@ export class ForkChoice implements IForkChoice {
   /**
    * Returns a MUTABLE `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
-  getBlockHex(blockRoot: RootHex): ProtoBlock | null {
-    const defaultStatus = this.protoArray.getDefaultVariant(blockRoot);
-    if (defaultStatus === undefined) {
-      return null;
-    }
-    const node = this.protoArray.getNode(blockRoot, defaultStatus);
+  getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null {
+    const node = this.protoArray.getNode(blockRoot, payloadStatus);
     if (!node) {
       return null;
     }
@@ -1003,9 +1011,41 @@ export class ForkChoice implements IForkChoice {
     };
   }
 
+  getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null {
+    const defaultStatus = this.protoArray.getDefaultVariant(blockRoot);
+    if (defaultStatus === undefined) {
+      return null;
+    }
+
+    return this.getBlockHex(blockRoot, defaultStatus);
+  }
+
+  /**
+   * Returns a `ProtoBlock` that has matching block root and block hash
+   */
+  getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null {
+    const variantIndices = this.protoArray.indices.get(blockRoot);
+    if (variantIndices === undefined) {
+      return null;
+    }
+
+    for (const variantIndex of variantIndices) {
+      const node = this.protoArray.nodes[variantIndex];
+      if (node.executionPayloadBlockHash === blockHash) {
+        return node;
+      }
+    }
+
+    return null;
+  }
+
   getJustifiedBlock(): ProtoBlock {
-    const rootHex = this.fcStore.justified.checkpoint.rootHex;
-    const block = this.getBlockHex(rootHex);
+    const {rootHex, epoch} = this.fcStore.justified.checkpoint;
+    // Checkpoints for pre-gloas should be FULL variant, while post-gloas should be EMPTY variant
+    const block = this.getBlockHex(
+      rootHex,
+      epoch >= this.config.GLOAS_FORK_EPOCH ? PayloadStatus.EMPTY : PayloadStatus.FULL
+    );
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
@@ -1016,8 +1056,12 @@ export class ForkChoice implements IForkChoice {
   }
 
   getFinalizedBlock(): ProtoBlock {
-    const rootHex = this.fcStore.finalizedCheckpoint.rootHex;
-    const block = this.getBlockHex(rootHex);
+    const {rootHex, epoch} = this.fcStore.finalizedCheckpoint;
+    // Checkpoints for pre-gloas should be FULL variant, while post-gloas should be EMPTY variant
+    const block = this.getBlockHex(
+      rootHex,
+      epoch >= this.config.GLOAS_FORK_EPOCH ? PayloadStatus.EMPTY : PayloadStatus.FULL
+    );
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,

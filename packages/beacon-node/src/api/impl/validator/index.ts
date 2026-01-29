@@ -385,7 +385,7 @@ export function getValidatorApi(
    */
 
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+    const protoBeaconBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
     if (!protoBeaconBlock) {
       throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
@@ -397,7 +397,7 @@ export function getValidatorApi(
   }
 
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+    const protoBeaconBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
     if (!protoBeaconBlock) {
       throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }

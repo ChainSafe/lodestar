@@ -736,7 +736,7 @@ export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0
 function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): ProtoBlock {
   // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
-  const headBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+  const headBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,
