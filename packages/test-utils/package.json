@@ -54,7 +54,7 @@
     "@chainsafe/blst": "^2.2.0",
     "@lodestar/params": "workspace:^",
     "@lodestar/utils": "workspace:^",
-    "axios": "^1.7.2",
+    "axios": "^1.13.2",
     "tmp": "^0.2.1",
     "vitest": "catalog:"
   },

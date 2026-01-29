@@ -81,8 +81,8 @@ importers:
         specifier: 'catalog:'
         version: 4.0.7(@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7))(vitest@4.0.7)
       axios:
-        specifier: ^1.7.2
-        version: 1.12.0(debug@4.4.3)
+        specifier: ^1.13.2
+        version: 1.13.3(debug@4.4.3)
       bun-types:
         specifier: ^1.2.21
         version: 1.2.21(@types/react@19.1.12)
@@ -790,8 +790,8 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5
       axios:
-        specifier: ^1.7.2
-        version: 1.12.0(debug@4.4.3)
+        specifier: ^1.13.2
+        version: 1.13.3(debug@4.4.3)
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -878,8 +878,8 @@ importers:
         specifier: ^17.0.24
         version: 17.0.24
       axios:
-        specifier: ^1.7.2
-        version: 1.12.0(debug@4.4.3)
+        specifier: ^1.13.2
+        version: 1.13.3(debug@4.4.3)
       deepmerge:
         specifier: ^4.3.1
         version: 4.3.1
@@ -1030,8 +1030,8 @@ importers:
         specifier: workspace:^
         version: link:../utils
       axios:
-        specifier: ^1.7.2
-        version: 1.12.0(debug@4.4.3)
+        specifier: ^1.13.2
+        version: 1.13.3(debug@4.4.3)
       tmp:
         specifier: ^0.2.1
         version: 0.2.4
@@ -3441,8 +3441,8 @@ packages:
     engines: {node: '>= 0.8.0'}
     deprecated: The AWS SDK for JavaScript (v2) has reached end-of-support, and no longer receives updates. Please migrate your code to use AWS SDK for JavaScript (v3). More info https://a.co/cUPnyil
 
-  axios@1.12.0:
-    resolution: {integrity: sha512-oXTDccv8PcfjZmPGlWsPSwtOJCZ/b6W5jAMCNcfwJbCzDckwG0jrYJFaWH1yvivfCXjVzV/SPDEhMB3Q+DSurg==}
+  axios@1.13.3:
+    resolution: {integrity: sha512-ERT8kdX7DZjtUm7IitEyV7InTHAF42iJuMArIiDIV5YtPanJkgw4hw5Dyg9fh0mihdWNn1GKaeIWErfe56UQ1g==}
 
   babel-runtime@6.26.0:
     resolution: {integrity: sha512-ITKNuq2wKlW1fJg9sSW52eepoYgZBggvOAHC0u/CYu/qxQ9EVzThCgR69BnSXLHjy2f7SY5zaQ4yt7H9ZVxY2g==}
@@ -10299,7 +10299,7 @@ snapshots:
       uuid: 3.3.2
       xml2js: 0.4.19
 
-  axios@1.12.0(debug@4.4.3):
+  axios@1.13.3(debug@4.4.3):
     dependencies:
       follow-redirects: 1.15.11(debug@4.4.3)
       form-data: 4.0.5
