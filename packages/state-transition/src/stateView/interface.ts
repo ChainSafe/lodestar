@@ -58,11 +58,11 @@ export interface IBeaconStateView {
   historicalSummaries: capella.HistoricalSummaries;
   // electra
   pendingDeposits: electra.PendingDeposits;
-  pendingDepositsLength: number;
+  pendingDepositsCount: number;
   pendingPartialWithdrawals: electra.PendingPartialWithdrawals;
-  pendingPartialWithdrawalsLength: number;
+  pendingPartialWithdrawalsCount: number;
   pendingConsolidations: electra.PendingConsolidations;
-  pendingConsolidationsLength: number;
+  pendingConsolidationsCount: number;
   // fulu
   proposerLookahead: fulu.ProposerLookahead;
   // gloas
