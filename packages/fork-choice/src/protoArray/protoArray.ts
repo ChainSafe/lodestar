@@ -190,8 +190,10 @@ export class ProtoArray {
     const parentVariants = this.indices.get(block.parentRoot);
     if (!parentVariants) {
       // Parent not found
-      // TODO GLOAS: verify this
-      return PayloadStatus.EMPTY;
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.UNKNOWN_BLOCK,
+        root: block.parentRoot,
+      });
     }
 
     const parentIndex = parentVariants[0];
@@ -459,7 +461,12 @@ export class ProtoArray {
    *
    * Spec: gloas/fork-choice.md (on_execution_payload event)
    */
-  onExecutionPayload(blockRoot: RootHex, currentSlot: Slot): void {
+  onExecutionPayload(
+    blockRoot: RootHex,
+    currentSlot: Slot,
+    executionPayloadBlockHash: RootHex,
+    executionPayloadNumber: number
+  ): void {
     // First check if block exists
     const variants = this.indices.get(blockRoot);
     if (!variants) {
@@ -470,9 +477,12 @@ export class ProtoArray {
       });
     }
 
-    // Pre-Gloas: variants[0] contains FULL, nothing to do
     if (variants.length === 1) {
-      return;
+      // Pre-gloas block should not be calling this method
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK,
+        root: blockRoot,
+      });
     }
 
     // Check if FULL already exists for Gloas blocks
@@ -505,6 +515,9 @@ export class ProtoArray {
       weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,
+      executionStatus: ExecutionStatus.Valid, // TODO GLOAS: Review execution status
+      executionPayloadBlockHash,
+      executionPayloadNumber,
     };
 
     const fullIndex = this.nodes.length;

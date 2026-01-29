@@ -28,6 +28,7 @@ export enum ProtoArrayErrorCode {
   INVALID_BLOCK_EXECUTION_STATUS = "PROTO_ARRAY_INVALID_BLOCK_EXECUTION_STATUS",
   INVALID_JUSTIFIED_EXECUTION_STATUS = "PROTO_ARRAY_INVALID_JUSTIFIED_EXECUTION_STATUS",
   INVALID_LVH_EXECUTION_RESPONSE = "PROTO_ARRAY_INVALID_LVH_EXECUTION_RESPONSE",
+  PRE_GLOAS_BLOCK = "PROTO_ARRAY_ERROR_PRE_GLOAS_BLOCK",
 }
 
 export type ProtoArrayErrorType =
@@ -56,6 +57,7 @@ export type ProtoArrayErrorType =
     }
   | {code: ProtoArrayErrorCode.INVALID_BLOCK_EXECUTION_STATUS; root: RootHex}
   | {code: ProtoArrayErrorCode.INVALID_JUSTIFIED_EXECUTION_STATUS; root: RootHex}
-  | ({code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE} & LVHExecError);
+  | ({code: ProtoArrayErrorCode.INVALID_LVH_EXECUTION_RESPONSE} & LVHExecError)
+  | {code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK; root: RootHex};
 
 export class ProtoArrayError extends LodestarError<ProtoArrayErrorType> {}

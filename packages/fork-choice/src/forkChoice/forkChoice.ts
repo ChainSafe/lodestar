@@ -754,18 +754,25 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-      ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
+      ...(isGloasBeaconBlock(block)
         ? {
-            executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
-            executionPayloadNumber: block.body.executionPayload.blockNumber,
-            executionStatus: this.getPostMergeExecStatus(executionStatus),
+            executionPayloadBlockHash: toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash), // post-gloas, we don't know payload hash until we import execution payload. Set to parent payload hash for now
+            executionPayloadNumber: 0, // post-gloas, we don't know payload number until we import execution payload. Set to 0 for now
+            executionStatus: this.getPostMergeExecStatus(executionStatus), // TODO GLOAS: Need a new execution status to denote scenario where we are waiting for payload, or payload is never revealed.
             dataAvailabilityStatus,
           }
-        : {
-            executionPayloadBlockHash: null,
-            executionStatus: this.getPreMergeExecStatus(executionStatus),
-            dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
-          }),
+        : isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
+          ? {
+              executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
+              executionPayloadNumber: block.body.executionPayload.blockNumber,
+              executionStatus: this.getPostMergeExecStatus(executionStatus),
+              dataAvailabilityStatus,
+            }
+          : {
+              executionPayloadBlockHash: null,
+              executionStatus: this.getPreMergeExecStatus(executionStatus),
+              dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
+            }),
 
       // Extract parentBlockHash for Gloas blocks (ePBS)
       // Spec: gloas/fork-choice.md#new-get_parent_payload_status
@@ -902,8 +909,13 @@ export class ForkChoice implements IForkChoice {
    * Creates the FULL variant of a Gloas block when the payload becomes available
    * Spec: gloas/fork-choice.md#new-on_execution_payload
    */
-  onExecutionPayload(blockRoot: RootHex): void {
-    this.protoArray.onExecutionPayload(blockRoot, this.fcStore.currentSlot);
+  onExecutionPayload(blockRoot: RootHex, executionPayloadBlockHash: RootHex, executionPayloadNumber: number): void {
+    this.protoArray.onExecutionPayload(
+      blockRoot,
+      this.fcStore.currentSlot,
+      executionPayloadBlockHash,
+      executionPayloadNumber
+    );
   }
 
   /**
@@ -1264,6 +1276,7 @@ export class ForkChoice implements IForkChoice {
         return block.parentRoot;
       }
 
+      // For the first slot of the epoch, a block is it's own target
       const nextRoot = block.blockRoot === block.targetRoot ? block.parentRoot : block.targetRoot;
       const defaultStatus = this.protoArray.getDefaultVariant(nextRoot);
       if (defaultStatus === undefined) {
