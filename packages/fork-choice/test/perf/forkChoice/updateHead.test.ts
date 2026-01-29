@@ -29,7 +29,7 @@ describe("forkchoice updateHead", () => {
         const forkChoice = initializeForkChoice(opts);
 
         const vote1 = forkChoice.updateHead();
-        const vote2 = forkChoice.getBlockHex(vote1.parentRoot);
+        const vote2 = forkChoice.getBlockHexDefaultStatus(vote1.parentRoot);
         if (!vote2) throw Error("no vote2");
         if (vote1.blockRoot === vote2.blockRoot) throw Error("blockRoot vote1 == vote2");
         if (vote1.slot === vote2.slot) throw Error("slot vote1 == vote2");

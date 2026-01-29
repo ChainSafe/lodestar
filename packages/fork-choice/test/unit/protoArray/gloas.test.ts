@@ -291,7 +291,7 @@ describe("Gloas Fork Choice", () => {
       expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)).toBeUndefined();
 
       // Call onExecutionPayload
-      protoArray.onExecutionPayload("0x02", gloasForkSlot);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
 
       // FULL should now exist
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
@@ -303,7 +303,7 @@ describe("Gloas Fork Choice", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot);
 
-      protoArray.onExecutionPayload("0x02", gloasForkSlot);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
 
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
       const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
@@ -315,8 +315,8 @@ describe("Gloas Fork Choice", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot);
 
-      protoArray.onExecutionPayload("0x02", gloasForkSlot);
-      protoArray.onExecutionPayload("0x02", gloasForkSlot);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
 
       // Should still only have one FULL node
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
@@ -331,14 +331,14 @@ describe("Gloas Fork Choice", () => {
       expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)).toBeDefined();
 
       // Calling onExecutionPayload should be no-op
-      protoArray.onExecutionPayload("0x02", gloasForkSlot - 1);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot - 1, "0x02", gloasForkSlot - 1, stateRoot);
 
       // Still just one FULL node
       expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)).toBeDefined();
     });
 
     it("throws for unknown block", () => {
-      expect(() => protoArray.onExecutionPayload("0x99", gloasForkSlot)).toThrow();
+      expect(() => protoArray.onExecutionPayload("0x99", gloasForkSlot, "0x99", gloasForkSlot, stateRoot)).toThrow();
     });
   });
 
@@ -402,7 +402,7 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, gloasForkSlot);
 
       // Make execution payload available by creating FULL variant
-      protoArray.onExecutionPayload("0x02", gloasForkSlot);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
 
       // Vote yes from majority of PTC (>50%)
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
@@ -418,7 +418,7 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, gloasForkSlot);
 
       // Make execution payload available by creating FULL variant
-      protoArray.onExecutionPayload("0x02", gloasForkSlot);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
 
       // Vote yes from exactly 50% (not >50%)
       const threshold = Math.floor(PTC_SIZE / 2);
@@ -434,7 +434,7 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, gloasForkSlot);
 
       // Make execution payload available by creating FULL variant
-      protoArray.onExecutionPayload("0x02", gloasForkSlot);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
 
       // Vote mixed yes/no
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
@@ -487,7 +487,7 @@ describe("Gloas Fork Choice", () => {
     it("intra-block: EMPTY/FULL variants have PENDING as parent", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot);
-      protoArray.onExecutionPayload("0x02", gloasForkSlot);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
 
       const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
       const emptyNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY);
@@ -501,7 +501,7 @@ describe("Gloas Fork Choice", () => {
       // Block A
       const blockA = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(blockA, gloasForkSlot);
-      protoArray.onExecutionPayload("0x02", gloasForkSlot);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
 
       // Block B extends A's FULL (parentBlockHash matches)
       const blockB = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02");
@@ -530,7 +530,7 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot);
-      protoArray.onExecutionPayload("0x02", blockSlot);
+      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot);
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
@@ -607,7 +607,7 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot);
-      protoArray.onExecutionPayload("0x02", blockSlot);
+      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot);
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");

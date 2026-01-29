@@ -209,7 +209,7 @@ describe("Forkchoice", () => {
       const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
       const blockRoot = getBlockRoot(atSlot);
-      const block = forkchoice.getBlockHex(blockRoot);
+      const block = forkchoice.getBlockHexDefaultStatus(blockRoot);
       if (!block) throw Error(`No block for blockRoot ${blockRoot}`);
 
       const expectedDependentRoot = getBlockRoot(pivotSlot);
