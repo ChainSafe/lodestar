@@ -323,18 +323,15 @@ describe("Gloas Fork Choice", () => {
       expect(fullNode).toBeDefined();
     });
 
-    it("does nothing for pre-Gloas blocks", () => {
+    it("throws for pre-Gloas blocks", () => {
       const block = createTestBlock(gloasForkSlot - 1, "0x02", genesisRoot);
       protoArray.onBlock(block, gloasForkSlot - 1);
 
       // Pre-Gloas block already has FULL
       expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)).toBeDefined();
 
-      // Calling onExecutionPayload should be no-op
-      protoArray.onExecutionPayload("0x02", gloasForkSlot - 1, "0x02", gloasForkSlot - 1, stateRoot);
-
-      // Still just one FULL node
-      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)).toBeDefined();
+      // Calling onExecutionPayload should throw for pre-Gloas blocks
+      expect(() => protoArray.onExecutionPayload("0x02", gloasForkSlot - 1, "0x02", gloasForkSlot - 1, stateRoot)).toThrow();
     });
 
     it("throws for unknown block", () => {
