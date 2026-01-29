@@ -76,10 +76,9 @@ export interface IBeaconStateView {
   nextDecisionRoot: RootHex;
   getShufflingDecisionRoot(epoch: Epoch): RootHex;
   // Proposer shuffling
-  proposers: ValidatorIndex[];
-  proposersNextEpoch: ValidatorIndex[];
-  // Proposers for previous epoch, initialized to null in first epoch
-  proposersPrevEpoch: ValidatorIndex[] | null;
+  previousProposers: ValidatorIndex[] | null;
+  currentProposers: ValidatorIndex[];
+  nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
   // Sync committees
   currentSyncCommittee: altair.SyncCommittee;
