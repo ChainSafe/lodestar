@@ -1,6 +1,5 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {ByteViews} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -139,7 +138,7 @@ export interface IBeaconStateView {
   // Proofs
 
   getFinalizedRootProof(): Uint8Array[];
-  getSyncCommitteesWitness(fork: ForkName): SyncCommitteeWitness;
+  getSyncCommitteesWitness(): SyncCommitteeWitness;
   getSingleProof(gindex: bigint): Uint8Array[];
   createMultiProof(descriptor: Uint8Array): CompactMultiProof;
 
