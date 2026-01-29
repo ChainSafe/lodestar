@@ -47,8 +47,7 @@ export interface IBeaconStateView {
   previousJustifiedCheckpoint: Checkpoint;
   currentJustifiedCheckpoint: Checkpoint;
   finalizedCheckpoint: Checkpoint;
-  getBlockRootAtSlot(slot: Slot): Root;
-  getBlockRoot(epoch: Epoch): Root;
+  getBlockRoot(slot: Slot): Root;
   getRandaoMix(epoch: Epoch): Bytes32;
   // altair
   previousEpochParticipation: number[];
