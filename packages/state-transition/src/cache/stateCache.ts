@@ -17,6 +17,7 @@ import {
 } from "./types.js";
 
 export type BeaconStateCache = {
+  /** @deprecated should not access config outside of state-transition package */
   config: BeaconConfig;
   epochCtx: EpochCache;
   /** Count of clones created from this BeaconStateCache instance. readonly to prevent accidental usage downstream */
@@ -179,7 +180,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     stateBytes,
     seedValidatorsBytes
   );
-  const {pubkey2index, index2pubkey, shufflingCache} = cachedSeedState.epochCtx;
+  const {pubkey2index, index2pubkey} = cachedSeedState.epochCtx;
   // Get the validators sub tree once for all the loop
   const validators = migratedState.validators;
   for (const validatorIndex of modifiedValidators) {
@@ -195,7 +196,6 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
       config: cachedSeedState.config,
       pubkey2index,
       index2pubkey,
-      shufflingCache,
     },
     {...(opts ?? {}), ...{skipSyncPubkeys: true}}
   ) as T;

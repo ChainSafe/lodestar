@@ -1,12 +1,6 @@
-import {
-  EPOCHS_PER_SLASHINGS_VECTOR,
-  FAR_FUTURE_EPOCH,
-  ForkSeq,
-  MIN_ACTIVATION_BALANCE,
-  SLOTS_PER_HISTORICAL_ROOT,
-} from "@lodestar/params";
-import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
-import {intDiv, toRootHex} from "@lodestar/utils";
+import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {intDiv} from "@lodestar/utils";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 import {
   CachedBeaconStateAllForks,
@@ -26,16 +20,13 @@ import {
   FLAG_UNSLASHED,
   hasMarkers,
 } from "../util/attesterStatus.js";
+import {EpochShuffling} from "../util/epochShuffling.js";
 
 export type EpochTransitionCacheOpts = {
   /**
    * Assert progressive balances the same to EpochTransitionCache
    */
   assertCorrectProgressiveBalances?: boolean;
-  /**
-   * Do not queue shuffling calculation async. Forces sync JIT calculation in afterProcessEpoch
-   */
-  asyncShufflingCalculation?: boolean;
 };
 
 /**
@@ -162,9 +153,10 @@ export interface EpochTransitionCache {
   nextShufflingActiveIndices: Uint32Array;
 
   /**
-   * Shuffling decision root that gets set on the EpochCache in afterProcessEpoch
+   * Pre-computed shuffling for epoch N+2, populated by processProposerLookahead (Fulu+).
+   * Used by afterProcessEpoch to avoid recomputing the same shuffling.
    */
-  nextShufflingDecisionRoot: RootHex;
+  nextShuffling: EpochShuffling | null;
 
   /**
    * Altair specific, this is total active balances for the next epoch.
@@ -178,12 +170,6 @@ export interface EpochTransitionCache {
    * | afterEpochTransitionCache                | read it                            |
    */
   nextEpochTotalActiveBalanceByIncrement: number;
-
-  /**
-   * Compute the shuffling sync or async.  Defaults to synchronous.  Need to pass `true` with the
-   * `EpochTransitionCacheOpts`
-   */
-  asyncShufflingCalculation: boolean;
 
   /**
    * Track by validator index if it's active in the prev epoch.
@@ -379,12 +365,7 @@ export function beforeProcessEpoch(
     }
   });
 
-  // Trigger async build of shuffling for epoch after next (nextShuffling post epoch transition)
-  const epochAfterNext = state.epochCtx.nextEpoch + 1;
-  // cannot call calculateShufflingDecisionRoot here because spec prevent getting current slot
-  // as a decision block.  we are part way through the transition though and this was added in
-  // process slot beforeProcessEpoch happens so it available and valid
-  const nextShufflingDecisionRoot = toRootHex(state.blockRoots.get(state.slot % SLOTS_PER_HISTORICAL_ROOT));
+  // Prepare shuffling data for epoch after next (nextShuffling post epoch transition)
   const nextShufflingActiveIndices = new Uint32Array(nextEpochShufflingActiveIndicesLength);
   if (nextEpochShufflingActiveIndicesLength > nextEpochShufflingActiveValidatorIndices.length) {
     throw new Error(
@@ -394,11 +375,6 @@ export function beforeProcessEpoch(
   // only the first `activeValidatorCount` elements are copied to `activeIndices`
   for (let i = 0; i < nextEpochShufflingActiveIndicesLength; i++) {
     nextShufflingActiveIndices[i] = nextEpochShufflingActiveValidatorIndices[i];
-  }
-
-  const asyncShufflingCalculation = opts?.asyncShufflingCalculation ?? false;
-  if (asyncShufflingCalculation) {
-    state.epochCtx.shufflingCache?.build(epochAfterNext, nextShufflingDecisionRoot, state, nextShufflingActiveIndices);
   }
 
   if (totalActiveStakeByIncrement < 1) {
@@ -524,9 +500,8 @@ export function beforeProcessEpoch(
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation: indicesEligibleForActivation.map(({validatorIndex}) => validatorIndex),
     indicesToEject,
-    nextShufflingDecisionRoot,
     nextShufflingActiveIndices,
-    asyncShufflingCalculation,
+    nextShuffling: null,
     // to be updated in processEffectiveBalanceUpdates
     nextEpochTotalActiveBalanceByIncrement: 0,
     isActivePrevEpoch,

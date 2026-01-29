@@ -1,6 +1,9 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {G2_POINT_AT_INFINITY} from "../constants/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {
@@ -23,7 +26,13 @@ export function processSyncAggregate(
   if (verifySignatures) {
     // This is to conform to the spec - we want the signature to be verified
     const participantIndices = block.body.syncAggregate.syncCommitteeBits.intersectValues(committeeIndices);
-    const signatureSet = getSyncCommitteeSignatureSet(state, block, participantIndices);
+    const signatureSet = getSyncCommitteeSignatureSet(
+      state.config,
+      state.epochCtx.index2pubkey,
+      state.epochCtx.currentSyncCommitteeIndexed,
+      block,
+      participantIndices
+    );
     // When there's no participation we consider the signature valid and just ignore i
     if (signatureSet !== null && !verifySignatureSet(signatureSet)) {
       throw Error("Sync committee signature invalid");
@@ -63,12 +72,13 @@ export function processSyncAggregate(
 }
 
 export function getSyncCommitteeSignatureSet(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
+  index2pubkey: Index2PubkeyCache,
+  currentSyncCommitteeIndexed: SyncCommitteeCache,
   block: altair.BeaconBlock,
   /** Optional parameter to prevent computing it twice */
   participantIndices?: number[]
 ): ISignatureSet | null {
-  const {epochCtx} = state;
   const {syncAggregate} = block.body;
   const signature = syncAggregate.syncCommitteeSignature;
 
@@ -92,7 +102,7 @@ export function getSyncCommitteeSignatureSet(
   const rootSigned = block.parentRoot;
 
   if (!participantIndices) {
-    const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
+    const committeeIndices = currentSyncCommitteeIndexed.validatorIndices;
     participantIndices = syncAggregate.syncCommitteeBits.intersectValues(committeeIndices);
   }
 
@@ -106,11 +116,13 @@ export function getSyncCommitteeSignatureSet(
     throw Error("Empty sync committee signature is not infinity");
   }
 
-  const domain = state.config.getDomain(state.slot, DOMAIN_SYNC_COMMITTEE, previousSlot);
+  // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
+  // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
+  const domain = config.getDomain(block.slot, DOMAIN_SYNC_COMMITTEE, previousSlot);
 
   return {
     type: SignatureSetType.aggregate,
-    pubkeys: participantIndices.map((i) => epochCtx.index2pubkey[i]),
+    pubkeys: participantIndices.map((i) => index2pubkey[i]),
     signingRoot: computeSigningRoot(ssz.Root, rootSigned, domain),
     signature,
   };

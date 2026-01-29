@@ -2,6 +2,7 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {
+  ArrayOf,
   CommitteeIndex,
   Epoch,
   RootHex,
@@ -13,7 +14,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
+import {JsonOnlyReq} from "../../../utils/codecs.js";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
   ExecutionOptimisticAndFinalizedCodec,

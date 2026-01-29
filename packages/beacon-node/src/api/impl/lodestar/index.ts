@@ -198,7 +198,7 @@ export function getLodestarApi({
       const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
 
       const stateView = (
-        state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state.clone()
+        state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state
       ) as BeaconStateCapella;
 
       const fork = config.getForkName(stateView.slot);
@@ -236,6 +236,12 @@ export function getLodestarApi({
         meta: {
           version: config.getForkName(slot),
         },
+      };
+    },
+
+    async getMonitoredValidatorIndices() {
+      return {
+        data: chain.validatorMonitor?.getMonitoredValidatorIndices() ?? [],
       };
     },
   };

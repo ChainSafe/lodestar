@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {pruneSetToMax} from "@lodestar/utils";
-import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadAttributesRpc} from "./types.js";
+import {DATA, QUANTITY} from "./utils.js";
 
 // Idealy this only need to be set to the max head reorgs number
 const MAX_PAYLOAD_IDS = SLOTS_PER_EPOCH;

@@ -3,7 +3,6 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {StateRegenerationOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache} from "./types.js";
 
@@ -39,7 +38,7 @@ export class BlockStateCacheImpl implements BlockStateCache {
     }
   }
 
-  get(rootHex: RootHex, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null {
+  get(rootHex: RootHex): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const item = this.head?.stateRoot === rootHex ? this.head.state : this.cache.get(rootHex);
     if (!item) {
@@ -49,7 +48,7 @@ export class BlockStateCacheImpl implements BlockStateCache {
     this.metrics?.hits.inc();
     this.metrics?.stateClonedCount.observe(item.clonedCount);
 
-    return item.clone(opts?.dontTransferCache);
+    return item;
   }
 
   add(item: CachedBeaconStateAllForks): void {

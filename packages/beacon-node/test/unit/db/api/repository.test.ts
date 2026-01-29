@@ -21,6 +21,7 @@ vi.mock("@lodestar/db/controller/level", async (importOriginal) => {
         valuesStream: vi.fn(),
         batchDelete: vi.fn(),
         batchPut: vi.fn(),
+        batch: vi.fn(),
       };
     }),
   };
@@ -38,7 +39,7 @@ const TestSSZType = new ContainerType({
 
 class TestRepository extends Repository<string, TestType> {
   constructor(db: Db) {
-    super(config, db, Bucket.phase0_depositEvent, TestSSZType, "phase0_depositEvent");
+    super(config, db, Bucket.phase0_exit, TestSSZType, "phase0_exit");
   }
 }
 

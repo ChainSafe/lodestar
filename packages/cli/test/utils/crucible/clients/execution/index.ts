@@ -6,7 +6,6 @@ import {
   ExecutionGeneratorOptions,
   ExecutionGenesisOptions,
   ExecutionNode,
-  ExecutionStartMode,
 } from "../../interfaces.js";
 import {getGethGenesisBlock} from "../../utils/executionGenesis.js";
 import {getEstimatedForkTime} from "../../utils/index.js";
@@ -57,16 +56,13 @@ export async function createExecutionNode<E extends ExecutionClient>(
     ...options,
     ...genesisOptions,
     id: elId,
-    mode:
-      options.mode ??
-      (forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ExecutionStartMode.PreMerge : ExecutionStartMode.PostMerge),
     address: runner.getNextIp(),
     mining: options.mining ?? false,
   };
 
   await ensureDirectories(opts.paths);
   await writeFile(opts.paths.jwtsecretFilePath, SHARED_JWT_SECRET);
-  await writeFile(opts.paths.genesisFilePath, JSON.stringify(getGethGenesisBlock(opts.mode, genesisOptions)));
+  await writeFile(opts.paths.genesisFilePath, JSON.stringify(getGethGenesisBlock(genesisOptions)));
 
   switch (client) {
     case ExecutionClient.Mock: {

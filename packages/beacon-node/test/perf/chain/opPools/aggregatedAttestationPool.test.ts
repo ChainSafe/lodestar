@@ -1,6 +1,6 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -15,6 +15,7 @@ import {
 import {ssz} from "@lodestar/types";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
+import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
 const vc = 1_500_000;
 
@@ -163,10 +164,12 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
       },
       beforeEach: (state) => {
         const pool = getAggregatedAttestationPool(state, numMissedVotes, numBadVotes);
-        return {state, pool};
+        const shufflingCache = new ShufflingCache();
+        shufflingCache.processState(state);
+        return {state, pool, shufflingCache};
       },
-      fn: ({state, pool}) => {
-        pool.getAttestationsForBlock(state.config.getForkName(state.slot), forkchoice, state);
+      fn: ({state, pool, shufflingCache}) => {
+        pool.getAttestationsForBlock(state.config.getForkName(state.slot), forkchoice, shufflingCache, state);
       },
     });
   }
@@ -232,7 +235,7 @@ function getAggregatedAttestationPool(
   numMissedVotes: number,
   numBadVotes: number
 ): AggregatedAttestationPool {
-  const config = createChainForkConfig(defaultChainConfig);
+  const config = createBeaconConfig(defaultChainConfig, Buffer.alloc(32, 0xaa));
 
   const pool = new AggregatedAttestationPool(config);
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {

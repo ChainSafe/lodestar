@@ -1040,9 +1040,7 @@ export function getValidatorApi(
           const res = await getStateResponseWithRegen(chain, startSlot);
 
           const stateViewDU =
-            res.state instanceof Uint8Array
-              ? loadState(config, chain.getHeadState(), res.state).state
-              : res.state.clone();
+            res.state instanceof Uint8Array ? loadState(config, chain.getHeadState(), res.state).state : res.state;
 
           state = createCachedBeaconState(
             stateViewDU,
@@ -1511,7 +1509,7 @@ export function getValidatorApi(
 
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
-        const validatorIndex = headState.epochCtx.pubkey2index.get(pubkey);
+        const validatorIndex = chain.pubkey2index.get(pubkey);
         if (validatorIndex === null) return false;
 
         const validator = headState.validators.getReadonly(validatorIndex);

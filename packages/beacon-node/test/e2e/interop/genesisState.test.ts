@@ -59,7 +59,7 @@ describe("interop / initDevState", () => {
 
   it("Create correct genesisState", () => {
     const validatorCount = 8;
-    const {state} = initDevState(config, validatorCount, {
+    const state = initDevState(config, validatorCount, {
       genesisTime: 1644000000,
       eth1BlockHash: Buffer.alloc(32, 0xaa),
       eth1Timestamp: 1644000000,

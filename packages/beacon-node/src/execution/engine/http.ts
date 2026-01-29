@@ -4,14 +4,6 @@ import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} fr
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {strip0xPrefix} from "@lodestar/utils";
-import {
-  ErrorJsonRpcResponse,
-  HttpRpcError,
-  IJsonRpcHttpClient,
-  JsonRpcHttpClientEvent,
-  ReqOpts,
-} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {bytesToData, numToQuantity} from "../../eth1/provider/utils.js";
 import {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {getLodestarClientVersion} from "../../util/metadata.js";
@@ -27,6 +19,13 @@ import {
   PayloadId,
   VersionedHashes,
 } from "./interface.js";
+import {
+  ErrorJsonRpcResponse,
+  HttpRpcError,
+  IJsonRpcHttpClient,
+  JsonRpcHttpClientEvent,
+  ReqOpts,
+} from "./jsonRpcHttpClient.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
@@ -45,7 +44,7 @@ import {
   serializePayloadAttributes,
   serializeVersionedHashes,
 } from "./types.js";
-import {getExecutionEngineState} from "./utils.js";
+import {bytesToData, getExecutionEngineState, numToQuantity} from "./utils.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -194,15 +193,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    *   1. {status: INVALID_BLOCK_HASH, latestValidHash: null, validationError:
    *      errorMessage | null} if the blockHash validation has failed
    *
-   *   2. {status: INVALID_TERMINAL_BLOCK, latestValidHash: null, validationError:
-   *      errorMessage | null} if terminal block conditions are not satisfied
-   *
-   *   3. {status: SYNCING, latestValidHash: null, validationError: null} if the payload
+   *   2. {status: SYNCING, latestValidHash: null, validationError: null} if the payload
    *      extends the canonical chain and requisite data for its validation is missing
    *      with the payload status obtained from the Payload validation process if the payload
    *      has been fully validated while processing the call
    *
-   *   4. {status: ACCEPTED, latestValidHash: null, validationError: null} if the
+   *   3. {status: ACCEPTED, latestValidHash: null, validationError: null} if the
    *      following conditions are met:
    *        i) the blockHash of the payload is valid
    *        ii) the payload doesn't extend the canonical chain
@@ -330,16 +326,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    *      errorMessage | null}, payloadId: null}
    *      obtained from the Payload validation process if the payload is deemed INVALID
    *
-   *   3. {payloadStatus: {status: INVALID_TERMINAL_BLOCK, latestValidHash: null,
-   *      validationError: errorMessage | null}, payloadId: null}
-   *      either obtained from the Payload validation process or as a result of validating a
-   *      PoW block referenced by forkchoiceState.headBlockHash
-   *
-   *   4. {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash,
+   *   3. {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash,
    *      validationError: null}, payloadId: null}
    *      if the payload is deemed VALID and a build process hasn't been started
    *
-   *   5. {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash,
+   *   4. {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash,
    *      validationError: null}, payloadId: buildProcessId}
    *      if the payload is deemed VALID and the build process has begun.
    *

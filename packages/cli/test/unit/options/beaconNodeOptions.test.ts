@@ -1,9 +1,7 @@
-import fs from "node:fs";
 import {describe, expect, it} from "vitest";
 import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
-import {getTestdirPath} from "../../utils.js";
 
 describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {
@@ -33,7 +31,6 @@ describe("options / beaconNodeOptions", () => {
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
-      "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
@@ -45,15 +42,6 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxCPStateEpochsOnDisk": 1000,
       "chain.archiveMode": ArchiveMode.Frequency,
       emitPayloadAttributes: false,
-
-      eth1: true,
-      "eth1.providerUrl": "http://my.node:8545",
-      "eth1.providerUrls": ["http://my.node:8545"],
-      "eth1.depositContractDeployBlock": 1625314,
-      "eth1.disableEth1DepositDataTracker": true,
-      "eth1.unsafeAllowDepositDataOverwrite": false,
-      "eth1.forcedEth1DataVote":
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
@@ -139,7 +127,6 @@ describe("options / beaconNodeOptions", () => {
         preaggregateSlotDistance: 1,
         attDataCacheSlotDistance: 2,
         computeUnrealized: true,
-        safeSlotsToImportOptimistically: 256,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
@@ -154,15 +141,6 @@ describe("options / beaconNodeOptions", () => {
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
-      },
-      eth1: {
-        enabled: true,
-        providerUrls: ["http://my.node:8545"],
-        depositContractDeployBlock: 1625314,
-        disableEth1DepositDataTracker: true,
-        unsafeAllowDepositDataOverwrite: false,
-        forcedEth1DataVote:
-          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
@@ -231,29 +209,5 @@ describe("options / beaconNodeOptions", () => {
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     expect(options).toEqual(expectedOptions);
-  });
-
-  it("Should use execution endpoint & jwt for eth1", () => {
-    const jwtSecretFile = getTestdirPath("./jwtsecret");
-    const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-    fs.writeFileSync(jwtSecretFile, jwtSecretHex, {encoding: "utf8"});
-
-    // Cast to match the expected fully defined type
-    const beaconNodeArgsPartial = {
-      eth1: true,
-      "execution.urls": ["http://my.node:8551"],
-      jwtSecret: jwtSecretFile,
-    } as BeaconNodeArgs;
-
-    const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
-      eth1: {
-        enabled: true,
-        providerUrls: ["http://my.node:8551"],
-        jwtSecretHex,
-      },
-    };
-
-    const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    expect(options.eth1).toEqual(expectedOptions.eth1);
   });
 });

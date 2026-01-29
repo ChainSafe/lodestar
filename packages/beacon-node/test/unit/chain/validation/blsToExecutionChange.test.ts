@@ -83,7 +83,7 @@ describe("validate bls to execution change", () => {
   const signedBlsToExecChange = {message: blsToExecutionChange, signature: wsk.sign(signingRoot).toBytes()};
 
   beforeEach(() => {
-    chainStub = getMockedBeaconChain();
+    chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
     vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch");

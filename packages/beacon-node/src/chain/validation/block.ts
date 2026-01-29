@@ -134,6 +134,9 @@ export async function validateGossipBlock(
       throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
     });
 
+  // in forky condition, make sure to populate ShufflingCache with regened state
+  chain.shufflingCache.processState(blockState);
+
   // Extra conditions for merge fork blocks
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
@@ -154,7 +157,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
-    const signatureSet = getBlockProposerSignatureSet(blockState, signedBlock);
+    const signatureSet = getBlockProposerSignatureSet(chain.config, chain.index2pubkey, signedBlock);
     // Don't batch so verification is not delayed
     if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
       throw new BlockGossipError(GossipAction.REJECT, {

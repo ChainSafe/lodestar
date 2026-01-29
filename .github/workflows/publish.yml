@@ -1,0 +1,48 @@
+name: Publish
+
+# only one can run at a time
+concurrency: cd-publish
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      # - peerDAS # Nextfork branch
+      - unstable
+
+permissions:
+  contents: write # Required for OIDC
+  id-token: write # Required to create a Github release
+  pull-requests: write # Required to add tags to pull requests
+
+jobs:
+  publish-stable:
+    if: |
+      startsWith(github.ref, 'refs/tags/v') && (
+        !contains(github.ref_name, '-rc') && 
+        !contains(github.ref_name, '-beta') &&
+        !contains(github.ref_name, '-alpha')
+      )
+    uses: ./.github/workflows/publish-stable.yml
+    secrets: inherit
+
+  publish-rc:
+    if: |
+      startsWith(github.ref, 'refs/tags/v') && (
+        contains(github.ref_name, '-rc') ||
+        contains(github.ref_name, '-beta') ||
+        contains(github.ref_name, '-alpha')
+      )
+    uses: ./.github/workflows/publish-rc.yml
+    secrets: inherit
+
+  # publish-nextfork:
+  #   if: github.ref == 'refs/heads/peerDAS'
+  #   uses: ./.github/workflows/publish-next-fork.yml
+  # secrets: inherit
+
+  publish-dev:
+    if: github.ref == 'refs/heads/unstable'
+    uses: ./.github/workflows/publish-dev.yml
+    secrets: inherit

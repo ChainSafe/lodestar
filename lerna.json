@@ -2,14 +2,13 @@
   "packages": [
     "packages/*"
   ],
-  "npmClient": "yarn",
-  "useNx": true,
-  "version": "1.37.0",
+  "version": "1.39.0",
   "stream": true,
   "command": {
     "version": {
       "message": "chore(release): %s"
     }
   },
-  "$schema": "node_modules/lerna/schemas/lerna-schema.json"
+  "useWorkspaces": true,
+  "$schema": "node_modules/@lerna-lite/cli/schemas/lerna-schema.json"
 }

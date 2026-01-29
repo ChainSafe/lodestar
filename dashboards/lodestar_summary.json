@@ -1831,18 +1831,6 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(lodestar_eth1_http_client_request_time_seconds_sum{routeId=\"getBlockNumber\"}[$rate_interval])\n/\nrate(lodestar_eth1_http_client_request_time_seconds_count{routeId=\"getBlockNumber\"}[$rate_interval])",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "eth1_getBlockNumber_roundtrip",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
           "expr": "avg_over_time( scrape_duration_seconds{job=~\"$beacon_job|beacon\"} [$rate_interval])",
           "hide": false,
           "interval": "",
@@ -3276,7 +3264,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "unstable-lg1k-hzax41-dkr"
+            "value": "unstable-super"
           }
         ],
         "hide": 0,

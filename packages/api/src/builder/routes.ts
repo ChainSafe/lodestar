@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, VALIDATOR_REGISTRY_LIMIT, isForkPostDeneb} from "@lodestar/params";
 import {
+  ArrayOf,
   BLSPubkey,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
@@ -14,7 +15,6 @@ import {
 } from "@lodestar/types";
 import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {
-  ArrayOf,
   EmptyArgs,
   EmptyMeta,
   EmptyRequest,

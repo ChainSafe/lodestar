@@ -110,8 +110,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     PRESET_BASE: false, // Not relevant, each preset value is checked below
     CONFIG_NAME: false, // Arbitrary string, not relevant
-    // validator client behaviour does not change with this parameters, so it's not concerned about them.
-    // However, with the override ttd flag, the validator and beacon could be out of sync and prevent it from running.
+
+    // Deprecated - All networks have completed the merge transition
     TERMINAL_TOTAL_DIFFICULTY: false,
     TERMINAL_BLOCK_HASH: false,
     TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: false,
@@ -323,6 +323,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PAYLOAD_ATTESTATION_DUE_BPS: gloasForkRelevant,
     PTC_SIZE: gloasForkRelevant,
     MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
+    BUILDER_REGISTRY_LIMIT: gloasForkRelevant,
     BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
+    MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
+    MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
   };
 }

@@ -2,18 +2,19 @@ import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
+import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {ZERO_HASH_HEX} from "@lodestar/params";
+import {CachedBeaconStateAllForks, Index2PubkeyCache, isExecutionCachedStateType} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
-import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
@@ -46,13 +47,15 @@ export type BeaconNodeModules = {
 export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
   config: BeaconConfig;
+  pubkey2index: PubkeyIndexMap;
+  index2pubkey: Index2PubkeyCache;
   db: IBeaconDb;
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
   privateKey: PrivateKey;
   dataDir: string;
   peerStoreDir?: string;
-  anchorState: BeaconStateAllForks;
+  anchorState: CachedBeaconStateAllForks;
   isAnchorStateFinalized: boolean;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
@@ -68,7 +71,6 @@ enum LoggerModule {
   api = "api",
   backfill = "backfill",
   chain = "chain",
-  eth1 = "eth1",
   execution = "execution",
   metrics = "metrics",
   monitoring = "monitoring",
@@ -148,6 +150,8 @@ export class BeaconNode {
   static async init<T extends BeaconNode = BeaconNode>({
     opts,
     config,
+    pubkey2index,
+    index2pubkey,
     db,
     logger,
     processShutdownCallback,
@@ -199,6 +203,17 @@ export class BeaconNode {
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
 
+    // Delete deprecated eth1 data to free up disk space for users
+    logger.debug("Deleting deprecated eth1 data from database");
+    const startTime = Date.now();
+    db.deleteDeprecatedEth1Data()
+      .then(() => {
+        logger.debug("Deleted deprecated eth1 data", {durationMs: Date.now() - startTime});
+      })
+      .catch((e) => {
+        logger.error("Failed to delete deprecated eth1 data", {}, e);
+      });
+
     const monitoring = opts.monitoring.endpoint
       ? new MonitoringService(
           "beacon",
@@ -207,10 +222,26 @@ export class BeaconNode {
         )
       : null;
 
+    let executionEngineOpts = opts.executionEngine;
+    if (opts.executionEngine.mode === "mock") {
+      const eth1BlockHash = isExecutionCachedStateType(anchorState)
+        ? toRootHex(anchorState.latestExecutionPayloadHeader.blockHash)
+        : undefined;
+      executionEngineOpts = {
+        ...opts.executionEngine,
+        genesisBlockHash: ZERO_HASH_HEX,
+        eth1BlockHash,
+        genesisTime: anchorState.genesisTime,
+        config,
+      };
+    }
+
     const chain = new BeaconChain(opts.chain, {
       privateKey,
       config,
       clock,
+      pubkey2index,
+      index2pubkey,
       dataDir,
       db,
       dbName: opts.db.name,
@@ -220,14 +251,7 @@ export class BeaconNode {
       validatorMonitor,
       anchorState,
       isAnchorStateFinalized,
-      eth1: initializeEth1ForBlockProduction(opts.eth1, {
-        config,
-        db,
-        metrics,
-        logger: logger.child({module: LoggerModule.eth1}),
-        signal,
-      }),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, {
+      executionEngine: initializeExecutionEngine(executionEngineOpts, {
         metrics,
         signal,
         logger: logger.child({module: LoggerModule.execution}),

@@ -3,9 +3,10 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {ssz} from "@lodestar/types";
+import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
+import {EpochShuffling, calculateShufflingDecisionRoot} from "../../src/util/epochShuffling.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
@@ -159,8 +160,33 @@ describe("CachedBeaconState", () => {
 
         // confirm loadState() result
         const stateBytes = state.serialize();
+        const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex): EpochShuffling | null => {
+          if (
+            shufflingEpoch === seedState.epochCtx.epoch - 1 &&
+            dependentRoot === calculateShufflingDecisionRoot(config, seedState, shufflingEpoch)
+          ) {
+            return seedState.epochCtx.previousShuffling;
+          }
+
+          if (
+            shufflingEpoch === seedState.epochCtx.epoch &&
+            dependentRoot === calculateShufflingDecisionRoot(config, seedState, shufflingEpoch)
+          ) {
+            return seedState.epochCtx.currentShuffling;
+          }
+
+          if (
+            shufflingEpoch === seedState.epochCtx.epoch + 1 &&
+            dependentRoot === calculateShufflingDecisionRoot(config, seedState, shufflingEpoch)
+          ) {
+            return seedState.epochCtx.nextShuffling;
+          }
+
+          return null;
+        };
         const newCachedState = loadCachedBeaconState(seedState, stateBytes, {
           skipSyncCommitteeCache: true,
+          shufflingGetter,
         });
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).toEqual(stateBytes);
@@ -171,9 +197,8 @@ describe("CachedBeaconState", () => {
             config,
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
-            shufflingCache: seedState.epochCtx.shufflingCache,
           },
-          {skipSyncCommitteeCache: true}
+          {skipSyncCommitteeCache: true, shufflingGetter}
         );
         // validatorCountDelta < 0 is unrealistic and shuffling computation results in a different result
         if (validatorCountDelta >= 0) {

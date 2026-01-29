@@ -1,4 +1,3 @@
-import {ChainForkConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {
@@ -7,8 +6,7 @@ import {
   computeEpochAtSlot,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, bellatrix, deneb} from "@lodestar/types";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {IndexedAttestation, deneb} from "@lodestar/types";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -18,7 +16,6 @@ import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
-import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {FULU_ZEBRA_BANNER} from "./utils/zebraBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
@@ -78,6 +75,10 @@ export async function verifyBlocksInEpoch(
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
 
+  // in forky condition, make sure to populate ShufflingCache with regened state
+  // otherwise it may fail to get indexed attestations from shuffling cache later
+  this.shufflingCache.processState(preState0);
+
   if (!isStateValidatorsNodesPopulated(preState0)) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
       slot: preState0.slot,
@@ -103,15 +104,16 @@ export async function verifyBlocksInEpoch(
         : Promise.resolve({
             execAborted: null,
             executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
-            mergeBlockFound: null,
           } as SegmentExecStatus);
 
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
     for (const [i, block] of blocks.entries()) {
-      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) =>
-        preState0.epochCtx.getIndexedAttestation(fork, attestation)
-      );
+      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
+        const attEpoch = computeEpochAtSlot(attestation.data.slot);
+        const decisionRoot = preState0.epochCtx.getShufflingDecisionRoot(attEpoch);
+        return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
+      });
     }
 
     // batch all I/O operations to reduce overhead
@@ -143,6 +145,8 @@ export async function verifyBlocksInEpoch(
       // All signatures at once
       opts.skipVerifyBlockSignatures !== true
         ? verifyBlocksSignatures(
+            this.config,
+            this.index2pubkey,
             this.bls,
             this.logger,
             this.metrics,
@@ -162,12 +166,6 @@ export async function verifyBlocksInEpoch(
     ]);
 
     if (opts.verifyOnly !== true) {
-      if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
-        // merge block found and is fully valid = state transition + signatures + execution payload.
-        // TODO: Will this banner be logged during syncing?
-        logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
-      }
-
       const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
       const toForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(lastBlock.message.slot));
 
@@ -249,17 +247,4 @@ export async function verifyBlocksInEpoch(
   } finally {
     abortController.abort();
   }
-}
-
-function logOnPowBlock(logger: Logger, config: ChainForkConfig, mergeBlock: bellatrix.BeaconBlock): void {
-  const mergeBlockHash = toRootHex(config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
-  const mergeExecutionHash = toRootHex(mergeBlock.body.executionPayload.blockHash);
-  const mergePowHash = toRootHex(mergeBlock.body.executionPayload.parentHash);
-  logger.info(POS_PANDA_MERGE_TRANSITION_BANNER);
-  logger.info("Execution transitioning from PoW to PoS!!!");
-  logger.info("Importing block referencing terminal PoW block", {
-    blockHash: mergeBlockHash,
-    executionHash: mergeExecutionHash,
-    powHash: mergePowHash,
-  });
 }

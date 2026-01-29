@@ -1,7 +1,9 @@
 import {digest} from "@chainsafe/as-sha256";
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
 import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {capella} from "@lodestar/types";
+import {Validator} from "@lodestar/types/phase0";
 import {toHex} from "@lodestar/utils";
 import {verifyBlsToExecutionChangeSignature} from "../signatureSets/index.js";
 import {CachedBeaconStateCapella} from "../types.js";
@@ -12,12 +14,18 @@ export function processBlsToExecutionChange(
 ): void {
   const addressChange = signedBlsToExecutionChange.message;
 
-  const validation = isValidBlsToExecutionChange(state, signedBlsToExecutionChange, true);
+  if (addressChange.validatorIndex >= state.validators.length) {
+    throw Error(
+      `withdrawalValidatorIndex ${addressChange.validatorIndex} >= state.validators len ${state.validators.length}`
+    );
+  }
+
+  const validator = state.validators.get(addressChange.validatorIndex);
+  const validation = isValidBlsToExecutionChange(state.config, validator, signedBlsToExecutionChange, true);
   if (!validation.valid) {
     throw validation.error;
   }
 
-  const validator = state.validators.get(addressChange.validatorIndex);
   const newWithdrawalCredentials = new Uint8Array(32);
   newWithdrawalCredentials[0] = ETH1_ADDRESS_WITHDRAWAL_PREFIX;
   newWithdrawalCredentials.set(addressChange.toExecutionAddress, 12);
@@ -27,22 +35,13 @@ export function processBlsToExecutionChange(
 }
 
 export function isValidBlsToExecutionChange(
-  state: CachedBeaconStateCapella,
+  config: BeaconConfig,
+  validator: Validator,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange,
   verifySignature = true
 ): {valid: true} | {valid: false; error: Error} {
   const addressChange = signedBLSToExecutionChange.message;
 
-  if (addressChange.validatorIndex >= state.validators.length) {
-    return {
-      valid: false,
-      error: Error(
-        `withdrawalValidatorIndex ${addressChange.validatorIndex} > state.validators len ${state.validators.length}`
-      ),
-    };
-  }
-
-  const validator = state.validators.getReadonly(addressChange.validatorIndex);
   const {withdrawalCredentials} = validator;
   if (withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
     return {
@@ -65,7 +64,7 @@ export function isValidBlsToExecutionChange(
     };
   }
 
-  if (verifySignature && !verifyBlsToExecutionChangeSignature(state, signedBLSToExecutionChange)) {
+  if (verifySignature && !verifyBlsToExecutionChangeSignature(config, signedBLSToExecutionChange)) {
     return {
       valid: false,
       error: Error(

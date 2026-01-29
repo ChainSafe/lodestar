@@ -1,4 +1,5 @@
-import {Id, Repository} from "@lodestar/db";
+import {BeaconConfig} from "@lodestar/config";
+import {DbBatch, Id, Repository} from "@lodestar/db";
 import {
   BLS_WITHDRAWAL_PREFIX,
   ForkName,
@@ -50,6 +51,8 @@ export class OpPool {
   private readonly attesterSlashingIndexes = new Set<ValidatorIndex>();
   /** Map of validator index -> SignedBLSToExecutionChange */
   private readonly blsToExecutionChanges = new Map<ValidatorIndex, SignedBLSToExecutionChangeVersioned>();
+
+  constructor(private readonly config: BeaconConfig) {}
 
   // Getters for metrics
 
@@ -191,9 +194,8 @@ export class OpPool {
     phase0.SignedVoluntaryExit[],
     capella.SignedBLSToExecutionChange[],
   ] {
-    const {config} = state;
     const stateEpoch = computeEpochAtSlot(state.slot);
-    const stateFork = config.getForkSeq(state.slot);
+    const stateFork = this.config.getForkSeq(state.slot);
     const toBeSlashedIndices = new Set<ValidatorIndex>();
     const proposerSlashings: phase0.ProposerSlashing[] = [];
 
@@ -265,7 +267,7 @@ export class OpPool {
         // a future fork.
         isVoluntaryExitSignatureIncludable(
           stateFork,
-          config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch))
+          this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch))
         )
       ) {
         voluntaryExits.push(voluntaryExit);
@@ -368,14 +370,13 @@ export class OpPool {
    * Prune if validator has already exited at or before the finalized checkpoint of the head.
    */
   private pruneVoluntaryExits(headState: CachedBeaconStateAllForks): void {
-    const {config} = headState;
-    const headStateFork = config.getForkSeq(headState.slot);
+    const headStateFork = this.config.getForkSeq(headState.slot);
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
 
     for (const [key, voluntaryExit] of this.voluntaryExits.entries()) {
       // VoluntaryExit messages signed in the previous fork become invalid and can never be included in any future
       // block, so just drop as the head state advances into the next fork.
-      if (config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch)) < headStateFork) {
+      if (this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch)) < headStateFork) {
         this.voluntaryExits.delete(key);
       }
 
@@ -392,9 +393,8 @@ export class OpPool {
    * to opPool once gossipsub seen cache TTL passes.
    */
   private pruneBlsToExecutionChanges(headBlock: SignedBeaconBlock, headState: CachedBeaconStateAllForks): void {
-    const {config} = headState;
     const recentBlsToExecutionChanges =
-      config.getForkSeq(headBlock.message.slot) >= ForkSeq.capella
+      this.config.getForkSeq(headBlock.message.slot) >= ForkSeq.capella
         ? (headBlock as capella.SignedBeaconBlock).message.body.blsToExecutionChanges
         : [];
 
@@ -440,23 +440,21 @@ async function persistDiff<K extends Id, V>(
   serializeKey: (key: K) => number | string
 ): Promise<void> {
   const persistedKeys = await dbRepo.keys();
-  const itemsToPut: {key: K; value: V}[] = [];
-  const keysToDelete: K[] = [];
+  const batch: DbBatch<K, V> = [];
 
   const persistedKeysSerialized = new Set(persistedKeys.map(serializeKey));
   for (const item of items) {
     if (!persistedKeysSerialized.has(serializeKey(item.key))) {
-      itemsToPut.push(item);
+      batch.push({type: "put", key: item.key, value: item.value});
     }
   }
 
   const targetKeysSerialized = new Set(items.map((item) => serializeKey(item.key)));
   for (const persistedKey of persistedKeys) {
     if (!targetKeysSerialized.has(serializeKey(persistedKey))) {
-      keysToDelete.push(persistedKey);
+      batch.push({type: "del", key: persistedKey});
     }
   }
 
-  if (itemsToPut.length > 0) await dbRepo.batchPut(itemsToPut);
-  if (keysToDelete.length > 0) await dbRepo.batchDelete(keysToDelete);
+  if (batch.length > 0) await dbRepo.batch(batch);
 }

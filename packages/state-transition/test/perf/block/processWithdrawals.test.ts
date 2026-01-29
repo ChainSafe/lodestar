@@ -24,15 +24,15 @@ describe("getExpectedWithdrawals", () => {
   //  - or they were full withdrawan and zero balance
   const testCases: (WithdrawalOpts & {cache: boolean; sampled: number})[] = [
     // Best case when every probe results into a withdrawal candidate
-    {excessBalance: 1, eth1Credentials: 1, withdrawable: 0, withdrawn: 0, cache: true, sampled: 15},
+    {excessBalance: 1, eth1Credentials: 1, withdrawable: 0, withdrawn: 0, cache: true, sampled: 16},
     // Normal case based on mainnet conditions: mainnet network conditions: 95% reward rate
-    {excessBalance: 0.95, eth1Credentials: 0.1, withdrawable: 0.05, withdrawn: 0, cache: true, sampled: 219},
+    {excessBalance: 0.95, eth1Credentials: 0.1, withdrawable: 0.05, withdrawn: 0, cache: true, sampled: 220},
     // Intermediate good case
-    {excessBalance: 0.95, eth1Credentials: 0.3, withdrawable: 0.05, withdrawn: 0, cache: true, sampled: 42},
-    {excessBalance: 0.95, eth1Credentials: 0.7, withdrawable: 0.05, withdrawn: 0, cache: true, sampled: 18},
+    {excessBalance: 0.95, eth1Credentials: 0.3, withdrawable: 0.05, withdrawn: 0, cache: true, sampled: 43},
+    {excessBalance: 0.95, eth1Credentials: 0.7, withdrawable: 0.05, withdrawn: 0, cache: true, sampled: 19},
     // Intermediate bad case
-    {excessBalance: 0.1, eth1Credentials: 0.1, withdrawable: 0, withdrawn: 0, cache: true, sampled: 1_020},
-    {excessBalance: 0.03, eth1Credentials: 0.03, withdrawable: 0, withdrawn: 0, cache: true, sampled: 11_777},
+    {excessBalance: 0.1, eth1Credentials: 0.1, withdrawable: 0, withdrawn: 0, cache: true, sampled: 1_021},
+    {excessBalance: 0.03, eth1Credentials: 0.03, withdrawable: 0, withdrawn: 0, cache: true, sampled: 11_778},
     // Expected 141_069 but gets bounded at 16_384
     {excessBalance: 0.01, eth1Credentials: 0.01, withdrawable: 0, withdrawn: 0, cache: true, sampled: 16_384},
     // Worst case: All validators 250_000 need to be probed but get bounded at 16_384
@@ -70,9 +70,9 @@ describe("getExpectedWithdrawals", () => {
         return opts.cache ? state : state.clone(true);
       },
       fn: (state) => {
-        const {sampledValidators} = getExpectedWithdrawals(ForkSeq.capella, state); // TODO Electra: Do test for electra
-        if (sampledValidators !== opts.sampled) {
-          throw Error(`Wrong sampledValidators ${sampledValidators} != ${opts.sampled}`);
+        const {processedValidatorSweepCount} = getExpectedWithdrawals(ForkSeq.capella, state); // TODO Electra: Do test for electra
+        if (processedValidatorSweepCount !== opts.sampled) {
+          throw Error(`Wrong sampledValidators ${processedValidatorSweepCount} != ${opts.sampled}`);
         }
       },
     });

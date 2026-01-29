@@ -201,6 +201,7 @@ params
 performant
 pid
 plaintext
+pnpm
 pre
 premined
 produceBlockV
