@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostBellatrix,
@@ -43,7 +43,7 @@ import {
   electra,
   fulu,
 } from "@lodestar/types";
-import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {
@@ -86,7 +86,7 @@ export type BlockAttributes = {
   randaoReveal: BLSSignature;
   graffiti: Bytes32;
   slot: Slot;
-  parentBlockRoot: Root;
+  parentBlock: ProtoBlock;
   feeRecipient?: string;
 };
 
@@ -155,13 +155,14 @@ export async function produceBlockBody<T extends BlockType>(
   const {
     slot: blockSlot,
     feeRecipient: requestedFeeRecipient,
-    parentBlockRoot,
+    parentBlock,
     proposerIndex,
     proposerPubKey,
     commonBlockBodyPromise,
   } = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
+  const parentBlockRoot = fromHex(parentBlock.blockRoot);
   // even though shouldOverrideBuilder is relevant for the engine response, for simplicity of typing
   // we just return it undefined for the builder which anyway doesn't get consumed downstream
   let shouldOverrideBuilder: boolean | undefined;
@@ -637,7 +638,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
   currentState: CachedBeaconStateAllForks,
-  {randaoReveal, graffiti, slot, parentBlockRoot}: BlockAttributes
+  {randaoReveal, graffiti, slot, parentBlock}: BlockAttributes
 ): Promise<CommonBlockBody> {
   const stepsMetrics =
     blockType === BlockType.Full
@@ -691,6 +692,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
 
   const endSyncAggregate = stepsMetrics?.startTimer();
   if (ForkSeq[fork] >= ForkSeq.altair) {
+    const parentBlockRoot = fromHex(parentBlock.blockRoot);
     const previousSlot = slot - 1;
     const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
     this.metrics?.production.producedSyncAggregateParticipants.observe(
