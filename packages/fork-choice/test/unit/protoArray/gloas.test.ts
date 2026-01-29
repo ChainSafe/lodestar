@@ -331,7 +331,9 @@ describe("Gloas Fork Choice", () => {
       expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)).toBeDefined();
 
       // Calling onExecutionPayload should throw for pre-Gloas blocks
-      expect(() => protoArray.onExecutionPayload("0x02", gloasForkSlot - 1, "0x02", gloasForkSlot - 1, stateRoot)).toThrow();
+      expect(() =>
+        protoArray.onExecutionPayload("0x02", gloasForkSlot - 1, "0x02", gloasForkSlot - 1, stateRoot)
+      ).toThrow();
     });
 
     it("throws for unknown block", () => {
