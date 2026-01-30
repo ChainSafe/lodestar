@@ -112,81 +112,9 @@ jobs:
       version: ${{ steps.version.outputs.version }}
 
   docker:
-    name: Build Docker (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
+    name: Publish to Docker Hub
     needs: npm
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - arch: amd64
-            runner: buildjet-4vcpu-ubuntu-2204
-          - arch: arm64
-            runner: buildjet-4vcpu-ubuntu-2204-arm
-    steps:
-      - uses: actions/checkout@v4
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push lodestar
-        run: >
-          docker buildx build . --push
-          --tag chainsafe/lodestar:next-${{ matrix.arch }}
-          --platform linux/${{ matrix.arch }}
-          --build-arg COMMIT=$(git rev-parse HEAD)
-
-      - name: Build and push custom Grafana
-        run: >
-          docker buildx build ./docker/grafana/ --push
-          --file ./docker/grafana/Dockerfile
-          --build-context dashboards=./dashboards
-          --tag chainsafe/lodestar-grafana:next-${{ matrix.arch }}
-          --platform linux/${{ matrix.arch }}
-
-      - name: Build and push custom Prometheus
-        run: >
-          docker buildx build ./docker/prometheus/ --push
-          --file ./docker/prometheus/Dockerfile
-          --tag chainsafe/lodestar-prometheus:next-${{ matrix.arch }}
-          --platform linux/${{ matrix.arch }}
-
-  docker-manifest:
-    name: Create Docker manifest
-    runs-on: ubuntu-latest
-    needs: docker
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Create and push lodestar manifest
-        run: |
-          docker buildx imagetools create -t chainsafe/lodestar:next \
-            chainsafe/lodestar:next-amd64 \
-            chainsafe/lodestar:next-arm64
-
-      - name: Create and push grafana manifest
-        run: |
-          docker buildx imagetools create -t chainsafe/lodestar-grafana:next \
-            chainsafe/lodestar-grafana:next-amd64 \
-            chainsafe/lodestar-grafana:next-arm64
-
-      - name: Create and push prometheus manifest
-        run: |
-          docker buildx imagetools create -t chainsafe/lodestar-prometheus:next \
-            chainsafe/lodestar-prometheus:next-amd64 \
-            chainsafe/lodestar-prometheus:next-arm64
-
-      - run: docker run chainsafe/lodestar:next --help
-      # Display history to know byte size of each layer
-      # Image is available only because of the previous `docker run` command
-      - run: docker image history chainsafe/lodestar:next
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: next
+    secrets: inherit

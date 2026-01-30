@@ -119,86 +119,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  docker:
-    name: Build Docker (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
+  await-release:
+    name: Await npm release
+    runs-on: ubuntu-latest
     needs: [tag, npm]
     if: needs.tag.outputs.is_rc == 'true'
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - arch: amd64
-            runner: buildjet-4vcpu-ubuntu-2204
-          - arch: arm64
-            runner: buildjet-4vcpu-ubuntu-2204-arm
     steps:
       - uses: actions/checkout@v4
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} rc 900
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
-        run: >
-          docker buildx build . --push
-          --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }}-${{ matrix.arch }}
-          --platform linux/${{ matrix.arch }}
-          --build-arg COMMIT=$(git rev-parse HEAD)
 
-      - name: Build and push custom Grafana
-        run: >
-          docker buildx build ./docker/grafana/ --push
-          --file ./docker/grafana/Dockerfile
-          --build-context dashboards=./dashboards
-          --tag chainsafe/lodestar-grafana:${{ needs.tag.outputs.tag }}-${{ matrix.arch }}
-          --platform linux/${{ matrix.arch }}
-
-      - name: Build and push custom Prometheus
-        run: >
-          docker buildx build ./docker/prometheus/ --push
-          --file ./docker/prometheus/Dockerfile
-          --tag chainsafe/lodestar-prometheus:${{ needs.tag.outputs.tag }}-${{ matrix.arch }}
-          --platform linux/${{ matrix.arch }}
-
-  docker-manifest:
-    name: Create Docker manifest
-    runs-on: ubuntu-latest
-    needs: [tag, docker]
+  docker:
+    name: Publish to Docker Hub
+    needs: [tag, await-release]
     if: needs.tag.outputs.is_rc == 'true'
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Create and push lodestar manifest
-        run: |
-          docker buildx imagetools create -t chainsafe/lodestar:rc \
-            -t chainsafe/lodestar:${{ needs.tag.outputs.tag }} \
-            chainsafe/lodestar:${{ needs.tag.outputs.tag }}-amd64 \
-            chainsafe/lodestar:${{ needs.tag.outputs.tag }}-arm64
-
-      - name: Create and push grafana manifest
-        run: |
-          docker buildx imagetools create -t chainsafe/lodestar-grafana:${{ needs.tag.outputs.tag }} \
-            chainsafe/lodestar-grafana:${{ needs.tag.outputs.tag }}-amd64 \
-            chainsafe/lodestar-grafana:${{ needs.tag.outputs.tag }}-arm64
-
-      - name: Create and push prometheus manifest
-        run: |
-          docker buildx imagetools create -t chainsafe/lodestar-prometheus:${{ needs.tag.outputs.tag }} \
-            chainsafe/lodestar-prometheus:${{ needs.tag.outputs.tag }}-amd64 \
-            chainsafe/lodestar-prometheus:${{ needs.tag.outputs.tag }}-arm64
-
-      - run: docker run chainsafe/lodestar:${{ needs.tag.outputs.tag }} --help
-      # Display history to know byte size of each layer
-      # Image is available only because of the previous `docker run` command
-      - run: docker image history chainsafe/lodestar:${{ needs.tag.outputs.tag }}
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      extra-tags: rc
+    secrets: inherit
