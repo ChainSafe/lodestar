@@ -1,17 +1,13 @@
 name: Test Docker build
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Docker image tag"
-        required: true
-        type: string
-        default: "test"
+  push:
+    branches:
+      - nflaig/native-arm64-runners
 
 jobs:
   docker:
     uses: ./.github/workflows/docker.yml
     with:
-      tag: ${{ inputs.tag }}
+      tag: test
     secrets: inherit
