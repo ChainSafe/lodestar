@@ -189,7 +189,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getBlobParameters(epoch: Epoch): BlobParameters {
       if (epoch < config.FULU_FORK_EPOCH) {
-        throw Error(`getBlobParameters is not available pre-fulu epoch=${epoch}, fulu epoch=${config.FULU_FORK_EPOCH}`);
+        throw Error(`getBlobParameters is not available pre-fulu epoch=${epoch}`);
       }
 
       // Find the latest applicable value from blob schedule

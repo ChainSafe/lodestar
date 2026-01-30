@@ -37,7 +37,8 @@ const maxPositiveScore =
     VOLUNTARY_EXIT_WEIGHT +
     PROPOSER_SLASHING_WEIGHT +
     ATTESTER_SLASHING_WEIGHT +
-    BLS_TO_EXECUTION_CHANGE_WEIGHT);
+    BLS_TO_EXECUTION_CHANGE_WEIGHT +
+    EXECUTION_PAYLOAD_BID_WEIGHT);
 
 /**
  * The following params is implemented by Lighthouse at

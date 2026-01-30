@@ -77,7 +77,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   if (block.builderIndex === undefined || block.blockHashHex === undefined) {
-    // Cache fail. This should not happen
+    // This indicates this block is a pre-gloas block which is wrong
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
       blockRoot: blockRootHex,

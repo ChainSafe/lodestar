@@ -3,6 +3,13 @@ import {MapDef, toRootHex} from "@lodestar/utils";
 import {InsertOutcome} from "./types.js";
 import {pruneBySlot} from "./utils.js";
 
+/**
+ * Bid pool store bids for two purposes:
+ *  - Choose best bids when we are proposing
+ *  - Data column sidecar gossip validation if kzg commitments is moved to bids see https://github.com/ethereum/consensus-specs/pull/4875
+ * For the second purpose, data column sidecars may arrive as late as MAXIMUM_GOSSIP_CLOCK_DISPARITY into next slot so we need to retain
+ * two slots of bids
+ */
 const SLOTS_RETAINED = 2;
 
 type BlockRootHex = string;
