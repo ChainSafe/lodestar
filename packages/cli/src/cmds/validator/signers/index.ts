@@ -188,17 +188,26 @@ async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<S
     }
   } else {
     // Fetch pubkeys from all external signer URLs
+    // Handle errors per signer to allow validator to start even if some signers are unavailable
     const pubkeyPromises = externalSignerUrls.map(async (url) => {
-      const pubkeys = await externalSignerGetKeys(url);
-      return {url, pubkeys};
+      try {
+        const pubkeys = await externalSignerGetKeys(url);
+        return {url, pubkeys};
+      } catch (e) {
+        // Log error would be ideal but logger is not available in this context
+        // Return empty pubkeys for this URL to avoid crashing the validator startup
+        return {url, pubkeys: []};
+      }
     });
     
     const results = await Promise.all(pubkeyPromises);
     
     for (const {url, pubkeys} of results) {
-      assertValidPubkeysHex(pubkeys);
-      for (const pubkey of pubkeys) {
-        signers.push({type: SignerType.Remote, pubkey, url});
+      if (pubkeys.length > 0) {
+        assertValidPubkeysHex(pubkeys);
+        for (const pubkey of pubkeys) {
+          signers.push({type: SignerType.Remote, pubkey, url});
+        }
       }
     }
   }
