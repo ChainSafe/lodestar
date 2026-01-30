@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools
 COPY --from=build_src /usr/app .
 
 # Rebuild native deps
-RUN corepack enable && pnpm rebuild
+RUN corepack enable && pnpm install --frozen-lockfile --prod && pnpm rebuild
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
