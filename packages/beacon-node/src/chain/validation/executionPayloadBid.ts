@@ -1,3 +1,4 @@
+import {PublicKey} from "@chainsafe/blst";
 import {
   CachedBeaconStateGloas,
   canBuilderCoverBid,
@@ -121,7 +122,7 @@ async function validateExecutionPayloadBid(
 
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
-    chain.index2pubkey[bid.builderIndex],
+    PublicKey.fromBytes(state.builders.getReadonly(bid.builderIndex).pubkey),
     getExecutionPayloadBidSigningRoot(chain.config, state as CachedBeaconStateGloas, bid),
     signedExecutionPayloadBid.signature
   );
