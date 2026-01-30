@@ -434,7 +434,6 @@ export function getBeaconBlockApi({
         const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
           nonFinalizedBlocks.map(async (summary) => {
-            // Use chain.getBlockByRoot which checks cache before falling back to DB
             const blockResult = await chain.getBlockByRoot(summary.blockRoot);
             if (blockResult) {
               const canonical = chain.forkChoice.getCanonicalBlockAtSlot(blockResult.block.message.slot);
