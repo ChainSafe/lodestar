@@ -1,3 +1,4 @@
+import {PublicKey} from "@chainsafe/blst";
 import {
   CachedBeaconStateGloas,
   canBuilderCoverBid,
@@ -46,11 +47,11 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // _[IGNORE]_ the `SignedProposerPreferences` where `preferences.proposal_slot`
+  // [IGNORE] the `SignedProposerPreferences` where `preferences.proposal_slot`
   // is equal to `bid.slot` has been seen.
   // TODO GLOAS: Implement this along with proposer preference
 
-  // _[REJECT]_ `bid.builder_index` is a valid/active builder index -- i.e.
+  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
   // `is_active_builder(state, bid.builder_index)` returns `True`.
   if (!isActiveBuilder(state, bid.builderIndex)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
@@ -58,12 +59,6 @@ async function validateExecutionPayloadBid(
       builderIndex: bid.builderIndex,
     });
   }
-
-  // _[REJECT]_ `bid.fee_recipient` matches the `fee_recipient` from the proposer's
-  // `SignedProposerPreferences` associated with `bid.slot`.
-  // _[REJECT]_ `bid.gas_limit` matches the `gas_limit` from the proposer's
-  // `SignedProposerPreferences` associated with `bid.slot`.
-  // TODO GLOAS: Implement this along with proposer preference
 
   // [REJECT] `bid.execution_payment` is zero.
   if (bid.executionPayment !== 0) {
@@ -73,6 +68,12 @@ async function validateExecutionPayloadBid(
       executionPayment: bid.executionPayment,
     });
   }
+
+  // [REJECT] `bid.fee_recipient` matches the `fee_recipient` from the proposer's
+  // `SignedProposerPreferences` associated with `bid.slot`.
+  // [REJECT] `bid.gas_limit` matches the `gas_limit` from the proposer's
+  // `SignedProposerPreferences` associated with `bid.slot`.
+  // TODO GLOAS: Implement this along with proposer preference
 
   // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for this slot.
   if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex)) {
@@ -95,7 +96,7 @@ async function validateExecutionPayloadBid(
       currentHighestBid: bestBid.value,
     });
   }
-  // _[IGNORE]_ `bid.value` is less or equal than the builder's excess balance --
+  // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
   // i.e. `can_builder_cover_bid(state, builder_index, amount)` returns `True`.
   if (!canBuilderCoverBid(state, bid.builderIndex, bid.value)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
@@ -121,7 +122,7 @@ async function validateExecutionPayloadBid(
 
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
-    chain.index2pubkey[bid.builderIndex],
+    PublicKey.fromBytes(state.builders.getReadonly(bid.builderIndex).pubkey),
     getExecutionPayloadBidSigningRoot(chain.config, state as CachedBeaconStateGloas, bid),
     signedExecutionPayloadBid.signature
   );

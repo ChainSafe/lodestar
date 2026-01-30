@@ -1,6 +1,9 @@
 import {BuilderIndex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
+/**
+ * TODO GLOAS: Revisit this value and add rational for choosing it
+ */
 const SLOTS_RETAINED = 2;
 
 /**

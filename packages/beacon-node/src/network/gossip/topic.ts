@@ -349,5 +349,5 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.bls_to_execution_change]: true,
   [GossipType.execution_payload]: true,
   [GossipType.payload_attestation_message]: true,
-  [GossipType.execution_payload_bid]: false,
+  [GossipType.execution_payload_bid]: true,
 };

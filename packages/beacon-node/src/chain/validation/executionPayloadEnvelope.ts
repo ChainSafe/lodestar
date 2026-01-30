@@ -1,4 +1,6 @@
+import {PublicKey} from "@chainsafe/blst";
 import {
+  CachedBeaconStateGloas,
   computeStartSlotAtEpoch,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadEnvelopeSigningRoot,
@@ -103,8 +105,9 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
+  const state = chain.getHeadState() as CachedBeaconStateGloas;
   const signatureSet = createSingleSignatureSetFromComponents(
-    chain.index2pubkey[envelope.builderIndex],
+    PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey),
     getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
     executionPayloadEnvelope.signature
   );

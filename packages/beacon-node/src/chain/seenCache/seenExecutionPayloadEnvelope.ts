@@ -4,7 +4,7 @@ import {RootHex, Slot} from "@lodestar/types";
  * Cache to prevent processing multiple execution payload envelopes for the same block root.
  * Only one builder qualifies to submit an execution payload for a given slot.
  * We only keep track of envelopes of unfinalized slots.
- * _[IGNORE]_ The node has not seen another valid `SignedExecutionPayloadEnvelope` for this block root.
+ * [IGNORE] The node has not seen another valid `SignedExecutionPayloadEnvelope` for this block root.
  */
 export class SeenExecutionPayloadEnvelopes {
   private readonly slotByBlockRoot = new Map<RootHex, Slot>();
