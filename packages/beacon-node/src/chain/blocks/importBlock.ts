@@ -34,7 +34,6 @@ import {toCheckpointHex} from "../stateCache/index.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
-import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -91,11 +90,8 @@ export async function importBlock(
     throw Error("Unavailable block can not be imported in forkchoice");
   }
 
-  // 1. Persist block to hot DB (pre-emptively)
-  // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
-  if (!opts.eagerPersistBlock) {
-    await writeBlockInputToDb.call(this, [blockInput]);
-  }
+  // 1. Persist block to hot DB (performed asynchronously to avoid blocking head selection)
+  void this.unfinalizedBlockWrites.push([blockInput]);
 
   // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
   this.serializedCache.clear();

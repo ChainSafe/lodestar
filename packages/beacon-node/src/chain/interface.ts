@@ -22,6 +22,8 @@ import {
   Wei,
   altair,
   capella,
+  deneb,
+  fulu,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -211,9 +213,23 @@ export interface IBeaconChain {
   /**
    * Get local block by root, does not fetch from the network
    */
+  getSerializedBlockByRoot(
+    root: RootHex
+  ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null>;
+  /**
+   * Get local block by root, does not fetch from the network
+   */
   getBlockByRoot(
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
+  getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
+  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<fulu.DataColumnSidecars>;
+  getSerializedDataColumnSidecars(
+    blockSlot: Slot,
+    blockRootHex: string,
+    indices: number[]
+  ): Promise<(Uint8Array | undefined)[]>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{

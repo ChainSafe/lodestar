@@ -212,6 +212,31 @@ export function createLodestarMetrics(
       }),
     },
 
+    unfinalizedBlockWritesQueue: {
+      length: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_length",
+        help: "Count of total unfinalized block writes queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_dropped_jobs_total",
+        help: "Count of total unfinalized block writes queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_unfinalized_block_writes_queue_job_time_seconds",
+        help: "Time to process unfinalized block writes queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_unfinalized_block_writes_queue_job_wait_time_seconds",
+        help: "Time from job added to the unfinalized block writes queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_concurrency",
+        help: "Current concurrency of unfinalized block writes queue",
+      }),
+    },
+
     engineHttpProcessorQueue: {
       length: register.gauge({
         name: "lodestar_engine_http_processor_queue_length",

@@ -41,7 +41,7 @@ export function processExecutionPayloadEnvelope(
   }
 
   for (const consolidation of requests.consolidations) {
-    processConsolidationRequest(fork, state, consolidation);
+    processConsolidationRequest(state, consolidation);
   }
 
   // Queue the builder payment

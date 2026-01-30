@@ -255,9 +255,6 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
         slot: regenRequest.args[1],
       };
 
-    case "getCheckpointState":
-      return ssz.phase0.Checkpoint.toJson(regenRequest.args[0]);
-
     case "getPreState": {
       const slot = regenRequest.args[0].slot;
       return {
