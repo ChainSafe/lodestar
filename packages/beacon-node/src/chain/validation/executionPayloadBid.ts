@@ -1,11 +1,9 @@
-import {MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {
   CachedBeaconStateGloas,
+  canBuilderCoverBid,
   createSingleSignatureSetFromComponents,
-  getCurrentEpoch,
   getExecutionPayloadBidSigningRoot,
-  isBuilderWithdrawalCredential,
-  isActiveValidator,
+  isActiveBuilder,
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -34,26 +32,37 @@ async function validateExecutionPayloadBid(
   const bid = signedExecutionPayloadBid.message;
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
-  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipExecutionPayloadBid);
+  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipExecutionPayloadBid) as CachedBeaconStateGloas;
 
-  // [REJECT] `bid.builder_index` is a valid, active, and non-slashed builder index.
-  const builder = state.validators.getReadonly(bid.builderIndex);
-  if (builder.slashed || !isActiveValidator(builder, getCurrentEpoch(state))) {
+  // [IGNORE] `bid.slot` is the current slot or the next slot.
+  const currentSlot = chain.clock.currentSlot;
+  if (bid.slot !== currentSlot && bid.slot !== currentSlot + 1) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
+
+  // _[IGNORE]_ the `SignedProposerPreferences` where `preferences.proposal_slot`
+  // is equal to `bid.slot` has been seen.
+  // TODO GLOAS: Implement this along with proposer preference
+  
+
+  // _[REJECT]_ `bid.builder_index` is a valid/active builder index -- i.e.
+  // `is_active_builder(state, bid.builder_index)` returns `True`.
+  if (!isActiveBuilder(state, bid.builderIndex)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
       builderIndex: bid.builderIndex,
     });
   }
 
-  // [REJECT] the builder's withdrawal credentials' prefix is `BUILDER_WITHDRAWAL_PREFIX` -- i.e.
-  // `is_builder_withdrawal_credential(state.validators[bid.builder_index].withdrawal_credentials)`
-  // returns `True`.
-  if (!isBuilderWithdrawalCredential(builder.withdrawalCredentials)) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.BUILDER_BAD_CREDENTIALS,
-      builderIndex: bid.builderIndex,
-    });
-  }
+  // _[REJECT]_ `bid.fee_recipient` matches the `fee_recipient` from the proposer's
+  // `SignedProposerPreferences` associated with `bid.slot`.
+  // _[REJECT]_ `bid.gas_limit` matches the `gas_limit` from the proposer's
+  // `SignedProposerPreferences` associated with `bid.slot`.
+  // TODO GLOAS: Implement this along with proposer preference
 
   // [REJECT] `bid.execution_payment` is zero.
   if (bid.executionPayment !== 0) {
@@ -85,14 +94,13 @@ async function validateExecutionPayloadBid(
       currentHighestBid: bestBid.value,
     });
   }
-  // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
-  // i.e. `MIN_ACTIVATION_BALANCE + bid.value <= state.balances[bid.builder_index]`.
-  const builderBalance = state.balances.get(bid.builderIndex);
-  if (builderBalance < bid.value + MIN_ACTIVATION_BALANCE) {
+  // _[IGNORE]_ `bid.value` is less or equal than the builder's excess balance --
+  // i.e. `can_builder_cover_bid(state, builder_index, amount)` returns `True`.
+  if (!canBuilderCoverBid(state, bid.builderIndex, bid.value)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH,
       bidValue: bid.value,
-      builderBalance,
+      builderBalance: state.builders.getReadonly(bid.builderIndex).balance,
     });
   }
 
@@ -107,16 +115,6 @@ async function validateExecutionPayloadBid(
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
       parentBlockRoot: parentBlockRootHex,
-    });
-  }
-
-  // [IGNORE] `bid.slot` is the current slot or the next slot.
-  const currentSlot = chain.clock.currentSlot;
-  if (bid.slot !== currentSlot && bid.slot !== currentSlot + 1) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
-      builderIndex: bid.builderIndex,
-      slot: bid.slot,
     });
   }
 
