@@ -1,0 +1,17 @@
+name: Test Docker build
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Docker image tag"
+        required: true
+        type: string
+        default: "test"
+
+jobs:
+  docker:
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: ${{ inputs.tag }}
+    secrets: inherit
