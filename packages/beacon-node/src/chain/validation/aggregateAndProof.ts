@@ -75,7 +75,10 @@ async function validateAggregateAndProof(
   if (ForkSeq[fork] >= ForkSeq.gloas) {
     // [REJECT] `aggregate.data.index < 2`.
     if (attData.index >= 2) {
-      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE, attDataIndex: attData.index});
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE,
+        attDataIndex: attData.index,
+      });
     }
     // [REJECT] `aggregate.data.index == 0` if `block.slot == aggregate.data.slot`.
     const block = chain.forkChoice.getBlock(attData.beaconBlockRoot);

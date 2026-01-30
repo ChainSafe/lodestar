@@ -67,7 +67,10 @@ export function isActiveBuilder(state: CachedBeaconStateGloas, builderIndex: Bui
  * Get the total pending balance to withdraw for a builder (from withdrawals + payments).
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-get_pending_balance_to_withdraw_for_builder
  */
-export function getPendingBalanceToWithdrawForBuilder(state: CachedBeaconStateGloas, builderIndex: BuilderIndex): number {
+export function getPendingBalanceToWithdrawForBuilder(
+  state: CachedBeaconStateGloas,
+  builderIndex: BuilderIndex
+): number {
   let pendingBalance = 0;
 
   // Sum pending withdrawals
@@ -93,7 +96,11 @@ export function getPendingBalanceToWithdrawForBuilder(state: CachedBeaconStateGl
  * Check if a builder has sufficient balance to cover a bid amount.
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-can_builder_cover_bid
  */
-export function canBuilderCoverBid(state: CachedBeaconStateGloas, builderIndex: BuilderIndex, bidAmount: number): boolean {
+export function canBuilderCoverBid(
+  state: CachedBeaconStateGloas,
+  builderIndex: BuilderIndex,
+  bidAmount: number
+): boolean {
   const builder = state.builders.getReadonly(builderIndex);
   const pendingBalance = getPendingBalanceToWithdrawForBuilder(state, builderIndex);
   const minBalance = MIN_DEPOSIT_AMOUNT + pendingBalance;

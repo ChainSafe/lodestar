@@ -1,13 +1,13 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {BUILDER_INDEX_SELF_BUILD, DOMAIN_BEACON_BUILDER, ForkPostGloas, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.ts";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
 import {CachedBeaconStateGloas} from "../types.ts";
 import {canBuilderCoverBid, isActiveBuilder} from "../util/gloas.ts";
-import {computeSigningRoot, getCurrentEpoch, getRandaoMix} from "../util/index.ts";
+import {getCurrentEpoch, getRandaoMix} from "../util/index.ts";
 
 export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block: BeaconBlock<ForkPostGloas>): void {
   const signedBid = block.body.signedExecutionPayloadBid;

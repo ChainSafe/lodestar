@@ -32,7 +32,9 @@ async function validateExecutionPayloadBid(
   const bid = signedExecutionPayloadBid.message;
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
-  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipExecutionPayloadBid) as CachedBeaconStateGloas;
+  const state = (await chain.getHeadStateAtCurrentEpoch(
+    RegenCaller.validateGossipExecutionPayloadBid
+  )) as CachedBeaconStateGloas;
 
   // [IGNORE] `bid.slot` is the current slot or the next slot.
   const currentSlot = chain.clock.currentSlot;
@@ -47,7 +49,6 @@ async function validateExecutionPayloadBid(
   // _[IGNORE]_ the `SignedProposerPreferences` where `preferences.proposal_slot`
   // is equal to `bid.slot` has been seen.
   // TODO GLOAS: Implement this along with proposer preference
-  
 
   // _[REJECT]_ `bid.builder_index` is a valid/active builder index -- i.e.
   // `is_active_builder(state, bid.builder_index)` returns `True`.
