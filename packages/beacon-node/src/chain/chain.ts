@@ -1117,6 +1117,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
     metrics.opPool.payloadAttestationPool.size.set(this.payloadAttestationPool.size);
+    metrics.opPool.executionPayloadBidPool.size.set(this.executionPayloadBidPool.size);
     // syncContributionAndProofPool tracks metrics on its own
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);

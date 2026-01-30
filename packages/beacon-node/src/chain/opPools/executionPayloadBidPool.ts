@@ -25,6 +25,16 @@ export class ExecutionPayloadBidPool {
   >(() => new MapDef<BlockRootHex, Map<BlockHashHex, gloas.ExecutionPayloadBid>>(() => new Map()));
   private lowestPermissibleSlot = 0;
 
+  get size(): number {
+    let count = 0;
+    for (const byParentRoot of this.bidByParentHashByParentRootBySlot.values()) {
+      for (const byParentHash of byParentRoot.values()) {
+        count += byParentHash.size;
+      }
+    }
+    return count;
+  }
+
   add(bid: gloas.ExecutionPayloadBid): InsertOutcome {
     const {slot, parentBlockRoot, parentBlockHash, value} = bid;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;

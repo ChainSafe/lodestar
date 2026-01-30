@@ -1140,6 +1140,22 @@ export function createLodestarMetrics(
           help: "Total number of getPayloadAttestationsForBlock calls with no aggregate for slot and payload attestation data root",
         }),
       },
+      executionPayloadBidPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_execution_payload_bid_pool_size",
+          help: "Current size of the ExecutionPayloadBidPool = total number of bids",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+      },
     },
 
     chain: {
