@@ -48,7 +48,9 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
         // Supernodes may only have a subset of the data columns by the time the block begins to be imported
         // because full data availability can be assumed after NUMBER_OF_COLUMNS / 2 columns are available.
         // Here, however, all data columns must be fully available/reconstructed before persisting to the DB.
-        await blockInput.waitForComputedAllData(BLOB_AVAILABILITY_TIMEOUT);
+        await blockInput.waitForComputedAllData(BLOB_AVAILABILITY_TIMEOUT).catch(() => {
+          this.logger.debug("Failed to wait for computed all data", {slot, blockRoot: blockRootHex});
+        });
       }
 
       const {custodyColumns} = this.custodyConfig;
