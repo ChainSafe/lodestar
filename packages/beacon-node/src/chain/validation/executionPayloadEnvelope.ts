@@ -36,7 +36,7 @@ async function validateExecutionPayloadEnvelope(
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
   // TODO GLOAS: Need to review this
-  const block = chain.forkChoice.getBlock(envelope.beaconBlockRoot);
+  const block = chain.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,
@@ -78,7 +78,7 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  if (block.builderIndex === undefined || block.blockHashHex === undefined) {
+  if (block.builderIndex === undefined || block.blockHashFromBid === undefined) {
     // This indicates this block is a pre-gloas block which is wrong
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
@@ -96,11 +96,11 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `payload.block_hash == bid.block_hash`
-  if (toRootHex(payload.blockHash) !== block.blockHashHex) {
+  if (toRootHex(payload.blockHash) !== block.blockHashFromBid) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
       envelopeBlockHash: toRootHex(payload.blockHash),
-      bidBlockHash: block.blockHashHex,
+      bidBlockHash: block.blockHashFromBid,
     });
   }
 

@@ -112,9 +112,9 @@ export type ProtoBlock = BlockExtraMeta & {
 
   // GLOAS: The followings are from bids. They are null in pre-gloas
   // Used for execution payload gossip validation
-  builderIndex?: number;
-  // Used for execution payload gossip validation
-  blockHashHex?: RootHex;
+  builderIndex: number | null;
+  // Used for execution payload gossip validation. Not to be confused with executionPayloadBlockHash
+  blockHashFromBid: RootHex | null;
 
   // Used to determine if this block extends EMPTY or FULL parent variant
   // Spec: gloas/fork-choice.md#new-get_parent_payload_status

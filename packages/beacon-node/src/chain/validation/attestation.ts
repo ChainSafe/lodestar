@@ -304,7 +304,7 @@ async function validateAttestationNoSignatureCheck(
         }
 
         // [REJECT] `attestation.data.index == 0` if `block.slot == attestation.data.slot`.
-        const block = chain.forkChoice.getBlock(attData.beaconBlockRoot);
+        const block = chain.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
 
         // block being null will be handled by `verifyHeadBlockAndTargetRoot`
         if (block !== null && block.slot === attSlot && attData.index !== 0) {

@@ -81,7 +81,7 @@ async function validateAggregateAndProof(
       });
     }
     // [REJECT] `aggregate.data.index == 0` if `block.slot == aggregate.data.slot`.
-    const block = chain.forkChoice.getBlock(attData.beaconBlockRoot);
+    const block = chain.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
 
     // If block is unknown, we don't handle it here. It will throw error later on at `verifyHeadBlockAndTargetRoot()`
     if (block !== null && block.slot === attData.slot && attData.index !== 0) {

@@ -738,7 +738,7 @@ export class BeaconChain implements IBeaconChain {
   async getSerializedBlockByRoot(
     root: string
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
-    const block = this.forkChoice.getBlockHex(root);
+    const block = this.forkChoice.getBlockHexDefaultStatus(root);
     if (block) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
