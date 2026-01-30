@@ -581,11 +581,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         chain.getBlobsTracker.triggerGetBlobs(blockInput);
         // if we've received at least half of the columns, trigger reconstruction of the rest
         if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
-          chain.columnReconstructionTracker.triggerColumnReconstruction(
-            // wait to reconstruct until after head vote
-            getCutoffTimeMs(chain, dataColumnSlot, config.getAttestationDueMs(topic.boundary.fork)),
-            blockInput
-          );
+          chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
         }
       }
 

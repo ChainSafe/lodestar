@@ -1,4 +1,4 @@
-import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas} from "@lodestar/params";
 import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
@@ -789,13 +789,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
 
     const sampledColumns = this.getSampledColumns();
-    const hasAllData =
-      // already hasAllData
-      this.state.hasAllData ||
-      // has all sampled columns
-      sampledColumns.length === this.sampledColumns.length ||
-      // has enough columns to reconstruct the rest
-      sampledColumns.length >= NUMBER_OF_COLUMNS / 2;
+    const hasAllData = this.state.hasAllData || sampledColumns.length === this.sampledColumns.length;
 
     const hasComputedAllData =
       // already hasAllData
