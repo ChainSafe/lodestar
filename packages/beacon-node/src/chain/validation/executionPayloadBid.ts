@@ -47,7 +47,7 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // _[IGNORE]_ the `SignedProposerPreferences` where `preferences.proposal_slot`
+  // [IGNORE] the `SignedProposerPreferences` where `preferences.proposal_slot`
   // is equal to `bid.slot` has been seen.
   // TODO GLOAS: Implement this along with proposer preference
 
@@ -96,7 +96,7 @@ async function validateExecutionPayloadBid(
       currentHighestBid: bestBid.value,
     });
   }
-  // _[IGNORE]_ `bid.value` is less or equal than the builder's excess balance --
+  // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
   // i.e. `can_builder_cover_bid(state, builder_index, amount)` returns `True`.
   if (!canBuilderCoverBid(state, bid.builderIndex, bid.value)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
