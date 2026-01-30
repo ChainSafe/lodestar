@@ -308,7 +308,6 @@ describe("regen/reload states with n-historical states configuration", () => {
             blsVerifyAllMainThread: true,
             forkchoiceConstructor: ReorgedForkChoice,
             // this node does not need to reload state
-            nHistoricalStates: false,
             proposerBoost: true,
           },
         },
@@ -330,7 +329,6 @@ describe("regen/reload states with n-historical states configuration", () => {
             blsVerifyAllMainThread: true,
             forkchoiceConstructor: ReorgedForkChoice,
             // this node can follow with nHistoricalStates flag and it has to reload state
-            nHistoricalStates: true,
             maxBlockStates,
             maxCPStateEpochsInMemory,
             proposerBoost: true,

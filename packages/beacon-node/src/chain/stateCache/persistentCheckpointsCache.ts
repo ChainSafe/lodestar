@@ -851,6 +851,10 @@ export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
   };
 }
 
+export function toCheckpointKey(cp: CheckpointHex): string {
+  return `${cp.rootHex}:${cp.epoch}`;
+}
+
 function toCacheKey(cp: CheckpointHex | phase0.Checkpoint): CacheKey {
   if (isCheckpointHex(cp)) {
     return `${cp.rootHex}_${cp.epoch}`;
