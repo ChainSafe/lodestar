@@ -51,7 +51,7 @@ async function validateExecutionPayloadBid(
   // is equal to `bid.slot` has been seen.
   // TODO GLOAS: Implement this along with proposer preference
 
-  // _[REJECT]_ `bid.builder_index` is a valid/active builder index -- i.e.
+  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
   // `is_active_builder(state, bid.builder_index)` returns `True`.
   if (!isActiveBuilder(state, bid.builderIndex)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
@@ -59,12 +59,6 @@ async function validateExecutionPayloadBid(
       builderIndex: bid.builderIndex,
     });
   }
-
-  // _[REJECT]_ `bid.fee_recipient` matches the `fee_recipient` from the proposer's
-  // `SignedProposerPreferences` associated with `bid.slot`.
-  // _[REJECT]_ `bid.gas_limit` matches the `gas_limit` from the proposer's
-  // `SignedProposerPreferences` associated with `bid.slot`.
-  // TODO GLOAS: Implement this along with proposer preference
 
   // [REJECT] `bid.execution_payment` is zero.
   if (bid.executionPayment !== 0) {
@@ -74,6 +68,12 @@ async function validateExecutionPayloadBid(
       executionPayment: bid.executionPayment,
     });
   }
+
+  // [REJECT] `bid.fee_recipient` matches the `fee_recipient` from the proposer's
+  // `SignedProposerPreferences` associated with `bid.slot`.
+  // [REJECT] `bid.gas_limit` matches the `gas_limit` from the proposer's
+  // `SignedProposerPreferences` associated with `bid.slot`.
+  // TODO GLOAS: Implement this along with proposer preference
 
   // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for this slot.
   if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex)) {

@@ -45,7 +45,7 @@ async function validatePayloadAttestationMessage(
   }
 
   // [IGNORE] The `payload_attestation_message` is the first valid message received
-  // from the validator with index `payload_attestation_message.validate_index`.
+  // from the validator with index `payload_attestation_message.validator_index`.
   // A single validator can participate PTC at most once per epoch
   if (chain.seenPayloadAttesters.isKnown(epoch, validatorIndex)) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
