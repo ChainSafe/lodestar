@@ -10,7 +10,7 @@ import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
 /**
- * The number of slots that will be stored in the pool
+ * TODO GLOAS: Revisit this value and add rational for choosing it
  */
 const SLOTS_RETAINED = 2;
 
