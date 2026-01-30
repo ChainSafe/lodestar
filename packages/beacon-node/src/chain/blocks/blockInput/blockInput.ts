@@ -660,6 +660,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     blockInput.blockPromise.resolve(props.block);
     if (hasAllData) {
       blockInput.dataPromise.resolve([]);
+      blockInput.computedDataPromise.resolve([]);
     }
     return blockInput;
   }
@@ -795,7 +796,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       // has all sampled columns
       sampledColumns.length === this.sampledColumns.length ||
       // has enough columns to reconstruct the rest
-      sampledColumns.length >= NUMBER_OF_COLUMNS / 2;
+      this.columnsCache.size >= NUMBER_OF_COLUMNS / 2;
 
     const hasComputedAllData =
       // has all sampled columns
@@ -804,7 +805,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     this.state = {
       ...this.state,
       hasAllData: hasAllData || this.state.hasAllData,
-      hasComputedAllData: hasComputedAllData,
+      hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
       timeCompleteSec: hasAllData ? seenTimestampSec : undefined,
     } as BlockInputColumnsState;
 
