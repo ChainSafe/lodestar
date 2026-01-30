@@ -124,7 +124,7 @@ export function getVoluntaryExitValidity(
   // only exit validator if it has no pending withdrawals in the queue
   if (
     fork >= ForkSeq.electra &&
-    getPendingBalanceToWithdraw(fork, state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) !== 0
+    getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) !== 0
   ) {
     return VoluntaryExitValidity.pendingWithdrawals;
   }
