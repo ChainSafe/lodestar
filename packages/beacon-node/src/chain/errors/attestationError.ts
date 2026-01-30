@@ -184,7 +184,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET}
   | {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX}
   | {code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE}
-  | {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE}
+  | {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE; attDataIndex: number}
   | {code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {

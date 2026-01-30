@@ -295,10 +295,9 @@ async function validateAttestationNoSignatureCheck(
       committeeIndex = attestationOrCache.attestation.committeeIndex;
 
       if (isForkPostGloas(fork)) {
-        // TODO GLOAS: Handle fork boundary
         // [REJECT] `attestation.data.index < 2`.
         if (attData.index >= 2) {
-          throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE});
+          throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE, attDataIndex: attData.index});
         }
 
         // [REJECT] `attestation.data.index == 0` if `block.slot == attestation.data.slot`.
