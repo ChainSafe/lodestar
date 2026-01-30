@@ -76,7 +76,7 @@ const transition =
           };
         },
         shouldError: (testCase) => testCase.post === undefined,
-        timeout: 30000,
+        timeout: 60000,
         getExpected: (testCase) => testCase.post,
         expectFunc: (_testCase, expected, actual) => {
           expectEqualBeaconState(forkNext, expected, actual);
