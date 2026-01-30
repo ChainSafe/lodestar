@@ -4,7 +4,7 @@ import {
   createSingleSignatureSetFromComponents,
   getCurrentEpoch,
   getExecutionPayloadBidSigningRoot,
-  hasBuilderWithdrawalCredential,
+  isBuilderWithdrawalCredential,
   isActiveValidator,
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
@@ -48,7 +48,7 @@ async function validateExecutionPayloadBid(
   // [REJECT] the builder's withdrawal credentials' prefix is `BUILDER_WITHDRAWAL_PREFIX` -- i.e.
   // `is_builder_withdrawal_credential(state.validators[bid.builder_index].withdrawal_credentials)`
   // returns `True`.
-  if (!hasBuilderWithdrawalCredential(builder.withdrawalCredentials)) {
+  if (!isBuilderWithdrawalCredential(builder.withdrawalCredentials)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_BAD_CREDENTIALS,
       builderIndex: bid.builderIndex,

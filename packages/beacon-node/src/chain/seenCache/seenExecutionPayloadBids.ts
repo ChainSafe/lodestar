@@ -1,4 +1,4 @@
-import {Slot, ValidatorIndex} from "@lodestar/types";
+import {BuilderIndex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
 const SLOTS_RETAINED = 2;
@@ -7,14 +7,14 @@ const SLOTS_RETAINED = 2;
  * Tracks execution payload bids we've already seen per (slot, builder).
  */
 export class SeenExecutionPayloadBids {
-  private readonly builderIndexesBySlot = new MapDef<Slot, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
+  private readonly builderIndexesBySlot = new MapDef<Slot, Set<BuilderIndex>>(() => new Set<BuilderIndex>());
   private lowestPermissibleSlot: Slot = 0;
 
-  isKnown(slot: Slot, builderIndex: ValidatorIndex): boolean {
+  isKnown(slot: Slot, builderIndex: BuilderIndex): boolean {
     return this.builderIndexesBySlot.get(slot)?.has(builderIndex) === true;
   }
 
-  add(slot: Slot, builderIndex: ValidatorIndex): void {
+  add(slot: Slot, builderIndex: BuilderIndex): void {
     if (slot < this.lowestPermissibleSlot) {
       throw Error(`slot ${slot} < lowestPermissibleSlot ${this.lowestPermissibleSlot}`);
     }

@@ -1,4 +1,4 @@
-import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {BuilderIndex, RootHex, Slot} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.ts";
 
 export enum ExecutionPayloadBidErrorCode {
@@ -15,16 +15,16 @@ export enum ExecutionPayloadBidErrorCode {
 }
 
 export type ExecutionPayloadBidErrorType =
-  | {code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE; builderIndex: ValidatorIndex}
-  | {code: ExecutionPayloadBidErrorCode.BUILDER_BAD_CREDENTIALS; builderIndex: ValidatorIndex}
+  | {code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE; builderIndex: BuilderIndex}
+  | {code: ExecutionPayloadBidErrorCode.BUILDER_BAD_CREDENTIALS; builderIndex: BuilderIndex}
   | {
       code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT;
-      builderIndex: ValidatorIndex;
+      builderIndex: BuilderIndex;
       executionPayment: number;
     }
   | {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN;
-      builderIndex: ValidatorIndex;
+      builderIndex: BuilderIndex;
       slot: Slot;
       parentBlockRoot: RootHex;
       parentBlockHash: RootHex;
@@ -33,7 +33,7 @@ export type ExecutionPayloadBidErrorType =
   | {code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH; bidValue: number; builderBalance: number}
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH; parentBlockHash: RootHex}
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT; parentBlockRoot: RootHex}
-  | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; builderIndex: ValidatorIndex; slot: Slot}
-  | {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE; builderIndex: ValidatorIndex; slot: Slot};
+  | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; builderIndex: BuilderIndex; slot: Slot}
+  | {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE; builderIndex: BuilderIndex; slot: Slot};
 
 export class ExecutionPayloadBidError extends GossipActionError<ExecutionPayloadBidErrorType> {}

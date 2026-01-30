@@ -1,4 +1,4 @@
-import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {BuilderIndex, RootHex, Slot} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum ExecutionPayloadEnvelopeErrorCode {
@@ -19,14 +19,14 @@ export type ExecutionPayloadEnvelopeErrorType =
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN;
       blockRoot: RootHex;
       slot: Slot;
-      builderIndex: ValidatorIndex;
+      builderIndex: BuilderIndex;
     }
   | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK; blockRoot: RootHex}
   | {code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH; envelopeSlot: Slot; blockSlot: Slot}
   | {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH;
-      envelopeBuilderIndex: ValidatorIndex;
-      bidBuilderIndex: ValidatorIndex;
+      envelopeBuilderIndex: BuilderIndex;
+      bidBuilderIndex: BuilderIndex;
     }
   | {code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH; envelopeBlockHash: RootHex; bidBlockHash: RootHex}
   | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE}

@@ -1,8 +1,8 @@
-import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {BuilderIndex, RootHex, Slot} from "@lodestar/types";
 
 type SeenExecutionPayloadEnvelopeEntry = {
   slot: Slot;
-  builderIndexes: Set<ValidatorIndex>;
+  builderIndexes: Set<BuilderIndex>;
 };
 
 /**
@@ -15,18 +15,18 @@ export class SeenExecutionPayloadEnvelopes {
   private readonly builderIndexesByBlockRoot = new Map<RootHex, SeenExecutionPayloadEnvelopeEntry>();
   private finalizedSlot: Slot = 0;
 
-  isKnown(blockRoot: RootHex, builderIndex: ValidatorIndex): boolean {
+  isKnown(blockRoot: RootHex, builderIndex: BuilderIndex): boolean {
     return this.builderIndexesByBlockRoot.get(blockRoot)?.builderIndexes.has(builderIndex) === true;
   }
 
-  add(blockRoot: RootHex, slot: Slot, builderIndex: ValidatorIndex): void {
+  add(blockRoot: RootHex, slot: Slot, builderIndex: BuilderIndex): void {
     if (slot < this.finalizedSlot) {
       throw Error(`slot ${slot} < finalizedSlot ${this.finalizedSlot}`);
     }
 
     let entry = this.builderIndexesByBlockRoot.get(blockRoot);
     if (!entry) {
-      entry = {slot, builderIndexes: new Set<ValidatorIndex>()};
+      entry = {slot, builderIndexes: new Set<BuilderIndex>()};
       this.builderIndexesByBlockRoot.set(blockRoot, entry);
     }
 
