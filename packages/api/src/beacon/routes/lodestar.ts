@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ssz} from "@lodestar/types";
+import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 import {
   EmptyArgs,
   EmptyMeta,
@@ -271,6 +271,18 @@ export type Endpoints = {
     VersionMeta
   >;
 
+  /**
+   * Returns the validator indices that are currently being monitored by the validator monitor.
+   */
+  getMonitoredValidatorIndices: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ValidatorIndex[],
+    EmptyMeta
+  >;
+
   /** Dump Discv5 Kad values */
   discv5GetKadValues: Endpoint<
     // ⏎
@@ -461,6 +473,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         // Default timeout is not sufficient to download state
         timeoutMs: 5 * 60 * 1000,
       },
+    },
+    getMonitoredValidatorIndices: {
+      url: "/eth/v1/lodestar/monitored_validators",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
     },
     discv5GetKadValues: {
       url: "/eth/v1/debug/discv5_kad_values",

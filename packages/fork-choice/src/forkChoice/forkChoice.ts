@@ -774,13 +774,12 @@ export class ForkChoice implements IForkChoice {
               dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
             }),
 
-      // Extract parentBlockHash for Gloas blocks (ePBS)
-      // Spec: gloas/fork-choice.md#new-get_parent_payload_status
-      // Gloas blocks have signedExecutionPayloadBid with parentBlockHash
+      payloadStatus: isGloasBeaconBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL,
+      builderIndex: isGloasBeaconBlock(block) ? block.body.signedExecutionPayloadBid.message.builderIndex : null,
+      blockHashHex: isGloasBeaconBlock(block) ? toRootHex(block.body.signedExecutionPayloadBid.message.blockHash) : null,
       parentBlockHash: isGloasBeaconBlock(block)
         ? toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
         : null,
-      payloadStatus: isGloasBeaconBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL,
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);

@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb} from "@lodestar/params";
+import {ForkName, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -111,7 +111,7 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
-  if (isForkPostDeneb(fork)) {
+  if (isForkPostDeneb(fork) && !isForkPostGloas(fork)) {
     const blobKzgCommitmentsLen = (block as deneb.BeaconBlock).body.blobKzgCommitments.length;
     const maxBlobsPerBlock = config.getMaxBlobsPerBlock(computeEpochAtSlot(blockSlot));
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
@@ -128,6 +128,7 @@ export async function validateGossipBlock(
   // this is something we should change this in the future to make the code airtight to the spec.
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
+  // TODO GLOAS: post-gloas, we check the validity of bid's parent payload, not the entire beacon block
   const blockState = await chain.regen
     .getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
@@ -140,7 +141,7 @@ export async function validateGossipBlock(
   // Extra conditions for merge fork blocks
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
-  if (fork === ForkName.bellatrix) {
+  if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
     if (!isExecutionBlockBodyType(block.body)) throw Error("Not merge block type");
     const executionPayload = block.body.executionPayload;
     if (isExecutionStateType(blockState) && isExecutionEnabled(blockState, block)) {

@@ -117,7 +117,9 @@ export const {
 
   PTC_SIZE,
   MAX_PAYLOAD_ATTESTATIONS,
+  BUILDER_REGISTRY_LIMIT,
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
+  MAX_BUILDERS_PER_WITHDRAWALS_SWEEP,
 } = activePreset;
 
 ////////////
@@ -157,8 +159,9 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
-export const DOMAIN_BEACON_BUILDER = Uint8Array.from([27, 0, 0, 0]);
+export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
 export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
+export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 
 // Application specific domains
 
@@ -313,5 +316,7 @@ export const KZG_COMMITMENTS_GINDEX = 27;
 export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
 
 // Gloas Misc
+export const BUILDER_INDEX_FLAG = 2 ** 40;
+export const BUILDER_INDEX_SELF_BUILD = Infinity;
 export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
 export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;

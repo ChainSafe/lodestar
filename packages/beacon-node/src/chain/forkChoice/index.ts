@@ -148,8 +148,10 @@ export function initializeForkChoiceFromFinalizedState(
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-        parentBlockHash: isForkPostGloas ? toRootHex((state as CachedBeaconStateGloas).latestBlockHash) : null,
         payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
+        builderIndex: isForkPostGloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex : null,
+        blockHashHex: isForkPostGloas ? toRootHex((state as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash) : null,
+        parentBlockHash: isForkPostGloas ? toRootHex((state as CachedBeaconStateGloas).latestBlockHash) : null,
       },
       currentSlot
     ),
@@ -233,8 +235,10 @@ export function initializeForkChoiceFromUnfinalizedState(
       : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-    parentBlockHash: isForkPostGloas ? toRootHex((unfinalizedState as CachedBeaconStateGloas).latestBlockHash) : null,
     payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
+    builderIndex: isForkPostGloas ? (unfinalizedState as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex : null,
+    blockHashHex: isForkPostGloas ? toRootHex((unfinalizedState as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash) : null,
+    parentBlockHash: isForkPostGloas ? toRootHex((unfinalizedState as CachedBeaconStateGloas).latestBlockHash) : null,
   };
 
   const parentSlot = blockHeader.slot - 1;

@@ -15,6 +15,8 @@ import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
 
 export * from "./attesterSlashings.js";
 export * from "./blsToExecutionChange.js";
+export * from "./executionPayloadBid.js";
+export * from "./executionPayloadEnvelope.js";
 export * from "./indexedAttestation.js";
 export * from "./indexedPayloadAttestation.js";
 export * from "./proposer.js";

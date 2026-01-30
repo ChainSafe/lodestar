@@ -1,6 +1,7 @@
 import {BitVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
+  BUILDER_REGISTRY_LIMIT,
   HISTORICAL_ROOTS_LIMIT,
   MAX_PAYLOAD_ATTESTATIONS,
   NUMBER_OF_COLUMNS,
@@ -17,15 +18,42 @@ import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
 // biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want `Boolean` name to be imported
-const {Gwei, ExecutionAddress, ValidatorIndex, Epoch, BLSSignature, Bytes32, Root, Slot, Boolean, UintBn64, UintNum64} =
-  primitiveSsz;
+const {Boolean} = primitiveSsz;
+
+const {
+  Gwei,
+  ExecutionAddress,
+  ValidatorIndex,
+  Epoch,
+  BLSSignature,
+  Bytes32,
+  Root,
+  Slot,
+  UintBn64,
+  UintNum64,
+  BLSPubkey,
+  Uint8,
+  BuilderIndex,
+  EpochInf,
+} = primitiveSsz;
+
+export const Builder = new ContainerType(
+  {
+    pubkey: BLSPubkey,
+    version: Uint8,
+    executionAddress: ExecutionAddress,
+    balance: UintNum64,
+    depositEpoch: EpochInf,
+    withdrawableEpoch: EpochInf,
+  },
+  {typeName: "Builder", jsonCase: "eth2"}
+);
 
 export const BuilderPendingWithdrawal = new ContainerType(
   {
     feeRecipient: ExecutionAddress,
     amount: UintNum64,
-    builderIndex: ValidatorIndex,
-    withdrawableEpoch: Epoch,
+    builderIndex: BuilderIndex,
   },
   {typeName: "BuilderPendingWithdrawal", jsonCase: "eth2"}
 );
@@ -75,6 +103,24 @@ export const IndexedPayloadAttestation = new ContainerType(
   {typeName: "IndexedPayloadAttestation", jsonCase: "eth2"}
 );
 
+export const ProposerPreferences = new ContainerType(
+  {
+    proposalSlot: Slot,
+    validatorIndex: ValidatorIndex,
+    feeRecipient: ExecutionAddress,
+    gasLimit: UintNum64,
+  },
+  {typeName: "ProposerPreferences", jsonCase: "eth2"}
+);
+
+export const SignedProposerPreferences = new ContainerType(
+  {
+    message: ProposerPreferences,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedProposerPreferences", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadBid = new ContainerType(
   {
     parentBlockHash: Bytes32,
@@ -83,7 +129,7 @@ export const ExecutionPayloadBid = new ContainerType(
     prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
     gasLimit: UintBn64,
-    builderIndex: ValidatorIndex,
+    builderIndex: BuilderIndex,
     slot: Slot,
     value: UintNum64,
     executionPayment: UintNum64,
@@ -104,7 +150,7 @@ export const ExecutionPayloadEnvelope = new ContainerType(
   {
     payload: electraSsz.ExecutionPayload,
     executionRequests: electraSsz.ExecutionRequests,
-    builderIndex: ValidatorIndex,
+    builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
     slot: Slot,
     blobKzgCommitments: denebSsz.BlobKzgCommitments,
@@ -211,11 +257,13 @@ export const BeaconState = new ContainerType(
     pendingPartialWithdrawals: electraSsz.BeaconState.fields.pendingPartialWithdrawals,
     pendingConsolidations: electraSsz.BeaconState.fields.pendingConsolidations,
     proposerLookahead: fuluSsz.BeaconState.fields.proposerLookahead,
+    builders: new ListCompositeType(Builder, BUILDER_REGISTRY_LIMIT), // New in GLOAS:EIP7732
+    nextWithdrawalBuilderIndex: BuilderIndex, // New in GLOAS:EIP7732
     executionPayloadAvailability: new BitVectorType(SLOTS_PER_HISTORICAL_ROOT), // New in GLOAS:EIP7732
     builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH), // New in GLOAS:EIP7732
     builderPendingWithdrawals: new ListCompositeType(BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT), // New in GLOAS:EIP7732
     latestBlockHash: Bytes32, // New in GLOAS:EIP7732
-    latestWithdrawalsRoot: Root, // New in GLOAS:EIP7732
+    payloadExpectedWithdrawals: capellaSsz.Withdrawals, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

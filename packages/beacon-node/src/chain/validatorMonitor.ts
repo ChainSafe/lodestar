@@ -24,7 +24,7 @@ import {
   altair,
   deneb,
 } from "@lodestar/types";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
+import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {RegistryMetricCreator} from "../metrics/index.js";
 
@@ -39,7 +39,8 @@ const MAX_CACHED_DISTINCT_TARGETS = 4;
 const LATE_ATTESTATION_SUBMISSION_BPS = 5000;
 const LATE_BLOCK_SUBMISSION_BPS = 2500;
 
-const RETAIN_REGISTERED_VALIDATORS_MS = 1 * 3600 * 1000; // 1 hour
+/** Number of epochs to retain registered validators after their last registration */
+const RETAIN_REGISTERED_VALIDATORS_EPOCHS = 2;
 
 type Seconds = number;
 export enum OpSource {
@@ -97,6 +98,8 @@ export type ValidatorMonitor = {
   ): void;
   onceEveryEndOfEpoch(state: CachedBeaconStateAllForks): void;
   scrapeMetrics(slotClock: Slot): void;
+  /** Returns the list of validator indices currently being monitored */
+  getMonitoredValidatorIndices(): ValidatorIndex[];
 };
 
 export type ValidatorMonitorOpts = {
@@ -284,6 +287,9 @@ export function createValidatorMonitor(
     logger[logLevel](message, context);
   };
 
+  // Calculate retain time dynamically based on slot duration (2 epochs)
+  const retainRegisteredValidatorsMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS * RETAIN_REGISTERED_VALIDATORS_EPOCHS;
+
   /** The validators that require additional monitoring. */
   const validators = new MapDef<ValidatorIndex, MonitoredValidator>(() => ({
     summaries: new Map<Epoch, EpochSummary>(),
@@ -306,11 +312,19 @@ export function createValidatorMonitor(
 
   let lastRegisteredStatusEpoch = -1;
 
+  // Track validator additions/removals per epoch for logging
+  const addedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
+  const removedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
+
   const validatorMonitorMetrics = metricsRegister ? createValidatorMonitorMetrics(metricsRegister) : null;
 
   const validatorMonitor: ValidatorMonitor = {
     registerLocalValidator(index) {
+      const isNewValidator = !validators.has(index);
       validators.getOrDefault(index).lastRegisteredTimeMs = Date.now();
+      if (isNewValidator) {
+        addedValidatorsInEpoch.add(index);
+      }
     },
 
     registerLocalValidatorInSyncCommittee(index, untilEpoch) {
@@ -673,10 +687,28 @@ export function createValidatorMonitor(
 
       // Prune validators not seen in a while
       for (const [index, validator] of validators.entries()) {
-        if (Date.now() - validator.lastRegisteredTimeMs > RETAIN_REGISTERED_VALIDATORS_MS) {
+        if (Date.now() - validator.lastRegisteredTimeMs > retainRegisteredValidatorsMs) {
           validators.delete(index);
+          removedValidatorsInEpoch.add(index);
         }
       }
+
+      // Log validator monitor status every epoch
+      const allIndices = Array.from(validators.keys()).sort((a, b) => a - b);
+      const addedIndices = Array.from(addedValidatorsInEpoch).sort((a, b) => a - b);
+      const removedIndices = Array.from(removedValidatorsInEpoch).sort((a, b) => a - b);
+
+      log("Validator monitor status", {
+        epoch: computeEpochAtSlot(headState.slot),
+        added: addedIndices.length > 0 ? prettyPrintIndices(addedIndices) : "none",
+        removed: removedIndices.length > 0 ? prettyPrintIndices(removedIndices) : "none",
+        total: validators.size,
+        indices: prettyPrintIndices(allIndices),
+      });
+
+      // Clear tracking sets for next epoch
+      addedValidatorsInEpoch.clear();
+      removedValidatorsInEpoch.clear();
 
       // Compute summaries of previous epoch attestation performance
       const prevEpoch = computeEpochAtSlot(headState.slot) - 1;
@@ -735,6 +767,13 @@ export function createValidatorMonitor(
      */
     scrapeMetrics(slotClock) {
       validatorMonitorMetrics?.validatorsConnected.set(validators.size);
+
+      // Update static metric with connected validator indices
+      if (validatorMonitorMetrics?.validatorsConnectedIndices) {
+        validatorMonitorMetrics.validatorsConnectedIndices.reset();
+        const allIndices = Array.from(validators.keys()).sort((a, b) => a - b);
+        validatorMonitorMetrics.validatorsConnectedIndices.set({indices: prettyPrintIndices(allIndices)}, 1);
+      }
 
       const epoch = computeEpochAtSlot(slotClock);
       const slotInEpoch = slotClock % SLOTS_PER_EPOCH;
@@ -814,6 +853,10 @@ export function createValidatorMonitor(
       validatorMonitorMetrics?.validatorsInSyncCommittee.set(validatorsInSyncCommittee);
       validatorMonitorMetrics?.prevEpochSyncCommitteeHits.set(prevEpochSyncCommitteeHits);
       validatorMonitorMetrics?.prevEpochSyncCommitteeMisses.set(prevEpochSyncCommitteeMisses);
+    },
+
+    getMonitoredValidatorIndices() {
+      return Array.from(validators.keys()).sort((a, b) => a - b);
     },
   };
 
@@ -1096,6 +1139,12 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
     validatorsConnected: register.gauge({
       name: "validator_monitor_validators",
       help: "Count of validators that are specifically monitored by this beacon node",
+    }),
+
+    validatorsConnectedIndices: register.gauge<{indices: string}>({
+      name: "validator_monitor_indices",
+      help: "Static metric with connected validator indices as label, value is always 1",
+      labelNames: ["indices"],
     }),
 
     validatorsInSyncCommittee: register.gauge({

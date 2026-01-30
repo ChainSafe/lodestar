@@ -30,7 +30,7 @@ import {
   isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromAsync, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
@@ -285,7 +285,7 @@ export function getBeaconBlockApi({
       () =>
         // there is no rush to persist block since we published it to gossip anyway
         chain
-          .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
+          .processBlock(blockForImport, opts)
           .catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               chain.emitter.emit(ChainEvent.unknownParent, {
@@ -626,6 +626,7 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
 
       let data: deneb.BlobSidecars;
 
@@ -642,10 +643,7 @@ export function getBeaconBlockApi({
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
-          let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
-          if (dataColumnSidecars.length === 0) {
-            dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
-          }
+          const dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, blockRootHex);
 
           if (dataColumnSidecars.length === 0) {
             throw new ApiError(
@@ -682,10 +680,7 @@ export function getBeaconBlockApi({
           data = [];
         }
       } else if (isForkPostDeneb(fork)) {
-        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
-        if (!blobSidecars) {
-          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
-        }
+        const blobSidecars = await chain.getBlobSidecars(block.message.slot, blockRootHex);
 
         if (!blobSidecars) {
           throw new ApiError(
@@ -715,6 +710,7 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
 
       let blobs: deneb.Blobs;
 
@@ -731,10 +727,7 @@ export function getBeaconBlockApi({
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
-          let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
-          if (dataColumnSidecars.length === 0) {
-            dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
-          }
+          const dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, blockRootHex);
 
           if (dataColumnSidecars.length === 0) {
             throw new ApiError(
@@ -766,10 +759,7 @@ export function getBeaconBlockApi({
           blobs = [];
         }
       } else if (isForkPostDeneb(fork)) {
-        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
-        if (!blobSidecars) {
-          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
-        }
+        const blobSidecars = await chain.getBlobSidecars(block.message.slot, blockRootHex);
 
         if (!blobSidecars) {
           throw new ApiError(
