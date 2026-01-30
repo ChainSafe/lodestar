@@ -798,8 +798,6 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       sampledColumns.length >= NUMBER_OF_COLUMNS / 2;
 
     const hasComputedAllData =
-      // already hasAllData
-      this.state.hasAllData ||
       // has all sampled columns
       sampledColumns.length === this.sampledColumns.length;
 
