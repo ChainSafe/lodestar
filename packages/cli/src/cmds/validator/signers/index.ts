@@ -154,23 +154,54 @@ export function getSignerPubkeyHex(signer: Signer): string {
 }
 
 async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<Signer[]> {
-  const externalSignerUrl = args["externalSigner.url"];
-  if (!externalSignerUrl) {
+  const externalSignerUrls = args["externalSigner.url"] ?? [];
+  
+  if (externalSignerUrls.length === 0) {
     throw new YargsError(
       `Must set externalSigner.url with ${
         args["externalSigner.pubkeys"] ? "externalSigner.pubkeys" : "externalSigner.fetch"
       }`
     );
   }
-  if (!isValidHttpUrl(externalSignerUrl)) {
-    throw new YargsError(`Invalid external signer URL: ${externalSignerUrl}`);
+
+  // Validate all URLs
+  for (const url of externalSignerUrls) {
+    if (!isValidHttpUrl(url)) {
+      throw new YargsError(`Invalid external signer URL: ${url}`);
+    }
   }
+
   if (args["externalSigner.pubkeys"] && args["externalSigner.pubkeys"].length === 0) {
     throw new YargsError("externalSigner.pubkeys is set to an empty list");
   }
 
-  const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl));
-  assertValidPubkeysHex(pubkeys);
+  const signers: Signer[] = [];
 
-  return pubkeys.map((pubkey) => ({type: SignerType.Remote, pubkey, url: externalSignerUrl}));
+  if (args["externalSigner.pubkeys"]) {
+    // If pubkeys are explicitly provided, assign them to the first URL
+    // This maintains backward compatibility - users can still specify pubkeys with multiple URLs
+    // but all pubkeys will be associated with the first URL
+    const pubkeys = args["externalSigner.pubkeys"];
+    assertValidPubkeysHex(pubkeys);
+    for (const pubkey of pubkeys) {
+      signers.push({type: SignerType.Remote, pubkey, url: externalSignerUrls[0]});
+    }
+  } else {
+    // Fetch pubkeys from all external signer URLs
+    const pubkeyPromises = externalSignerUrls.map(async (url) => {
+      const pubkeys = await externalSignerGetKeys(url);
+      return {url, pubkeys};
+    });
+    
+    const results = await Promise.all(pubkeyPromises);
+    
+    for (const {url, pubkeys} of results) {
+      assertValidPubkeysHex(pubkeys);
+      for (const pubkey of pubkeys) {
+        signers.push({type: SignerType.Remote, pubkey, url});
+      }
+    }
+  }
+
+  return signers;
 }
