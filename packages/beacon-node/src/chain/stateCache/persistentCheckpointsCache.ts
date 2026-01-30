@@ -31,7 +31,7 @@ type PersistentCheckpointStateCacheModules = {
   signal?: AbortSignal;
   datastore: CPStateDatastore;
   blockStateCache: BlockStateCache;
-  bufferPool?: BufferPool | null;
+  bufferPool?: BufferPool;
 };
 
 /** checkpoint serialized as a string */
@@ -119,7 +119,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly maxEpochsOnDisk: number;
   private readonly datastore: CPStateDatastore;
   private readonly blockStateCache: BlockStateCache;
-  private readonly bufferPool?: BufferPool | null;
+  private readonly bufferPool?: BufferPool;
 
   constructor(
     {
