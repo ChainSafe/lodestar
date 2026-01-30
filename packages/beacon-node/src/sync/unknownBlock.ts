@@ -423,8 +423,6 @@ export class BlockInputSync {
         // see https://github.com/ChainSafe/lodestar/issues/5650
         ignoreIfFinalized: true,
         blsVerifyOnMainThread: true,
-        // block is validated with correct root, we want to process it as soon as possible
-        eagerPersistBlock: true,
       })
     );
 
@@ -434,7 +432,6 @@ export class BlockInputSync {
     if (!res.err) {
       // no need to update status to "processed", delete anyway
       this.pendingBlocks.delete(pendingBlock.blockInput.blockRootHex);
-      this.chain.seenBlockInputCache.prune(pendingBlock.blockInput.blockRootHex);
 
       // Send child blocks to the processor
       for (const descendantBlock of getDescendantBlocks(pendingBlock.blockInput.blockRootHex, this.pendingBlocks)) {

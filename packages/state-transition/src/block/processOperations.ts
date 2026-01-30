@@ -83,7 +83,7 @@ export function processOperations(
     }
 
     for (const elConsolidationRequest of bodyElectra.executionRequests.consolidations) {
-      processConsolidationRequest(fork, stateElectra, elConsolidationRequest);
+      processConsolidationRequest(stateElectra, elConsolidationRequest);
     }
   }
 

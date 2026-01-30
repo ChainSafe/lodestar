@@ -2,16 +2,13 @@ import {BLOB_SIDECAR_FIXED_SIZE} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
 import {BlobSidecarsByRootRequest} from "../../../util/types.js";
 
 export async function* onBlobSidecarsByRoot(
   requestBody: BlobSidecarsByRootRequest,
-  chain: IBeaconChain,
-  db: IBeaconDb
+  chain: IBeaconChain
 ): AsyncIterable<ResponseOutgoing> {
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
@@ -34,14 +31,13 @@ export async function* onBlobSidecarsByRoot(
 
     // Check if we need to load sidecars for a new block root
     if (lastFetchedSideCars === null || lastFetchedSideCars.blockRoot !== blockRootHex) {
-      const blobSideCarsBytesWrapped = await db.blobSidecars.getBinary(fromHex(block.blockRoot));
-      if (!blobSideCarsBytesWrapped) {
+      const blobSidecarsBytes = await chain.getSerializedBlobSidecars(block.slot, blockRootHex);
+      if (!blobSidecarsBytes) {
         // Handle the same to onBeaconBlocksByRange
         throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
       }
-      const blobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
 
-      lastFetchedSideCars = {blockRoot: blockRootHex, bytes: blobSideCarsBytes};
+      lastFetchedSideCars = {blockRoot: blockRootHex, bytes: blobSidecarsBytes};
     }
 
     const blobSidecarBytes = lastFetchedSideCars.bytes.slice(

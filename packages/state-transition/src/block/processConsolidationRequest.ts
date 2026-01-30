@@ -1,4 +1,4 @@
-import {FAR_FUTURE_EPOCH, ForkSeq, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
@@ -13,7 +13,6 @@ import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidat
 
 // TODO Electra: Clean up necessary as there is a lot of overlap with isValidSwitchToCompoundRequest
 export function processConsolidationRequest(
-  fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   consolidationRequest: electra.ConsolidationRequest
 ): void {
@@ -83,7 +82,7 @@ export function processConsolidationRequest(
   }
 
   // Verify the source has no pending withdrawals in the queue
-  if (getPendingBalanceToWithdraw(fork, state, sourceIndex) > 0) {
+  if (getPendingBalanceToWithdraw(state, sourceIndex) > 0) {
     return;
   }
 

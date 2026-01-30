@@ -5,7 +5,7 @@ import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
+import {CheckpointHex} from "../stateCache/index.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {
@@ -220,24 +220,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.push({key: "getPreState", args: [block, opts, rCaller]});
   }
 
-  async getCheckpointState(
-    cp: phase0.Checkpoint,
-    opts: StateRegenerationOpts,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks> {
-    this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
-
-    // First attempt to fetch the state from cache before queueing
-    const checkpointState = this.checkpointStateCache.get(toCheckpointHex(cp));
-    if (checkpointState) {
-      return checkpointState;
-    }
-
-    // The state is not immediately available in the caches, enqueue the job
-    this.metrics?.regenFnQueuedTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
-    return this.jobQueue.push({key: "getCheckpointState", args: [cp, opts, rCaller]});
-  }
-
   /**
    * Get state of provided `blockRoot` and dial forward to `slot`
    * Use this api with care because we don't want the queue to be busy
@@ -245,7 +227,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * @returns
    */
   async getBlockSlotState(
-    blockRoot: RootHex,
+    block: ProtoBlock,
     slot: Slot,
     opts: StateRegenerationOpts,
     rCaller: RegenCaller
@@ -253,7 +235,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getBlockSlotState});
 
     // The state is not immediately available in the caches, enqueue the job
-    return this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot, opts, rCaller]});
+    return this.jobQueue.push({key: "getBlockSlotState", args: [block, slot, opts, rCaller]});
   }
 
   async getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
@@ -281,8 +263,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       switch (regenRequest.key) {
         case "getPreState":
           return await this.regen.getPreState(...regenRequest.args);
-        case "getCheckpointState":
-          return await this.regen.getCheckpointState(...regenRequest.args);
         case "getBlockSlotState":
           return await this.regen.getBlockSlotState(...regenRequest.args);
         case "getState":

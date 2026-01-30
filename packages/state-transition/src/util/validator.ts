@@ -125,7 +125,6 @@ export function isPartiallyWithdrawableValidator(fork: ForkSeq, validator: phase
 }
 
 export function getPendingBalanceToWithdraw(
-  fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   validatorIndex: ValidatorIndex
 ): number {
@@ -133,20 +132,6 @@ export function getPendingBalanceToWithdraw(
   for (const item of state.pendingPartialWithdrawals.getAllReadonly()) {
     if (item.validatorIndex === validatorIndex) {
       total += Number(item.amount);
-    }
-  }
-
-  if (fork >= ForkSeq.gloas) {
-    const stateGloas = state as CachedBeaconStateGloas;
-    for (const item of stateGloas.builderPendingWithdrawals.getAllReadonly()) {
-      if (item.builderIndex === validatorIndex) {
-        total += item.amount;
-      }
-    }
-    for (const item of stateGloas.builderPendingPayments.getAllReadonly()) {
-      if (item.withdrawal.builderIndex === validatorIndex) {
-        total += item.withdrawal.amount;
-      }
     }
   }
 

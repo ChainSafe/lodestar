@@ -1,11 +1,11 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, G2_POINT_AT_INFINITY, computeTimeAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {BeaconChain} from "../../../../../src/chain/chain.js";
@@ -93,9 +93,9 @@ describe("api/validator - produceBlockV3", () => {
       vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(currentSlot);
       vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
       modules.chain.recomputeForkChoiceHead.mockReturnValue({
-        blockRoot: toHexString(fullBlock.parentRoot),
+        blockRoot: toRootHex(fullBlock.parentRoot),
       } as ProtoBlock);
-      modules.chain.getProposerHead.mockReturnValue({blockRoot: toHexString(fullBlock.parentRoot)} as ProtoBlock);
+      modules.chain.getProposerHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
       modules.chain.forkChoice.getBlock.mockReturnValue(zeroProtoBlock);
       modules.chain.produceCommonBlockBody.mockResolvedValue({
         attestations: fullBlock.body.attestations,
@@ -179,16 +179,13 @@ describe("api/validator - produceBlockV3", () => {
     const slot = 100000;
     const randaoReveal = fullBlock.body.randaoReveal;
     const parentBlockRoot = fullBlock.parentRoot;
+    const parentBlock = generateProtoBlock({blockRoot: toRootHex(parentBlockRoot), slot: currentSlot - 1});
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
-    modules.chain.getProposerHead.mockReturnValue(
-      generateProtoBlock({blockRoot: toHexString(parentBlockRoot), slot: currentSlot - 1})
-    );
-    modules.chain.recomputeForkChoiceHead.mockReturnValue(
-      generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
-    );
-    modules.chain.forkChoice.getBlock.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
+    modules.chain.getProposerHead.mockReturnValue(parentBlock);
+    modules.chain.recomputeForkChoiceHead.mockReturnValue(parentBlock);
+    modules.chain.forkChoice.getBlock.mockReturnValue(parentBlock);
     modules.chain.produceBlock.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue,
@@ -213,7 +210,7 @@ describe("api/validator - produceBlockV3", () => {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
       slot,
-      parentBlockRoot,
+      parentBlock,
       feeRecipient,
       commonBlockBodyPromise: expect.any(Promise),
     });
@@ -225,7 +222,7 @@ describe("api/validator - produceBlockV3", () => {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
       slot,
-      parentBlockRoot,
+      parentBlock,
       feeRecipient: undefined,
       commonBlockBodyPromise: expect.any(Promise),
     });
@@ -279,7 +276,7 @@ describe("api/validator - produceBlockV3", () => {
       graffiti: toGraffitiBytes(graffiti),
       slot,
       feeRecipient,
-      parentBlockRoot: fromHexString(ZERO_HASH_HEX),
+      parentBlock: generateProtoBlock({blockRoot: ZERO_HASH_HEX}),
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),
       commonBlockBodyPromise: createCommonBlockBodyPromise(),
@@ -304,7 +301,7 @@ describe("api/validator - produceBlockV3", () => {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
       slot,
-      parentBlockRoot: fromHexString(ZERO_HASH_HEX),
+      parentBlock: generateProtoBlock({blockRoot: ZERO_HASH_HEX}),
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),
       commonBlockBodyPromise: createCommonBlockBodyPromise(),

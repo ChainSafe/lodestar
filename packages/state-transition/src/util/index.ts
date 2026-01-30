@@ -15,6 +15,7 @@ export * from "./epochShuffling.js";
 export * from "./execution.js";
 export * from "./finality.js";
 export * from "./genesis.js";
+export * from "./gloas.js";
 export * from "./interop.js";
 export * from "./loadState/index.js";
 export * from "./rootCache.js";

@@ -98,35 +98,29 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
   }
 }
 
-/**
- * Prunes eagerly persisted block inputs only if not known to the fork-choice
- */
-export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, blockInputs: IBlockInput[]): Promise<void> {
-  const blockToRemove = [];
-  const blobsToRemove = [];
-  const dataColumnsToRemove = [];
-
-  for (const blockInput of blockInputs) {
-    const block = blockInput.getBlock();
-    const slot = block.message.slot;
-    const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
-    const blockRootHex = toRootHex(blockRoot);
-    if (!this.forkChoice.hasBlockHex(blockRootHex)) {
-      blockToRemove.push(block);
-
-      if (isBlockInputColumns(blockInput) && blockInput.getCustodyColumns().length > 0) {
-        dataColumnsToRemove.push(blockRoot);
-      } else if (isBlockInputBlobs(blockInput)) {
-        const blobSidecars = blockInput.getBlobs();
-        blobsToRemove.push({blockRoot, slot, blobSidecars});
+export async function persistBlockInputs(this: BeaconChain, blockInputs: IBlockInput[]): Promise<void> {
+  await writeBlockInputToDb
+    .call(this, blockInputs)
+    .catch((e) => {
+      this.logger.debug(
+        "Error persisting block input in hot db",
+        {
+          count: blockInputs.length,
+          slot: blockInputs[0].slot,
+          root: blockInputs[0].blockRootHex,
+        },
+        e
+      );
+    })
+    .finally(() => {
+      for (const blockInput of blockInputs) {
+        this.seenBlockInputCache.prune(blockInput.blockRootHex);
       }
-    }
-  }
-
-  await Promise.all([
-    // TODO: Batch DB operations not with Promise.all but with level db ops
-    this.db.block.batchRemove(blockToRemove),
-    this.db.blobSidecars.batchRemove(blobsToRemove),
-    this.db.dataColumnSidecar.deleteMany(dataColumnsToRemove),
-  ]);
+      if (blockInputs.length === 1) {
+        this.logger.debug("Pruned block input", {
+          slot: blockInputs[0].slot,
+          root: blockInputs[0].blockRootHex,
+        });
+      }
+    });
 }

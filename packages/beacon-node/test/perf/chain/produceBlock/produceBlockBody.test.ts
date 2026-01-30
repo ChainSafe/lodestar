@@ -1,6 +1,5 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
-import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
@@ -80,14 +79,14 @@ describe("produceBlockBody", () => {
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
-        parentBlockRoot: fromHexString(head.blockRoot),
+        parentBlock: head,
       });
 
       await produceBlockBody.call(chain, BlockType.Full, state, {
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
-        parentBlockRoot: fromHexString(head.blockRoot),
+        parentBlock: head,
         proposerIndex,
         proposerPubKey,
         commonBlockBodyPromise,

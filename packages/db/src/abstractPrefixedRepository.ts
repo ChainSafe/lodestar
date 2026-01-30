@@ -172,6 +172,34 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     await this.db.batch(batchWithKeys, this.dbReqOpts);
   }
 
+  async values(prefix: P | P[]): Promise<T[]> {
+    const result: T[] = [];
+    for (const p of Array.isArray(prefix) ? prefix : [prefix]) {
+      for await (const vb of this.db.valuesStream({
+        gte: this.wrapKey(this.getMinKeyRaw(p)),
+        lte: this.wrapKey(this.getMaxKeyRaw(p)),
+        bucketId: this.bucketId,
+      })) {
+        result.push(this.decodeValue(vb));
+      }
+    }
+    return result;
+  }
+
+  async valuesBinary(prefix: P | P[]): Promise<Uint8Array[]> {
+    const result: Uint8Array[] = [];
+    for (const p of Array.isArray(prefix) ? prefix : [prefix]) {
+      for await (const vb of this.db.valuesStream({
+        gte: this.wrapKey(this.getMinKeyRaw(p)),
+        lte: this.wrapKey(this.getMaxKeyRaw(p)),
+        bucketId: this.bucketId,
+      })) {
+        result.push(vb);
+      }
+    }
+    return result;
+  }
+
   async *valuesStream(prefix: P | P[]): AsyncIterable<T> {
     for (const p of Array.isArray(prefix) ? prefix : [prefix]) {
       for await (const vb of this.db.valuesStream({

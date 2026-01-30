@@ -4,7 +4,6 @@ import {GENESIS_SLOT, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.ts";
@@ -22,7 +21,6 @@ export async function* onBeaconBlocksByRange(
   const endSlot = startSlot + count;
 
   const finalized = db.blockArchive;
-  const unfinalized = db.block;
   // in the case of initializing from a non-finalized state, we don't have the finalized block so this api does not work
   // chain.forkChoice.getFinalizeBlock().slot
   const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
@@ -65,7 +63,7 @@ export async function* onBeaconBlocksByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blockBytes = await unfinalized.getBinary(fromHex(block.blockRoot));
+        const blockBytes = await chain.getSerializedBlockByRoot(block.blockRoot);
         if (!blockBytes) {
           throw new ResponseError(
             RespStatus.SERVER_ERROR,
@@ -74,7 +72,7 @@ export async function* onBeaconBlocksByRange(
         }
 
         yield {
-          data: blockBytes,
+          data: blockBytes.block,
           boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
         };
       }
