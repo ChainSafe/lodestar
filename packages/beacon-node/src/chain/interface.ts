@@ -23,6 +23,7 @@ import {
   altair,
   capella,
   phase0,
+  rewards,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -55,9 +56,6 @@ import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
-import {AttestationsRewards} from "./rewards/attestationsRewards.js";
-import {BlockRewards} from "./rewards/blockRewards.js";
-import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {
   SeenAggregators,
   SeenAttesters,
@@ -185,12 +183,12 @@ export interface IBeaconChain {
   getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: CachedBeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Returns a local state by state root */
   getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Return serialized bytes of a persisted checkpoint state */
   getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
   /** Returns a cached state by checkpoint */
@@ -270,15 +268,15 @@ export interface IBeaconChain {
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
 
-  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards>;
+  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
   getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
+  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
   getSyncCommitteeRewards(
     blockRef: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<SyncCommitteeRewards>;
+  ): Promise<rewards.SyncCommitteeRewards>;
 }
 
 export type SSZObjectType =

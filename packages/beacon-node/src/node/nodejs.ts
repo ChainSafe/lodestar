@@ -6,9 +6,10 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {CachedBeaconStateAllForks, Index2PubkeyCache} from "@lodestar/state-transition";
+import {ZERO_HASH_HEX} from "@lodestar/params";
+import {CachedBeaconStateAllForks, Index2PubkeyCache, isExecutionCachedStateType} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
-import {sleep} from "@lodestar/utils";
+import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
@@ -221,6 +222,20 @@ export class BeaconNode {
         )
       : null;
 
+    let executionEngineOpts = opts.executionEngine;
+    if (opts.executionEngine.mode === "mock") {
+      const eth1BlockHash = isExecutionCachedStateType(anchorState)
+        ? toRootHex(anchorState.latestExecutionPayloadHeader.blockHash)
+        : undefined;
+      executionEngineOpts = {
+        ...opts.executionEngine,
+        genesisBlockHash: ZERO_HASH_HEX,
+        eth1BlockHash,
+        genesisTime: anchorState.genesisTime,
+        config,
+      };
+    }
+
     const chain = new BeaconChain(opts.chain, {
       privateKey,
       config,
@@ -236,7 +251,7 @@ export class BeaconNode {
       validatorMonitor,
       anchorState,
       isAnchorStateFinalized,
-      executionEngine: initializeExecutionEngine(opts.executionEngine, {
+      executionEngine: initializeExecutionEngine(executionEngineOpts, {
         metrics,
         signal,
         logger: logger.child({module: LoggerModule.execution}),

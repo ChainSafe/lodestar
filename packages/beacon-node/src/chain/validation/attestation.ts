@@ -13,9 +13,9 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {
-  EpochCacheError,
-  EpochCacheErrorCode,
   EpochShuffling,
+  ShufflingError,
+  ShufflingErrorCode,
   SingleSignatureSet,
   computeEpochAtSlot,
   computeSigningRoot,
@@ -225,7 +225,7 @@ export async function validateApiAttestation(
       code: AttestationErrorCode.INVALID_SIGNATURE,
     });
   } catch (err) {
-    if (err instanceof EpochCacheError && err.type.code === EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
+    if (err instanceof ShufflingError && err.type.code === ShufflingErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.BAD_TARGET_EPOCH,
       });

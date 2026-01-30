@@ -138,8 +138,9 @@ export async function validateGossipBlobSidecar(
   const signature = blobSidecar.signedBlockHeader.signature;
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blobSlot, blockHex, signature)) {
     const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+      chain.config,
       chain.index2pubkey,
-      blockState,
+      blockState.slot,
       blobSidecar.signedBlockHeader
     );
     // Don't batch so verification is not delayed
@@ -243,10 +244,9 @@ export async function validateBlockBlobSidecars(
     const blockRootHex = toRootHex(blockRoot);
     const signature = firstSidecarSignedBlockHeader.signature;
     if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRootHex, signature)) {
-      const headState = await chain.getHeadState();
       const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
+        chain.config,
         chain.index2pubkey,
-        headState,
         firstSidecarSignedBlockHeader
       );
 

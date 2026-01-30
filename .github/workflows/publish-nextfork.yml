@@ -25,12 +25,14 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - name: Install pnpm before setup node
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: "https://registry.npmjs.org"
           check-latest: true
-          cache: yarn
+          cache: pnpm
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
@@ -41,12 +43,12 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/pnpm-lock.yaml', '**/package.json') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
+        run: pnpm install --frozen-lockfile && pnpm build
       - name: Build
-        run: yarn build
+        run: pnpm build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
       - name: Get version
@@ -64,7 +66,7 @@ jobs:
         # This "temp" commit doesn't change the actually release commit which is captured above.
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
-          yarn lerna version ${{ steps.version.outputs.version }} \
+          pnpm lerna version ${{ steps.version.outputs.version }} \
           --force-publish \
           --exact \
           --yes \
@@ -99,7 +101,7 @@ jobs:
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          yarn lerna publish from-package \
+          pnpm lerna publish from-package \
           --yes \
           --no-verify-access \
           --dist-tag next \

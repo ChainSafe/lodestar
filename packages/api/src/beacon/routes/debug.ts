@@ -1,8 +1,7 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconState, StringType, fulu, ssz} from "@lodestar/types";
+import {ArrayOf, BeaconState, StringType, fulu, ssz} from "@lodestar/types";
 import {
-  ArrayOf,
   EmptyArgs,
   EmptyMeta,
   EmptyMetaCodec,

@@ -2,19 +2,13 @@ import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  DataAvailabilityStatus,
-  ExecutionPayloadStatus,
-  stateTransition,
-} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {BlockAltairOpts, getBlockAltair} from "../../../../../state-transition/test/perf/block/util.js";
-import {
-  cachedStateAltairPopulateCaches,
-  generatePerfTestCachedStateAltair,
-} from "../../../../../state-transition/test/perf/util.js";
-import {computeBlockRewards} from "../../../../src/chain/rewards/blockRewards.js";
+import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/block/externalData.js";
+import {computeBlockRewards} from "../../../src/rewards/blockRewards.js";
+import {stateTransition} from "../../../src/stateTransition.js";
+import {CachedBeaconStateAllForks} from "../../../src/types.js";
+import {BlockAltairOpts, getBlockAltair} from "../../perf/block/util.js";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../../perf/util.js";
 
 describe("chain / rewards / blockRewards", () => {
   const config = createBeaconConfig({...chainConfigDef, ALTAIR_FORK_EPOCH: 0}, Buffer.alloc(32, 0xaa));
@@ -157,13 +151,13 @@ describe("chain / rewards / blockRewards", () => {
 
     // Set postState's reward cache
     const rewardCache = postState.proposerRewards; // Grab original reward cache before overwritten
-    postState.proposerRewards = {attestations: 1000, syncAggregate: 1001, slashing: 1002};
+    const proposerRewards = {attestations: 1000, syncAggregate: 1001, slashing: 1002};
 
     const calculatedBlockReward = await computeBlockRewards(
       config,
       block.message,
       preState as CachedBeaconStateAllForks,
-      postState
+      proposerRewards
     );
     const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} =
       calculatedBlockReward;

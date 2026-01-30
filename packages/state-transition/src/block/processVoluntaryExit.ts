@@ -1,8 +1,16 @@
+import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
-import {phase0} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
-import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
+import {
+  convertValidatorIndexToBuilderIndex,
+  getPendingBalanceToWithdrawForBuilder,
+  initiateBuilderExit,
+  isActiveBuilder,
+  isBuilderIndex,
+} from "../util/gloas.js";
+import {computeSigningRoot, getCurrentEpoch, getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
 import {initiateValidatorExit} from "./index.js";
 
 export enum VoluntaryExitValidity {
@@ -16,7 +24,7 @@ export enum VoluntaryExitValidity {
 }
 
 /**
- * Process a VoluntaryExit operation. Initiates the exit of a validator.
+ * Process a VoluntaryExit operation. Initiates the exit of a validator or builder.
  *
  * PERF: Work depends on number of VoluntaryExit per block. On regular networks the average is 0 / block.
  */
@@ -26,6 +34,53 @@ export function processVoluntaryExit(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
+  const voluntaryExit = signedVoluntaryExit.message;
+  const currentEpoch = getCurrentEpoch(state);
+
+  // Exits must specify an epoch when they become valid; they are not valid before then
+  if (currentEpoch < voluntaryExit.epoch) {
+    throw Error(`Voluntary exit epoch ${voluntaryExit.epoch} is after current epoch ${currentEpoch}`);
+  }
+
+  // Check if this is a builder exit
+  if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
+    const stateGloas = state as CachedBeaconStateGloas;
+    const builderIndex = convertValidatorIndexToBuilderIndex(voluntaryExit.validatorIndex);
+    const builder = stateGloas.builders.getReadonly(builderIndex);
+
+    // Verify the builder is active
+    if (!isActiveBuilder(stateGloas, builderIndex)) {
+      throw Error(`Builder ${builderIndex} is not active`);
+    }
+
+    // Only exit builder if it has no pending withdrawals in the queue
+    if (getPendingBalanceToWithdrawForBuilder(stateGloas, builderIndex) !== 0) {
+      throw Error(`Builder ${builderIndex} has pending withdrawals`);
+    }
+
+    // Verify signature
+    if (verifySignature) {
+      const domain = state.config.getDomainForVoluntaryExit(state.slot);
+      const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
+
+      try {
+        const publicKey = PublicKey.fromBytes(builder.pubkey);
+        const signature = Signature.fromBytes(signedVoluntaryExit.signature, true);
+
+        if (!verify(signingRoot, publicKey, signature)) {
+          throw Error("BLS verify failed");
+        }
+      } catch (e) {
+        throw Error(`Builder ${builderIndex} invalid exit signature reason=${(e as Error).message}`);
+      }
+    }
+
+    // Initiate builder exit
+    initiateBuilderExit(stateGloas, builderIndex);
+    return;
+  }
+
+  // Handle validator exit
   const validity = getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
   if (validity !== VoluntaryExitValidity.valid) {
     throw Error(`Invalid voluntary exit at forkSeq=${fork} reason=${validity}`);

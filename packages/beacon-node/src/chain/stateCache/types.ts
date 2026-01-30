@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
-import {StateRegenerationOpts} from "../regen/interface.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 
@@ -21,7 +20,7 @@ export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
  * The cache key is state root
  */
 export interface BlockStateCache {
-  get(rootHex: RootHex, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null;
+  get(rootHex: RootHex): CachedBeaconStateAllForks | null;
   add(item: CachedBeaconStateAllForks): void;
   setHeadState(item: CachedBeaconStateAllForks | null): void;
   /**
@@ -60,16 +59,12 @@ export interface BlockStateCache {
  */
 export interface CheckpointStateCache {
   init?: () => Promise<void>;
-  getOrReload(cp: CheckpointHex, opts?: StateRegenerationOpts): Promise<CachedBeaconStateAllForks | null>;
+  getOrReload(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | null>;
   getStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
-  get(cpOrKey: CheckpointHex | string, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null;
+  get(cpOrKey: CheckpointHex | string): CachedBeaconStateAllForks | null;
   add(cp: phase0.Checkpoint, state: CachedBeaconStateAllForks): void;
-  getLatest(rootHex: RootHex, maxEpoch: Epoch, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null;
-  getOrReloadLatest(
-    rootHex: RootHex,
-    maxEpoch: Epoch,
-    opts?: StateRegenerationOpts
-  ): Promise<CachedBeaconStateAllForks | null>;
+  getLatest(rootHex: RootHex, maxEpoch: Epoch): CachedBeaconStateAllForks | null;
+  getOrReloadLatest(rootHex: RootHex, maxEpoch: Epoch): Promise<CachedBeaconStateAllForks | null>;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
   pruneFinalized(finalizedEpoch: Epoch): void;

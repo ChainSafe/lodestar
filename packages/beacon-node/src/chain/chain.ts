@@ -14,9 +14,12 @@ import {
   EpochShuffling,
   Index2PubkeyCache,
   computeAnchorCheckpoint,
+  computeAttestationsRewards,
+  computeBlockRewards,
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeSyncCommitteeRewards,
   getEffectiveBalanceIncrementsZeroInactive,
   getEffectiveBalancesFromStateBytes,
   processSlots,
@@ -36,6 +39,7 @@ import {
   Wei,
   isBlindedBeaconBlock,
   phase0,
+  rewards,
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -48,6 +52,7 @@ import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
+import {callInNextEventLoop} from "../util/eventLoop.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {SerializedCache} from "../util/serializedCache.js";
@@ -79,9 +84,6 @@ import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
-import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
-import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
-import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 import {
   SeenAggregators,
   SeenAttesters,
@@ -302,7 +304,8 @@ export class BeaconChain implements IBeaconChain {
     });
 
     this._earliestAvailableSlot = anchorState.slot;
-    this.shufflingCache = anchorState.epochCtx.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
+
+    this.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
       {
         shuffling: anchorState.epochCtx.previousShuffling,
         decisionRoot: anchorState.epochCtx.previousDecisionRoot,
@@ -428,6 +431,7 @@ export class BeaconChain implements IBeaconChain {
     clock.addListener(ClockEvent.epoch, this.onClockEpoch.bind(this));
     emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
+    emitter.addListener(ChainEvent.checkpoint, this.onCheckpoint.bind(this));
   }
 
   async init(): Promise<void> {
@@ -517,7 +521,7 @@ export class BeaconChain implements IBeaconChain {
   async getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null> {
+  ): Promise<{state: CachedBeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
 
     if (slot < finalizedBlock.slot) {
@@ -572,7 +576,7 @@ export class BeaconChain implements IBeaconChain {
   async getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null> {
+  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
       const block = this.forkChoice.getBlock(state.latestBlockHeader.hashTreeRoot());
@@ -600,7 +604,8 @@ export class BeaconChain implements IBeaconChain {
       };
     }
 
-    const data = await this.db.stateArchive.getByRoot(fromHex(stateRoot));
+    // this is mostly useful for a node with `--chain.archiveStateEpochFrequency 1`
+    const data = await this.db.stateArchive.getBinaryByRoot(fromHex(stateRoot));
     return data && {state: data, executionOptimistic: false, finalized: true};
   }
 
@@ -993,8 +998,8 @@ export class BeaconChain implements IBeaconChain {
       this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
       state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
     }
-
-    // should always be the current epoch of the active context so no need to await a result from the ShufflingCache
+    // resolve the promise to unblock other calls of the same epoch and dependent root
+    this.shufflingCache.processState(state);
     return state.epochCtx.getShufflingAtEpoch(attEpoch);
   }
 
@@ -1183,6 +1188,13 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
+  private onCheckpoint(this: BeaconChain, _checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
+    // Defer to not block other checkpoint event handlers, which can cause lightclient update delays
+    callInNextEventLoop(() => {
+      this.shufflingCache.processState(state);
+    });
+  }
+
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
@@ -1306,7 +1318,7 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<BlockRewards> {
+  async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {
     let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
@@ -1315,15 +1327,15 @@ export class BeaconChain implements IBeaconChain {
 
     preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
-    const postState = this.regen.getStateSync(toRootHex(block.stateRoot)) ?? undefined;
+    const proposerRewards = this.regen.getStateSync(toRootHex(block.stateRoot))?.proposerRewards ?? undefined;
 
-    return computeBlockRewards(this.config, block, preState.clone(), postState?.clone());
+    return computeBlockRewards(this.config, block, preState, proposerRewards);
   }
 
   async getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}> {
+  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}> {
     // We use end slot of (epoch + 1) to ensure we have seen all attestations. On-time or late. Any late attestation beyond this slot is not considered
     const slot = computeEndSlotAtEpoch(epoch + 1);
     const stateResult = await this.getStateBySlot(slot, {allowRegen: false}); // No regen if state not in cache
@@ -1349,7 +1361,7 @@ export class BeaconChain implements IBeaconChain {
   async getSyncCommitteeRewards(
     block: BeaconBlock | BlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<SyncCommitteeRewards> {
+  ): Promise<rewards.SyncCommitteeRewards> {
     let preState = this.regen.getPreStateSync(block);
 
     if (preState === null) {
@@ -1358,6 +1370,6 @@ export class BeaconChain implements IBeaconChain {
 
     preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
-    return computeSyncCommitteeRewards(this.config, this.index2pubkey, block, preState.clone(), validatorIds);
+    return computeSyncCommitteeRewards(this.config, this.index2pubkey, block, preState, validatorIds);
   }
 }

@@ -1,8 +1,7 @@
 import {ContainerType, OptionalType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {StringType, fulu, ssz, stringType} from "@lodestar/types";
+import {ArrayOf, StringType, fulu, ssz, stringType} from "@lodestar/types";
 import {
-  ArrayOf,
   EmptyArgs,
   EmptyMeta,
   EmptyMetaCodec,

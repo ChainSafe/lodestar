@@ -9,17 +9,17 @@ import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {waitForSlot} from "../utils/crucible/utils/network.js";
 
-const altairForkEpoch = 0;
-const bellatrixForkEpoch = 0;
-const capellaForkEpoch = 0;
-const denebForkEpoch = 0;
+const ELECTRA_FORK_EPOCH = 0;
+const FULU_FORK_EPOCH = 1;
 const validatorCount = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
-  ALTAIR_FORK_EPOCH: altairForkEpoch,
-  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-  CAPELLA_FORK_EPOCH: capellaForkEpoch,
-  DENEB_FORK_EPOCH: denebForkEpoch,
+  ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+  BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+  CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+  DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+  ELECTRA_FORK_EPOCH,
+  FULU_FORK_EPOCH,
   runTillEpoch: 2,
   initialNodes: 1,
 });
@@ -120,7 +120,7 @@ await env.tracker.assert("should return HTTP error responses in a spec compliant
   assert.deepStrictEqual(JSON.parse(await res2.errorBody()), {code: 400, message: "slot must be integer"});
 
   // Error processing multiple items
-  const signedAttestations = Array.from({length: 3}, () => ssz.phase0.Attestation.defaultValue());
+  const signedAttestations = Array.from({length: 3}, () => ssz.electra.SingleAttestation.defaultValue());
   const res3 = await node.api.beacon.submitPoolAttestationsV2({signedAttestations});
   const errBody = JSON.parse(await res3.errorBody()) as {code: number; message: string; failures: unknown[]};
   assert.equal(errBody.code, 400);
@@ -128,7 +128,7 @@ await env.tracker.assert("should return HTTP error responses in a spec compliant
   assert.equal(errBody.failures.length, signedAttestations.length);
   assert.deepStrictEqual(errBody.failures[0], {
     index: 0,
-    message: "ATTESTATION_ERROR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET",
+    message: "ATTESTATION_ERROR_UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT",
   });
 
   // Route does not exist

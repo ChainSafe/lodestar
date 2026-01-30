@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {Id, Repository} from "@lodestar/db";
+import {DbBatch, Id, Repository} from "@lodestar/db";
 import {
   BLS_WITHDRAWAL_PREFIX,
   ForkName,
@@ -440,23 +440,21 @@ async function persistDiff<K extends Id, V>(
   serializeKey: (key: K) => number | string
 ): Promise<void> {
   const persistedKeys = await dbRepo.keys();
-  const itemsToPut: {key: K; value: V}[] = [];
-  const keysToDelete: K[] = [];
+  const batch: DbBatch<K, V> = [];
 
   const persistedKeysSerialized = new Set(persistedKeys.map(serializeKey));
   for (const item of items) {
     if (!persistedKeysSerialized.has(serializeKey(item.key))) {
-      itemsToPut.push(item);
+      batch.push({type: "put", key: item.key, value: item.value});
     }
   }
 
   const targetKeysSerialized = new Set(items.map((item) => serializeKey(item.key)));
   for (const persistedKey of persistedKeys) {
     if (!targetKeysSerialized.has(serializeKey(persistedKey))) {
-      keysToDelete.push(persistedKey);
+      batch.push({type: "del", key: persistedKey});
     }
   }
 
-  if (itemsToPut.length > 0) await dbRepo.batchPut(itemsToPut);
-  if (keysToDelete.length > 0) await dbRepo.batchDelete(keysToDelete);
+  if (batch.length > 0) await dbRepo.batch(batch);
 }

@@ -5,7 +5,7 @@ import {interopSecretKey} from "@lodestar/state-transition";
 import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
 import {Signer, SignerType, externalSignerGetKeys} from "@lodestar/validator";
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
-import {YargsError, assertValidPubkeysHex, parseRange} from "../../../util/index.js";
+import {YargsError, assertValidPubkeysHex} from "../../../util/index.js";
 import {showProgress} from "../../../util/progress.js";
 import {decryptKeystoreDefinitions} from "../keymanager/decryptKeystoreDefinitions.js";
 import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
@@ -49,7 +49,7 @@ export async function getSignersFromArgs(
 
   // ONLY USE FOR TESTNETS - Derive interop keys
   if (args.interopIndexes) {
-    const indexes = parseRange(args.interopIndexes);
+    const indexes = args.interopIndexes;
     // Using a remote signer with TESTNETS
     if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
       return getRemoteSigners(args);
@@ -67,7 +67,7 @@ export async function getSignersFromArgs(
     }
 
     const masterSK = deriveKeyFromMnemonic(args.fromMnemonic);
-    const indexes = parseRange(args.mnemonicIndexes);
+    const indexes = Array.from(new Set(args.mnemonicIndexes));
     return indexes.map((index) => ({
       type: SignerType.Local,
       secretKey: SecretKey.fromBytes(deriveEth2ValidatorKeys(masterSK, index).signing),

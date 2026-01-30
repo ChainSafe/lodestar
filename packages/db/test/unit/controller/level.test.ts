@@ -82,6 +82,55 @@ describe("LevelDB controller", () => {
     expect((await db.entries()).length).toBe(0);
   });
 
+  it("test batch", async () => {
+    const [
+      {key: k1, value: v1},
+      {key: k2, value: v2},
+      {key: k3, value: v3},
+      {key: k4, value: v4},
+      {key: k5, value: v5},
+    ] = Array.from({length: 5}, (_, i) => ({
+      key: Buffer.from(`test${i}`),
+      value: Buffer.from(`some value ${i}`),
+    }));
+    await db.put(k1, v1);
+    await db.put(k2, v2);
+    await db.put(k3, v3);
+
+    expect(await db.entries()).toEqual([
+      {key: k1, value: v1},
+      {key: k2, value: v2},
+      {key: k3, value: v3},
+    ]);
+
+    await db.batch([
+      {
+        type: "del",
+        key: k1,
+      },
+      {
+        type: "put",
+        key: k4,
+        value: v4,
+      },
+      {
+        type: "del",
+        key: k3,
+      },
+      {
+        type: "put",
+        key: k5,
+        value: v5,
+      },
+    ]);
+
+    expect(await db.entries()).toEqual([
+      {key: k2, value: v2},
+      {key: k4, value: v4},
+      {key: k5, value: v5},
+    ]);
+  });
+
   it("test entries", async () => {
     const k1 = Buffer.from("test1");
     const k2 = Buffer.from("test2");

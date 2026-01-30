@@ -32,10 +32,6 @@ export enum RegenFnName {
 
 export type StateRegenerationOpts = {
   dontTransferCache: boolean;
-  /**
-   * Do not queue shuffling calculation async. Forces sync JIT calculation in afterProcessEpoch if not passed as `true`
-   */
-  asyncShufflingCalculation?: boolean;
 };
 
 export interface IStateRegenerator extends IStateRegeneratorInternal {
@@ -91,5 +87,5 @@ export interface IStateRegeneratorInternal {
   /**
    * Return the exact state with `stateRoot`
    */
-  getState(stateRoot: RootHex, rCaller: RegenCaller, opts?: StateRegenerationOpts): Promise<CachedBeaconStateAllForks>;
+  getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
 }
