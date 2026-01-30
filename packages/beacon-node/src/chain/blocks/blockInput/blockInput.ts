@@ -687,6 +687,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
     if (hasAllData) {
       blockInput.dataPromise.resolve([]);
+      blockInput.computedDataPromise.resolve([]);
     }
     return blockInput;
   }
