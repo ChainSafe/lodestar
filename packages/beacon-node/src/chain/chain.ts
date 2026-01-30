@@ -341,7 +341,6 @@ export class BeaconChain implements IBeaconChain {
     this.bufferPool = new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics);
 
     let checkpointStateCache: CheckpointStateCache;
-    this.cpStateDatastore = undefined;
     this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
     checkpointStateCache = new PersistentCheckpointStateCache(
       {
