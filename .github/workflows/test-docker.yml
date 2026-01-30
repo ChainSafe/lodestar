@@ -1,0 +1,13 @@
+name: Test Docker build
+
+on:
+  push:
+    branches:
+      - nflaig/native-arm64-runners
+
+jobs:
+  docker:
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: test
+    secrets: inherit
