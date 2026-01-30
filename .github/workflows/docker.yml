@@ -92,5 +92,11 @@ jobs:
             chainsafe/lodestar-prometheus:${{ inputs.tag }}-amd64 \
             chainsafe/lodestar-prometheus:${{ inputs.tag }}-arm64
 
-      - run: docker run chainsafe/lodestar:${{ inputs.tag }} --help
+      - name: Sanity check image
+        run: |
+          docker run -d --name lodestar-sanity -p 9596:9596 chainsafe/lodestar:${{ inputs.tag }} dev
+          sleep 30
+          curl -f http://127.0.0.1:9596/eth/v1/node/version || (docker logs lodestar-sanity && exit 1)
+          docker stop lodestar-sanity
+
       - run: docker image history chainsafe/lodestar:${{ inputs.tag }}
