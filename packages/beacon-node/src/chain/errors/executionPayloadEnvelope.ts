@@ -19,7 +19,6 @@ export type ExecutionPayloadEnvelopeErrorType =
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN;
       blockRoot: RootHex;
       slot: Slot;
-      builderIndex: BuilderIndex;
     }
   | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_BLOCK; blockRoot: RootHex}
   | {code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH; envelopeSlot: Slot; blockSlot: Slot}

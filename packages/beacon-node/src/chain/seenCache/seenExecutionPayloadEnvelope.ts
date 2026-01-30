@@ -1,44 +1,33 @@
-import {BuilderIndex, RootHex, Slot} from "@lodestar/types";
-
-type SeenExecutionPayloadEnvelopeEntry = {
-  slot: Slot;
-  builderIndexes: Set<BuilderIndex>;
-};
+import {RootHex, Slot} from "@lodestar/types";
 
 /**
- * Cache to prevent processing multiple execution payload envelopes for the same block root from the same builder.
- * We only keep track of envelopes of unfinalized slots
- * _[IGNORE]_ The node has not seen another valid
- *  `SignedExecutionPayloadEnvelope` for this block root from this builder.
+ * Cache to prevent processing multiple execution payload envelopes for the same block root.
+ * Only one builder qualifies to submit an execution payload for a given slot.
+ * We only keep track of envelopes of unfinalized slots.
+ * _[IGNORE]_ The node has not seen another valid `SignedExecutionPayloadEnvelope` for this block root.
  */
 export class SeenExecutionPayloadEnvelopes {
-  private readonly builderIndexesByBlockRoot = new Map<RootHex, SeenExecutionPayloadEnvelopeEntry>();
+  private readonly slotByBlockRoot = new Map<RootHex, Slot>();
   private finalizedSlot: Slot = 0;
 
-  isKnown(blockRoot: RootHex, builderIndex: BuilderIndex): boolean {
-    return this.builderIndexesByBlockRoot.get(blockRoot)?.builderIndexes.has(builderIndex) === true;
+  isKnown(blockRoot: RootHex): boolean {
+    return this.slotByBlockRoot.has(blockRoot);
   }
 
-  add(blockRoot: RootHex, slot: Slot, builderIndex: BuilderIndex): void {
+  add(blockRoot: RootHex, slot: Slot): void {
     if (slot < this.finalizedSlot) {
       throw Error(`slot ${slot} < finalizedSlot ${this.finalizedSlot}`);
     }
 
-    let entry = this.builderIndexesByBlockRoot.get(blockRoot);
-    if (!entry) {
-      entry = {slot, builderIndexes: new Set<BuilderIndex>()};
-      this.builderIndexesByBlockRoot.set(blockRoot, entry);
-    }
-
-    entry.builderIndexes.add(builderIndex);
+    this.slotByBlockRoot.set(blockRoot, slot);
   }
 
   prune(finalizedSlot: Slot): void {
     this.finalizedSlot = finalizedSlot;
 
-    for (const [blockRoot, {slot}] of this.builderIndexesByBlockRoot.entries()) {
+    for (const [blockRoot, slot] of this.slotByBlockRoot.entries()) {
       if (slot < finalizedSlot) {
-        this.builderIndexesByBlockRoot.delete(blockRoot);
+        this.slotByBlockRoot.delete(blockRoot);
       }
     }
   }

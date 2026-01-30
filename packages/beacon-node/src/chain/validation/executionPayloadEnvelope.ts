@@ -44,12 +44,11 @@ async function validateExecutionPayloadEnvelope(
 
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  if (chain.seenExecutionPayloadEnvelopes.isKnown(blockRootHex, envelope.builderIndex)) {
+  if (chain.seenExecutionPayloadEnvelopes.isKnown(blockRootHex)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,
       slot: envelope.slot,
-      builderIndex: envelope.builderIndex,
     });
   }
 
@@ -116,5 +115,5 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  chain.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot, envelope.builderIndex);
+  chain.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot);
 }
