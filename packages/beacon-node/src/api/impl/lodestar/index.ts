@@ -270,7 +270,7 @@ export function getLodestarApi({
         data: {
           earliestCustodiedSlot,
           custodyGroupCount: targetCustodyGroupCount,
-          custodyColumns: [...custodyColumns],
+          custodyColumns,
         },
       };
     },
