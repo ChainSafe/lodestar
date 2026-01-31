@@ -1,4 +1,4 @@
-import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
+import {GossipSub, GossipsubEvents, type PartialMessageExtension} from "@chainsafe/libp2p-gossipsub";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
@@ -55,6 +55,8 @@ export type Eth2GossipsubOpts = {
   disableFloodPublish?: boolean;
   skipParamsLog?: boolean;
   disableLightClientServer?: boolean;
+  enablePartialMessages?: boolean;
+  partialMessageExtension?: PartialMessageExtension;
 };
 
 export type ForkBoundaryLabel = string;
@@ -140,6 +142,9 @@ export class Eth2Gossipsub extends GossipSub {
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: 16829,
+      // Partial messages support for PeerDAS data columns
+      partialMessages: opts.enablePartialMessages ?? false,
+      partialMessageExtension: opts.partialMessageExtension,
     });
     this.scoreParams = scoreParams;
     this.config = config;

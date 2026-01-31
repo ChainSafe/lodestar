@@ -94,6 +94,7 @@
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
-    "elliptic": ">=6.6.1"
+    "elliptic": ">=6.6.1",
+    "@libp2p/interface": "^2.7.0"
   }
 }

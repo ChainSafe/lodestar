@@ -875,6 +875,31 @@ export function createLodestarMetrics(
         labelNames: ["result"],
       }),
     },
+    partialColumns: {
+      received: register.counter<{result: string}>({
+        name: "lodestar_partial_columns_received_total",
+        help: "Total partial column messages received",
+        labelNames: ["result"],
+      }),
+      rebroadcast: register.counter({
+        name: "lodestar_partial_columns_rebroadcast_total",
+        help: "Total partial column rebroadcasts sent",
+      }),
+      fetched: register.counter<{result: string}>({
+        name: "lodestar_partial_columns_fetched_total",
+        help: "Total columns fetched via req/resp after partial message hint",
+        labelNames: ["result"],
+      }),
+      groupsTracked: register.gauge({
+        name: "lodestar_partial_groups_tracked",
+        help: "Number of block roots being tracked for partial reconstruction",
+      }),
+      availabilityRatio: register.histogram({
+        name: "lodestar_partial_column_availability_ratio",
+        help: "Ratio of available columns when partial message received",
+        buckets: [0.1, 0.25, 0.5, 0.75, 0.9, 1.0],
+      }),
+    },
     importBlock: {
       persistBlockNoSerializedDataCount: register.gauge({
         name: "lodestar_import_block_persist_block_no_serialized_data_count",
