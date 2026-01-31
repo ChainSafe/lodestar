@@ -7,8 +7,28 @@ import {globalOptions, rcConfigOption} from "./options/index.js";
 import {getVersionData} from "./util/version.js";
 
 /**
+ * Options that are explicitly defined as arrays and can accept multiple values.
+ * These are allowed to be passed multiple times (e.g., --beaconNodes x --beaconNodes y).
+ */
+const ARRAY_OPTIONS = new Set([
+  "--bootnodes",
+  "--startValidators",
+  "--pubkeys",
+  "--beaconNodes",
+  "--builder.urls",
+  "--externalSigner.pubkeys",
+  "--externalSigner.url",
+  "--eth1.providerUrls",
+  "--execution.urls",
+  "--chain.archiveBlobEpochs",
+  "--rest.cors",
+  "--network.connectToDiscv5Bootnodes",
+  "--log.file.categories",
+]);
+
+/**
  * Check for duplicate flags in raw argv and throw an error if found.
- * This prevents silent "last value wins" behavior for non-array options.
+ * Array options are allowed to be passed multiple times.
  */
 function checkDuplicateFlags(argv: string[]): void {
   const flagCounts = new Map<string, number>();
@@ -24,7 +44,8 @@ function checkDuplicateFlags(argv: string[]): void {
 
   const duplicates: string[] = [];
   for (const [flag, count] of flagCounts) {
-    if (count > 1) {
+    // Skip array options - they're allowed to have multiple values
+    if (count > 1 && !ARRAY_OPTIONS.has(flag)) {
       duplicates.push(flag);
     }
   }
