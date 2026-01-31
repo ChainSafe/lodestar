@@ -63,9 +63,8 @@ export class ColumnReconstructionTracker {
     // just that it has been triggered for this block root.
     this.running = true;
     this.lastBlockRootHex = blockInput.blockRootHex;
-    const slotMs = this.config.SECONDS_PER_SLOT * 1000;
-    const minDelayMs = (slotMs * RECONSTRUCTION_DELAY_MIN_BPS) / 10000;
-    const maxDelayMs = (slotMs * RECONSTRUCTION_DELAY_MAX_BPS) / 10000;
+    const minDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MIN_BPS);
+    const maxDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MAX_BPS);
     const delay = minDelayMs + Math.random() * (maxDelayMs - minDelayMs);
     sleep(delay)
       .then(() => {
