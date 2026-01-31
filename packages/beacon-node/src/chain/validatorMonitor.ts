@@ -347,7 +347,7 @@ export function createValidatorMonitor(
         return;
       }
 
-      // Track total balance instead of per-validator balance to reduce metric cardinality
+      // Track total balance for prevEpochOnChainBalance metric instead of per-validator to avoid high cardinality
       let totalBalance = 0;
 
       for (const [index, monitoredValidator] of validators.entries()) {
