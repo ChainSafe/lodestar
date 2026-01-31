@@ -1,8 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
 import {HttpHeader, getClient, routes} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
-import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Validator} from "@lodestar/validator";
@@ -119,29 +118,19 @@ describe("lightclient api", () => {
     expect(finalityUpdate).toBeDefined();
   });
 
-  it.skip("getLightClientCommitteeRoot() for the 1st period", async () => {
-    // need to investigate why this test fails after upgrading to electra
-    // TODO: https://github.com/ChainSafe/lodestar/issues/8723
+  it("getLightClientCommitteeRoot() for the 1st period", async () => {
     await waitForBestUpdate();
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const committeeRes = await lightclient.getLightClientCommitteeRoot({startPeriod: 0, count: 1});
     committeeRes.assertOk();
-    const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
-    const validators = (await client.postStateValidators({stateId: "head"})).value();
-    const pubkeys = validators.map((v) => v.validator.pubkey);
-    expect(pubkeys.length).toBe(validatorCount);
-    // only 2 validators spreading to 512 committee slots
-    const committeePubkeys = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) =>
-      i % 2 === 0 ? pubkeys[0] : pubkeys[1]
-    );
-    const aggregatePubkey = aggregateSerializedPublicKeys(committeePubkeys).toBytes();
+
+    // Get the actual sync committee root from the head state
+    // The sync committee is computed using a weighted random shuffle, not simple alternation
+    const headState = bn.chain.getHeadState();
+    const expectedRoot = headState.currentSyncCommittee.hashTreeRoot();
+
     // single committee hash since we requested for the first period
-    expect(committeeRes.value()).toEqual([
-      ssz.altair.SyncCommittee.hashTreeRoot({
-        pubkeys: committeePubkeys,
-        aggregatePubkey,
-      }),
-    ]);
+    expect(committeeRes.value()).toEqual([expectedRoot]);
   });
 });
