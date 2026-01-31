@@ -29,6 +29,9 @@ export function getLodestarCli(): Argv {
       // As of yargs v16.1.0 dot-notation breaks strictOptions()
       // Manually processing options is typesafe tho more verbose
       "dot-notation": false,
+      // Prevent duplicate flags from being parsed as arrays
+      // e.g. --checkpointSyncUrl x --checkpointSyncUrl y would fail without this
+      "duplicate-arguments-array": false,
     })
     .options(globalOptions)
     // blank scriptName so that help text doesn't display the cli name before each command
