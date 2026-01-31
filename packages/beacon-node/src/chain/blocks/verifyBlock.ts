@@ -181,7 +181,11 @@ export async function verifyBlocksInEpoch(
 
           case ForkName.fulu:
             this.logger.info(FULU_ZEBRA_BANNER);
-            this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
+            this.logger.info("Activating peerDAS", {
+              epoch: this.config.FULU_FORK_EPOCH,
+              custodyGroupCount: this.custodyConfig.targetCustodyGroupCount,
+              custodyColumns: this.custodyConfig.custodyColumns.join(","),
+            });
             break;
 
           default:

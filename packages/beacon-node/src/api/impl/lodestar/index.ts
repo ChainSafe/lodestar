@@ -244,6 +244,36 @@ export function getLodestarApi({
         data: chain.validatorMonitor?.getMonitoredValidatorIndices() ?? [],
       };
     },
+
+    async getCustodyInfo() {
+      // Check if Fulu is scheduled (PeerDAS is active)
+      if (config.FULU_FORK_EPOCH === Infinity) {
+        throw new ApiError(400, "Fulu fork is not scheduled");
+      }
+
+      const currentEpoch = chain.clock.currentEpoch;
+
+      // Check if we're past Fulu activation
+      if (currentEpoch < config.FULU_FORK_EPOCH) {
+        throw new ApiError(400, "Fulu fork is not yet active");
+      }
+
+      const {custodyColumns, targetCustodyGroupCount} = chain.custodyConfig;
+
+      // The earliest custodied slot is the max of:
+      // 1. The Fulu fork activation slot
+      // 2. The earliest available slot (from backfill/anchor)
+      const fuluActivationSlot = config.FULU_FORK_EPOCH * SLOTS_PER_EPOCH;
+      const earliestCustodiedSlot = Math.max(fuluActivationSlot, chain.earliestAvailableSlot);
+
+      return {
+        data: {
+          earliestCustodiedSlot,
+          custodyGroupCount: targetCustodyGroupCount,
+          custodyColumns: [...custodyColumns],
+        },
+      };
+    },
   };
 }
 
