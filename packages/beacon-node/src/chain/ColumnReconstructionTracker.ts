@@ -6,14 +6,16 @@ import {BlockInputColumns} from "./blocks/blockInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
 /**
- * Minimum time to wait before attempting reconstruction
+ * Minimum delay before attempting reconstruction as a ratio of slot duration.
+ * For a 12s slot, this equates to 800ms (the original hardcoded value).
  */
-const RECONSTRUCTION_DELAY_MIN_MS = 800;
+const RECONSTRUCTION_DELAY_MIN_RATIO = 1 / 15;
 
 /**
- * Maximum time to wait before attempting reconstruction
+ * Maximum delay before attempting reconstruction as a ratio of slot duration.
+ * For a 12s slot, this equates to 1200ms (the original hardcoded value).
  */
-const RECONSTRUCTION_DELAY_MAX_MS = 1200;
+const RECONSTRUCTION_DELAY_MAX_RATIO = 1 / 10;
 
 export type ColumnReconstructionTrackerInit = {
   logger: Logger;
@@ -61,8 +63,10 @@ export class ColumnReconstructionTracker {
     // just that it has been triggered for this block root.
     this.running = true;
     this.lastBlockRootHex = blockInput.blockRootHex;
-    const delay =
-      RECONSTRUCTION_DELAY_MIN_MS + Math.random() * (RECONSTRUCTION_DELAY_MAX_MS - RECONSTRUCTION_DELAY_MIN_MS);
+    const slotMs = this.config.SECONDS_PER_SLOT * 1000;
+    const minDelayMs = slotMs * RECONSTRUCTION_DELAY_MIN_RATIO;
+    const maxDelayMs = slotMs * RECONSTRUCTION_DELAY_MAX_RATIO;
+    const delay = minDelayMs + Math.random() * (maxDelayMs - minDelayMs);
     sleep(delay)
       .then(() => {
         const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
