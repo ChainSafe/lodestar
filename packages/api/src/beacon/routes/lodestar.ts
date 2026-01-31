@@ -326,7 +326,7 @@ export type Endpoints = {
     EmptyMeta
   >;
 
-  /** Get custody information for data columns (PeerDAS/Fulu) */
+  /** Get custody information for data columns */
   getCustodyInfo: Endpoint<
     // ⏎
     "GET",
