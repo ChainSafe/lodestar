@@ -178,9 +178,16 @@ async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<S
   const signers: Signer[] = [];
 
   if (args["externalSigner.pubkeys"]) {
-    // If pubkeys are explicitly provided, assign them to the first URL
-    // This maintains backward compatibility - users can still specify pubkeys with multiple URLs
-    // but all pubkeys will be associated with the first URL
+    // If pubkeys are explicitly provided with multiple URLs, warn user about limitation
+    if (externalSignerUrls.length > 1) {
+      throw new YargsError(
+        "Cannot use --externalSigner.pubkeys with multiple --externalSigner.url values. " +
+          "When explicitly providing pubkeys, all pubkeys are associated with the first URL. " +
+          "To use multiple signers, use --externalSigner.fetch instead to fetch pubkeys from each signer."
+      );
+    }
+    // If pubkeys are explicitly provided, assign them to the first (and only) URL
+    // This maintains backward compatibility
     const pubkeys = args["externalSigner.pubkeys"];
     assertValidPubkeysHex(pubkeys);
     for (const pubkey of pubkeys) {
@@ -192,15 +199,38 @@ async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<S
     const pubkeyPromises = externalSignerUrls.map(async (url) => {
       try {
         const pubkeys = await externalSignerGetKeys(url);
-        return {url, pubkeys};
+        return {url, pubkeys, error: null};
       } catch (e) {
-        // Log error would be ideal but logger is not available in this context
-        // Return empty pubkeys for this URL to avoid crashing the validator startup
-        return {url, pubkeys: []};
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        // Warn user about failed signer (logger not available in this context)
+        console.warn(`Warning: Failed to fetch pubkeys from external signer ${url}: ${errorMsg}`);
+        return {url, pubkeys: [], error: errorMsg};
       }
     });
     
     const results = await Promise.all(pubkeyPromises);
+    
+    // Check if all signers failed
+    const failedSigners = results.filter((r) => r.error !== null);
+    const successfulSigners = results.filter((r) => r.pubkeys.length > 0);
+    
+    if (failedSigners.length === results.length) {
+      // All signers failed - throw error to prevent silent failure
+      const errorMessages = failedSigners.map((r) => `  ${r.url}: ${r.error}`).join("\n");
+      throw new YargsError(
+        `Failed to fetch pubkeys from all external signer(s):\n${errorMessages}\n` +
+          "Please verify the signer URLs are correct and accessible."
+      );
+    }
+    
+    // Warn if some signers failed but at least one succeeded
+    if (failedSigners.length > 0 && successfulSigners.length > 0) {
+      const failedUrls = failedSigners.map((r) => r.url).join(", ");
+      console.warn(
+        `Warning: Failed to fetch pubkeys from some external signer(s): ${failedUrls}. ` +
+          "Validator will continue with available signers."
+      );
+    }
     
     for (const {url, pubkeys} of results) {
       if (pubkeys.length > 0) {
