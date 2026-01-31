@@ -721,7 +721,16 @@ export class PeerManager {
     // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
     // If that happens, it's okay. Only the "outbound" connection triggers immediate action
     const now = Date.now();
-    const nodeId = computeNodeId(remotePeer);
+
+    let nodeId: Uint8Array;
+    try {
+      nodeId = computeNodeId(remotePeer);
+    } catch (e) {
+      // Can happen if peer has invalid/malformed public key
+      this.logger.debug("Failed to compute nodeId for peer, disconnecting", {peer: remotePeerPrettyStr}, e as Error);
+      void this.goodbyeAndDisconnect(remotePeer, GoodByeReasonCode.ERROR);
+      return;
+    }
     const peerData: PeerData = {
       lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
       // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
