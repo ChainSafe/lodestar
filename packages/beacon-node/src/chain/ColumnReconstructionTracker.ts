@@ -6,14 +6,12 @@ import {BlockInputColumns} from "./blocks/blockInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
 /**
- * Minimum delay before attempting reconstruction in basis points (BPS) of slot duration.
- * 667 BPS = 6.67% of slot. For a 12s slot, this equates to ~800ms.
+ * Minimum time to wait before attempting reconstruction
  */
 const RECONSTRUCTION_DELAY_MIN_BPS = 667;
 
 /**
- * Maximum delay before attempting reconstruction in basis points (BPS) of slot duration.
- * 1000 BPS = 10% of slot. For a 12s slot, this equates to 1200ms.
+ * Maximum time to wait before attempting reconstruction
  */
 const RECONSTRUCTION_DELAY_MAX_BPS = 1000;
 
