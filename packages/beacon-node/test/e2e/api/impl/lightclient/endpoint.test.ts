@@ -2,7 +2,8 @@ import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {HttpHeader, getClient, routes} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
+import {CachedBeaconStateAltair} from "@lodestar/state-transition";
+import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Validator} from "@lodestar/validator";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
@@ -127,7 +128,8 @@ describe("lightclient api", () => {
 
     // Get the actual sync committee root from the head state
     // The sync committee is computed using a weighted random shuffle, not simple alternation
-    const headState = bn.chain.getHeadState();
+    // Since the test starts at Electra, headState is always post-Altair and has currentSyncCommittee
+    const headState = bn.chain.getHeadState() as CachedBeaconStateAltair;
     const expectedRoot = headState.currentSyncCommittee.hashTreeRoot();
 
     // single committee hash since we requested for the first period
