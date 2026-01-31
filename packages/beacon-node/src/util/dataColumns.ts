@@ -120,17 +120,6 @@ export class CustodyConfig {
     );
   }
 
-  /**
-   * Get a consistent snapshot of custody configuration.
-   * This ensures atomicity when reading related custody properties.
-   */
-  getCustodySnapshot(): {targetCustodyGroupCount: number; custodyColumns: ColumnIndex[]} {
-    return {
-      targetCustodyGroupCount: this.targetCustodyGroupCount,
-      custodyColumns: this.custodyColumns,
-    };
-  }
-
   private getCustodyColumnsIndex(custodyColumns: ColumnIndex[]): Uint8Array {
     // custody columns map which column maps to which index in the array of columns custodied
     // with zero representing it is not custodied
