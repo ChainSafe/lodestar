@@ -776,7 +776,9 @@ export class ForkChoice implements IForkChoice {
 
       payloadStatus: isGloasBeaconBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL,
       builderIndex: isGloasBeaconBlock(block) ? block.body.signedExecutionPayloadBid.message.builderIndex : null,
-      blockHashFromBid: isGloasBeaconBlock(block) ? toRootHex(block.body.signedExecutionPayloadBid.message.blockHash) : null,
+      blockHashFromBid: isGloasBeaconBlock(block)
+        ? toRootHex(block.body.signedExecutionPayloadBid.message.blockHash)
+        : null,
       parentBlockHash: isGloasBeaconBlock(block)
         ? toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
         : null,

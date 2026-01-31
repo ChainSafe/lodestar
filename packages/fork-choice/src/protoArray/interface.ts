@@ -119,7 +119,6 @@ export type ProtoBlock = BlockExtraMeta & {
   // Used to determine if this block extends EMPTY or FULL parent variant
   // Spec: gloas/fork-choice.md#new-get_parent_payload_status
   parentBlockHash: RootHex | null;
-
 };
 
 /**

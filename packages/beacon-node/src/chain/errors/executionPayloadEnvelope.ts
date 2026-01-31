@@ -27,7 +27,11 @@ export type ExecutionPayloadEnvelopeErrorType =
       envelopeBuilderIndex: BuilderIndex;
       bidBuilderIndex: BuilderIndex | null;
     }
-  | {code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH; envelopeBlockHash: RootHex; bidBlockHash: RootHex | null}
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH;
+      envelopeBlockHash: RootHex;
+      bidBlockHash: RootHex | null;
+    }
   | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE}
   | {code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL; blockRoot: RootHex};
 
