@@ -34,6 +34,7 @@ export type SyncOptions = {
    * blocks for.
    */
   slotImportTolerance?: number;
+  forceCheckpointSync?: boolean;
 };
 
 export const defaultSyncOptions: SyncOptions = {
@@ -42,4 +43,5 @@ export const defaultSyncOptions: SyncOptions = {
   /** By default skip the backfill sync */
   backfillBatchSize: 0,
   slotImportTolerance: SLOTS_PER_EPOCH,
+  forceCheckpointSync: false,
 };

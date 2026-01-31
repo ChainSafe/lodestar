@@ -1,5 +1,4 @@
 export {AttesterSlashingRepository} from "./attesterSlashing.js";
-export {BackfilledRanges} from "./backfilledRanges.js";
 export {BackfillState} from "./backfillState.js";
 export {BlobSidecarsRepository} from "./blobSidecars.js";
 export {BlobSidecarsArchiveRepository} from "./blobSidecarsArchive.js";

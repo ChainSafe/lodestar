@@ -3,7 +3,7 @@ import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
   BLSToExecutionChangeRepository,
-  BackfilledRanges,
+  BackfillState,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
   BlobSidecarsRepository,
@@ -21,7 +21,7 @@ import {
   SyncCommitteeWitnessRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
-import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
+import {BackfillRange, PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -65,7 +65,8 @@ export interface IBeaconDb {
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
-  backfilledRanges: BackfilledRanges;
+  backfillState: BackfillState;
+  backfillRange: BackfillRange;
 
   pruneHotDb(): Promise<void>;
 

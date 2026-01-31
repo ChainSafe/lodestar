@@ -2,7 +2,7 @@ import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
+import {BeaconDb, BeaconNode, defaultOptions} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
@@ -26,6 +26,8 @@ import {initBeaconState} from "./initBeaconState.js";
 import {initPrivateKeyAndEnr} from "./initPeerIdAndEnr.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
+
+const {sync: defaultSyncOptions} = defaultOptions;
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -229,6 +231,10 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}, eth1: {jwtVersion: versionStr}});
     // Set commit and version for ClientVersion
     beaconNodeOptions.set({executionEngine: {commit, version}});
+    // Set forceCheckpointSync flag to use in backfill sync
+    beaconNodeOptions.set({
+      sync: {forceCheckpointSync: args?.forceCheckpointSync ?? defaultSyncOptions.forceCheckpointSync},
+    });
   }
 
   // Render final options

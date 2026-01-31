@@ -233,6 +233,7 @@ export class ArchiveStore {
       const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
       timer?.({source: ArchiveStoreTask.ForkchoicePrune});
 
+      // Todo: Uncomment after integrating backfill db repositories
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await updateBackfillRange({chain: this.chain, db: this.db, logger: this.logger}, finalized);
       timer?.({source: ArchiveStoreTask.UpdateBackfillRange});
