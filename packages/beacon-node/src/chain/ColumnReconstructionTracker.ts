@@ -41,11 +41,16 @@ export class ColumnReconstructionTracker {
   /** Track if a reconstruction attempt is in-flight */
   running = false;
 
+  private readonly minDelayMs: number;
+  private readonly maxDelayMs: number;
+
   constructor(init: ColumnReconstructionTrackerInit) {
     this.logger = init.logger;
     this.emitter = init.emitter;
     this.metrics = init.metrics;
     this.config = init.config;
+    this.minDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MIN_BPS);
+    this.maxDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MAX_BPS);
   }
 
   triggerColumnReconstruction(blockInput: BlockInputColumns): void {
@@ -61,9 +66,7 @@ export class ColumnReconstructionTracker {
     // just that it has been triggered for this block root.
     this.running = true;
     this.lastBlockRootHex = blockInput.blockRootHex;
-    const minDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MIN_BPS);
-    const maxDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MAX_BPS);
-    const delay = minDelayMs + Math.random() * (maxDelayMs - minDelayMs);
+    const delay = this.minDelayMs + Math.random() * (this.maxDelayMs - this.minDelayMs);
     sleep(delay)
       .then(() => {
         const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
