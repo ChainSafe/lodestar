@@ -94,6 +94,7 @@ describe("options / beaconNodeOptions", () => {
       "network.useWorker": true,
       "network.maxYoungGenerationSizeMb": 152,
       "network.targetGroupPeers": 12,
+      directPeers: ["/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu"],
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -197,6 +198,7 @@ describe("options / beaconNodeOptions", () => {
         useWorker: true,
         maxYoungGenerationSizeMb: 152,
         targetGroupPeers: 12,
+        directPeers: ["/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu"],
       },
       sync: {
         isSingleNode: true,
