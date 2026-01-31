@@ -6,16 +6,16 @@ import {BlockInputColumns} from "./blocks/blockInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
 /**
- * Minimum delay before attempting reconstruction as a ratio of slot duration.
- * For a 12s slot, this equates to 800ms (the original hardcoded value).
+ * Minimum delay before attempting reconstruction in basis points (BPS) of slot duration.
+ * 667 BPS = 6.67% of slot. For a 12s slot, this equates to ~800ms.
  */
-const RECONSTRUCTION_DELAY_MIN_RATIO = 1 / 15;
+const RECONSTRUCTION_DELAY_MIN_BPS = 667;
 
 /**
- * Maximum delay before attempting reconstruction as a ratio of slot duration.
- * For a 12s slot, this equates to 1200ms (the original hardcoded value).
+ * Maximum delay before attempting reconstruction in basis points (BPS) of slot duration.
+ * 1000 BPS = 10% of slot. For a 12s slot, this equates to 1200ms.
  */
-const RECONSTRUCTION_DELAY_MAX_RATIO = 1 / 10;
+const RECONSTRUCTION_DELAY_MAX_BPS = 1000;
 
 export type ColumnReconstructionTrackerInit = {
   logger: Logger;
@@ -64,8 +64,8 @@ export class ColumnReconstructionTracker {
     this.running = true;
     this.lastBlockRootHex = blockInput.blockRootHex;
     const slotMs = this.config.SECONDS_PER_SLOT * 1000;
-    const minDelayMs = slotMs * RECONSTRUCTION_DELAY_MIN_RATIO;
-    const maxDelayMs = slotMs * RECONSTRUCTION_DELAY_MAX_RATIO;
+    const minDelayMs = (slotMs * RECONSTRUCTION_DELAY_MIN_BPS) / 10000;
+    const maxDelayMs = (slotMs * RECONSTRUCTION_DELAY_MAX_BPS) / 10000;
     const delay = minDelayMs + Math.random() * (maxDelayMs - minDelayMs);
     sleep(delay)
       .then(() => {
