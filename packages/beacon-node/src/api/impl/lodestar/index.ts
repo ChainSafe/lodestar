@@ -258,7 +258,7 @@ export function getLodestarApi({
         throw new ApiError(400, "Fulu fork is not yet active");
       }
 
-      const {custodyColumns, targetCustodyGroupCount} = chain.custodyConfig;
+      const {custodyColumns, targetCustodyGroupCount} = chain.custodyConfig.getCustodySnapshot();
 
       // The earliest custodied slot is the max of:
       // 1. The Fulu fork activation slot
