@@ -424,7 +424,6 @@ export function createValidatorMonitor(
         }
       }
 
-      // Set total balance of all monitored validators
       if (balances !== undefined) {
         validatorMonitorMetrics?.prevEpochOnChainBalance.set(totalBalance);
       }
