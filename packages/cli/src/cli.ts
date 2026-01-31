@@ -6,55 +6,6 @@ import {cmds} from "./cmds/index.js";
 import {globalOptions, rcConfigOption} from "./options/index.js";
 import {getVersionData} from "./util/version.js";
 
-/**
- * Options that are explicitly defined as arrays and can accept multiple values.
- * These are allowed to be passed multiple times (e.g., --beaconNodes x --beaconNodes y).
- */
-const ARRAY_OPTIONS = new Set([
-  "--bootnodes",
-  "--startValidators",
-  "--pubkeys",
-  "--beaconNodes",
-  "--builder.urls",
-  "--externalSigner.pubkeys",
-  "--externalSigner.url",
-  "--eth1.providerUrls",
-  "--execution.urls",
-  "--chain.archiveBlobEpochs",
-  "--rest.cors",
-  "--network.connectToDiscv5Bootnodes",
-  "--log.file.categories",
-]);
-
-/**
- * Check for duplicate flags in raw argv and throw an error if found.
- * Array options are allowed to be passed multiple times.
- */
-function checkDuplicateFlags(argv: string[]): void {
-  const flagCounts = new Map<string, number>();
-
-  for (const arg of argv) {
-    // Match flags like --flag, -f, --flag=value
-    const match = arg.match(/^(-{1,2}[a-zA-Z][a-zA-Z0-9.-]*)(?:=.*)?$/);
-    if (match) {
-      const flag = match[1];
-      flagCounts.set(flag, (flagCounts.get(flag) ?? 0) + 1);
-    }
-  }
-
-  const duplicates: string[] = [];
-  for (const [flag, count] of flagCounts) {
-    // Skip array options - they're allowed to have multiple values
-    if (count > 1 && !ARRAY_OPTIONS.has(flag)) {
-      duplicates.push(flag);
-    }
-  }
-
-  if (duplicates.length > 0) {
-    throw new Error(`Duplicate flags are not allowed: ${duplicates.join(", ")}`);
-  }
-}
-
 const {version} = getVersionData();
 const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum Consensus Beacon Chain.
   * Version: ${version}
@@ -72,16 +23,29 @@ export const yarg = yargs((hideBin as (args: string[]) => string[])(process.argv
  * The CLI must actually be executed in a different script
  */
 export function getLodestarCli(): Argv {
-  // Check for duplicate flags before yargs parses them
-  // This throws an error instead of silent "last value wins" behavior
-  checkDuplicateFlags(process.argv);
-
   const lodestar = yarg
     .env("LODESTAR")
     .parserConfiguration({
       // As of yargs v16.1.0 dot-notation breaks strictOptions()
       // Manually processing options is typesafe tho more verbose
       "dot-notation": false,
+    })
+    .check((argv, options) => {
+      // Detect duplicate flags: if a non-array option has an array value,
+      // it means the flag was passed multiple times
+      const duplicates: string[] = [];
+      for (const [key, opt] of Object.entries(options)) {
+        // Skip internal yargs keys and array options
+        if (key === "_" || key === "$0" || opt?.type === "array") continue;
+        const value = argv[key];
+        if (Array.isArray(value)) {
+          duplicates.push(`--${key}`);
+        }
+      }
+      if (duplicates.length > 0) {
+        throw new Error(`Duplicate flags are not allowed: ${duplicates.join(", ")}`);
+      }
+      return true;
     })
     .options(globalOptions)
     // blank scriptName so that help text doesn't display the cli name before each command
