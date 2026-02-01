@@ -17,7 +17,7 @@ import {kzg} from "../../util/kzg.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError, BlobSidecarValidationError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
-import {RegenCaller} from "../regen/index.js";
+import {RegenCaller, RegenError, RegenErrorCode} from "../regen/index.js";
 
 export async function validateGossipBlobSidecar(
   fork: ForkName,
@@ -118,15 +118,20 @@ export async function validateGossipBlobSidecar(
     });
   }
 
-  // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.
-  // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
-  // this is something we should change this in the future to make the code airtight to the spec.
-  // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
+  // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources)
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
+  // [REJECT] The current finalized_checkpoint is an ancestor of the block
   const blockState = await chain.regen
     .getBlockSlotState(parentBlock, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
-    .catch(() => {
-      throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+    .catch((e) => {
+      // REJECT if block is not a descendant of finalized (pruned from forkchoice)
+      const action =
+        e instanceof RegenError &&
+        (e.type.code === RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE ||
+          e.type.code === RegenErrorCode.STATE_NOT_IN_FORKCHOICE)
+          ? GossipAction.REJECT
+          : GossipAction.IGNORE;
+      throw new BlobSidecarGossipError(action, {
         code: BlobSidecarErrorCode.PARENT_UNKNOWN,
         parentRoot,
         blockRoot: blockHex,
