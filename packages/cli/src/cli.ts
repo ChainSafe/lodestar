@@ -1,10 +1,56 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs, {Argv} from "yargs";
 import {hideBin} from "yargs/helpers";
-import {registerCommandToYargs} from "@lodestar/utils";
+import {CliCommand, CliCommandOptions, registerCommandToYargs} from "@lodestar/utils";
 import {cmds} from "./cmds/index.js";
 import {globalOptions, rcConfigOption} from "./options/index.js";
 import {getVersionData} from "./util/version.js";
+
+/**
+ * Traverses all commands and subcommands to find all options of type "array".
+ * This is used to allow duplicate flags for array-like options.
+ * Also includes aliases for array options.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Need any for generic command types
+function getAllArrayOptions(commands: CliCommand<any, any>[], globalOpts: CliCommandOptions<any>): Set<string> {
+  const arrayOptions = new Set<string>();
+
+  // biome-ignore lint/suspicious/noExplicitAny: Need any for generic option types
+  function processOptions(options: CliCommandOptions<any> | undefined): void {
+    if (!options) return;
+
+    for (const key of Object.keys(options)) {
+      const opt = options[key];
+      if (opt.type === "array") {
+        arrayOptions.add(key);
+        if (opt.alias) {
+          const aliases = Array.isArray(opt.alias) ? opt.alias : [opt.alias];
+          for (const alias of aliases) {
+            arrayOptions.add(String(alias));
+          }
+        }
+      }
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Need any for generic command types
+  function traverseCommands(cmds: CliCommand<any, any>[]): void {
+    for (const cmd of cmds) {
+      processOptions(cmd.options);
+      if (cmd.subcommands) {
+        traverseCommands(cmd.subcommands);
+      }
+    }
+  }
+
+  traverseCommands(commands);
+  processOptions(globalOpts);
+
+  return arrayOptions;
+}
+
+// Build set of all array options at module load time
+const ARRAY_OPTIONS = getAllArrayOptions(cmds, globalOptions);
 
 const {version} = getVersionData();
 const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum Consensus Beacon Chain.
@@ -30,14 +76,13 @@ export function getLodestarCli(): Argv {
       // Manually processing options is typesafe tho more verbose
       "dot-notation": false,
     })
-    .check((argv, options) => {
+    .check((argv) => {
       // Detect duplicate flags: if a non-array option has an array value,
       // it means the flag was passed multiple times
       const duplicates: string[] = [];
-      for (const [key, opt] of Object.entries(options)) {
-        // Skip internal yargs keys and array options
-        if (key === "_" || key === "$0" || opt?.type === "array") continue;
-        const value = argv[key];
+      for (const [key, value] of Object.entries(argv)) {
+        // Skip internal yargs keys and array options (which legitimately accept multiple values)
+        if (key === "_" || key === "$0" || ARRAY_OPTIONS.has(key)) continue;
         if (Array.isArray(value)) {
           duplicates.push(`--${key}`);
         }
