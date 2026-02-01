@@ -238,11 +238,16 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Fetches JSON and throws detailed errors in case the HTTP request is not ok
    */
   private async fetchJsonOneUrl<R, T = unknown>(url: string, json: T, opts?: ReqOpts): Promise<R> {
+    // Avoid closure allocation: use .bind() instead of arrow function.
+    // Arrow functions capture the surrounding scope (request body, etc.),
+    // which prevents GC when user passes a long-lived AbortSignal.
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), opts?.timeout ?? this.opts?.timeout ?? REQUEST_TIMEOUT);
+    const abort = controller.abort.bind(controller);
+    const timeout = setTimeout(abort, opts?.timeout ?? this.opts?.timeout ?? REQUEST_TIMEOUT);
 
-    const onParentSignalAbort = (): void => controller.abort();
-    this.opts?.signal?.addEventListener("abort", onParentSignalAbort, {once: true});
+    // Wrap abort() to avoid passing the Event as abort reason
+    const onAbort = (): void => abort();
+    this.opts?.signal?.addEventListener("abort", onAbort, {once: true});
 
     // Default to "unknown" to prevent mixing metrics with others.
     const routeId = opts?.routeId ?? "unknown";
@@ -304,7 +309,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       this.metrics?.activeRequests.dec({routeId}, 1);
 
       clearTimeout(timeout);
-      this.opts?.signal?.removeEventListener("abort", onParentSignalAbort);
+      this.opts?.signal?.removeEventListener("abort", onAbort);
     }
   }
 }

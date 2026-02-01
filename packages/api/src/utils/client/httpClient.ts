@@ -350,15 +350,20 @@ export class HttpClient implements IHttpClient {
   ): Promise<ApiResponse<E>> {
     const abortSignals = [this.signal, init.signal];
 
-    // Implement fetch timeout
+    // Avoid closure allocation: use .bind() instead of arrow function.
+    // Arrow functions capture the surrounding scope (request body, etc.),
+    // which prevents GC when user passes a long-lived AbortSignal.
+    // Using .bind() only retains a reference to the controller itself.
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), init.timeoutMs);
+    const abort = controller.abort.bind(controller);
+    const timeout = setTimeout(abort, init.timeoutMs);
     init.signal = controller.signal;
 
     // Attach global/local signal to this request's controller
-    const onSignalAbort = (): void => controller.abort();
+    // Note: We wrap abort() to avoid passing the Event as abort reason
+    const onAbort = (): void => abort();
     for (const s of abortSignals) {
-      s?.addEventListener("abort", onSignalAbort);
+      s?.addEventListener("abort", onAbort, {once: true});
     }
 
     const routeId = definition.operationId;
@@ -408,7 +413,7 @@ export class HttpClient implements IHttpClient {
 
       clearTimeout(timeout);
       for (const s of abortSignals) {
-        s?.removeEventListener("abort", onSignalAbort);
+        s?.removeEventListener("abort", onAbort);
       }
     }
   }

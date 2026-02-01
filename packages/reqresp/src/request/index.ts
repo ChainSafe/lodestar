@@ -19,6 +19,30 @@ export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_TTFB_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_RESP_TIMEOUT = 10 * 1000; // 10 sec
 
+/** State object for timeout handling - avoids closure allocations */
+interface TimeoutState {
+  timeoutRESP: NodeJS.Timeout | null;
+  respTimeoutController: AbortController;
+  RESP_TIMEOUT: number;
+}
+
+/** Static helper for TTFB timeout - avoids closure allocation */
+function handleTTFBTimeout(state: TimeoutState, ttfbTimeoutController: AbortController): void {
+  if (state.timeoutRESP) clearTimeout(state.timeoutRESP);
+  ttfbTimeoutController.abort();
+}
+
+/** Static helper for RESP timeout - avoids closure allocation */
+function handleRespTimeout(state: TimeoutState): void {
+  state.respTimeoutController.abort();
+}
+
+/** Restart response timeout - uses static helpers to avoid closures */
+function restartRespTimeout(state: TimeoutState): void {
+  if (state.timeoutRESP) clearTimeout(state.timeoutRESP);
+  state.timeoutRESP = setTimeout(handleRespTimeout, state.RESP_TIMEOUT, state);
+}
+
 export interface SendRequestOpts {
   /** The maximum time for complete response transfer. */
   respTimeoutMs?: number;
@@ -157,18 +181,15 @@ export async function* sendRequest(
     const ttfbTimeoutController = new AbortController();
     const respTimeoutController = new AbortController();
 
-    let timeoutRESP: NodeJS.Timeout | null = null;
-
-    const timeoutTTFB = setTimeout(() => {
-      // If we abort on first byte delay, don't need to abort for response delay
-      if (timeoutRESP) clearTimeout(timeoutRESP);
-      ttfbTimeoutController.abort();
-    }, TTFB_TIMEOUT);
-
-    const restartRespTimeout = (): void => {
-      if (timeoutRESP) clearTimeout(timeoutRESP);
-      timeoutRESP = setTimeout(() => respTimeoutController.abort(), RESP_TIMEOUT);
+    // State object for timeout handling - avoids closure allocations on each chunk
+    const timeoutState: TimeoutState = {
+      timeoutRESP: null,
+      respTimeoutController,
+      RESP_TIMEOUT,
     };
+
+    // Use static helpers with setTimeout arg passing to avoid closure allocation
+    const timeoutTTFB = setTimeout(handleTTFBTimeout, TTFB_TIMEOUT, timeoutState, ttfbTimeoutController);
 
     try {
       // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
@@ -190,11 +211,11 @@ export async function* sendRequest(
             // On first byte, cancel the single use TTFB_TIMEOUT, and start RESP_TIMEOUT
             clearTimeout(timeoutTTFB);
             timerTTFB?.();
-            restartRespTimeout();
+            restartRespTimeout(timeoutState);
           },
           onFirstResponseChunk() {
             // On <response_chunk>, cancel this chunk's RESP_TIMEOUT and start next's
-            restartRespTimeout();
+            restartRespTimeout(timeoutState);
           },
         })
       );
@@ -205,7 +226,7 @@ export async function* sendRequest(
       logger.verbose("Req  done", logCtx);
     } finally {
       clearTimeout(timeoutTTFB);
-      if (timeoutRESP !== null) clearTimeout(timeoutRESP);
+      if (timeoutState.timeoutRESP !== null) clearTimeout(timeoutState.timeoutRESP);
 
       // Necessary to call `stream.close()` since collectResponses() may break out of the source before exhausting it
       // `stream.close()` libp2p-mplex will .end() the source (it-pushable instance)

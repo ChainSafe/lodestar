@@ -163,9 +163,8 @@ export class AttnetsService implements IAttnetsService {
    */
   private onSlot = (clockSlot: Slot): void => {
     try {
-      setTimeout(() => {
-        this.onHalfSlot(clockSlot);
-      }, this.config.SLOT_DURATION_MS * 0.5);
+      // Use setTimeout's argument passing to avoid closure allocation
+      setTimeout(this.onHalfSlot, this.config.SLOT_DURATION_MS * 0.5, clockSlot);
 
       for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
         if (dutiedSlot === clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {

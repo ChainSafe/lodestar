@@ -35,6 +35,11 @@ export function getBrowserLogger(opts: BrowserLoggerOpts): Logger {
   );
 }
 
+/** Static helper to emit logged event - avoids closure allocation in setTimeout */
+function emitLogged(transport: BrowserConsole, info: WinstonLogInfo): void {
+  transport.emit("logged", info);
+}
+
 class BrowserConsole extends Transport {
   name = "BrowserConsole";
   private levels: Record<LogLevel, number> = {
@@ -61,9 +66,8 @@ class BrowserConsole extends Transport {
   }
 
   log(info: WinstonLogInfo, callback: () => void): void {
-    setTimeout(() => {
-      this.emit("logged", info);
-    }, 0);
+    // Use static helper with setTimeout arg passing to avoid closure allocation
+    setTimeout(emitLogged, 0, this, info);
 
     const val = this.levels[info[LEVEL]];
     const mappedMethod = this.methods[info[LEVEL]];
