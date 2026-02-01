@@ -248,9 +248,14 @@ export function getLodestarApi({
     async getCustodyInfo() {
       const {custodyColumns, targetCustodyGroupCount} = chain.custodyConfig;
 
+      // Data column custody only starts at Fulu fork, so the earliest custodied slot
+      // is the max of Fulu activation slot and the node's earliest available slot
+      const fuluForkSlot = config.forks.fulu.epoch * SLOTS_PER_EPOCH;
+      const earliestCustodiedSlot = Math.max(fuluForkSlot, chain.earliestAvailableSlot);
+
       return {
         data: {
-          earliestCustodiedSlot: chain.earliestAvailableSlot,
+          earliestCustodiedSlot,
           custodyGroupCount: targetCustodyGroupCount,
           custodyColumns,
         },
