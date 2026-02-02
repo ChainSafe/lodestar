@@ -5,7 +5,6 @@ import {
   ForkAll,
   ForkName,
   ForkPostFulu,
-  ForkPostGloas,
   ForkPreGloas,
   KZG_COMMITMENTS_GINDEX,
   NUMBER_OF_COLUMNS,
