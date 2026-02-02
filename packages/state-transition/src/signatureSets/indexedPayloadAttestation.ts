@@ -9,7 +9,7 @@ export function getIndexedPayloadAttestationSignatureSet(
   indexedPayloadAttestation: gloas.IndexedPayloadAttestation
 ): ISignatureSet {
   return createAggregateSignatureSetFromComponents(
-    indexedPayloadAttestation.attestingIndices.map((i) => state.epochCtx.index2pubkey[i]),
+    indexedPayloadAttestation.attestingIndices,
     getPayloadAttestationDataSigningRoot(state.config, state.slot, indexedPayloadAttestation.data),
     indexedPayloadAttestation.signature
   );
