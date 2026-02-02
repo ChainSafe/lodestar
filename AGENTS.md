@@ -15,22 +15,25 @@ and serves as:
 
 ```
 /packages/
-  api/             # REST API client and server
-  beacon-node/     # Beacon chain node implementation
-  cli/             # Command-line interface
-  config/          # Network configuration (mainnet, sepolia, etc.)
-  db/              # Database abstraction (LevelDB)
-  flare/           # CLI debugging/testing tool
-  fork-choice/     # Fork choice implementation (proto-array)
-  light-client/    # Light client implementation
-  logger/          # Logging utilities
-  params/          # Consensus parameters and presets
-  prover/          # Execution API prover
-  reqresp/         # libp2p request/response protocol
-  state-transition/# State transition functions
-  types/           # SSZ type definitions
-  utils/           # Shared utilities
-  validator/       # Validator client
+  api/              # REST API client and server
+  beacon-node/      # Beacon chain node implementation
+  cli/              # Command-line interface
+  config/           # Network configuration (mainnet, sepolia, etc.)
+  db/               # Database abstraction (LevelDB)
+  era/              # Era file handling for historical data
+  flare/            # CLI debugging/testing tool
+  fork-choice/      # Fork choice implementation (proto-array)
+  light-client/     # Light client implementation
+  logger/           # Logging utilities
+  params/           # Consensus parameters and presets
+  prover/           # Execution API prover
+  reqresp/          # libp2p request/response protocol
+  spec-test-util/   # Test harness for consensus spec tests
+  state-transition/ # State transition functions
+  test-utils/       # Shared utilities for testing
+  types/            # SSZ type definitions
+  utils/            # Shared utilities
+  validator/        # Validator client
 
 /configs/          # Network configuration files
 /docs/             # Documentation source
@@ -224,9 +227,9 @@ refactor(reqresp)!: support byte based handlers
 
 ### Adding a new SSZ type
 
-1. Add type definition in `packages/types/src/`
-2. Export from appropriate fork module
-3. Add to `sszTypes` object
+1. Add the type definition in the relevant fork file (e.g., `packages/types/src/phase0/sszTypes.ts`)
+2. Export the new type from that file's `ssz` object
+3. The type will be automatically aggregated (no central `sszTypes` to modify)
 4. Run `pnpm check-types` to verify
 
 ### Modifying gossip validation
