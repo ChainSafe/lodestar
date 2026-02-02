@@ -69,6 +69,9 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.light_client_finality_update:
     case GossipType.light_client_optimistic_update:
     case GossipType.bls_to_execution_change:
+    case GossipType.execution_payload:
+    case GossipType.payload_attestation_message:
+    case GossipType.execution_payload_bid:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -114,6 +117,12 @@ export function getGossipSSZType(topic: GossipTopic) {
         : ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
+    case GossipType.execution_payload:
+      return ssz.gloas.SignedExecutionPayloadEnvelope;
+    case GossipType.payload_attestation_message:
+      return ssz.gloas.PayloadAttestationMessage;
+    case GossipType.execution_payload_bid:
+      return ssz.gloas.SignedExecutionPayloadBid;
   }
 }
 
@@ -190,6 +199,9 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.light_client_finality_update:
       case GossipType.light_client_optimistic_update:
       case GossipType.bls_to_execution_change:
+      case GossipType.execution_payload:
+      case GossipType.payload_attestation_message:
+      case GossipType.execution_payload_bid:
         return {type: gossipTypeStr, boundary, encoding};
     }
 
@@ -239,6 +251,12 @@ export function getCoreTopicsAtFork(
     {type: GossipType.proposer_slashing},
     {type: GossipType.attester_slashing},
   ];
+
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    topics.push({type: GossipType.execution_payload});
+    topics.push({type: GossipType.payload_attestation_message});
+    topics.push({type: GossipType.execution_payload_bid});
+  }
 
   // After fulu also track data_column_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.fulu) {
@@ -329,4 +347,7 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.light_client_finality_update]: false,
   [GossipType.light_client_optimistic_update]: false,
   [GossipType.bls_to_execution_change]: true,
+  [GossipType.execution_payload]: true,
+  [GossipType.payload_attestation_message]: true,
+  [GossipType.execution_payload_bid]: true,
 };

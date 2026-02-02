@@ -212,6 +212,31 @@ export function createLodestarMetrics(
       }),
     },
 
+    unfinalizedBlockWritesQueue: {
+      length: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_length",
+        help: "Count of total unfinalized block writes queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_dropped_jobs_total",
+        help: "Count of total unfinalized block writes queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_unfinalized_block_writes_queue_job_time_seconds",
+        help: "Time to process unfinalized block writes queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_unfinalized_block_writes_queue_job_wait_time_seconds",
+        help: "Time from job added to the unfinalized block writes queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_concurrency",
+        help: "Current concurrency of unfinalized block writes queue",
+      }),
+    },
+
     engineHttpProcessorQueue: {
       length: register.gauge({
         name: "lodestar_engine_http_processor_queue_length",
@@ -1116,6 +1141,46 @@ export function createLodestarMetrics(
           help: "Total number of empty returns in SyncContributionAndProofPool.getAggregate(slot, root)",
         }),
       },
+      payloadAttestationPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_payload_attestation_pool_size",
+          help: "Current size of the PayloadAttestationPool = total payload attestations unique by data and slot",
+        }),
+        payloadAttDataPerSlot: register.gauge({
+          name: "lodestar_oppool_payload_attestation_pool_payload_attestation_data_per_slot_total",
+          help: "Total number of payload attestation data per slot in PayloadAttestationPool",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_payload_attestation_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a payload attestation message from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_payload_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a payload attestation message from api to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        getPayloadAttestationsCacheMisses: register.counter({
+          name: "lodestar_oppool_payload_attestation_pool_get_payload_attestations_cache_misses_total",
+          help: "Total number of getPayloadAttestationsForBlock calls with no aggregate for slot and payload attestation data root",
+        }),
+      },
+      executionPayloadBidPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_execution_payload_bid_pool_size",
+          help: "Current size of the ExecutionPayloadBidPool = total number of bids",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+      },
     },
 
     chain: {
@@ -1308,32 +1373,18 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_miss_count",
         help: "Count of shuffling cache miss",
       }),
-      shufflingBuiltMultipleTimes: register.gauge({
-        name: "lodestar_shuffling_cache_recalculated_shuffling_count",
-        help: "Count of shuffling that were build multiple times",
-      }),
-      shufflingPromiseNotResolvedAndThrownAway: register.gauge({
-        name: "lodestar_shuffling_cache_promise_not_resolved_and_thrown_away_count",
-        help: "Count of shuffling cache promises that were discarded and the shuffling was built synchronously",
+      shufflingSetMultipleTimes: register.gauge({
+        name: "lodestar_shuffling_cache_set_multiple_times_count",
+        help: "Count of shuffling that were set multiple times",
       }),
       shufflingPromiseNotResolved: register.gauge({
         name: "lodestar_shuffling_cache_promise_not_resolved_count",
         help: "Count of shuffling cache promises that were requested before the promise was resolved",
       }),
-      nextShufflingNotOnEpochCache: register.gauge({
-        name: "lodestar_shuffling_cache_next_shuffling_not_on_epoch_cache",
-        help: "The next shuffling was not on the epoch cache before the epoch transition",
-      }),
       shufflingPromiseResolutionTime: register.histogram({
         name: "lodestar_shuffling_cache_promise_resolution_time_seconds",
         help: "Time from promise insertion until promise resolution when shuffling was ready in seconds",
         buckets: [0.5, 1, 1.5, 2],
-      }),
-      shufflingCalculationTime: register.histogram<{source: "build" | "getSync"}>({
-        name: "lodestar_shuffling_cache_shuffling_calculation_time_seconds",
-        help: "Run time of shuffling calculation",
-        buckets: [0.5, 0.75, 1, 1.25, 1.5],
-        labelNames: ["source"],
       }),
     },
 
@@ -1616,98 +1667,6 @@ export function createLodestarMetrics(
       staleLightClientUpdates: register.counter({
         name: "lodestar_lightclient_server_stale_updates_total",
         help: "Total number of stale light client updates that were not emitted",
-      }),
-    },
-
-    eth1: {
-      depositTrackerIsCaughtup: register.gauge({
-        name: "lodestar_eth1_deposit_tracker_is_caughtup",
-        help: "Eth1 deposit is caught up 0=false 1=true",
-      }),
-      depositTrackerUpdateErrors: register.gauge({
-        name: "lodestar_eth1_deposit_tracker_update_errors_total",
-        help: "Eth1 deposit update loop errors total",
-      }),
-      remoteHighestBlock: register.gauge({
-        name: "lodestar_eth1_remote_highest_block",
-        help: "Eth1 current highest block number",
-      }),
-      depositEventsFetched: register.gauge({
-        name: "lodestar_eth1_deposit_events_fetched_total",
-        help: "Eth1 deposit events fetched total",
-      }),
-      lastProcessedDepositBlockNumber: register.gauge({
-        name: "lodestar_eth1_last_processed_deposit_block_number",
-        help: "Eth1 deposit tracker lastProcessedDepositBlockNumber",
-      }),
-      blocksFetched: register.gauge({
-        name: "lodestar_eth1_blocks_fetched_total",
-        help: "Eth1 blocks fetched total",
-      }),
-      lastFetchedBlockBlockNumber: register.gauge({
-        name: "lodestar_eth1_last_fetched_block_block_number",
-        help: "Eth1 deposit tracker last fetched block's block number",
-      }),
-      lastFetchedBlockTimestamp: register.gauge({
-        name: "lodestar_eth1_last_fetched_block_timestamp",
-        help: "Eth1 deposit tracker last fetched block's timestamp",
-      }),
-      eth1FollowDistanceSecondsConfig: register.gauge({
-        name: "lodestar_eth1_follow_distance_seconds_config",
-        help: "Constant with value = SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE",
-      }),
-      eth1FollowDistanceDynamic: register.gauge({
-        name: "lodestar_eth1_follow_distance_dynamic",
-        help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
-      }),
-      eth1GetBlocksBatchSizeDynamic: register.gauge({
-        name: "lodestar_eth1_blocks_batch_size_dynamic",
-        help: "Dynamic batch size to fetch blocks",
-      }),
-      eth1GetLogsBatchSizeDynamic: register.gauge({
-        name: "lodestar_eth1_logs_batch_size_dynamic",
-        help: "Dynamic batch size to fetch deposit logs",
-      }),
-    },
-
-    eth1HttpClient: {
-      requestTime: register.histogram<{routeId: string}>({
-        name: "lodestar_eth1_http_client_request_time_seconds",
-        help: "eth1 JsonHttpClient - histogram or roundtrip request times",
-        labelNames: ["routeId"],
-        // Provide max resolution on problematic values around 1 second
-        buckets: [0.1, 0.5, 1, 2, 5, 15],
-      }),
-      streamTime: register.histogram<{routeId: string}>({
-        name: "lodestar_eth1_http_client_stream_time_seconds",
-        help: "eth1 JsonHttpClient - streaming time by routeId",
-        labelNames: ["routeId"],
-        // Provide max resolution on problematic values around 1 second
-        buckets: [0.1, 0.5, 1, 2, 5, 15],
-      }),
-      requestErrors: register.gauge<{routeId: string}>({
-        name: "lodestar_eth1_http_client_request_errors_total",
-        help: "eth1 JsonHttpClient - total count of request errors",
-        labelNames: ["routeId"],
-      }),
-      retryCount: register.gauge<{routeId: string}>({
-        name: "lodestar_eth1_http_client_request_retries_total",
-        help: "eth1 JsonHttpClient - total count of request retries",
-        labelNames: ["routeId"],
-      }),
-      requestUsedFallbackUrl: register.gauge<{routeId: string}>({
-        name: "lodestar_eth1_http_client_request_used_fallback_url_total",
-        help: "eth1 JsonHttpClient - total count of requests on fallback url(s)",
-        labelNames: ["routeId"],
-      }),
-      activeRequests: register.gauge<{routeId: string}>({
-        name: "lodestar_eth1_http_client_active_requests",
-        help: "eth1 JsonHttpClient - current count of active requests",
-        labelNames: ["routeId"],
-      }),
-      configUrlsCount: register.gauge({
-        name: "lodestar_eth1_http_client_config_urls_count",
-        help: "eth1 JsonHttpClient - static config urls count",
       }),
     },
 

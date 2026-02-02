@@ -12,7 +12,6 @@ import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
@@ -92,6 +91,8 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         {
           privateKey: await generateKeyPair("secp256k1"),
           config: state.config,
+          pubkey2index: state.epochCtx.pubkey2index,
+          index2pubkey: state.epochCtx.index2pubkey,
           db,
           dataDir: ".",
           dbName: ".",
@@ -101,7 +102,6 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           validatorMonitor: null,
           anchorState: state,
           isAnchorStateFinalized: true,
-          eth1: new Eth1ForBlockProductionDisabled(),
           executionEngine: new ExecutionEngineDisabled(),
         }
       );

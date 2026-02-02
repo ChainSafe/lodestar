@@ -124,7 +124,7 @@ export async function validateGossipBlobSidecar(
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
   const blockState = await chain.regen
-    .getBlockSlotState(parentRoot, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
+    .getBlockSlotState(parentBlock, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
       throw new BlobSidecarGossipError(GossipAction.IGNORE, {
         code: BlobSidecarErrorCode.PARENT_UNKNOWN,
@@ -138,8 +138,8 @@ export async function validateGossipBlobSidecar(
   const signature = blobSidecar.signedBlockHeader.signature;
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blobSlot, blockHex, signature)) {
     const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
-      chain.index2pubkey,
-      blockState,
+      chain.config,
+      blockState.slot,
       blobSidecar.signedBlockHeader
     );
     // Don't batch so verification is not delayed
@@ -243,12 +243,7 @@ export async function validateBlockBlobSidecars(
     const blockRootHex = toRootHex(blockRoot);
     const signature = firstSidecarSignedBlockHeader.signature;
     if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRootHex, signature)) {
-      const headState = await chain.getHeadState();
-      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
-        chain.index2pubkey,
-        headState,
-        firstSidecarSignedBlockHeader
-      );
+      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(chain.config, firstSidecarSignedBlockHeader);
 
       if (
         !(await chain.bls.verifySignatureSets([signatureSet], {

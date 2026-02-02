@@ -6,6 +6,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   isExecutionCachedStateType,
+  isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
@@ -171,13 +172,18 @@ function getHeadExecutionInfo(
 
   // Add execution status to notifier only if head is on/post bellatrix
   if (isExecutionCachedStateType(headState)) {
-    const executionPayloadHashInfo =
-      headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
-    const executionPayloadNumberInfo =
-      headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
-    return [
-      `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(executionPayloadHashInfo)})`,
-    ];
+    if (isMergeTransitionComplete(headState)) {
+      const executionPayloadHashInfo =
+        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
+      const executionPayloadNumberInfo =
+        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
+      return [
+        `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
+          executionPayloadHashInfo
+        )})`,
+      ];
+    }
+    return [`exec-block: ${executionStatusStr}`];
   }
 
   return [];

@@ -1,6 +1,6 @@
 import {ClassicLevel} from "classic-level";
 import {Logger} from "@lodestar/utils";
-import {DatabaseController, DatabaseOptions, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
+import {DatabaseController, DatabaseOptions, DbBatch, DbReqOpts, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
 
 enum Status {
@@ -141,6 +141,13 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, keys.length);
 
     return this.db.batch(keys.map((key) => ({type: "del", key: key})));
+  }
+
+  batch(batch: DbBatch<Uint8Array, Uint8Array>, opts?: DbReqOpts): Promise<void> {
+    this.metrics?.dbWriteReq.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, 1);
+    this.metrics?.dbWriteItems.inc({bucket: opts?.bucketId ?? BUCKET_ID_UNKNOWN}, batch.length);
+
+    return this.db.batch(batch);
   }
 
   keysStream(opts: FilterOptions<Uint8Array> = {}): AsyncIterable<Uint8Array> {

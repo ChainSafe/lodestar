@@ -8,11 +8,10 @@ import {CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {Epoch, Slot, electra} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
-import {bytesToData} from "../../lib/eth1/provider/utils.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
-import {dataToBytes} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
+import {bytesToData, dataToBytes} from "../../src/execution/engine/utils.js";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {BeaconNode} from "../../src/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
@@ -25,7 +24,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker yarn vitest run test/sim/electra-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker pnpm vitest run test/sim/electra-interop.test.ts
 // ```
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
@@ -311,8 +310,6 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         api: {rest: {enabled: true} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, discv5: null},
-        // Now eth deposit/merge tracker methods directly available on engine endpoints
-        eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
         chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },

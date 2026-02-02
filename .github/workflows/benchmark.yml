@@ -31,28 +31,9 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: 24
-          check-latest: true
-          cache: yarn
-      - name: Node.js version
-        id: node
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
-      - name: Restore dependencies
-        uses: actions/cache@v4
-        id: cache-deps
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
-      - name: Install & build
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
-      - name: Build
-        run: yarn build
-        if: steps.cache-deps.outputs.cache-hit == 'true'
+          node: 24
       # </common-build>
 
       # Restore performance downloaded states
@@ -63,7 +44,7 @@ jobs:
           key: perf-states-${{ hashFiles('packages/state-transition/test/perf/params.ts') }}
 
       - name: Run benchmarks
-        run: yarn benchmark
+        run: pnpm benchmark
         env:
           # To download content for tests
           INFURA_ETH2_CREDENTIALS: ${{ secrets.INFURA_ETH2_CREDENTIALS }}

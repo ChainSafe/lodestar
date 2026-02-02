@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostBellatrix,
@@ -43,9 +43,9 @@ import {
   electra,
   fulu,
 } from "@lodestar/types";
-import {Logger, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
+import {numToQuantity} from "../../execution/engine/utils.js";
 import {
   IExecutionBuilder,
   IExecutionEngine,
@@ -78,7 +78,6 @@ export enum BlockProductionStep {
   voluntaryExits = "voluntaryExits",
   blsToExecutionChanges = "blsToExecutionChanges",
   attestations = "attestations",
-  eth1DataAndDeposits = "eth1DataAndDeposits",
   syncAggregate = "syncAggregate",
   executionPayload = "executionPayload",
 }
@@ -87,7 +86,7 @@ export type BlockAttributes = {
   randaoReveal: BLSSignature;
   graffiti: Bytes32;
   slot: Slot;
-  parentBlockRoot: Root;
+  parentBlock: ProtoBlock;
   feeRecipient?: string;
 };
 
@@ -156,17 +155,18 @@ export async function produceBlockBody<T extends BlockType>(
   const {
     slot: blockSlot,
     feeRecipient: requestedFeeRecipient,
-    parentBlockRoot,
+    parentBlock,
     proposerIndex,
     proposerPubKey,
     commonBlockBodyPromise,
   } = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
+  const parentBlockRoot = fromHex(parentBlock.blockRoot);
   // even though shouldOverrideBuilder is relevant for the engine response, for simplicity of typing
   // we just return it undefined for the builder which anyway doesn't get consumed downstream
   let shouldOverrideBuilder: boolean | undefined;
-  const fork = currentState.config.getForkName(blockSlot);
+  const fork = this.config.getForkName(blockSlot);
   const produceResult = {
     type: blockType,
     fork,
@@ -624,7 +624,7 @@ function preparePayloadAttributes(
     (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
       ForkSeq[fork],
       prepareState as CachedBeaconStateCapella
-    ).withdrawals;
+    ).expectedWithdrawals;
   }
 
   if (ForkSeq[fork] >= ForkSeq.deneb) {
@@ -638,14 +638,14 @@ export async function produceCommonBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
   currentState: CachedBeaconStateAllForks,
-  {randaoReveal, graffiti, slot, parentBlockRoot}: BlockAttributes
+  {randaoReveal, graffiti, slot, parentBlock}: BlockAttributes
 ): Promise<CommonBlockBody> {
   const stepsMetrics =
     blockType === BlockType.Full
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  const fork = currentState.config.getForkName(slot);
+  const fork = this.config.getForkName(slot);
 
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -662,25 +662,27 @@ export async function produceCommonBlockBody<T extends BlockType>(
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(fork, this.forkChoice, currentState);
+  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
+    fork,
+    this.forkChoice,
+    this.shufflingCache,
+    currentState
+  );
   endAttestations?.({
     step: BlockProductionStep.attestations,
-  });
-
-  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
-  const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
-  endEth1DataAndDeposits?.({
-    step: BlockProductionStep.eth1DataAndDeposits,
   });
 
   const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
     randaoReveal,
     graffiti,
-    eth1Data,
+    // Eth1 data voting is no longer required since electra
+    eth1Data: currentState.eth1Data,
     proposerSlashings,
     attesterSlashings,
     attestations,
-    deposits,
+    // Since electra, deposits are processed by the execution layer,
+    // we no longer support handling deposits from earlier forks.
+    deposits: [],
     voluntaryExits,
   };
 
@@ -690,6 +692,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
 
   const endSyncAggregate = stepsMetrics?.startTimer();
   if (ForkSeq[fork] >= ForkSeq.altair) {
+    const parentBlockRoot = fromHex(parentBlock.blockRoot);
     const previousSlot = slot - 1;
     const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
     this.metrics?.production.producedSyncAggregateParticipants.observe(

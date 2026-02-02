@@ -42,7 +42,7 @@ Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scrip
 
 ### Prerequisites
 
-Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v24) of [NodeJS](https://nodejs.org/en/).
+Make sure to have [pnpm installed](https://pnpm.io/). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v24) of [NodeJS](https://nodejs.org/en/).
 
 :::info
 NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.
@@ -72,7 +72,7 @@ cd lodestar
 Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root.
 
 ```bash
-yarn install
+pnpm install
 ```
 
 ### Build source code
@@ -80,7 +80,7 @@ yarn install
 Build across all packages.
 
 ```bash
-yarn run build
+pnpm run build
 ```
 
 ### Lodestar CLI
@@ -97,7 +97,7 @@ See [Command Line Reference](./../beacon-management/beacon-cli.md) for further i
 
 **ModuleNotFoundError: No module named 'distutils'**
 
-If you stump upon this issue while running Yarn, it's because Python 3.12 had removed `distutils` package. That package is required for node build tool. You can install it with following command.
+If you stump upon this issue while running `pnpm install`, it's because Python 3.12 had removed `distutils` package. That package is required for node build tool. You can install it with following command.
 
 ```bash
 pip3 install setuptools --force-reinstall --user

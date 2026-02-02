@@ -3,7 +3,11 @@ import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
-import {executionPayloadToPayloadHeader, getFullOrBlindedPayloadFromBody} from "../util/execution.js";
+import {
+  executionPayloadToPayloadHeader,
+  getFullOrBlindedPayloadFromBody,
+  isMergeTransitionComplete,
+} from "../util/execution.js";
 import {computeEpochAtSlot, computeTimeAtSlot, getRandaoMix} from "../util/index.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
@@ -17,13 +21,15 @@ export function processExecutionPayload(
   const forkName = ForkName[ForkSeq[fork] as ForkName];
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
   // with respect to the previous execution payload header
-  const {latestExecutionPayloadHeader} = state;
-  if (!byteArrayEquals(payload.parentHash, latestExecutionPayloadHeader.blockHash)) {
-    throw Error(
-      `Invalid execution payload parentHash ${toRootHex(payload.parentHash)} latest blockHash ${toRootHex(
-        latestExecutionPayloadHeader.blockHash
-      )}`
-    );
+  if (isMergeTransitionComplete(state)) {
+    const {latestExecutionPayloadHeader} = state;
+    if (!byteArrayEquals(payload.parentHash, latestExecutionPayloadHeader.blockHash)) {
+      throw Error(
+        `Invalid execution payload parentHash ${toRootHex(payload.parentHash)} latest blockHash ${toRootHex(
+          latestExecutionPayloadHeader.blockHash
+        )}`
+      );
+    }
   }
 
   // Verify random

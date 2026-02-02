@@ -78,8 +78,6 @@ export type ImportBlockOpts = {
   validBlobSidecars?: BlobSidecarValidation;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
-  /** Set to true if persist block right at verification time */
-  eagerPersistBlock?: boolean;
 };
 
 /**

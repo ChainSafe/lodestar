@@ -22,12 +22,16 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+
+      - name: Install pnpm before setup node
+        uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: "https://registry.npmjs.org"
           check-latest: true
-          cache: yarn
+          cache: pnpm
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
@@ -38,12 +42,12 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/pnpm-lock.yaml', '**/package.json') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
+        run: pnpm install --frozen-lockfile && pnpm build
       - name: Build
-        run: yarn build
+        run: pnpm build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
       - name: Get version
@@ -61,7 +65,7 @@ jobs:
         # This "temp" commit doesn't change the actually release commit which is captured above.
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
-          yarn lerna version ${{ steps.version.outputs.version }} \
+          pnpm lerna version ${{ steps.version.outputs.version }} \
           --force-publish \
           --exact \
           --yes \
@@ -96,7 +100,7 @@ jobs:
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          yarn lerna publish from-package \
+          pnpm lerna publish from-package \
           --yes \
           --no-verify-access \
           --dist-tag next \
@@ -108,44 +112,8 @@ jobs:
 
   docker:
     name: Publish to Docker Hub
-    runs-on: buildjet-4vcpu-ubuntu-2204
     needs: npm
-    steps:
-      - uses: actions/checkout@v4
-      # https://github.com/docker/setup-qemu-action
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push lodestar
-        run: >
-          docker buildx build . --push
-          --tag chainsafe/lodestar:next
-          --platform linux/amd64,linux/arm64
-          --build-arg COMMIT=$(git rev-parse HEAD)
-
-      - run: docker run chainsafe/lodestar:next --help
-      # Display history to know byte size of each layer
-      # Image is available only because of the previous `docker run` command
-      - run: docker image history chainsafe/lodestar:next
-
-      - name: Build and push custom Grafana
-        run: >
-          docker buildx build ./docker/grafana/ --push
-          --file ./docker/grafana/Dockerfile
-          --build-context dashboards=./dashboards
-          --tag chainsafe/lodestar-grafana:next
-          --platform linux/amd64,linux/arm64
-
-      - name: Build and push custom Prometheus
-        run: >
-          docker buildx build ./docker/prometheus/ --push
-          --file ./docker/prometheus/Dockerfile
-          --tag chainsafe/lodestar-prometheus:next
-          --platform linux/amd64,linux/arm64
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: next
+    secrets: inherit

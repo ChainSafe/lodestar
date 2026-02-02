@@ -12,7 +12,7 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 [![Eth Consensus Spec v1.5.0](https://img.shields.io/badge/ETH%20consensus--spec-1.5.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.5.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-16.x-green)
-![Yarn](https://img.shields.io/badge/yarn-%232C8EBB.svg?style=for-the-badge&logo=yarn&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-%232C8EBB.svg?style=for-the-badge&logo=pnpm&logoColor=white)
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 

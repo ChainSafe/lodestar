@@ -108,7 +108,7 @@ describe("get proposers api impl", () => {
   it("should get proposers for historical epoch", async () => {
     const historicalEpoch = currentEpoch - 2;
     initializeState(currentSlot - 2 * SLOTS_PER_EPOCH);
-    modules.chain.getStateBySlot.mockResolvedValue({state, executionOptimistic: false, finalized: true});
+    modules.chain.getStateBySlot.mockResolvedValue({state: cachedState, executionOptimistic: false, finalized: true});
 
     const {data: result} = (await api.getProposerDuties({epoch: historicalEpoch})) as {
       data: routes.validator.ProposerDutyList;

@@ -144,7 +144,7 @@ If your project is using some provider type which is not among above list, you h
 ## Prerequisites
 
 - [NodeJS](https://nodejs.org/) (LTS)
-- [Yarn](https://classic.yarnpkg.com/lang/en/)
+- [pnpm](https://pnpm.io/)
 
 ## What you need
 

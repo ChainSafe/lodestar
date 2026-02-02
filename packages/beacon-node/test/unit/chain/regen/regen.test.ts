@@ -1,4 +1,6 @@
 import {beforeEach, describe, expect, it} from "vitest";
+import {createBeaconConfig} from "@lodestar/config";
+import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RegenCaller} from "../../../../src/chain/regen/interface.js";
@@ -10,6 +12,7 @@ import {testLogger} from "../../../utils/logger.js";
 import {generateCachedState} from "../../../utils/state.js";
 
 describe("regen", () => {
+  const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
   //
   //     epoch: 19         20           21         22          23
   //            |-----------|-----------|-----------|-----------|
@@ -74,6 +77,7 @@ describe("regen", () => {
     beforeEach(() => {
       cache = new PersistentCheckpointStateCache(
         {
+          config,
           datastore,
           logger: testLogger(),
           blockStateCache: new FIFOBlockStateCache({}, {}),

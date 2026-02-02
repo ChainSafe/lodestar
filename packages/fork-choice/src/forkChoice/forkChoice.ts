@@ -10,6 +10,7 @@ import {
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isExecutionBlockBodyType,
+  isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
@@ -22,6 +23,7 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
+  isGloasBeaconBlock,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -741,7 +743,7 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-      ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state)
+      ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
         ? {
             executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
             executionPayloadNumber: block.body.executionPayload.blockNumber,
@@ -752,6 +754,15 @@ export class ForkChoice implements IForkChoice {
             executionPayloadBlockHash: null,
             executionStatus: this.getPreMergeExecStatus(executionStatus),
             dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
+          }),
+      ...(isGloasBeaconBlock(block)
+        ? {
+            builderIndex: block.body.signedExecutionPayloadBid.message.builderIndex,
+            blockHashHex: toRootHex(block.body.signedExecutionPayloadBid.message.blockHash),
+          }
+        : {
+            builderIndex: undefined,
+            blockHashHex: undefined,
           }),
     };
 

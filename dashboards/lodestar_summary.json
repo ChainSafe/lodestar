@@ -1361,7 +1361,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg(\n  rate(validator_monitor_prev_epoch_on_chain_balance[32m])\n)",
+          "expr": "rate(validator_monitor_prev_epoch_on_chain_balance[32m]) / validator_monitor_validators",
           "hide": false,
           "interval": "",
           "legendFormat": "balance_delta",
@@ -1824,18 +1824,6 @@
           "legendFormat": "{{method}}",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(lodestar_eth1_http_client_request_time_seconds_sum{routeId=\"getBlockNumber\"}[$rate_interval])\n/\nrate(lodestar_eth1_http_client_request_time_seconds_count{routeId=\"getBlockNumber\"}[$rate_interval])",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "eth1_getBlockNumber_roundtrip",
-          "refId": "B"
         },
         {
           "datasource": {
@@ -3276,7 +3264,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "unstable-lg1k-hzax41-dkr"
+            "value": "unstable-super"
           }
         ],
         "hide": 0,

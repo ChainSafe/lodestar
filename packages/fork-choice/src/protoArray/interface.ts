@@ -89,6 +89,10 @@ export type ProtoBlock = BlockExtraMeta & {
 
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
+
+  // GLOAS: The followings are from bids. Used for execution payload gossip validation
+  builderIndex?: number;
+  blockHashHex?: RootHex;
 };
 
 /**

@@ -61,11 +61,7 @@ export async function* onDataColumnSidecarsByRoot(
       continue;
     }
 
-    const dataColumns = block
-      ? // Non-finalized sidecars are stored by block root
-        await db.dataColumnSidecar.getManyBinary(blockRoot, availableColumns)
-      : // Finalized sidecars are archived and stored by slot
-        await db.dataColumnSidecarArchive.getManyBinary(slot, availableColumns);
+    const dataColumns = await chain.getSerializedDataColumnSidecars(slot, blockRootHex, availableColumns);
 
     const unavailableColumnIndices: ColumnIndex[] = [];
     for (let i = 0; i < dataColumns.length; i++) {

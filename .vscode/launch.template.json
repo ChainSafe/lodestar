@@ -42,7 +42,7 @@
       "name": "Test Current File",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/node_modules/.bin/vitest",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
       "args": [
         "--run",
         "${file}",

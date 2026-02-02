@@ -31,12 +31,8 @@ jobs:
       - name: Install arm64 specifics
         if: matrix.arch == 'arm64'
         run: |-
-          # Install missing yarn
-          # See https://github.com/github-early-access/arm-runners-beta/issues/5
-          curl -fsSL --create-dirs -o $HOME/bin/yarn \
-          https://github.com/yarnpkg/yarn/releases/download/v1.22.22/yarn-1.22.22.js
-          chmod +x $HOME/bin/yarn
-          echo "$HOME/bin" >> $GITHUB_PATH
+          # Install missing pnpm
+          curl -fsSL https://get.pnpm.io/install.sh | sh -
           # Install missing build-essential
           sudo apt-get update
           sudo apt-get install -y build-essential python3
@@ -45,8 +41,8 @@ jobs:
           node: 24
       - run: |
           mkdir -p dist
-          yarn global add @chainsafe/caxa@3.0.6
-          npx caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -D -p "yarn install --frozen-lockfile --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
+          pnpm add -g @chainsafe/caxa@3.0.6
+          npx caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -D -p "pnpm clean:nm && pnpm install --frozen-lockfile --prod" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/packages/cli/bin/lodestar.js"
           tar -czf "dist/lodestar-${{ inputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz" "lodestar"
       - name: Upload binaries
         uses: actions/upload-artifact@v4

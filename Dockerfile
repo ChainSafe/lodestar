@@ -1,43 +1,28 @@
-
-# --platform=$BUILDPLATFORM is used build javascript source with host arch
-# Otherwise TS builds on emulated archs and can be extremely slow (+1h)
-FROM --platform=${BUILDPLATFORM:-amd64} node:24-slim AS build_src
+FROM node:24-slim AS build_src
 ARG COMMIT
 WORKDIR /usr/app
 RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
-RUN yarn install --non-interactive --frozen-lockfile && \
-  yarn build && \
-  yarn install --non-interactive --frozen-lockfile --production
+ENV CI=true
+RUN corepack enable && corepack prepare --activate && \
+  pnpm install --frozen-lockfile && \
+  pnpm build && \
+  pnpm clean:nm && \
+  pnpm install --frozen-lockfile --prod
 
 # To have access to the specific branch and commit used to build this source,
 # a git-data.json file is created by persisting git data at build time. Then,
 # a version string like `v0.35.0-beta.0/HEAD/82219149 (git)` can be shown in
 # the terminal and in the logs; which is very useful to track tests better.
-RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
-
-
-# Copy built src + node_modules to build native packages for archs different than host.
-# Note: This step is redundant for the host arch
-FROM node:24-slim AS build_deps
-WORKDIR /usr/app
-RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-COPY --from=build_src /usr/app .
-
-# Do yarn --force to trigger a rebuild of the native packages
-# Emmulates `yarn rebuild` which is not available in v1 https://yarnpkg.com/cli/rebuild
-RUN yarn install --non-interactive --frozen-lockfile --production --force
-# Rebuild leveldb bindings (required for arm64 build)
-RUN cd node_modules/classic-level && yarn rebuild
+RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
 FROM node:24-slim
 WORKDIR /usr/app
-COPY --from=build_deps /usr/app .
+COPY --from=build_src /usr/app .
 
 # NodeJS applications have a default memory limit of 4GB on most machines.
 # This limit is bit tight for a Mainnet node, it is recommended to raise the limit

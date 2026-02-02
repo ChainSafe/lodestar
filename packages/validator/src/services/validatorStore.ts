@@ -53,7 +53,7 @@ import {DoppelgangerService} from "./doppelgangerService.js";
 import {IndicesService} from "./indices.js";
 
 type BLSPubkeyMaybeHex = BLSPubkey | PubkeyHex;
-type Eth1Address = string;
+type ExecutionAddress = string;
 
 export enum SignerType {
   Local,
@@ -74,7 +74,7 @@ export type SignerRemote = {
 type DefaultProposerConfig = {
   graffiti?: string;
   strictFeeRecipientCheck: boolean;
-  feeRecipient: Eth1Address;
+  feeRecipient: ExecutionAddress;
   builder: {
     gasLimit: number;
     selection: routes.validator.BuilderSelection;
@@ -85,7 +85,7 @@ type DefaultProposerConfig = {
 export type ProposerConfig = {
   graffiti?: string;
   strictFeeRecipientCheck?: boolean;
-  feeRecipient?: Eth1Address;
+  feeRecipient?: ExecutionAddress;
   builder?: {
     gasLimit?: number;
     selection?: routes.validator.BuilderSelection;
@@ -219,7 +219,7 @@ export class ValidatorStore {
       : this.indicesService.pollValidatorIndices(Array.from(this.validators.keys()));
   }
 
-  getFeeRecipient(pubkeyHex: PubkeyHex): Eth1Address {
+  getFeeRecipient(pubkeyHex: PubkeyHex): ExecutionAddress {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
@@ -227,12 +227,12 @@ export class ValidatorStore {
     return validatorData.feeRecipient ?? this.defaultProposerConfig.feeRecipient;
   }
 
-  getFeeRecipientByIndex(index: ValidatorIndex): Eth1Address {
+  getFeeRecipientByIndex(index: ValidatorIndex): ExecutionAddress {
     const pubkey = this.indicesService.index2pubkey.get(index);
     return pubkey ? this.getFeeRecipient(pubkey) : this.defaultProposerConfig.feeRecipient;
   }
 
-  setFeeRecipient(pubkeyHex: PubkeyHex, feeRecipient: Eth1Address): void {
+  setFeeRecipient(pubkeyHex: PubkeyHex, feeRecipient: ExecutionAddress): void {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
@@ -696,7 +696,7 @@ export class ValidatorStore {
 
   async signValidatorRegistration(
     pubkeyMaybeHex: BLSPubkeyMaybeHex,
-    regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
+    regAttributes: {feeRecipient: ExecutionAddress; gasLimit: number},
     _slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
     const pubkey = typeof pubkeyMaybeHex === "string" ? fromHex(pubkeyMaybeHex) : pubkeyMaybeHex;
@@ -727,7 +727,7 @@ export class ValidatorStore {
 
   async getValidatorRegistration(
     pubkeyMaybeHex: BLSPubkeyMaybeHex,
-    regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
+    regAttributes: {feeRecipient: ExecutionAddress; gasLimit: number},
     slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
     const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toPubkeyHex(pubkeyMaybeHex);

@@ -412,6 +412,10 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
     return this.blobsCache.has(blobIndex);
   }
 
+  getBlob(blobIndex: BlobIndex): deneb.BlobSidecar | undefined {
+    return this.blobsCache.get(blobIndex)?.blobSidecar;
+  }
+
   addBlob(
     {blockRootHex, blobSidecar, source, peerIdStr, seenTimestampSec}: AddBlob,
     opts = {throwOnDuplicateAdd: true}
@@ -785,6 +789,10 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
   hasColumn(columnIndex: number): boolean {
     return this.columnsCache.has(columnIndex);
+  }
+
+  getColumn(columnIndex: number): fulu.DataColumnSidecar | undefined {
+    return this.columnsCache.get(columnIndex)?.columnSidecar;
   }
 
   getVersionedHashes(): VersionedHashes {

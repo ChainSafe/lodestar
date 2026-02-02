@@ -1,4 +1,4 @@
-import {toBufferBE} from "bigint-buffer";
+import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {beforeAll, describe, expect, it} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";

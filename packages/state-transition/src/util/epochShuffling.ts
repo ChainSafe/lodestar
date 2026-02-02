@@ -9,53 +9,12 @@ import {
   TARGET_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {Epoch, RootHex, ValidatorIndex, ssz} from "@lodestar/types";
-import {GaugeExtra, Logger, NoLabels, intDiv, toRootHex} from "@lodestar/utils";
+import {intDiv, toRootHex} from "@lodestar/utils";
 import {BeaconStateAllForks} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getSeed} from "./seed.js";
-
-export interface ShufflingBuildProps {
-  state: BeaconStateAllForks;
-  activeIndices: Uint32Array;
-}
-
-export interface PublicShufflingCacheMetrics {
-  shufflingCache: {
-    nextShufflingNotOnEpochCache: GaugeExtra<NoLabels>;
-  };
-}
-export interface IShufflingCache {
-  metrics: PublicShufflingCacheMetrics | null;
-  logger: Logger | null;
-  /**
-   * Gets a cached shuffling via the epoch and decision root. If the state and
-   * activeIndices are passed and a shuffling is not available it will be built
-   * synchronously. If the state is not passed and the shuffling is not available
-   * nothing will be returned.
-   *
-   * NOTE: If a shuffling is already queued and not calculated it will build and resolve
-   * the promise but the already queued build will happen at some later time
-   */
-  getSync<T extends ShufflingBuildProps | undefined>(
-    epoch: Epoch,
-    decisionRoot: RootHex,
-    buildProps?: T
-  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
-
-  /**
-   * Gets a cached shuffling via the epoch and decision root.  Returns a promise
-   * for the shuffling if it hs not calculated yet.  Returns null if a build has
-   * not been queued nor a shuffling was calculated.
-   */
-  get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null>;
-
-  /**
-   * Queue asynchronous build for an EpochShuffling
-   */
-  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: Uint32Array): void;
-}
 
 /**
  * Readonly interface for EpochShuffling.
@@ -164,7 +123,7 @@ export async function computeEpochShufflingAsync(
   };
 }
 
-function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
+export function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
   return toRootHex(getBlockRootAtSlot(state, pivotSlot));
 }

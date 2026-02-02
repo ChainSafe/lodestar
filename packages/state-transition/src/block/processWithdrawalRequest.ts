@@ -42,7 +42,7 @@ export function processWithdrawalRequest(
   }
 
   // TODO Electra: Consider caching pendingPartialWithdrawals
-  const pendingBalanceToWithdraw = getPendingBalanceToWithdraw(fork, state, validatorIndex);
+  const pendingBalanceToWithdraw = getPendingBalanceToWithdraw(state, validatorIndex);
   const validatorBalance = state.balances.get(validatorIndex);
 
   if (isFullExitRequest) {

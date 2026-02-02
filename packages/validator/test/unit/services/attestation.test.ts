@@ -1,7 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
@@ -63,7 +62,6 @@ describe("AttestationService", () => {
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
     ["With default configuration", {}, {}],
     ["With default configuration post-electra", {}, electraConfig],
-    ["With distributed aggregation selection enabled", {distributedAggregationSelection: true}, {}],
   ];
 
   for (const [title, opts, chainConfig] of testContexts) {
@@ -105,8 +103,7 @@ describe("AttestationService", () => {
               validatorIndex: 0,
               pubkey: pubkeys[0],
             },
-            selectionProof: opts.distributedAggregationSelection ? null : ZERO_HASH,
-            partialSelectionProof: opts.distributedAggregationSelection ? ZERO_HASH : undefined,
+            selectionProof: ZERO_HASH,
           },
         ];
 
@@ -129,44 +126,12 @@ describe("AttestationService", () => {
         api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
         api.validator.publishAggregateAndProofsV2.mockResolvedValue(mockApiResponse({}));
 
-        if (opts.distributedAggregationSelection) {
-          // Mock distributed validator middleware client selections endpoint
-          // and return a selection proof that passes `is_aggregator` test
-          api.validator.submitBeaconCommitteeSelections.mockResolvedValue(
-            mockApiResponse({data: [{validatorIndex: 0, slot: 0, selectionProof: Buffer.alloc(1, 0x10)}]})
-          );
-          // Accept all subscriptions
-          api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue(mockApiResponse({}));
-        }
-
         // Mock signing service
         validatorStore.signAttestation.mockResolvedValue(singleAttestation);
         validatorStore.signAggregateAndProof.mockResolvedValue(aggregateAndProof);
 
         // Trigger clock onSlot for slot 0
         await clock.tickSlotFns(0, controller.signal);
-
-        if (opts.distributedAggregationSelection) {
-          // Must submit partial beacon committee selection proof based on duty
-          const selection: routes.validator.BeaconCommitteeSelection = {
-            validatorIndex: 0,
-            slot: 0,
-            selectionProof: ZERO_HASH,
-          };
-          expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledOnce();
-          expect(api.validator.submitBeaconCommitteeSelections).toHaveBeenCalledWith({selections: [selection]});
-
-          // Must resubscribe validator as aggregator on beacon committee subnet
-          const subscription: routes.validator.BeaconCommitteeSubscription = {
-            validatorIndex: 0,
-            committeeIndex: 0,
-            committeesAtSlot: 120,
-            slot: 0,
-            isAggregator: true,
-          };
-          expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
-          expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledWith({subscriptions: [subscription]});
-        }
 
         // Must submit the attestation received through produceAttestationData()
         expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
