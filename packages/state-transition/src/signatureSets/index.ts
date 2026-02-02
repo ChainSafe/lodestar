@@ -2,7 +2,6 @@ import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, altair, capella} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {ISignatureSet} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
@@ -30,7 +29,6 @@ export * from "./voluntaryExits.js";
  */
 export function getBlockSignatureSets(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   currentSyncCommitteeIndexed: SyncCommitteeCache,
   signedBlock: SignedBeaconBlock,
   indexedAttestations: IndexedAttestation[],
@@ -43,22 +41,21 @@ export function getBlockSignatureSets(
   const fork = config.getForkSeq(signedBlock.message.slot);
 
   const signatureSets = [
-    getRandaoRevealSignatureSet(config, index2pubkey, signedBlock.message),
-    ...getProposerSlashingsSignatureSets(config, index2pubkey, signedBlock),
-    ...getAttesterSlashingsSignatureSets(config, index2pubkey, signedBlock),
-    ...getAttestationsSignatureSets(config, index2pubkey, signedBlock, indexedAttestations),
-    ...getVoluntaryExitsSignatureSets(config, index2pubkey, signedBlock),
+    getRandaoRevealSignatureSet(config, signedBlock.message),
+    ...getProposerSlashingsSignatureSets(config, signedBlock),
+    ...getAttesterSlashingsSignatureSets(config, signedBlock),
+    ...getAttestationsSignatureSets(config, signedBlock, indexedAttestations),
+    ...getVoluntaryExitsSignatureSets(config, signedBlock),
   ];
 
   if (!opts?.skipProposerSignature) {
-    signatureSets.push(getBlockProposerSignatureSet(config, index2pubkey, signedBlock));
+    signatureSets.push(getBlockProposerSignatureSet(config, signedBlock));
   }
 
   // Only after altair fork, validate tSyncCommitteeSignature
   if (fork >= ForkSeq.altair) {
     const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(
       config,
-      index2pubkey,
       currentSyncCommitteeIndexed,
       (signedBlock as altair.SignedBeaconBlock).message
     );
