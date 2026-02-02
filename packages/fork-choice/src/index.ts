@@ -6,6 +6,16 @@ export {
   type InvalidBlock,
   InvalidBlockCode,
 } from "./forkChoice/errors.js";
+export {
+  type FCRBalanceSource,
+  type FCRContext,
+  type FCRMetrics,
+  type FCRResult,
+  type FCRStore,
+  FastConfirmationRule,
+  type IFastConfirmationRule,
+  getFCRMetrics,
+} from "./forkChoice/fastConfirmationRule/fastConfirmationRule.ts";
 export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,
