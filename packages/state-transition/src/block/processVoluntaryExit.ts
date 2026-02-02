@@ -49,7 +49,7 @@ export function processVoluntaryExit(
     const builder = stateGloas.builders.getReadonly(builderIndex);
 
     // Verify the builder is active
-    if (!isActiveBuilder(stateGloas, builderIndex)) {
+    if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
       throw Error(`Builder ${builderIndex} is not active`);
     }
 
