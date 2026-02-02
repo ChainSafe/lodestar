@@ -232,16 +232,6 @@ refactor(reqresp)!: support byte based handlers
 3. The type will be automatically aggregated (no central `sszTypes` to modify)
 4. Run `pnpm check-types` to verify
 
-### Modifying gossip validation
-
-Gossip validation returns `GossipAction`:
-- `REJECT`: Permanently invalid, penalize peer
-- `IGNORE`: Temporarily invalid, don't penalize
-- `ACCEPT`: Valid message
-
-Use `REJECT` for malformed data or spec violations.
-Use `IGNORE` for timing issues or missing dependencies.
-
 ## Style learnings from reviews
 
 ### Prefer inline logic over helper functions
@@ -288,8 +278,8 @@ const trimmed = value?.trim() ?? "";
 
 ### Default branch is `unstable`
 
-All PRs should target `unstable`, not `main`. The `main` branch is only for
-releases.
+All PRs should target `unstable`. The `stable` branch is for releases only
+(see RELEASE.md for details).
 
 ### Spec tests require download
 
