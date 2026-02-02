@@ -37,6 +37,8 @@ describe("ProtoArray", () => {
 
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
+        builderIndex: null,
+        blockHashFromBid: null,
       },
       genesisSlot
     );
@@ -66,6 +68,8 @@ describe("ProtoArray", () => {
 
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
+        builderIndex: null,
+        blockHashFromBid: null,
       },
       genesisSlot + 1
     );
@@ -95,6 +99,8 @@ describe("ProtoArray", () => {
 
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
+        builderIndex: null,
+        blockHashFromBid: null,
       },
       genesisSlot + 1
     );

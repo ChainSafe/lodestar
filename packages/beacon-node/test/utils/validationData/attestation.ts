@@ -82,6 +82,8 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
     parentBlockHash: null,
     payloadStatus: 2, // PayloadStatus.FULL
+    builderIndex: null,
+    blockHashFromBid: null,
   };
 
   const shufflingCache = new ShufflingCache(null, null, {}, [

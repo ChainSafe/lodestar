@@ -90,6 +90,8 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
 
       parentBlockHash: null,
       payloadStatus: PayloadStatus.FULL,
+      builderIndex: null,
+      blockHashFromBid: null,
     };
 
     protoArr.onBlock(block, block.slot);

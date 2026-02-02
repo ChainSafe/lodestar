@@ -67,6 +67,8 @@ describe("Gloas Fork Choice", () => {
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
       parentBlockHash: parentBlockHash === undefined ? null : parentBlockHash,
       payloadStatus: PayloadStatus.FULL,
+      builderIndex: null,
+      blockHashFromBid: null,
     };
   }
 

@@ -124,6 +124,8 @@ function setupForkChoice(): ProtoArray {
 
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
+        builderIndex: null,
+        blockHashFromBid: null,
       },
       block.slot
     );

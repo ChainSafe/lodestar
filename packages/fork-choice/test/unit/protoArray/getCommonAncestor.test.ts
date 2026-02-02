@@ -48,6 +48,8 @@ describe("getCommonAncestor", () => {
 
       parentBlockHash: null,
       payloadStatus: PayloadStatus.FULL,
+      builderIndex: null,
+      blockHashFromBid: null,
     },
     0
   );
@@ -77,6 +79,8 @@ describe("getCommonAncestor", () => {
 
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
+        builderIndex: null,
+        blockHashFromBid: null,
       },
       block.slot
     );
