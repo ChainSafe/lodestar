@@ -118,6 +118,19 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         unrealizedFinalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
+        confirmedRoot: toHexString(finalizedCheckpoint.root),
+        previousEpochObservedJustifiedCheckpoint: {
+          ...justifiedCheckpoint,
+          rootHex: toHexString(justifiedCheckpoint.root),
+        },
+        currentEpochObservedJustifiedCheckpoint: {
+          ...justifiedCheckpoint,
+          rootHex: toHexString(justifiedCheckpoint.root),
+        },
+        previousEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
+        currentEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
+        previousSlotHead: toHexString(finalizedCheckpoint.root),
+        currentSlotHead: toHexString(finalizedCheckpoint.root),
       };
       forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, originalState.validators.length, null);
     },

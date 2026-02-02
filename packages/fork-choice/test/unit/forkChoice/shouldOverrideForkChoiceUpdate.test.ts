@@ -116,6 +116,21 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
+    confirmedRoot: genesisBlock.blockRoot,
+    previousEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    currentEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    previousEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
+    currentEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
+    previousSlotHead: genesisBlock.blockRoot,
+    currentSlotHead: genesisBlock.blockRoot,
   };
 
   const testCases: {

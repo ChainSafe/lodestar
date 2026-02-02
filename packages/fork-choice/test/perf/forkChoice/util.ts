@@ -52,6 +52,13 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
+    confirmedRoot: genesisRoot,
+    previousEpochObservedJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
+    currentEpochObservedJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
+    previousEpochObservedJustifiedBalances: balances,
+    currentEpochObservedJustifiedBalances: balances,
+    previousSlotHead: genesisRoot,
+    currentSlotHead: genesisRoot,
   };
 
   const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null);
