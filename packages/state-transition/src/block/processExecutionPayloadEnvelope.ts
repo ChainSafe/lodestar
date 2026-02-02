@@ -96,7 +96,6 @@ function validateExecutionPayloadEnvelope(
       `Builder index mismatch between envelope and committed bid envelope=${envelope.builderIndex} committedBid=${committedBid.builderIndex}`
     );
   }
-  // [Modified in Gloas:EIP7732] - blobKzgCommitmentsRoot check removed, commitments now in bid
 
   if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
     throw new Error(

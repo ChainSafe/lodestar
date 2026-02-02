@@ -153,6 +153,7 @@ export const ExecutionPayloadEnvelope = new ContainerType(
     builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
     slot: Slot,
+    // blobKzgCommitments: denebSsz.BlobKzgCommitments, // Removed in GLOAS:EIP7732
     stateRoot: Root,
   },
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
