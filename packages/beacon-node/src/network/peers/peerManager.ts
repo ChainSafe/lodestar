@@ -722,15 +722,14 @@ export class PeerManager {
     // If that happens, it's okay. Only the "outbound" connection triggers immediate action
     const now = Date.now();
 
-    let nodeId: Uint8Array;
-    try {
-      nodeId = computeNodeId(remotePeer);
-    } catch (e) {
-      // Can happen if peer has invalid/malformed public key
-      this.logger.debug("Failed to compute nodeId for peer, disconnecting", {peer: remotePeerPrettyStr}, e as Error);
-      void this.goodbyeAndDisconnect(remotePeer, GoodByeReasonCode.ERROR);
+    // Ethereum uses secp256k1 for node IDs, reject peers with other key types
+    if (remotePeer.type !== "secp256k1") {
+      this.logger.debug("Peer does not have secp256k1 key, disconnecting", {peer: remotePeerPrettyStr, type: remotePeer.type});
+      void this.goodbyeAndDisconnect(remotePeer, GoodByeReasonCode.IRRELEVANT_NETWORK);
       return;
     }
+
+    const nodeId = computeNodeId(remotePeer);
     const peerData: PeerData = {
       lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
       // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
