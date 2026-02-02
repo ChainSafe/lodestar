@@ -18,6 +18,7 @@ import {IBeaconChain} from "../../chain/interface.ts";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
 import {byteArrayEquals} from "../../util/bytes.js";
@@ -387,10 +388,7 @@ export async function fetchAndValidateColumns({
 }: FetchByRootAndValidateColumnsProps): Promise<WarnResult<fulu.DataColumnSidecars, DownloadByRootError>> {
   const {peerId: peerIdStr} = peerMeta;
   const slot = block.message.slot;
-  // For GLOAS+, commitments are in the execution payload bid
-  const blobCount = isForkPostGloas(forkName)
-    ? (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments.length
-    : (block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments.length;
+  const blobCount = getBlobKzgCommitments(forkName, block).length;
   if (blobCount === 0) {
     return {result: [], warnings: null};
   }

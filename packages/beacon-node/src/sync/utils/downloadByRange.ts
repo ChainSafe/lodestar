@@ -20,6 +20,7 @@ import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/index.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
 
@@ -695,13 +696,7 @@ export async function validateColumnsByRangeResponse(
         dataFork: dataSlot ? config.getForkName(dataSlot) : "unknown",
       });
     }
-    if (isForkPostGloas(forkName)) {
-      // For GLOAS+, commitments are in the execution payload bid
-      blobCount = (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments
-        .length;
-    } else {
-      blobCount = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
-    }
+    blobCount = getBlobKzgCommitments(forkName, block as SignedBeaconBlock<ForkPostFulu>).length;
 
     if (columnSidecars.length === 0) {
       if (!blobCount) {
