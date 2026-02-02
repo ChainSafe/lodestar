@@ -724,7 +724,10 @@ export class PeerManager {
 
     // Ethereum uses secp256k1 for node IDs, reject peers with other key types
     if (remotePeer.type !== "secp256k1") {
-      this.logger.debug("Peer does not have secp256k1 key, disconnecting", {peer: remotePeerPrettyStr, type: remotePeer.type});
+      this.logger.debug("Peer does not have secp256k1 key, disconnecting", {
+        peer: remotePeerPrettyStr,
+        type: remotePeer.type,
+      });
       void this.goodbyeAndDisconnect(remotePeer, GoodByeReasonCode.IRRELEVANT_NETWORK);
       return;
     }
