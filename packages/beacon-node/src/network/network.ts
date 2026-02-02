@@ -24,6 +24,7 @@ import {
   capella,
   deneb,
   fulu,
+  gloas,
   phase0,
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
@@ -486,6 +487,17 @@ export class Network implements INetwork {
     return this.publishGossip<GossipType.light_client_optimistic_update>(
       {type: GossipType.light_client_optimistic_update, boundary},
       update
+    );
+  }
+
+  async publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number> {
+    const epoch = computeEpochAtSlot(signedEnvelope.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.execution_payload>(
+      {type: GossipType.execution_payload, boundary},
+      signedEnvelope,
+      {ignoreDuplicatePublishError: true}
     );
   }
 

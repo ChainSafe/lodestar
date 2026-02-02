@@ -347,6 +347,30 @@ export function getDataColumnSidecarsFromColumnSidecar(
 }
 
 /**
+ * For GLOAS self-builds: build DataColumnSidecars from the envelope data.
+ * In GLOAS, blobKzgCommitments are in the ExecutionPayloadEnvelope, not the BeaconBlockBody.
+ * The inclusion proof is computed against the envelope's blobKzgCommitments field.
+ */
+export function getDataColumnSidecarsForGloas(
+  signedBlockHeader: SignedBeaconBlockHeader,
+  blobKzgCommitments: deneb.BlobKzgCommitments,
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
+): fulu.DataColumnSidecars {
+  // No need to create data column sidecars if there are no blobs
+  if (blobKzgCommitments.length === 0) {
+    return [];
+  }
+
+  // For GLOAS, the inclusion proof is for the envelope's blobKzgCommitments field
+  // The envelope structure has a different gindex than the block body
+  // TODO GLOAS: Compute proper inclusion proof for envelope's blobKzgCommitments
+  // For now, use an empty proof since the envelope already contains the commitments explicitly
+  const kzgCommitmentsInclusionProof = new Array(17).fill(new Uint8Array(32)) as fulu.KzgCommitmentsInclusionProof;
+
+  return getDataColumnSidecars(signedBlockHeader, blobKzgCommitments, kzgCommitmentsInclusionProof, cellsAndKzgProofs);
+}
+
+/**
  * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns
  */
 export async function recoverDataColumnSidecars(

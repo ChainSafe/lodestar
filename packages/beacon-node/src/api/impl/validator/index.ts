@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
+  BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
   ForkPreGloas,
@@ -14,6 +15,7 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -45,6 +47,7 @@ import {
   Wei,
   bellatrix,
   getValidatorStatus,
+  gloas,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -900,6 +903,52 @@ export function getValidatorApi(
       return {data, meta};
     },
 
+    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient}) {
+      const fork = config.getForkName(slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
+      }
+
+      notWhileSyncing();
+      await waitForSlot(slot);
+
+      const parentBlock = chain.getProposerHead(slot);
+
+      // Build a common block body for later processes
+      const graffitiBytes = toGraffitiBytes(
+        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(), chain.executionEngine.clientVersion, {})
+      );
+      const commonBlockBodyPromise = chain.produceCommonBlockBody({
+        slot,
+        parentBlock,
+        randaoReveal,
+        graffiti: graffitiBytes,
+      });
+
+      // For gloas, we return a beacon block with separate execution payload bid
+      const {block, consensusBlockValue} = await chain.produceBlock({
+        slot,
+        parentBlock,
+        randaoReveal,
+        graffiti: graffitiBytes,
+        feeRecipient,
+        commonBlockBodyPromise,
+      });
+
+      const version = config.getForkName(block.slot);
+
+      metrics?.blockProductionSuccess.inc({source: ProducedBlockSource.engine});
+
+      return {
+        data: block as gloas.BeaconBlock,
+        meta: {
+          version,
+          consensusBlockValue,
+        },
+      };
+    },
+
     async produceAttestationData({committeeIndex, slot}) {
       notWhileSyncing();
 
@@ -1530,6 +1579,83 @@ export function getValidatorApi(
         epoch: currentEpoch,
         count: filteredRegistrations.length,
       });
+    },
+
+    async getExecutionPayloadEnvelope({slot, builderIndex}) {
+      notWhileSyncing();
+      await waitForSlot(slot);
+
+      const fork = config.getForkName(slot);
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `getExecutionPayloadEnvelope not supported for fork=${fork}`);
+      }
+
+      // For self-builds, the proposer is also the builder
+      const proposerIndex = chain.getHeadState().epochCtx.getBeaconProposer(slot);
+      if (builderIndex !== proposerIndex) {
+        // TODO GLOAS: For external builders, fetch envelope via P2P or builder API
+        throw new ApiError(
+          404,
+          `Builder index ${builderIndex} does not match proposer ${proposerIndex} for self-build`
+        );
+      }
+
+      // Search the block production cache for a block produced at this slot
+      // The cache is keyed by block root, so we need to search through entries
+      let cachedResult: {
+        blockRootHex: string;
+        executionPayload: gloas.ExecutionPayloadEnvelope["payload"];
+        executionRequests: gloas.ExecutionPayloadEnvelope["executionRequests"];
+        blobKzgCommitments: gloas.ExecutionPayloadEnvelope["blobKzgCommitments"];
+      } | null = null;
+
+      for (const [blockRootHex, produceResult] of chain.blockProductionCache.entries()) {
+        if (produceResult.fork === fork && "executionPayload" in produceResult) {
+          const gloasResult = produceResult as {
+            fork: typeof fork;
+            executionPayload: gloas.ExecutionPayloadEnvelope["payload"];
+            executionRequests: gloas.ExecutionPayloadEnvelope["executionRequests"];
+            blobKzgCommitments: gloas.ExecutionPayloadEnvelope["blobKzgCommitments"];
+          };
+          // Check if the payload matches the requested slot
+          if (gloasResult.executionPayload && Number(gloasResult.executionPayload.timestamp) > 0) {
+            // For self-builds at this slot, this should be our produced block
+            cachedResult = {
+              blockRootHex,
+              ...gloasResult,
+            };
+            break;
+          }
+        }
+      }
+
+      if (!cachedResult) {
+        throw new ApiError(404, `No cached block production result found for slot ${slot}`);
+      }
+
+      // Build the envelope
+      // For self-builds, builder_index = BUILDER_INDEX_SELF_BUILD (UINT64_MAX)
+      const beaconBlockRoot = fromHex(cachedResult.blockRootHex);
+
+      const envelope: gloas.ExecutionPayloadEnvelope = {
+        payload: cachedResult.executionPayload,
+        executionRequests: cachedResult.executionRequests,
+        builderIndex: BUILDER_INDEX_SELF_BUILD,
+        beaconBlockRoot,
+        slot,
+        blobKzgCommitments: cachedResult.blobKzgCommitments,
+        // TODO GLOAS: Compute state root properly - for now use zero hash
+        // The state root should be computed by calling process_execution_payload with verify=false
+        // and then taking hash_tree_root(state) as per the builder spec
+        stateRoot: new Uint8Array(32),
+      };
+
+      return {
+        data: envelope,
+        meta: {
+          version: fork,
+        },
+      };
     },
   };
 }

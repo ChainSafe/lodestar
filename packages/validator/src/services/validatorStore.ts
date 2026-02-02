@@ -6,6 +6,7 @@ import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_APPLICATION_BUILDER,
   DOMAIN_BEACON_ATTESTER,
+  DOMAIN_BEACON_BUILDER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
   DOMAIN_RANDAO,
@@ -39,6 +40,7 @@ import {
   ValidatorIndex,
   altair,
   bellatrix,
+  gloas,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -210,6 +212,10 @@ export class ValidatorStore {
 
   getPubkeyOfIndex(index: ValidatorIndex): PubkeyHex | undefined {
     return this.indicesService.index2pubkey.get(index);
+  }
+
+  getValidatorIndex(pubkeyHex: PubkeyHex): ValidatorIndex | undefined {
+    return this.indicesService.getValidatorIndex(pubkeyHex);
   }
 
   pollValidatorIndices(): Promise<ValidatorIndex[]> {
@@ -485,6 +491,41 @@ export class ValidatorStore {
       message: blindedOrFull,
       signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
     } as SignedBeaconBlock | SignedBlindedBeaconBlock;
+  }
+
+  /**
+   * Sign an execution payload envelope for Gloas self-building.
+   * Uses DOMAIN_BEACON_BUILDER domain as per the spec.
+   */
+  async signExecutionPayloadEnvelope(
+    pubkey: BLSPubkey,
+    envelope: gloas.ExecutionPayloadEnvelope,
+    currentSlot: Slot
+  ): Promise<gloas.SignedExecutionPayloadEnvelope> {
+    // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
+    if (envelope.slot > currentSlot) {
+      throw Error(`Not signing envelope with slot ${envelope.slot} greater than current slot ${currentSlot}`);
+    }
+
+    // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
+    this.assertDoppelgangerSafe(pubkey);
+
+    const signingSlot = envelope.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
+    const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
+
+    // TODO GLOAS: Add slashing protection for envelope signing if needed
+    // For self-builds, this is similar to block proposal protection
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.BLOCK_V2, // TODO GLOAS: Add dedicated type for envelope signing
+      data: envelope as unknown as BeaconBlock,
+    };
+
+    return {
+      message: envelope,
+      signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
+    };
   }
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {

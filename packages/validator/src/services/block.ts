@@ -1,5 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
+import {isForkPostGloas} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -95,6 +96,13 @@ export class BlockProposingService {
 
     // Wrap with try catch here to re-use `logCtx`
     try {
+      const fork = this.config.getForkName(slot);
+
+      // Gloas uses different block production flow
+      if (isForkPostGloas(fork)) {
+        return this.createAndPublishBlockGloas(pubkey, slot);
+      }
+
       const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
       const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
 
@@ -161,6 +169,82 @@ export class BlockProposingService {
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
     }
+  }
+
+  /**
+   * Gloas block production flow:
+   * 1. Produce beacon block with execution payload bid
+   * 2. Sign and publish the beacon block
+   * 3. Get the execution payload envelope
+   * 4. Sign and publish the envelope
+   */
+  private async createAndPublishBlockGloas(pubkey: BLSPubkey, slot: Slot): Promise<void> {
+    const pubkeyHex = toPubkeyHex(pubkey);
+    const debugLogCtx = {slot, validator: pubkeyHex};
+
+    const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
+    const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
+    const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+
+    this.logger.debug("Producing Gloas block", {...debugLogCtx, feeRecipient});
+    this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
+
+    // Step 1: Produce beacon block with execution payload bid
+    const blockRes = await this.api.validator.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+    });
+    const block = blockRes.value();
+    const blockMeta = blockRes.meta();
+
+    this.logger.debug("Produced Gloas block", {
+      ...debugLogCtx,
+      consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+    });
+    this.metrics?.blocksProduced.inc();
+
+    // Step 2: Sign and publish the beacon block
+    const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
+
+    const {broadcastValidation} = this.opts;
+    await this.api.beacon.publishBlockV2({
+      signedBlockContents: {signedBlock},
+      broadcastValidation,
+    });
+
+    this.logger.debug("Published Gloas beacon block", debugLogCtx);
+
+    // Step 3: Get the execution payload envelope
+    // For self-builds, the builder index is the proposer's validator index
+    const validatorIndex = this.validatorStore.getValidatorIndex(pubkeyHex);
+    if (validatorIndex === undefined) {
+      throw new Error(`Validator index not found for ${pubkeyHex}`);
+    }
+
+    const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
+      slot,
+      builderIndex: validatorIndex,
+    });
+    const envelope = envelopeRes.value();
+
+    this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
+
+    // Step 4: Sign and publish the envelope
+    const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(pubkey, envelope, slot);
+
+    await this.api.beacon.publishExecutionPayloadEnvelope({
+      signedExecutionPayloadEnvelope: signedEnvelope,
+    });
+
+    this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
+    this.metrics?.blocksPublished.inc();
+    this.logger.info("Published Gloas block and envelope", {
+      ...debugLogCtx,
+      graffiti,
+      consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+    });
   }
 
   private publishBlockWrapper = async (

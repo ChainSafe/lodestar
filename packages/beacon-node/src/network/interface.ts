@@ -31,6 +31,7 @@ import {
   capella,
   deneb,
   fulu,
+  gloas,
   phase0,
 } from "@lodestar/types";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
@@ -95,6 +96,7 @@ export interface INetwork extends INetworkCorePublic {
   publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
+  publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;

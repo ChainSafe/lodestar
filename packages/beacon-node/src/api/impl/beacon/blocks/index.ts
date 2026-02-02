@@ -1,6 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {
+  BUILDER_INDEX_SELF_BUILD,
   ForkPostBellatrix,
   ForkPostFulu,
   ForkPreGloas,
@@ -42,6 +43,7 @@ import {
   ProduceFullBellatrix,
   ProduceFullDeneb,
   ProduceFullFulu,
+  ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
@@ -51,7 +53,7 @@ import {
   kzgCommitmentToVersionedHash,
   reconstructBlobs,
 } from "../../../../util/blobs.js";
-import {getDataColumnSidecarsFromBlock} from "../../../../util/dataColumns.js";
+import {getDataColumnSidecarsForGloas, getDataColumnSidecarsFromBlock} from "../../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -93,6 +95,7 @@ export function getBeaconBlockApi({
     const fork = config.getForkName(slot);
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
+    // TODO GLOAS: handle new BlockInput type
     const blockForImport = chain.seenBlockInputCache.getByBlock({
       block: signedBlock,
       source: BlockInputSource.api,
@@ -299,7 +302,7 @@ export function getBeaconBlockApi({
     ];
     const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
 
-    if (isForkPostFulu(fork)) {
+    if (isForkPostFulu(fork) && !isForkPostGloas(fork)) {
       let columnsPublishedWithZeroPeers = 0;
       // sent peers per topic are logged in network.publishGossip(), here we only track metrics for it
       // starting from fulu, we have to push to 128 subnets so need to make sure we have enough sent peers per topic
@@ -620,6 +623,110 @@ export function getBeaconBlockApi({
 
     async publishBlockV2(args, context, opts) {
       await publishBlock(args, context, opts);
+    },
+
+    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
+      const seenTimestampSec = Date.now() / 1000;
+      const envelope = signedExecutionPayloadEnvelope.message;
+      const slot = envelope.slot;
+      const fork = config.getForkName(slot);
+      const blockRootHex = toRootHex(envelope.beaconBlockRoot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `publishExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
+      }
+
+      // Validate that we're not too far in the future
+      const currentSlot = chain.clock.currentSlot;
+      if (slot > currentSlot + 1) {
+        throw new ApiError(400, `Envelope slot ${slot} is too far in the future (current: ${currentSlot})`);
+      }
+
+      const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
+      let dataColumnSidecars: fulu.DataColumnSidecars = [];
+
+      // For self-builds, retrieve cached production data and build DataColumnSidecars
+      if (isSelfBuild) {
+        const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
+        if (cachedResult?.cells && cachedResult.cellProofs && cachedResult.blobKzgCommitments.length > 0) {
+          // Get the signed block header from the block we produced
+          const blockResult = await chain.getBlockByRoot(blockRootHex);
+          if (blockResult) {
+            const signedBlockHeader = signedBlockToSignedHeader(config, blockResult.block);
+
+            // Build cellsAndProofs from the cached cells and proofs
+            // cellProofs is a flat array: 128 proofs per blob
+            const cellsAndProofs = cachedResult.cells.map((rowCells, rowIndex) => ({
+              cells: rowCells,
+              proofs: cachedResult.cellProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
+            }));
+
+            // Build DataColumnSidecars for GLOAS (commitments from envelope)
+            dataColumnSidecars = getDataColumnSidecarsForGloas(
+              signedBlockHeader,
+              cachedResult.blobKzgCommitments,
+              cellsAndProofs
+            );
+          }
+        }
+      }
+
+      // TODO GLOAS: Verify execution payload envelope signature
+      // For self-builds with G2_POINT_AT_INFINITY signature, this is a no-op
+      // For external builders, verify using verify_execution_payload_envelope_signature(state, signed_envelope)
+
+      // TODO GLOAS: Process execution payload via state transition
+      // Call process_execution_payload(state, signed_envelope, execution_engine)
+
+      // TODO GLOAS: Update fork choice with the execution payload
+      // Call on_execution_payload(store, signed_envelope) to update fork choice state
+
+      const valLogMeta = {
+        slot,
+        blockRoot: blockRootHex,
+        builderIndex: envelope.builderIndex,
+        isSelfBuild,
+        dataColumns: dataColumnSidecars.length,
+      };
+
+      chain.logger.info("Publishing execution payload envelope", valLogMeta);
+
+      // Publish envelope and data columns
+      const publishPromises = [
+        // Gossip the signed execution payload envelope first
+        () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
+        // For self-builds, publish all DataColumnSidecars
+        ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
+      ];
+
+      const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
+
+      // Track metrics for data column publishing
+      if (dataColumnSidecars.length > 0) {
+        let columnsPublishedWithZeroPeers = 0;
+        // Skip first entry (envelope), track data columns
+        for (let i = 1; i < sentPeersArr.length; i++) {
+          const sentPeers = sentPeersArr[i] as number;
+          metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
+          if (sentPeers === 0) {
+            columnsPublishedWithZeroPeers++;
+          }
+        }
+        if (columnsPublishedWithZeroPeers > 0) {
+          chain.logger.warn("Published data columns to 0 peers for GLOAS envelope", {
+            slot,
+            blockRoot: blockRootHex,
+            columns: columnsPublishedWithZeroPeers,
+          });
+        }
+      }
+
+      const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
+      chain.logger.info("Published execution payload envelope", {
+        ...valLogMeta,
+        delaySec,
+        sentPeers: (sentPeersArr[0] as number) ?? 0,
+      });
     },
 
     async getBlobSidecars({blockId, indices}) {
