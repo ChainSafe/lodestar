@@ -96,13 +96,7 @@ function validateExecutionPayloadEnvelope(
       `Builder index mismatch between envelope and committed bid envelope=${envelope.builderIndex} committedBid=${committedBid.builderIndex}`
     );
   }
-
-  const envelopeKzgRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(envelope.blobKzgCommitments);
-  if (!byteArrayEquals(committedBid.blobKzgCommitmentsRoot, envelopeKzgRoot)) {
-    throw new Error(
-      `Kzg commitment root mismatch between envelope and committed bid envelope=${toRootHex(envelopeKzgRoot)} committedBid=${toRootHex(committedBid.blobKzgCommitmentsRoot)}`
-    );
-  }
+  // [Modified in Gloas:EIP7732] - blobKzgCommitmentsRoot check removed, commitments now in bid
 
   if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
     throw new Error(
@@ -146,14 +140,7 @@ function validateExecutionPayloadEnvelope(
       `Timestamp mismatch between envelope's payload and state envelope=${payload.timestamp} state=${computeTimeAtSlot(state.config, state.slot, state.genesisTime)}`
     );
   }
-
-  // Verify commitments are under limit
-  const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
-  if (envelope.blobKzgCommitments.length > maxBlobsPerBlock) {
-    throw new Error(
-      `Kzg commitments exceed limit commitment.length=${envelope.blobKzgCommitments.length} limit=${maxBlobsPerBlock}`
-    );
-  }
+  // [Modified in Gloas:EIP7732] - commitments limit check moved to processExecutionPayloadBid
 
   // Skipped: Verify the execution payload is valid
 }

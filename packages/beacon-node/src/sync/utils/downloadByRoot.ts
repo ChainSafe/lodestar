@@ -7,8 +7,9 @@ import {
   ForkPreGloas,
   isForkPostDeneb,
   isForkPostFulu,
+  isForkPostGloas,
 } from "@lodestar/params";
-import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
 import {LodestarError, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -379,14 +380,17 @@ export async function fetchAndValidateColumns({
   chain,
   network,
   peerMeta,
+  forkName,
   block,
   blockRoot,
   missing,
 }: FetchByRootAndValidateColumnsProps): Promise<WarnResult<fulu.DataColumnSidecars, DownloadByRootError>> {
   const {peerId: peerIdStr} = peerMeta;
   const slot = block.message.slot;
-  // TODO GLOAS: Get blob count from somewhere else since blobKzgCommitments is absent from block body
-  const blobCount = (block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments.length;
+  // For GLOAS+, commitments are in the execution payload bid
+  const blobCount = isForkPostGloas(forkName)
+    ? (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments.length
+    : (block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments.length;
   if (blobCount === 0) {
     return {result: [], warnings: null};
   }

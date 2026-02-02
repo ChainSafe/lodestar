@@ -5,9 +5,11 @@ import {
   ForkAll,
   ForkName,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreGloas,
   KZG_COMMITMENTS_GINDEX,
   NUMBER_OF_COLUMNS,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
@@ -19,6 +21,7 @@ import {
   SignedBeaconBlockHeader,
   deneb,
   fulu,
+  gloas,
   ssz,
 } from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
@@ -310,16 +313,19 @@ export function getDataColumnSidecarsFromBlock(
   signedBlock: SignedBeaconBlock<ForkPostFulu>,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
-  // TODO GLOAS: Need to get blobKzgCommitments from somewhere else
-  const blobKzgCommitments = (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>)
-    .blobKzgCommitments;
+  const fork = config.getForkName(signedBlock.message.slot);
+
+  // For GLOAS+, commitments are in the execution payload bid
+  // For pre-GLOAS (Fulu), commitments are in the block body
+  const blobKzgCommitments = isForkPostGloas(fork)
+    ? (signedBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments
+    : (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
 
   // No need to create data column sidecars if there are no blobs
   if (blobKzgCommitments.length === 0) {
     return [];
   }
 
-  const fork = config.getForkName(signedBlock.message.slot);
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
 
   const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(fork, signedBlock.message.body);

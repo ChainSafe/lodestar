@@ -7,7 +7,7 @@ import {
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
-import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
+import {SignedBeaconBlock, Slot, deneb, fulu, gloas, phase0} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
@@ -696,9 +696,9 @@ export async function validateColumnsByRangeResponse(
       });
     }
     if (isForkPostGloas(forkName)) {
-      // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
-      // if block without columns is passed default to zero and throw below
-      blobCount = 0;
+      // For GLOAS+, commitments are in the execution payload bid
+      blobCount = (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments
+        .length;
     } else {
       blobCount = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
     }
