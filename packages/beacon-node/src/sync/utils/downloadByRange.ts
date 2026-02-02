@@ -1,13 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPreFulu,
-  ForkPreGloas,
-  isForkPostFulu,
-  isForkPostGloas,
-} from "@lodestar/params";
-import {SignedBeaconBlock, Slot, deneb, fulu, gloas, phase0} from "@lodestar/types";
+import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
+import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
@@ -20,6 +13,7 @@ import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/index.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
 
@@ -695,9 +689,7 @@ export async function validateColumnsByRangeResponse(
         dataFork: dataSlot ? config.getForkName(dataSlot) : "unknown",
       });
     }
-    blobCount = isForkPostGloas(forkName)
-      ? (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments.length
-      : (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
+    blobCount = getBlobKzgCommitments(forkName, block as SignedBeaconBlock<ForkPostFulu>).length;
 
     if (columnSidecars.length === 0) {
       if (!blobCount) {

@@ -301,6 +301,20 @@ export function getDataColumnSidecars(
 }
 
 /**
+ * Get blob KZG commitments from a signed block, handling the different locations
+ * in pre-Gloas (directly in block body) vs post-Gloas (in execution payload bid).
+ */
+export function getBlobKzgCommitments(
+  fork: ForkName,
+  signedBlock: SignedBeaconBlock<ForkPostFulu>
+): deneb.KZGCommitment[] {
+  if (isForkPostGloas(fork)) {
+    return (signedBlock as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments;
+  }
+  return (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
+}
+
+/**
  * Given a signed block and the cells/proofs associated with each blob in the
  * block, assemble the sidecars which can be distributed to peers.
  *
@@ -313,9 +327,7 @@ export function getDataColumnSidecarsFromBlock(
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   const fork = config.getForkName(signedBlock.message.slot);
-  const blobKzgCommitments = isForkPostGloas(fork)
-    ? (signedBlock as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments
-    : (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
+  const blobKzgCommitments = getBlobKzgCommitments(fork, signedBlock);
 
   // No need to create data column sidecars if there are no blobs
   if (blobKzgCommitments.length === 0) {
