@@ -309,6 +309,7 @@ describe("regen/reload states with n-historical states configuration", () => {
             forkchoiceConstructor: ReorgedForkChoice,
             // this node does not need to reload state
             proposerBoost: true,
+            // by default, maxCPStateEpochsInMemory is 3 so that it does not have to persist/reload checkpoint states
           },
         },
         validatorCount,
