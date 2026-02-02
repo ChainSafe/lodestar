@@ -32,22 +32,6 @@ import {NodeId} from "../network/subnets/index.js";
 import {dataColumnMatrixRecovery} from "./blobs.js";
 import {kzg} from "./kzg.js";
 
-/**
- * Get blob KZG commitments from a block, handling fork differences.
- * Pre-GLOAS: commitments are in block.body.blobKzgCommitments
- * GLOAS+: commitments are in block.body.signedExecutionPayloadBid.message.blobKzgCommitments
- */
-export function getBlobKzgCommitments(
-  fork: ForkName,
-  block: SignedBeaconBlock<ForkPostFulu>
-): deneb.KZGCommitment[] {
-  if (isForkPostGloas(fork)) {
-    return (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message
-      .blobKzgCommitments as deneb.KZGCommitment[];
-  }
-  return (block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
-}
-
 export enum RecoverResult {
   // the recover is not attempted because we have less than `NUMBER_OF_COLUMNS / 2` columns
   NotAttemptedLessThanHalf = "not_attempted_less_than_half",
@@ -329,7 +313,9 @@ export function getDataColumnSidecarsFromBlock(
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
   const fork = config.getForkName(signedBlock.message.slot);
-  const blobKzgCommitments = getBlobKzgCommitments(fork, signedBlock);
+  const blobKzgCommitments = isForkPostGloas(fork)
+    ? (signedBlock as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments
+    : (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
 
   // No need to create data column sidecars if there are no blobs
   if (blobKzgCommitments.length === 0) {

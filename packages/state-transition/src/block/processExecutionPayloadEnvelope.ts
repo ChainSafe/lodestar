@@ -140,7 +140,6 @@ function validateExecutionPayloadEnvelope(
       `Timestamp mismatch between envelope's payload and state envelope=${payload.timestamp} state=${computeTimeAtSlot(state.config, state.slot, state.genesisTime)}`
     );
   }
-  // [Modified in Gloas:EIP7732] - commitments limit check moved to processExecutionPayloadBid
 
   // Skipped: Verify the execution payload is valid
 }
