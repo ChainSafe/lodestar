@@ -138,11 +138,10 @@ export async function validateGossipBlock(
   // in forky condition, make sure to populate ShufflingCache with regened state
   chain.shufflingCache.processState(blockState);
 
-  // Extra conditions for merge fork blocks
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
   if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
-    if (!isExecutionBlockBodyType(block.body)) throw Error("Not merge block type");
+    if (!isExecutionBlockBodyType(block.body)) throw Error("Not execution block body type");
     const executionPayload = block.body.executionPayload;
     if (isExecutionStateType(blockState) && isExecutionEnabled(blockState, block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
