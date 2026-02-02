@@ -1,6 +1,6 @@
 import bearerAuthPlugin from "@fastify/bearer-auth";
 import {fastifyCors} from "@fastify/cors";
-import {FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
+import {FastifyError, FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
 import {parse as parseQueryString} from "qs";
 import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
@@ -91,9 +91,9 @@ export class RestApiServer {
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 
     // To parse our ApiError -> statusCode
-    server.setErrorHandler((err, _req, res) => {
+    server.setErrorHandler<FastifyError | Error>((err, _req, res) => {
       const stacktraces = opts.stacktraces ? err.stack?.split("\n") : undefined;
-      if (err.validation) {
+      if ("validation" in err && err.validation) {
         const {instancePath, message} = err.validation[0];
         const payload: ErrorResponse = {
           code: 400,

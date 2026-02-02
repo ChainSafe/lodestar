@@ -4,6 +4,8 @@ packages:
 linkWorkspacePackages: true
 
 minimumReleaseAge: 2880
+minimumReleaseAgeExclude:
+  - fastify
 
 nodeLinker: isolated
 
