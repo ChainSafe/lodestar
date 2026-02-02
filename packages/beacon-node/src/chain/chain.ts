@@ -367,6 +367,12 @@ export class BeaconChain implements IBeaconChain {
     blockStateCache.setHeadState(anchorState);
     checkpointStateCache.add(checkpoint, anchorState);
 
+    const forkChoiceStateGetters = {
+      blockStateGetter: (stateRoot: RootHex) => blockStateCache.get(stateRoot, {dontTransferCache: true}),
+      checkpointStateGetter: (checkpoint: CheckpointWithHex) =>
+        checkpointStateCache.get({epoch: checkpoint.epoch, rootHex: checkpoint.rootHex}, {dontTransferCache: true}),
+    };
+
     const forkChoice = initializeForkChoice(
       config,
       emitter,
@@ -376,7 +382,8 @@ export class BeaconChain implements IBeaconChain {
       opts,
       this.justifiedBalancesGetter.bind(this),
       metrics,
-      logger
+      logger,
+      forkChoiceStateGetters
     );
     const regen = new QueuedStateRegenerator({
       config,

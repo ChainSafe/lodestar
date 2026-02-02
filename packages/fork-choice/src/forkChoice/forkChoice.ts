@@ -1655,18 +1655,7 @@ export class ForkChoice implements IForkChoice {
       },
       getCurrentSlot: () => this.fcStore.currentSlot,
       getHead: () => ({blockRoot: this.head.blockRoot}),
-      getBlock: (root: RootHex) => {
-        const block = this.getBlockHex(root);
-        if (!block) return null;
-        return {
-          slot: block.slot,
-          parentRoot: block.parentRoot,
-          justifiedEpoch: block.justifiedEpoch,
-          justifiedRoot: block.justifiedRoot,
-          unrealizedJustifiedEpoch: block.unrealizedJustifiedEpoch,
-          unrealizedJustifiedRoot: block.unrealizedJustifiedRoot,
-        };
-      },
+      getBlock: (root: RootHex) => this.getBlockHex(root),
       getAncestor: (root: RootHex, slot: Slot) => this.getAncestor(root, slot),
       isDescendant: (ancestor: RootHex, descendant: RootHex) => this.isDescendant(ancestor, descendant),
       getLatestMessage: (validatorIndex: ValidatorIndex) => {

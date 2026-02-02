@@ -7,6 +7,7 @@ import {
   ProtoArray,
   ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
+  CheckpointWithHex,
 } from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
@@ -21,7 +22,7 @@ import {
   isExecutionStateType,
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
-import {Slot, ssz} from "@lodestar/types";
+import {RootHex, Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -30,6 +31,11 @@ import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only
   forkchoiceConstructor?: typeof ForkChoice;
+};
+
+type ForkChoiceStateGetters = {
+  blockStateGetter?: (stateRoot: RootHex) => CachedBeaconStateAllForks | null;
+  checkpointStateGetter?: (checkpoint: CheckpointWithHex) => CachedBeaconStateAllForks | null;
 };
 
 export enum ForkchoiceCaller {
@@ -49,7 +55,8 @@ export function initializeForkChoice(
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   metrics: Metrics | null,
-  logger?: Logger
+  logger?: Logger,
+  stateGetters?: ForkChoiceStateGetters
 ): ForkChoice {
   return isFinalizedState
     ? initializeForkChoiceFromFinalizedState(
@@ -60,7 +67,8 @@ export function initializeForkChoice(
         opts,
         justifiedBalancesGetter,
         metrics,
-        logger
+        logger,
+        stateGetters
       )
     : initializeForkChoiceFromUnfinalizedState(
         config,
@@ -70,7 +78,8 @@ export function initializeForkChoice(
         opts,
         justifiedBalancesGetter,
         metrics,
-        logger
+        logger,
+        stateGetters
       );
 }
 
@@ -85,7 +94,8 @@ export function initializeForkChoiceFromFinalizedState(
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   metrics: Metrics | null,
-  logger?: Logger
+  logger?: Logger,
+  stateGetters?: ForkChoiceStateGetters
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
   const finalizedCheckpoint = {...checkpoint};
@@ -116,7 +126,8 @@ export function initializeForkChoiceFromFinalizedState(
       {
         onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
-      }
+      },
+      stateGetters
     ),
 
     ProtoArray.initialize(
@@ -175,7 +186,8 @@ export function initializeForkChoiceFromUnfinalizedState(
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
   metrics: Metrics | null,
-  logger?: Logger
+  logger?: Logger,
+  stateGetters?: ForkChoiceStateGetters
 ): ForkChoice {
   const {blockHeader} = computeAnchorCheckpoint(config, unfinalizedState);
   const finalizedCheckpoint = unfinalizedState.finalizedCheckpoint.toValue();
@@ -205,7 +217,8 @@ export function initializeForkChoiceFromUnfinalizedState(
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
-    }
+    },
+    stateGetters
   );
 
   // this is the same to the finalized state
