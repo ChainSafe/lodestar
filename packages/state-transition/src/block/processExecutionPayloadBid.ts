@@ -43,7 +43,7 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     }
   }
 
-  // Verify commitments are under limit [New in Gloas:EIP7732]
+  // Verify commitments are under limit
   const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
   if (bid.blobKzgCommitments.length > maxBlobsPerBlock) {
     throw Error(
