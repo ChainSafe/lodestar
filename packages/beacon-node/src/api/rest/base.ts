@@ -91,9 +91,9 @@ export class RestApiServer {
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 
     // To parse our ApiError -> statusCode
-    server.setErrorHandler<FastifyError | Error>((err, _req, res) => {
+    server.setErrorHandler<FastifyError>((err, _req, res) => {
       const stacktraces = opts.stacktraces ? err.stack?.split("\n") : undefined;
-      if ("validation" in err && err.validation) {
+      if (err.validation) {
         const {instancePath, message} = err.validation[0];
         const payload: ErrorResponse = {
           code: 400,
