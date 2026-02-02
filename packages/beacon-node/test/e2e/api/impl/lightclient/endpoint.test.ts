@@ -1,4 +1,4 @@
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {HttpHeader, getClient, routes} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
@@ -13,6 +13,8 @@ import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
 describe("lightclient api", () => {
+  vi.setConfig({testTimeout: 10_000});
+
   const SLOT_DURATION_MS = 1000;
   const restPort = 9596;
   const ELECTRA_FORK_EPOCH = 0;
@@ -85,8 +87,7 @@ describe("lightclient api", () => {
     await sleep(2 * SLOT_DURATION_MS);
   };
 
-  // waitForBestUpdate can take up to 7 slots (5 for event + 2 sleep), need longer timeout
-  it("getLightClientUpdatesByRange()", {timeout: 10_000}, async () => {
+  it("getLightClientUpdatesByRange()", async () => {
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     await waitForBestUpdate();
     const res = await client.getLightClientUpdatesByRange({startPeriod: 0, count: 1});
@@ -97,7 +98,7 @@ describe("lightclient api", () => {
     expect(res.meta().versions[0]).toBe(ForkName.electra);
   });
 
-  it("getLightClientOptimisticUpdate()", {timeout: 10_000}, async () => {
+  it("getLightClientOptimisticUpdate()", async () => {
     await waitForBestUpdate();
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const res = await client.getLightClientOptimisticUpdate();
@@ -120,7 +121,7 @@ describe("lightclient api", () => {
     expect(finalityUpdate).toBeDefined();
   });
 
-  it("getLightClientCommitteeRoot() for the 1st period", {timeout: 10_000}, async () => {
+  it("getLightClientCommitteeRoot() for the 1st period", async () => {
     await waitForBestUpdate();
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
