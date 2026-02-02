@@ -1,5 +1,6 @@
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {Root, RootHex} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {IForkChoice} from "./interface.js";
 
 /**
@@ -10,6 +11,10 @@ import {IForkChoice} from "./interface.js";
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0/fork_choice/safe-block.md#get_safe_beacon_block_root
  */
 export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
+  const confirmedRoot = fc.getConfirmedRoot?.();
+  if (confirmedRoot && fc.hasBlockHex(confirmedRoot)) {
+    return fromHex(confirmedRoot);
+  }
   return fc.getJustifiedCheckpoint().root;
 }
 
@@ -23,5 +28,12 @@ export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0/fork_choice/safe-block.md#get_safe_execution_block_hash
  */
 export function getSafeExecutionBlockHash(forkChoice: IForkChoice): RootHex {
+  const confirmedRoot = forkChoice.getConfirmedRoot?.();
+  if (confirmedRoot) {
+    const confirmedBlock = forkChoice.getBlockHex(confirmedRoot);
+    if (confirmedBlock?.executionPayloadBlockHash) {
+      return confirmedBlock.executionPayloadBlockHash;
+    }
+  }
   return forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
 }

@@ -12,6 +12,10 @@ export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 
 export type JustifiedBalances = EffectiveBalanceIncrements;
 
+export type BlockStateGetter = (stateRoot: RootHex) => CachedBeaconStateAllForks | null;
+
+export type CheckpointStateGetter = (checkpoint: CheckpointWithHex) => CachedBeaconStateAllForks | null;
+
 /**
  * Returns the justified balances of checkpoint.
  * MUST not throw an error in any case, related to cache miss. Either trigger regen or approximate from a close state.
@@ -44,11 +48,15 @@ export interface IForkChoiceStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
+  blockStateGetter?: BlockStateGetter;
+  checkpointStateGetter?: CheckpointStateGetter;
 
   // Fast Confirmation Rule fields
   confirmedRoot: RootHex;
   previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
   currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
+  previousEpochObservedJustifiedBalances: JustifiedBalances;
+  currentEpochObservedJustifiedBalances: JustifiedBalances;
   previousSlotHead: RootHex;
   currentSlotHead: RootHex;
 }
@@ -69,8 +77,13 @@ export class ForkChoiceStore implements IForkChoiceStore {
   confirmedRoot: RootHex;
   previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
   currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
+  previousEpochObservedJustifiedBalances: JustifiedBalances;
+  currentEpochObservedJustifiedBalances: JustifiedBalances;
   previousSlotHead: RootHex;
   currentSlotHead: RootHex;
+
+  blockStateGetter?: BlockStateGetter;
+  checkpointStateGetter?: CheckpointStateGetter;
 
   constructor(
     currentSlot: Slot,
@@ -81,10 +94,16 @@ export class ForkChoiceStore implements IForkChoiceStore {
     private readonly events?: {
       onJustified: (cp: CheckpointWithHex) => void;
       onFinalized: (cp: CheckpointWithHex) => void;
+    },
+    stateGetters?: {
+      blockStateGetter?: BlockStateGetter;
+      checkpointStateGetter?: CheckpointStateGetter;
     }
   ) {
     this.justifiedBalancesGetter = justifiedBalancesGetter;
     this.currentSlot = currentSlot;
+    this.blockStateGetter = stateGetters?.blockStateGetter;
+    this.checkpointStateGetter = stateGetters?.checkpointStateGetter;
     const justified = {
       checkpoint: toCheckpointWithHex(justifiedCheckpoint),
       balances: justifiedBalances,
@@ -100,6 +119,8 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this.confirmedRoot = anchorRoot;
     this.previousEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
     this.currentEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
+    this.previousEpochObservedJustifiedBalances = justifiedBalances;
+    this.currentEpochObservedJustifiedBalances = justifiedBalances;
     this.previousSlotHead = anchorRoot;
     this.currentSlotHead = anchorRoot;
   }

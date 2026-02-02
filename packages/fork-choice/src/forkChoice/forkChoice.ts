@@ -44,6 +44,11 @@ import {
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
+  type FCRContext,
+  FastConfirmationRule,
+  type IFastConfirmationRule,
+} from "./fastConfirmationRule/fastConfirmationRule.ts";
+import {
   AncestorResult,
   AncestorStatus,
   EpochDifference,
@@ -58,6 +63,7 @@ export type ForkChoiceOpts = {
   proposerBoostReorg?: boolean;
   computeUnrealized?: boolean;
   enableFastConfirmation?: boolean;
+  fastConfirmation?: IFastConfirmationRule;
 };
 
 export enum UpdateHeadOpt {
@@ -132,6 +138,9 @@ export class ForkChoice implements IForkChoice {
   private justifiedProposerBoostScore: number | null = null;
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
+  /** Optional fast confirmation rule implementation */
+  private readonly fcr?: IFastConfirmationRule;
+  private readonly fcrContext?: FCRContext;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -155,6 +164,11 @@ export class ForkChoice implements IForkChoice {
 
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
+
+    if (this.opts?.enableFastConfirmation) {
+      this.fcr = this.opts.fastConfirmation ?? new FastConfirmationRule(this.fcStore, metrics);
+      this.fcrContext = this.createFcrContext();
+    }
 
     metrics?.forkChoice.votes.addCollect(() => {
       metrics.forkChoice.votes.set(this.voteNextEpochs.length);
@@ -194,6 +208,14 @@ export class ForkChoice implements IForkChoice {
    */
   getHead(): ProtoBlock {
     return this.head;
+  }
+
+  getConfirmedRoot(): RootHex {
+    return this.fcr?.getConfirmedRoot() ?? this.fcStore.justified.checkpoint.rootHex;
+  }
+
+  getConfirmedBlock(): ProtoBlock | null {
+    return this.getBlockHex(this.getConfirmedRoot());
   }
 
   /**
@@ -871,6 +893,7 @@ export class ForkChoice implements IForkChoice {
     this.queuedAttestationsPreviousSlot = 0;
     // Process any attestations that might now be eligible.
     this.processAttestationQueue();
+    this.runFastConfirmation();
     this.validatedAttestationDatas = new Set();
   }
 
@@ -1607,6 +1630,72 @@ export class ForkChoice implements IForkChoice {
     prelimProposerHead = parentBlock;
 
     return {prelimProposerHead};
+  }
+
+  private runFastConfirmation(): void {
+    if (!this.fcr || !this.fcrContext) return;
+    const timer = this.metrics?.fcr.duration.startTimer();
+    try {
+      this.updateHead();
+      const result = this.fcr.onSlotStartAfterPastAttestationsApplied(this.fcrContext);
+      this.fcStore.confirmedRoot = result.confirmedRoot;
+    } catch (err) {
+      this.logger?.warn("Fast confirmation failed", {}, err as Error);
+    } finally {
+      timer?.();
+    }
+  }
+
+  private createFcrContext(): FCRContext {
+    const confirmationByzantineThreshold = this.config.CONFIRMATION_BYZANTINE_THRESHOLD ?? 0;
+    return {
+      config: {
+        CONFIRMATION_BYZANTINE_THRESHOLD: confirmationByzantineThreshold,
+        PROPOSER_SCORE_BOOST: this.config.PROPOSER_SCORE_BOOST,
+      },
+      getCurrentSlot: () => this.fcStore.currentSlot,
+      getHead: () => ({blockRoot: this.head.blockRoot}),
+      getBlock: (root: RootHex) => {
+        const block = this.getBlockHex(root);
+        if (!block) return null;
+        return {
+          slot: block.slot,
+          parentRoot: block.parentRoot,
+          justifiedEpoch: block.justifiedEpoch,
+          justifiedRoot: block.justifiedRoot,
+          unrealizedJustifiedEpoch: block.unrealizedJustifiedEpoch,
+          unrealizedJustifiedRoot: block.unrealizedJustifiedRoot,
+        };
+      },
+      getAncestor: (root: RootHex, slot: Slot) => this.getAncestor(root, slot),
+      isDescendant: (ancestor: RootHex, descendant: RootHex) => this.isDescendant(ancestor, descendant),
+      getLatestMessage: (validatorIndex: ValidatorIndex) => {
+        const nextIndex = this.voteNextIndices[validatorIndex];
+        if (nextIndex === undefined || nextIndex === NULL_VOTE_INDEX) {
+          return null;
+        }
+        const node = this.protoArray.nodes[nextIndex];
+        if (!node) return null;
+        return {root: node.blockRoot, epoch: this.voteNextEpochs[validatorIndex]};
+      },
+      getHeadState: () => this.fcStore.blockStateGetter?.(this.head.stateRoot) ?? null,
+      getCheckpointState: (checkpoint: CheckpointWithHex) => this.fcStore.checkpointStateGetter?.(checkpoint) ?? null,
+      getUnrealizedJustified: () => ({
+        checkpoint: this.fcStore.unrealizedJustified.checkpoint,
+        balances: this.fcStore.unrealizedJustified.balances,
+      }),
+      getFinalizedCheckpoint: () => this.fcStore.finalizedCheckpoint,
+      getEquivocatingIndices: () => this.fcStore.equivocatingIndices,
+      getTrackedVotesCount: () => {
+        let count = 0;
+        for (let i = 0; i < this.voteNextIndices.length; i++) {
+          if (this.voteNextIndices[i] !== NULL_VOTE_INDEX) {
+            count++;
+          }
+        }
+        return count;
+      },
+    };
   }
 }
 
