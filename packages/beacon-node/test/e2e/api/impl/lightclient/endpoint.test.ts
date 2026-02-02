@@ -85,7 +85,8 @@ describe("lightclient api", () => {
     await sleep(2 * SLOT_DURATION_MS);
   };
 
-  it("getLightClientUpdatesByRange()", async () => {
+  // waitForBestUpdate can take up to 7 slots (5 for event + 2 sleep), need longer timeout
+  it("getLightClientUpdatesByRange()", {timeout: 10_000}, async () => {
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     await waitForBestUpdate();
     const res = await client.getLightClientUpdatesByRange({startPeriod: 0, count: 1});
@@ -96,7 +97,7 @@ describe("lightclient api", () => {
     expect(res.meta().versions[0]).toBe(ForkName.electra);
   });
 
-  it("getLightClientOptimisticUpdate()", async () => {
+  it("getLightClientOptimisticUpdate()", {timeout: 10_000}, async () => {
     await waitForBestUpdate();
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const res = await client.getLightClientOptimisticUpdate();
@@ -119,7 +120,7 @@ describe("lightclient api", () => {
     expect(finalityUpdate).toBeDefined();
   });
 
-  it("getLightClientCommitteeRoot() for the 1st period", async () => {
+  it("getLightClientCommitteeRoot() for the 1st period", {timeout: 10_000}, async () => {
     await waitForBestUpdate();
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
