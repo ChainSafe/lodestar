@@ -1,6 +1,7 @@
 import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {ForkChoiceStateGetter, IFCRStore} from "./fastConfirmationRule/types.ts";
 import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interface.js";
 
 /**
@@ -11,10 +12,6 @@ import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interfa
 export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 
 export type JustifiedBalances = EffectiveBalanceIncrements;
-
-export type BlockStateGetter = (stateRoot: RootHex) => CachedBeaconStateAllForks | null;
-
-export type CheckpointStateGetter = (checkpoint: CheckpointWithHex) => CachedBeaconStateAllForks | null;
 
 /**
  * Returns the justified balances of checkpoint.
@@ -39,7 +36,7 @@ export type JustifiedBalancesGetter = (
  * - The actual block DAG in `ProtoArray`.
  * - `time` is represented using `Slot` instead of UNIX epoch `u64`.
  */
-export interface IForkChoiceStore {
+export interface IForkChoiceStore extends IFCRStore {
   currentSlot: Slot;
   get justified(): CheckpointHexWithTotalBalance;
   set justified(justified: CheckpointHexWithBalance);
@@ -48,17 +45,6 @@ export interface IForkChoiceStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
-  blockStateGetter?: BlockStateGetter;
-  checkpointStateGetter?: CheckpointStateGetter;
-
-  // Fast Confirmation Rule fields
-  confirmedRoot: RootHex;
-  previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
-  currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
-  previousEpochObservedJustifiedBalances: JustifiedBalances;
-  currentEpochObservedJustifiedBalances: JustifiedBalances;
-  previousSlotHead: RootHex;
-  currentSlotHead: RootHex;
 }
 
 /**
@@ -81,9 +67,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
   currentEpochObservedJustifiedBalances: JustifiedBalances;
   previousSlotHead: RootHex;
   currentSlotHead: RootHex;
-
-  blockStateGetter?: BlockStateGetter;
-  checkpointStateGetter?: CheckpointStateGetter;
+  stateGetter: ForkChoiceStateGetter;
 
   constructor(
     currentSlot: Slot,
@@ -91,19 +75,15 @@ export class ForkChoiceStore implements IForkChoiceStore {
     finalizedCheckpoint: phase0.Checkpoint,
     justifiedBalances: EffectiveBalanceIncrements,
     justifiedBalancesGetter: JustifiedBalancesGetter,
+    stateGetter: ForkChoiceStateGetter,
     private readonly events?: {
       onJustified: (cp: CheckpointWithHex) => void;
       onFinalized: (cp: CheckpointWithHex) => void;
-    },
-    stateGetters?: {
-      blockStateGetter?: BlockStateGetter;
-      checkpointStateGetter?: CheckpointStateGetter;
     }
   ) {
     this.justifiedBalancesGetter = justifiedBalancesGetter;
     this.currentSlot = currentSlot;
-    this.blockStateGetter = stateGetters?.blockStateGetter;
-    this.checkpointStateGetter = stateGetters?.checkpointStateGetter;
+    this.stateGetter = stateGetter;
     const justified = {
       checkpoint: toCheckpointWithHex(justifiedCheckpoint),
       balances: justifiedBalances,

@@ -167,7 +167,7 @@ export class ForkChoice implements IForkChoice {
 
     if (this.opts?.enableFastConfirmation) {
       this.fcr = this.opts.fastConfirmation ?? new FastConfirmationRule(this.fcStore, metrics);
-      this.fcrContext = this.createFcrContext();
+      this.fcrContext = this.createFCRContext();
     }
 
     metrics?.forkChoice.votes.addCollect(() => {
@@ -1646,7 +1646,7 @@ export class ForkChoice implements IForkChoice {
     }
   }
 
-  private createFcrContext(): FCRContext {
+  private createFCRContext(): FCRContext {
     const confirmationByzantineThreshold = this.config.CONFIRMATION_BYZANTINE_THRESHOLD ?? 0;
     return {
       config: {
@@ -1667,8 +1667,8 @@ export class ForkChoice implements IForkChoice {
         if (!node) return null;
         return {root: node.blockRoot, epoch: this.voteNextEpochs[validatorIndex]};
       },
-      getHeadState: () => this.fcStore.blockStateGetter?.(this.head.stateRoot) ?? null,
-      getCheckpointState: (checkpoint: CheckpointWithHex) => this.fcStore.checkpointStateGetter?.(checkpoint) ?? null,
+      getHeadState: () => this.fcStore.stateGetter({stateRoot: this.head.stateRoot}),
+      getCheckpointState: (checkpoint: CheckpointWithHex) => this.fcStore.stateGetter({checkpoint}),
       getUnrealizedJustified: () => ({
         checkpoint: this.fcStore.unrealizedJustified.checkpoint,
         balances: this.fcStore.unrealizedJustified.balances,

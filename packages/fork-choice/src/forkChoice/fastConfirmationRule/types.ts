@@ -8,7 +8,11 @@ export type FCRBalanceSource = {
   balances: EffectiveBalanceIncrements;
 };
 
-export type FCRStore = {
+export type ForkChoiceStateGetter = (
+  opts: {stateRoot: RootHex; checkpoint?: never} | {stateRoot?: never; checkpoint: CheckpointWithHex}
+) => CachedBeaconStateAllForks | null;
+
+export type IFCRStore = {
   confirmedRoot: RootHex;
   previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
   currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
@@ -16,6 +20,7 @@ export type FCRStore = {
   currentEpochObservedJustifiedBalances: EffectiveBalanceIncrements;
   previousSlotHead: RootHex;
   currentSlotHead: RootHex;
+  stateGetter: ForkChoiceStateGetter;
 };
 
 export type FCRResult = {

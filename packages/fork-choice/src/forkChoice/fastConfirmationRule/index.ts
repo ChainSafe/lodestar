@@ -7,16 +7,15 @@ import {
   computeStartSlotAtEpoch,
   getActiveValidatorIndices,
   getCurrentEpoch,
-  isStartSlotOfEpoch,
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.ts";
-import {FCRMetrics} from "./metrics.ts";
-import {FCRBalanceSource, FCRContext, FCRResult, IFCRStore, IFastConfirmationRule} from "./types.ts";
+import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.js";
+import {FCRMetrics} from "./metrics.js";
+import {FCRBalanceSource, FCRContext, FCRResult, IFCRStore, IFastConfirmationRule} from "./types.js";
 
-export * from "./metrics.ts";
-export * from "./types.ts";
+export * from "./metrics.js";
+export * from "./types.js";
 
 const COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR = 5;
 
@@ -31,28 +30,13 @@ export class FastConfirmationRule implements IFastConfirmationRule {
   }
 
   onSlotStartAfterPastAttestationsApplied(ctx: FCRContext): FCRResult {
-    this.updateFCRVariables(ctx);
+    this.updateFastConfirmationVariables(ctx);
     const result = this.getLatestConfirmed(ctx);
-    this.updateFCRMetrics(ctx, result);
+    this.updateFcrMetrics(ctx, result);
     return result;
   }
 
-  // Private methods
-  // ---------------------
-  private updateFCRVariables(ctx: FCRContext): void {
-    this.store.previousSlotHead = this.store.currentSlotHead;
-    this.store.currentSlotHead = ctx.getHead().blockRoot;
-
-    if (isStartSlotOfEpoch(ctx.getCurrentSlot() + 1)) {
-      this.store.previousEpochObservedJustifiedCheckpoint = this.store.currentEpochObservedJustifiedCheckpoint;
-      this.store.previousEpochObservedJustifiedBalances = this.store.currentEpochObservedJustifiedBalances;
-      const unrealized = ctx.getUnrealizedJustified();
-      this.store.currentEpochObservedJustifiedCheckpoint = unrealized.checkpoint;
-      this.store.currentEpochObservedJustifiedBalances = unrealized.balances;
-    }
-  }
-
-  private updateFCRMetrics(ctx: FCRContext, result: FCRResult): void {
+  private updateFcrMetrics(ctx: FCRContext, result: FCRResult): void {
     if (!this.metrics) return;
     const confirmedBlock = ctx.getBlock(result.confirmedRoot);
     if (confirmedBlock) {
@@ -68,36 +52,45 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     this.metrics.fcr.votesTracked.set(ctx.getTrackedVotesCount());
   }
 
+  private updateFastConfirmationVariables(ctx: FCRContext): void {
+    this.store.previousSlotHead = this.store.currentSlotHead;
+    this.store.currentSlotHead = ctx.getHead().blockRoot;
+
+    if (this.isStartSlotAtEpoch((ctx.getCurrentSlot() + 1) as Slot)) {
+      this.store.previousEpochObservedJustifiedCheckpoint = this.store.currentEpochObservedJustifiedCheckpoint;
+      this.store.previousEpochObservedJustifiedBalances = this.store.currentEpochObservedJustifiedBalances;
+      const unrealized = ctx.getUnrealizedJustified();
+      this.store.currentEpochObservedJustifiedCheckpoint = unrealized.checkpoint;
+      this.store.currentEpochObservedJustifiedBalances = unrealized.balances;
+    }
+  }
+
   private getLatestConfirmed(ctx: FCRContext): FCRResult {
     let confirmedRoot = this.store.confirmedRoot;
-    const finalizedRoot = ctx.getFinalizedCheckpoint().rootHex;
     let didReset = false;
+    const currentEpoch = computeEpochAtSlot(ctx.getCurrentSlot());
 
     const head = ctx.getHead().blockRoot;
-    const currentSlot = ctx.getCurrentSlot();
-    const currentEpoch = computeEpochAtSlot(currentSlot);
-    const confirmedSlot = this.getBlockSlot(ctx, confirmedRoot);
     const confirmedEpoch = this.getBlockEpoch(ctx, confirmedRoot);
-
-    const confirmedBlockNotAvailable = confirmedEpoch === null;
-    const confirmedEpochBehindHead = confirmedEpoch && confirmedEpoch + 1 < currentEpoch;
-    const notAncestorOfHead = !this.isAncestor(ctx, head, confirmedRoot);
-    const allChildrenNotConfirmed =
-      isStartSlotOfEpoch(ctx.getCurrentSlot()) && !this.isConfirmedChainSafe(ctx, confirmedRoot);
-
-    if (confirmedBlockNotAvailable) {
-      confirmedRoot = finalizedRoot;
+    if (confirmedEpoch === null) {
+      confirmedRoot = ctx.getFinalizedCheckpoint().rootHex;
       didReset = true;
-    } else if (confirmedEpochBehindHead || notAncestorOfHead || allChildrenNotConfirmed) {
-      didReset = confirmedRoot !== finalizedRoot;
-      confirmedRoot = finalizedRoot;
+    } else if (
+      confirmedEpoch + 1 < currentEpoch ||
+      !this.isAncestor(ctx, head, confirmedRoot) ||
+      (this.isStartSlotAtEpoch(ctx.getCurrentSlot()) && !this.isConfirmedChainSafe(ctx, confirmedRoot))
+    ) {
+      if (confirmedRoot !== ctx.getFinalizedCheckpoint().rootHex) {
+        didReset = true;
+      }
+      confirmedRoot = ctx.getFinalizedCheckpoint().rootHex;
     }
 
     const headUnrealized = this.getUnrealizedJustification(ctx, head);
+    const confirmedSlot = this.getBlockSlot(ctx, confirmedRoot);
     const observedSlot = this.getBlockSlot(ctx, this.store.currentEpochObservedJustifiedCheckpoint.rootHex);
-
     if (
-      isStartSlotOfEpoch(currentSlot) &&
+      this.isStartSlotAtEpoch(ctx.getCurrentSlot()) &&
       this.store.currentEpochObservedJustifiedCheckpoint.epoch + 1 === currentEpoch &&
       headUnrealized !== null &&
       equalCheckpointWithHex(this.store.currentEpochObservedJustifiedCheckpoint, headUnrealized) &&
@@ -112,8 +105,8 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     if (confirmedEpochAfterRestart !== null && confirmedEpochAfterRestart + 1 >= currentEpoch) {
       confirmedRoot = this.findLatestConfirmedDescendant(ctx, confirmedRoot);
     }
-    this.store.confirmedRoot = confirmedRoot;
 
+    this.store.confirmedRoot = confirmedRoot;
     return {confirmedRoot, didReset};
   }
 
@@ -133,7 +126,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       confirmedEpoch + 1 === currentEpoch &&
       previousSlotVotingSource !== null &&
       previousSlotVotingSource.epoch + 2 >= currentEpoch &&
-      (isStartSlotOfEpoch(ctx.getCurrentSlot()) ||
+      (this.isStartSlotAtEpoch(ctx.getCurrentSlot()) ||
         (this.willNoConflictingCheckpointBeJustified(ctx) &&
           ((prevSlotJustification !== null && prevSlotJustification.epoch + 1 >= currentEpoch) ||
             (headJustification !== null && headJustification.epoch + 1 >= currentEpoch))))
@@ -155,7 +148,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     }
 
     if (
-      isStartSlotOfEpoch(ctx.getCurrentSlot()) ||
+      this.isStartSlotAtEpoch(ctx.getCurrentSlot()) ||
       (headJustification !== null && headJustification.epoch + 1 >= currentEpoch)
     ) {
       const canonicalRoots = this.getAncestorRoots(ctx, head, confirmedRoot);
@@ -183,7 +176,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
         (tentativeEpoch === currentEpoch ||
           (tentativeVotingSource !== null &&
             tentativeVotingSource.epoch + 2 >= currentEpoch &&
-            (isStartSlotOfEpoch(ctx.getCurrentSlot()) || this.willNoConflictingCheckpointBeJustified(ctx))))
+            (this.isStartSlotAtEpoch(ctx.getCurrentSlot()) || this.willNoConflictingCheckpointBeJustified(ctx))))
       ) {
         confirmedRoot = tentativeConfirmedRoot;
       }
@@ -240,11 +233,11 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     const state = balanceSource.state;
     const activeIndices = state ? Array.from(getActiveValidatorIndices(state, getCurrentEpoch(state))) : null;
     let score = 0;
+    if (!state) return score;
     const equivocating = ctx.getEquivocatingIndices();
 
     if (activeIndices !== null) {
       for (const i of activeIndices) {
-        if (!state) continue;
         if (state.validators.get(i)?.slashed) continue;
         if (equivocating.has(i)) continue;
         const latestMessage = ctx.getLatestMessage(i);
@@ -558,6 +551,10 @@ export class FastConfirmationRule implements IFastConfirmationRule {
         return ancestorRoots;
       }
     }
+  }
+
+  private isStartSlotAtEpoch(slot: Slot): boolean {
+    return computeSlotsSinceEpochStart(slot) === 0;
   }
 
   private getBlockSlot(ctx: FCRContext, blockRoot: RootHex): Slot | null {

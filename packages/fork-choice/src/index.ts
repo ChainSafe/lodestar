@@ -11,8 +11,9 @@ export {
   type FCRContext,
   type FCRMetrics,
   type FCRResult,
-  type FCRStore,
   FastConfirmationRule,
+  type ForkChoiceStateGetter,
+  type IFCRStore,
   type IFastConfirmationRule,
   getFCRMetrics,
 } from "./forkChoice/fastConfirmationRule/fastConfirmationRule.ts";
