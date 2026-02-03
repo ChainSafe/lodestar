@@ -20,7 +20,7 @@ import {
   isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
+import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -436,7 +436,12 @@ export async function importBlock(
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
     this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
-    const parentBlockSummary = this.forkChoice.getBlockDefaultStatus(checkpointState.latestBlockHeader.parentRoot);
+    const parentBlockSummary = isGloasBeaconBlock(block.message)
+      ? this.forkChoice.getBlockHexAndBlockHash(
+          toRootHex(checkpointState.latestBlockHeader.parentRoot),
+          toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+        )
+      : this.forkChoice.getBlockDefaultStatus(checkpointState.latestBlockHeader.parentRoot);
 
     if (parentBlockSummary) {
       const justifiedCheckpoint = checkpointState.currentJustifiedCheckpoint;

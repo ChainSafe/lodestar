@@ -9,7 +9,7 @@ import {
   isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb} from "@lodestar/types";
+import {SignedBeaconBlock, deneb, isGloasBeaconBlock} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -71,7 +71,12 @@ export async function validateGossipBlock(
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   const parentRoot = toRootHex(block.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+  const parentBlock = isGloasBeaconBlock(block)
+    ? chain.forkChoice.getBlockHexAndBlockHash(
+        parentRoot,
+        toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
+      )
+    : chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:

@@ -757,7 +757,28 @@ export class ForkChoice implements IForkChoice {
       ...(isGloasBeaconBlock(block)
         ? {
             executionPayloadBlockHash: toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash), // post-gloas, we don't know payload hash until we import execution payload. Set to parent payload hash for now
-            executionPayloadNumber: 0, // post-gloas, we don't know payload number until we import execution payload. Set to 0 for now
+            executionPayloadNumber: (() => {
+              // Determine parent's execution payload number based on which variant the block extends
+              const parentBlockHashFromBid = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
+
+              // If parent is pre-merge, return 0
+              if (parentBlock.executionPayloadBlockHash === null) {
+                return 0;
+              }
+
+              // If parent is pre-Gloas, it only has FULL variant
+              if (parentBlock.parentBlockHash === null) {
+                return parentBlock.executionPayloadNumber;
+              }
+
+              // Parent is Gloas: get the variant that matches the parentBlockHash from bid
+              const parentVariant = this.getBlockHexAndBlockHash(parentRootHex, parentBlockHashFromBid);
+              if (parentVariant && parentVariant.executionPayloadBlockHash !== null) {
+                return parentVariant.executionPayloadNumber;
+              }
+              // Fallback to parent block's number (we know it's post-merge from check above)
+              return parentBlock.executionPayloadNumber;
+            })(),
             executionStatus: this.getPostMergeExecStatus(executionStatus), // TODO GLOAS: Need a new execution status to denote scenario where we are waiting for payload, or payload is never revealed.
             dataAvailabilityStatus,
           }
