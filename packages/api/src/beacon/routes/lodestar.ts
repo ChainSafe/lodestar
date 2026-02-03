@@ -240,6 +240,41 @@ export type Endpoints = {
     EmptyResponseData,
     EmptyMeta
   >;
+
+  /**
+   * Add a direct peer at runtime.
+   * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
+   * Accepts either a multiaddr with peer ID or an ENR string.
+   */
+  addDirectPeer: Endpoint<
+    // ⏎
+    "POST",
+    {peer: string},
+    {query: {peer: string}},
+    {peerId: string | null},
+    EmptyMeta
+  >;
+
+  /** Remove a peer from direct peers */
+  removeDirectPeer: Endpoint<
+    // ⏎
+    "DELETE",
+    {peerId: string},
+    {query: {peerId: string}},
+    {removed: boolean},
+    EmptyMeta
+  >;
+
+  /** Get list of direct peer IDs */
+  getDirectPeers: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    string[],
+    EmptyMeta
+  >;
+
   /** Same to node api with new fields */
   getPeers: Endpoint<
     "GET",
@@ -442,6 +477,32 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         schema: {query: {peerId: Schema.StringRequired}},
       },
       resp: EmptyResponseCodec,
+    },
+    addDirectPeer: {
+      url: "/eth/v1/lodestar/direct_peer",
+      method: "POST",
+      req: {
+        writeReq: ({peer}) => ({query: {peer}}),
+        parseReq: ({query}) => ({peer: query.peer}),
+        schema: {query: {peer: Schema.StringRequired}},
+      },
+      resp: JsonOnlyResponseCodec,
+    },
+    removeDirectPeer: {
+      url: "/eth/v1/lodestar/direct_peer",
+      method: "DELETE",
+      req: {
+        writeReq: ({peerId}) => ({query: {peerId}}),
+        parseReq: ({query}) => ({peerId: query.peerId}),
+        schema: {query: {peerId: Schema.StringRequired}},
+      },
+      resp: JsonOnlyResponseCodec,
+    },
+    getDirectPeers: {
+      url: "/eth/v1/lodestar/direct_peers",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
     },
     getPeers: {
       url: "/eth/v1/lodestar/peers",

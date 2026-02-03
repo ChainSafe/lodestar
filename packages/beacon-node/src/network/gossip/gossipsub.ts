@@ -87,6 +87,7 @@ export class Eth2Gossipsub extends GossipSub {
   private readonly logger: Logger;
   private readonly peersData: PeersData;
   private readonly events: NetworkEventBus;
+  private readonly libp2p: Libp2p;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
@@ -159,6 +160,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.logger = logger;
     this.peersData = peersData;
     this.events = events;
+    this.libp2p = modules.libp2p;
     this.gossipTopicCache = gossipTopicCache;
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
@@ -340,6 +342,57 @@ export class Eth2Gossipsub extends GossipSub {
     callInNextEventLoop(() => {
       this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
     });
+  }
+
+  /**
+   * Add a peer as a direct peer at runtime.
+   * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
+   *
+   * @param peerStr - Either a multiaddr with peer ID or an ENR string
+   * @returns The peer ID string if successfully added, null if parsing failed
+   */
+  addDirectPeer(peerStr: string): string | null {
+    const parsed = parseDirectPeers([peerStr], this.logger);
+    if (parsed.length === 0) {
+      return null;
+    }
+
+    const {id: peerId, addrs} = parsed[0];
+    const peerIdStr = peerId.toString();
+
+    // Add to direct peers set (this is public readonly on GossipSub parent class)
+    this.direct.add(peerIdStr);
+
+    // Add addresses to peer store so we can connect
+    if (addrs.length > 0) {
+      this.libp2p.peerStore.merge(peerId, {multiaddrs: addrs}).catch((e) => {
+        this.logger.warn("Failed to add direct peer addresses to peer store", {peerId: peerIdStr}, e);
+      });
+    }
+
+    this.logger.info("Added direct peer via API", {peerId: peerIdStr});
+    return peerIdStr;
+  }
+
+  /**
+   * Remove a peer from direct peers.
+   *
+   * @param peerIdStr - The peer ID string to remove
+   * @returns true if the peer was removed, false if it wasn't a direct peer
+   */
+  removeDirectPeer(peerIdStr: string): boolean {
+    const removed = this.direct.delete(peerIdStr);
+    if (removed) {
+      this.logger.info("Removed direct peer via API", {peerId: peerIdStr});
+    }
+    return removed;
+  }
+
+  /**
+   * Get list of current direct peer IDs.
+   */
+  getDirectPeers(): string[] {
+    return Array.from(this.direct);
   }
 }
 
