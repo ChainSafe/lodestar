@@ -1,5 +1,5 @@
+import {getImplementation, initNative} from "@vekexasia/bigint-buffer2";
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
-import {initNative, getImplementation} from "@vekexasia/bigint-buffer2";
 import {bigIntToBytes, bigIntToBytesInto} from "@lodestar/utils";
 
 describe("bigIntToBytes", () => {
