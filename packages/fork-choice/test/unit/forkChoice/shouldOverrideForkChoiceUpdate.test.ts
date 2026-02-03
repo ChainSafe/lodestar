@@ -118,23 +118,35 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot + 1,
     justified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisBlock.blockRoot),
+        rootHex: genesisBlock.blockRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances: new Uint16Array(Array(32).fill(150)),
       totalBalance: 32 * 150,
     },
     unrealizedJustified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisBlock.blockRoot),
+        rootHex: genesisBlock.blockRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances: new Uint16Array(Array(32).fill(150)),
     },
     finalizedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
+      payloadStatus: PayloadStatus.FULL,
     },
     unrealizedFinalizedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
+      payloadStatus: PayloadStatus.FULL,
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),

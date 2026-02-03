@@ -55,16 +55,36 @@ describe("Forkchoice", () => {
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot + 1,
     justified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(finalizedRoot),
+        rootHex: finalizedRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances: new Uint16Array([32]),
       totalBalance: 32,
     },
     unrealizedJustified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(finalizedRoot),
+        rootHex: finalizedRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances: new Uint16Array([32]),
     },
-    finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-    unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    finalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+      payloadStatus: PayloadStatus.FULL,
+    },
+    unrealizedFinalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+      payloadStatus: PayloadStatus.FULL,
+    },
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
   };

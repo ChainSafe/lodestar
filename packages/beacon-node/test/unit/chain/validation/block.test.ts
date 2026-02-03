@@ -1,7 +1,7 @@
 import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostDeneb, ForkPreFulu} from "@lodestar/params";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
@@ -46,7 +46,12 @@ describe("gossip block validation", () => {
 
     verifySignature = chain.bls.verifySignatureSets;
     verifySignature.mockResolvedValue(true);
-    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: ZERO_HASH, rootHex: ""});
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: ZERO_HASH,
+      rootHex: "",
+      payloadStatus: PayloadStatus.FULL,
+    });
 
     // Reset seen cache
     (
@@ -70,7 +75,12 @@ describe("gossip block validation", () => {
 
   it("WOULD_REVERT_FINALIZED_SLOT", async () => {
     // Set finalized epoch to be greater than block's epoch
-    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: Infinity, root: ZERO_HASH, rootHex: ""});
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({
+      epoch: Infinity,
+      root: ZERO_HASH,
+      rootHex: "",
+      payloadStatus: PayloadStatus.FULL,
+    });
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),

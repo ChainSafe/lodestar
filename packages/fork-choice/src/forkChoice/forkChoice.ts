@@ -1,7 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
   ZERO_HASH,
@@ -53,7 +54,7 @@ import {
   NotReorgedReason,
   ShouldOverrideForkChoiceUpdateResult,
 } from "./interface.js";
-import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
+import {CheckpointWithPayload, IForkChoiceStore, JustifiedBalances, toCheckpointWithPayload} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;
@@ -556,11 +557,11 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes;
   }
 
-  getFinalizedCheckpoint(): CheckpointWithHex {
+  getFinalizedCheckpoint(): CheckpointWithPayload {
     return this.fcStore.finalizedCheckpoint;
   }
 
-  getJustifiedCheckpoint(): CheckpointWithHex {
+  getJustifiedCheckpoint(): CheckpointWithPayload {
     return this.fcStore.justified.checkpoint;
   }
 
@@ -666,9 +667,14 @@ export class ForkChoice implements IForkChoice {
       this.proposerBoostRoot = blockRootHex;
     }
 
-    const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
-    const finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
+    // Get justified checkpoint with payload status for Gloas
+    const justifiedPayloadStatus = getCheckpointPayloadStatus(state, state.currentJustifiedCheckpoint.epoch);
+    const justifiedCheckpoint = toCheckpointWithPayload(state.currentJustifiedCheckpoint, justifiedPayloadStatus);
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
+
+    // Get finalized checkpoint with payload status for Gloas
+    const finalizedPayloadStatus = getCheckpointPayloadStatus(state, state.finalizedCheckpoint.epoch);
+    const finalizedCheckpoint = toCheckpointWithPayload(state.finalizedCheckpoint, finalizedPayloadStatus);
 
     // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on demand only if
     // the justified checkpoint changes
@@ -690,29 +696,57 @@ export class ForkChoice implements IForkChoice {
     // This is an optimization. It should reduce the amount of times we run
     // `process_justification_and_finalization` by approximately 1/3rd when the chain is
     // performing optimally.
-    let unrealizedJustifiedCheckpoint: CheckpointWithHex;
-    let unrealizedFinalizedCheckpoint: CheckpointWithHex;
+    let unrealizedJustifiedCheckpoint: CheckpointWithPayload;
+    let unrealizedFinalizedCheckpoint: CheckpointWithPayload;
     if (this.opts?.computeUnrealized) {
       if (
         parentBlock.unrealizedJustifiedEpoch === blockEpoch &&
         parentBlock.unrealizedFinalizedEpoch + 1 >= blockEpoch
       ) {
         // reuse from parent, happens at 1/3 last blocks of epoch as monitored in mainnet
+        // Get payload status for unrealized justified checkpoint
+        const unrealizedJustifiedPayloadStatus = getCheckpointPayloadStatus(
+          state,
+          parentBlock.unrealizedJustifiedEpoch
+        );
         unrealizedJustifiedCheckpoint = {
           epoch: parentBlock.unrealizedJustifiedEpoch,
           root: fromHex(parentBlock.unrealizedJustifiedRoot),
           rootHex: parentBlock.unrealizedJustifiedRoot,
+          payloadStatus: unrealizedJustifiedPayloadStatus,
         };
+        // Get payload status for unrealized finalized checkpoint
+        const unrealizedFinalizedPayloadStatus = getCheckpointPayloadStatus(
+          state,
+          parentBlock.unrealizedFinalizedEpoch
+        );
         unrealizedFinalizedCheckpoint = {
           epoch: parentBlock.unrealizedFinalizedEpoch,
           root: fromHex(parentBlock.unrealizedFinalizedRoot),
           rootHex: parentBlock.unrealizedFinalizedRoot,
+          payloadStatus: unrealizedFinalizedPayloadStatus,
         };
       } else {
         // compute new, happens 2/3 first blocks of epoch as monitored in mainnet
         const unrealized = computeUnrealizedCheckpoints(state);
-        unrealizedJustifiedCheckpoint = toCheckpointWithHex(unrealized.justifiedCheckpoint);
-        unrealizedFinalizedCheckpoint = toCheckpointWithHex(unrealized.finalizedCheckpoint);
+        // Get payload status for unrealized justified checkpoint
+        const unrealizedJustifiedPayloadStatus = getCheckpointPayloadStatus(
+          state,
+          unrealized.justifiedCheckpoint.epoch
+        );
+        unrealizedJustifiedCheckpoint = toCheckpointWithPayload(
+          unrealized.justifiedCheckpoint,
+          unrealizedJustifiedPayloadStatus
+        );
+        // Get payload status for unrealized finalized checkpoint
+        const unrealizedFinalizedPayloadStatus = getCheckpointPayloadStatus(
+          state,
+          unrealized.finalizedCheckpoint.epoch
+        );
+        unrealizedFinalizedCheckpoint = toCheckpointWithPayload(
+          unrealized.finalizedCheckpoint,
+          unrealizedFinalizedPayloadStatus
+        );
       }
     } else {
       unrealizedJustifiedCheckpoint = justifiedCheckpoint;
@@ -1062,12 +1096,8 @@ export class ForkChoice implements IForkChoice {
   }
 
   getJustifiedBlock(): ProtoBlock {
-    const {rootHex, epoch} = this.fcStore.justified.checkpoint;
-    // Checkpoints for pre-gloas should be FULL variant, while post-gloas should be EMPTY variant
-    const block = this.getBlockHex(
-      rootHex,
-      epoch >= this.config.GLOAS_FORK_EPOCH ? PayloadStatus.EMPTY : PayloadStatus.FULL
-    );
+    const {rootHex, payloadStatus} = this.fcStore.justified.checkpoint;
+    const block = this.getBlockHex(rootHex, payloadStatus);
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
@@ -1078,12 +1108,8 @@ export class ForkChoice implements IForkChoice {
   }
 
   getFinalizedBlock(): ProtoBlock {
-    const {rootHex, epoch} = this.fcStore.finalizedCheckpoint;
-    // Checkpoints for pre-gloas should be FULL variant, while post-gloas should be EMPTY variant
-    const block = this.getBlockHex(
-      rootHex,
-      epoch >= this.config.GLOAS_FORK_EPOCH ? PayloadStatus.EMPTY : PayloadStatus.FULL
-    );
+    const {rootHex, payloadStatus} = this.fcStore.finalizedCheckpoint;
+    const block = this.getBlockHex(rootHex, payloadStatus);
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
@@ -1414,12 +1440,12 @@ export class ForkChoice implements IForkChoice {
    *
    * **`on_tick`**
    * May need the justified balances of:
-   * - unrealizedJustified: Already available in `CheckpointHexWithBalance`
+   * - unrealizedJustified: Already available in `CheckpointWithPayloadAndBalance`
    * Since this balances are already available the getter is just `() => balances`, without cache interaction
    */
   private updateCheckpoints(
-    justifiedCheckpoint: CheckpointWithHex,
-    finalizedCheckpoint: CheckpointWithHex,
+    justifiedCheckpoint: CheckpointWithPayload,
+    finalizedCheckpoint: CheckpointWithPayload,
     getJustifiedBalances: () => JustifiedBalances
   ): void {
     // Update justified checkpoint.
@@ -1439,8 +1465,8 @@ export class ForkChoice implements IForkChoice {
    * Update unrealized checkpoints in store if necessary
    */
   private updateUnrealizedCheckpoints(
-    unrealizedJustifiedCheckpoint: CheckpointWithHex,
-    unrealizedFinalizedCheckpoint: CheckpointWithHex,
+    unrealizedJustifiedCheckpoint: CheckpointWithPayload,
+    unrealizedFinalizedCheckpoint: CheckpointWithPayload,
     getJustifiedBalances: () => JustifiedBalances
   ): void {
     if (unrealizedJustifiedCheckpoint.epoch > this.fcStore.unrealizedJustified.checkpoint.epoch) {
@@ -1776,4 +1802,31 @@ export function getCommitteeFraction(
 ): number {
   const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
   return Math.floor((committeeWeight * config.committeePercent) / 100);
+}
+
+/**
+ * Get the payload status for a checkpoint.
+ *
+ * Pre-Gloas: always FULL (payload embedded in block)
+ * Gloas: determined by state.execution_payload_availability
+ *
+ * @param state - The state to check execution_payload_availability
+ * @param checkpointEpoch - The epoch of the checkpoint
+ */
+export function getCheckpointPayloadStatus(state: CachedBeaconStateAllForks, checkpointEpoch: number): PayloadStatus {
+  const fork = state.config.getForkSeq(state.slot);
+
+  // Pre-Gloas: always FULL
+  if (fork < ForkSeq.gloas) {
+    return PayloadStatus.FULL;
+  }
+
+  // For Gloas, check state.execution_payload_availability
+  // - For non-skipped slots at checkpoint: returns false (EMPTY) since payload hasn't arrived yet
+  // - For skipped slots at checkpoint: returns the actual availability status from state
+  const checkpointSlot = computeStartSlotAtEpoch(checkpointEpoch);
+  const gloasState = state as CachedBeaconStateGloas;
+  const payloadAvailable = gloasState.executionPayloadAvailability.get(checkpointSlot % SLOTS_PER_HISTORICAL_ROOT);
+
+  return payloadAvailable ? PayloadStatus.FULL : PayloadStatus.EMPTY;
 }
