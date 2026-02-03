@@ -8,6 +8,7 @@ import {
   ProtoArray,
   ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
+  getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
@@ -107,6 +108,12 @@ export function initializeForkChoiceFromFinalizedState(
 
   const isForkPostGloas = (state as CachedBeaconStateGloas).latestBlockHash !== undefined;
 
+  // Determine justified checkpoint payload status
+  const justifiedPayloadStatus = getCheckpointPayloadStatus(state, justifiedCheckpoint.epoch);
+
+  // Determine finalized checkpoint payload status
+  const finalizedPayloadStatus = getCheckpointPayloadStatus(state, finalizedCheckpoint.epoch);
+
   return new forkchoiceConstructor(
     config,
 
@@ -116,6 +123,8 @@ export function initializeForkChoiceFromFinalizedState(
       finalizedCheckpoint,
       justifiedBalances,
       justifiedBalancesGetter,
+      justifiedPayloadStatus,
+      finalizedPayloadStatus,
       {
         onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
@@ -196,19 +205,27 @@ export function initializeForkChoiceFromUnfinalizedState(
 
   // this is not the justified state, but there is no other ways to get justified balances
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(unfinalizedState);
+
+  const isForkPostGloas = (unfinalizedState as CachedBeaconStateGloas).latestBlockHash !== undefined;
+
+  // For unfinalized state, use getCheckpointPayloadStatus to determine the correct status.
+  // It checks state.execution_payload_availability to determine EMPTY vs FULL.
+  const justifiedPayloadStatus = getCheckpointPayloadStatus(unfinalizedState, justifiedCheckpoint.epoch);
+  const finalizedPayloadStatus = getCheckpointPayloadStatus(unfinalizedState, finalizedCheckpoint.epoch);
+
   const store = new ForkChoiceStore(
     currentSlot,
     justifiedCheckpoint,
     finalizedCheckpoint,
     justifiedBalances,
     justifiedBalancesGetter,
+    justifiedPayloadStatus,
+    finalizedPayloadStatus,
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
     }
   );
-
-  const isForkPostGloas = (unfinalizedState as CachedBeaconStateGloas).latestBlockHash !== undefined;
 
   // this is the same to the finalized state
   const headBlock: ProtoBlock = {

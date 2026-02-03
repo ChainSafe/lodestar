@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";
@@ -25,7 +25,12 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
     block.message.slot = currentSlot;
 
     forkChoice = getMockedBeaconChain().forkChoice;
-    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({
+      epoch: 0,
+      root: Buffer.alloc(32),
+      rootHex: "",
+      payloadStatus: PayloadStatus.FULL,
+    });
     clock = new ClockStopped(currentSlot);
     modules = {config, forkChoice, clock, opts: {} as IChainOptions, blacklistedBlocks: new Map()};
     // On first call, parentRoot is known
@@ -48,7 +53,12 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
   });
 
   it("WOULD_REVERT_FINALIZED_SLOT", () => {
-    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 5, root: Buffer.alloc(32), rootHex: ""});
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({
+      epoch: 5,
+      root: Buffer.alloc(32),
+      rootHex: "",
+      payloadStatus: PayloadStatus.FULL,
+    });
     expectThrowsLodestarError(
       () => verifyBlocksSanityChecks(modules, [block], {}),
       BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT

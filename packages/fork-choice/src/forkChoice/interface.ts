@@ -12,7 +12,7 @@ import {
   ProtoNode,
 } from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
-import {CheckpointWithHex} from "./store.js";
+import {CheckpointWithHex, CheckpointWithPayload} from "./store.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -24,12 +24,12 @@ export type CheckpointsWithHex = {
   finalizedCheckpoint: CheckpointWithHex;
 };
 
-export type CheckpointHexWithBalance = {
-  checkpoint: CheckpointWithHex;
+export type CheckpointWithPayloadAndBalance = {
+  checkpoint: CheckpointWithPayload;
   balances: EffectiveBalanceIncrements;
 };
 
-export type CheckpointHexWithTotalBalance = CheckpointHexWithBalance & {
+export type CheckpointWithPayloadAndTotalBalance = CheckpointWithPayloadAndBalance & {
   totalBalance: number;
 };
 
