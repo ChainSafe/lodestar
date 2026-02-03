@@ -271,10 +271,10 @@ export const DataColumnSidecar = new ContainerType(
   {
     index: fuluSsz.DataColumnSidecar.fields.index,
     column: fuluSsz.DataColumnSidecar.fields.column,
-    // kzgCommitments: fuluSsz.DataColumnSidecar.fields.kzgCommitments, // Removed in GLOAS:EIP7732
+    // kzgCommitments: denebSsz.BlobKzgCommitments, // Removed in GLOAS:EIP7732
     kzgProofs: fuluSsz.DataColumnSidecar.fields.kzgProofs,
-    // signedBlockHeader: fuluSsz.DataColumnSidecar.fields.signedBlockHeader, // Removed in GLOAS:EIP7732
-    // kzgCommitmentsInclusionProof: fuluSsz.DataColumnSidecar.fields.kzgCommitmentsInclusionProof, // Removed in GLOAS:EIP7732
+    // signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader, // Removed in GLOAS:EIP7732
+    // kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof, // Removed in GLOAS:EIP7732
     slot: Slot, // New in GLOAS:EIP7732
     beaconBlockRoot: Root, // New in GLOAS:EIP7732
   },
