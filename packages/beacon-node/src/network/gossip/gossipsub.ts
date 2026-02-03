@@ -345,11 +345,8 @@ export class Eth2Gossipsub extends GossipSub {
   }
 
   /**
-   * Add a peer as a direct peer at runtime.
+   * Add a peer as a direct peer at runtime. Accepts multiaddr with peer ID or ENR string.
    * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
-   *
-   * @param peerStr - Either a multiaddr with peer ID or an ENR string
-   * @returns The peer ID string if successfully added, null if parsing or address storage failed
    */
   async addDirectPeer(peerStr: string): Promise<string | null> {
     const parsed = parseDirectPeers([peerStr], this.logger);
@@ -379,9 +376,6 @@ export class Eth2Gossipsub extends GossipSub {
 
   /**
    * Remove a peer from direct peers.
-   *
-   * @param peerIdStr - The peer ID string to remove
-   * @returns true if the peer was removed, false if it wasn't a direct peer
    */
   removeDirectPeer(peerIdStr: string): boolean {
     const removed = this.direct.delete(peerIdStr);
