@@ -340,9 +340,8 @@ export class BeaconChain implements IBeaconChain {
     const blockStateCache = new FIFOBlockStateCache(this.opts, {metrics});
     this.bufferPool = new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics);
 
-    let checkpointStateCache: CheckpointStateCache;
     this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
-    checkpointStateCache = new PersistentCheckpointStateCache(
+    const checkpointStateCache: CheckpointStateCache = new PersistentCheckpointStateCache(
       {
         config,
         metrics,
