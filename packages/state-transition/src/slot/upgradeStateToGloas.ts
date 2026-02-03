@@ -1,9 +1,9 @@
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {getCachedBeaconState} from "../cache/stateCache.js";
-import {applyDepositForBuilder} from "../block/processDepositRequest.js";
 import {isValidDepositSignature} from "../block/processDeposit.js";
+import {applyDepositForBuilder} from "../block/processDepositRequest.js";
+import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {isBuilderWithdrawalCredential} from "../util/gloas.js";
 
@@ -144,7 +144,15 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     // If pending deposit for a new validator with valid signature, track the pubkey
     // so subsequent builder deposits for the same pubkey stay in pending (applied
     // to the validator later). Deposits with invalid signatures are dropped.
-    if (isValidDepositSignature(state.config, deposit.pubkey, deposit.withdrawalCredentials, deposit.amount, deposit.signature)) {
+    if (
+      isValidDepositSignature(
+        state.config,
+        deposit.pubkey,
+        deposit.withdrawalCredentials,
+        deposit.amount,
+        deposit.signature
+      )
+    ) {
       validatorPubkeys.add(pubkeyHex);
       pendingDeposits.push({
         pubkey: deposit.pubkey,
