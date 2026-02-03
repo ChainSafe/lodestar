@@ -62,7 +62,7 @@ describe("network / gossip / directPeers", () => {
       expect(result).toHaveLength(0);
       expect(logger.warn).toHaveBeenCalledWith(
         "Failed to parse direct peer multiaddr",
-        expect.objectContaining({multiaddr: "not-a-valid-multiaddr"}),
+        {multiaddr: "not-a-valid-multiaddr"},
         expect.any(Error)
       );
     });
@@ -138,11 +138,7 @@ describe("network / gossip / directPeers", () => {
       const result = parseDirectPeers([invalidEnr], logger);
 
       expect(result).toHaveLength(0);
-      expect(logger.warn).toHaveBeenCalledWith(
-        "Failed to parse direct peer ENR",
-        expect.objectContaining({enr: invalidEnr}),
-        expect.any(Error)
-      );
+      expect(logger.warn).toHaveBeenCalledWith("Failed to parse direct peer ENR", {enr: invalidEnr}, expect.any(Error));
     });
 
     it("should parse mixed multiaddrs and ENRs", async () => {

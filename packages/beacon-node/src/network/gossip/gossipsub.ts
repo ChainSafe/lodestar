@@ -456,14 +456,7 @@ export function parseDirectPeers(directPeerStrs: string[], logger: Logger): Addr
 
           logger.info("Added direct peer", {peerId: peerIdStr, addr: addr.toString()});
         } catch (e) {
-          logger.warn(
-            "Invalid peer ID in direct peer multiaddr",
-            {
-              multiaddr: peerStr,
-              peerId: peerIdStr,
-            },
-            e as Error
-          );
+          logger.warn("Invalid peer ID in direct peer multiaddr", {multiaddr: peerStr, peerId: peerIdStr}, e as Error);
         }
       } catch (e) {
         logger.warn("Failed to parse direct peer multiaddr", {multiaddr: peerStr}, e as Error);
