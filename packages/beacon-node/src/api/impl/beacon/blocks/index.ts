@@ -131,6 +131,9 @@ export function getBeaconBlockApi({
       dataColumnSidecars = [];
     }
 
+    // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
+    // Data columns/blobs may arrive via gossip from another node before the API publish completes,
+    // so we allow duplicates here instead of throwing an error.
     if (isBlockInputColumns(blockForImport)) {
       for (const dataColumnSidecar of dataColumnSidecars) {
         blockForImport.addColumn(
@@ -140,9 +143,6 @@ export function getBeaconBlockApi({
             source: BlockInputSource.api,
             seenTimestampSec,
           },
-          // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
-          // Columns may arrive via gossip from another node before the API publish completes,
-          // so we allow duplicates here instead of throwing an error.
           {throwOnDuplicateAdd: false}
         );
       }
@@ -155,9 +155,6 @@ export function getBeaconBlockApi({
             source: BlockInputSource.api,
             seenTimestampSec,
           },
-          // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
-          // Blobs may arrive via gossip from another node before the API publish completes,
-          // so we allow duplicates here instead of throwing an error.
           {throwOnDuplicateAdd: false}
         );
       }
