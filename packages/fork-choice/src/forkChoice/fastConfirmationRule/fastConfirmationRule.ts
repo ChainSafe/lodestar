@@ -274,7 +274,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     endSlot: Slot
   ): number {
     if (startSlot > endSlot) return 0;
-    const headState = ctx.getHeadState();
+    const headState = this.store.stateGetter({stateRoot: ctx.getHead().stateRoot});
     if (!headState) return 0;
     const balances = balanceSource.balances;
     const participants = new Set<ValidatorIndex>();
@@ -306,7 +306,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     endSlot: Slot
   ): number {
     if (startSlot > endSlot) return 0;
-    const headState = ctx.getHeadState();
+    const headState = this.store.stateGetter({stateRoot: ctx.getHead().stateRoot});
     if (!headState) return 0;
     const balances = balanceSource.balances;
     const participants = new Set<ValidatorIndex>();
@@ -510,7 +510,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
   private getCurrentTargetState(ctx: FCRContext): CachedBeaconStateAllForks | null {
     const target = this.getCurrentTarget(ctx);
     if (!target) return null;
-    return ctx.getCheckpointState(target);
+    return this.store.stateGetter({checkpoint: target});
   }
 
   private getCheckpointForBlock(ctx: FCRContext, blockRoot: RootHex, epoch: Epoch): CheckpointWithHex | null {
@@ -582,7 +582,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       kind === "previous"
         ? this.store.previousEpochObservedJustifiedBalances
         : this.store.currentEpochObservedJustifiedBalances;
-    const state = ctx.getCheckpointState(checkpoint);
+    const state = this.store.stateGetter({checkpoint});
     return {
       state,
       balances: state?.epochCtx.effectiveBalanceIncrements ?? fallbackBalances,

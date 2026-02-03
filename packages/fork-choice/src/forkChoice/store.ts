@@ -94,7 +94,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this._finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
     this.unrealizedFinalizedCheckpoint = this._finalizedCheckpoint;
 
-    // Initialize FCR fields according to spec (all start at anchor/finalized checkpoint)
+    // Initialize FCR fields
     const anchorRoot = toCheckpointWithHex(finalizedCheckpoint).rootHex;
     this.confirmedRoot = anchorRoot;
     this.previousEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);

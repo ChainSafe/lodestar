@@ -34,13 +34,11 @@ export type FCRContext = {
     PROPOSER_SCORE_BOOST: number;
   };
   getCurrentSlot(): Slot;
-  getHead(): {blockRoot: RootHex};
+  getHead(): ProtoBlock;
   getBlock(root: RootHex): ProtoBlock | null;
   getAncestor(root: RootHex, slot: Slot): RootHex;
   isDescendant(ancestor: RootHex, descendant: RootHex): boolean;
   getLatestMessage(validatorIndex: ValidatorIndex): {root: RootHex; epoch: Epoch} | null;
-  getHeadState(): CachedBeaconStateAllForks | null;
-  getCheckpointState(checkpoint: CheckpointWithHex): CachedBeaconStateAllForks | null;
   getUnrealizedJustified(): {checkpoint: CheckpointWithHex; balances: EffectiveBalanceIncrements};
   getFinalizedCheckpoint(): CheckpointWithHex;
   getEquivocatingIndices(): Set<ValidatorIndex>;

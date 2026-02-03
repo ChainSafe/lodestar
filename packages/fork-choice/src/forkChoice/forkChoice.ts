@@ -1654,7 +1654,7 @@ export class ForkChoice implements IForkChoice {
         PROPOSER_SCORE_BOOST: this.config.PROPOSER_SCORE_BOOST,
       },
       getCurrentSlot: () => this.fcStore.currentSlot,
-      getHead: () => ({blockRoot: this.head.blockRoot}),
+      getHead: () => this.head,
       getBlock: (root: RootHex) => this.getBlockHex(root),
       getAncestor: (root: RootHex, slot: Slot) => this.getAncestor(root, slot),
       isDescendant: (ancestor: RootHex, descendant: RootHex) => this.isDescendant(ancestor, descendant),
@@ -1667,8 +1667,6 @@ export class ForkChoice implements IForkChoice {
         if (!node) return null;
         return {root: node.blockRoot, epoch: this.voteNextEpochs[validatorIndex]};
       },
-      getHeadState: () => this.fcStore.stateGetter({stateRoot: this.head.stateRoot}),
-      getCheckpointState: (checkpoint: CheckpointWithHex) => this.fcStore.stateGetter({checkpoint}),
       getUnrealizedJustified: () => ({
         checkpoint: this.fcStore.unrealizedJustified.checkpoint,
         balances: this.fcStore.unrealizedJustified.balances,
