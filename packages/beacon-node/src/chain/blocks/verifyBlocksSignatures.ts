@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {CachedBeaconStateAllForks, Index2PubkeyCache, getBlockSignatureSets} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -17,7 +17,6 @@ import {ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksSignatures(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   bls: IBlsVerifier,
   logger: Logger,
   metrics: Metrics | null,
@@ -42,16 +41,9 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(
-            config,
-            index2pubkey,
-            currentSyncCommitteeIndexed,
-            block,
-            indexedAttestationsByBlock[i],
-            {
-              skipProposerSignature: opts.validProposerSignature,
-            }
-          )
+          getBlockSignatureSets(config, currentSyncCommitteeIndexed, block, indexedAttestationsByBlock[i], {
+            skipProposerSignature: opts.validProposerSignature,
+          })
         );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks

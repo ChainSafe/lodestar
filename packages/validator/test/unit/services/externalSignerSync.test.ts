@@ -1,4 +1,4 @@
-import {toBufferBE} from "bigint-buffer";
+import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {MockInstance, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {createChainForkConfig} from "@lodestar/config";

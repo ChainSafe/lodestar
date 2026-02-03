@@ -650,7 +650,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg(\n  rate(validator_monitor_prev_epoch_on_chain_balance[32m])\n)",
+          "expr": "rate(validator_monitor_prev_epoch_on_chain_balance[32m]) / validator_monitor_validators",
           "hide": false,
           "interval": "",
           "legendFormat": "balance_delta",

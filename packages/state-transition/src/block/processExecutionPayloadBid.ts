@@ -28,7 +28,7 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     const builder = state.builders.getReadonly(builderIndex);
 
     // Verify that the builder is active
-    if (!isActiveBuilder(state, builderIndex)) {
+    if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
       throw Error(`Invalid execution payload bid: builder ${builderIndex} is not active`);
     }
 
@@ -85,7 +85,7 @@ function verifyExecutionPayloadBidSignature(
   pubkey: Uint8Array,
   signedBid: gloas.SignedExecutionPayloadBid
 ): boolean {
-  const signingRoot = getExecutionPayloadBidSigningRoot(state.config, state, signedBid.message);
+  const signingRoot = getExecutionPayloadBidSigningRoot(state.config, state.slot, signedBid.message);
 
   try {
     const publicKey = PublicKey.fromBytes(pubkey);

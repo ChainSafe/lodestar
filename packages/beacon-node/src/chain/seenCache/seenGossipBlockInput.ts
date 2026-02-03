@@ -379,7 +379,7 @@ export class SeenBlockInput {
     let itemsToDelete = this.blockInputs.size - MAX_BLOCK_INPUT_CACHE_SIZE;
 
     if (itemsToDelete > 0) {
-      const sorted = [...this.blockInputs.entries()].sort((a, b) => b[1].slot - a[1].slot);
+      const sorted = [...this.blockInputs.entries()].sort((a, b) => a[1].slot - b[1].slot);
       for (const [rootHex] of sorted) {
         this.blockInputs.delete(rootHex);
         itemsToDelete--;

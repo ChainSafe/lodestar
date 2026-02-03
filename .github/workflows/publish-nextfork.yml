@@ -113,44 +113,8 @@ jobs:
 
   docker:
     name: Publish to Docker Hub
-    runs-on: buildjet-4vcpu-ubuntu-2204
     needs: npm
-    steps:
-      - uses: actions/checkout@v4
-      # https://github.com/docker/setup-qemu-action
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push lodestar
-        run: >
-          docker buildx build . --push
-          --tag chainsafe/lodestar:nextfork
-          --platform linux/amd64,linux/arm64
-          --build-arg COMMIT=$(git rev-parse HEAD)
-
-      - run: docker run chainsafe/lodestar:nextfork --help
-      # Display history to know byte size of each layer
-      # Image is available only because of the previous `docker run` command
-      - run: docker image history chainsafe/lodestar:nextfork
-
-      - name: Build and push custom Grafana
-        run: >
-          docker buildx build ./docker/grafana/ --push
-          --file ./docker/grafana/Dockerfile
-          --build-context dashboards=./dashboards
-          --tag chainsafe/lodestar-grafana:nextfork
-          --platform linux/amd64,linux/arm64
-
-      - name: Build and push custom Prometheus
-        run: >
-          docker buildx build ./docker/prometheus/ --push
-          --file ./docker/prometheus/Dockerfile
-          --tag chainsafe/lodestar-prometheus:nextfork
-          --platform linux/amd64,linux/arm64
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: nextfork
+    secrets: inherit
