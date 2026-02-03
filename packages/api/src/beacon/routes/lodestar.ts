@@ -479,7 +479,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: EmptyResponseCodec,
     },
     addDirectPeer: {
-      url: "/eth/v1/lodestar/direct_peer",
+      url: "/eth/v1/lodestar/direct_peers",
       method: "POST",
       req: {
         writeReq: ({peer}) => ({query: {peer}}),
@@ -489,7 +489,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: JsonOnlyResponseCodec,
     },
     removeDirectPeer: {
-      url: "/eth/v1/lodestar/direct_peer",
+      url: "/eth/v1/lodestar/direct_peers",
       method: "DELETE",
       req: {
         writeReq: ({peerId}) => ({query: {peerId}}),
