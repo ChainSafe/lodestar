@@ -344,6 +344,10 @@ export class Eth2Gossipsub extends GossipSub {
     });
   }
 
+  /**
+   * Add a peer as a direct peer at runtime. Accepts multiaddr with peer ID or ENR string.
+   * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
+   */
   async addDirectPeer(peerStr: string): Promise<string | null> {
     const parsed = parseDirectPeers([peerStr], this.logger);
     if (parsed.length === 0) {
@@ -370,6 +374,9 @@ export class Eth2Gossipsub extends GossipSub {
     return peerIdStr;
   }
 
+  /**
+   * Remove a peer from direct peers.
+   */
   removeDirectPeer(peerIdStr: string): boolean {
     const removed = this.direct.delete(peerIdStr);
     if (removed) {
@@ -378,6 +385,9 @@ export class Eth2Gossipsub extends GossipSub {
     return removed;
   }
 
+  /**
+   * Get list of current direct peer IDs.
+   */
   getDirectPeers(): string[] {
     return Array.from(this.direct);
   }
