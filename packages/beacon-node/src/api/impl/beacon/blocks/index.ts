@@ -133,9 +133,6 @@ export function getBeaconBlockApi({
 
     if (isBlockInputColumns(blockForImport)) {
       for (const dataColumnSidecar of dataColumnSidecars) {
-        // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
-        // Columns may arrive via gossip from another node before the API publish completes,
-        // so we allow duplicates here instead of throwing an error.
         blockForImport.addColumn(
           {
             blockRootHex: blockRoot,
@@ -143,14 +140,14 @@ export function getBeaconBlockApi({
             source: BlockInputSource.api,
             seenTimestampSec,
           },
+          // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
+          // Columns may arrive via gossip from another node before the API publish completes,
+          // so we allow duplicates here instead of throwing an error.
           {throwOnDuplicateAdd: false}
         );
       }
     } else if (isBlockInputBlobs(blockForImport)) {
       for (const blobSidecar of blobSidecars) {
-        // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
-        // Blobs may arrive via gossip from another node before the API publish completes,
-        // so we allow duplicates here instead of throwing an error.
         blockForImport.addBlob(
           {
             blockRootHex: blockRoot,
@@ -158,6 +155,9 @@ export function getBeaconBlockApi({
             source: BlockInputSource.api,
             seenTimestampSec,
           },
+          // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
+          // Blobs may arrive via gossip from another node before the API publish completes,
+          // so we allow duplicates here instead of throwing an error.
           {throwOnDuplicateAdd: false}
         );
       }
