@@ -1008,8 +1008,8 @@ importers:
         specifier: workspace:^
         version: link:../utils
       '@vekexasia/bigint-buffer2':
-        specifier: ^1.0.4
-        version: 1.0.4
+        specifier: ^1.0.5
+        version: 1.0.5
     devDependencies:
       '@lodestar/api':
         specifier: workspace:^
@@ -1064,8 +1064,8 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0
       '@vekexasia/bigint-buffer2':
-        specifier: ^1.0.4
-        version: 1.0.4
+        specifier: ^1.0.5
+        version: 1.0.5
       any-signal:
         specifier: ^4.1.1
         version: 4.1.1
@@ -1132,8 +1132,8 @@ importers:
         specifier: workspace:^
         version: link:../test-utils
       '@vekexasia/bigint-buffer2':
-        specifier: ^1.0.4
-        version: 1.0.4
+        specifier: ^1.0.5
+        version: 1.0.5
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
@@ -3167,8 +3167,8 @@ packages:
   '@types/yauzl@2.10.0':
     resolution: {integrity: sha512-Cn6WYCm0tXv8p6k+A8PvbDG763EDpBoTzHdA+Q/MF6H3sapGjCm9NzoaJncJS9tUKSuCoDs9XHxYYsQDgxR6kw==}
 
-  '@vekexasia/bigint-buffer2@1.0.4':
-    resolution: {integrity: sha512-B2AG3lN2FRxLwqstNtJAYKL4758VxATXtwc3289PSl7gOXQ1wudHC4YrHUFyWYf4//oE5omHWYL8a85OG5OQQg==}
+  '@vekexasia/bigint-buffer2@1.0.5':
+    resolution: {integrity: sha512-dzs0gI8Sr1hajRU/PMM46hNBSMvphrsXcJrAp/5w6RXmSFFsKBazIrtqjPc+6mXA0m+NMCzoLHISE1HvmNp9Fw==}
     engines: {node: '>= 14.0.0'}
     peerDependencies:
       '@vekexasia/bigint-uint8array': '*'
@@ -9948,7 +9948,7 @@ snapshots:
       '@types/node': 24.10.1
     optional: true
 
-  '@vekexasia/bigint-buffer2@1.0.4': {}
+  '@vekexasia/bigint-buffer2@1.0.5': {}
 
   '@vitest/browser-playwright@4.0.7(playwright@1.56.1)(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:

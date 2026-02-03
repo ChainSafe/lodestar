@@ -4,6 +4,8 @@ packages:
 linkWorkspacePackages: true
 
 minimumReleaseAge: 2880
+minimumReleaseAgeExclude:
+  - "@vekexasia/bigint-buffer2"
 
 nodeLinker: isolated
 
