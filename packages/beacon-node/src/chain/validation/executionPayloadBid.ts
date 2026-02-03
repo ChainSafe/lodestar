@@ -53,7 +53,8 @@ async function validateExecutionPayloadBid(
 
   // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
   // `is_active_builder(state, bid.builder_index)` returns `True`.
-  if (!isActiveBuilder(state, bid.builderIndex)) {
+  const builder = state.builders.getReadonly(bid.builderIndex);
+  if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
       builderIndex: bid.builderIndex,
@@ -102,7 +103,7 @@ async function validateExecutionPayloadBid(
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH,
       bidValue: bid.value,
-      builderBalance: state.builders.getReadonly(bid.builderIndex).balance,
+      builderBalance: builder.balance,
     });
   }
 
@@ -122,8 +123,8 @@ async function validateExecutionPayloadBid(
 
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
-    PublicKey.fromBytes(state.builders.getReadonly(bid.builderIndex).pubkey),
-    getExecutionPayloadBidSigningRoot(chain.config, state as CachedBeaconStateGloas, bid),
+    PublicKey.fromBytes(builder.pubkey),
+    getExecutionPayloadBidSigningRoot(chain.config, state.slot, bid),
     signedExecutionPayloadBid.signature
   );
 

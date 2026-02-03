@@ -244,6 +244,18 @@ export function getLodestarApi({
         data: chain.validatorMonitor?.getMonitoredValidatorIndices() ?? [],
       };
     },
+
+    async getCustodyInfo() {
+      const {custodyColumns, targetCustodyGroupCount} = chain.custodyConfig;
+
+      return {
+        data: {
+          earliestCustodiedSlot: chain.earliestAvailableSlot,
+          custodyGroupCount: targetCustodyGroupCount,
+          custodyColumns,
+        },
+      };
+    },
   };
 }
 

@@ -9,7 +9,7 @@ import {
   MIN_DEPOSIT_AMOUNT,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {BuilderIndex, ValidatorIndex} from "@lodestar/types";
+import {BuilderIndex, Epoch, ValidatorIndex, gloas} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
@@ -56,10 +56,7 @@ export function convertValidatorIndexToBuilderIndex(validatorIndex: ValidatorInd
  * Check if a builder is active (deposited and not yet withdrawable).
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#isactivebuilder
  */
-export function isActiveBuilder(state: CachedBeaconStateGloas, builderIndex: BuilderIndex): boolean {
-  const builder = state.builders.getReadonly(builderIndex);
-  const finalizedEpoch = state.finalizedCheckpoint.epoch;
-
+export function isActiveBuilder(builder: gloas.Builder, finalizedEpoch: Epoch): boolean {
   return builder.depositEpoch < finalizedEpoch && builder.withdrawableEpoch === FAR_FUTURE_EPOCH;
 }
 

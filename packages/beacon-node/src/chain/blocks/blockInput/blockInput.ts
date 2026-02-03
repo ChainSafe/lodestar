@@ -1,4 +1,4 @@
-import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas} from "@lodestar/params";
+import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
@@ -561,6 +561,7 @@ type BlockInputColumnsState =
   | {
       hasBlock: true;
       hasAllData: true;
+      hasComputedAllData: boolean;
       versionedHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkColumnsDA>;
       source: SourceMeta;
@@ -569,6 +570,7 @@ type BlockInputColumnsState =
   | {
       hasBlock: true;
       hasAllData: false;
+      hasComputedAllData: false;
       versionedHashes: VersionedHashes;
       block: SignedBeaconBlock<ForkColumnsDA>;
       source: SourceMeta;
@@ -576,11 +578,13 @@ type BlockInputColumnsState =
   | {
       hasBlock: false;
       hasAllData: true;
+      hasComputedAllData: boolean;
       versionedHashes: VersionedHashes;
     }
   | {
       hasBlock: false;
       hasAllData: false;
+      hasComputedAllData: false;
       versionedHashes: VersionedHashes;
     };
 /**
@@ -598,6 +602,12 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
   private readonly sampledColumns: ColumnIndex[];
   private readonly custodyColumns: ColumnIndex[];
+  /**
+   * This promise resolves when all sampled columns are available
+   *
+   * This is different from `dataPromise` which resolves when all data is available or could become available (e.g. through reconstruction)
+   */
+  protected computedDataPromise = createPromise<fulu.DataColumnSidecars>();
 
   private constructor(
     init: BlockInputInit,
@@ -626,6 +636,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     const state = {
       hasBlock: true,
       hasAllData,
+      hasComputedAllData: hasAllData,
       versionedHashes: props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       block: props.block,
       source: {
@@ -649,6 +660,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     blockInput.blockPromise.resolve(props.block);
     if (hasAllData) {
       blockInput.dataPromise.resolve([]);
+      blockInput.computedDataPromise.resolve([]);
     }
     return blockInput;
   }
@@ -661,6 +673,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     const state: BlockInputColumnsState = {
       hasBlock: false,
       hasAllData,
+      hasComputedAllData: hasAllData as false,
       versionedHashes: props.columnSidecar.kzgCommitments.map(kzgCommitmentToVersionedHash),
     };
     const init: BlockInputInit = {
@@ -674,6 +687,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
     if (hasAllData) {
       blockInput.dataPromise.resolve([]);
+      blockInput.computedDataPromise.resolve([]);
     }
     return blockInput;
   }
@@ -722,11 +736,14 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     const hasAllData =
       (props.block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments.length === 0 ||
       this.state.hasAllData;
+    const hasComputedAllData =
+      props.block.message.body.blobKzgCommitments.length === 0 || this.state.hasComputedAllData;
 
     this.state = {
       ...this.state,
       hasBlock: true,
       hasAllData,
+      hasComputedAllData,
       block: props.block,
       source: {
         source: props.source,
@@ -774,16 +791,31 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
 
     const sampledColumns = this.getSampledColumns();
-    const hasAllData = this.state.hasAllData || sampledColumns.length === this.sampledColumns.length;
+    const hasAllData =
+      // already hasAllData
+      this.state.hasAllData ||
+      // has all sampled columns
+      sampledColumns.length === this.sampledColumns.length ||
+      // has enough columns to reconstruct the rest
+      this.columnsCache.size >= NUMBER_OF_COLUMNS / 2;
+
+    const hasComputedAllData =
+      // has all sampled columns
+      sampledColumns.length === this.sampledColumns.length;
 
     this.state = {
       ...this.state,
       hasAllData: hasAllData || this.state.hasAllData,
+      hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
       timeCompleteSec: hasAllData ? seenTimestampSec : undefined,
     } as BlockInputColumnsState;
 
     if (hasAllData && sampledColumns !== null) {
       this.dataPromise.resolve(sampledColumns);
+    }
+
+    if (hasComputedAllData && sampledColumns !== null) {
+      this.computedDataPromise.resolve(sampledColumns);
     }
   }
 
@@ -858,5 +890,16 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       missing,
       versionedHashes: this.state.versionedHashes,
     };
+  }
+
+  hasComputedAllData(): boolean {
+    return this.state.hasComputedAllData;
+  }
+
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<fulu.DataColumnSidecars> {
+    if (!this.state.hasComputedAllData) {
+      return withTimeout(() => this.computedDataPromise.promise, timeout, signal);
+    }
+    return Promise.resolve(this.getSampledColumns());
   }
 }

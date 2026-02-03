@@ -434,11 +434,13 @@ export function getBeaconBlockApi({
         const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
           nonFinalizedBlocks.map(async (summary) => {
-            const block = await db.block.get(fromHex(summary.blockRoot));
-            if (block) {
-              const canonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
+            const blockResult = await chain.getBlockByRoot(summary.blockRoot);
+            if (blockResult) {
+              const canonical = chain.forkChoice.getCanonicalBlockAtSlot(blockResult.block.message.slot);
               if (canonical) {
-                result.push(toBeaconHeaderResponse(config, block, canonical.blockRoot === summary.blockRoot));
+                result.push(
+                  toBeaconHeaderResponse(config, blockResult.block, canonical.blockRoot === summary.blockRoot)
+                );
                 if (isOptimisticBlock(canonical)) {
                   executionOptimistic = true;
                 }
@@ -492,9 +494,9 @@ export function getBeaconBlockApi({
             finalized = false;
 
             if (summary.blockRoot !== toRootHex(canonicalRoot)) {
-              const block = await db.block.get(fromHex(summary.blockRoot));
-              if (block) {
-                result.push(toBeaconHeaderResponse(config, block));
+              const blockResult = await chain.getBlockByRoot(summary.blockRoot);
+              if (blockResult) {
+                result.push(toBeaconHeaderResponse(config, blockResult.block));
               }
             }
           })

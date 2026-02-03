@@ -1,15 +1,14 @@
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_BUILDER} from "@lodestar/params";
-import {gloas, ssz} from "@lodestar/types";
-import {CachedBeaconStateGloas} from "../types.js";
+import {Slot, gloas, ssz} from "@lodestar/types";
 import {computeSigningRoot} from "../util/index.js";
 
 export function getExecutionPayloadBidSigningRoot(
   config: BeaconConfig,
-  state: CachedBeaconStateGloas,
+  stateSlot: Slot,
   bid: gloas.ExecutionPayloadBid
 ): Uint8Array {
-  const domain = config.getDomain(state.slot, DOMAIN_BEACON_BUILDER);
+  const domain = config.getDomain(stateSlot, DOMAIN_BEACON_BUILDER);
 
   return computeSigningRoot(ssz.gloas.ExecutionPayloadBid, bid, domain);
 }

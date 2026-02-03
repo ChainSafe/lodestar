@@ -1,0 +1,102 @@
+name: Build and publish Docker images
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Docker image tag"
+        required: true
+        type: string
+      extra-tags:
+        description: "Extra tags to apply (comma-separated, e.g. 'latest,rc')"
+        required: false
+        type: string
+
+jobs:
+  docker:
+    name: Build Docker (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: buildjet-4vcpu-ubuntu-2204
+          - arch: arm64
+            runner: buildjet-4vcpu-ubuntu-2204-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push lodestar
+        run: >
+          docker buildx build . --push
+          --tag chainsafe/lodestar:${{ inputs.tag }}-${{ matrix.arch }}
+          --platform linux/${{ matrix.arch }}
+          --build-arg COMMIT=$(git rev-parse HEAD)
+
+      - name: Build and push custom Grafana
+        run: >
+          docker buildx build ./docker/grafana/ --push
+          --file ./docker/grafana/Dockerfile
+          --build-context dashboards=./dashboards
+          --tag chainsafe/lodestar-grafana:${{ inputs.tag }}-${{ matrix.arch }}
+          --platform linux/${{ matrix.arch }}
+
+      - name: Build and push custom Prometheus
+        run: >
+          docker buildx build ./docker/prometheus/ --push
+          --file ./docker/prometheus/Dockerfile
+          --tag chainsafe/lodestar-prometheus:${{ inputs.tag }}-${{ matrix.arch }}
+          --platform linux/${{ matrix.arch }}
+
+  docker-manifest:
+    name: Create Docker manifest
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create and push lodestar manifest
+        run: |
+          EXTRA_TAGS=""
+          if [ -n "${{ inputs.extra-tags }}" ]; then
+            for t in $(echo "${{ inputs.extra-tags }}" | tr ',' ' '); do
+              EXTRA_TAGS="$EXTRA_TAGS -t chainsafe/lodestar:$t"
+            done
+          fi
+          docker buildx imagetools create -t chainsafe/lodestar:${{ inputs.tag }} $EXTRA_TAGS \
+            chainsafe/lodestar:${{ inputs.tag }}-amd64 \
+            chainsafe/lodestar:${{ inputs.tag }}-arm64
+
+      - name: Create and push grafana manifest
+        run: |
+          docker buildx imagetools create -t chainsafe/lodestar-grafana:${{ inputs.tag }} \
+            chainsafe/lodestar-grafana:${{ inputs.tag }}-amd64 \
+            chainsafe/lodestar-grafana:${{ inputs.tag }}-arm64
+
+      - name: Create and push prometheus manifest
+        run: |
+          docker buildx imagetools create -t chainsafe/lodestar-prometheus:${{ inputs.tag }} \
+            chainsafe/lodestar-prometheus:${{ inputs.tag }}-amd64 \
+            chainsafe/lodestar-prometheus:${{ inputs.tag }}-arm64
+
+      - name: Sanity check image
+        run: |
+          docker run -d --name lodestar-sanity -p 9596:9596 chainsafe/lodestar:${{ inputs.tag }} dev --rest.address 0.0.0.0
+          sleep 30
+          curl -f http://127.0.0.1:9596/eth/v1/node/version || (docker logs lodestar-sanity && exit 1)
+          docker stop lodestar-sanity
+
+      - run: docker image history chainsafe/lodestar:${{ inputs.tag }}

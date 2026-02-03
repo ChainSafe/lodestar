@@ -347,6 +347,9 @@ export function createValidatorMonitor(
         return;
       }
 
+      // Track total balance instead of per-validator balance to reduce metric cardinality
+      let totalBalance = 0;
+
       for (const [index, monitoredValidator] of validators.entries()) {
         // We subtract two from the state of the epoch that generated these summaries.
         //
@@ -405,7 +408,7 @@ export function createValidatorMonitor(
 
         const balance = balances?.[index];
         if (balance !== undefined) {
-          validatorMonitorMetrics?.prevEpochOnChainBalance.set({index}, balance);
+          totalBalance += balance;
         }
 
         if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
@@ -419,6 +422,10 @@ export function createValidatorMonitor(
             inclusionDistance,
           });
         }
+      }
+
+      if (balances !== undefined) {
+        validatorMonitorMetrics?.prevEpochOnChainBalance.set(totalBalance);
       }
     },
 
@@ -1153,11 +1160,9 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
     }),
 
     // Validator Monitor Metrics (per-epoch summaries)
-    // Only track prevEpochOnChainBalance per index
-    prevEpochOnChainBalance: register.gauge<{index: number}>({
+    prevEpochOnChainBalance: register.gauge({
       name: "validator_monitor_prev_epoch_on_chain_balance",
-      help: "Balance of validator after an epoch",
-      labelNames: ["index"],
+      help: "Total balance of all monitored validators after an epoch",
     }),
     prevEpochOnChainAttesterHit: register.gauge({
       name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",

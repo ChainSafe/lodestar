@@ -92,9 +92,9 @@ export function assertValidProposerSlashing(
 
   // verify signatures
   if (verifySignatures) {
-    const signatureSets = getProposerSlashingSignatureSets(config, index2pubkey, stateSlot, proposerSlashing);
+    const signatureSets = getProposerSlashingSignatureSets(config, stateSlot, proposerSlashing);
     for (let i = 0; i < signatureSets.length; i++) {
-      if (!verifySignatureSet(signatureSets[i])) {
+      if (!verifySignatureSet(signatureSets[i], index2pubkey)) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     }

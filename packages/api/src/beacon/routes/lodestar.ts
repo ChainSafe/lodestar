@@ -101,6 +101,15 @@ const HistoricalSummariesResponseType = new ContainerType(
 
 export type HistoricalSummariesResponse = ValueOf<typeof HistoricalSummariesResponseType>;
 
+export type CustodyInfo = {
+  /** Earliest slot for which the node has custodied data columns */
+  earliestCustodiedSlot: Slot;
+  /** Number of custody groups the node is responsible for */
+  custodyGroupCount: number;
+  /** List of column indices the node is custodying */
+  custodyColumns: number[];
+};
+
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
   writeHeapdump: Endpoint<
@@ -316,6 +325,16 @@ export type Endpoints = {
     {root: RootHex; slot: Slot}[],
     EmptyMeta
   >;
+
+  /** Get custody information for data columns */
+  getCustodyInfo: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    CustodyInfo,
+    EmptyMeta
+  >;
 };
 
 export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -498,6 +517,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
     },
     dumpDbStateIndex: {
       url: "/eth/v1/debug/dump_db_state_index",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    getCustodyInfo: {
+      url: "/eth/v1/lodestar/custody_info",
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,

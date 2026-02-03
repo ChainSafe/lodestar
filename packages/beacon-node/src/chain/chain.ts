@@ -107,12 +107,10 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
-import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
-import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
@@ -142,7 +140,7 @@ export class BeaconChain implements IBeaconChain {
   readonly logger: Logger;
   readonly metrics: Metrics | null;
   readonly validatorMonitor: ValidatorMonitor | null;
-  readonly bufferPool: BufferPool | null;
+  readonly bufferPool: BufferPool;
 
   readonly anchorStateLatestBlockSlot: Slot;
 
@@ -278,8 +276,8 @@ export class BeaconChain implements IBeaconChain {
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
+      ? new BlsSingleThreadVerifier({metrics, index2pubkey})
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, index2pubkey});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
@@ -339,32 +337,23 @@ export class BeaconChain implements IBeaconChain {
     this.index2pubkey = index2pubkey;
 
     const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
-    const blockStateCache = this.opts.nHistoricalStates
-      ? new FIFOBlockStateCache(this.opts, {metrics})
-      : new BlockStateCacheImpl({metrics});
-    this.bufferPool = this.opts.nHistoricalStates
-      ? new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics)
-      : null;
+    const blockStateCache = new FIFOBlockStateCache(this.opts, {metrics});
+    this.bufferPool = new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics);
 
     let checkpointStateCache: CheckpointStateCache;
-    this.cpStateDatastore = undefined;
-    if (this.opts.nHistoricalStates) {
-      this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
-      checkpointStateCache = new PersistentCheckpointStateCache(
-        {
-          config,
-          metrics,
-          logger,
-          clock,
-          blockStateCache,
-          bufferPool: this.bufferPool,
-          datastore: this.cpStateDatastore,
-        },
-        this.opts
-      );
-    } else {
-      checkpointStateCache = new InMemoryCheckpointStateCache({metrics});
-    }
+    this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
+    checkpointStateCache = new PersistentCheckpointStateCache(
+      {
+        config,
+        metrics,
+        logger,
+        clock,
+        blockStateCache,
+        bufferPool: this.bufferPool,
+        datastore: this.cpStateDatastore,
+      },
+      this.opts
+    );
 
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     blockStateCache.add(anchorState);
@@ -387,6 +376,7 @@ export class BeaconChain implements IBeaconChain {
       forkChoice,
       blockStateCache,
       checkpointStateCache,
+      seenBlockInputCache: this.seenBlockInputCache,
       db,
       metrics,
       validatorMonitor,
@@ -1368,13 +1358,13 @@ export class BeaconChain implements IBeaconChain {
     // TODO: Improve using regen here
     const {blockRoot, stateRoot, slot} = this.forkChoice.getHead();
     const headState = this.regen.getStateSync(stateRoot);
-    const headBlock = await this.db.block.get(fromHex(blockRoot));
-    if (headBlock == null) {
-      throw Error(`Head block ${slot} ${headBlock} is not available in database`);
+    const blockResult = await this.getBlockByRoot(blockRoot);
+    if (blockResult == null) {
+      throw Error(`Head block for ${slot} is not available in cache or database`);
     }
 
     if (headState) {
-      this.opPool.pruneAll(headBlock, headState);
+      this.opPool.pruneAll(blockResult.block, headState);
     }
 
     if (headState === null) {

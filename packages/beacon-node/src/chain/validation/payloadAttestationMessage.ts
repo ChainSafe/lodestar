@@ -89,7 +89,7 @@ async function validatePayloadAttestationMessage(
   // [REJECT] `payload_attestation_message.signature` is valid with respect to the validator's public key.
   const signatureSet = createSingleSignatureSetFromComponents(
     chain.index2pubkey[validatorIndex],
-    getPayloadAttestationDataSigningRoot(state, data),
+    getPayloadAttestationDataSigningRoot(chain.config, state.slot, data),
     payloadAttestationMessage.signature
   );
 

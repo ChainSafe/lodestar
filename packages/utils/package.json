@@ -48,7 +48,7 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
     "any-signal": "^4.1.1",
-    "bigint-buffer": "^1.1.5",
+    "@vekexasia/bigint-buffer2": "^1.0.4",
     "case": "^1.6.3",
     "js-yaml": "^4.1.0"
   },

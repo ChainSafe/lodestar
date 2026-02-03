@@ -7,7 +7,7 @@ import {Worker, spawn} from "@chainsafe/threads";
 self = undefined;
 
 import {PublicKey} from "@chainsafe/blst";
-import {ISignatureSet} from "@lodestar/state-transition";
+import {ISignatureSet, Index2PubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../../metrics/index.js";
 import {LinkedList} from "../../../util/array.js";
@@ -34,6 +34,7 @@ const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/m
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
   metrics: Metrics | null;
+  index2pubkey: Index2PubkeyCache;
 };
 
 export type BlsMultiThreadWorkerPoolOptions = {
@@ -113,6 +114,7 @@ type WorkerDescriptor = {
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
+  private readonly index2pubkey: Index2PubkeyCache;
 
   private readonly workers: WorkerDescriptor[];
   private readonly jobs = new LinkedList<JobQueueItem>();
@@ -128,9 +130,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private workersBusy = 0;
 
   constructor(options: BlsMultiThreadWorkerPoolOptions, modules: BlsMultiThreadWorkerPoolModules) {
-    const {logger, metrics} = modules;
+    const {logger, metrics, index2pubkey} = modules;
     this.logger = logger;
     this.metrics = metrics;
+    this.index2pubkey = index2pubkey;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
 
     // Use compressed for herumi for now.
@@ -170,7 +173,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       try {
         return verifySignatureSetsMaybeBatch(
           sets.map((set) => ({
-            publicKey: getAggregatedPubkey(set),
+            publicKey: getAggregatedPubkey(set, this.index2pubkey),
             message: set.signingRoot.valueOf(),
             signature: set.signature,
           }))
@@ -395,7 +398,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         try {
           // Note: This can throw, must be handled per-job.
           // Pubkey and signature aggregation is defered here
-          workReq = await jobItemWorkReq(job, this.metrics);
+          workReq = await jobItemWorkReq(job, this.index2pubkey, this.metrics);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
 

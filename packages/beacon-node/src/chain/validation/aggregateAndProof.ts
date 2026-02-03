@@ -239,16 +239,15 @@ async function validateAggregateAndProof(
   // by the validator with index aggregate_and_proof.aggregator_index.
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
-  const aggregator = chain.index2pubkey[aggregateAndProof.aggregatorIndex];
   const signingRoot = cachedAttData ? cachedAttData.signingRoot : getAttestationDataSigningRoot(chain.config, attData);
   const indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
-    indexedAttestation.attestingIndices.map((i) => chain.index2pubkey[i]),
+    indexedAttestation.attestingIndices,
     signingRoot,
     indexedAttestation.signature
   );
   const signatureSets = [
-    getSelectionProofSignatureSet(chain.config, attSlot, aggregator, signedAggregateAndProof),
-    getAggregateAndProofSignatureSet(chain.config, attEpoch, aggregator, signedAggregateAndProof),
+    getSelectionProofSignatureSet(chain.config, attSlot, aggregatorIndex, signedAggregateAndProof),
+    getAggregateAndProofSignatureSet(chain.config, attEpoch, aggregatorIndex, signedAggregateAndProof),
     indexedAttestationSignatureSet,
   ];
   // no need to write to SeenAttestationDatas
