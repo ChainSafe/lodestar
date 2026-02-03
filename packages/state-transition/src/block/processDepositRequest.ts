@@ -14,7 +14,8 @@ export function applyDepositForBuilder(
   pubkey: BLSPubkey,
   withdrawalCredentials: Bytes32,
   amount: UintNum64,
-  signature: Bytes32
+  signature: Bytes32,
+  slot: number
 ): void {
   const builderIndex = findBuilderIndexByPubkey(state, pubkey);
 
@@ -25,7 +26,7 @@ export function applyDepositForBuilder(
   } else {
     // New builder - verify signature and add to registry
     if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
-      addBuilderToRegistry(state, pubkey, withdrawalCredentials, amount);
+      addBuilderToRegistry(state, pubkey, withdrawalCredentials, amount, slot);
     }
   }
 }
@@ -38,7 +39,8 @@ function addBuilderToRegistry(
   state: CachedBeaconStateGloas,
   pubkey: BLSPubkey,
   withdrawalCredentials: Bytes32,
-  amount: UintNum64
+  amount: UintNum64,
+  slot: number
 ): void {
   const currentEpoch = computeEpochAtSlot(state.slot);
 
@@ -58,7 +60,7 @@ function addBuilderToRegistry(
     version: withdrawalCredentials[0],
     executionAddress: withdrawalCredentials.subarray(12),
     balance: amount,
-    depositEpoch: currentEpoch,
+    depositEpoch: computeEpochAtSlot(slot),
     withdrawableEpoch: FAR_FUTURE_EPOCH,
   });
 
@@ -93,7 +95,7 @@ export function processDepositRequest(
     // Route to builder if it's an existing builder OR has builder prefix and is not a validator
     if (isBuilder || (isBuilderPrefix && !isValidator)) {
       // Apply builder deposits immediately
-      applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature);
+      applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
       return;
     }
   }
