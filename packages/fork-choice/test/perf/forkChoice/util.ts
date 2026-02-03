@@ -59,6 +59,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     currentEpochObservedJustifiedBalances: balances,
     previousSlotHead: genesisRoot,
     currentSlotHead: genesisRoot,
+    stateGetter: () => null,
   };
 
   const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null);

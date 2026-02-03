@@ -131,6 +131,7 @@ describe("Forkchoice / GetProposerHead", () => {
     currentEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
     previousSlotHead: genesisBlock.blockRoot,
     currentSlotHead: genesisBlock.blockRoot,
+    stateGetter: () => null,
   };
 
   // head block's weight < 30 is considered weak. parent block's total weight > 240 is considered strong

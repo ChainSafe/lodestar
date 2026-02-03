@@ -112,6 +112,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     if (confirmedEpochAfterRestart !== null && confirmedEpochAfterRestart + 1 >= currentEpoch) {
       confirmedRoot = this.findLatestConfirmedDescendant(ctx, confirmedRoot);
     }
+
     this.store.confirmedRoot = confirmedRoot;
 
     return {confirmedRoot, didReset};
@@ -166,8 +167,11 @@ export class FastConfirmationRule implements IFastConfirmationRule {
         const tentativeEpoch = this.getBlockEpoch(ctx, tentativeConfirmedRoot);
         if (blockEpoch === null || tentativeEpoch === null) break;
 
-        if (blockEpoch > tentativeEpoch && !this.willCurrentTargetBeJustified(ctx)) {
-          break;
+        if (blockEpoch > tentativeEpoch) {
+          const blockCheckpoint = this.getCheckpointForBlock(ctx, blockRoot, blockEpoch);
+          if (!blockCheckpoint || !this.willCheckpointBeJustified(ctx, blockCheckpoint)) {
+            break;
+          }
         }
 
         if (!this.isOneConfirmed(ctx, currentBalanceSource, blockRoot)) {
@@ -230,9 +234,19 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       (currentSlot - 1) as Slot
     );
     const supportDiscount = this.getSupportDiscount(ctx, balanceSource, blockRoot);
-    const adversarialWeight = this.getAdversarialWeight(ctx, balanceSource, blockRoot);
 
-    return 2 * support + supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeight;
+    const committeeWeightFromBlock = this.estimateCommitteeWeightBetweenSlots(
+      balanceSource,
+      block.slot,
+      (currentSlot - 1) as Slot
+    );
+
+    const adversarialWeightBase = this.getAdversarialWeight(ctx, balanceSource, blockRoot);
+
+    const adversarialWeightScaled =
+      maximumSupport > 0 ? (adversarialWeightBase * committeeWeightFromBlock) / maximumSupport : 0;
+
+    return 2 * support + supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeightScaled;
   }
 
   private getAttestationScore(ctx: FCRContext, balanceSource: FCRBalanceSource, blockRoot: RootHex): number {
@@ -240,11 +254,11 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     const state = balanceSource.state;
     const activeIndices = state ? Array.from(getActiveValidatorIndices(state, getCurrentEpoch(state))) : null;
     let score = 0;
+    if (!state) return score;
     const equivocating = ctx.getEquivocatingIndices();
 
     if (activeIndices !== null) {
       for (const i of activeIndices) {
-        if (!state) continue;
         if (state.validators.get(i)?.slashed) continue;
         if (equivocating.has(i)) continue;
         const latestMessage = ctx.getLatestMessage(i);
@@ -401,21 +415,24 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       return totalActiveBalance;
     }
 
+    const committeeWeightPerSlot = Math.floor(totalActiveBalance / SLOTS_PER_EPOCH);
+
     if (startEpoch === endEpoch) {
-      return Math.floor(totalActiveBalance / SLOTS_PER_EPOCH) * (endSlot - startSlot + 1);
+      return committeeWeightPerSlot * (endSlot - startSlot + 1);
     }
 
-    const numSlotsInEndEpoch = computeSlotsSinceEpochStart(endSlot) + 1;
-    const remainingSlotsInEndEpoch = SLOTS_PER_EPOCH - numSlotsInEndEpoch;
     const numSlotsInStartEpoch = SLOTS_PER_EPOCH - computeSlotsSinceEpochStart(startSlot);
+    const numSlotsInEndEpoch = computeSlotsSinceEpochStart(endSlot) + 1;
 
-    const endEpochWeightEstimate = Math.floor(totalActiveBalance / SLOTS_PER_EPOCH) * numSlotsInEndEpoch;
-    const startEpochWeightEstimate =
-      Math.floor(Math.floor(totalActiveBalance / SLOTS_PER_EPOCH) / SLOTS_PER_EPOCH) *
-      numSlotsInStartEpoch *
-      remainingSlotsInEndEpoch;
+    const startEpochWeightEstimate = committeeWeightPerSlot * numSlotsInStartEpoch;
+    const endEpochWeightEstimate = committeeWeightPerSlot * numSlotsInEndEpoch;
 
-    return this.adjustCommitteeWeightEstimateToEnsureSafety(startEpochWeightEstimate + endEpochWeightEstimate);
+    const numCompleteEpochs = Math.max(0, endEpoch - startEpoch - 1);
+    const completeEpochsWeight = totalActiveBalance * numCompleteEpochs;
+
+    return this.adjustCommitteeWeightEstimateToEnsureSafety(
+      startEpochWeightEstimate + completeEpochsWeight + endEpochWeightEstimate
+    );
   }
 
   private adjustCommitteeWeightEstimateToEnsureSafety(estimate: number): number {
@@ -498,6 +515,61 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     if (!targetState) return false;
     const totalActiveBalance = targetState.epochCtx.totalActiveBalanceIncrements;
     const honestSupport = this.computeHonestFfgSupportForCurrentTarget(ctx);
+    return 3 * honestSupport >= 2 * totalActiveBalance;
+  }
+
+  private willCheckpointBeJustified(ctx: FCRContext, checkpoint: CheckpointWithHex): boolean {
+    const currentTarget = this.getCurrentTarget(ctx);
+    if (currentTarget && equalCheckpointWithHex(checkpoint, currentTarget)) {
+      return this.willCurrentTargetBeJustified(ctx);
+    }
+
+    // For other checkpoints, check if it's already unrealized justified or will gather enough support
+    const unrealizedJustified = ctx.getUnrealizedJustified();
+    if (equalCheckpointWithHex(checkpoint, unrealizedJustified.checkpoint)) {
+      return true;
+    }
+
+    // Get the state for this checkpoint to calculate potential support
+    const checkpointState = this.store.stateGetter({checkpoint});
+    if (!checkpointState) return false;
+
+    const totalActiveBalance = checkpointState.epochCtx.totalActiveBalanceIncrements;
+    const balances = checkpointState.epochCtx.effectiveBalanceIncrements;
+    const activeIndices = getActiveValidatorIndices(checkpointState, getCurrentEpoch(checkpointState));
+    const equivocating = ctx.getEquivocatingIndices();
+
+    // Count current FFG votes for this checkpoint
+    let ffgSupport = 0;
+    for (const i of activeIndices) {
+      if (checkpointState.validators.get(i)?.slashed) continue;
+      if (equivocating.has(i)) continue;
+      const latestMessage = ctx.getLatestMessage(i);
+      if (!latestMessage) continue;
+      const latestCheckpoint = this.getCheckpointForBlock(ctx, latestMessage.root, latestMessage.epoch);
+      if (latestCheckpoint && equalCheckpointWithHex(checkpoint, latestCheckpoint)) {
+        ffgSupport += balances[i] ?? 0;
+      }
+    }
+
+    // Estimate remaining honest support
+    const currentSlot = ctx.getCurrentSlot();
+    const checkpointEpoch = checkpoint.epoch;
+    const ffgWeightTillNow = this.estimateCommitteeWeightBetweenSlots(
+      {state: checkpointState, balances},
+      computeStartSlotAtEpoch(checkpointEpoch),
+      (currentSlot - 1) as Slot
+    );
+
+    const remainingFfgWeight = totalActiveBalance - ffgWeightTillNow;
+    const remainingHonestFfgWeight =
+      Math.floor(remainingFfgWeight / 100) * (100 - ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD);
+
+    const minHonestFfgSupport =
+      ffgSupport -
+      Math.min(Math.floor(ffgWeightTillNow / 100) * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD, ffgSupport);
+
+    const honestSupport = minHonestFfgSupport + remainingHonestFfgWeight;
     return 3 * honestSupport >= 2 * totalActiveBalance;
   }
 

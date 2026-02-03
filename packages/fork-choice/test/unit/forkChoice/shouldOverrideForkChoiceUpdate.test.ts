@@ -131,6 +131,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     currentEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
     previousSlotHead: genesisBlock.blockRoot,
     currentSlotHead: genesisBlock.blockRoot,
+    stateGetter: () => null,
   };
 
   const testCases: {

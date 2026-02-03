@@ -68,6 +68,7 @@ describe("Forkchoice", () => {
     currentEpochObservedJustifiedBalances: new Uint16Array([32]),
     previousSlotHead: finalizedRoot,
     currentSlotHead: finalizedRoot,
+    stateGetter: () => null,
   };
 
   const getParentBlockRoot = (slot: number, skippedSlots: number[] = []): RootHex => {
