@@ -349,9 +349,9 @@ export class Eth2Gossipsub extends GossipSub {
    * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
    *
    * @param peerStr - Either a multiaddr with peer ID or an ENR string
-   * @returns The peer ID string if successfully added, null if parsing failed
+   * @returns The peer ID string if successfully added, null if parsing or address storage failed
    */
-  addDirectPeer(peerStr: string): string | null {
+  async addDirectPeer(peerStr: string): Promise<string | null> {
     const parsed = parseDirectPeers([peerStr], this.logger);
     if (parsed.length === 0) {
       return null;
@@ -360,15 +360,18 @@ export class Eth2Gossipsub extends GossipSub {
     const {id: peerId, addrs} = parsed[0];
     const peerIdStr = peerId.toString();
 
-    // Add to direct peers set (this is public readonly on GossipSub parent class)
-    this.direct.add(peerIdStr);
-
-    // Add addresses to peer store so we can connect
+    // Add addresses to peer store first so we can connect
     if (addrs.length > 0) {
-      this.libp2p.peerStore.merge(peerId, {multiaddrs: addrs}).catch((e) => {
-        this.logger.warn("Failed to add direct peer addresses to peer store", {peerId: peerIdStr}, e);
-      });
+      try {
+        await this.libp2p.peerStore.merge(peerId, {multiaddrs: addrs});
+      } catch (e) {
+        this.logger.warn("Failed to add direct peer addresses to peer store", {peerId: peerIdStr}, e as Error);
+        return null;
+      }
     }
+
+    // Add to direct peers set only after addresses are stored
+    this.direct.add(peerIdStr);
 
     this.logger.info("Added direct peer via API", {peerId: peerIdStr});
     return peerIdStr;
