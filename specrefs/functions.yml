@@ -2275,23 +2275,6 @@
         return bls.Sign(privkey, signing_root)
     </spec>
 
-- name: get_builder_from_deposit#gloas
-  sources: []
-  spec: |
-    <spec fn="get_builder_from_deposit" fork="gloas" hash="7f914af6">
-    def get_builder_from_deposit(
-        state: BeaconState, pubkey: BLSPubkey, withdrawal_credentials: Bytes32, amount: uint64
-    ) -> Builder:
-        return Builder(
-            pubkey=pubkey,
-            version=uint8(withdrawal_credentials[0]),
-            execution_address=ExecutionAddress(withdrawal_credentials[12:]),
-            balance=amount,
-            deposit_epoch=get_current_epoch(state),
-            withdrawable_epoch=FAR_FUTURE_EPOCH,
-        )
-    </spec>
-
 - name: get_builder_payment_quorum_threshold#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
