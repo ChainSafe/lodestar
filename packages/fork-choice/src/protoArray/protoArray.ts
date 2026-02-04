@@ -25,6 +25,16 @@ type ProposerBoost = {root: RootHex; score: number};
 
 const ZERO_HASH_HEX = toRootHex(Buffer.alloc(32, 0));
 
+/** Pre-Gloas: single element, FULL index (for backward compatibility) */
+type PreGloasVariantIndex = number;
+/**
+ * Post-Gloas: array length is 2 or 3
+ *   - Length 2: [PENDING_INDEX, EMPTY_INDEX] when payload hasn't arrived yet
+ *   - Length 3: [PENDING_INDEX, EMPTY_INDEX, FULL_INDEX] when payload has arrived
+ */
+type GloasVariantIndices = [number, number] | [number, number, number];
+type VariantIndices = PreGloasVariantIndex | GloasVariantIndices;
+
 export class ProtoArray {
   // Do not attempt to prune the tree unless it has at least this many nodes.
   // Small prunes simply waste time
@@ -42,14 +52,9 @@ export class ProtoArray {
    * - number[1] = EMPTY variant index (PayloadStatus.EMPTY = 1)
    * - number[2] = FULL variant index (PayloadStatus.FULL = 2)
    *
-   * Pre-Gloas: array length is 1, number[0] contains FULL index (for backward compatibility)
-   * Post-Gloas: array length is 2 or 3
-   *   - Length 2: [PENDING_INDEX, EMPTY_INDEX] when payload hasn't arrived yet
-   *   - Length 3: [PENDING_INDEX, EMPTY_INDEX, FULL_INDEX] when payload has arrived
-   *
    * Note: undefined array elements indicate that variant doesn't exist for this block
    */
-  indices = new Map<RootHex, number[]>();
+  indices = new Map<RootHex, VariantIndices>();
   lvhError?: LVHExecError;
 
   private previousProposerBoost: ProposerBoost | null = null;
@@ -117,16 +122,16 @@ export class ProtoArray {
    * Note: payloadStatus is required. Use getDefaultVariant() to get the canonical variant.
    */
   getNodeIndexByRootAndStatus(root: RootHex, payloadStatus: PayloadStatus): number | undefined {
-    const variants = this.indices.get(root);
-    if (!variants) {
+    const variantOrArr = this.indices.get(root);
+    if (!variantOrArr) {
       return undefined;
     }
 
-    // Pre-Gloas: only one variant exists (FULL at index 0)
-    if (variants.length === 1) {
+    // Pre-Gloas: only FULL variant exists
+    if (!Array.isArray(variantOrArr)) {
       // Return FULL variant if no status specified or FULL explicitly requested
       if (payloadStatus === PayloadStatus.FULL) {
-        return variants[0];
+        return variantOrArr;
       }
       // PENDING and EMPTY are invalid for pre-Gloas blocks
       throw new ProtoArrayError({
@@ -136,7 +141,7 @@ export class ProtoArray {
     }
 
     // Gloas: return the specified variant, or PENDING if not specified
-    return variants[payloadStatus];
+    return variantOrArr[payloadStatus];
   }
 
   /**
@@ -148,13 +153,13 @@ export class ProtoArray {
    * @returns PayloadStatus.FULL for pre-Gloas, PayloadStatus.PENDING for Gloas, undefined if block not found
    */
   getDefaultVariant(blockRoot: RootHex): PayloadStatus | undefined {
-    const variants = this.indices.get(blockRoot);
-    if (!variants) {
+    const variantOrArr = this.indices.get(blockRoot);
+    if (!variantOrArr) {
       return undefined;
     }
 
-    // Pre-Gloas: only one variant exists (FULL)
-    if (variants.length === 1) {
+    // Pre-Gloas: only FULL variant exists
+    if (!Array.isArray(variantOrArr)) {
       return PayloadStatus.FULL;
     }
 
@@ -179,12 +184,6 @@ export class ProtoArray {
     }
 
     // Gloas block must have parentBlockHash from its SignedExecutionPayloadBid
-    const parentBlockHash = block.parentBlockHash;
-    if (parentBlockHash === null) {
-      // should not happen for Gloas blocks
-      return PayloadStatus.FULL;
-    }
-
     // Get parent node to compare execution payload hash
     // Use variants[0] which works for both pre-Gloas (FULL) and Gloas (PENDING)
     const parentVariants = this.indices.get(block.parentRoot);
@@ -194,6 +193,12 @@ export class ProtoArray {
         code: ProtoArrayErrorCode.UNKNOWN_BLOCK,
         root: block.parentRoot,
       });
+    }
+
+    const parentBlockHash = block.parentBlockHash;
+    // Pre-Gloas blocks don't have parentBlockHash
+    if (parentBlockHash === null || !Array.isArray(parentVariants)) {
+      return PayloadStatus.FULL;
     }
 
     const parentIndex = parentVariants[0];
@@ -362,7 +367,7 @@ export class ProtoArray {
       // Check if parent exists by getting variants array
       const parentVariants = this.indices.get(block.parentRoot);
       if (parentVariants) {
-        const anyParentIndex = parentVariants[0];
+        const anyParentIndex = Array.isArray(parentVariants) ? parentVariants[0] : parentVariants;
         const anyParentNode = this.nodes[anyParentIndex];
 
         if (!isGloasBlock(anyParentNode)) {
@@ -404,10 +409,7 @@ export class ProtoArray {
 
       // Store both variants in the indices array
       // [PENDING, EMPTY, undefined] - FULL will be added later if payload arrives
-      const variants: number[] = [];
-      variants[PayloadStatus.PENDING] = pendingIndex;
-      variants[PayloadStatus.EMPTY] = emptyIndex;
-      this.indices.set(block.blockRoot, variants);
+      this.indices.set(block.blockRoot, [pendingIndex, emptyIndex]);
 
       // Update bestChild pointers
       if (parentIndex !== undefined) {
@@ -438,9 +440,8 @@ export class ProtoArray {
       const nodeIndex = this.nodes.length;
       this.nodes.push(node);
 
-      // Store FULL variant in indices array
-      // Pre-Gloas: variants[0] contains FULL index
-      this.indices.set(block.blockRoot, [nodeIndex]);
+      // Pre-Gloas: store FULL index instead of array
+      this.indices.set(block.blockRoot, nodeIndex);
 
       // If this node is valid, lets propagate the valid status up the chain
       // and throw error if we counter invalid, as this breaks consensus
@@ -478,7 +479,7 @@ export class ProtoArray {
       });
     }
 
-    if (variants.length === 1) {
+    if (!Array.isArray(variants)) {
       // Pre-gloas block should not be calling this method
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK,
@@ -986,7 +987,9 @@ export class ProtoArray {
     }
 
     // Find the minimum index among all variants to ensure we don't prune too much
-    const finalizedIndex = Math.min(...variants.filter((idx) => idx !== undefined));
+    const finalizedIndex = Array.isArray(variants)
+      ? Math.min(...variants.filter((idx) => idx !== undefined))
+      : variants;
 
     if (finalizedIndex < this.pruneThreshold) {
       // Pruning at small numbers incurs more cost than benefit
@@ -1017,24 +1020,35 @@ export class ProtoArray {
     this.nodes = this.nodes.slice(finalizedIndex);
 
     // Adjust the indices map - subtract finalizedIndex from all node indices
-    const newIndices = new Map<RootHex, number[]>();
     for (const [root, variantIndices] of this.indices.entries()) {
-      const adjustedVariants: number[] = [];
-      for (let i = 0; i < variantIndices.length; i++) {
-        const idx = variantIndices[i];
-        if (idx !== undefined) {
-          if (idx < finalizedIndex) {
-            throw new ProtoArrayError({
-              code: ProtoArrayErrorCode.INDEX_OVERFLOW,
-              value: "indices",
-            });
-          }
-          adjustedVariants[i] = idx - finalizedIndex;
+      // Pre-Gloas: single index
+      if (!Array.isArray(variantIndices)) {
+        if (variantIndices < finalizedIndex) {
+          throw new ProtoArrayError({
+            code: ProtoArrayErrorCode.INDEX_OVERFLOW,
+            value: "indices",
+          });
         }
+        this.indices.set(root, variantIndices - finalizedIndex);
+        continue;
       }
-      newIndices.set(root, adjustedVariants);
+
+      // Post-Gloas: array of variant indices
+      const adjustedVariants = variantIndices.map((_, idx) => {
+        if (idx === undefined) {
+          return undefined;
+        }
+
+        if (idx < finalizedIndex) {
+          throw new ProtoArrayError({
+            code: ProtoArrayErrorCode.INDEX_OVERFLOW,
+            value: "indices",
+          });
+        }
+        return idx - finalizedIndex;
+      });
+      this.indices.set(root, adjustedVariants as GloasVariantIndices);
     }
-    this.indices = newIndices;
 
     // Iterate through all the existing nodes and adjust their indices to match the new layout of this.nodes
     for (let i = 0, len = this.nodes.length; i < len; i++) {
@@ -1346,15 +1360,15 @@ export class ProtoArray {
    */
   getAncestor(blockRoot: RootHex, ancestorSlot: Slot): ProtoNode {
     // Get any variant to check the block (use variants[0])
-    const variants = this.indices.get(blockRoot);
-    if (!variants) {
+    const variantOrArr = this.indices.get(blockRoot);
+    if (!variantOrArr) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: blockRoot,
       });
     }
 
-    const blockIndex = variants[0];
+    const blockIndex = Array.isArray(variantOrArr) ? variantOrArr[0] : variantOrArr;
     const block = this.nodes[blockIndex];
 
     // If block is at or before queried slot, return PENDING variant (or FULL for pre-Gloas)
@@ -1376,7 +1390,7 @@ export class ProtoArray {
       });
     }
 
-    let parentIndex = parentVariants[0];
+    let parentIndex = Array.isArray(parentVariants) ? parentVariants[0] : parentVariants;
     let parentBlock = this.nodes[parentIndex];
 
     // Walk backwards while parent.slot > ancestorSlot
@@ -1392,7 +1406,7 @@ export class ProtoArray {
         });
       }
 
-      parentIndex = nextParentVariants[0];
+      parentIndex = Array.isArray(nextParentVariants) ? nextParentVariants[0] : nextParentVariants;
       parentBlock = this.nodes[parentIndex];
     }
 
