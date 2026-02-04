@@ -1,4 +1,3 @@
-import axios from "axios";
 import {describe, expect, it, vi} from "vitest";
 import {fromHex} from "@lodestar/utils";
 import {ChainConfig} from "../../src/chainConfig/types.js";
@@ -128,12 +127,14 @@ function assertCorrectConfig(localConfig: ChainConfig, remoteConfig: Partial<Cha
 }
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<Partial<ChainConfig>> {
-  const response = await axios({
-    url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/configs/${preset}.yaml`,
-    timeout: 30 * 1000,
-  });
+  const url = `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/configs/${preset}.yaml`;
+  const response = await fetch(url, {signal: AbortSignal.timeout(30_000)});
 
-  return parseConfigYaml(response.data);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+  }
+
+  return parseConfigYaml(await response.text());
 }
 
 function parseConfigYaml(yaml: string): Partial<ChainConfig> {
