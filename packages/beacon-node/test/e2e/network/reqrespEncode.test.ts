@@ -4,7 +4,6 @@ import {mplex} from "@libp2p/mplex";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {tcp} from "@libp2p/tcp";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import all from "it-all";
 import {Libp2p, createLibp2p} from "libp2p";
 import {afterEach, describe, expect, it} from "vitest";
 import {noise} from "@chainsafe/libp2p-noise";
