@@ -1250,7 +1250,7 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes;
   }
 
-  // TODO: this function is ambiguous, consumer should also provide payload, or it should accept a ProtoBlock instead
+  // TODO GLOAS: this function is ambiguous, consumer should also provide payload, or it should accept a ProtoBlock instead
   // also consumer may want PENDING or EMPTY only
   *forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock> {
     const rootsInChain = new Set([blockRoot]);
