@@ -274,6 +274,35 @@ const peers = config.directPeers ?? [];
 const trimmed = value?.trim() ?? "";
 ```
 
+## Implementing consensus specs
+
+The primary reference for implementing consensus specs is the
+[Ethereum consensus-specs repository](https://github.com/ethereum/consensus-specs).
+Additionally, [eth2book.info](https://eth2book.info) is a valuable resource for
+understanding phase0, altair, bellatrix, and capella specs and how the spec
+evolved over time (though no longer actively maintained).
+
+When implementing changes from the consensus specs, the mapping is typically:
+
+| Spec Document | Lodestar Package |
+|---------------|------------------|
+| beacon-chain.md (containers) | `@lodestar/types` |
+| beacon-chain.md (functions) | `@lodestar/state-transition` |
+| p2p-interface.md | `@lodestar/beacon-node` (networking, gossip) |
+| validator.md | `@lodestar/validator` |
+| fork-choice.md | `@lodestar/fork-choice` |
+
+### Fork organization
+
+Specs and code are organized by fork: `phase0`, `altair`, `bellatrix`,
+`capella`, `deneb`, `electra`, `fulu`, `gloas`.
+
+- **@lodestar/types/src/** - Each fork has its own directory with SSZ type definitions
+- **@lodestar/state-transition/src/block/** - Block processing functions
+  (e.g., `processAttestations`, `processDeposit`, `processWithdrawals`)
+- **@lodestar/state-transition/src/epoch/** - Epoch processing functions
+- **@lodestar/state-transition/src/slot/** - Slot processing functions
+
 ## Important notes
 
 ### Default branch is `unstable`
