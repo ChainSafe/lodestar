@@ -1,5 +1,5 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@lodestar/utils";
 import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";

@@ -1,4 +1,4 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostElectra} from "@lodestar/params";
 import {LightClientBootstrap, Root, ssz} from "@lodestar/types";

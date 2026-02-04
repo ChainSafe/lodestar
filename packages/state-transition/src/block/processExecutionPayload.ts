@@ -1,4 +1,4 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@lodestar/utils";
 import {ForkName, ForkSeq, isForkPostDeneb} from "@lodestar/params";
 import {BeaconBlockBody, BlindedBeaconBlockBody, deneb, isExecutionPayload} from "@lodestar/types";
 import {toHex, toRootHex} from "@lodestar/utils";

@@ -1,4 +1,4 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";

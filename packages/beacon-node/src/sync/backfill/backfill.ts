@@ -10,7 +10,7 @@ import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
-import {byteArrayEquals} from "../../util/bytes.js";
+import {byteArrayEquals} from "@lodestar/utils";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";

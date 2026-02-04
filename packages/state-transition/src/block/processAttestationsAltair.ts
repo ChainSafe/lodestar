@@ -1,4 +1,4 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@lodestar/utils";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,

@@ -19,7 +19,7 @@ import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumn
 import {INetwork} from "../../network/interface.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
-import {byteArrayEquals} from "../../util/bytes.js";
+import {byteArrayEquals} from "@lodestar/utils";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
 import {

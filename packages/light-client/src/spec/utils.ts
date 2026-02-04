@@ -1,4 +1,5 @@
-import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,

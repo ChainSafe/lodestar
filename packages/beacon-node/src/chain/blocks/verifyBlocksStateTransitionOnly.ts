@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {byteArrayEquals} from "../../util/bytes.js";
+import {byteArrayEquals} from "@lodestar/utils";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";

@@ -1,4 +1,4 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@lodestar/utils";
 import {
   BUILDER_INDEX_FLAG,
   BUILDER_PAYMENT_THRESHOLD_DENOMINATOR,
