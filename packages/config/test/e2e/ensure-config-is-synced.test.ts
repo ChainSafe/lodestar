@@ -1,13 +1,11 @@
 import {describe, expect, it, vi} from "vitest";
 import {fromHex} from "@lodestar/utils";
+import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {ChainConfig} from "../../src/chainConfig/types.js";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
 
 // Not e2e, but slow. Run with e2e tests
-
-/** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.7.0-alpha.1";
 
 /**
  * Fields that we filter from remote config when doing comparison.
@@ -63,12 +61,12 @@ describe("Ensure chainConfig is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
   it("mainnet chainConfig values match spec", async () => {
-    const remoteConfig = await downloadRemoteConfig("mainnet", specConfigCommit);
+    const remoteConfig = await downloadRemoteConfig("mainnet", ethereumConsensusSpecsTests.specVersion);
     assertCorrectConfig({...mainnetChainConfig}, remoteConfig);
   });
 
   it("minimal chainConfig values match spec", async () => {
-    const remoteConfig = await downloadRemoteConfig("minimal", specConfigCommit);
+    const remoteConfig = await downloadRemoteConfig("minimal", ethereumConsensusSpecsTests.specVersion);
     assertCorrectConfig({...minimalChainConfig}, remoteConfig);
   });
 });
@@ -78,7 +76,7 @@ function assertCorrectConfig(localConfig: ChainConfig, remoteConfig: Partial<Cha
   const filteredLocalConfig: Partial<ChainConfig> = {};
   for (const key of Object.keys(localConfig) as (keyof ChainConfig)[]) {
     if (!ignoredLocalConfigFields.includes(key)) {
-      filteredLocalConfig[key] = localConfig[key];
+      (filteredLocalConfig as Record<string, unknown>)[key] = localConfig[key];
     }
   }
 
@@ -86,7 +84,7 @@ function assertCorrectConfig(localConfig: ChainConfig, remoteConfig: Partial<Cha
   const filteredRemoteConfig: Partial<ChainConfig> = {};
   for (const key of Object.keys(remoteConfig) as (keyof ChainConfig)[]) {
     if (!ignoredRemoteConfigFields.includes(key)) {
-      filteredRemoteConfig[key] = remoteConfig[key];
+      (filteredRemoteConfig as Record<string, unknown>)[key] = remoteConfig[key];
     }
   }
 
