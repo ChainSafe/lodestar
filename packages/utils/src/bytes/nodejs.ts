@@ -64,10 +64,12 @@ export function fromHex(hex: string): Uint8Array {
 
 /**
  * Compare two byte arrays for equality using Buffer.compare for better performance.
- * Buffer.compare uses native code and is significantly faster than manual iteration:
- * - 32 bytes: ~2x faster
- * - 1024 bytes: ~22x faster
- * - Large arrays (100MB+): ~38x faster
+ * Buffer.compare uses native code and is significantly faster than manual iteration.
+ *
+ * Benchmark results (nodejs Buffer.compare vs browser loop):
+ * - 32 bytes: 54.9M ops/s vs 23.7M ops/s (2.3x faster)
+ * - 1024 bytes: 34.5M ops/s vs 1.1M ops/s (31x faster)
+ * - 131072 bytes: 454K ops/s vs 8.7K ops/s (52x faster)
  */
 export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) {
