@@ -72,7 +72,9 @@ export async function createNodeJsLibp2p(
     noiseCrypto.chaCha20Poly1305Encrypt = asCrypto.chaCha20Poly1305Encrypt;
   }
 
-  return createLibp2p({
+  // Type assertion needed due to dependency version mismatches
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (await createLibp2p({
     privateKey,
     addresses: {
       listen: localMultiaddrs,
@@ -93,7 +95,7 @@ export async function createNodeJsLibp2p(
         },
       }),
     ],
-    streamMuxers: [mplex({maxInboundStreams: 256, disconnectThreshold: networkOpts.disconnectThreshold})],
+    streamMuxers: [mplex({disconnectThreshold: networkOpts.disconnectThreshold})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics
       ? prometheusMetrics({
@@ -121,15 +123,16 @@ export async function createNodeJsLibp2p(
       maxAddressAge: Infinity,
       maxPeerAge: Infinity,
     },
-    datastore,
+    // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed due to interface-datastore version mismatch
+    datastore: datastore as any,
     services: {
       identify: identify({
-        agentVersion: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
         runOnConnectionOpen: false,
       }),
       // individual components are specified because the components object is a Proxy
       // and passing it here directly causes problems downstream, not to mention is slowwww
-      components: (components: LodestarComponents) => ({
+      // Type assertion needed due to multiaddr version mismatch between dependencies
+      components: ((components: LodestarComponents) => ({
         peerId: components.peerId,
         privateKey: components.privateKey,
         nodeInfo: components.nodeInfo,
@@ -147,7 +150,8 @@ export async function createNodeJsLibp2p(
         datastore: components.datastore,
         connectionProtector: components.connectionProtector,
         metrics: components.metrics,
-      }),
+        // biome-ignore lint/suspicious/noExplicitAny: Type assertion needed due to version mismatch
+      })) as any,
     },
-  });
+  })) as unknown as Libp2p;
 }
