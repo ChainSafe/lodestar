@@ -78,5 +78,24 @@ describe("bytes utils", async () => {
       },
       runsFactor,
     });
+
+    // byteArrayEquals benchmarks - comparing browser (loop) vs nodejs (Buffer.compare)
+    const arraysToCompare = [
+      {name: "32 bytes (block root)", a: blockRoot, b: new Uint8Array(blockRoot)},
+      {name: "1024 bytes", a: new Uint8Array(1024).fill(42), b: new Uint8Array(1024).fill(42)},
+      {name: `${BLOB_LEN} bytes (blob)`, a: blob, b: new Uint8Array(blob)},
+    ];
+
+    for (const {name: arrName, a, b} of arraysToCompare) {
+      bench({
+        id: `${name} byteArrayEquals ${arrName}`,
+        fn: () => {
+          for (let i = 0; i < runsFactor; i++) {
+            impl.byteArrayEquals(a, b);
+          }
+        },
+        runsFactor,
+      });
+    }
   }
 });
