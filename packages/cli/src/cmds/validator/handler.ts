@@ -1,5 +1,6 @@
 import {setMaxListeners} from "node:events";
 import path from "node:path";
+import {initBigIntBufferNative} from "@lodestar/utils";
 import {WireFormat, routes} from "@lodestar/api";
 import {
   MonitoringService,
@@ -43,6 +44,9 @@ import {logSigners, warnOrExitNoSigners} from "./signers/logSigners.js";
  * Runs a validator client.
  */
 export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Promise<void> {
+  // Initialize native bigint-buffer bindings for optimal performance
+  await initBigIntBufferNative();
+
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const {doppelgangerProtection} = args;
