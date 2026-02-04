@@ -1,5 +1,5 @@
 import {Uint8ArrayList} from "uint8arraylist";
-import {encodeResponseChunk, encodeErrorResponse} from "../../src/encoders/responseEncode.js";
+import {encodeErrorResponse, encodeResponseChunk} from "../../src/encoders/responseEncode.js";
 import {RespStatus} from "../../src/interface.js";
 import {Protocol} from "../../src/types.js";
 import {ResponseChunk} from "../fixtures/encoders.js";

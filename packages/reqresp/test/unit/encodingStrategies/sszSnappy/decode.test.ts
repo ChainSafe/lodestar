@@ -15,7 +15,7 @@ describe("encodingStrategies / sszSnappy / decode", () => {
     const inputChunks = chunks.map((c) => new Uint8ArrayList(c));
     const mockStream = new MockLibP2pStream(inputChunks, "test");
     const bytes = byteStream(mockStream);
-    
+
     const bodyResult = await decodeSszSnappyPayload(bytes, type);
     expect(bodyResult).toEqual(binaryPayload.data);
   });
@@ -28,7 +28,7 @@ describe("encodingStrategies / sszSnappy / decode", () => {
       it(id, async () => {
         const mockStream = new MockLibP2pStream([streamedBytes], "test");
         const bytes = byteStream(mockStream);
-        
+
         const bodyResult = await decodeSszSnappyPayload(bytes, serializer);
         expect(bodyResult).toEqual(new Uint8Array(payload.data));
       });
@@ -41,7 +41,7 @@ describe("encodingStrategies / sszSnappy / decode", () => {
         const inputChunks = [new Uint8ArrayList(...chunks)];
         const mockStream = new MockLibP2pStream(inputChunks, "test");
         const bytes = byteStream(mockStream);
-        
+
         await expect(decodeSszSnappyPayload(bytes, type)).rejects.toThrow(error);
       });
     }

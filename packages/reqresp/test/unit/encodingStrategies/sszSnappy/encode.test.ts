@@ -8,11 +8,8 @@ describe("encodingStrategies / sszSnappy / encode", () => {
   it.each(encodingStrategiesTestCases)("$id", async ({binaryPayload, chunks}) => {
     const encoded = encodeSszSnappyPayload(binaryPayload.data);
     const expectedConcat = Buffer.concat(chunks.map((c) => c.subarray()));
-    
-    expectEqualByteChunks(
-      [encoded.subarray()],
-      [expectedConcat]
-    );
+
+    expectEqualByteChunks([encoded.subarray()], [expectedConcat]);
   });
 
   describe("mainnet cases", () => {
@@ -21,7 +18,7 @@ describe("encodingStrategies / sszSnappy / encode", () => {
 
       const encoded = encodeSszSnappyPayload(payload.data);
       const expectedStreamed = Buffer.concat([Buffer.from(varintEncode(bodySize)), streamedBody]);
-      
+
       expect(Buffer.from(encoded.subarray())).toEqual(expectedStreamed);
     });
   });

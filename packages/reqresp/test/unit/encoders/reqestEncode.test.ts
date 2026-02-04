@@ -8,7 +8,7 @@ describe("encoders / requestEncode", () => {
     it.each(requestEncodersCases)("$id", async ({protocol, requestBody, chunks}) => {
       // Encode request using new synchronous API
       const encoded = encodeRequest(protocol, requestBody);
-      
+
       // Compare with expected chunks
       expectEqualByteChunks(
         [encoded.subarray()],

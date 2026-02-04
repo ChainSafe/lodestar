@@ -81,7 +81,7 @@ export class MockLibP2pStream implements Stream {
     } else {
       // For backwards compatibility, store reference and handle async
       this.inputChunks = [];
-      (async () => {
+      void (async () => {
         for await (const chunk of requestChunks) {
           this.inputChunks.push(chunk instanceof Uint8ArrayList ? chunk : new Uint8ArrayList(chunk));
         }

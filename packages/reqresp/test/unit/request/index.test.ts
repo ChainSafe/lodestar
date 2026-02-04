@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
-import {Uint8ArrayList} from "uint8arraylist";
 import {Libp2p} from "libp2p";
+import {Uint8ArrayList} from "uint8arraylist";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {LodestarError, sleep} from "@lodestar/utils";
@@ -49,13 +49,12 @@ describe("request / sendRequest", () => {
 
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
-      const encodedChunks = responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol);
+      const encodedChunks = responseEncode(
+        [{status: RespStatus.SUCCESS, payload: requestBody}],
+        protocols[0] as Protocol
+      );
       libp2p = {
-        dialProtocol: vi
-          .fn()
-          .mockResolvedValue(
-            new MockLibP2pStream(encodedChunks, protocols[0].method)
-          ),
+        dialProtocol: vi.fn().mockResolvedValue(new MockLibP2pStream(encodedChunks, protocols[0].method)),
       } as unknown as Libp2p;
 
       // Collect responses
