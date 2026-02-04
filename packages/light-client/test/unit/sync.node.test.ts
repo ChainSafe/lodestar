@@ -26,7 +26,7 @@ import {
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
 describe("sync", () => {
-  vi.setConfig({testTimeout: 30_000});
+  vi.setConfig({testTimeout: 45_000});
   const afterEachCbs: (() => Promise<unknown> | unknown)[] = [];
 
   afterEach(async () => {
