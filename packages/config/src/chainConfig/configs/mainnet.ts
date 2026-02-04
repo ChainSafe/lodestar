@@ -71,7 +71,7 @@ export const chainConfig: ChainConfig = {
   // 2**8 (= 256) epochs ~27 hours
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
   // 2**12 (= 4,096) epochs ~18 days
-  MIN_BUILDER_WITHDRAWABILITY_DELAY: 4096,
+  MIN_BUILDER_WITHDRAWABILITY_DELAY: 64,
   // 2**8 (= 256) epochs ~27 hours
   SHARD_COMMITTEE_PERIOD: 256,
   // 2**11 (= 2,048) Eth1 blocks ~8 hours
