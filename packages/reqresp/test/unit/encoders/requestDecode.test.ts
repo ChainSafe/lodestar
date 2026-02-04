@@ -1,4 +1,4 @@
-import {byteStream} from "@libp2p/utils/byte-stream";
+import {byteStream} from "@libp2p/utils";
 import {Uint8ArrayList} from "uint8arraylist";
 import {describe, expect, it} from "vitest";
 import {decodeRequest} from "../../../src/encoders/requestDecode.js";

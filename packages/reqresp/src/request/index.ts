@@ -122,7 +122,7 @@ export async function* sendRequest(
         async () => {
           await bytes.write(encodedRequest, {signal});
           // Close write side after sending request
-          await stream.closeWrite();
+          await stream.close();
         },
         REQUEST_TIMEOUT,
         signal

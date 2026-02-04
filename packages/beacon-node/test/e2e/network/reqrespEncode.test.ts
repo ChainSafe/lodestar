@@ -108,10 +108,16 @@ describe("reqresp encoder", () => {
   }) {
     const stream = await dialer.dialProtocol(toMultiaddr, protocol);
     if (requestChunks) {
-      await stream.sink(requestChunks.map(fromHex));
+      for (const chunk of requestChunks) {
+        stream.send(fromHex(chunk));
+      }
+      await stream.close();
     }
 
-    const chunks = await all(stream.source);
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk instanceof Uint8Array ? chunk : chunk.subarray());
+    }
     const join = (c: string[]): string => c.join("").replace(/0x/g, "");
     const chunksHex = chunks.map((chunk) => toHex(chunk.slice(0, chunk.byteLength)));
     expect(join(chunksHex)).toEqual(join(expectedChunks));

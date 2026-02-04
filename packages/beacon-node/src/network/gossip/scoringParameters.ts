@@ -3,7 +3,7 @@ import {
   PeerScoreThresholds,
   TopicScoreParams,
   defaultTopicScoreParams,
-} from "@chainsafe/libp2p-gossipsub/score";
+} from "@libp2p/gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";

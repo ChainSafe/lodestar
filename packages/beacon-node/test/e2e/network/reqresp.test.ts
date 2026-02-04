@@ -242,29 +242,28 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("should trigger TTFB_TIMEOUT error if first response is delayed", async () => {
-    const ttfbTimeoutMs = 250;
+  it("should trigger RESP_TIMEOUT error if first response is delayed", async () => {
+    const respTimeoutMs = 250;
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
             // Wait for too long before sending first response chunk
-            await sleep(ttfbTimeoutMs * 10, controller.signal);
+            await sleep(respTimeoutMs * 10, controller.signal);
             yield wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
           }
         },
-      {ttfbTimeoutMs}
+      {respTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
       netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 1}),
-      new RequestError({code: RequestErrorCode.TTFB_TIMEOUT})
+      new RequestError({code: RequestErrorCode.RESP_TIMEOUT})
     );
   });
 
   it("should trigger a RESP_TIMEOUT error if first byte is on time but later delayed", async () => {
-    const ttfbTimeoutMs = 250;
     const respTimeoutMs = 300;
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
@@ -277,7 +276,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
             yield getEmptyEncodedPayloadSignedBeaconBlock(config);
           }
         },
-      {ttfbTimeoutMs, respTimeoutMs}
+      {respTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
@@ -286,8 +285,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     );
   });
 
-  it("should trigger TTFB_TIMEOUT error if respTimeoutMs and ttfbTimeoutMs is the same", async () => {
-    const ttfbTimeoutMs = 250;
+  it("should trigger RESP_TIMEOUT error if no response before timeout", async () => {
     const respTimeoutMs = 250;
 
     const [netA, _, _0, peerIdB] = await createAndConnectPeers(
@@ -298,12 +296,12 @@ function runTests({useWorker}: {useWorker: boolean}): void {
             await sleep(100000000, controller.signal);
           }
         },
-      {respTimeoutMs, ttfbTimeoutMs}
+      {respTimeoutMs}
     );
 
     await expectRejectedWithLodestarError(
       netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 2}),
-      new RequestError({code: RequestErrorCode.TTFB_TIMEOUT})
+      new RequestError({code: RequestErrorCode.RESP_TIMEOUT})
     );
   });
 
@@ -316,7 +314,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
             await sleep(100000000, controller.signal);
           }
         },
-      {respTimeoutMs: 250, ttfbTimeoutMs: 250}
+      {respTimeoutMs: 250}
     );
 
     await expectRejectedWithLodestarError(

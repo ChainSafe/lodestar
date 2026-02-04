@@ -55,7 +55,8 @@ describe("AttnetsService", () => {
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {networkConfig, logger, onSetValue: () => null});
-    service = new AttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId, {
+    // Cast to any since mesh is added dynamically via Object.defineProperty
+    service = new AttnetsService(config, clock, gossipStub as any, metadata, logger, null, nodeId, {
       slotsToSubscribeBeforeAggregatorDuty: 2,
     });
   });

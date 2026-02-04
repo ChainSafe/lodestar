@@ -1,6 +1,6 @@
 import {Message, TopicValidatorResult} from "@libp2p/interface";
 import {Libp2p} from "libp2p";
-import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
+import {PeerIdStr} from "@libp2p/gossipsub/types";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
   AttesterSlashing,

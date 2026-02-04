@@ -1,7 +1,7 @@
-import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
-import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
-import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
-import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
+import {GossipSub, GossipsubEvents} from "@libp2p/gossipsub";
+import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@libp2p/gossipsub/metrics";
+import {PeerScoreParams} from "@libp2p/gossipsub/score";
+import {SignaturePolicy, TopicStr} from "@libp2p/gossipsub/types";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";

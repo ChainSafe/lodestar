@@ -1,4 +1,10 @@
-import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface";
+import {
+  MessageStreamDirection,
+  MessageStreamReadStatus,
+  MessageStreamStatus,
+  MessageStreamWriteStatus,
+  Stream,
+} from "@libp2p/interface";
 import {logger} from "@libp2p/logger";
 import {Uint8ArrayList} from "uint8arraylist";
 import {expect} from "vitest";
@@ -49,17 +55,23 @@ export class MockLibP2pStream implements Stream {
   protocol: string;
   id = "mock";
   log = logger("mock");
-  direction: Direction = "inbound";
-  status: StreamStatus = "open";
-  readStatus: ReadStatus = "ready";
-  writeStatus: WriteStatus = "ready";
+  direction: MessageStreamDirection = "inbound";
+  status: MessageStreamStatus = "open";
+  readStatus: MessageStreamReadStatus = "readable";
+  writeStatus: MessageStreamWriteStatus = "writable";
+  remoteReadStatus: MessageStreamReadStatus = "readable";
+  remoteWriteStatus: MessageStreamWriteStatus = "writable";
+  maxReadBufferLength = 1024 * 1024;
+  inactivityTimeout = 30000;
+  writableNeedsDrain = false;
+  readBufferLength = 0;
+  writeBufferLength = 0;
   timeline = {
     open: Date.now(),
   };
   metadata = {};
 
-  private inputChunks: Uint8ArrayList[];
-  private inputIndex = 0;
+  private inputChunks: Uint8ArrayList[] = [];
   resultChunks: Uint8Array[] = [];
 
   constructor(requestChunks: Uint8ArrayList[] | AsyncIterable<any> | AsyncGenerator<any>, protocol?: string) {
@@ -119,7 +131,7 @@ export class MockLibP2pStream implements Stream {
   closeWrite = async (): Promise<void> => {
     this.writeStatus = "closed";
   };
-  abort = (): void => {
+  abort = (_err: Error): void => {
     this.status = "aborted";
   };
 
@@ -129,10 +141,20 @@ export class MockLibP2pStream implements Stream {
   dispatchEvent(): boolean {
     return true;
   }
+  listenerCount(_type: string): number {
+    return 0;
+  }
+  safeDispatchEvent(_type: string, _detail?: CustomEventInit<unknown>): boolean {
+    return true;
+  }
 
   // Pause/resume for backpressure
   pause(): void {}
   resume(): void {}
+
+  // Push/unshift for buffer management
+  push(_buf: Uint8Array | Uint8ArrayList): void {}
+  unshift(_data: Uint8Array | Uint8ArrayList): void {}
 }
 
 export function fromHexBuf(hex: string): Buffer {

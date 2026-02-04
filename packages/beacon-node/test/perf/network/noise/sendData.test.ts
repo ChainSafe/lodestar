@@ -9,6 +9,12 @@ import {Uint8ArrayList} from "uint8arraylist";
 import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
 
+// Type for the duplex-like stream interface used in perf testing
+interface DuplexStream {
+  source: AsyncIterable<Uint8Array | Uint8ArrayList>;
+  sink: (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => Promise<void>;
+}
+
 describe("network / noise / sendData", () => {
   const numberOfMessages = 1000;
 
@@ -36,21 +42,30 @@ describe("network / noise / sendData", () => {
 
         const [inboundConnection, outboundConnection] = duplexPair<Uint8Array | Uint8ArrayList>();
         const [outbound, inbound] = await Promise.all([
-          noiseA.secureOutbound(outboundConnection, {remotePeer: peerB}),
-          noiseB.secureInbound(inboundConnection, {remotePeer: peerA}),
+          // Cast to any to bypass strict MessageStream type requirements in perf tests
+          noiseA.secureOutbound(outboundConnection as any, {remotePeer: peerB}),
+          noiseB.secureInbound(inboundConnection as any, {remotePeer: peerA}),
         ]);
 
-        return {connA: outbound.conn, connB: inbound.conn, data: new Uint8Array(messageLength)};
+        // In libp2p v3, SecuredConnection.connection is a MessageStream
+        // Cast to DuplexStream for compatibility with pipe-based perf test
+        return {
+          connA: outbound.connection as unknown as DuplexStream,
+          connB: inbound.connection as unknown as DuplexStream,
+          data: new Uint8Array(messageLength),
+        };
       },
       fn: async ({connA, connB, data}) => {
+        // Create async generator for sending messages
+        async function* generateMessages(): AsyncIterable<Uint8Array> {
+          for (let i = 0; i < numberOfMessages; i++) {
+            yield data;
+          }
+        }
         await Promise.all([
           //
           pipe(connB.source, connB.sink),
-          pipe(function* () {
-            for (let i = 0; i < numberOfMessages; i++) {
-              yield data;
-            }
-          }, connA.sink),
+          pipe(generateMessages(), connA.sink),
           pipe(connB.source, drain),
         ]);
       },
