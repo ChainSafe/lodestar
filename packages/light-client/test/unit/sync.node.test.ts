@@ -26,7 +26,6 @@ import {
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
 describe("sync", () => {
-  // Increased from 30s to 45s to handle slow CI runners
   vi.setConfig({testTimeout: 45_000});
   const afterEachCbs: (() => Promise<unknown> | unknown)[] = [];
 
