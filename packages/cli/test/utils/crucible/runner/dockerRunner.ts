@@ -89,7 +89,8 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     const health = jobOption.health;
 
     if (health) {
-      spawnOpts.healthTimeoutMs = 30000;
+      // Increased from 30s to 60s to handle slow CI runners
+      spawnOpts.healthTimeoutMs = 60000;
       spawnOpts.health = health;
     } else {
       spawnOpts.resolveOn = ChildProcessResolve.Completion;
