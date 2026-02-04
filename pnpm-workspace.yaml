@@ -4,6 +4,9 @@ packages:
 linkWorkspacePackages: true
 
 minimumReleaseAge: 2880
+# Exclude bigint-buffer2 from minimum release age to use v1.0.5 immediately
+# to fix the bun test suite. See #8789.
+# TODO: Remove this exclusion once v1.0.5 is older than 48 hours.
 minimumReleaseAgeExclude:
   - "@vekexasia/bigint-buffer2"
 
