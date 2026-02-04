@@ -141,7 +141,7 @@ export function getBeaconBlockApi({
             seenTimestampSec,
           },
           // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
-          // Data columns/blobs may arrive via gossip from another node before the API publish completes,
+          // Data columns may arrive via gossip from another node before the API publish completes,
           // so we allow duplicates here instead of throwing an error.
           {throwOnDuplicateAdd: false}
         );
