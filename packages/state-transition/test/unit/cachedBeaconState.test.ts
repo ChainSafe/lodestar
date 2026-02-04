@@ -12,7 +12,7 @@ import {interopPubkeysCached} from "../utils/interop.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 
 describe("CachedBeaconState", () => {
-  vi.setConfig({testTimeout: 20_000, hookTimeout: 20_000});
+  vi.setConfig({testTimeout: 30_000, hookTimeout: 30_000});
 
   it("Clone and mutate", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();

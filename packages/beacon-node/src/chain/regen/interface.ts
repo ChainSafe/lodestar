@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
-import {CheckpointHex} from "../stateCache/index.js";
+import {CheckpointHex} from "../stateCache/types.js";
 
 export enum RegenCaller {
   getDuties = "getDuties",
@@ -18,6 +18,7 @@ export enum RegenCaller {
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
   validateGossipAttestation = "validateGossipAttestation",
   validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
+  validateGossipExecutionPayloadBid = "validateGossipExecutionPayloadBid",
   onForkChoiceFinalized = "onForkChoiceFinalized",
   restApi = "restApi",
 }
@@ -26,7 +27,6 @@ export enum RegenFnName {
   getBlockSlotState = "getBlockSlotState",
   getState = "getState",
   getPreState = "getPreState",
-  getCheckpointState = "getCheckpointState",
 }
 
 export type StateRegenerationOpts = {
@@ -64,20 +64,10 @@ export interface IStateRegeneratorInternal {
   ): Promise<CachedBeaconStateAllForks>;
 
   /**
-   * Return a valid checkpoint state
-   * This will always return a state with `state.slot % SLOTS_PER_EPOCH === 0`
-   */
-  getCheckpointState(
-    cp: phase0.Checkpoint,
-    opts: StateRegenerationOpts,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks>;
-
-  /**
    * Return the state of `blockRoot` processed to slot `slot`
    */
   getBlockSlotState(
-    blockRoot: RootHex,
+    block: ProtoBlock,
     slot: Slot,
     opts: StateRegenerationOpts,
     rCaller: RegenCaller

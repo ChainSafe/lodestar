@@ -15,7 +15,7 @@ export function verifyVoluntaryExitSignature(
   stateSlot: Slot,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, index2pubkey, stateSlot, signedVoluntaryExit));
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, stateSlot, signedVoluntaryExit), index2pubkey);
 }
 
 /**
@@ -23,7 +23,6 @@ export function verifyVoluntaryExitSignature(
  */
 export function getVoluntaryExitSignatureSet(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   stateSlot: Slot,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
@@ -31,22 +30,18 @@ export function getVoluntaryExitSignatureSet(
   const domain = config.getDomainForVoluntaryExit(stateSlot, messageSlot);
 
   return {
-    type: SignatureSetType.single,
-    pubkey: index2pubkey[signedVoluntaryExit.message.validatorIndex],
+    type: SignatureSetType.indexed,
+    index: signedVoluntaryExit.message.validatorIndex,
     signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
     signature: signedVoluntaryExit.signature,
   };
 }
 
-export function getVoluntaryExitsSignatureSets(
-  config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
-  signedBlock: SignedBeaconBlock
-): ISignatureSet[] {
+export function getVoluntaryExitsSignatureSets(config: BeaconConfig, signedBlock: SignedBeaconBlock): ISignatureSet[] {
   // the getDomain() api requires the state slot as 1st param, however it's the same to block.slot in state-transition
   // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
   const blockSlot = signedBlock.message.slot;
   return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
-    getVoluntaryExitSignatureSet(config, index2pubkey, blockSlot, voluntaryExit)
+    getVoluntaryExitSignatureSet(config, blockSlot, voluntaryExit)
   );
 }

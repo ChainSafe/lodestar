@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
@@ -10,7 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {Logger, mapValues} from "@lodestar/utils";
+import {Logger, mapValues, toRootHex} from "@lodestar/utils";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {BeaconNode} from "../../../src/index.js";
@@ -64,15 +63,16 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     if (checkpoint.epoch <= lastSeenEpoch) return;
     lastSeenEpoch = checkpoint.epoch;
 
-    // Recover the pre-epoch transition state, use any random caller for regen
-    const checkpointState = await bn.chain.regen.getCheckpointState(
-      checkpoint,
-      {dontTransferCache: true},
-      RegenCaller.onForkChoiceFinalized
-    );
+    const checkpointState = bn.chain.regen.getCheckpointStateSync({
+      ...checkpoint,
+      rootHex: toRootHex(checkpoint.root),
+    });
+    if (checkpointState == null) {
+      throw Error(`Checkpoint state not found for epoch ${checkpoint.epoch} root ${toRootHex(checkpoint.root)}`);
+    }
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.stateRoots.get(lastSlot % SLOTS_PER_HISTORICAL_ROOT);
-    const lastState = await bn.chain.regen.getState(toHexString(lastStateRoot), RegenCaller.onForkChoiceFinalized);
+    const lastState = await bn.chain.regen.getState(toRootHex(lastStateRoot), RegenCaller.onForkChoiceFinalized);
     logParticipation(lastState);
   }
 

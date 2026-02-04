@@ -80,7 +80,7 @@ describe("computeGossipPeerScoreParams", () => {
     expect(params.firstMessageDeliveriesWeight).closeTo(1.8407, TOLERANCE);
     expect(params.firstMessageDeliveriesDecay).closeTo(0.99856, TOLERANCE);
     expect(params.firstMessageDeliveriesCap).closeTo(21.73035, TOLERANCE);
-    expect(params.invalidMessageDeliveriesWeight).closeTo(-2200, TOLERANCE);
+    expect(params.invalidMessageDeliveriesWeight).closeTo(-2800, TOLERANCE);
     expect(params.invalidMessageDeliveriesDecay).closeTo(0.99713, TOLERANCE);
   }
 
@@ -106,7 +106,7 @@ describe("computeGossipPeerScoreParams", () => {
     expect(params.firstMessageDeliveriesWeight).closeTo(36.81486, TOLERANCE);
     expect(params.firstMessageDeliveriesDecay).closeTo(0.998561, TOLERANCE);
     expect(params.firstMessageDeliveriesCap).closeTo(1.08652, TOLERANCE);
-    expect(params.invalidMessageDeliveriesWeight).closeTo(-2200.0, TOLERANCE);
+    expect(params.invalidMessageDeliveriesWeight).closeTo(-2800.0, TOLERANCE);
     expect(params.invalidMessageDeliveriesDecay).closeTo(0.99713, TOLERANCE);
   }
 
@@ -124,7 +124,7 @@ describe("computeGossipPeerScoreParams", () => {
     expect(params.firstMessageDeliveriesWeight).closeTo(0.33509, TOLERANCE);
     expect(params.firstMessageDeliveriesDecay).closeTo(0.86596, TOLERANCE);
     expect(params.firstMessageDeliveriesCap).closeTo(119.3712, TOLERANCE);
-    expect(params.invalidMessageDeliveriesWeight).closeTo(-220.0, TOLERANCE);
+    expect(params.invalidMessageDeliveriesWeight).closeTo(-280.0, TOLERANCE);
     expect(params.invalidMessageDeliveriesDecay).closeTo(0.99713, TOLERANCE);
 
     // Check message rate penalty params
@@ -132,11 +132,11 @@ describe("computeGossipPeerScoreParams", () => {
     expect(params.meshMessageDeliveriesCap).closeTo(68.6255, TOLERANCE);
     expect(params.meshMessageDeliveriesActivation).toEqual(384 * 1000);
     expect(params.meshMessageDeliveriesWindow).toEqual(12 * 1000);
-    expect(params.meshFailurePenaltyWeight).closeTo(-0.7474, TOLERANCE);
+    expect(params.meshFailurePenaltyWeight).closeTo(-0.95127, TOLERANCE);
     expect(params.meshFailurePenaltyDecay).closeTo(0.93057, TOLERANCE);
 
     if (penaltiesActive) {
-      expect(params.meshMessageDeliveriesWeight).closeTo(-0.7474, TOLERANCE);
+      expect(params.meshMessageDeliveriesWeight).closeTo(-0.95127, TOLERANCE);
       expect(params.meshMessageDeliveriesThreshold).closeTo(17.15638, TOLERANCE);
     } else {
       expect(params.meshMessageDeliveriesWeight).toEqual(0.0);
@@ -158,7 +158,7 @@ describe("computeGossipPeerScoreParams", () => {
     expect(params.firstMessageDeliveriesWeight).closeTo(1.14716, TOLERANCE);
     expect(params.firstMessageDeliveriesDecay).closeTo(0.99283, TOLERANCE);
     expect(params.firstMessageDeliveriesCap).closeTo(34.8687, TOLERANCE);
-    expect(params.invalidMessageDeliveriesWeight).closeTo(-220.0, TOLERANCE);
+    expect(params.invalidMessageDeliveriesWeight).closeTo(-280.0, TOLERANCE);
     expect(params.invalidMessageDeliveriesDecay).closeTo(0.99713, TOLERANCE);
 
     // Check message rate penalty params
@@ -166,11 +166,11 @@ describe("computeGossipPeerScoreParams", () => {
     expect(params.meshMessageDeliveriesCap).closeTo(2.0547574, TOLERANCE);
     expect(params.meshMessageDeliveriesActivation).toEqual(384 * 1000);
     expect(params.meshMessageDeliveriesWindow).toEqual(12 * 1000);
-    expect(params.meshFailurePenaltyWeight).closeTo(-468.9689, TOLERANCE);
+    expect(params.meshFailurePenaltyWeight).closeTo(-596.8696, TOLERANCE);
     expect(params.meshFailurePenaltyDecay).closeTo(0.97163, TOLERANCE);
 
     if (penaltiesActive) {
-      expect(params.meshMessageDeliveriesWeight).closeTo(-468.9689, TOLERANCE);
+      expect(params.meshMessageDeliveriesWeight).closeTo(-596.8696, TOLERANCE);
       expect(params.meshMessageDeliveriesThreshold).closeTo(0.68491, TOLERANCE);
     } else {
       expect(params.meshMessageDeliveriesWeight).toEqual(0.0);
@@ -200,7 +200,7 @@ describe("computeGossipPeerScoreParams", () => {
     expect(params.firstMessageDeliveriesWeight).closeTo(2.6807, TOLERANCE);
     expect(params.firstMessageDeliveriesDecay).closeTo(0.86596, TOLERANCE);
     expect(params.firstMessageDeliveriesCap).closeTo(14.9214, TOLERANCE);
-    expect(params.invalidMessageDeliveriesWeight).closeTo(-7040.0, TOLERANCE);
+    expect(params.invalidMessageDeliveriesWeight).closeTo(-8960.0, TOLERANCE);
     expect(params.invalidMessageDeliveriesDecay).closeTo(0.99713, TOLERANCE);
 
     // Check message rate penalty params
@@ -208,11 +208,11 @@ describe("computeGossipPeerScoreParams", () => {
     expect(params.meshMessageDeliveriesCap).closeTo(69.88248, TOLERANCE);
     expect(params.meshMessageDeliveriesActivation).toEqual(204 * 1000);
     expect(params.meshMessageDeliveriesWindow).toEqual(12 * 1000);
-    expect(params.meshFailurePenaltyWeight).closeTo(-369.0421, TOLERANCE);
+    expect(params.meshFailurePenaltyWeight).closeTo(-469.69001, TOLERANCE);
     expect(params.meshFailurePenaltyDecay).closeTo(0.96466, TOLERANCE);
 
     if (penaltiesActive) {
-      expect(params.meshMessageDeliveriesWeight).closeTo(-369.0421, TOLERANCE);
+      expect(params.meshMessageDeliveriesWeight).closeTo(-469.69001, TOLERANCE);
       expect(params.meshMessageDeliveriesThreshold).closeTo(4.367655, TOLERANCE);
     } else {
       expect(params.meshMessageDeliveriesWeight).toEqual(0.0);

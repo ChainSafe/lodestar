@@ -83,3 +83,7 @@ packages/cli/.git-data.json
 dictionary.dic
 
 temp/
+
+# Local development artifacts
+.venv/
+checkpoint_states/

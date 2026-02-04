@@ -80,6 +80,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.0.7(@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7))(vitest@4.0.7)
+      axios:
+        specifier: ^1.13.2
+        version: 1.13.3(debug@4.4.3)
       bun-types:
         specifier: ^1.2.21
         version: 1.2.21(@types/react@19.1.12)
@@ -784,8 +787,8 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5
       axios:
-        specifier: ^1.3.4
-        version: 1.12.0(debug@4.4.3)
+        specifier: ^1.13.2
+        version: 1.13.3(debug@4.4.3)
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -872,8 +875,8 @@ importers:
         specifier: ^17.0.24
         version: 17.0.24
       axios:
-        specifier: ^1.3.4
-        version: 1.12.0(debug@4.4.3)
+        specifier: ^1.13.2
+        version: 1.13.3(debug@4.4.3)
       deepmerge:
         specifier: ^4.3.1
         version: 4.3.1
@@ -995,9 +998,9 @@ importers:
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
-      bigint-buffer:
-        specifier: ^1.1.5
-        version: 1.1.5
+      '@vekexasia/bigint-buffer2':
+        specifier: ^1.1.0
+        version: 1.1.0
     devDependencies:
       '@lodestar/api':
         specifier: workspace:^
@@ -1018,8 +1021,8 @@ importers:
         specifier: workspace:^
         version: link:../utils
       axios:
-        specifier: ^1.3.4
-        version: 1.12.0(debug@4.4.3)
+        specifier: ^1.13.2
+        version: 1.13.3(debug@4.4.3)
       tmp:
         specifier: ^0.2.1
         version: 0.2.4
@@ -1051,12 +1054,12 @@ importers:
       '@chainsafe/as-sha256':
         specifier: ^1.2.0
         version: 1.2.0
+      '@vekexasia/bigint-buffer2':
+        specifier: ^1.1.0
+        version: 1.1.0
       any-signal:
         specifier: ^4.1.1
         version: 4.1.1
-      bigint-buffer:
-        specifier: ^1.1.5
-        version: 1.1.5
       case:
         specifier: ^1.6.3
         version: 1.6.3
@@ -1119,9 +1122,9 @@ importers:
       '@lodestar/test-utils':
         specifier: workspace:^
         version: link:../test-utils
-      bigint-buffer:
-        specifier: ^1.1.5
-        version: 1.1.5
+      '@vekexasia/bigint-buffer2':
+        specifier: ^1.1.0
+        version: 1.1.0
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
@@ -1219,10 +1222,6 @@ packages:
 
   '@babel/helper-string-parser@7.25.9':
     resolution: {integrity: sha512-4A/SCr/2KLd5jrtOMFzaKjVtAei3+2r/NChoBNoZ3EyP/+GlhoaEGoWOZUmFmoITP7zOJyHIMm+DYRd8o3PvHA==}
-    engines: {node: '>=6.9.0'}
-
-  '@babel/helper-validator-identifier@7.25.9':
-    resolution: {integrity: sha512-Ed61U6XJc3CVRfkERJWDz4dJwKe7iLmmJsbOGu9wSloNSFttHV0I8g6UAgb7qnK5ly5bGLPd4oXZlxCdANBOWQ==}
     engines: {node: '>=6.9.0'}
 
   '@babel/helper-validator-identifier@7.28.5':
@@ -3197,6 +3196,15 @@ packages:
   '@types/yauzl@2.10.0':
     resolution: {integrity: sha512-Cn6WYCm0tXv8p6k+A8PvbDG763EDpBoTzHdA+Q/MF6H3sapGjCm9NzoaJncJS9tUKSuCoDs9XHxYYsQDgxR6kw==}
 
+  '@vekexasia/bigint-buffer2@1.1.0':
+    resolution: {integrity: sha512-CB19/UHoop2Q+HaRU1lI3fWKUkwju7XtwGTvdDfJgZyPHI+lLXKDYOOkz+NOCLfcBSXpJXpue/vLN0PDZtBT/Q==}
+    engines: {node: '>= 14.0.0'}
+    peerDependencies:
+      '@vekexasia/bigint-uint8array': '*'
+    peerDependenciesMeta:
+      '@vekexasia/bigint-uint8array':
+        optional: true
+
   '@vitest/browser-playwright@4.0.7':
     resolution: {integrity: sha512-j5vA74jIqKbMA6yRTQ4PwEwbuPx+Ldtdb12gAJt++eds3kDtuvmfqRe9SmCxXRJ50drZaSai6Vunh2WcjUw8Fg==}
     peerDependencies:
@@ -3467,8 +3475,8 @@ packages:
     engines: {node: '>= 0.8.0'}
     deprecated: The AWS SDK for JavaScript (v2) has reached end-of-support, and no longer receives updates. Please migrate your code to use AWS SDK for JavaScript (v3). More info https://a.co/cUPnyil
 
-  axios@1.12.0:
-    resolution: {integrity: sha512-oXTDccv8PcfjZmPGlWsPSwtOJCZ/b6W5jAMCNcfwJbCzDckwG0jrYJFaWH1yvivfCXjVzV/SPDEhMB3Q+DSurg==}
+  axios@1.13.3:
+    resolution: {integrity: sha512-ERT8kdX7DZjtUm7IitEyV7InTHAF42iJuMArIiDIV5YtPanJkgw4hw5Dyg9fh0mihdWNn1GKaeIWErfe56UQ1g==}
 
   babel-runtime@6.26.0:
     resolution: {integrity: sha512-ITKNuq2wKlW1fJg9sSW52eepoYgZBggvOAHC0u/CYu/qxQ9EVzThCgR69BnSXLHjy2f7SY5zaQ4yt7H9ZVxY2g==}
@@ -3488,10 +3496,6 @@ packages:
   before-after-hook@4.0.0:
     resolution: {integrity: sha512-q6tR3RPqIB1pMiTRMFcZwuG5T8vwp+vUvEG0vuI6B+Rikh5BfPp2fQ82c925FOs+b0lcFQ8CFrL+KbilfZFhOQ==}
 
-  bigint-buffer@1.1.5:
-    resolution: {integrity: sha512-trfYco6AoZ+rKhKnxA0hgX0HAbVP/s808/EuDSe2JDzUnCp/xAsli35Orvk67UrTEcwuxZqYZDmfA2RXJgxVvA==}
-    engines: {node: '>= 10.0.0'}
-
   bigint-crypto-utils@3.2.2:
     resolution: {integrity: sha512-U1RbE3aX9ayCUVcIPHuPDPKcK3SFOXf93J1UK/iHlJuQB7bhagPIX06/CLpLEsDThJ7KA4Dhrnzynl+d2weTiw==}
     engines: {node: '>=14.0.0'}
@@ -3499,9 +3503,6 @@ packages:
   bin-links@6.0.0:
     resolution: {integrity: sha512-X4CiKlcV2GjnCMwnKAfbVWpHa++65th9TuzAEYtZoATiOE2DQKhSp4CJlyLoTqdhBKlXjpXjCTYPNNFS33Fi6w==}
     engines: {node: ^20.17.0 || >=22.9.0}
-
-  bindings@1.5.0:
-    resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
 
   bintrees@1.0.1:
     resolution: {integrity: sha512-tbaUB1QpTIj4cKY8c1rvNAvEQXA+ekzHmbe4jzNfW3QWsF9GnnP/BRWyl6/qqS53heoYJ93naaFcm/jooONH8g==}
@@ -4307,9 +4308,6 @@ packages:
 
   file-stream-rotator@0.6.1:
     resolution: {integrity: sha512-u+dBid4PvZw17PmDeRcNOtCP9CCK/9lRN2w+r1xIS7yOL9JFrIBKTvrYsxT4P0pGtThYTn++QS5ChHaUov3+zQ==}
-
-  file-uri-to-path@1.0.0:
-    resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -7604,8 +7602,6 @@ snapshots:
 
   '@babel/helper-string-parser@7.25.9': {}
 
-  '@babel/helper-validator-identifier@7.25.9': {}
-
   '@babel/helper-validator-identifier@7.28.5': {}
 
   '@babel/parser@7.26.7':
@@ -7615,7 +7611,7 @@ snapshots:
   '@babel/types@7.26.7':
     dependencies:
       '@babel/helper-string-parser': 7.25.9
-      '@babel/helper-validator-identifier': 7.25.9
+      '@babel/helper-validator-identifier': 7.28.5
 
   '@bcoe/v8-coverage@1.0.2': {}
 
@@ -10111,6 +10107,8 @@ snapshots:
       '@types/node': 24.10.1
     optional: true
 
+  '@vekexasia/bigint-buffer2@1.1.0': {}
+
   '@vitest/browser-playwright@4.0.7(playwright@1.56.1)(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
       '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)
@@ -10455,7 +10453,7 @@ snapshots:
       uuid: 3.3.2
       xml2js: 0.4.19
 
-  axios@1.12.0(debug@4.4.3):
+  axios@1.13.3(debug@4.4.3):
     dependencies:
       follow-redirects: 1.15.11(debug@4.4.3)
       form-data: 4.0.5
@@ -10478,10 +10476,6 @@ snapshots:
 
   before-after-hook@4.0.0: {}
 
-  bigint-buffer@1.1.5:
-    dependencies:
-      bindings: 1.5.0
-
   bigint-crypto-utils@3.2.2: {}
 
   bin-links@6.0.0:
@@ -10491,10 +10485,6 @@ snapshots:
       proc-log: 6.1.0
       read-cmd-shim: 6.0.0
       write-file-atomic: 7.0.0
-
-  bindings@1.5.0:
-    dependencies:
-      file-uri-to-path: 1.0.0
 
   bintrees@1.0.1: {}
 
@@ -11500,8 +11490,6 @@ snapshots:
   file-stream-rotator@0.6.1:
     dependencies:
       moment: 2.29.4
-
-  file-uri-to-path@1.0.0: {}
 
   fill-range@7.1.1:
     dependencies:

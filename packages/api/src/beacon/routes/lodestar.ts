@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ssz} from "@lodestar/types";
+import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 import {
   EmptyArgs,
   EmptyMeta,
@@ -100,6 +100,15 @@ const HistoricalSummariesResponseType = new ContainerType(
 );
 
 export type HistoricalSummariesResponse = ValueOf<typeof HistoricalSummariesResponseType>;
+
+export type CustodyInfo = {
+  /** Earliest slot for which the node has custodied data columns */
+  earliestCustodiedSlot: Slot;
+  /** Number of custody groups the node is responsible for */
+  custodyGroupCount: number;
+  /** List of column indices the node is custodying */
+  custodyColumns: number[];
+};
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
@@ -271,6 +280,18 @@ export type Endpoints = {
     VersionMeta
   >;
 
+  /**
+   * Returns the validator indices that are currently being monitored by the validator monitor.
+   */
+  getMonitoredValidatorIndices: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ValidatorIndex[],
+    EmptyMeta
+  >;
+
   /** Dump Discv5 Kad values */
   discv5GetKadValues: Endpoint<
     // ⏎
@@ -302,6 +323,16 @@ export type Endpoints = {
     EmptyArgs,
     EmptyRequest,
     {root: RootHex; slot: Slot}[],
+    EmptyMeta
+  >;
+
+  /** Get custody information for data columns */
+  getCustodyInfo: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    CustodyInfo,
     EmptyMeta
   >;
 };
@@ -462,6 +493,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         timeoutMs: 5 * 60 * 1000,
       },
     },
+    getMonitoredValidatorIndices: {
+      url: "/eth/v1/lodestar/monitored_validators",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
     discv5GetKadValues: {
       url: "/eth/v1/debug/discv5_kad_values",
       method: "GET",
@@ -480,6 +517,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
     },
     dumpDbStateIndex: {
       url: "/eth/v1/debug/dump_db_state_index",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    getCustodyInfo: {
+      url: "/eth/v1/lodestar/custody_info",
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,

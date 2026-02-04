@@ -323,6 +323,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PAYLOAD_ATTESTATION_DUE_BPS: gloasForkRelevant,
     PTC_SIZE: gloasForkRelevant,
     MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
+    BUILDER_REGISTRY_LIMIT: gloasForkRelevant,
     BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
+    MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
+    MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
   };
 }

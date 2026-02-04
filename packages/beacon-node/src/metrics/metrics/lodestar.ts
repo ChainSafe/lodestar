@@ -212,6 +212,31 @@ export function createLodestarMetrics(
       }),
     },
 
+    unfinalizedBlockWritesQueue: {
+      length: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_length",
+        help: "Count of total unfinalized block writes queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_dropped_jobs_total",
+        help: "Count of total unfinalized block writes queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_unfinalized_block_writes_queue_job_time_seconds",
+        help: "Time to process unfinalized block writes queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_unfinalized_block_writes_queue_job_wait_time_seconds",
+        help: "Time from job added to the unfinalized block writes queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_concurrency",
+        help: "Current concurrency of unfinalized block writes queue",
+      }),
+    },
+
     engineHttpProcessorQueue: {
       length: register.gauge({
         name: "lodestar_engine_http_processor_queue_length",
@@ -1114,6 +1139,46 @@ export function createLodestarMetrics(
         getAggregateReturnsEmpty: register.gauge({
           name: "lodestar_oppool_sync_contribution_and_proof_pool_get_aggregate_returns_empty_total",
           help: "Total number of empty returns in SyncContributionAndProofPool.getAggregate(slot, root)",
+        }),
+      },
+      payloadAttestationPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_payload_attestation_pool_size",
+          help: "Current size of the PayloadAttestationPool = total payload attestations unique by data and slot",
+        }),
+        payloadAttDataPerSlot: register.gauge({
+          name: "lodestar_oppool_payload_attestation_pool_payload_attestation_data_per_slot_total",
+          help: "Total number of payload attestation data per slot in PayloadAttestationPool",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_payload_attestation_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a payload attestation message from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_payload_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a payload attestation message from api to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        getPayloadAttestationsCacheMisses: register.counter({
+          name: "lodestar_oppool_payload_attestation_pool_get_payload_attestations_cache_misses_total",
+          help: "Total number of getPayloadAttestationsForBlock calls with no aggregate for slot and payload attestation data root",
+        }),
+      },
+      executionPayloadBidPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_execution_payload_bid_pool_size",
+          help: "Current size of the ExecutionPayloadBidPool = total number of bids",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
+          labelNames: ["insertOutcome"],
         }),
       },
     },

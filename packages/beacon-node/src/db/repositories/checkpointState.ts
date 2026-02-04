@@ -9,7 +9,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 export class CheckpointStateRepository extends BinaryRepository<Uint8Array> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_checkpointState;
-    // biome-ignore lint/suspicious/noExplicitAny: The type is complex to specify a proper override
+
     super(config, db, bucket, getBucketNameByValue(bucket));
   }
 }

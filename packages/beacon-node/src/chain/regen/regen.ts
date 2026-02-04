@@ -11,13 +11,14 @@ import {
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
-import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, phase0} from "@lodestar/types";
+import {BeaconBlock, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
@@ -28,6 +29,7 @@ export type RegenModules = {
   forkChoice: IForkChoice;
   blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;
+  seenBlockInputCache: SeenBlockInput;
   config: ChainForkConfig;
   emitter: ChainEventEmitter;
   logger: Logger;
@@ -74,7 +76,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // We may have the checkpoint state with parent root inside the checkpoint state cache
     // through gossip validation.
     if (parentEpoch < blockEpoch) {
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch}, opts, regenCaller, allowDiskReload);
+      return this.getBlockSlotState(parentBlock, block.slot, opts, regenCaller, allowDiskReload);
     }
 
     // Otherwise, get the state normally.
@@ -82,37 +84,16 @@ export class StateRegenerator implements IStateRegeneratorInternal {
   }
 
   /**
-   * Get state after block `cp.root` dialed forward to first slot of `cp.epoch`
-   */
-  async getCheckpointState(
-    cp: phase0.Checkpoint,
-    opts: StateRegenerationOpts,
-    regenCaller: RegenCaller,
-    allowDiskReload = false
-  ): Promise<CachedBeaconStateAllForks> {
-    const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
-    return this.getBlockSlotState(toRootHex(cp.root), checkpointStartSlot, opts, regenCaller, allowDiskReload);
-  }
-
-  /**
    * Get state after block `blockRoot` dialed forward to `slot`
    *   - allowDiskReload should be used with care, as it will cause the state to be reloaded from disk
    */
   async getBlockSlotState(
-    blockRoot: RootHex,
+    block: ProtoBlock,
     slot: Slot,
     opts: StateRegenerationOpts,
     regenCaller: RegenCaller,
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
-    const block = this.modules.forkChoice.getBlockHex(blockRoot);
-    if (!block) {
-      throw new RegenError({
-        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
-        blockRoot,
-      });
-    }
-
     if (slot < block.slot) {
       throw new RegenError({
         code: RegenErrorCode.SLOT_BEFORE_BLOCK_SLOT,
@@ -121,6 +102,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       });
     }
 
+    const {blockRoot} = block;
     const {checkpointStateCache} = this.modules;
     const epoch = computeEpochAtSlot(slot);
     const latestCheckpointStateCtx = allowDiskReload
@@ -211,7 +193,10 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const protoBlocksAsc = blocksToReplay.reverse();
     for (const [i, protoBlock] of protoBlocksAsc.entries()) {
       replaySlots[i] = protoBlock.slot;
-      blockPromises[i] = this.modules.db.block.get(fromHex(protoBlock.blockRoot));
+      const blockInput = this.modules.seenBlockInputCache.get(protoBlock.blockRoot);
+      blockPromises[i] = blockInput?.hasBlock()
+        ? Promise.resolve(blockInput.getBlock())
+        : this.modules.db.block.get(fromHex(protoBlock.blockRoot));
     }
 
     const logCtx = {stateRoot, caller, replaySlots: replaySlots.join(",")};

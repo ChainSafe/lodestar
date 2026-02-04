@@ -62,4 +62,15 @@ export function fromHex(hex: string): Uint8Array {
 
 /// the performance of fromHexInto using a preallocated buffer is very bad compared to browser so I moved it to the benchmark
 
-export {bigIntToBytes, bytesToBigInt, bytesToInt, fromHexInto, intToBytes, toHexString, xor} from "./browser.ts";
+export {
+  bigIntToBytes,
+  bigIntToBytesInto,
+  bytesToBigInt,
+  bytesToInt,
+  fromHexInto,
+  getBigIntBufferImplementation,
+  initBigIntBufferNative,
+  intToBytes,
+  toHexString,
+  xor,
+} from "./browser.ts";

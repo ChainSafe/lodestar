@@ -238,6 +238,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
     // load Buffer instead of SignedBeaconBlock to improve performance
     const canonicalBlockEntries: BlockArchiveBatchPutBinaryItem[] = await Promise.all(
       canonicalBlocks.map(async (block) => {
+        // Here we assume the blocks are already in the hot db
         const blockBuffer = await db.block.getBinary(block.root);
         if (!blockBuffer) {
           throw Error(`Block not found for slot ${block.slot} root ${toRootHex(block.root)}`);
@@ -294,6 +295,8 @@ async function migrateBlobSidecarsFromHotToColdDb(
           );
         })
         .map(async (block) => {
+          // Here we assume the blob sidecars are already in the hot db
+          // instead of checking first the block input cache
           const bytes = await db.blobSidecars.getBinary(block.root);
           if (!bytes) {
             throw Error(`No blobSidecars found for slot ${block.slot} root ${toRootHex(block.root)}`);
@@ -343,6 +346,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
         continue;
       }
 
+      // Here we assume the data column sidecars are already in the hot db
       const dataColumnSidecarBytes = await fromAsync(db.dataColumnSidecar.valuesStreamBinary(block.root));
       // there could be 0 dataColumnSidecarBytes if block has no blob
       logger.verbose("migrateDataColumnSidecarsFromHotToColdDb", {

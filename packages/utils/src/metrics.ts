@@ -11,6 +11,8 @@ export interface Gauge<Labels extends LabelsGeneric = NoLabels> {
   set: NoLabels extends Labels ? (value: number) => void : (labels: Labels, value: number) => void;
 
   collect?(): void;
+
+  reset(): void;
 }
 
 export interface GaugeExtra<Labels extends LabelsGeneric = NoLabels> extends Omit<Gauge<Labels>, "collect"> {

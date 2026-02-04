@@ -80,9 +80,8 @@ export class PrepareNextSlotScheduler {
       await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
-      const {slot: headSlot, blockRoot: headRoot} = this.chain.recomputeForkChoiceHead(
-        ForkchoiceCaller.prepareNextSlot
-      );
+      const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
+      const {slot: headSlot, blockRoot: headRoot} = headBlock;
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -112,7 +111,7 @@ export class PrepareNextSlotScheduler {
       // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
       // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
       const prepareState = await this.chain.regen.getBlockSlotState(
-        headRoot,
+        headBlock,
         prepareSlot,
         // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
         // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
@@ -129,7 +128,8 @@ export class PrepareNextSlotScheduler {
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
-          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = this.chain.predictProposerHead(clockSlot);
+          const proposerHead = this.chain.predictProposerHead(clockSlot);
+          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
 
           // If we predict we can reorg, update prepareState with proposer head block
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
@@ -141,7 +141,7 @@ export class PrepareNextSlotScheduler {
             });
             this.metrics?.weakHeadDetected.inc();
             updatedPrepareState = (await this.chain.regen.getBlockSlotState(
-              proposerHeadRoot,
+              proposerHead,
               prepareSlot,
               // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
               {dontTransferCache: !isEpochTransition},
