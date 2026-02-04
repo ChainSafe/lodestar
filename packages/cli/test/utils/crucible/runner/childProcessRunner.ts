@@ -23,7 +23,6 @@ export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
     const health = jobOption.health;
 
     if (health) {
-      // Increased from 30s to 60s to handle slow CI runners
       spawnOpts.healthTimeoutMs = 60000;
       spawnOpts.health = health;
     } else {

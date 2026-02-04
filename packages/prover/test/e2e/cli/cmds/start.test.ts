@@ -53,7 +53,6 @@ describe("prover/proxy", () => {
       );
       // Give sometime to the prover to start proxy server
       await sleep(3000);
-      // Increased from 50s to 80s to handle slow CI runners and waitForFinalized()
     }, 80000);
 
     afterAll(async () => {

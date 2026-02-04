@@ -18,7 +18,6 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
 describe("sync / unknown block sync for fulu", () => {
-  // Increased from 40s to 60s to handle slow CI runners
   vi.setConfig({testTimeout: 60_000});
 
   const validatorCount = 8;
