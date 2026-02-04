@@ -721,6 +721,17 @@ export class PeerManager {
     // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
     // If that happens, it's okay. Only the "outbound" connection triggers immediate action
     const now = Date.now();
+
+    // Ethereum uses secp256k1 for node IDs, reject peers with other key types
+    if (remotePeer.type !== "secp256k1") {
+      this.logger.debug("Peer does not have secp256k1 key, disconnecting", {
+        peer: remotePeerPrettyStr,
+        type: remotePeer.type,
+      });
+      void this.goodbyeAndDisconnect(remotePeer, GoodByeReasonCode.IRRELEVANT_NETWORK);
+      return;
+    }
+
     const nodeId = computeNodeId(remotePeer);
     const peerData: PeerData = {
       lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
