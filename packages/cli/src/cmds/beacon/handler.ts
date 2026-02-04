@@ -9,7 +9,7 @@ import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {Index2PubkeyCache, createCachedBeaconState, syncPubkeys} from "@lodestar/state-transition";
-import {ErrorAborted, bytesToInt, formatBytes, initBigIntBufferNative} from "@lodestar/utils";
+import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
@@ -38,9 +38,6 @@ const EIGHT_GB = 8 * 1024 * 1024 * 1024;
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
   const {config, options, beaconPaths, network, version, commit, privateKey, logger} = await beaconHandlerInit(args);
-
-  // Initialize native bigint-buffer bindings for optimal performance
-  await initBigIntBufferNative();
 
   if (hasher.name !== "hashtree") {
     logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
