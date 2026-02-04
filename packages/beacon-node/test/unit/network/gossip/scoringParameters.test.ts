@@ -1,5 +1,5 @@
-import {describe, expect, it} from "vitest";
 import {TopicScoreParams} from "@libp2p/gossipsub/score";
+import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/configs";
 import {ATTESTATION_SUBNET_COUNT, ForkName, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";

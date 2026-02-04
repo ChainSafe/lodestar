@@ -1,7 +1,8 @@
-import {GossipSub, GossipsubEvents} from "@libp2p/gossipsub";
+import {GossipSub, GossipSubComponents, GossipSubEvents, gossipsub} from "@libp2p/gossipsub";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@libp2p/gossipsub/metrics";
-import {PeerScoreParams} from "@libp2p/gossipsub/score";
-import {SignaturePolicy, TopicStr} from "@libp2p/gossipsub/types";
+import {PeerScoreParams, PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import {PublishOpts, SignaturePolicy, TopicStr} from "@libp2p/gossipsub/types";
+import {PeerId} from "@libp2p/interface";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
@@ -59,6 +60,22 @@ export type Eth2GossipsubOpts = {
 
 export type ForkBoundaryLabel = string;
 
+type PeerIdStr = string;
+
+// Internal gossipsub types that we need to access
+interface GossipSubInternal extends GossipSub {
+  mesh: Map<TopicStr, Set<PeerIdStr>>;
+  peers: Map<PeerIdStr, unknown>;
+  topics: Map<TopicStr, Set<PeerIdStr>>;
+  score: {score(peerId: PeerIdStr): number};
+  reportMessageValidationResult(msgId: string, propagationSource: PeerIdStr, acceptance: unknown): void;
+  dumpPeerScoreStats(): PeerScoreStatsDump;
+  getMeshPeers(topic: string): string[];
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  isStarted(): boolean;
+}
+
 /**
  * Wrapper around js-libp2p-gossipsub with the following extensions:
  * - Eth2 message id
@@ -71,9 +88,12 @@ export type ForkBoundaryLabel = string;
  *   - `unhandleTopic`
  *
  * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
+ *
+ * Uses composition pattern since GossipSub is now an interface in @libp2p/gossipsub v15+
  */
-export class Eth2Gossipsub extends GossipSub {
+export class Eth2Gossipsub {
   readonly scoreParams: Partial<PeerScoreParams>;
+  private readonly gs: GossipSub;
   private readonly config: BeaconConfig;
   private readonly logger: Logger;
   private readonly peersData: PeersData;
@@ -97,9 +117,11 @@ export class Eth2Gossipsub extends GossipSub {
       );
     }
 
+    // Create the underlying GossipSub instance using the factory function
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super(modules.libp2p.services.components, {
+    // Type assertion needed due to components type mismatch between dependencies
+    this.gs = gossipsub({
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
       allowPublishToZeroTopicPeers: allowPublishToZeroPeers,
       D: gossipsubD ?? GOSSIP_D,
@@ -140,7 +162,8 @@ export class Eth2Gossipsub extends GossipSub {
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: 16829,
-    });
+    })(modules.libp2p.services.components as unknown as GossipSubComponents);
+
     this.scoreParams = scoreParams;
     this.config = config;
     this.logger = logger;
@@ -148,7 +171,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.events = events;
     this.gossipTopicCache = gossipTopicCache;
 
-    this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
+    this.gs.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
@@ -157,6 +180,115 @@ export class Eth2Gossipsub extends GossipSub {
       this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
     }
   }
+
+  // ========== Lifecycle methods (Startable interface) ==========
+
+  async start(): Promise<void> {
+    return (this.gs as GossipSubInternal).start();
+  }
+
+  async stop(): Promise<void> {
+    return (this.gs as GossipSubInternal).stop();
+  }
+
+  isStarted(): boolean {
+    return (this.gs as GossipSubInternal).isStarted?.() ?? true;
+  }
+
+  // ========== GossipSub interface delegation ==========
+
+  get globalSignaturePolicy(): SignaturePolicy {
+    return this.gs.globalSignaturePolicy as SignaturePolicy;
+  }
+
+  get protocols(): string[] {
+    return this.gs.protocols;
+  }
+
+  get topicValidators(): Map<string, unknown> {
+    return this.gs.topicValidators;
+  }
+
+  getPeers(): PeerId[] {
+    return this.gs.getPeers();
+  }
+
+  getTopics(): string[] {
+    return this.gs.getTopics();
+  }
+
+  subscribe(topic: string): void {
+    this.gs.subscribe(topic);
+  }
+
+  unsubscribe(topic: string): void {
+    this.gs.unsubscribe(topic);
+  }
+
+  getSubscribers(topic: string): PeerId[] {
+    return this.gs.getSubscribers(topic);
+  }
+
+  publish(topic: string, data?: Uint8Array, opts?: PublishOpts): Promise<{recipients: PeerId[]}> {
+    // The GossipSub interface doesn't expose opts but the implementation supports it
+    // biome-ignore lint/suspicious/noExplicitAny: Internal gossipsub implementation supports opts
+    return (this.gs as any).publish(topic, data, opts);
+  }
+
+  // ========== TypedEventTarget interface delegation ==========
+
+  // biome-ignore lint/suspicious/noExplicitAny: Event listener types vary across libp2p versions
+  addEventListener<K extends keyof GossipSubEvents>(type: K, listener: any, options?: any): void {
+    this.gs.addEventListener(type, listener, options);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Event listener types vary across libp2p versions
+  removeEventListener(type: string, listener: any, options?: any): void {
+    this.gs.removeEventListener(type, listener, options);
+  }
+
+  dispatchEvent(event: Event): boolean {
+    return this.gs.dispatchEvent(event);
+  }
+
+  // ========== Internal gossipsub access (needed by Lodestar) ==========
+
+  /** Map of topic -> Set of peer IDs in mesh */
+  get mesh(): Map<TopicStr, Set<PeerIdStr>> {
+    return (this.gs as GossipSubInternal).mesh;
+  }
+
+  /** Map of peer ID -> peer state */
+  get peers(): Map<PeerIdStr, unknown> {
+    return (this.gs as GossipSubInternal).peers;
+  }
+
+  /** Scoring module */
+  get score(): {score(peerId: PeerIdStr): number} {
+    return (this.gs as GossipSubInternal).score;
+  }
+
+  /** Get peer score for a specific peer */
+  getScore(peerIdStr: PeerIdStr): number {
+    return this.score.score(peerIdStr);
+  }
+
+  /** Get mesh peers for a specific topic */
+  getMeshPeers(topic: string): string[] {
+    return (this.gs as GossipSubInternal).getMeshPeers?.(topic) ?? [];
+  }
+
+  /** Dump peer score statistics */
+  dumpPeerScoreStats(): PeerScoreStatsDump {
+    return (this.gs as GossipSubInternal).dumpPeerScoreStats();
+  }
+
+  /** Report message validation result */
+  reportMessageValidationResult(msgId: string, propagationSource: PeerIdStr, acceptance: unknown): void {
+    (this.gs as GossipSubInternal).reportMessageValidationResult(msgId, propagationSource, acceptance);
+  }
+
+  // ========== Eth2-specific methods ==========
 
   /**
    * Subscribe to a `GossipTopic`
@@ -181,8 +313,7 @@ export class Eth2Gossipsub extends GossipSub {
 
   private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics, networkConfig: NetworkConfig): void {
     const mesh = this.mesh;
-    // biome-ignore lint/complexity/useLiteralKeys: `topics` is a private attribute
-    const topics = this["topics"] as Map<string, Set<string>>;
+    const topics = (this.gs as unknown as {topics: Map<string, Set<string>>}).topics;
     const peers = this.peers;
     const score = this.score;
     const meshPeersByClient = new Map<string, number>();
@@ -289,7 +420,7 @@ export class Eth2Gossipsub extends GossipSub {
     metrics.gossipPeer.score.set(gossipScores);
   }
 
-  private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
+  private onGossipsubMessage(event: GossipSubEvents["gossipsub:message"]): void {
     const {propagationSource, msgId, msg} = event.detail;
 
     // Also validates that the topicStr is known
