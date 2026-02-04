@@ -13,11 +13,24 @@ const specConfigCommit = "v1.7.0-alpha.1";
 /**
  * Fields that we filter from remote config when doing comparison.
  * These are network-specific values that differ from the spec defaults,
- * or have special formats that require custom handling.
+ * have special formats that require custom handling, or are not yet implemented.
  */
 const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // BLOB_SCHEDULE is an array/JSON format that requires special parsing
   "BLOB_SCHEDULE" as keyof ChainConfig,
+  // EIP-7805 (Inclusion Lists) - not yet implemented in Lodestar
+  "VIEW_FREEZE_CUTOFF_BPS" as keyof ChainConfig,
+  "INCLUSION_LIST_SUBMISSION_DUE_BPS" as keyof ChainConfig,
+  "PROPOSER_INCLUSION_LIST_CUTOFF_BPS" as keyof ChainConfig,
+  "MAX_REQUEST_INCLUSION_LIST" as keyof ChainConfig,
+  "MAX_BYTES_PER_INCLUSION_LIST" as keyof ChainConfig,
+  // Networking params that may be in presets instead of chainConfig
+  "ATTESTATION_SUBNET_COUNT" as keyof ChainConfig,
+  "ATTESTATION_SUBNET_EXTRA_BITS" as keyof ChainConfig,
+  "ATTESTATION_SUBNET_PREFIX_BITS" as keyof ChainConfig,
+  // Future spec params not yet in Lodestar
+  "EPOCHS_PER_SHUFFLING_PHASE" as keyof ChainConfig,
+  "PROPOSER_SELECTION_GAP" as keyof ChainConfig,
   // Network-specific fork epochs and versions - these vary per network deployment
   // and are not meant to be synced from the spec defaults
   "ALTAIR_FORK_EPOCH",
@@ -63,34 +76,34 @@ describe("Ensure chainConfig is synced", () => {
 
 function assertCorrectConfig(localConfig: ChainConfig, remoteConfig: Partial<ChainConfig>): void {
   // Filter out ignored fields from local config
-  const filteredLocalConfig: Partial<ChainConfig> = Object.keys(localConfig)
-    .filter((key) => !ignoredLocalConfigFields.includes(key as keyof ChainConfig))
-    .reduce(
-      (acc, key) => {
-        acc[key as keyof ChainConfig] = localConfig[key as keyof ChainConfig];
-        return acc;
-      },
-      {} as Partial<ChainConfig>
-    );
+  const filteredLocalConfig: Partial<ChainConfig> = {};
+  for (const key of Object.keys(localConfig) as (keyof ChainConfig)[]) {
+    if (!ignoredLocalConfigFields.includes(key)) {
+      filteredLocalConfig[key] = localConfig[key];
+    }
+  }
 
   // Filter out ignored fields from remote config
-  const filteredRemoteConfig: Partial<ChainConfig> = Object.keys(remoteConfig)
-    .filter((key) => !ignoredRemoteConfigFields.includes(key as keyof ChainConfig))
-    .reduce(
-      (acc, key) => {
-        acc[key as keyof ChainConfig] = remoteConfig[key as keyof ChainConfig];
-        return acc;
-      },
-      {} as Partial<ChainConfig>
-    );
+  const filteredRemoteConfig: Partial<ChainConfig> = {};
+  for (const key of Object.keys(remoteConfig) as (keyof ChainConfig)[]) {
+    if (!ignoredRemoteConfigFields.includes(key)) {
+      filteredRemoteConfig[key] = remoteConfig[key];
+    }
+  }
 
   // Check each key for better debuggability
   for (const key of Object.keys(filteredRemoteConfig) as (keyof ChainConfig)[]) {
     const localValue = filteredLocalConfig[key];
     const remoteValue = filteredRemoteConfig[key];
 
-    // Skip if either value is undefined (field not in both configs)
-    if (localValue === undefined || remoteValue === undefined) {
+    // If localValue is undefined, it means a config is missing from our local implementation
+    if (localValue === undefined) {
+      expect(localValue).toBeWithMessage(remoteValue, `${key} is present in remote spec but not in local config`);
+      continue;
+    }
+
+    // Skip if remoteValue is undefined (local-only field)
+    if (remoteValue === undefined) {
       continue;
     }
 
@@ -135,7 +148,7 @@ function parseConfigYaml(yaml: string): Partial<ChainConfig> {
     const match = line.match(/^([A-Z_]+):\s*(.+)$/);
     if (match) {
       const [, key, rawValue] = match;
-      const value = rawValue.trim().replace(/^['"]|['"]$/g, ""); // Remove quotes
+      const value = rawValue.trim().replace(/^(['"])(.*)\\1$/, "$2"); // Remove matching quotes
 
       // Parse the value based on its format
       if (value.startsWith("0x")) {
