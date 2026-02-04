@@ -5,7 +5,7 @@ import {Logger, MetricsRegisterExtra} from "@lodestar/utils";
 import {Metrics, getMetrics} from "./metrics.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
 import {SelfRateLimiter} from "./rate_limiter/selfRateLimiter.js";
-import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
+import {RequestError, RequestErrorCode, SendRequestOpts, sendRequest} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
 import {
   DialOnlyProtocol,

@@ -2,7 +2,7 @@ import {PeerId, Stream} from "@libp2p/interface";
 import {byteStream} from "@libp2p/utils";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {decodeRequest} from "../encoders/requestDecode.js";
-import {encodeResponseChunk, encodeErrorResponse} from "../encoders/responseEncode.js";
+import {encodeErrorResponse, encodeResponseChunk} from "../encoders/responseEncode.js";
 import {RespStatus} from "../interface.js";
 import {Metrics} from "../metrics.js";
 import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
@@ -77,11 +77,7 @@ export async function handleRequest({
     // Read and decode request with timeout
     let requestBody: Uint8Array;
     try {
-      requestBody = await withTimeout(
-        async () => decodeRequest(bytes, protocol, signal),
-        REQUEST_TIMEOUT,
-        signal
-      );
+      requestBody = await withTimeout(async () => decodeRequest(bytes, protocol, signal), REQUEST_TIMEOUT, signal);
     } catch (e: unknown) {
       if (e instanceof TimeoutError) {
         throw e; // Let outer catch re-type the error as SERVER_ERROR
@@ -116,7 +112,7 @@ export async function handleRequest({
     }
   } catch (e) {
     const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;
-    
+
     // Encode and write error response: <result> | <error_message>?
     const errorChunk = encodeErrorResponse(protocol, status, (e as Error).message);
     try {

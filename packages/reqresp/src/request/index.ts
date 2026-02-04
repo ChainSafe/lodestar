@@ -147,9 +147,7 @@ export async function* sendRequest(
       const responseTimeoutSignal = AbortSignal.timeout(RESP_TIMEOUT);
 
       // Combine parent signal with response timeout
-      const combinedSignal = signal
-        ? AbortSignal.any([signal, responseTimeoutSignal])
-        : responseTimeoutSignal;
+      const combinedSignal = signal ? AbortSignal.any([signal, responseTimeoutSignal]) : responseTimeoutSignal;
 
       // Read responses using decodeResponse generator
       for await (const response of decodeResponse(bytes, protocol, combinedSignal)) {

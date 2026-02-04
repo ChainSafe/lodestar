@@ -93,7 +93,11 @@ async function readSszSnappyBody(
     // Read in reasonable chunks (4KB) but not more than allowed
     const remainingAllowed = maxBytes - totalReadBytes;
     if (remainingAllowed <= 0) {
-      throw new SszSnappyError({code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ, readBytes: totalReadBytes, sszDataLength});
+      throw new SszSnappyError({
+        code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
+        readBytes: totalReadBytes,
+        sszDataLength,
+      });
     }
 
     const chunkSize = Math.min(4096, remainingAllowed);
@@ -101,7 +105,7 @@ async function readSszSnappyBody(
     let chunk: Uint8ArrayList;
     try {
       chunk = await bytes.read({bytes: chunkSize, signal});
-    } catch (e) {
+    } catch (_e) {
       // Stream ended before we got all data
       if (uncompressedData.length < sszDataLength) {
         throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
@@ -121,7 +125,11 @@ async function readSszSnappyBody(
 
     // SHOULD NOT read more than max_encoded_len(n) bytes after reading the SSZ length-prefix n from the header
     if (totalReadBytes > maxBytes) {
-      throw new SszSnappyError({code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ, readBytes: totalReadBytes, sszDataLength});
+      throw new SszSnappyError({
+        code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
+        readBytes: totalReadBytes,
+        sszDataLength,
+      });
     }
 
     // Decompress chunk
