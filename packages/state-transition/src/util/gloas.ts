@@ -32,7 +32,8 @@ export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas):
  * Check if a validator index represents a builder (has the builder flag set).
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-is_builder_index
  *
- * Note: Uses BigInt for bitwise operations since BUILDER_INDEX_FLAG (2^40) exceeds 32-bit integer range.
+ * Note: Uses BigInt because JavaScript bitwise operators (&, |, etc.) coerce operands to 32-bit
+ * integers, which would truncate BUILDER_INDEX_FLAG (2^40).
  */
 export function isBuilderIndex(validatorIndex: number): boolean {
   return (BigInt(validatorIndex) & BigInt(BUILDER_INDEX_FLAG)) !== 0n;
@@ -42,7 +43,7 @@ export function isBuilderIndex(validatorIndex: number): boolean {
  * Convert a builder index to a flagged validator index for use in Withdrawal containers.
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_builder_index_to_validator_index
  *
- * Note: Uses BigInt for bitwise operations since BUILDER_INDEX_FLAG (2^40) exceeds 32-bit integer range.
+ * Note: Uses BigInt because JavaScript bitwise operators coerce operands to 32-bit integers.
  */
 export function convertBuilderIndexToValidatorIndex(builderIndex: BuilderIndex): ValidatorIndex {
   return Number(BigInt(builderIndex) | BigInt(BUILDER_INDEX_FLAG));
@@ -52,7 +53,7 @@ export function convertBuilderIndexToValidatorIndex(builderIndex: BuilderIndex):
  * Convert a flagged validator index back to a builder index.
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_validator_index_to_builder_index
  *
- * Note: Uses BigInt for bitwise operations since BUILDER_INDEX_FLAG (2^40) exceeds 32-bit integer range.
+ * Note: Uses BigInt because JavaScript bitwise operators coerce operands to 32-bit integers.
  */
 export function convertValidatorIndexToBuilderIndex(validatorIndex: ValidatorIndex): BuilderIndex {
   return Number(BigInt(validatorIndex) & ~BigInt(BUILDER_INDEX_FLAG));
