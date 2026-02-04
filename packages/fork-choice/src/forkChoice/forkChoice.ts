@@ -1085,6 +1085,13 @@ export class ForkChoice implements IForkChoice {
       return null;
     }
 
+    // Pre-Gloas
+    if (!Array.isArray(variantIndices)) {
+      const node = this.protoArray.nodes[variantIndices];
+      return node.executionPayloadBlockHash === blockHash ? node : null;
+    }
+
+    // Post-Gloas
     for (const variantIndex of variantIndices) {
       const node = this.protoArray.nodes[variantIndex];
       if (node.executionPayloadBlockHash === blockHash) {
@@ -1243,6 +1250,8 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes;
   }
 
+  // TODO GLOAS: this function is ambiguous, consumer should also provide payload, or it should accept a ProtoBlock instead
+  // also consumer may want PENDING or EMPTY only
   *forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock> {
     const rootsInChain = new Set([blockRoot]);
 
@@ -1255,7 +1264,9 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Find the minimum index among all variants to start iteration
-    const blockIndex = Math.min(...blockVariants.filter((idx) => idx !== undefined));
+    const blockIndex = Array.isArray(blockVariants)
+      ? Math.min(...blockVariants.filter((idx) => idx !== undefined))
+      : blockVariants;
 
     for (let i = blockIndex + 1; i < this.protoArray.nodes.length; i++) {
       const node = this.protoArray.nodes[i];
