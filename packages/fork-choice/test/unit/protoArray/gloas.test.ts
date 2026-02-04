@@ -21,21 +21,22 @@ describe("Gloas Fork Choice", () => {
     blockRoot: RootHex,
     payloadStatus: PayloadStatus
   ): ProtoNode | undefined {
-    const variants = (protoArray as any).indices.get(blockRoot);
-    if (!variants) return undefined;
+    // const variants = (protoArray as any).indices.get(blockRoot);
+    // if (!variants) return undefined;
 
-    // For pre-Gloas, variants[0] contains FULL index
-    if (variants.length === 1) {
-      // Pre-Gloas block only has FULL variant
-      // Only return if requested payloadStatus is FULL
-      if (payloadStatus === PayloadStatus.FULL) {
-        return (protoArray as any).nodes[variants[0]];
-      }
-      return undefined;
-    }
+    // // For pre-Gloas, variants[0] contains FULL index
+    // if (variants.length === 1) {
+    //   // Pre-Gloas block only has FULL variant
+    //   // Only return if requested payloadStatus is FULL
+    //   if (payloadStatus === PayloadStatus.FULL) {
+    //     return (protoArray as any).nodes[variants[0]];
+    //   }
+    //   return undefined;
+    // }
 
-    // For post-Gloas, variants[payloadStatus] contains the index for that status
-    const index = variants[payloadStatus];
+    // // For post-Gloas, variants[payloadStatus] contains the index for that status
+    // const index = variants[payloadStatus];
+    const index = protoArray.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
     if (index === undefined) return undefined;
     return (protoArray as any).nodes[index];
   }
@@ -77,9 +78,8 @@ describe("Gloas Fork Choice", () => {
       const protoArray = ProtoArray.initialize(createTestBlock(0, genesisRoot, "0x00"), 0);
       const variants = (protoArray as any).indices.get(genesisRoot);
       expect(variants).toBeDefined();
-      // Pre-Gloas: variants[0] contains FULL index
-      expect(variants.length).toBe(1);
-      expect(variants[0]).toBe(0);
+      // Pre-Gloas: variants is the FULL index
+      expect(variants).toBe(0);
     });
 
     it("getNodeByPayloadStatus() retrieves correct variants", () => {
@@ -130,11 +130,8 @@ describe("Gloas Fork Choice", () => {
       expect(fullNode?.payloadStatus).toBe(PayloadStatus.FULL);
 
       // Should not have PENDING or EMPTY variants
-      const pendingNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
-      expect(pendingNode).toBeUndefined();
-
-      const emptyNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY);
-      expect(emptyNode).toBeUndefined();
+      expect(() => getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING)).toThrow();
+      expect(() => getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY)).toThrow();
     });
 
     it("getNode() finds pre-Gloas blocks by root (FULL)", () => {
@@ -216,8 +213,7 @@ describe("Gloas Fork Choice", () => {
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
       expect(fullNode).toBeDefined();
 
-      const pendingNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
-      expect(pendingNode).toBeUndefined();
+      expect(() => getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING)).toThrow();
     });
   });
 

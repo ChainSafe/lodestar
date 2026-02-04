@@ -123,7 +123,7 @@ export class ProtoArray {
    */
   getNodeIndexByRootAndStatus(root: RootHex, payloadStatus: PayloadStatus): number | undefined {
     const variantOrArr = this.indices.get(root);
-    if (!variantOrArr) {
+    if (variantOrArr == null) {
       return undefined;
     }
 
@@ -154,7 +154,7 @@ export class ProtoArray {
    */
   getDefaultVariant(blockRoot: RootHex): PayloadStatus | undefined {
     const variantOrArr = this.indices.get(blockRoot);
-    if (!variantOrArr) {
+    if (variantOrArr == null) {
       return undefined;
     }
 
@@ -187,7 +187,7 @@ export class ProtoArray {
     // Get parent node to compare execution payload hash
     // Use variants[0] which works for both pre-Gloas (FULL) and Gloas (PENDING)
     const parentVariants = this.indices.get(block.parentRoot);
-    if (!parentVariants) {
+    if (parentVariants == null) {
       // Parent not found
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.UNKNOWN_BLOCK,
@@ -366,7 +366,7 @@ export class ProtoArray {
 
       // Check if parent exists by getting variants array
       const parentVariants = this.indices.get(block.parentRoot);
-      if (parentVariants) {
+      if (parentVariants != null) {
         const anyParentIndex = Array.isArray(parentVariants) ? parentVariants[0] : parentVariants;
         const anyParentNode = this.nodes[anyParentIndex];
 
@@ -471,7 +471,7 @@ export class ProtoArray {
   ): void {
     // First check if block exists
     const variants = this.indices.get(blockRoot);
-    if (!variants) {
+    if (variants == null) {
       // Equivalent to `assert envelope.beacon_block_root in store.block_states`
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.UNKNOWN_BLOCK,
@@ -979,7 +979,7 @@ export class ProtoArray {
    */
   maybePrune(finalizedRoot: RootHex): ProtoBlock[] {
     const variants = this.indices.get(finalizedRoot);
-    if (!variants) {
+    if (variants == null) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN,
         root: finalizedRoot,
@@ -1361,7 +1361,7 @@ export class ProtoArray {
   getAncestor(blockRoot: RootHex, ancestorSlot: Slot): ProtoNode {
     // Get any variant to check the block (use variants[0])
     const variantOrArr = this.indices.get(blockRoot);
-    if (!variantOrArr) {
+    if (variantOrArr == null) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: blockRoot,
@@ -1382,7 +1382,7 @@ export class ProtoArray {
     // Start with the parent of the current block
     let currentBlock = block;
     const parentVariants = this.indices.get(currentBlock.parentRoot);
-    if (!parentVariants) {
+    if (parentVariants == null) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR,
         descendantRoot: blockRoot,
@@ -1398,7 +1398,7 @@ export class ProtoArray {
       currentBlock = parentBlock;
 
       const nextParentVariants = this.indices.get(currentBlock.parentRoot);
-      if (!nextParentVariants) {
+      if (nextParentVariants == null) {
         throw new ForkChoiceError({
           code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR,
           descendantRoot: blockRoot,
