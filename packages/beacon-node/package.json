@@ -172,6 +172,7 @@
     "@types/js-yaml": "^4.0.5",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
+    "it-all": "^3.0.4",
     "it-drain": "^3.0.3",
     "it-pair": "^2.0.6",
     "js-yaml": "^4.1.0",
