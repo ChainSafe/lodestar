@@ -357,14 +357,18 @@ export class Eth2Gossipsub extends GossipSub {
     const {id: peerId, addrs} = parsed[0];
     const peerIdStr = peerId.toString();
 
+    // Direct peers need addresses to connect - reject if none provided
+    if (addrs.length === 0) {
+      this.logger.warn("Cannot add direct peer without addresses", {peerId: peerIdStr});
+      return null;
+    }
+
     // Add addresses to peer store first so we can connect
-    if (addrs.length > 0) {
-      try {
-        await this.libp2p.peerStore.merge(peerId, {multiaddrs: addrs});
-      } catch (e) {
-        this.logger.warn("Failed to add direct peer addresses to peer store", {peerId: peerIdStr}, e as Error);
-        return null;
-      }
+    try {
+      await this.libp2p.peerStore.merge(peerId, {multiaddrs: addrs});
+    } catch (e) {
+      this.logger.warn("Failed to add direct peer addresses to peer store", {peerId: peerIdStr}, e as Error);
+      return null;
     }
 
     // Add to direct peers set only after addresses are stored
