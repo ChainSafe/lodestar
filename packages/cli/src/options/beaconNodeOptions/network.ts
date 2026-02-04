@@ -22,6 +22,7 @@ export type NetworkArgs = {
   slotsToSubscribeBeforeAggregatorDuty?: number;
   disablePeerScoring?: boolean;
   mdns?: boolean;
+  directPeers?: string[];
   "network.maxPeers"?: number;
   "network.connectToDiscv5Bootnodes"?: boolean;
   "network.discv5FirstQueryDelayMs"?: number;
@@ -156,6 +157,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     useWorker: args["network.useWorker"],
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
+    directPeers: args.directPeers,
   };
 }
 
@@ -257,6 +259,22 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "Enable mdns local peer discovery",
     defaultDescription: String(defaultOptions.network.mdns === true),
     group: "network",
+  },
+
+  directPeers: {
+    type: "array",
+    description:
+      "Direct peers for GossipSub mesh. These peers maintain permanent connections without GRAFT/PRUNE. " +
+      "Supports multiaddr with peer ID (e.g., `/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...`) " +
+      "or ENR (e.g., `enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...`). " +
+      "Both peers must configure each other as direct peers for the feature to work properly.",
+    defaultDescription: "[]",
+    group: "network",
+    coerce: (args: string[] | undefined) =>
+      (args ?? [])
+        .flatMap((item) => item.split(","))
+        .map((s) => s.trim())
+        .filter(Boolean),
   },
 
   "network.maxPeers": {

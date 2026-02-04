@@ -1,5 +1,5 @@
-import {byteArrayEquals} from "@lodestar/utils";
 import {gloas} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.ts";
 import {isValidIndexedPayloadAttestation} from "./isValidIndexedPayloadAttestation.ts";
 

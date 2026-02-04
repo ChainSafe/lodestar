@@ -15,6 +15,12 @@ export interface NetworkOptions
     Omit<Eth2GossipsubOpts, "disableLightClientServer"> {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
+  /**
+   * Direct peers for GossipSub - these peers maintain permanent mesh connections without GRAFT/PRUNE.
+   * Format: multiaddr strings with peer ID, e.g., "/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7..."
+   * Both peers must configure each other as direct peers for the feature to work properly.
+   */
+  directPeers?: string[];
   subscribeAllSubnets?: boolean;
   mdns?: boolean;
   connectToDiscv5Bootnodes?: boolean;
