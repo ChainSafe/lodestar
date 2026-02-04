@@ -1,4 +1,7 @@
-import {Direction, PeerId} from "@libp2p/interface";
+import {PeerId} from "@libp2p/interface";
+
+type Direction = "inbound" | "outbound";
+
 import {BitArray} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";

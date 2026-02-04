@@ -375,7 +375,8 @@ export class PeerDiscovery {
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
 
-    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets, undefined);
+    // Type assertion needed due to multiaddr version mismatch between dependencies
+    const status = this.handleDiscoveredPeer(id, multiaddrs[0] as Multiaddr, attnets, syncnets, undefined);
     this.logger.debug("Discovered peer via libp2p", {peer: prettyPrintPeerId(id), status});
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
