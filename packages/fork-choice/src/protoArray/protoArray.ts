@@ -1034,18 +1034,18 @@ export class ProtoArray {
       }
 
       // Post-Gloas: array of variant indices
-      const adjustedVariants = variantIndices.map((_, idx) => {
-        if (idx === undefined) {
+      const adjustedVariants = variantIndices.map((variantIndex) => {
+        if (variantIndex === undefined) {
           return undefined;
         }
 
-        if (idx < finalizedIndex) {
+        if (variantIndex < finalizedIndex) {
           throw new ProtoArrayError({
             code: ProtoArrayErrorCode.INDEX_OVERFLOW,
             value: "indices",
           });
         }
-        return idx - finalizedIndex;
+        return variantIndex - finalizedIndex;
       });
       this.indices.set(root, adjustedVariants as GloasVariantIndices);
     }
