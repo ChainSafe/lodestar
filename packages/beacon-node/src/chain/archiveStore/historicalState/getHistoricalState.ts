@@ -1,6 +1,5 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig} from "@lodestar/config";
-import {byteArrayEquals} from "@lodestar/utils";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -9,6 +8,7 @@ import {
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
+import {byteArrayEquals} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {getStateTypeFromBytes} from "../../../util/multifork.js";
 import {HistoricalStateRegenMetrics} from "./metrics.js";
