@@ -122,7 +122,18 @@ function charCodeToByte(charCode: number): number {
   throw new Error(`Invalid hex character code: ${charCode}`);
 }
 
-import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "@vekexasia/bigint-buffer2";
+import {
+  getImplementation as getBigIntBufferImplementation,
+  initNative as initBigIntBufferNative,
+  toBigIntBE,
+  toBigIntLE,
+  toBufferBE,
+  toBufferBEInto,
+  toBufferLE,
+  toBufferLEInto,
+} from "@vekexasia/bigint-buffer2";
+
+export {getBigIntBufferImplementation, initBigIntBufferNative};
 
 type Endianness = "le" | "be";
 
@@ -161,6 +172,22 @@ export function bigIntToBytes(value: bigint, length: number, endianness: Endiann
   }
   if (endianness === "be") {
     return toBufferBE(value, length);
+  }
+  throw new Error("endianness must be either 'le' or 'be'");
+}
+
+/**
+ * Write bigint into existing buffer. ~30% faster than allocating new buffer.
+ * Buffer must be pre-allocated with correct length.
+ */
+export function bigIntToBytesInto(value: bigint, buffer: Uint8Array, endianness: Endianness = "le"): void {
+  if (endianness === "le") {
+    toBufferLEInto(value, buffer as Buffer);
+    return;
+  }
+  if (endianness === "be") {
+    toBufferBEInto(value, buffer as Buffer);
+    return;
   }
   throw new Error("endianness must be either 'le' or 'be'");
 }
