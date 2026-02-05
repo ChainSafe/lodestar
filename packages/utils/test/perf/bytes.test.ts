@@ -82,11 +82,11 @@ describe("bytes utils", async () => {
     /**
      * Node v24.13.0 benchmark results for byteArrayEquals:
      *
-     * | Size | nodejs (hybrid) | browser (loop) |
-     * |------|-----------------|----------------|
-     * | 32 bytes | 14.7 ns/op (loop) | 14.7 ns/op |
-     * | 1024 bytes | 55 ns/op (Buffer.compare) | 940 ns/op |
-     * | 131072 bytes | 270 ns/op (Buffer.compare) | 14.8 μs/op |
+     * Size         | nodejs (hybrid)              | browser (loop)
+     * -------------|------------------------------|----------------
+     * 32 bytes     | 14.7 ns/op (loop)            | 14.7 ns/op
+     * 1024 bytes   | 55 ns/op (Buffer.compare)    | 940 ns/op
+     * 131072 bytes | 270 ns/op (Buffer.compare)   | 14.8 μs/op
      *
      * The nodejs implementation uses a hybrid approach:
      * - Loop for <=32 bytes (V8 JIT optimized)
