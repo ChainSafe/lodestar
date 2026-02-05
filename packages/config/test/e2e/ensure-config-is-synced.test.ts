@@ -1,6 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
-import {fetch} from "@lodestar/api";
-import {fromHex} from "@lodestar/utils";
+import {fetch, fromHex} from "@lodestar/utils";
 import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
