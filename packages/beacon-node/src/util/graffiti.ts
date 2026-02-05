@@ -47,21 +47,23 @@ function getClientInfoCandidates(cl: ClientVersion, el: ClientVersion | null | u
     const {code: elCode, commit: elCommit} = el;
     const {code: clCode, commit: clCommit} = cl;
     return [
-      // Full: "EL1234LS5678"
+      // Full: "EL1234LS5678" (12 bytes)
       `${elCode}${elCommit.slice(0, 4)}${clCode}${clCommit.slice(0, 4)}`,
-      // Compact: "EL12LS56"
+      // Compact: "EL12LS56" (8 bytes)
       `${elCode}${elCommit.slice(0, 2)}${clCode}${clCommit.slice(0, 2)}`,
-      // Codes only: "ELLS"
+      // Codes only: "ELLS" (4 bytes)
       `${elCode}${clCode}`,
+      // Single code: "LS" (2 bytes) - CL only fallback
+      clCode,
     ];
   }
   const {code: clCode, commit: clCommit} = cl;
   return [
-    // CL only full: "LS5678"
+    // CL only full: "LS5678" (6 bytes)
     `${clCode}${clCommit.slice(0, 4)}`,
-    // CL only compact: "LS56"
+    // CL only compact: "LS56" (4 bytes)
     `${clCode}${clCommit.slice(0, 2)}`,
-    // CL code only: "LS"
+    // CL code only: "LS" (2 bytes)
     clCode,
   ];
 }

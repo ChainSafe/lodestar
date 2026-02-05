@@ -113,6 +113,16 @@ describe("Graffiti helper", () => {
       expect(result).toBe("1234567890123456789012345 BULS");
     });
 
+    it("should append single CL code for very long graffiti with EL", () => {
+      // 28 char graffiti leaves 32 - 28 - 1 = 3 bytes, not enough for codes (4), use single code (2)
+      const result = appendClientInfoToGraffiti(
+        "1234567890123456789012345678",
+        consensusClientVersion,
+        executionClientVersion
+      );
+      expect(result).toBe("1234567890123456789012345678 LS");
+    });
+
     it("should return unchanged for 32-byte graffiti", () => {
       const fullGraffiti = "a".repeat(32);
       const result = appendClientInfoToGraffiti(fullGraffiti, consensusClientVersion, executionClientVersion);
