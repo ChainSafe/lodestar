@@ -9,6 +9,33 @@ import {maxEncodedLen} from "./utils.js";
 
 export const MAX_VARINT_BYTES = 10;
 
+// Snappy frame header size (1 byte type + 3 bytes length)
+const SNAPPY_FRAME_HEADER_SIZE = 4;
+
+/**
+ * Wraps byteStream read to convert libp2p errors to SszSnappyError.
+ */
+async function safeRead(
+  bytes: ByteStream<MessageStream>,
+  options: {bytes: number; signal?: AbortSignal}
+): Promise<Uint8ArrayList> {
+  try {
+    return await bytes.read(options);
+  } catch (e) {
+    // Handle UnexpectedEOFError from @libp2p/utils and other stream closed errors
+    const message = (e as Error).message || "";
+    if (
+      message.includes("EOF") ||
+      message.includes("closed") ||
+      message.includes("ended") ||
+      (e as Error).name === "UnexpectedEOFError"
+    ) {
+      throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
+    }
+    throw e;
+  }
+}
+
 /**
  * Reads and decodes an SSZ-snappy payload from stream using byteStream.
  * Wire format:
@@ -38,7 +65,7 @@ async function readSszSnappyHeader(
   const buffer = new Uint8ArrayList();
 
   for (let i = 0; i < MAX_VARINT_BYTES; i++) {
-    const byte = await bytes.read({bytes: 1, signal});
+    const byte = await safeRead(bytes, {bytes: 1, signal});
     buffer.append(byte);
 
     try {
@@ -76,6 +103,12 @@ async function readSszSnappyHeader(
 
 /**
  * Reads and decompresses snappy-framed SSZ data.
+ * Uses precise frame-by-frame reading to avoid consuming bytes from the next response chunk.
+ *
+ * Snappy frame format:
+ * - 1 byte chunk type
+ * - 3 bytes little-endian length
+ * - length bytes of frame data
  */
 async function readSszSnappyBody(
   bytes: ByteStream<MessageStream>,
@@ -87,43 +120,13 @@ async function readSszSnappyBody(
   let totalReadBytes = 0;
   const maxBytes = maxEncodedLen(sszDataLength);
 
-  // Read and decompress chunks until we have enough uncompressed data
+  // Read and decompress snappy frames until we have enough uncompressed data
   while (uncompressedData.length < sszDataLength) {
-    // Calculate how much more we need to read
-    // Read in reasonable chunks (4KB) but not more than allowed
-    const remainingAllowed = maxBytes - totalReadBytes;
-    if (remainingAllowed <= 0) {
-      throw new SszSnappyError({
-        code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
-        readBytes: totalReadBytes,
-        sszDataLength,
-      });
-    }
+    // Read snappy frame header (4 bytes: 1 type + 3 length)
+    const header = await safeRead(bytes, {bytes: SNAPPY_FRAME_HEADER_SIZE, signal});
+    totalReadBytes += SNAPPY_FRAME_HEADER_SIZE;
 
-    const chunkSize = Math.min(4096, remainingAllowed);
-
-    let chunk: Uint8ArrayList;
-    try {
-      chunk = await bytes.read({bytes: chunkSize, signal});
-    } catch (_e) {
-      // Stream ended before we got all data
-      if (uncompressedData.length < sszDataLength) {
-        throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
-      }
-      break;
-    }
-
-    if (chunk.length === 0) {
-      // Stream ended
-      if (uncompressedData.length < sszDataLength) {
-        throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
-      }
-      break;
-    }
-
-    totalReadBytes += chunk.length;
-
-    // SHOULD NOT read more than max_encoded_len(n) bytes after reading the SSZ length-prefix n from the header
+    // Check max bytes limit
     if (totalReadBytes > maxBytes) {
       throw new SszSnappyError({
         code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
@@ -132,9 +135,33 @@ async function readSszSnappyBody(
       });
     }
 
-    // Decompress chunk
+    // Parse frame length from header (3 bytes little-endian at offset 1)
+    const frameLength = header.get(1) + (header.get(2) << 8) + (header.get(3) << 16);
+
+    // Read frame data
+    let frameData: Uint8ArrayList;
+    if (frameLength > 0) {
+      frameData = await safeRead(bytes, {bytes: frameLength, signal});
+      totalReadBytes += frameLength;
+
+      // Check max bytes limit again after reading frame data
+      if (totalReadBytes > maxBytes) {
+        throw new SszSnappyError({
+          code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
+          readBytes: totalReadBytes,
+          sszDataLength,
+        });
+      }
+    } else {
+      frameData = new Uint8ArrayList();
+    }
+
+    // Combine header and frame data for decompressor
+    const fullFrame = new Uint8ArrayList(header, frameData);
+
+    // Decompress the complete frame
     try {
-      const uncompressed = decompressor.uncompress(chunk);
+      const uncompressed = decompressor.uncompress(fullFrame);
       if (uncompressed !== null) {
         uncompressedData.append(uncompressed);
       }

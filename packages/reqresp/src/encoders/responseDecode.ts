@@ -1,5 +1,6 @@
 import type {MessageStream} from "@libp2p/interface";
 import type {ByteStream} from "@libp2p/utils";
+import {Uint8ArrayList} from "uint8arraylist";
 import {ForkName} from "@lodestar/params";
 import {decodePayload} from "../encodingStrategies/index.js";
 import {RespStatus} from "../interface.js";
@@ -80,19 +81,37 @@ async function readResultByte(bytes: ByteStream<MessageStream>, signal?: AbortSi
 
 /**
  * Reads an optional error message from the stream.
+ * Error messages may be either:
+ * 1. SSZ-snappy encoded: <varint-length> | <snappy-frames(error-message)>
+ * 2. Raw UTF-8 bytes (for compatibility)
+ *
+ * The decodeErrorMessage utility handles both formats.
  */
 async function readErrorMessage(bytes: ByteStream<MessageStream>, signal?: AbortSignal): Promise<string> {
   try {
-    // Read up to 256 bytes for error message
-    // Note: The entire <error_message> is expected to be available
-    const data = await bytes.read({bytes: 256, signal});
+    // Read error message bytes from stream
+    // Error messages are max 256 bytes uncompressed, but may be larger when snappy-encoded
+    // Read in chunks until stream ends or we hit a reasonable limit
+    const errorBytes = new Uint8ArrayList();
+    const maxBytes = 1024; // Reasonable limit for encoded error message
 
-    try {
-      return decodeErrorMessage(data.subarray());
-    } catch {
-      // Error message is optional and may not be decodable
-      return Buffer.prototype.toString.call(data.subarray(), "hex");
+    while (errorBytes.length < maxBytes) {
+      try {
+        // Read one byte at a time to avoid over-reading
+        const chunk = await bytes.read({bytes: 1, signal});
+        errorBytes.append(chunk);
+      } catch {
+        // Stream ended - this is expected
+        break;
+      }
     }
+
+    if (errorBytes.length === 0) {
+      return "";
+    }
+
+    // decodeErrorMessage handles both snappy-encoded and raw formats
+    return decodeErrorMessage(errorBytes.subarray());
   } catch {
     // Stream may end without error message
     return "";

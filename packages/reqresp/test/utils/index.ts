@@ -47,9 +47,14 @@ export function expectInEqualByteChunks(chunks: Uint8Array[], expectedChunks: Ui
   }
 }
 
+type EventHandler = (evt: Event) => void;
+
 /**
  * Mock libp2p v3 stream for testing.
- * Implements the EventTarget-based stream interface with message events.
+ * Implements the full MessageStream interface required by byteStream().
+ *
+ * Key design: Data emission is deferred until after event listeners are attached.
+ * This matches real libp2p behavior where streams emit data asynchronously.
  */
 export class MockLibP2pStream implements Stream {
   protocol: string;
@@ -61,39 +66,90 @@ export class MockLibP2pStream implements Stream {
   writeStatus: MessageStreamWriteStatus = "writable";
   remoteReadStatus: MessageStreamReadStatus = "readable";
   remoteWriteStatus: MessageStreamWriteStatus = "writable";
-  maxReadBufferLength = 1024 * 1024;
-  inactivityTimeout = 30000;
-  writableNeedsDrain = false;
-  readBufferLength = 0;
-  writeBufferLength = 0;
   timeline = {
     open: Date.now(),
   };
   metadata = {};
+  maxReadBufferLength = 4_194_304;
+  maxWriteBufferLength = 4_194_304;
+  inactivityTimeout = 30_000;
+  writableNeedsDrain = false;
+  readBufferLength = 0;
+  writeBufferLength = 0;
 
-  private inputChunks: Uint8ArrayList[] = [];
+  private readBuffer: Uint8ArrayList[] = [];
   resultChunks: Uint8Array[] = [];
 
-  constructor(requestChunks: Uint8ArrayList[] | AsyncIterable<any> | AsyncGenerator<any>, protocol?: string) {
-    // Convert async iterable to array if needed
+  private eventListeners = new Map<string, Set<EventHandler>>();
+  private inputSource: AsyncIterable<Uint8ArrayList | Uint8Array>;
+  private sourceStarted = false;
+
+  constructor(requestChunks: Uint8ArrayList[] | AsyncIterable<Uint8ArrayList | Uint8Array>, protocol?: string) {
     if (Array.isArray(requestChunks)) {
-      this.inputChunks = requestChunks;
+      this.inputSource = arrToSource(requestChunks);
     } else {
-      // For backwards compatibility, store reference and handle async
-      this.inputChunks = [];
-      void (async () => {
-        for await (const chunk of requestChunks) {
-          this.inputChunks.push(chunk instanceof Uint8ArrayList ? chunk : new Uint8ArrayList(chunk));
-        }
-      })();
+      this.inputSource = requestChunks;
     }
     this.protocol = protocol ?? "mock";
+
+    // Don't start source immediately - wait for message listeners to be attached
+    // This matches real libp2p stream behavior where data arrives asynchronously
+  }
+
+  private async startSource(): Promise<void> {
+    if (this.sourceStarted) return;
+    this.sourceStarted = true;
+
+    try {
+      // Collect all chunks into a single buffer to emit as one message
+      // This matches how byteStream expects data - as a continuous stream
+      const allData = new Uint8ArrayList();
+      for await (const chunk of this.inputSource) {
+        const data = chunk instanceof Uint8ArrayList ? chunk : new Uint8ArrayList(chunk);
+        allData.append(data);
+      }
+
+      // Emit all data as a single message
+      if (allData.byteLength > 0) {
+        this.emitMessage(allData);
+      }
+    } catch (err) {
+      this.emitClose(err as Error);
+      return;
+    }
+
+    // Signal EOF after a short delay to allow byteStream to process the data
+    // The delay needs to be long enough for async reads to complete
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    this.remoteWriteStatus = "closed";
+    this.emitRemoteCloseWrite();
+  }
+
+  private emitMessage(data: Uint8ArrayList): void {
+    const evt = new CustomEvent("message", {detail: data}) as unknown as {
+      type: "message";
+      data: Uint8ArrayList;
+    };
+    (evt as any).data = data; // libp2p uses .data not .detail
+    this.dispatchEvent(evt as unknown as Event);
+  }
+
+  private emitRemoteCloseWrite(): void {
+    const evt = new Event("remoteCloseWrite");
+    this.dispatchEvent(evt);
+  }
+
+  private emitClose(error?: Error): void {
+    const evt = new CustomEvent("close", {detail: {error, local: false}}) as unknown as Event;
+    (evt as any).error = error;
+    (evt as any).local = false;
+    this.dispatchEvent(evt);
   }
 
   // libp2p v3: Streams implement AsyncIterable
   async *[Symbol.asyncIterator](): AsyncGenerator<Uint8ArrayList> {
-    for (const chunk of this.inputChunks) {
-      yield chunk;
+    for await (const chunk of this.inputSource) {
+      yield chunk instanceof Uint8ArrayList ? chunk : new Uint8ArrayList(chunk);
     }
   }
 
@@ -102,6 +158,21 @@ export class MockLibP2pStream implements Stream {
     const bytes = data instanceof Uint8ArrayList ? data.subarray() : data;
     this.resultChunks.push(bytes);
     return true;
+  }
+
+  // libp2p v3: push method for receiving data (required by byteStream validation)
+  push(buf: Uint8Array | Uint8ArrayList): void {
+    const data = buf instanceof Uint8ArrayList ? buf : new Uint8ArrayList(buf);
+    this.readBuffer.push(data);
+    this.readBufferLength += data.byteLength;
+    this.emitMessage(data);
+  }
+
+  // libp2p v3: unshift method
+  unshift(data: Uint8Array | Uint8ArrayList): void {
+    const buf = data instanceof Uint8ArrayList ? data : new Uint8ArrayList(data);
+    this.readBuffer.unshift(buf);
+    this.readBufferLength += buf.byteLength;
   }
 
   // libp2p v3: onDrain for backpressure
@@ -124,26 +195,50 @@ export class MockLibP2pStream implements Stream {
 
   close = async (): Promise<void> => {
     this.status = "closed";
+    this.emitClose();
   };
   closeRead = async (): Promise<void> => {
     this.readStatus = "closed";
   };
-  closeWrite = async (): Promise<void> => {
-    this.writeStatus = "closed";
-  };
-  abort = (_err: Error): void => {
+  abort = (err?: Error): void => {
     this.status = "aborted";
+    this.emitClose(err);
   };
 
-  // EventTarget methods (no-op for basic tests)
-  addEventListener(): void {}
-  removeEventListener(): void {}
-  dispatchEvent(): boolean {
+  // EventTarget methods - proper implementation for byteStream
+  addEventListener(type: string, listener: EventHandler): void {
+    if (!this.eventListeners.has(type)) {
+      this.eventListeners.set(type, new Set());
+    }
+    this.eventListeners.get(type)?.add(listener);
+
+    // Start pumping data when a 'message' listener is added
+    // Use queueMicrotask to allow all listeners to be registered first
+    if (type === "message" && !this.sourceStarted) {
+      queueMicrotask(() => {
+        void this.startSource();
+      });
+    }
+  }
+
+  removeEventListener(type: string, listener: EventHandler): void {
+    this.eventListeners.get(type)?.delete(listener);
+  }
+
+  dispatchEvent(evt: Event): boolean {
+    const listeners = this.eventListeners.get(evt.type);
+    if (listeners) {
+      for (const listener of listeners) {
+        listener(evt);
+      }
+    }
     return true;
   }
+
   listenerCount(_type: string): number {
     return 0;
   }
+
   safeDispatchEvent(_type: string, _detail?: CustomEventInit<unknown>): boolean {
     return true;
   }
@@ -151,10 +246,6 @@ export class MockLibP2pStream implements Stream {
   // Pause/resume for backpressure
   pause(): void {}
   resume(): void {}
-
-  // Push/unshift for buffer management
-  push(_buf: Uint8Array | Uint8ArrayList): void {}
-  unshift(_data: Uint8Array | Uint8ArrayList): void {}
 }
 
 export function fromHexBuf(hex: string): Buffer {

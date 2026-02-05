@@ -121,7 +121,7 @@ export async function* sendRequest(
       await withTimeout(
         async () => {
           await bytes.write(encodedRequest, {signal});
-          // Close write side after sending request
+          // Close write side after sending request (libp2p v3: close() closes writable end)
           await stream.close();
         },
         REQUEST_TIMEOUT,
@@ -150,12 +150,21 @@ export async function* sendRequest(
       const combinedSignal = signal ? AbortSignal.any([signal, responseTimeoutSignal]) : responseTimeoutSignal;
 
       // Read responses using decodeResponse generator
-      for await (const response of decodeResponse(bytes, protocol, combinedSignal)) {
-        if (firstResponse) {
-          timerTTFB?.();
-          firstResponse = false;
+      // Wrap in try/catch to convert native TimeoutError to RequestError
+      try {
+        for await (const response of decodeResponse(bytes, protocol, combinedSignal)) {
+          if (firstResponse) {
+            timerTTFB?.();
+            firstResponse = false;
+          }
+          yield response;
         }
-        yield response;
+      } catch (e) {
+        // AbortSignal.timeout() throws a DOMException with name "TimeoutError"
+        if ((e as Error).name === "TimeoutError") {
+          throw new RequestError({code: RequestErrorCode.RESP_TIMEOUT});
+        }
+        throw e;
       }
 
       logger.verbose("Req  done", logCtx);

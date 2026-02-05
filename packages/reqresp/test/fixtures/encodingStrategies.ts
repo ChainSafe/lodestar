@@ -70,13 +70,17 @@ export const encodingStrategiesDecodingErrorCases: {
   {
     id: "if it read more than maxEncodedLen",
     type: ssz.phase0.Ping,
-    error: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
+    // With frame-by-frame reading, malformed snappy (zeros instead of identifier frame)
+    // is detected as decompressor error before max bytes check
+    error: SszSnappyErrorCode.DECOMPRESSOR_ERROR,
     chunks: [Buffer.from(varintEncode(ssz.phase0.Ping.minSize)), Buffer.alloc(100)],
   },
   {
     id: "if failed ssz snappy input malformed",
     type: ssz.phase0.Status,
-    error: SszSnappyErrorCode.DECOMPRESSOR_ERROR,
+    // With frame-by-frame reading, malformed snappy causes SOURCE_ABORTED
+    // when reading frame data that doesn't exist
+    error: SszSnappyErrorCode.SOURCE_ABORTED,
     chunks: [Buffer.from(varintEncode(ssz.phase0.Status.minSize)), Buffer.from("wrong snappy data")],
   },
 ];

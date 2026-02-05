@@ -33,7 +33,8 @@ describe("request / sendRequest", () => {
       id: "Return first chunk only for a single-chunk method",
       protocols: [emptyProtocol],
       requestBody: sszSnappyPing.binaryPayload,
-      expectedReturn: [{...sszSnappyPing.binaryPayload, data: Buffer.from(sszSnappyPing.binaryPayload.data)}],
+      // Response data is Uint8Array, normalize for comparison
+      expectedReturn: [{...sszSnappyPing.binaryPayload, data: new Uint8Array(sszSnappyPing.binaryPayload.data)}],
     },
   ];
 
