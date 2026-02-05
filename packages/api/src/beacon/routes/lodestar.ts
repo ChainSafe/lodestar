@@ -54,6 +54,9 @@ export type GossipPeerScoreStat = {
   // + Other un-typed options
 };
 
+/** A multiaddr with peer ID (e.g., /ip4/.../tcp/.../p2p/...) or ENR string (enr:-...) */
+export type DirectPeerInput = string;
+
 export type RegenQueueItem = {
   key: string;
   args: unknown;
