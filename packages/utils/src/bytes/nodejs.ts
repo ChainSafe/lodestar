@@ -71,15 +71,15 @@ export function fromHex(hex: string): Uint8Array {
  * - 96 bytes:   Loop 130 ns/op vs Buffer.compare 50 ns/op (Buffer 2.6x faster)
  * - 1024 bytes: Loop 940 ns/op vs Buffer.compare 55 ns/op (Buffer 17x faster)
  *
- * Uses loop for small arrays (<=32 bytes) where V8 JIT is more efficient,
+ * Uses loop for small arrays (<=48 bytes) where V8 JIT is more efficient,
  * and Buffer.compare for larger arrays where native code wins.
  */
 export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) {
     return false;
   }
-  // For small arrays (32 bytes = roots), loop is faster due to V8 JIT optimizations
-  if (a.length <= 32) {
+  // For small arrays (<=48 bytes: roots, pubkeys), loop is faster due to V8 JIT optimizations
+  if (a.length <= 48) {
     for (let i = 0; i < a.length; i++) {
       if (a[i] !== b[i]) return false;
     }

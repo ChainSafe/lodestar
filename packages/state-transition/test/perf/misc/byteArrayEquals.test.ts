@@ -36,8 +36,8 @@ function byteArrayEqualsLoop(a: Uint8Array, b: Uint8Array): boolean {
  *   - 16384 bytes: Loop 14.8 μs/op vs Buffer.compare 270 ns/op (Buffer 55x faster)
  *
  * The @lodestar/utils implementation uses a hybrid approach:
- *   - Loop for <=32 bytes (common case: roots)
- *   - Buffer.compare for >32 bytes (pubkeys, signatures, large data)
+ *   - Loop for <=48 bytes (common case: roots, pubkeys)
+ *   - Buffer.compare for >48 bytes (signatures, large data)
  */
 describe.skip("compare Uint8Array using loop-based vs Buffer.compare-based byteArrayEquals", () => {
   const numValidator = 1_000_000;

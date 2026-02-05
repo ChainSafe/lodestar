@@ -91,8 +91,8 @@ describe("bytes utils", async () => {
      * 131072 bytes | 270 ns/op (Buffer.compare)   | 14.8 μs/op
      *
      * The nodejs implementation uses a hybrid approach:
-     * - Loop for <=32 bytes (V8 JIT optimized)
-     * - Buffer.compare for >32 bytes (native code)
+     * - Loop for <=48 bytes (V8 JIT optimized)
+     * - Buffer.compare for >48 bytes (native code)
      */
     const arraysToCompare = [
       {name: "32 bytes (block root)", a: blockRoot, b: new Uint8Array(blockRoot)},
