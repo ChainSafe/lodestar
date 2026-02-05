@@ -2,7 +2,7 @@ import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persis
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {FINALIZED_ROOT_GINDEX, FINALIZED_ROOT_GINDEX_ELECTRA, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -44,7 +44,7 @@ import {
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {BeaconStateAllForks} from "../cache/types.js";
 import {computeUnrealizedCheckpoints} from "../epoch/computeUnrealizedCheckpoints.js";
-import {getSyncCommitteesWitness} from "../lightClient/proofs.js";
+import {getFinalizedRootProof, getSyncCommitteesWitness} from "../lightClient/proofs.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {computeAttestationsRewards} from "../rewards/attestationsRewards.js";
 import {computeBlockRewards} from "../rewards/blockRewards.js";
@@ -522,10 +522,7 @@ export class BeaconStateView implements IBeaconStateView {
   // Proofs
 
   getFinalizedRootProof(): Uint8Array[] {
-    const finalizedRootGindex = this.cachedState.epochCtx.isPostElectra()
-      ? FINALIZED_ROOT_GINDEX_ELECTRA
-      : FINALIZED_ROOT_GINDEX;
-    return new Tree(this.cachedState.node).getSingleProof(BigInt(finalizedRootGindex));
+    return getFinalizedRootProof(this.cachedState);
   }
 
   getSyncCommitteesWitness(): SyncCommitteeWitness {
