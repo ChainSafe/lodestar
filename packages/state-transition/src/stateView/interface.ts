@@ -46,15 +46,20 @@ export interface IBeaconStateView {
   previousJustifiedCheckpoint: Checkpoint;
   currentJustifiedCheckpoint: Checkpoint;
   finalizedCheckpoint: Checkpoint;
-  getBlockRoot(slot: Slot): Root;
+  getBlockRootAtSlot(slot: Slot): Root;
+  getBlockRootAtEpoch(epoch: Epoch): Root;
   getRandaoMix(epoch: Epoch): Bytes32;
+
   // altair
   previousEpochParticipation: number[];
   currentEpochParticipation: number[];
+
   // bellatrix
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
+
   // capella
   historicalSummaries: capella.HistoricalSummaries;
+
   // electra
   pendingDeposits: electra.PendingDeposits;
   pendingDepositsCount: number;
@@ -62,24 +67,30 @@ export interface IBeaconStateView {
   pendingPartialWithdrawalsCount: number;
   pendingConsolidations: electra.PendingConsolidations;
   pendingConsolidationsCount: number;
+
   // fulu
   proposerLookahead: fulu.ProposerLookahead;
+
   // gloas
   executionPayloadAvailability: boolean[];
 
   // Shuffling and committees
-
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
   // Decision roots
   previousDecisionRoot: RootHex;
   currentDecisionRoot: RootHex;
   nextDecisionRoot: RootHex;
   getShufflingDecisionRoot(epoch: Epoch): RootHex;
+  getPreviousShuffling(): EpochShuffling;
+  getCurrentShuffling(): EpochShuffling;
+  getNextShuffling(): EpochShuffling;
+
   // Proposer shuffling
   previousProposers: ValidatorIndex[] | null;
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
+
   // Sync committees
   currentSyncCommittee: altair.SyncCommittee;
   nextSyncCommittee: altair.SyncCommittee;
@@ -88,7 +99,6 @@ export interface IBeaconStateView {
   getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
 
   // Validators and balances
-
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
   getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements;
   getBalance(index: number): number;
@@ -100,14 +110,12 @@ export interface IBeaconStateView {
   activeValidatorCount: number;
 
   // Merge
-
   isExecutionStateType: boolean;
   isMergeTransitionComplete: boolean;
   // TODO this should go away (or rather only need block)
   isExecutionEnabled(block: BeaconBlock | BlindedBeaconBlock): boolean;
 
   // Block production
-
   getExpectedWithdrawals(): {
     expectedWithdrawals: capella.Withdrawal[];
     processedBuilderWithdrawalsCount: number;
@@ -116,7 +124,6 @@ export interface IBeaconStateView {
   };
 
   // API
-
   proposerRewards: RewardCache;
   computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards>;
   computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards>;
@@ -127,7 +134,6 @@ export interface IBeaconStateView {
   getLatestWeakSubjectivityCheckpointEpoch(): Epoch;
 
   // Validation
-
   getVoluntaryExitValidity(
     signedVoluntaryExit: phase0.SignedVoluntaryExit,
     verifySignature: boolean
@@ -135,20 +141,16 @@ export interface IBeaconStateView {
   isValidVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit, verifySignature: boolean): boolean;
 
   // Proofs
-
   getFinalizedRootProof(): Uint8Array[];
   getSyncCommitteesWitness(): SyncCommitteeWitness;
   getSingleProof(gindex: bigint): Uint8Array[];
   createMultiProof(descriptor: Uint8Array): CompactMultiProof;
 
   // Fork choice
-
   computeUnrealizedCheckpoints(): {
     justifiedCheckpoint: phase0.Checkpoint;
     finalizedCheckpoint: phase0.Checkpoint;
   };
-
-  // ???
 
   // this is for backward compatible
   clonedCount: number;
@@ -158,7 +160,6 @@ export interface IBeaconStateView {
   isStateValidatorsNodesPopulated(): boolean;
 
   // Serialization
-
   loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
   serialize(): Uint8Array;
   serializedSize(): number;
@@ -170,7 +171,6 @@ export interface IBeaconStateView {
   hashTreeRoot(): Uint8Array;
 
   // State transition
-
   stateTransition(
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
