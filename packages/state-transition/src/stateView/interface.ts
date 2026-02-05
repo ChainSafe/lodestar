@@ -93,11 +93,12 @@ export interface IBeaconStateView {
   getCurrentShuffling(): EpochShuffling;
   getNextShuffling(): EpochShuffling;
 
-  // Proposer shuffling
+  // utils: proposers, anchor checkpoint
   previousProposers: ValidatorIndex[] | null;
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
+  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader};
 
   // Sync committees
   currentSyncCommittee: altair.SyncCommittee;

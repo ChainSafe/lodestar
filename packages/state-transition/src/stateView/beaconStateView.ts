@@ -55,6 +55,7 @@ import {computeSyncCommitteeRewards} from "../rewards/syncCommitteeRewards.js";
 import {StateTransitionModules, StateTransitionOpts, processSlots, stateTransition} from "../stateTransition.js";
 import {getEffectiveBalanceIncrementsZeroInactive} from "../util/balance.js";
 import {getBlockRootAtSlot} from "../util/blockRoot.js";
+import {computeAnchorCheckpoint} from "../util/computeAnchorCheckpoint.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "../util/epoch.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {isExecutionEnabled, isExecutionStateType, isMergeTransitionComplete} from "../util/execution.js";
@@ -404,6 +405,10 @@ export class BeaconStateView implements IBeaconStateView {
 
   getBeaconProposer(slot: number): ValidatorIndex {
     return this.cachedState.epochCtx.getBeaconProposer(slot);
+  }
+
+  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
+    return computeAnchorCheckpoint(this.config, this.cachedState);
   }
 
   // Sync committees
