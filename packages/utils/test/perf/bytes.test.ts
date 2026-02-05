@@ -85,7 +85,7 @@ describe("bytes utils", async () => {
      * Size         | nodejs (hybrid)              | browser (loop)
      * -------------|------------------------------|----------------
      * 32 bytes     | 14.7 ns/op (loop)            | 14.7 ns/op
-     * 48 bytes     | 56 ns/op (Buffer.compare)    | 36 ns/op
+     * 48 bytes     | 36 ns/op (loop)              | 36 ns/op
      * 96 bytes     | 50 ns/op (Buffer.compare)    | 130 ns/op
      * 1024 bytes   | 55 ns/op (Buffer.compare)    | 940 ns/op
      * 131072 bytes | 270 ns/op (Buffer.compare)   | 14.8 μs/op
