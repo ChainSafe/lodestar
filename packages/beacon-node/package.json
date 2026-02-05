@@ -151,7 +151,7 @@
     "datastore-fs": "^10.0.6",
     "datastore-level": "^11.0.3",
     "deepmerge": "^4.3.1",
-    "fastify": "^5.2.1",
+    "fastify": "^5.7.4",
     "interface-datastore": "^8.3.0",
     "it-all": "^3.0.4",
     "it-pipe": "^3.0.1",
