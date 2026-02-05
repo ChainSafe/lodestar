@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {ProtoBlock} from "../../protoArray/interface.ts";
-import {CheckpointWithHex} from "../store.js";
+import {CheckpointWithHex} from "../store.ts";
 
 export type FCRBalanceSource = {
   state: CachedBeaconStateAllForks | null;
@@ -26,6 +26,43 @@ export type IFCRStore = {
 export type FCRResult = {
   confirmedRoot: RootHex;
   didReset?: boolean;
+};
+
+export type FCRSnapshot = {
+  currentSlot: Slot;
+  currentEpoch: Epoch;
+  headRoot: RootHex;
+  confirmedRoot: RootHex;
+  confirmedEpoch: Epoch | null;
+  confirmedSlot: Slot | null;
+  observedJustified: CheckpointWithHex;
+  headUnrealized: CheckpointWithHex | null;
+  finalizedRoot: RootHex;
+};
+
+export type FCRDecision = {
+  confirmedRoot: RootHex;
+  didReset: boolean;
+  stop?: boolean;
+  reason?: string;
+};
+
+export type FCRRule = (
+  snapshot: FCRSnapshot,
+  ctx: FCRContext,
+  store: IFCRStore,
+  cache: FCRCache,
+  decision: FCRDecision
+) => FCRDecision;
+
+export type FCRCache = {
+  blockByRoot: Map<RootHex, ProtoBlock | null>;
+  epochByRoot: Map<RootHex, Epoch | null>;
+  slotByRoot: Map<RootHex, Slot | null>;
+  ancestorRoots: Map<string, RootHex[]>;
+  committeeBySlot: Map<Slot, Set<ValidatorIndex>>;
+  headState?: CachedBeaconStateAllForks | null;
+  checkpointStateByKey: Map<string, CachedBeaconStateAllForks | null>;
 };
 
 export type FCRContext = {

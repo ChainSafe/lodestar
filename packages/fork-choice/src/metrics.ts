@@ -1,5 +1,5 @@
 import {MetricsRegisterExtra} from "@lodestar/utils";
-import {FCRMetrics, getFCRMetrics} from "./forkChoice/fastConfirmationRule/metrics.ts";
+import {FCRMetrics, getFCRMetrics} from "./forkChoice/fcr/metrics.ts";
 import {UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 import {NotReorgedReason} from "./forkChoice/interface.js";
 
