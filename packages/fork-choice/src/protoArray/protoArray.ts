@@ -1433,7 +1433,25 @@ export class ProtoArray {
   }
 
   /**
+   * Get the parent node index for traversal
+   * For Gloas blocks: returns the correct EMPTY/FULL variant based on parent payload status
+   * For pre-Gloas blocks: returns the simple parent index
+   * Returns undefined if parent doesn't exist or can't be found
+   */
+  private getParentNodeIndex(node: ProtoNode): number | undefined {
+    if (isGloasBlock(node)) {
+      // Use getParentPayloadStatus for Gloas blocks to get correct EMPTY/FULL variant
+      const parentPayloadStatus = this.getParentPayloadStatus(node);
+      return this.getNodeIndexByRootAndStatus(node.parentRoot, parentPayloadStatus);
+    }
+    // Simple parent traversal for pre-Gloas blocks (includes fork transition)
+    return node.parent;
+  }
+
+  /**
    * Iterate from a block root backwards over nodes
+   * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
+   * For pre-Gloas blocks: returns FULL variants
    */
   *iterateAncestorNodes(blockRoot: RootHex): IterableIterator<ProtoNode> {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
@@ -1456,23 +1474,27 @@ export class ProtoArray {
   }
 
   /**
-   * Iterate from a block root backwards over nodes
+   * Iterate from a node backwards over ancestor nodes
+   * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
+   * For pre-Gloas blocks: returns FULL variants
+   * Handles fork transition from Gloas to pre-Gloas blocks
    */
   *iterateAncestorNodesFromNode(node: ProtoNode): IterableIterator<ProtoNode> {
     while (node.parent !== undefined) {
-      // Traverse to parent node
-      // Note: node.parent may point to EMPTY or FULL variant, but we only want to yield default variants
-      node = this.getNodeFromIndex(node.parent);
-
-      // Only yield default variants (PENDING for Gloas, FULL for pre-Gloas)
-      if (this.isDefaultVariant(node)) {
-        yield node;
+      const parentIndex = this.getParentNodeIndex(node);
+      if (parentIndex === undefined) {
+        break;
       }
+
+      node = this.nodes[parentIndex];
+      yield node;
     }
   }
 
   /**
    * Get all nodes from a block root backwards
+   * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
+   * For pre-Gloas blocks: returns FULL variants
    */
   getAllAncestorNodes(blockRoot: RootHex): ProtoNode[] {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
@@ -1491,17 +1513,23 @@ export class ProtoArray {
       });
     }
 
-    const nodes = [node];
+    // Include starting node if node is pre-gloas
+    // Reason why we exclude post-gloas is because node is always default variant (PENDING)
+    // which we want to exclude.
+    const nodes: ProtoNode[] = [];
+
+    if (!isGloasBlock(node)) {
+      nodes.push(node);
+    }
 
     while (node.parent !== undefined) {
-      // Traverse to parent node
-      // Note: node.parent may point to EMPTY or FULL variant, but we only want to collect default variants
-      node = this.getNodeFromIndex(node.parent);
-
-      // Only collect default variants (PENDING for Gloas, FULL for pre-Gloas)
-      if (this.isDefaultVariant(node)) {
-        nodes.push(node);
+      const parentIndex = this.getParentNodeIndex(node);
+      if (parentIndex === undefined) {
+        break;
       }
+
+      node = this.nodes[parentIndex];
+      nodes.push(node);
     }
 
     return nodes;
@@ -1512,7 +1540,8 @@ export class ProtoArray {
    * iterateNodes is to find ancestor nodes of a blockRoot.
    * this is to find non-ancestor nodes of a blockRoot.
    *
-   * Only default variant (FULL pre-gloas and PENDING post-gloas) are returned
+   * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
+   * For pre-Gloas blocks: returns FULL variants
    */
   getAllNonAncestorNodes(blockRoot: RootHex): ProtoNode[] {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
@@ -1532,31 +1561,33 @@ export class ProtoArray {
         index: startIndex,
       });
     }
+
+    // For both Gloas and pre-Gloas blocks
     const result: ProtoNode[] = [];
     let nodeIndex = startIndex;
     while (node.parent !== undefined) {
-      // Traverse to parent - may point to any variant
-      const parentIndex = node.parent;
-      node = this.getNodeFromIndex(parentIndex);
-
-      if (!this.isDefaultVariant(node)) {
-        // Parent is non-default variant, need to find default variant
-        // Skip to next iteration to find the default variant
-        continue;
+      const parentIndex = this.getParentNodeIndex(node);
+      if (parentIndex === undefined) {
+        break;
       }
 
-      // nodes between nodeIndex and parentIndex means non-ancestor nodes
-      // Excludes all EMPTY/FULL variant post-gloas
-      result.push(...this.getNodesBetween(nodeIndex, parentIndex).filter(this.isDefaultVariant));
+      node = this.nodes[parentIndex];
+      // Collect non-ancestor nodes between current and parent
+      // Filter to exclude PENDING nodes (FULL variant pre-gloas, EMPTY or FULL variant post-gloas)
+      result.push(
+        ...this.getNodesBetween(nodeIndex, parentIndex).filter((n) => n.payloadStatus !== PayloadStatus.PENDING)
+      );
       nodeIndex = parentIndex;
     }
-    result.push(...this.getNodesBetween(nodeIndex, 0).filter(this.isDefaultVariant));
+    // Collect remaining nodes from nodeIndex to beginning
+    result.push(...this.getNodesBetween(nodeIndex, 0).filter((n) => n.payloadStatus !== PayloadStatus.PENDING));
     return result;
   }
 
   /**
    * Returns both ancestor and non-ancestor nodes in a single traversal.
-   * Only default variant (FULL pre-gloas and PENDING post-gloas) are returned
+   * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
+   * For pre-Gloas blocks: returns FULL variants
    */
   getAllAncestorAndNonAncestorNodes(blockRoot: RootHex): {ancestors: ProtoNode[]; nonAncestors: ProtoNode[]} {
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
@@ -1578,33 +1609,31 @@ export class ProtoArray {
     const ancestors: ProtoNode[] = [];
     const nonAncestors: ProtoNode[] = [];
 
+    // Include starting node if it's not PENDING (i.e., pre-Gloas or EMPTY/FULL variant post-Gloas)
+    if (node.payloadStatus !== PayloadStatus.PENDING) {
+      ancestors.push(node);
+    }
+
     let nodeIndex = startIndex;
     while (node.parent !== undefined) {
-      // Only add default variants to ancestors
-      if (this.isDefaultVariant(node)) {
-        ancestors.push(node);
+      const parentIndex = this.getParentNodeIndex(node);
+      if (parentIndex === undefined) {
+        break;
       }
 
-      // Traverse to parent - may point to any variant
-      const parentIndex = node.parent;
-      node = this.getNodeFromIndex(parentIndex);
+      node = this.nodes[parentIndex];
+      ancestors.push(node);
 
-      if (!this.isDefaultVariant(node)) {
-        // Parent is non-default variant, skip to next iteration to find default variant
-        continue;
-      }
-
-      // Nodes between nodeIndex and parentIndex are non-ancestor nodes
-      // Filter out all FULL/EMPTY variants post-gloas
-      nonAncestors.push(...this.getNodesBetween(nodeIndex, parentIndex).filter(this.isDefaultVariant));
+      // Collect non-ancestor nodes between current and parent
+      // Filter to exclude PENDING nodes (include all FULL/EMPTY for both pre-Gloas and Gloas)
+      nonAncestors.push(
+        ...this.getNodesBetween(nodeIndex, parentIndex).filter((n) => n.payloadStatus !== PayloadStatus.PENDING)
+      );
       nodeIndex = parentIndex;
     }
 
-    // Add final node if it's a default variant
-    if (this.isDefaultVariant(node)) {
-      ancestors.push(node);
-    }
-    nonAncestors.push(...this.getNodesBetween(nodeIndex, 0).filter(this.isDefaultVariant));
+    // Collect remaining non-ancestor nodes from nodeIndex to beginning
+    nonAncestors.push(...this.getNodesBetween(nodeIndex, 0).filter((n) => n.payloadStatus !== PayloadStatus.PENDING));
 
     return {ancestors, nonAncestors};
   }
@@ -1783,16 +1812,4 @@ export class ProtoArray {
     }
     return result;
   }
-
-  /**
-   * Check if a node is a default variant (PENDING for Gloas, FULL for pre-Gloas)
-   * Determines this directly from the node's properties without looking up indices map
-   */
-  private isDefaultVariant = (node: ProtoNode): boolean => {
-    // For Gloas blocks (parentBlockHash !== null), default is PENDING
-    // For pre-Gloas blocks (parentBlockHash === null), default is FULL
-    return isGloasBlock(node)
-      ? node.payloadStatus === PayloadStatus.PENDING
-      : node.payloadStatus === PayloadStatus.FULL;
-  };
 }

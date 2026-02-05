@@ -1393,6 +1393,10 @@ export class ForkChoice implements IForkChoice {
 
       // For the first slot of the epoch, a block is it's own target
       const nextRoot = block.blockRoot === block.targetRoot ? block.parentRoot : block.targetRoot;
+      // Use default variant (PENDING for Gloas, FULL for pre-Gloas)
+      // For Gloas: we search for PENDING blocks because dependent root is determined by the block itself,
+      // not the payload. In state-transition, block parentage is independent of payload status,
+      // so linking by PENDING block in fork-choice is correct.
       const defaultStatus = this.protoArray.getDefaultVariant(nextRoot);
       if (defaultStatus === undefined) {
         throw Error(`No block for root ${nextRoot}`);
