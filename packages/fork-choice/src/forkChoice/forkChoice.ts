@@ -905,7 +905,13 @@ export class ForkChoice implements IForkChoice {
         } else if (attestationData.index === 0) {
           payloadStatus = PayloadStatus.EMPTY;
         } else {
-          payloadStatus = PayloadStatus.PENDING;
+          throw new ForkChoiceError({
+            code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+            err: {
+              code: InvalidAttestationCode.INVALID_DATA_INDEX,
+              index: attestationData.index,
+            },
+          });
         }
       } else {
         payloadStatus = PayloadStatus.PENDING;
@@ -964,8 +970,6 @@ export class ForkChoice implements IForkChoice {
    * Notify fork choice that an execution payload has arrived (Gloas fork)
    * Creates the FULL variant of a Gloas block when the payload becomes available
    * Spec: gloas/fork-choice.md#new-on_execution_payload
-   *
-   *
    */
   onExecutionPayload(
     blockRoot: RootHex,
@@ -1067,6 +1071,14 @@ export class ForkChoice implements IForkChoice {
     };
   }
 
+  /**
+   * Returns a `ProtoBlock` with the default variant for the given block root
+   * - Pre-Gloas blocks: returns FULL variant (only variant)
+   * - Gloas blocks: returns PENDING variant
+   *
+   * Use this when you need the canonical block reference regardless of payload status.
+   * For searching by execution payload hash and variant-specific info, use `getBlockHexAndBlockHash` instead.
+   */
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null {
     const defaultStatus = this.protoArray.getDefaultVariant(blockRoot);
     if (defaultStatus === undefined) {
@@ -1635,6 +1647,17 @@ export class ForkChoice implements IForkChoice {
           code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK,
           block: block.slot,
           attestation: slot,
+        },
+      });
+    }
+
+    // For Gloas blocks, attestation index must be 0 or 1
+    if (isGloasBlock(block) && attestationData.index !== 0 && attestationData.index !== 1) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.INVALID_DATA_INDEX,
+          index: attestationData.index,
         },
       });
     }
