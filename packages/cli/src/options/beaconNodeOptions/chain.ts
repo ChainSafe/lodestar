@@ -92,7 +92,9 @@ export const options: CliCommandOptions<ChainArgs> = {
   graffitiAppend: {
     type: "boolean",
     description:
-      "Append CL/EL client version info to the graffiti. Uses adaptive sizing to include as much info as fits within the 32-byte limit. Format: '{userGraffiti} {clientInfo}'",
+      "Append CL/EL client version info to the graffiti. Format: '{graffiti} {clientInfo}'. " +
+      "For full client info to be included, limit custom graffiti to 19 bytes (with EL) or 25 bytes (CL-only). " +
+      "Longer graffiti will result in truncated client info.",
     default: defaultOptions.chain.graffitiAppend,
     group: "chain",
   },

@@ -39,36 +39,6 @@ export function getDefaultGraffiti(
 }
 
 /**
- * Get client info strings for adaptive sizing.
- * Returns an array of candidate strings ordered from most complete to most compact.
- */
-function getClientInfoCandidates(cl: ClientVersion, el: ClientVersion | null | undefined): string[] {
-  if (el != null) {
-    const {code: elCode, commit: elCommit} = el;
-    const {code: clCode, commit: clCommit} = cl;
-    return [
-      // Full: "EL1234LS5678" (12 bytes)
-      `${elCode}${elCommit.slice(0, 4)}${clCode}${clCommit.slice(0, 4)}`,
-      // Compact: "EL12LS56" (8 bytes)
-      `${elCode}${elCommit.slice(0, 2)}${clCode}${clCommit.slice(0, 2)}`,
-      // Codes only: "ELLS" (4 bytes)
-      `${elCode}${clCode}`,
-      // Single code: "EL" (2 bytes) - EL code when available (matches Teku)
-      elCode,
-    ];
-  }
-  const {code: clCode, commit: clCommit} = cl;
-  return [
-    // CL only full: "LS5678" (6 bytes)
-    `${clCode}${clCommit.slice(0, 4)}`,
-    // CL only compact: "LS56" (4 bytes)
-    `${clCode}${clCommit.slice(0, 2)}`,
-    // CL code only: "LS" (2 bytes)
-    clCode,
-  ];
-}
-
-/**
  * Truncates a UTF-8 string to fit within maxBytes without splitting multi-byte characters.
  * Returns the truncated string.
  */
@@ -89,16 +59,13 @@ export function truncateUtf8ToBytes(str: string, maxBytes: number): string {
 }
 
 /**
- * Appends client version info to user graffiti using adaptive sizing.
- * Tries to fit as much client info as possible within the 32-byte graffiti limit.
+ * Appends client version info to user graffiti.
  *
- * Format: "{userGraffiti} {clientInfo}" where clientInfo adapts based on available space:
- * - Full: "EL1234LS5678" - EL code + 4 hex commit + CL code + 4 hex commit
- * - Compact: "EL12LS56" - EL code + 2 hex commit + CL code + 2 hex commit
- * - Codes only: "ELLS" - Just client codes
+ * Format: "{userGraffiti} {clientInfo}" where clientInfo is the full client watermark.
+ * If the combined result exceeds 32 bytes, it is truncated.
  *
- * If no space remains for even the shortest tier, returns user graffiti (possibly truncated).
- * If private mode is enabled, returns user graffiti without appending client info.
+ * For full client info to be included, keep custom graffiti under 19 bytes (with EL)
+ * or 25 bytes (CL-only).
  *
  * @param userGraffiti - User-provided graffiti string
  * @param consensusClientVersion - CL client version info
@@ -117,54 +84,15 @@ export function appendClientInfoToGraffiti(
     return truncateUtf8ToBytes(userGraffiti, GRAFFITI_SIZE);
   }
 
-  // First, truncate user graffiti to fit within limit (UTF-8 safe)
-  const truncatedGraffiti = truncateUtf8ToBytes(userGraffiti, GRAFFITI_SIZE);
-  const userBytes = Buffer.byteLength(truncatedGraffiti, "utf8");
+  // Get full client info watermark
+  const clientInfo = getDefaultGraffiti(consensusClientVersion, executionClientVersion, {private: false});
 
-  // If truncated graffiti fills the entire space, return it
-  if (userBytes >= GRAFFITI_SIZE) {
-    return truncatedGraffiti;
+  // If no user graffiti, just return client info
+  if (userGraffiti.length === 0) {
+    return clientInfo;
   }
 
-  const candidates = getClientInfoCandidates(consensusClientVersion, executionClientVersion);
-  const hasUserGraffiti = userBytes > 0;
-  const availableBytesWithSeparator = hasUserGraffiti ? GRAFFITI_SIZE - userBytes - 1 : GRAFFITI_SIZE - userBytes;
-  const availableBytesWithoutSeparator = GRAFFITI_SIZE - userBytes;
-
-  // Teku special case: if exactly 3 bytes remain after reserving space for separator,
-  // drop the separator and use "codes-only" tier without separator
-  // This allows 28-byte graffiti + "BULS" (4 bytes) = 32 bytes
-  // See: GraffitiBuilder.java buildGraffiti() AUTO case
-  if (hasUserGraffiti && availableBytesWithSeparator === 3) {
-    // Get codes-only tier (index 2: "ELLS" for EL+CL or "LS" for CL-only)
-    const codesOnlyTier = candidates[2];
-    if (codesOnlyTier !== undefined) {
-      const codesOnlyBytes = Buffer.byteLength(codesOnlyTier, "utf8");
-      if (codesOnlyBytes <= availableBytesWithoutSeparator) {
-        return `${truncatedGraffiti}${codesOnlyTier}`;
-      }
-    }
-  }
-
-  // Normal case: find the best candidate that fits with separator
-  for (const clientInfo of candidates) {
-    const clientInfoBytes = Buffer.byteLength(clientInfo, "utf8");
-    if (clientInfoBytes <= availableBytesWithSeparator) {
-      return hasUserGraffiti ? `${truncatedGraffiti} ${clientInfo}` : clientInfo;
-    }
-  }
-
-  // Fallback: if nothing fits with separator, try without separator
-  // This handles cases like 30-byte graffiti where only 2 bytes remain
-  if (hasUserGraffiti) {
-    for (const clientInfo of candidates) {
-      const clientInfoBytes = Buffer.byteLength(clientInfo, "utf8");
-      if (clientInfoBytes <= availableBytesWithoutSeparator) {
-        return `${truncatedGraffiti}${clientInfo}`;
-      }
-    }
-  }
-
-  // No candidate fits, return truncated user graffiti unchanged
-  return truncatedGraffiti;
+  // Append with separator and truncate to fit 32 bytes
+  const combined = `${userGraffiti} ${clientInfo}`;
+  return truncateUtf8ToBytes(combined, GRAFFITI_SIZE);
 }
