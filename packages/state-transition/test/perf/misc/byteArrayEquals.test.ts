@@ -24,7 +24,7 @@ function byteArrayEqualsLoop(a: Uint8Array, b: Uint8Array): boolean {
  *
  * Node v24.13.0 benchmark results:
  *
- * For small arrays (<=32 bytes), loop is faster due to V8 JIT optimizations:
+ * For small arrays (<=48 bytes), loop is faster due to V8 JIT optimizations:
  *   - 32 bytes: Loop 14.7 ns/op vs Buffer.compare 49.7 ns/op (Loop 3.4x faster)
  *
  * For medium arrays, loop is still competitive:
