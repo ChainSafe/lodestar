@@ -138,7 +138,7 @@ export async function createNodeJsLibp2p(
     datastore: datastore as any,
     services: {
       identify: identify({
-        runOnConnectionOpen: false,
+        runOnConnectionOpen: true,
       }),
       // individual components are specified because the components object is a Proxy
       // and passing it here directly causes problems downstream, not to mention is slowwww
