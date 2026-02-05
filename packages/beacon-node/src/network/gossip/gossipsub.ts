@@ -113,6 +113,9 @@ export class Eth2Gossipsub {
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
 
+  // Direct peers set - tracks peers that should have permanent mesh connections
+  private readonly direct: Set<string>;
+
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
     const {networkConfig, logger, metricsRegister, peersData, events} = modules;
@@ -186,6 +189,9 @@ export class Eth2Gossipsub {
     this.events = events;
     this.libp2p = modules.libp2p;
     this.gossipTopicCache = gossipTopicCache;
+
+    // Initialize direct peers set with configured direct peers
+    this.direct = new Set(directPeers.map((p) => p.id.toString()));
 
     this.gs.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
