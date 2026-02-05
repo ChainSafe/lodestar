@@ -91,12 +91,9 @@ export class RestApiServer {
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 
     // To parse our ApiError -> statusCode
-    // Note: In Fastify 5.7+, err is typed as unknown by default, so we use type guards
-    server.setErrorHandler((err: unknown, _req, res) => {
-      const stacktraces = opts.stacktraces && err instanceof Error ? err.stack?.split("\n") : undefined;
-
-      // Check for Fastify validation errors
-      if (err instanceof Error && "validation" in err && (err as FastifyError).validation) {
+    server.setErrorHandler((err, _req, res) => {
+      const stacktraces = opts.stacktraces ? (err as Error).stack?.split("\n") : undefined;
+      if ((err as FastifyError).validation) {
         const {instancePath, message} = (err as FastifyError).validation![0];
         const payload: ErrorResponse = {
           code: 400,
@@ -115,8 +112,7 @@ export class RestApiServer {
       } else {
         // Convert our custom ApiError into status code
         const statusCode = err instanceof ApiError ? err.statusCode : 500;
-        const message = err instanceof Error ? err.message : String(err);
-        const payload: ErrorResponse = {code: statusCode, message, stacktraces};
+        const payload: ErrorResponse = {code: statusCode, message: (err as Error).message, stacktraces};
         void res.status(statusCode).send(payload);
       }
     });
