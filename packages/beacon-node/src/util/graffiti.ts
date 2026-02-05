@@ -53,8 +53,8 @@ function getClientInfoCandidates(cl: ClientVersion, el: ClientVersion | null | u
       `${elCode}${elCommit.slice(0, 2)}${clCode}${clCommit.slice(0, 2)}`,
       // Codes only: "ELLS" (4 bytes)
       `${elCode}${clCode}`,
-      // Single code: "LS" (2 bytes) - CL only fallback
-      clCode,
+      // Single code: "EL" (2 bytes) - EL code when available (matches Teku)
+      elCode,
     ];
   }
   const {code: clCode, commit: clCommit} = cl;
