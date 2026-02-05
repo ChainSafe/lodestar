@@ -67,6 +67,7 @@ export function fromHex(hex: string): Uint8Array {
  *
  * Node v24.13.0 benchmark results:
  * - 32 bytes:   Loop 14.7 ns/op vs Buffer.compare 49.7 ns/op (Loop 3.4x faster)
+ * - 48 bytes:   Loop 36 ns/op vs Buffer.compare 56 ns/op (Loop 1.5x faster)
  * - 96 bytes:   Loop 130 ns/op vs Buffer.compare 50 ns/op (Buffer 2.6x faster)
  * - 1024 bytes: Loop 940 ns/op vs Buffer.compare 55 ns/op (Buffer 17x faster)
  *

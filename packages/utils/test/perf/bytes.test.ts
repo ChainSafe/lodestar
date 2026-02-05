@@ -85,6 +85,7 @@ describe("bytes utils", async () => {
      * Size         | nodejs (hybrid)              | browser (loop)
      * -------------|------------------------------|----------------
      * 32 bytes     | 14.7 ns/op (loop)            | 14.7 ns/op
+     * 48 bytes     | 56 ns/op (Buffer.compare)    | 36 ns/op
      * 96 bytes     | 50 ns/op (Buffer.compare)    | 130 ns/op
      * 1024 bytes   | 55 ns/op (Buffer.compare)    | 940 ns/op
      * 131072 bytes | 270 ns/op (Buffer.compare)   | 14.8 μs/op
@@ -95,6 +96,7 @@ describe("bytes utils", async () => {
      */
     const arraysToCompare = [
       {name: "32 bytes (block root)", a: blockRoot, b: new Uint8Array(blockRoot)},
+      {name: "48 bytes (pubkey)", a: new Uint8Array(48).fill(42), b: new Uint8Array(48).fill(42)},
       {name: "96 bytes (signature)", a: new Uint8Array(96).fill(42), b: new Uint8Array(96).fill(42)},
       {name: "1024 bytes", a: new Uint8Array(1024).fill(42), b: new Uint8Array(1024).fill(42)},
       {name: `${BLOB_LEN} bytes (blob)`, a: blob, b: new Uint8Array(blob)},
