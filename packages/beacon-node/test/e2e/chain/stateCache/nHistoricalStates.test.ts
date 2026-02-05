@@ -303,12 +303,11 @@ describe("regen/reload states with n-historical states configuration", () => {
         options: {
           sync: {isSingleNode: true},
           network: {allowPublishToZeroPeers: true, mdns: true, useWorker: false},
-          // run the first bn with ReorgedForkChoice, no nHistoricalStates flag so it does not have to reload
+          // by default, maxCPStateEpochsInMemory is 3 so that it does not have to persist/reload checkpoint states
           chain: {
             blsVerifyAllMainThread: true,
             forkchoiceConstructor: ReorgedForkChoice,
             // this node does not need to reload state
-            nHistoricalStates: false,
             proposerBoost: true,
           },
         },
@@ -325,12 +324,10 @@ describe("regen/reload states with n-historical states configuration", () => {
         options: {
           api: {rest: {enabled: false}},
           network: {mdns: true, useWorker: false},
-          // run the 2nd bn with nHistoricalStates flag and the configured maxBlockStates, maxCPStateEpochsInMemory
+          // configure this node to be reloaded via maxBlockStates, maxCPStateEpochsInMemory options
           chain: {
             blsVerifyAllMainThread: true,
             forkchoiceConstructor: ReorgedForkChoice,
-            // this node can follow with nHistoricalStates flag and it has to reload state
-            nHistoricalStates: true,
             maxBlockStates,
             maxCPStateEpochsInMemory,
             proposerBoost: true,

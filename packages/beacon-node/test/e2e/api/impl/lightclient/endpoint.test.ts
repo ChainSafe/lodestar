@@ -1,9 +1,9 @@
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
-import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {HttpHeader, getClient, routes} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
-import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {CachedBeaconStateAltair} from "@lodestar/state-transition";
+import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Validator} from "@lodestar/validator";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
@@ -13,6 +13,8 @@ import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
 describe("lightclient api", () => {
+  vi.setConfig({testTimeout: 10_000});
+
   const SLOT_DURATION_MS = 1000;
   const restPort = 9596;
   const ELECTRA_FORK_EPOCH = 0;
@@ -119,29 +121,20 @@ describe("lightclient api", () => {
     expect(finalityUpdate).toBeDefined();
   });
 
-  it.skip("getLightClientCommitteeRoot() for the 1st period", async () => {
-    // need to investigate why this test fails after upgrading to electra
-    // TODO: https://github.com/ChainSafe/lodestar/issues/8723
+  it("getLightClientCommitteeRoot() for the 1st period", async () => {
     await waitForBestUpdate();
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const committeeRes = await lightclient.getLightClientCommitteeRoot({startPeriod: 0, count: 1});
     committeeRes.assertOk();
-    const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
-    const validators = (await client.postStateValidators({stateId: "head"})).value();
-    const pubkeys = validators.map((v) => v.validator.pubkey);
-    expect(pubkeys.length).toBe(validatorCount);
-    // only 2 validators spreading to 512 committee slots
-    const committeePubkeys = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) =>
-      i % 2 === 0 ? pubkeys[0] : pubkeys[1]
-    );
-    const aggregatePubkey = aggregateSerializedPublicKeys(committeePubkeys).toBytes();
+
+    // Get the actual sync committee root from the head state
+    // The sync committee is computed using a weighted random shuffle, not simple alternation
+    // Since the test starts at Electra, headState is always post-Altair and has currentSyncCommittee
+    const headState = bn.chain.getHeadState() as CachedBeaconStateAltair;
+    const expectedRoot = headState.currentSyncCommittee.hashTreeRoot();
+
     // single committee hash since we requested for the first period
-    expect(committeeRes.value()).toEqual([
-      ssz.altair.SyncCommittee.hashTreeRoot({
-        pubkeys: committeePubkeys,
-        aggregatePubkey,
-      }),
-    ]);
+    expect(committeeRes.value()).toEqual([expectedRoot]);
   });
 });

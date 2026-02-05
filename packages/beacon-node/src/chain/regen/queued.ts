@@ -5,8 +5,7 @@ import {BeaconBlock, Epoch, RootHex, Slot, isGloasBeaconBlock, phase0} from "@lo
 import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {CheckpointHex} from "../stateCache/index.js";
-import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
+import {BlockStateCache, CheckpointHex, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {
   IStateRegenerator,

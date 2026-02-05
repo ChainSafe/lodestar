@@ -8,12 +8,12 @@ import {ChainEventEmitter} from "./emitter.js";
 /**
  * Minimum time to wait before attempting reconstruction
  */
-const RECONSTRUCTION_DELAY_MIN_MS = 800;
+const RECONSTRUCTION_DELAY_MIN_BPS = 667;
 
 /**
  * Maximum time to wait before attempting reconstruction
  */
-const RECONSTRUCTION_DELAY_MAX_MS = 1200;
+const RECONSTRUCTION_DELAY_MAX_BPS = 1000;
 
 export type ColumnReconstructionTrackerInit = {
   logger: Logger;
@@ -41,11 +41,16 @@ export class ColumnReconstructionTracker {
   /** Track if a reconstruction attempt is in-flight */
   running = false;
 
+  private readonly minDelayMs: number;
+  private readonly maxDelayMs: number;
+
   constructor(init: ColumnReconstructionTrackerInit) {
     this.logger = init.logger;
     this.emitter = init.emitter;
     this.metrics = init.metrics;
     this.config = init.config;
+    this.minDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MIN_BPS);
+    this.maxDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MAX_BPS);
   }
 
   triggerColumnReconstruction(blockInput: BlockInputColumns): void {
@@ -61,8 +66,7 @@ export class ColumnReconstructionTracker {
     // just that it has been triggered for this block root.
     this.running = true;
     this.lastBlockRootHex = blockInput.blockRootHex;
-    const delay =
-      RECONSTRUCTION_DELAY_MIN_MS + Math.random() * (RECONSTRUCTION_DELAY_MAX_MS - RECONSTRUCTION_DELAY_MIN_MS);
+    const delay = this.minDelayMs + Math.random() * (this.maxDelayMs - this.minDelayMs);
     sleep(delay)
       .then(() => {
         const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};

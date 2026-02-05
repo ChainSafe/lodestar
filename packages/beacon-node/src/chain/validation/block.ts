@@ -143,11 +143,10 @@ export async function validateGossipBlock(
   // in forky condition, make sure to populate ShufflingCache with regened state
   chain.shufflingCache.processState(blockState);
 
-  // Extra conditions for merge fork blocks
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
   if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
-    if (!isExecutionBlockBodyType(block.body)) throw Error("Not merge block type");
+    if (!isExecutionBlockBodyType(block.body)) throw Error("Not execution block body type");
     const executionPayload = block.body.executionPayload;
     if (isExecutionStateType(blockState) && isExecutionEnabled(blockState, block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
@@ -163,7 +162,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
-    const signatureSet = getBlockProposerSignatureSet(chain.config, chain.index2pubkey, signedBlock);
+    const signatureSet = getBlockProposerSignatureSet(chain.config, signedBlock);
     // Don't batch so verification is not delayed
     if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
       throw new BlockGossipError(GossipAction.REJECT, {

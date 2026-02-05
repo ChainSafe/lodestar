@@ -133,21 +133,31 @@ export function getBeaconBlockApi({
 
     if (isBlockInputColumns(blockForImport)) {
       for (const dataColumnSidecar of dataColumnSidecars) {
-        blockForImport.addColumn({
-          blockRootHex: blockRoot,
-          columnSidecar: dataColumnSidecar,
-          source: BlockInputSource.api,
-          seenTimestampSec,
-        });
+        blockForImport.addColumn(
+          {
+            blockRootHex: blockRoot,
+            columnSidecar: dataColumnSidecar,
+            source: BlockInputSource.api,
+            seenTimestampSec,
+          },
+          // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
+          // Data columns may arrive via gossip from another node before the API publish completes,
+          // so we allow duplicates here instead of throwing an error.
+          {throwOnDuplicateAdd: false}
+        );
       }
     } else if (isBlockInputBlobs(blockForImport)) {
       for (const blobSidecar of blobSidecars) {
-        blockForImport.addBlob({
-          blockRootHex: blockRoot,
-          blobSidecar,
-          source: BlockInputSource.api,
-          seenTimestampSec,
-        });
+        blockForImport.addBlob(
+          {
+            blockRootHex: blockRoot,
+            blobSidecar,
+            source: BlockInputSource.api,
+            seenTimestampSec,
+          },
+          // Same as above for columns
+          {throwOnDuplicateAdd: false}
+        );
       }
     }
 
@@ -434,11 +444,13 @@ export function getBeaconBlockApi({
         const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
           nonFinalizedBlocks.map(async (summary) => {
-            const block = await db.block.get(fromHex(summary.blockRoot));
-            if (block) {
-              const canonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
+            const blockResult = await chain.getBlockByRoot(summary.blockRoot);
+            if (blockResult) {
+              const canonical = chain.forkChoice.getCanonicalBlockAtSlot(blockResult.block.message.slot);
               if (canonical) {
-                result.push(toBeaconHeaderResponse(config, block, canonical.blockRoot === summary.blockRoot));
+                result.push(
+                  toBeaconHeaderResponse(config, blockResult.block, canonical.blockRoot === summary.blockRoot)
+                );
                 if (isOptimisticBlock(canonical)) {
                   executionOptimistic = true;
                 }
@@ -492,9 +504,9 @@ export function getBeaconBlockApi({
             finalized = false;
 
             if (summary.blockRoot !== toRootHex(canonicalRoot)) {
-              const block = await db.block.get(fromHex(summary.blockRoot));
-              if (block) {
-                result.push(toBeaconHeaderResponse(config, block));
+              const blockResult = await chain.getBlockByRoot(summary.blockRoot);
+              if (blockResult) {
+                result.push(toBeaconHeaderResponse(config, blockResult.block));
               }
             }
           })

@@ -145,7 +145,6 @@ export async function verifyBlocksInEpoch(
       opts.skipVerifyBlockSignatures !== true
         ? verifyBlocksSignatures(
             this.config,
-            this.index2pubkey,
             this.bls,
             this.logger,
             this.metrics,

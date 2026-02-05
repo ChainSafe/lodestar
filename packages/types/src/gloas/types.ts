@@ -1,6 +1,7 @@
 import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
+export type Builder = ValueOf<typeof ssz.Builder>;
 export type BuilderPendingWithdrawal = ValueOf<typeof ssz.BuilderPendingWithdrawal>;
 export type BuilderPendingPayment = ValueOf<typeof ssz.BuilderPendingPayment>;
 export type PayloadAttestationData = ValueOf<typeof ssz.PayloadAttestationData>;

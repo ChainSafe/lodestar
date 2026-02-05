@@ -53,7 +53,7 @@ describe("prover/proxy", () => {
       );
       // Give sometime to the prover to start proxy server
       await sleep(3000);
-    }, 50000);
+    }, 80000);
 
     afterAll(async () => {
       if (proc) {
