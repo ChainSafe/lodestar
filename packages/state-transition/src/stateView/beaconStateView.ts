@@ -2,7 +2,7 @@ import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persis
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {FINALIZED_ROOT_GINDEX, FINALIZED_ROOT_GINDEX_ELECTRA, ForkName, ForkSeq} from "@lodestar/params";
+import {FINALIZED_ROOT_GINDEX, FINALIZED_ROOT_GINDEX_ELECTRA, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -125,11 +125,11 @@ export class BeaconStateView implements IBeaconStateView {
     return this.cachedState.finalizedCheckpoint;
   }
 
-  get proposers(): ValidatorIndex[] {
+  get currentProposers(): ValidatorIndex[] {
     return this.cachedState.epochCtx.proposers;
   }
 
-  get proposersNextEpoch(): ValidatorIndex[] {
+  get nextProposers(): ValidatorIndex[] {
     const {proposersNextEpoch} = this.cachedState.epochCtx;
     if (!proposersNextEpoch.computed) {
       // never happen
@@ -167,7 +167,7 @@ export class BeaconStateView implements IBeaconStateView {
     return this.cachedState.epochCtx.currentSyncCommitteeIndexed;
   }
 
-  get proposersPrevEpoch(): ValidatorIndex[] | null {
+  get previousProposers(): ValidatorIndex[] | null {
     return this.cachedState.epochCtx.proposersPrevEpoch;
   }
 
@@ -358,11 +358,11 @@ export class BeaconStateView implements IBeaconStateView {
     return validators;
   }
 
-  getValidatorCount(): number {
+  get validatorCount(): number {
     return this.cachedState.validators.length;
   }
 
-  getActiveValidatorCount(): number {
+  get activeValidatorCount(): number {
     return this.cachedState.epochCtx.currentShuffling.activeIndices.length;
   }
 
@@ -418,7 +418,7 @@ export class BeaconStateView implements IBeaconStateView {
     return getEffectiveBalanceIncrementsZeroInactive(this.cachedState);
   }
 
-  isExecutionStateType(): boolean {
+  get isExecutionStateType(): boolean {
     return this.config.getForkSeq(this.cachedState.slot) >= ForkSeq.bellatrix;
   }
 
@@ -430,7 +430,7 @@ export class BeaconStateView implements IBeaconStateView {
     return isExecutionEnabled(this.cachedState as CachedBeaconStateExecutions, block);
   }
 
-  isMergeTransitionComplete(): boolean {
+  get isMergeTransitionComplete(): boolean {
     return isExecutionStateType(this.cachedState) && isMergeTransitionComplete(this.cachedState);
   }
 
@@ -452,12 +452,13 @@ export class BeaconStateView implements IBeaconStateView {
     return computeUnrealizedCheckpoints(this.cachedState);
   }
 
-  getExpectedWithdrawals(fork: ForkSeq): {
+  getExpectedWithdrawals(): {
     expectedWithdrawals: capella.Withdrawal[];
     processedBuilderWithdrawalsCount: number;
     processedPartialWithdrawalsCount: number;
     processedValidatorSweepCount: number;
   } {
+    const fork = this.config.getForkSeq(this.cachedState.slot);
     return getExpectedWithdrawals(
       fork,
       this.cachedState as CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas
@@ -495,22 +496,19 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   getVoluntaryExitValidity(
-    fork: ForkSeq,
     signedVoluntaryExit: phase0.SignedVoluntaryExit,
     verifySignature = true
   ): VoluntaryExitValidity {
-    return getVoluntaryExitValidity(fork, this.cachedState, signedVoluntaryExit, verifySignature);
+    const stateFork = this.config.getForkSeq(this.cachedState.slot);
+    return getVoluntaryExitValidity(stateFork, this.cachedState, signedVoluntaryExit, verifySignature);
   }
 
-  isValidVoluntaryExit(
-    fork: ForkSeq,
-    signedVoluntaryExit: phase0.SignedVoluntaryExit,
-    verifySignature: boolean
-  ): boolean {
-    return this.getVoluntaryExitValidity(fork, signedVoluntaryExit, verifySignature) === VoluntaryExitValidity.valid;
+  isValidVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit, verifySignature: boolean): boolean {
+    return this.getVoluntaryExitValidity(signedVoluntaryExit, verifySignature) === VoluntaryExitValidity.valid;
   }
 
-  getSyncCommitteesWitness(fork: ForkName): SyncCommitteeWitness {
+  getSyncCommitteesWitness(): SyncCommitteeWitness {
+    const fork = this.config.getForkName(this.cachedState.slot);
     return getSyncCommitteesWitness(fork, this.cachedState);
   }
 
@@ -527,7 +525,7 @@ export class BeaconStateView implements IBeaconStateView {
     return getLatestWeakSubjectivityCheckpointEpoch(this.config, this.cachedState);
   }
 
-  getHistoricalSummaries(): capella.HistoricalSummaries {
+  get historicalSummaries(): capella.HistoricalSummaries {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.capella) {
       throw new Error("Historical summaries are not supported before Capella");
     }
@@ -535,7 +533,7 @@ export class BeaconStateView implements IBeaconStateView {
     return (this.cachedState as CachedBeaconStateCapella).historicalSummaries.toValue();
   }
 
-  getPendingDeposits(): electra.PendingDeposits {
+  get pendingDeposits(): electra.PendingDeposits {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
       throw new Error("Pending deposits are not supported before Electra");
     }
@@ -543,7 +541,15 @@ export class BeaconStateView implements IBeaconStateView {
     return (this.cachedState as CachedBeaconStateElectra).pendingDeposits.toValue();
   }
 
-  getPendingPartialWithdrawals(): electra.PendingPartialWithdrawals {
+  get pendingDepositsCount(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
+      throw new Error("Pending deposits are not supported before Electra");
+    }
+
+    return (this.cachedState as CachedBeaconStateElectra).pendingDeposits.length;
+  }
+
+  get pendingPartialWithdrawals(): electra.PendingPartialWithdrawals {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
       throw new Error("Pending partial withdrawals are not supported before Electra");
     }
@@ -551,7 +557,15 @@ export class BeaconStateView implements IBeaconStateView {
     return (this.cachedState as CachedBeaconStateElectra).pendingPartialWithdrawals.toValue();
   }
 
-  getPendingConsolidations(): electra.PendingConsolidations {
+  get pendingPartialWithdrawalsCount(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
+      throw new Error("Pending partial withdrawals are not supported before Electra");
+    }
+
+    return (this.cachedState as CachedBeaconStateElectra).pendingPartialWithdrawals.length;
+  }
+
+  get pendingConsolidations(): electra.PendingConsolidations {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
       throw new Error("Pending consolidations are not supported before Electra");
     }
@@ -559,7 +573,15 @@ export class BeaconStateView implements IBeaconStateView {
     return (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.toValue();
   }
 
-  getProposerLookahead(): fulu.ProposerLookahead {
+  get pendingConsolidationsCount(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
+      throw new Error("Pending consolidations are not supported before Electra");
+    }
+
+    return (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.length;
+  }
+
+  get proposerLookahead(): fulu.ProposerLookahead {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.fulu) {
       throw new Error("Proposer lookahead is not supported before Fulu");
     }
