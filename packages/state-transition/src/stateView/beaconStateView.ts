@@ -375,7 +375,7 @@ export class BeaconStateView implements IBeaconStateView {
 
   get nextSyncCommittee(): SyncCommittee {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
-      throw new Error("currentSyncCommittee is not available before Altair");
+      throw new Error("nextSyncCommittee is not available before Altair");
     }
 
     if (this._nextSyncCommittee === null) {
