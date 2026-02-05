@@ -93,8 +93,8 @@ export class RestApiServer {
     // To parse our ApiError -> statusCode
     server.setErrorHandler<FastifyError | Error>((err, _req, res) => {
       const stacktraces = opts.stacktraces ? err.stack?.split("\n") : undefined;
-      if ((err as FastifyError).validation) {
-        const {instancePath = "unknown", message} = (err as FastifyError).validation?.[0] ?? {};
+      if ("validation" in err && err.validation) {
+        const {instancePath = "unknown", message} = err.validation?.[0] ?? {};
         const payload: ErrorResponse = {
           code: 400,
           message: `${instancePath.substring(instancePath.lastIndexOf("/") + 1)} ${message}`,
