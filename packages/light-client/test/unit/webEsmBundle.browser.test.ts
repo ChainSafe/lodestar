@@ -1,5 +1,6 @@
 import {beforeAll, describe, expect, it, vi} from "vitest";
 import {sleep} from "@lodestar/utils";
+// biome-ignore lint/correctness/useImportExtensions: bundled file, not source
 import {Lightclient, LightclientEvent, transport, utils} from "../../dist/lightclient.min.mjs";
 
 describe("web bundle for lightclient", () => {
