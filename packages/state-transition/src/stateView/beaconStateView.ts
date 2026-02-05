@@ -6,8 +6,10 @@ import {ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
+  BuilderIndex,
   Bytes32,
   Epoch,
+  ExecutionPayloadBid,
   ExecutionPayloadHeader,
   Root,
   RootHex,
@@ -20,6 +22,7 @@ import {
   electra,
   fulu,
   getValidatorStatus,
+  gloas,
   mapToGeneralStatus,
   phase0,
   rewards,
@@ -55,6 +58,7 @@ import {getBlockRootAtSlot} from "../util/blockRoot.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {isExecutionEnabled, isExecutionStateType, isMergeTransitionComplete} from "../util/execution.js";
+import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getStateTypeFromBytes} from "../util/sszBytes.js";
@@ -84,6 +88,7 @@ export class BeaconStateView implements IBeaconStateView {
   private _proposerLookahead: fulu.ProposerLookahead | null = null;
   // gloas
   private _executionPayloadAvailability: boolean[] | null = null;
+  private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
@@ -303,6 +308,48 @@ export class BeaconStateView implements IBeaconStateView {
     return this._executionPayloadAvailability;
   }
 
+  get latestExecutionPayloadBid(): ExecutionPayloadBid {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("latestExecutionPayloadBid is not available before GLOAS");
+    }
+
+    if (this._latestExecutionPayloadBid === null) {
+      this._latestExecutionPayloadBid = (
+        this.cachedState as CachedBeaconStateGloas
+      ).latestExecutionPayloadBid.toValue();
+    }
+    return this._latestExecutionPayloadBid;
+  }
+
+  getBuilder(index: BuilderIndex): gloas.Builder {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before GLOAS");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).builders.getReadonly(index);
+  }
+
+  canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before GLOAS");
+    }
+
+    return canBuilderCoverBid(this.cachedState as CachedBeaconStateGloas, builderIndex, bidAmount);
+  }
+
+  /**
+   * Return the index of the validator in the PTC committee for the given slot.
+   * return -1 if validator is not in the PTC committee for the given slot.
+   */
+  validatorPTCCommitteeIndex(validatorIndex: ValidatorIndex, slot: Slot): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("PTC committees are not supported before GLOAS");
+    }
+
+    const ptcCommittee = (this.cachedState as CachedBeaconStateGloas).epochCtx.getPayloadTimelinessCommittee(slot);
+    return ptcCommittee.indexOf(validatorIndex);
+  }
+
   // Shuffling and committees
 
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
@@ -434,6 +481,14 @@ export class BeaconStateView implements IBeaconStateView {
 
   get activeValidatorCount(): number {
     return this.cachedState.epochCtx.currentShuffling.activeIndices.length;
+  }
+
+  getAllValidators(): phase0.Validator[] {
+    return this.cachedState.validators.getAllReadonlyValues();
+  }
+
+  getAllBalances(): number[] {
+    return this.cachedState.balances.getAll();
   }
 
   // Merge

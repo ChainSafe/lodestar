@@ -3,8 +3,10 @@ import {ByteViews} from "@chainsafe/ssz";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
+  BuilderIndex,
   Bytes32,
   Epoch,
+  ExecutionPayloadBid,
   ExecutionPayloadHeader,
   Root,
   RootHex,
@@ -16,6 +18,7 @@ import {
   capella,
   electra,
   fulu,
+  gloas,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -73,6 +76,10 @@ export interface IBeaconStateView {
 
   // gloas
   executionPayloadAvailability: boolean[];
+  latestExecutionPayloadBid: ExecutionPayloadBid;
+  getBuilder(index: BuilderIndex): gloas.Builder;
+  canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
+  validatorPTCCommitteeIndex(validatorIndex: ValidatorIndex, slot: Slot): number;
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
@@ -108,6 +115,9 @@ export interface IBeaconStateView {
   validatorCount: number;
   // this get number of active validators in the current shuffling
   activeValidatorCount: number;
+  // this is needed for apis only
+  getAllValidators(): phase0.Validator[];
+  getAllBalances(): number[];
 
   // Merge
   isExecutionStateType: boolean;
