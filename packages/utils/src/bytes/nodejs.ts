@@ -65,9 +65,9 @@ export function fromHex(hex: string): Uint8Array {
 /**
  * Compare two byte arrays for equality using the most performant method based on size.
  *
- * Node v24 benchmark results:
+ * Node v24.13.0 benchmark results:
  * - 32 bytes:   Loop 14.7 ns/op vs Buffer.compare 49.7 ns/op (Loop 3.4x faster)
- * - 48 bytes:   Loop 59.8 ns/op vs Buffer.compare 48.5 ns/op (Buffer 1.2x faster)
+ * - 96 bytes:   Loop 130 ns/op vs Buffer.compare 50 ns/op (Buffer 2.6x faster)
  * - 1024 bytes: Loop 940 ns/op vs Buffer.compare 55 ns/op (Buffer 17x faster)
  *
  * Uses loop for small arrays (<=32 bytes) where V8 JIT is more efficient,
