@@ -92,9 +92,9 @@ export class RestApiServer {
 
     // To parse our ApiError -> statusCode
     server.setErrorHandler((err, _req, res) => {
-      const stacktraces = opts.stacktraces ? (err as Error).stack?.split("\n") : undefined;
-      if ((err as FastifyError).validation) {
-        const {instancePath, message} = (err as FastifyError).validation![0];
+      const stacktraces = opts.stacktraces ? err.stack?.split("\n") : undefined;
+      if (err.validation) {
+        const {instancePath, message} = err.validation[0];
         const payload: ErrorResponse = {
           code: 400,
           message: `${instancePath.substring(instancePath.lastIndexOf("/") + 1)} ${message}`,
@@ -112,7 +112,7 @@ export class RestApiServer {
       } else {
         // Convert our custom ApiError into status code
         const statusCode = err instanceof ApiError ? err.statusCode : 500;
-        const payload: ErrorResponse = {code: statusCode, message: (err as Error).message, stacktraces};
+        const payload: ErrorResponse = {code: statusCode, message: err.message, stacktraces};
         void res.status(statusCode).send(payload);
       }
     });
