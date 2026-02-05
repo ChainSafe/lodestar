@@ -1,5 +1,6 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig} from "@lodestar/config";
+import {byteArrayEquals} from "@lodestar/utils";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -98,7 +99,7 @@ export async function getHistoricalState(
       throw e;
     }
     blockCount++;
-    if (Buffer.compare(state.hashTreeRoot(), block.message.stateRoot) !== 0) {
+    if (!byteArrayEquals(state.hashTreeRoot(), block.message.stateRoot)) {
       metrics?.regenErrorCount.inc({reason: RegenErrorType.invalidStateRoot});
     }
   }

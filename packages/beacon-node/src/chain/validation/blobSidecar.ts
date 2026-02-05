@@ -12,7 +12,7 @@ import {
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
-import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {kzg} from "../../util/kzg.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError, BlobSidecarValidationError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
@@ -226,7 +226,7 @@ export async function validateBlockBlobSidecars(
   const firstSidecarSignedBlockHeader = blobSidecars[0].signedBlockHeader;
   const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
-  if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
+  if (!byteArrayEquals(blockRoot, firstBlockRoot)) {
     throw new BlobSidecarValidationError(
       {
         code: BlobSidecarErrorCode.INCORRECT_BLOCK,
