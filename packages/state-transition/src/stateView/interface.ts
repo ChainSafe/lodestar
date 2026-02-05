@@ -1,6 +1,5 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {ByteViews} from "@chainsafe/ssz";
-import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -34,6 +33,9 @@ import {EpochShuffling} from "../util/epochShuffling.js";
  * A read-only view of the BeaconState.
  */
 export interface IBeaconStateView {
+  // State access
+
+  // phase0
   slot: Slot;
   fork: Fork;
   epoch: Epoch;
@@ -41,44 +43,134 @@ export interface IBeaconStateView {
   genesisValidatorsRoot: Root;
   eth1Data: phase0.Eth1Data;
   latestBlockHeader: phase0.BeaconBlockHeader;
-  previousDecisionRoot: RootHex;
-  currentDecisionRoot: RootHex;
-  nextDecisionRoot: RootHex;
   previousJustifiedCheckpoint: Checkpoint;
   currentJustifiedCheckpoint: Checkpoint;
   finalizedCheckpoint: Checkpoint;
-  proposers: ValidatorIndex[];
-  proposersNextEpoch: ValidatorIndex[];
+  getBlockRootAtSlot(slot: Slot): Root;
+  getBlockRootAtEpoch(epoch: Epoch): Root;
+  getRandaoMix(epoch: Epoch): Bytes32;
+
+  // altair
+  previousEpochParticipation: number[];
+  currentEpochParticipation: number[];
+
+  // bellatrix
+  latestExecutionPayloadHeader: ExecutionPayloadHeader;
+
+  // capella
+  historicalSummaries: capella.HistoricalSummaries;
+
+  // electra
+  pendingDeposits: electra.PendingDeposits;
+  pendingDepositsCount: number;
+  pendingPartialWithdrawals: electra.PendingPartialWithdrawals;
+  pendingPartialWithdrawalsCount: number;
+  pendingConsolidations: electra.PendingConsolidations;
+  pendingConsolidationsCount: number;
+
+  // fulu
+  proposerLookahead: fulu.ProposerLookahead;
+
+  // gloas
+  executionPayloadAvailability: boolean[];
+
+  // Shuffling and committees
+  getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
+  // Decision roots
+  previousDecisionRoot: RootHex;
+  currentDecisionRoot: RootHex;
+  nextDecisionRoot: RootHex;
+  getShufflingDecisionRoot(epoch: Epoch): RootHex;
+  getPreviousShuffling(): EpochShuffling;
+  getCurrentShuffling(): EpochShuffling;
+  getNextShuffling(): EpochShuffling;
+
+  // Proposer shuffling
+  previousProposers: ValidatorIndex[] | null;
+  currentProposers: ValidatorIndex[];
+  nextProposers: ValidatorIndex[];
+  getBeaconProposer(slot: Slot): ValidatorIndex;
+
+  // Sync committees
   currentSyncCommittee: altair.SyncCommittee;
   nextSyncCommittee: altair.SyncCommittee;
   currentSyncCommitteeIndexed: SyncCommitteeCache;
-  // Proposers for previous epoch, initialized to null in first epoch
-  proposersPrevEpoch: ValidatorIndex[] | null;
-  effectiveBalanceIncrements: EffectiveBalanceIncrements;
-  latestExecutionPayloadHeader: ExecutionPayloadHeader;
   syncProposerReward: number;
-  previousEpochParticipation: number[];
-  currentEpochParticipation: number[];
-  executionPayloadAvailability: boolean[];
+  getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
+
+  // Validators and balances
+  effectiveBalanceIncrements: EffectiveBalanceIncrements;
+  getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements;
+  getBalance(index: number): number;
+  // readonly
+  getValidator(index: ValidatorIndex): phase0.Validator;
+  getValidatorsByStatus(statuses: Set<string>, currentEpoch: Epoch): phase0.Validator[];
+  validatorCount: number;
+  // this get number of active validators in the current shuffling
+  activeValidatorCount: number;
+
+  // Merge
+  isExecutionStateType: boolean;
+  isMergeTransitionComplete: boolean;
+  // TODO this should go away (or rather only need block)
+  isExecutionEnabled(block: BeaconBlock | BlindedBeaconBlock): boolean;
+
+  // Block production
+  getExpectedWithdrawals(): {
+    expectedWithdrawals: capella.Withdrawal[];
+    processedBuilderWithdrawalsCount: number;
+    processedPartialWithdrawalsCount: number;
+    processedValidatorSweepCount: number;
+  };
+
+  // API
   proposerRewards: RewardCache;
-  // electra - specific
-  pendingDepositsLength: number;
-  pendingPartialWithdrawalsLength: number;
-  pendingConsolidationsLength: number;
+  computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards>;
+  computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards>;
+  computeSyncCommitteeRewards(
+    block: BeaconBlock,
+    validatorIds: (ValidatorIndex | string)[]
+  ): Promise<rewards.SyncCommitteeRewards>;
+  getLatestWeakSubjectivityCheckpointEpoch(): Epoch;
+
+  // Validation
+  getVoluntaryExitValidity(
+    signedVoluntaryExit: phase0.SignedVoluntaryExit,
+    verifySignature: boolean
+  ): VoluntaryExitValidity;
+  isValidVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit, verifySignature: boolean): boolean;
+
+  // Proofs
+  getFinalizedRootProof(): Uint8Array[];
+  getSyncCommitteesWitness(): SyncCommitteeWitness;
+  getSingleProof(gindex: bigint): Uint8Array[];
+  createMultiProof(descriptor: Uint8Array): CompactMultiProof;
+
+  // Fork choice
+  computeUnrealizedCheckpoints(): {
+    justifiedCheckpoint: phase0.Checkpoint;
+    finalizedCheckpoint: phase0.Checkpoint;
+  };
 
   // this is for backward compatible
   clonedCount: number;
   clonedCountWithTransferCache: number;
   createdWithTransferCache: boolean;
-
+  // TODO is there a better name that is less implementation specific but still conveys the meaning?
   isStateValidatorsNodesPopulated(): boolean;
+
+  // Serialization
+  loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
   serialize(): Uint8Array;
   serializedSize(): number;
   serializeToBytes(output: ByteViews, offset: number): number;
   serializeValidators(): Uint8Array;
   serializedValidatorsSize(): number;
   serializeValidatorsToBytes(output: ByteViews, offset: number): number;
+
   hashTreeRoot(): Uint8Array;
+
+  // State transition
   stateTransition(
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
@@ -89,67 +181,4 @@ export interface IBeaconStateView {
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
     modules?: StateTransitionModules
   ): IBeaconStateView;
-  loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
-
-  // this maps to getReadonly of CachedBeaconStateAllForks
-  // we should not modify validator through this api, only state-transition should do that
-  getValidator(index: ValidatorIndex): phase0.Validator;
-  getValidatorsByStatus(statuses: Set<string>, currentEpoch: Epoch): phase0.Validator[];
-  getValidatorCount(): number;
-  // this get number of active validators in the current shuffling
-  getActiveValidatorCount(): number;
-  getBeaconProposer(slot: Slot): ValidatorIndex;
-  getBeaconProposers(): ValidatorIndex[];
-  getBeaconProposersPrevEpoch(): ValidatorIndex[] | null;
-  getBeaconProposersNextEpoch(): ValidatorIndex[];
-  getShufflingDecisionRoot(epoch: Epoch): RootHex;
-  getPreviousShuffling(): EpochShuffling;
-  getCurrentShuffling(): EpochShuffling;
-  getNextShuffling(): EpochShuffling;
-  getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
-  getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
-  getBlockRootAtSlot(slot: Slot): Root;
-  getBlockRoot(epoch: Epoch): Root;
-  getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements;
-  isExecutionStateType(): boolean;
-  isExecutionEnabled(block: BeaconBlock | BlindedBeaconBlock): boolean;
-  isMergeTransitionComplete(): boolean;
-  getBalance(index: number): number;
-  getFinalizedRootProof(): Uint8Array[];
-  computeUnrealizedCheckpoints(): {
-    justifiedCheckpoint: phase0.Checkpoint;
-    finalizedCheckpoint: phase0.Checkpoint;
-  };
-  getExpectedWithdrawals(fork: ForkSeq): {
-    expectedWithdrawals: capella.Withdrawal[];
-    processedBuilderWithdrawalsCount: number;
-    processedPartialWithdrawalsCount: number;
-    processedValidatorSweepCount: number;
-  };
-  getRandaoMix(epoch: Epoch): Bytes32;
-  computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards>;
-  computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards>;
-  computeSyncCommitteeRewards(
-    block: BeaconBlock,
-    validatorIds: (ValidatorIndex | string)[]
-  ): Promise<rewards.SyncCommitteeRewards>;
-  getVoluntaryExitValidity(
-    fork: ForkSeq,
-    signedVoluntaryExit: phase0.SignedVoluntaryExit,
-    verifySignature: boolean
-  ): VoluntaryExitValidity;
-  isValidVoluntaryExit(
-    fork: ForkSeq,
-    signedVoluntaryExit: phase0.SignedVoluntaryExit,
-    verifySignature: boolean
-  ): boolean;
-  getSyncCommitteesWitness(fork: ForkName): SyncCommitteeWitness;
-  getSingleProof(gindex: bigint): Uint8Array[];
-  createMultiProof(descriptor: Uint8Array): CompactMultiProof;
-  getLatestWeakSubjectivityCheckpointEpoch(): Epoch;
-  getHistoricalSummaries(): capella.HistoricalSummaries;
-  getPendingDeposits(): electra.PendingDeposits;
-  getPendingPartialWithdrawals(): electra.PendingPartialWithdrawals;
-  getPendingConsolidations(): electra.PendingConsolidations;
-  getProposerLookahead(): fulu.ProposerLookahead;
 }

@@ -2,7 +2,7 @@ import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persis
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {FINALIZED_ROOT_GINDEX, FINALIZED_ROOT_GINDEX_ELECTRA, ForkName, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -44,14 +44,14 @@ import {
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {BeaconStateAllForks} from "../cache/types.js";
 import {computeUnrealizedCheckpoints} from "../epoch/computeUnrealizedCheckpoints.js";
-import {getSyncCommitteesWitness} from "../lightClient/proofs.js";
+import {getFinalizedRootProof, getSyncCommitteesWitness} from "../lightClient/proofs.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {computeAttestationsRewards} from "../rewards/attestationsRewards.js";
 import {computeBlockRewards} from "../rewards/blockRewards.js";
 import {computeSyncCommitteeRewards} from "../rewards/syncCommitteeRewards.js";
 import {StateTransitionModules, StateTransitionOpts, processSlots, stateTransition} from "../stateTransition.js";
 import {getEffectiveBalanceIncrementsZeroInactive} from "../util/balance.js";
-import {getBlockRoot, getBlockRootAtSlot} from "../util/blockRoot.js";
+import {getBlockRootAtSlot} from "../util/blockRoot.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {isExecutionEnabled, isExecutionStateType, isMergeTransitionComplete} from "../util/execution.js";
@@ -63,22 +63,43 @@ import {IBeaconStateView} from "./interface.js";
 
 export class BeaconStateView implements IBeaconStateView {
   private readonly config: BeaconConfig;
-  private _executionPayloadAvailability: boolean[] | null = null;
+  // Cached values extracted from the tree
+  // phase0
+  private _fork: Fork | null = null;
+  private _latestBlockHeader: phase0.BeaconBlockHeader | null = null;
+  // altair
   private _currentSyncCommittee: SyncCommittee | null = null;
   private _nextSyncCommittee: SyncCommittee | null = null;
   private _previousEpochParticipation: number[] | null = null;
   private _currentEpochParticipation: number[] | null = null;
+  // bellatrix
+  private _latestExecutionPayloadHeader: ExecutionPayloadHeader | null = null;
+  // capella
+  private _historicalSummaries: capella.HistoricalSummaries | null = null;
+  // electra
+  private _pendingPartialWithdrawals: electra.PendingPartialWithdrawals | null = null;
+  private _pendingConsolidations: electra.PendingConsolidations | null = null;
+  private _pendingDeposits: electra.PendingDeposits | null = null;
+  // fulu
+  private _proposerLookahead: fulu.ProposerLookahead | null = null;
+  // gloas
+  private _executionPayloadAvailability: boolean[] | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
   }
+
+  // phase0
 
   get slot(): number {
     return this.cachedState.slot;
   }
 
   get fork(): Fork {
-    return this.cachedState.fork.toValue();
+    if (this._fork === null) {
+      this._fork = this.cachedState.fork.toValue();
+    }
+    return this._fork;
   }
 
   get epoch(): number {
@@ -98,19 +119,10 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   get latestBlockHeader(): phase0.BeaconBlockHeader {
-    return this.cachedState.latestBlockHeader;
-  }
-
-  get previousDecisionRoot(): RootHex {
-    return this.cachedState.epochCtx.previousDecisionRoot;
-  }
-
-  get currentDecisionRoot(): RootHex {
-    return this.cachedState.epochCtx.currentDecisionRoot;
-  }
-
-  get nextDecisionRoot(): RootHex {
-    return this.cachedState.epochCtx.nextDecisionRoot;
+    if (this._latestBlockHeader === null) {
+      this._latestBlockHeader = this.cachedState.latestBlockHeader.toValue();
+    }
+    return this._latestBlockHeader;
   }
 
   get previousJustifiedCheckpoint(): Checkpoint {
@@ -125,19 +137,229 @@ export class BeaconStateView implements IBeaconStateView {
     return this.cachedState.finalizedCheckpoint;
   }
 
-  get proposers(): ValidatorIndex[] {
+  getBlockRootAtSlot(slot: Slot): Root {
+    return getBlockRootAtSlot(this.cachedState, slot);
+  }
+
+  getBlockRootAtEpoch(epoch: Epoch): Root {
+    return this.getBlockRootAtSlot(computeEpochAtSlot(epoch));
+  }
+
+  getRandaoMix(epoch: Epoch): Bytes32 {
+    return getRandaoMix(this.cachedState, epoch);
+  }
+
+  get previousEpochParticipation(): number[] {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
+      throw new Error("previousEpochParticipation is not available before Altair");
+    }
+
+    if (this._previousEpochParticipation === null) {
+      this._previousEpochParticipation = (
+        this.cachedState as CachedBeaconStateAltair
+      ).previousEpochParticipation.toValue();
+    }
+
+    return this._previousEpochParticipation;
+  }
+
+  // altair
+
+  get currentEpochParticipation(): number[] {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
+      throw new Error("currentEpochParticipation is not available before Altair");
+    }
+
+    if (this._currentEpochParticipation === null) {
+      this._currentEpochParticipation = (
+        this.cachedState as CachedBeaconStateAltair
+      ).currentEpochParticipation.toValue();
+    }
+
+    return this._currentEpochParticipation;
+  }
+
+  // bellatrix
+
+  get latestExecutionPayloadHeader(): ExecutionPayloadHeader {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.bellatrix) {
+      throw new Error("latestExecutionPayloadHeader is not available before Bellatrix");
+    }
+
+    if (this._latestExecutionPayloadHeader === null) {
+      this._latestExecutionPayloadHeader = (
+        this.cachedState as CachedBeaconStateExecutions
+      ).latestExecutionPayloadHeader.toValue();
+    }
+
+    return this._latestExecutionPayloadHeader;
+  }
+
+  // capella
+
+  get historicalSummaries(): capella.HistoricalSummaries {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.capella) {
+      throw new Error("Historical summaries are not supported before Capella");
+    }
+
+    if (this._historicalSummaries === null) {
+      this._historicalSummaries = (this.cachedState as CachedBeaconStateCapella).historicalSummaries.toValue();
+    }
+
+    return this._historicalSummaries;
+  }
+
+  // electra
+
+  get pendingDeposits(): electra.PendingDeposits {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
+      throw new Error("Pending deposits are not supported before Electra");
+    }
+
+    if (this._pendingDeposits === null) {
+      this._pendingDeposits = (this.cachedState as CachedBeaconStateElectra).pendingDeposits.toValue();
+    }
+
+    return this._pendingDeposits;
+  }
+
+  get pendingDepositsCount(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
+      throw new Error("Pending deposits are not supported before Electra");
+    }
+
+    return (this.cachedState as CachedBeaconStateElectra).pendingDeposits.length;
+  }
+
+  get pendingPartialWithdrawals(): electra.PendingPartialWithdrawals {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
+      throw new Error("Pending partial withdrawals are not supported before Electra");
+    }
+
+    if (this._pendingPartialWithdrawals === null) {
+      this._pendingPartialWithdrawals = (
+        this.cachedState as CachedBeaconStateElectra
+      ).pendingPartialWithdrawals.toValue();
+    }
+
+    return this._pendingPartialWithdrawals;
+  }
+
+  get pendingPartialWithdrawalsCount(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
+      throw new Error("Pending partial withdrawals are not supported before Electra");
+    }
+
+    return (this.cachedState as CachedBeaconStateElectra).pendingPartialWithdrawals.length;
+  }
+
+  get pendingConsolidations(): electra.PendingConsolidations {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
+      throw new Error("Pending consolidations are not supported before Electra");
+    }
+
+    if (this._pendingConsolidations === null) {
+      this._pendingConsolidations = (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.toValue();
+    }
+
+    return this._pendingConsolidations;
+  }
+
+  get pendingConsolidationsCount(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
+      throw new Error("Pending consolidations are not supported before Electra");
+    }
+
+    return (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.length;
+  }
+
+  // fulu
+
+  get proposerLookahead(): fulu.ProposerLookahead {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.fulu) {
+      throw new Error("Proposer lookahead is not supported before Fulu");
+    }
+
+    if (this._proposerLookahead === null) {
+      this._proposerLookahead = (this.cachedState as CachedBeaconStateFulu).proposerLookahead.toValue();
+    }
+
+    return this._proposerLookahead;
+  }
+
+  // gloas
+
+  get executionPayloadAvailability(): boolean[] {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("executionPayloadAvailability is not available before GLOAS");
+    }
+
+    if (this._executionPayloadAvailability === null) {
+      this._executionPayloadAvailability = (this.cachedState as CachedBeaconStateGloas).executionPayloadAvailability
+        .toValue()
+        .toBoolArray();
+    }
+
+    return this._executionPayloadAvailability;
+  }
+
+  // Shuffling and committees
+
+  getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
+    return this.cachedState.epochCtx.getShufflingAtEpoch(epoch);
+  }
+
+  get previousDecisionRoot(): RootHex {
+    return this.cachedState.epochCtx.previousDecisionRoot;
+  }
+
+  get currentDecisionRoot(): RootHex {
+    return this.cachedState.epochCtx.currentDecisionRoot;
+  }
+
+  get nextDecisionRoot(): RootHex {
+    return this.cachedState.epochCtx.nextDecisionRoot;
+  }
+
+  getShufflingDecisionRoot(epoch: Epoch): RootHex {
+    return this.cachedState.epochCtx.getShufflingDecisionRoot(epoch);
+  }
+
+  getPreviousShuffling(): EpochShuffling {
+    return this.cachedState.epochCtx.previousShuffling;
+  }
+
+  getCurrentShuffling(): EpochShuffling {
+    return this.cachedState.epochCtx.currentShuffling;
+  }
+
+  getNextShuffling(): EpochShuffling {
+    return this.cachedState.epochCtx.nextShuffling;
+  }
+
+  // Proposer shuffling
+
+  get previousProposers(): ValidatorIndex[] | null {
+    return this.cachedState.epochCtx.proposersPrevEpoch;
+  }
+
+  get currentProposers(): ValidatorIndex[] {
     return this.cachedState.epochCtx.proposers;
   }
 
-  get proposersNextEpoch(): ValidatorIndex[] {
-    const {proposersNextEpoch} = this.cachedState.epochCtx;
-    if (!proposersNextEpoch.computed) {
-      // never happen
-      throw new Error("proposersNextEpoch is not computed");
-    }
-
-    return proposersNextEpoch.indexes;
+  get nextProposers(): ValidatorIndex[] {
+    return this.cachedState.epochCtx.getBeaconProposersNextEpoch();
   }
+
+  getBeaconProposer(slot: number): ValidatorIndex {
+    return this.cachedState.epochCtx.getBeaconProposer(slot);
+  }
+
+  getBeaconProposers(): ValidatorIndex[] {
+    return this.cachedState.epochCtx.getBeaconProposers();
+  }
+
+  // Sync committees
 
   get currentSyncCommittee(): SyncCommittee {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
@@ -167,95 +389,166 @@ export class BeaconStateView implements IBeaconStateView {
     return this.cachedState.epochCtx.currentSyncCommitteeIndexed;
   }
 
-  get proposersPrevEpoch(): ValidatorIndex[] | null {
-    return this.cachedState.epochCtx.proposersPrevEpoch;
+  get syncProposerReward(): number {
+    return this.cachedState.epochCtx.syncProposerReward;
   }
+
+  getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache {
+    return this.cachedState.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
+  }
+
+  // Validators and balances
 
   get effectiveBalanceIncrements(): EffectiveBalanceIncrements {
     return this.cachedState.epochCtx.effectiveBalanceIncrements;
   }
 
-  get latestExecutionPayloadHeader(): ExecutionPayloadHeader {
+  getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {
+    return getEffectiveBalanceIncrementsZeroInactive(this.cachedState);
+  }
+
+  getBalance(index: number): number {
+    return this.cachedState.balances.get(index);
+  }
+
+  getValidator(index: ValidatorIndex): phase0.Validator {
+    return this.cachedState.validators.getReadonly(index);
+  }
+
+  getValidatorsByStatus(statuses: Set<string>, currentEpoch: Epoch): phase0.Validator[] {
+    const validators: phase0.Validator[] = [];
+    const validatorsArr = this.cachedState.validators.getAllReadonlyValues();
+
+    for (const validator of validatorsArr) {
+      const validatorStatus = getValidatorStatus(validator, currentEpoch);
+      if (statuses.has(validatorStatus) || statuses.has(mapToGeneralStatus(validatorStatus))) {
+        validators.push(validator);
+      }
+    }
+    return validators;
+  }
+
+  get validatorCount(): number {
+    return this.cachedState.validators.length;
+  }
+
+  get activeValidatorCount(): number {
+    return this.cachedState.epochCtx.currentShuffling.activeIndices.length;
+  }
+
+  // Merge
+
+  get isExecutionStateType(): boolean {
+    return this.config.getForkSeq(this.cachedState.slot) >= ForkSeq.bellatrix;
+  }
+
+  isExecutionEnabled(block: BeaconBlock | BlindedBeaconBlock): boolean {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.bellatrix) {
-      throw new Error("latestExecutionPayloadHeader is not available before Bellatrix");
+      return false;
     }
 
-    return (this.cachedState as CachedBeaconStateExecutions).latestExecutionPayloadHeader;
+    return isExecutionEnabled(this.cachedState as CachedBeaconStateExecutions, block);
   }
 
-  get syncProposerReward(): number {
-    return this.cachedState.epochCtx.syncProposerReward;
+  get isMergeTransitionComplete(): boolean {
+    return isExecutionStateType(this.cachedState) && isMergeTransitionComplete(this.cachedState);
   }
 
-  get previousEpochParticipation(): number[] {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
-      throw new Error("previousEpochParticipation is not available before Altair");
-    }
+  // Block production
 
-    if (this._previousEpochParticipation === null) {
-      this._previousEpochParticipation = (
-        this.cachedState as CachedBeaconStateAltair
-      ).previousEpochParticipation.toValue();
-    }
-
-    return this._previousEpochParticipation;
+  getExpectedWithdrawals(): {
+    expectedWithdrawals: capella.Withdrawal[];
+    processedBuilderWithdrawalsCount: number;
+    processedPartialWithdrawalsCount: number;
+    processedValidatorSweepCount: number;
+  } {
+    const fork = this.config.getForkSeq(this.cachedState.slot);
+    return getExpectedWithdrawals(
+      fork,
+      this.cachedState as CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas
+    );
   }
 
-  get currentEpochParticipation(): number[] {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
-      throw new Error("currentEpochParticipation is not available before Altair");
-    }
-
-    if (this._currentEpochParticipation === null) {
-      this._currentEpochParticipation = (
-        this.cachedState as CachedBeaconStateAltair
-      ).currentEpochParticipation.toValue();
-    }
-
-    return this._currentEpochParticipation;
-  }
-
-  get executionPayloadAvailability(): boolean[] {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("executionPayloadAvailability is not available before GLOAS");
-    }
-
-    if (this._executionPayloadAvailability === null) {
-      this._executionPayloadAvailability = (this.cachedState as CachedBeaconStateGloas).executionPayloadAvailability
-        .toValue()
-        .toBoolArray();
-    }
-
-    return this._executionPayloadAvailability;
-  }
+  // API
 
   get proposerRewards(): RewardCache {
     return this.cachedState.proposerRewards;
   }
 
-  get pendingDepositsLength(): number {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
-      throw new Error("pendingDepositsLength is not available before Electra");
-    }
-
-    return (this.cachedState as CachedBeaconStateElectra).pendingDeposits.length;
+  async computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards> {
+    return computeBlockRewards(this.cachedState.config, block, this.cachedState, proposerRewards);
   }
 
-  get pendingPartialWithdrawalsLength(): number {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
-      throw new Error("pendingPartialWithdrawalsLength is not available before Electra");
-    }
-
-    return (this.cachedState as CachedBeaconStateElectra).pendingPartialWithdrawals.length;
+  async computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards> {
+    return computeAttestationsRewards(
+      this.cachedState.config,
+      this.cachedState.epochCtx.pubkey2index,
+      this.cachedState,
+      validatorIds
+    );
   }
 
-  get pendingConsolidationsLength(): number {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
-      throw new Error("pendingConsolidationsLength is not available before Electra");
-    }
-
-    return (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.length;
+  async computeSyncCommitteeRewards(
+    block: BeaconBlock,
+    validatorIds: (ValidatorIndex | string)[]
+  ): Promise<rewards.SyncCommitteeRewards> {
+    return computeSyncCommitteeRewards(
+      this.cachedState.config,
+      this.cachedState.epochCtx.index2pubkey,
+      block,
+      this.cachedState,
+      validatorIds
+    );
   }
+
+  getLatestWeakSubjectivityCheckpointEpoch(): Epoch {
+    return getLatestWeakSubjectivityCheckpointEpoch(this.config, this.cachedState);
+  }
+
+  // Validation
+
+  getVoluntaryExitValidity(
+    signedVoluntaryExit: phase0.SignedVoluntaryExit,
+    verifySignature = true
+  ): VoluntaryExitValidity {
+    const stateFork = this.config.getForkSeq(this.cachedState.slot);
+    return getVoluntaryExitValidity(stateFork, this.cachedState, signedVoluntaryExit, verifySignature);
+  }
+
+  isValidVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit, verifySignature: boolean): boolean {
+    return this.getVoluntaryExitValidity(signedVoluntaryExit, verifySignature) === VoluntaryExitValidity.valid;
+  }
+
+  // Proofs
+
+  getFinalizedRootProof(): Uint8Array[] {
+    return getFinalizedRootProof(this.cachedState);
+  }
+
+  getSyncCommitteesWitness(): SyncCommitteeWitness {
+    const fork = this.config.getForkName(this.cachedState.slot);
+    return getSyncCommitteesWitness(fork, this.cachedState);
+  }
+
+  getSingleProof(gindex: bigint): Uint8Array[] {
+    return new Tree(this.cachedState.node).getSingleProof(gindex);
+  }
+
+  createMultiProof(descriptor: Uint8Array): CompactMultiProof {
+    const stateNode = this.cachedState.node;
+    return createProof(stateNode, {type: ProofType.compactMulti, descriptor}) as CompactMultiProof;
+  }
+
+  // Fork choice
+
+  computeUnrealizedCheckpoints(): {
+    justifiedCheckpoint: phase0.Checkpoint;
+    finalizedCheckpoint: phase0.Checkpoint;
+  } {
+    return computeUnrealizedCheckpoints(this.cachedState);
+  }
+
+  // this is for backward compatible
 
   get clonedCount(): number {
     return this.cachedState.clonedCount;
@@ -271,6 +564,29 @@ export class BeaconStateView implements IBeaconStateView {
 
   isStateValidatorsNodesPopulated(): boolean {
     return isStateValidatorsNodesPopulated(this.cachedState);
+  }
+
+  // Serialization
+
+  loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView {
+    const {state} = loadState(this.config, this.cachedState, stateBytes, seedValidatorsBytes);
+    const cachedState = createCachedBeaconState(
+      state,
+      {
+        config: this.config,
+        pubkey2index: this.cachedState.epochCtx.pubkey2index,
+        index2pubkey: this.cachedState.epochCtx.index2pubkey,
+      },
+      {
+        skipSyncPubkeys: true,
+      }
+    );
+
+    // load all cache in order for consumers (usually regen.getState()) to process blocks faster
+    cachedState.validators.getAllReadonlyValues();
+    cachedState.balances.getAll();
+
+    return new BeaconStateView(cachedState);
   }
 
   serialize(): Uint8Array {
@@ -302,6 +618,8 @@ export class BeaconStateView implements IBeaconStateView {
     return this.cachedState.hashTreeRoot();
   }
 
+  // State transition
+
   stateTransition(
     signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
     options: StateTransitionOpts,
@@ -318,253 +636,6 @@ export class BeaconStateView implements IBeaconStateView {
   ): IBeaconStateView {
     const newState = processSlots(this.cachedState, slot, epochTransitionCacheOpts, modules);
     return new BeaconStateView(newState);
-  }
-
-  loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView {
-    const {state} = loadState(this.config, this.cachedState, stateBytes, seedValidatorsBytes);
-    const cachedState = createCachedBeaconState(
-      state,
-      {
-        config: this.config,
-        pubkey2index: this.cachedState.epochCtx.pubkey2index,
-        index2pubkey: this.cachedState.epochCtx.index2pubkey,
-      },
-      {
-        skipSyncPubkeys: true,
-      }
-    );
-
-    // load all cache in order for consumers (usually regen.getState()) to process blocks faster
-    cachedState.validators.getAllReadonlyValues();
-    cachedState.balances.getAll();
-
-    return new BeaconStateView(cachedState);
-  }
-
-  getValidator(index: ValidatorIndex): phase0.Validator {
-    return this.cachedState.validators.getReadonly(index);
-  }
-
-  getValidatorsByStatus(statuses: Set<string>, currentEpoch: Epoch): phase0.Validator[] {
-    const validators: phase0.Validator[] = [];
-    const validatorsArr = this.cachedState.validators.getAllReadonlyValues();
-
-    for (const validator of validatorsArr) {
-      const validatorStatus = getValidatorStatus(validator, currentEpoch);
-      if (statuses.has(validatorStatus) || statuses.has(mapToGeneralStatus(validatorStatus))) {
-        validators.push(validator);
-      }
-    }
-    return validators;
-  }
-
-  getValidatorCount(): number {
-    return this.cachedState.validators.length;
-  }
-
-  getActiveValidatorCount(): number {
-    return this.cachedState.epochCtx.currentShuffling.activeIndices.length;
-  }
-
-  getBeaconProposer(slot: number): ValidatorIndex {
-    return this.cachedState.epochCtx.getBeaconProposer(slot);
-  }
-
-  getBeaconProposers(): ValidatorIndex[] {
-    return this.cachedState.epochCtx.getBeaconProposers();
-  }
-
-  getBeaconProposersPrevEpoch(): ValidatorIndex[] | null {
-    return this.cachedState.epochCtx.getBeaconProposersPrevEpoch();
-  }
-
-  getBeaconProposersNextEpoch(): ValidatorIndex[] {
-    return this.cachedState.epochCtx.getBeaconProposersNextEpoch();
-  }
-
-  getShufflingDecisionRoot(epoch: Epoch): RootHex {
-    return this.cachedState.epochCtx.getShufflingDecisionRoot(epoch);
-  }
-
-  getPreviousShuffling(): EpochShuffling {
-    return this.cachedState.epochCtx.previousShuffling;
-  }
-
-  getCurrentShuffling(): EpochShuffling {
-    return this.cachedState.epochCtx.currentShuffling;
-  }
-
-  getNextShuffling(): EpochShuffling {
-    return this.cachedState.epochCtx.nextShuffling;
-  }
-
-  getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
-    return this.cachedState.epochCtx.getShufflingAtEpoch(epoch);
-  }
-
-  getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache {
-    return this.cachedState.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
-  }
-
-  getBlockRootAtSlot(slot: Slot): Root {
-    return getBlockRootAtSlot(this.cachedState, slot);
-  }
-
-  getBlockRoot(epoch: Epoch): Root {
-    return getBlockRoot(this.cachedState, epoch);
-  }
-
-  getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {
-    return getEffectiveBalanceIncrementsZeroInactive(this.cachedState);
-  }
-
-  isExecutionStateType(): boolean {
-    return this.config.getForkSeq(this.cachedState.slot) >= ForkSeq.bellatrix;
-  }
-
-  isExecutionEnabled(block: BeaconBlock | BlindedBeaconBlock): boolean {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.bellatrix) {
-      return false;
-    }
-
-    return isExecutionEnabled(this.cachedState as CachedBeaconStateExecutions, block);
-  }
-
-  isMergeTransitionComplete(): boolean {
-    return isExecutionStateType(this.cachedState) && isMergeTransitionComplete(this.cachedState);
-  }
-
-  getBalance(index: number): number {
-    return this.cachedState.balances.get(index);
-  }
-
-  getFinalizedRootProof(): Uint8Array[] {
-    const finalizedRootGindex = this.cachedState.epochCtx.isPostElectra()
-      ? FINALIZED_ROOT_GINDEX_ELECTRA
-      : FINALIZED_ROOT_GINDEX;
-    return new Tree(this.cachedState.node).getSingleProof(BigInt(finalizedRootGindex));
-  }
-
-  computeUnrealizedCheckpoints(): {
-    justifiedCheckpoint: phase0.Checkpoint;
-    finalizedCheckpoint: phase0.Checkpoint;
-  } {
-    return computeUnrealizedCheckpoints(this.cachedState);
-  }
-
-  getExpectedWithdrawals(fork: ForkSeq): {
-    expectedWithdrawals: capella.Withdrawal[];
-    processedBuilderWithdrawalsCount: number;
-    processedPartialWithdrawalsCount: number;
-    processedValidatorSweepCount: number;
-  } {
-    return getExpectedWithdrawals(
-      fork,
-      this.cachedState as CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas
-    );
-  }
-
-  getRandaoMix(epoch: Epoch): Bytes32 {
-    return getRandaoMix(this.cachedState, epoch);
-  }
-
-  async computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards> {
-    return computeBlockRewards(this.cachedState.config, block, this.cachedState, proposerRewards);
-  }
-
-  async computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards> {
-    return computeAttestationsRewards(
-      this.cachedState.config,
-      this.cachedState.epochCtx.pubkey2index,
-      this.cachedState,
-      validatorIds
-    );
-  }
-
-  async computeSyncCommitteeRewards(
-    block: BeaconBlock,
-    validatorIds: (ValidatorIndex | string)[]
-  ): Promise<rewards.SyncCommitteeRewards> {
-    return computeSyncCommitteeRewards(
-      this.cachedState.config,
-      this.cachedState.epochCtx.index2pubkey,
-      block,
-      this.cachedState,
-      validatorIds
-    );
-  }
-
-  getVoluntaryExitValidity(
-    fork: ForkSeq,
-    signedVoluntaryExit: phase0.SignedVoluntaryExit,
-    verifySignature = true
-  ): VoluntaryExitValidity {
-    return getVoluntaryExitValidity(fork, this.cachedState, signedVoluntaryExit, verifySignature);
-  }
-
-  isValidVoluntaryExit(
-    fork: ForkSeq,
-    signedVoluntaryExit: phase0.SignedVoluntaryExit,
-    verifySignature: boolean
-  ): boolean {
-    return this.getVoluntaryExitValidity(fork, signedVoluntaryExit, verifySignature) === VoluntaryExitValidity.valid;
-  }
-
-  getSyncCommitteesWitness(fork: ForkName): SyncCommitteeWitness {
-    return getSyncCommitteesWitness(fork, this.cachedState);
-  }
-
-  getSingleProof(gindex: bigint): Uint8Array[] {
-    return new Tree(this.cachedState.node).getSingleProof(gindex);
-  }
-
-  createMultiProof(descriptor: Uint8Array): CompactMultiProof {
-    const stateNode = this.cachedState.node;
-    return createProof(stateNode, {type: ProofType.compactMulti, descriptor}) as CompactMultiProof;
-  }
-
-  getLatestWeakSubjectivityCheckpointEpoch(): Epoch {
-    return getLatestWeakSubjectivityCheckpointEpoch(this.config, this.cachedState);
-  }
-
-  getHistoricalSummaries(): capella.HistoricalSummaries {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.capella) {
-      throw new Error("Historical summaries are not supported before Capella");
-    }
-
-    return (this.cachedState as CachedBeaconStateCapella).historicalSummaries.toValue();
-  }
-
-  getPendingDeposits(): electra.PendingDeposits {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
-      throw new Error("Pending deposits are not supported before Electra");
-    }
-
-    return (this.cachedState as CachedBeaconStateElectra).pendingDeposits.toValue();
-  }
-
-  getPendingPartialWithdrawals(): electra.PendingPartialWithdrawals {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
-      throw new Error("Pending partial withdrawals are not supported before Electra");
-    }
-
-    return (this.cachedState as CachedBeaconStateElectra).pendingPartialWithdrawals.toValue();
-  }
-
-  getPendingConsolidations(): electra.PendingConsolidations {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.electra) {
-      throw new Error("Pending consolidations are not supported before Electra");
-    }
-
-    return (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.toValue();
-  }
-
-  getProposerLookahead(): fulu.ProposerLookahead {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.fulu) {
-      throw new Error("Proposer lookahead is not supported before Fulu");
-    }
-
-    return (this.cachedState as CachedBeaconStateFulu).proposerLookahead.toValue();
   }
 }
 
