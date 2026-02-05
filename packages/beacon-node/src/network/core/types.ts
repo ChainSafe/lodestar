@@ -30,6 +30,12 @@ export interface INetworkCorePublic {
   // Debug
   connectToPeer(peer: PeerIdStr, multiaddr: MultiaddrStr[]): Promise<void>;
   disconnectPeer(peer: PeerIdStr): Promise<void>;
+
+  // Direct peers management
+  addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null>;
+  removeDirectPeer(peerId: PeerIdStr): Promise<boolean>;
+  getDirectPeers(): Promise<string[]>;
+
   dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]>;
   dumpPeer(peerIdStr: PeerIdStr): Promise<routes.lodestar.LodestarNodePeer | undefined>;
   dumpPeerScoreStats(): Promise<PeerScoreStats>;

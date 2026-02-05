@@ -454,6 +454,18 @@ export class NetworkCore implements INetworkCore {
     await this.libp2p.hangUp(peerIdFromString(peerIdStr));
   }
 
+  async addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
+    return this.gossip.addDirectPeer(peer);
+  }
+
+  async removeDirectPeer(peerIdStr: PeerIdStr): Promise<boolean> {
+    return this.gossip.removeDirectPeer(peerIdStr);
+  }
+
+  async getDirectPeers(): Promise<string[]> {
+    return this.gossip.getDirectPeers();
+  }
+
   private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {
     const peerData = this.peersData.connectedPeers.get(peerIdStr);
     const fork = this.config.getForkName(this.clock.currentSlot);
