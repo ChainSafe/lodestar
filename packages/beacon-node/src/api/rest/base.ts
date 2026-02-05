@@ -1,6 +1,6 @@
 import bearerAuthPlugin from "@fastify/bearer-auth";
 import {fastifyCors} from "@fastify/cors";
-import {FastifyError, FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
+import {FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
 import {parse as parseQueryString} from "qs";
 import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
