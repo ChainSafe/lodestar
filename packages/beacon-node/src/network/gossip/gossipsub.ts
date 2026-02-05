@@ -358,6 +358,12 @@ export class Eth2Gossipsub extends GossipSub {
     const {id: peerId, addrs} = parsed[0];
     const peerIdStr = peerId.toString();
 
+    // Prevent adding self as a direct peer
+    if (peerId.equals(this.libp2p.peerId)) {
+      this.logger.warn("Cannot add self as a direct peer", {peerId: peerIdStr});
+      return null;
+    }
+
     // Direct peers need addresses to connect - reject if none provided
     if (addrs.length === 0) {
       this.logger.warn("Cannot add direct peer without addresses", {peerId: peerIdStr});
