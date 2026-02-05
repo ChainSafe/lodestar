@@ -520,6 +520,7 @@ export class BeaconStateView implements IBeaconStateView {
     expectedWithdrawals: capella.Withdrawal[];
     processedBuilderWithdrawalsCount: number;
     processedPartialWithdrawalsCount: number;
+    processedBuildersSweepCount: number;
     processedValidatorSweepCount: number;
   } {
     const fork = this.config.getForkSeq(this.cachedState.slot);
@@ -705,6 +706,9 @@ export class BeaconStateView implements IBeaconStateView {
   }
 }
 
+/**
+ * Create BeaconStateView for historical state regen, no need to sync pubkey cache there.
+ */
 export function createBeaconStateViewForHistoricalRegen(
   config: BeaconConfig,
   stateBytes: Uint8Array
@@ -712,7 +716,6 @@ export function createBeaconStateViewForHistoricalRegen(
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
 
   const pubkey2index = new PubkeyIndexMap();
-  // no need to populate index2pubkey for historical regen
   syncPubkeyCache(state, pubkey2index);
   const cachedState = createCachedBeaconState(
     state,
