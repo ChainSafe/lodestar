@@ -2,19 +2,6 @@ import {bench, describe} from "@chainsafe/benchmark";
 import * as browser from "../../src/bytes/browser.ts";
 import * as nodejs from "../../src/bytes/nodejs.ts";
 
-/**
- * Node v24.13.0 benchmark results for byteArrayEquals:
- *
- * | Size | nodejs (hybrid) | browser (loop) |
- * |------|-----------------|----------------|
- * | 32 bytes | 14.7 ns/op (loop) | 14.7 ns/op |
- * | 1024 bytes | 55 ns/op (Buffer.compare) | 940 ns/op |
- * | 131072 bytes | 270 ns/op (Buffer.compare) | 14.8 μs/op |
- *
- * The nodejs implementation uses a hybrid approach:
- * - Loop for <=32 bytes (V8 JIT optimized)
- * - Buffer.compare for >32 bytes (native code)
- */
 describe("bytes utils", async () => {
   const runsFactor = 1000;
   const blockRoot = new Uint8Array(Array.from({length: 32}, (_, i) => i));
@@ -92,7 +79,19 @@ describe("bytes utils", async () => {
       runsFactor,
     });
 
-    // byteArrayEquals benchmarks - comparing browser (loop) vs nodejs (Buffer.compare)
+    /**
+     * Node v24.13.0 benchmark results for byteArrayEquals:
+     *
+     * | Size | nodejs (hybrid) | browser (loop) |
+     * |------|-----------------|----------------|
+     * | 32 bytes | 14.7 ns/op (loop) | 14.7 ns/op |
+     * | 1024 bytes | 55 ns/op (Buffer.compare) | 940 ns/op |
+     * | 131072 bytes | 270 ns/op (Buffer.compare) | 14.8 μs/op |
+     *
+     * The nodejs implementation uses a hybrid approach:
+     * - Loop for <=32 bytes (V8 JIT optimized)
+     * - Buffer.compare for >32 bytes (native code)
+     */
     const arraysToCompare = [
       {name: "32 bytes (block root)", a: blockRoot, b: new Uint8Array(blockRoot)},
       {name: "1024 bytes", a: new Uint8Array(1024).fill(42), b: new Uint8Array(1024).fill(42)},
