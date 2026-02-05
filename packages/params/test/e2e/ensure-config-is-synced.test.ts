@@ -1,14 +1,12 @@
 import axios from "axios";
 import {describe, expect, it, vi} from "vitest";
+import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
 import {loadConfigYaml} from "../yaml.js";
 
 // Not e2e, but slow. Run with e2e tests
-
-/** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.7.0-alpha.1";
 /**
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant
@@ -19,12 +17,12 @@ describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
   it("mainnet", async () => {
-    const remotePreset = await downloadRemoteConfig("mainnet", specConfigCommit);
+    const remotePreset = await downloadRemoteConfig("mainnet", ethereumConsensusSpecsTests.specVersion);
     assertCorrectPreset({...mainnetPreset}, remotePreset);
   });
 
   it("minimal", async () => {
-    const remotePreset = await downloadRemoteConfig("minimal", specConfigCommit);
+    const remotePreset = await downloadRemoteConfig("minimal", ethereumConsensusSpecsTests.specVersion);
     assertCorrectPreset({...minimalPreset}, remotePreset);
   });
 });
