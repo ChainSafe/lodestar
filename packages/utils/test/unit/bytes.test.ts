@@ -1,5 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {
+  bigIntToBytes,
+  bigIntToBytesInto,
   bytesToInt,
   formatBytes,
   fromHex,
@@ -10,6 +12,44 @@ import {
   toPubkeyHex,
   toRootHex,
 } from "../../src/index.js";
+
+describe("bigIntToBytesInto", () => {
+  const testCases: {value: bigint; length: number; endianness: "le" | "be"}[] = [
+    {value: 0n, length: 8, endianness: "le"},
+    {value: 255n, length: 8, endianness: "le"},
+    {value: 65535n, length: 8, endianness: "le"},
+    {value: BigInt("18446744073709551615"), length: 8, endianness: "le"}, // max u64
+    {value: 0n, length: 32, endianness: "be"},
+    {value: 255n, length: 32, endianness: "be"},
+    {value: BigInt("0x" + "ff".repeat(32)), length: 32, endianness: "be"}, // max u256
+  ];
+
+  for (const {value, length, endianness} of testCases) {
+    it(`should write ${value} into buffer (${length} bytes, ${endianness})`, () => {
+      // Get expected result from allocating version
+      const expected = bigIntToBytes(value, length, endianness);
+
+      // Use the "into" version with pre-allocated buffer
+      const buffer = new Uint8Array(length);
+      bigIntToBytesInto(value, buffer, endianness);
+
+      expect(toHex(buffer)).toEqual(toHex(expected));
+    });
+  }
+
+  it("should reuse the same buffer for multiple writes", () => {
+    const buffer = new Uint8Array(8);
+
+    bigIntToBytesInto(100n, buffer, "le");
+    expect(toHex(buffer)).toEqual(toHex(bigIntToBytes(100n, 8, "le")));
+
+    bigIntToBytesInto(200n, buffer, "le");
+    expect(toHex(buffer)).toEqual(toHex(bigIntToBytes(200n, 8, "le")));
+
+    bigIntToBytesInto(300n, buffer, "le");
+    expect(toHex(buffer)).toEqual(toHex(bigIntToBytes(300n, 8, "le")));
+  });
+});
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
