@@ -63,18 +63,28 @@ export function fromHex(hex: string): Uint8Array {
 /// the performance of fromHexInto using a preallocated buffer is very bad compared to browser so I moved it to the benchmark
 
 /**
- * Compare two byte arrays for equality using Buffer.compare for better performance.
- * Buffer.compare uses native code and is significantly faster than manual iteration.
+ * Compare two byte arrays for equality using the most performant method based on size.
  *
- * Benchmark results (nodejs Buffer.compare vs browser loop):
- * - 32 bytes: 54.9M ops/s vs 23.7M ops/s (2.3x faster)
- * - 1024 bytes: 34.5M ops/s vs 1.1M ops/s (31x faster)
- * - 131072 bytes: 454K ops/s vs 8.7K ops/s (52x faster)
+ * Node v24 benchmark results:
+ * - 32 bytes:   Loop 14.7 ns/op vs Buffer.compare 49.7 ns/op (Loop 3.4x faster)
+ * - 48 bytes:   Loop 59.8 ns/op vs Buffer.compare 48.5 ns/op (Buffer 1.2x faster)
+ * - 1024 bytes: Loop 940 ns/op vs Buffer.compare 55 ns/op (Buffer 17x faster)
+ *
+ * Uses loop for small arrays (<=32 bytes) where V8 JIT is more efficient,
+ * and Buffer.compare for larger arrays where native code wins.
  */
 export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) {
     return false;
   }
+  // For small arrays (32 bytes = roots), loop is faster due to V8 JIT optimizations
+  if (a.length <= 32) {
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+  // For larger arrays, Buffer.compare uses native code and is significantly faster
   return Buffer.compare(a, b) === 0;
 }
 

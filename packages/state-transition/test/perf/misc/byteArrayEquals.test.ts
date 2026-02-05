@@ -20,24 +20,20 @@ function byteArrayEqualsLoop(a: Uint8Array, b: Uint8Array): boolean {
 
 /**
  * Compare loop-based byteArrayEquals (original @chainsafe/ssz implementation)
- * vs Buffer.compare-based byteArrayEquals (new @lodestar/utils implementation).
+ * vs hybrid byteArrayEquals (new @lodestar/utils implementation).
  *
- * The longer the array, the better performance Buffer.compare provides:
- *   - with 32 bytes, Buffer.compare is ~1.5x faster
- *    ✔ byteArrayEqualsLoop 32                                           1.004480e+7 ops/s    99.55400 ns/op
- *    ✔ byteArrayEquals 32                                               1.553495e+7 ops/s    64.37100 ns/op
+ * Node v24.13.0 benchmark results:
  *
- *   - with 1024 bytes, Buffer.compare is ~22x faster
- *    ✔ byteArrayEqualsLoop 1024                                            379239.7 ops/s    2.636855 us/op
- *    ✔ byteArrayEquals 1024                                                 8269999 ops/s    120.9190 ns/op
+ * For small arrays (<=32 bytes), loop is faster due to V8 JIT optimizations:
+ *   - 32 bytes: Loop 14.7 ns/op vs Buffer.compare 49.7 ns/op (Loop 3.4x faster)
  *
- *   - with 16384 bytes, Buffer.compare is ~41x faster
- *    ✔ byteArrayEqualsLoop 16384                                           23808.76 ops/s    42.00135 us/op
- *    ✔ byteArrayEquals 16384                                               975058.0 ops/s    1.025580 us/op
+ * For larger arrays, Buffer.compare is faster due to native code:
+ *   - 1024 bytes: Loop 940 ns/op vs Buffer.compare 55 ns/op (Buffer 17x faster)
+ *   - 16384 bytes: Loop 14.8 μs/op vs Buffer.compare 270 ns/op (Buffer 55x faster)
  *
- *   - with 123687377 bytes (full state), Buffer.compare is ~38x faster
- *    ✔ byteArrayEqualsLoop 123687377                                       3.077884 ops/s    324.8985 ms/op
- *    ✔ byteArrayEquals 123687377                                           114.7834 ops/s    8.712061 ms/op
+ * The @lodestar/utils implementation uses a hybrid approach:
+ *   - Loop for <=32 bytes (common case: roots, pubkeys)
+ *   - Buffer.compare for >32 bytes
  */
 describe.skip("compare Uint8Array using loop-based vs Buffer.compare-based byteArrayEquals", () => {
   const numValidator = 1_000_000;
