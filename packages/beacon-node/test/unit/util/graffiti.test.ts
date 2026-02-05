@@ -113,15 +113,85 @@ describe("Graffiti helper", () => {
       expect(result).toBe("1234567890123456789012345 BULS");
     });
 
-    it("should append single EL code for very long graffiti with EL", () => {
-      // 28 char graffiti leaves 32 - 28 - 1 = 3 bytes, not enough for codes (4), use single code (2)
-      // Matches Teku: uses EL code when EL is present
-      const result = appendClientInfoToGraffiti(
-        "1234567890123456789012345678",
-        consensusClientVersion,
-        executionClientVersion
-      );
-      expect(result).toBe("1234567890123456789012345678 BU");
+    // Teku compatibility tests - ported from GraffitiBuilderTest.java
+    describe("Teku compatibility", () => {
+      // ASCII_GRAFFITI_27 = "27 bytes of user's graffiti" (27 bytes)
+      // ASCII_GRAFFITI_28 = "28 bytes of user's graffiti!" (28 bytes)
+      // ASCII_GRAFFITI_30 = "30 bytes of a user's graffiti!" (30 bytes)
+
+      it("should append codes with space for 27-byte graffiti (Teku: AUTO)", () => {
+        // 27 bytes + 1 space + 4 codes = 32 bytes exactly
+        const graffiti = "27 bytes of user's graffiti";
+        expect(Buffer.byteLength(graffiti, "utf8")).toBe(27);
+        const result = appendClientInfoToGraffiti(graffiti, consensusClientVersion, executionClientVersion);
+        expect(result).toBe("27 bytes of user's graffiti BULS");
+        expect(Buffer.byteLength(result, "utf8")).toBe(32);
+      });
+
+      it("should append codes WITHOUT space for 28-byte graffiti (Teku: AUTO)", () => {
+        // Teku special case: 28 bytes + 4 codes = 32 bytes (drops separator)
+        // With separator: 28 + 1 + 4 = 33 > 32 (doesn't fit)
+        // Without separator: 28 + 4 = 32 (fits exactly!)
+        const graffiti = "28 bytes of user's graffiti!";
+        expect(Buffer.byteLength(graffiti, "utf8")).toBe(28);
+        const result = appendClientInfoToGraffiti(graffiti, consensusClientVersion, executionClientVersion);
+        expect(result).toBe("28 bytes of user's graffiti!BULS");
+        expect(Buffer.byteLength(result, "utf8")).toBe(32);
+      });
+
+      it("should append single EL code for 30-byte graffiti (Teku: CLIENT_CODES)", () => {
+        // 30 bytes + 2 bytes EL code = 32 bytes (no space available)
+        const graffiti = "30 bytes of a user's graffiti!";
+        expect(Buffer.byteLength(graffiti, "utf8")).toBe(30);
+        const result = appendClientInfoToGraffiti(graffiti, consensusClientVersion, executionClientVersion);
+        expect(result).toBe("30 bytes of a user's graffiti!BU");
+        expect(Buffer.byteLength(result, "utf8")).toBe(32);
+      });
+
+      it("should append full watermark for empty graffiti", () => {
+        const result = appendClientInfoToGraffiti("", consensusClientVersion, executionClientVersion);
+        expect(result).toBe("BU9b0eLS80c2");
+        expect(Buffer.byteLength(result, "utf8")).toBe(12);
+      });
+
+      it("should append full watermark with space for short graffiti", () => {
+        const result = appendClientInfoToGraffiti("small", consensusClientVersion, executionClientVersion);
+        expect(result).toBe("small BU9b0eLS80c2");
+      });
+
+      it("should handle UTF-8 emoji graffiti with space", () => {
+        // 🚀 is 4 bytes UTF-8
+        const graffiti = "🚀";
+        expect(Buffer.byteLength(graffiti, "utf8")).toBe(4);
+        const result = appendClientInfoToGraffiti(graffiti, consensusClientVersion, executionClientVersion);
+        expect(result).toBe("🚀 BU9b0eLS80c2");
+        expect(Buffer.byteLength(result, "utf8")).toBe(17); // 4 + 1 + 12
+      });
+
+      // CL-only tests (EL info not available)
+      it("should append CL watermark for empty graffiti when EL unavailable", () => {
+        const result = appendClientInfoToGraffiti("", consensusClientVersion, undefined);
+        expect(result).toBe("LS80c2");
+        expect(Buffer.byteLength(result, "utf8")).toBe(6);
+      });
+
+      it("should append CL code without space for 28-byte graffiti when EL unavailable", () => {
+        // Teku special case: 3 bytes remain → drop space, call formatClientsInfo(4)
+        // For CL-only, formatClientsInfo(4) returns just CL code "TK" (2 bytes)
+        const graffiti = "28 bytes of user's graffiti!";
+        const result = appendClientInfoToGraffiti(graffiti, consensusClientVersion, undefined);
+        // 28 + 2 (LS) = 30 bytes
+        expect(result).toBe("28 bytes of user's graffiti!LS");
+        expect(Buffer.byteLength(result, "utf8")).toBe(30);
+      });
+
+      it("should append CL code only for 30-byte graffiti when EL unavailable", () => {
+        const graffiti = "30 bytes of a user's graffiti!";
+        const result = appendClientInfoToGraffiti(graffiti, consensusClientVersion, undefined);
+        // 30 + 2 (LS) = 32 bytes
+        expect(result).toBe("30 bytes of a user's graffiti!LS");
+        expect(Buffer.byteLength(result, "utf8")).toBe(32);
+      });
     });
 
     it("should return unchanged for 32-byte graffiti", () => {

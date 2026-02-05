@@ -128,15 +128,40 @@ export function appendClientInfoToGraffiti(
 
   const candidates = getClientInfoCandidates(consensusClientVersion, executionClientVersion);
   const hasUserGraffiti = userBytes > 0;
-  // Need space for separator (" ") if user graffiti exists
-  const separatorBytes = hasUserGraffiti ? 1 : 0;
-  const availableBytes = GRAFFITI_SIZE - userBytes - separatorBytes;
+  const availableBytesWithSeparator = hasUserGraffiti ? GRAFFITI_SIZE - userBytes - 1 : GRAFFITI_SIZE - userBytes;
+  const availableBytesWithoutSeparator = GRAFFITI_SIZE - userBytes;
 
-  // Find the best candidate that fits (ordered from longest to shortest)
+  // Teku special case: if exactly 3 bytes remain after reserving space for separator,
+  // drop the separator and use "codes-only" tier without separator
+  // This allows 28-byte graffiti + "BULS" (4 bytes) = 32 bytes
+  // See: GraffitiBuilder.java buildGraffiti() AUTO case
+  if (hasUserGraffiti && availableBytesWithSeparator === 3) {
+    // Get codes-only tier (index 2: "ELLS" for EL+CL or "LS" for CL-only)
+    const codesOnlyTier = candidates[2];
+    if (codesOnlyTier !== undefined) {
+      const codesOnlyBytes = Buffer.byteLength(codesOnlyTier, "utf8");
+      if (codesOnlyBytes <= availableBytesWithoutSeparator) {
+        return `${truncatedGraffiti}${codesOnlyTier}`;
+      }
+    }
+  }
+
+  // Normal case: find the best candidate that fits with separator
   for (const clientInfo of candidates) {
     const clientInfoBytes = Buffer.byteLength(clientInfo, "utf8");
-    if (clientInfoBytes <= availableBytes) {
+    if (clientInfoBytes <= availableBytesWithSeparator) {
       return hasUserGraffiti ? `${truncatedGraffiti} ${clientInfo}` : clientInfo;
+    }
+  }
+
+  // Fallback: if nothing fits with separator, try without separator
+  // This handles cases like 30-byte graffiti where only 2 bytes remain
+  if (hasUserGraffiti) {
+    for (const clientInfo of candidates) {
+      const clientInfoBytes = Buffer.byteLength(clientInfo, "utf8");
+      if (clientInfoBytes <= availableBytesWithoutSeparator) {
+        return `${truncatedGraffiti}${clientInfo}`;
+      }
     }
   }
 
