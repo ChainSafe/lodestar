@@ -51,6 +51,10 @@ export function snappyUncompress(compressedData: Uint8Array): Uint8Array {
 }
 
 /** Compress data using snappy framing */
-export function snappyCompress(data: Uint8Array): Uint8Array {
-  return encodeSnappy(data).subarray();
+export async function snappyCompress(data: Uint8Array): Promise<Uint8Array> {
+  const buffers: Buffer[] = [];
+  for await (const chunk of encodeSnappy(Buffer.from(data.buffer, data.byteOffset, data.byteLength))) {
+    buffers.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(buffers);
 }

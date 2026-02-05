@@ -3,6 +3,7 @@ import {PrivateKey} from "@libp2p/interface";
 import {mplex} from "@libp2p/mplex";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {tcp} from "@libp2p/tcp";
+import {byteStream} from "@libp2p/utils";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {Libp2p, createLibp2p} from "libp2p";
 import {afterEach, describe, expect, it} from "vitest";
@@ -106,17 +107,28 @@ describe("reqresp encoder", () => {
     expectedChunks: string[];
   }) {
     const stream = await dialer.dialProtocol(toMultiaddr, protocol);
+    const bytes = byteStream(stream);
+
     if (requestChunks) {
       for (const chunk of requestChunks) {
-        stream.send(fromHex(chunk));
+        await bytes.write(fromHex(chunk));
       }
-      await stream.close();
     }
 
+    // Read all response chunks until stream ends
     const chunks: Uint8Array[] = [];
-    for await (const chunk of stream) {
-      chunks.push(chunk instanceof Uint8Array ? chunk : chunk.subarray());
+    try {
+      while (true) {
+        const chunk = await bytes.read({bytes: 4096});
+        if (chunk.length === 0) break;
+        chunks.push(chunk.subarray());
+      }
+    } catch {
+      // Stream closed - expected at end of response
     }
+
+    await stream.close();
+
     const join = (c: string[]): string => c.join("").replace(/0x/g, "");
     const chunksHex = chunks.map((chunk) => toHex(chunk.slice(0, chunk.byteLength)));
     expect(join(chunksHex)).toEqual(join(expectedChunks));

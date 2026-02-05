@@ -16,7 +16,6 @@ export function encodeSnappyFrames(bytes: Uint8Array): Uint8ArrayList {
   // Process data in chunks
   for (let i = 0; i < bytes.length; i += UNCOMPRESSED_CHUNK_SIZE) {
     const chunk = bytes.subarray(i, i + UNCOMPRESSED_CHUNK_SIZE);
-    // snappy types expect Buffer, convert Uint8Array
     const compressed = compressSync(Buffer.from(chunk));
 
     if (compressed.length < chunk.length) {
