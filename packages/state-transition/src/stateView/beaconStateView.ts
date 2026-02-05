@@ -2,7 +2,7 @@ import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persis
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -148,6 +148,10 @@ export class BeaconStateView implements IBeaconStateView {
 
   getBlockRootAtEpoch(epoch: Epoch): Root {
     return this.getBlockRootAtSlot(computeEpochAtSlot(epoch));
+  }
+
+  getStateRootAtSlot(slot: Slot): Root {
+    return this.cachedState.stateRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT);
   }
 
   getRandaoMix(epoch: Epoch): Bytes32 {
