@@ -63,11 +63,24 @@ import {IBeaconStateView} from "./interface.js";
 
 export class BeaconStateView implements IBeaconStateView {
   private readonly config: BeaconConfig;
-  private _executionPayloadAvailability: boolean[] | null = null;
+  // Cached values extracted from the tree
+  // phase0
+  private _fork: Fork | null = null;
+  // altair
   private _currentSyncCommittee: SyncCommittee | null = null;
   private _nextSyncCommittee: SyncCommittee | null = null;
   private _previousEpochParticipation: number[] | null = null;
   private _currentEpochParticipation: number[] | null = null;
+  // capella
+  private _historicalSummaries: capella.HistoricalSummaries | null = null;
+  // electra
+  private _pendingPartialWithdrawals: electra.PendingPartialWithdrawals | null = null;
+  private _pendingConsolidations: electra.PendingConsolidations | null = null;
+  private _pendingDeposits: electra.PendingDeposits | null = null;
+  // fulu
+  private _proposerLookahead: fulu.ProposerLookahead | null = null;
+  // gloas
+  private _executionPayloadAvailability: boolean[] | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
@@ -78,7 +91,10 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   get fork(): Fork {
-    return this.cachedState.fork.toValue();
+    if (this._fork === null) {
+      this._fork = this.cachedState.fork.toValue();
+    }
+    return this._fork;
   }
 
   get epoch(): number {
@@ -530,7 +546,11 @@ export class BeaconStateView implements IBeaconStateView {
       throw new Error("Historical summaries are not supported before Capella");
     }
 
-    return (this.cachedState as CachedBeaconStateCapella).historicalSummaries.toValue();
+    if (this._historicalSummaries === null) {
+      this._historicalSummaries = (this.cachedState as CachedBeaconStateCapella).historicalSummaries.toValue();
+    }
+
+    return this._historicalSummaries;
   }
 
   get pendingDeposits(): electra.PendingDeposits {
@@ -538,7 +558,11 @@ export class BeaconStateView implements IBeaconStateView {
       throw new Error("Pending deposits are not supported before Electra");
     }
 
-    return (this.cachedState as CachedBeaconStateElectra).pendingDeposits.toValue();
+    if (this._pendingDeposits === null) {
+      this._pendingDeposits = (this.cachedState as CachedBeaconStateElectra).pendingDeposits.toValue();
+    }
+
+    return this._pendingDeposits;
   }
 
   get pendingDepositsCount(): number {
@@ -554,7 +578,13 @@ export class BeaconStateView implements IBeaconStateView {
       throw new Error("Pending partial withdrawals are not supported before Electra");
     }
 
-    return (this.cachedState as CachedBeaconStateElectra).pendingPartialWithdrawals.toValue();
+    if (this._pendingPartialWithdrawals === null) {
+      this._pendingPartialWithdrawals = (
+        this.cachedState as CachedBeaconStateElectra
+      ).pendingPartialWithdrawals.toValue();
+    }
+
+    return this._pendingPartialWithdrawals;
   }
 
   get pendingPartialWithdrawalsCount(): number {
@@ -570,7 +600,11 @@ export class BeaconStateView implements IBeaconStateView {
       throw new Error("Pending consolidations are not supported before Electra");
     }
 
-    return (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.toValue();
+    if (this._pendingConsolidations === null) {
+      this._pendingConsolidations = (this.cachedState as CachedBeaconStateElectra).pendingConsolidations.toValue();
+    }
+
+    return this._pendingConsolidations;
   }
 
   get pendingConsolidationsCount(): number {
@@ -586,7 +620,11 @@ export class BeaconStateView implements IBeaconStateView {
       throw new Error("Proposer lookahead is not supported before Fulu");
     }
 
-    return (this.cachedState as CachedBeaconStateFulu).proposerLookahead.toValue();
+    if (this._proposerLookahead === null) {
+      this._proposerLookahead = (this.cachedState as CachedBeaconStateFulu).proposerLookahead.toValue();
+    }
+
+    return this._proposerLookahead;
   }
 }
 
