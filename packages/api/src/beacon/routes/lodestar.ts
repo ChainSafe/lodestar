@@ -254,7 +254,7 @@ export type Endpoints = {
     "POST",
     {peer: string},
     {query: {peer: string}},
-    {peerId: string | null},
+    {peerId: string},
     EmptyMeta
   >;
 
