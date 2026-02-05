@@ -641,6 +641,18 @@ export class Network implements INetwork {
     return this.core.disconnectPeer(peer);
   }
 
+  addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
+    return this.core.addDirectPeer(peer);
+  }
+
+  removeDirectPeer(peerId: string): Promise<boolean> {
+    return this.core.removeDirectPeer(peerId);
+  }
+
+  getDirectPeers(): Promise<string[]> {
+    return this.core.getDirectPeers();
+  }
+
   dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
     return this.core.dumpPeer(peerIdStr);
   }
