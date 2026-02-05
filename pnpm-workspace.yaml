@@ -4,11 +4,6 @@ packages:
 linkWorkspacePackages: true
 
 minimumReleaseAge: 2880
-# Exclude bigint-buffer2 from minimum release age to use v1.1.0 immediately
-# v1.1.0 removes the async init requirement, making native loading synchronous.
-# TODO: Remove this exclusion once v1.1.0 is older than 48 hours.
-minimumReleaseAgeExclude:
-  - "@vekexasia/bigint-buffer2"
 
 nodeLinker: isolated
 
