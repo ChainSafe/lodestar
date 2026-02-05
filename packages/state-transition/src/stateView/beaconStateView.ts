@@ -634,10 +634,12 @@ export class BeaconStateView implements IBeaconStateView {
 
   loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView {
     const {state} = loadState(this.config, this.cachedState, stateBytes, seedValidatorsBytes);
+
     const cachedState = createCachedBeaconState(
       state,
       {
         config: this.config,
+        // as of Feb 2026, it's not necessary to sync pubkey cache as it's shared across states in Lodestar
         pubkey2index: this.cachedState.epochCtx.pubkey2index,
         index2pubkey: this.cachedState.epochCtx.index2pubkey,
       },
