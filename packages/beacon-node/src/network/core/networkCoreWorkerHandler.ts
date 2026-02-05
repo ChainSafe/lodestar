@@ -247,7 +247,7 @@ export class WorkerNetworkCore implements INetworkCore {
   disconnectPeer(peer: PeerIdStr): Promise<void> {
     return this.getApi().disconnectPeer(peer);
   }
-  addDirectPeer(peer: string): Promise<string | null> {
+  addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
     return this.getApi().addDirectPeer(peer);
   }
   removeDirectPeer(peerId: PeerIdStr): Promise<boolean> {

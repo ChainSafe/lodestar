@@ -54,8 +54,17 @@ export type GossipPeerScoreStat = {
   // + Other un-typed options
 };
 
-/** A multiaddr with peer ID (e.g., /ip4/.../tcp/.../p2p/...) or ENR string (enr:-...) */
-export type DirectPeerInput = string;
+/**
+ * A multiaddr with peer ID or ENR string.
+ *
+ * Supported formats:
+ * - Multiaddr with peer ID: `/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...`
+ * - ENR: `enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...`
+ *
+ * For multiaddrs, the string must contain a /p2p/ component with the peer ID.
+ * For ENRs, the TCP multiaddr and peer ID are extracted from the encoded record.
+ */
+export type DirectPeer = string;
 
 export type RegenQueueItem = {
   key: string;
@@ -252,7 +261,7 @@ export type Endpoints = {
   addDirectPeer: Endpoint<
     // ⏎
     "POST",
-    {peer: string},
+    {peer: DirectPeer},
     {query: {peer: string}},
     {peerId: string},
     EmptyMeta

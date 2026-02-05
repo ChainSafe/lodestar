@@ -454,7 +454,7 @@ export class NetworkCore implements INetworkCore {
     await this.libp2p.hangUp(peerIdFromString(peerIdStr));
   }
 
-  async addDirectPeer(peer: string): Promise<string | null> {
+  async addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
     return this.gossip.addDirectPeer(peer);
   }
 

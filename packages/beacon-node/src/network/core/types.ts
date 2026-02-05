@@ -12,11 +12,6 @@ import {OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 
 export type MultiaddrStr = string;
-/** 
- * A multiaddr with peer ID (e.g., /ip4/.../tcp/.../p2p/...) or ENR string (enr:-...).
- * Type definition also exists in @lodestar/api routes.lodestar for API consumers.
- */
-export type DirectPeerInput = string;
 
 // Interface shared by main Network class, and all backends
 export interface INetworkCorePublic {
@@ -37,7 +32,7 @@ export interface INetworkCorePublic {
   disconnectPeer(peer: PeerIdStr): Promise<void>;
 
   // Direct peers management
-  addDirectPeer(peer: DirectPeerInput): Promise<string | null>;
+  addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null>;
   removeDirectPeer(peerId: PeerIdStr): Promise<boolean>;
   getDirectPeers(): Promise<string[]>;
 

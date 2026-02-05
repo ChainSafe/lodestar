@@ -5,6 +5,7 @@ import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {AddrInfo, SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
+import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
@@ -348,7 +349,7 @@ export class Eth2Gossipsub extends GossipSub {
    * Add a peer as a direct peer at runtime. Accepts multiaddr with peer ID or ENR string.
    * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
    */
-  async addDirectPeer(peerStr: string): Promise<string | null> {
+  async addDirectPeer(peerStr: routes.lodestar.DirectPeer): Promise<string | null> {
     const parsed = parseDirectPeers([peerStr], this.logger);
     if (parsed.length === 0) {
       return null;
@@ -460,7 +461,7 @@ function getForkBoundaryLabel(boundary: ForkBoundary): ForkBoundaryLabel {
  * For multiaddrs, the string must contain a /p2p/ component with the peer ID.
  * For ENRs, the TCP multiaddr and peer ID are extracted from the encoded record.
  */
-export function parseDirectPeers(directPeerStrs: string[], logger: Logger): AddrInfo[] {
+export function parseDirectPeers(directPeerStrs: routes.lodestar.DirectPeer[], logger: Logger): AddrInfo[] {
   const directPeers: AddrInfo[] = [];
 
   for (const peerStr of directPeerStrs) {
