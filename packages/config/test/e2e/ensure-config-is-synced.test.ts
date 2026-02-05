@@ -1,9 +1,10 @@
 import {describe, expect, it, vi} from "vitest";
+import {fetch} from "@lodestar/api";
 import {fromHex} from "@lodestar/utils";
 import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
-import {ChainConfig} from "../../src/chainConfig/types.js";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
+import {ChainConfig} from "../../src/chainConfig/types.js";
 
 // Not e2e, but slow. Run with e2e tests
 
@@ -119,7 +120,10 @@ function assertCorrectConfig(localConfig: ChainConfig, remoteConfig: Partial<Cha
     }
     // Handle number/string comparison
     else {
-      expect(localValue).toBeWithMessage(remoteValue, `${key} does not match: local=${localValue}, remote=${remoteValue}`);
+      expect(localValue).toBeWithMessage(
+        remoteValue,
+        `${key} does not match: local=${localValue}, remote=${remoteValue}`
+      );
     }
   }
 }
