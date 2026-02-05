@@ -587,6 +587,10 @@ export class BeaconStateView implements IBeaconStateView {
 
   getSyncCommitteesWitness(): SyncCommitteeWitness {
     const fork = this.config.getForkName(this.cachedState.slot);
+    if (ForkSeq[fork] < ForkSeq.altair) {
+      throw new Error("Sync committees witness is not available before Altair");
+    }
+
     return getSyncCommitteesWitness(fork, this.cachedState);
   }
 
