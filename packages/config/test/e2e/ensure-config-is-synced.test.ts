@@ -124,8 +124,8 @@ function assertCorrectConfig(localConfig: ChainConfig, remoteConfig: Partial<Cha
   }
 }
 
-async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<Partial<ChainConfig>> {
-  const url = `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/configs/${preset}.yaml`;
+async function downloadRemoteConfig(network: "mainnet" | "minimal", commit: string): Promise<Partial<ChainConfig>> {
+  const url = `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/configs/${network}.yaml`;
   const response = await fetch(url, {signal: AbortSignal.timeout(30_000)});
 
   if (!response.ok) {
