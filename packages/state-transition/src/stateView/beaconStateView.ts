@@ -55,7 +55,7 @@ import {computeSyncCommitteeRewards} from "../rewards/syncCommitteeRewards.js";
 import {StateTransitionModules, StateTransitionOpts, processSlots, stateTransition} from "../stateTransition.js";
 import {getEffectiveBalanceIncrementsZeroInactive} from "../util/balance.js";
 import {getBlockRootAtSlot} from "../util/blockRoot.js";
-import {computeEpochAtSlot} from "../util/epoch.js";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "../util/epoch.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {isExecutionEnabled, isExecutionStateType, isMergeTransitionComplete} from "../util/execution.js";
 import {canBuilderCoverBid} from "../util/gloas.js";
@@ -147,7 +147,7 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   getBlockRootAtEpoch(epoch: Epoch): Root {
-    return this.getBlockRootAtSlot(computeEpochAtSlot(epoch));
+    return this.getBlockRootAtSlot(computeStartSlotAtEpoch(epoch));
   }
 
   getStateRootAtSlot(slot: Slot): Root {
@@ -395,7 +395,7 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   get currentProposers(): ValidatorIndex[] {
-    return this.cachedState.epochCtx.proposers;
+    return this.cachedState.epochCtx.getBeaconProposers();
   }
 
   get nextProposers(): ValidatorIndex[] {
@@ -404,10 +404,6 @@ export class BeaconStateView implements IBeaconStateView {
 
   getBeaconProposer(slot: number): ValidatorIndex {
     return this.cachedState.epochCtx.getBeaconProposer(slot);
-  }
-
-  getBeaconProposers(): ValidatorIndex[] {
-    return this.cachedState.epochCtx.getBeaconProposers();
   }
 
   // Sync committees
@@ -463,7 +459,7 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   getValidator(index: ValidatorIndex): phase0.Validator {
-    return this.cachedState.validators.getReadonly(index);
+    return this.cachedState.validators.getReadonly(index).toValue();
   }
 
   getValidatorsByStatus(statuses: Set<string>, currentEpoch: Epoch): phase0.Validator[] {
