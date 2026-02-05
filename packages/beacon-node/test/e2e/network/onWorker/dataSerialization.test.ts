@@ -210,6 +210,9 @@ describe("data serialization through worker boundary", () => {
     writeDiscv5Profile: "",
     setAdvertisedGroupCount: null,
     setTargetGroupCount: null,
+    addDirectPeer: "QmTest",
+    removeDirectPeer: true,
+    getDirectPeers: ["QmTest1", "QmTest2"],
   };
 
   type TestCase = {id: string; data: unknown; shouldFail?: boolean};
