@@ -81,7 +81,7 @@ import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
+import {appendClientInfoToGraffiti, getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
@@ -607,9 +607,25 @@ export function getValidatorApi(
       );
     }
 
-    const graffitiBytes = toGraffitiBytes(
-      graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
-    );
+    // Determine the final graffiti string
+    let graffitiString: string;
+    if (graffiti != null) {
+      // User provided graffiti - optionally append client info
+      if (chain.opts.graffitiAppend) {
+        graffitiString = appendClientInfoToGraffiti(
+          graffiti,
+          getLodestarClientVersion(opts),
+          chain.executionEngine.clientVersion,
+          opts // Pass opts to respect private mode
+        );
+      } else {
+        graffitiString = graffiti;
+      }
+    } else {
+      // No user graffiti - use default (which includes client version info)
+      graffitiString = getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts);
+    }
+    const graffitiBytes = toGraffitiBytes(graffitiString);
 
     const loggerContext = {
       slot,

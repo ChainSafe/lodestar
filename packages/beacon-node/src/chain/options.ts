@@ -34,6 +34,11 @@ export type IChainOptions = BlockProcessOpts &
     persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
+    /**
+     * When enabled, appends CL/EL client version info to the graffiti.
+     * Uses adaptive sizing to fit as much info as possible within 32 bytes.
+     */
+    graffitiAppend?: boolean;
     maxSkipSlots?: number;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
@@ -104,6 +109,7 @@ export const defaultChainOptions: IChainOptions = {
   proposerBoostReorg: true,
   computeUnrealized: true,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  graffitiAppend: false,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
