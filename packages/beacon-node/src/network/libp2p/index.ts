@@ -72,10 +72,21 @@ export async function createNodeJsLibp2p(
     noiseCrypto.chaCha20Poly1305Encrypt = asCrypto.chaCha20Poly1305Encrypt;
   }
 
+  // Compute nodeInfo for identify protocol (replaces agentVersion in libp2p v3)
+  const nodeInfoName = "lodestar";
+  const nodeInfoVersion = networkOpts.version ?? "dev";
+  const userAgent = networkOpts.private ? "" : `${nodeInfoName}/${nodeInfoVersion}`;
+
   // Type assertion needed due to dependency version mismatches
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (await createLibp2p({
     privateKey,
+    // nodeInfo is used by the identify protocol (replaces agentVersion option)
+    nodeInfo: {
+      name: nodeInfoName,
+      version: nodeInfoVersion,
+      userAgent,
+    },
     addresses: {
       listen: localMultiaddrs,
       announce: [],

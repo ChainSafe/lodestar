@@ -167,7 +167,12 @@ describe("network / peers / PeerManager", () => {
     direction: "outbound",
     status: "open",
     remotePeer: peerId1,
-  } as Connection;
+    // Methods required by libp2p v3
+    close: vi.fn().mockResolvedValue(undefined),
+    abort: vi.fn(),
+    timeline: {open: Date.now()},
+    remoteAddr: {toString: () => "/ip4/127.0.0.1/tcp/9000"},
+  } as unknown as Connection;
 
   it("Should emit peer connected event on relevant peer status", async () => {
     const {statusCache, libp2p, networkEventBus} = await mockModules();
