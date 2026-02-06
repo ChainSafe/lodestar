@@ -1,6 +1,6 @@
 import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {buildFCRSnapshot, createFCRCache} from "./fcrData.ts";
+import {buildFCRSnapshot, createFCRCache} from "./data.ts";
 import {FCRMetrics} from "./metrics.ts";
 import {runFCRRules} from "./rules.ts";
 import {FCRContext, FCRResult, IFCRStore, IFastConfirmationRule} from "./types.ts";
