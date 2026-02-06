@@ -246,13 +246,13 @@ export class ProtoArray {
     const fullNodeIndex = variantIndices[PayloadStatus.FULL];
     if (fullNodeIndex !== undefined) {
       const fullNode = this.nodes[fullNodeIndex];
-      if (fullNode.executionPayloadBlockHash === blockHash) {
+      if (fullNode && fullNode.executionPayloadBlockHash === blockHash) {
         return fullNode;
       }
     }
 
     const emptyNode = this.nodes[variantIndices[PayloadStatus.EMPTY]];
-    if (emptyNode.executionPayloadBlockHash === blockHash) {
+    if (emptyNode && emptyNode.executionPayloadBlockHash === blockHash) {
       return emptyNode;
     }
 
