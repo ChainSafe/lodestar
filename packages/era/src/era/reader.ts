@@ -4,6 +4,7 @@ import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {ChainForkConfig, createCachedGenesis} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER, GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconState, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 import {E2STORE_HEADER_SIZE, EntryType, readEntry, readVersion} from "../e2s.ts";
 import {snappyUncompress} from "../util.ts";
 import {
@@ -166,10 +167,10 @@ export class EraReader {
           if (block === null) {
             if (slot === index.blocksIndex.startSlot) continue; // first slot in the era can't be easily validated
             if (
-              Buffer.compare(
+              !byteArrayEquals(
                 state.blockRoots[(slot - 1) % SLOTS_PER_HISTORICAL_ROOT],
                 state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT]
-              ) !== 0
+              )
             ) {
               throw new Error(`Block root mismatch at slot ${slot} for empty slot`);
             }
@@ -177,7 +178,7 @@ export class EraReader {
           }
 
           const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
-          if (Buffer.compare(blockRoot, state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT]) !== 0) {
+          if (!byteArrayEquals(blockRoot, state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT])) {
             throw new Error(`Block root mismatch at slot ${slot}`);
           }
           // genesis block doesn't have valid signature

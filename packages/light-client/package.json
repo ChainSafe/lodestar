@@ -79,7 +79,7 @@
     "@fastify/cors": "^10.0.1",
     "@lodestar/state-transition": "workspace:^",
     "@types/qs": "^6.9.7",
-    "fastify": "^5.2.1",
+    "fastify": "^5.7.4",
     "qs": "^6.11.1",
     "uint8arrays": "^5.0.1"
   },

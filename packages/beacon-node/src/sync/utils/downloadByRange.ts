@@ -8,7 +8,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
-import {LodestarError, Logger, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
   DAType,
@@ -475,7 +475,7 @@ export function validateBlockByRangeResponse(
     if (i < blocks.length - 1) {
       // compare the block root against the next block's parent root
       const parentRoot = blocks[i + 1].message.parentRoot;
-      if (Buffer.compare(blockRoot, parentRoot) !== 0) {
+      if (!byteArrayEquals(blockRoot, parentRoot)) {
         throw new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH,

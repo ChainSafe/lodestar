@@ -104,7 +104,7 @@
     "@types/tmp": "^0.2.3",
     "@types/yargs": "^17.0.24",
     "ethereum-cryptography": "^2.2.1",
-    "fastify": "^5.2.1",
+    "fastify": "^5.7.4",
     "tmp": "^0.2.4",
     "web3": "^4.0.3",
     "web3-eth-accounts": "^4.0.3"

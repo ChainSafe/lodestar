@@ -5,9 +5,12 @@ import {ACTIVE_PRESET, PresetName, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} f
 import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
-import {FIFOBlockStateCache, toCheckpointHex} from "../../../../src/chain/index.js";
+import {FIFOBlockStateCache} from "../../../../src/chain/index.js";
 import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
-import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
+import {
+  PersistentCheckpointStateCache,
+  toCheckpointHex,
+} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
 import {testLogger} from "../../../utils/logger.js";

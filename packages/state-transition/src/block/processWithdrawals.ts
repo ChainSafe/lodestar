@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   FAR_FUTURE_EPOCH,
   ForkSeq,
@@ -10,7 +9,7 @@ import {
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 import {BuilderIndex, ValidatorIndex, capella, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {
   convertBuilderIndexToValidatorIndex,

@@ -11,6 +11,10 @@ on:
         description: "Extra tags to apply (comma-separated, e.g. 'latest,rc')"
         required: false
         type: string
+      ref:
+        description: "Git ref to checkout (defaults to triggering ref)"
+        required: false
+        type: string
 
 jobs:
   docker:
@@ -26,6 +30,8 @@ jobs:
             runner: buildjet-4vcpu-ubuntu-2204-arm
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub

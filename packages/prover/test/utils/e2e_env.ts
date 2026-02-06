@@ -15,8 +15,8 @@ const denebForkEpoch = 0;
 const electraForkEpoch = 0;
 const genesisDelaySeconds = 30 * secondsPerSlot;
 
-// Wait for at least 2 epochs to ensure light client can sync from a finalized checkpoint
-export const minFinalizedTimeMs = 2 * 8 * 4 * 1000;
+// Wait for at least 3 epochs to ensure light client can sync from a finalized checkpoint
+export const minFinalizedTimeMs = 3 * 8 * 4 * 1000;
 
 export const config = {
   ALTAIR_FORK_EPOCH: altairForkEpoch,

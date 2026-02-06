@@ -579,7 +579,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           break;
       }
 
-      if (!blockInput.hasAllData()) {
+      if (!blockInput.hasComputedAllData()) {
         // immediately attempt fetch of data columns from execution engine
         chain.getBlobsTracker.triggerGetBlobs(blockInput);
         // if we've received at least half of the columns, trigger reconstruction of the rest
