@@ -181,13 +181,13 @@ export class LazySlasher {
     // Using aggregate: if t > m(s), there exists some a' that might be surrounded
     const minTarget = this.state.minTargetBySource.get(sourceEpoch);
     if (minTarget !== undefined && targetEpoch > minTarget) {
-      // Search range: attestations can be included up to 1 epoch after their target
-      // so we search [minTarget, minTarget + 2) to catch inclusion delays
+      // Search epochs: explicit list including minTarget and +1 for inclusion delay
+      // Note: searchEpochs is an explicit list, not a range!
       return {
         type: "surrounds",
         triggerAttestation: record,
         surroundedTargetEpoch: minTarget,
-        searchEpochs: [minTarget, minTarget + 2],
+        searchEpochs: [minTarget, minTarget + 1],
       };
     }
 
@@ -196,12 +196,13 @@ export class LazySlasher {
     // Using aggregate: if t < M(s), there exists some a' that might surround this
     const maxTarget = this.state.maxTargetBySource.get(sourceEpoch);
     if (maxTarget !== undefined && targetEpoch < maxTarget) {
-      // Search range extended for inclusion delays
+      // Search around maxTarget (the surrounding attestation's target), not our target
+      // Include +1 for inclusion delay
       return {
         type: "surrounded",
         triggerAttestation: record,
         surroundingTargetEpoch: maxTarget,
-        searchEpochs: [targetEpoch, targetEpoch + 2],
+        searchEpochs: [maxTarget, maxTarget + 1],
       };
     }
 
@@ -311,22 +312,20 @@ export class LazySlasher {
           (triggerSourceEpoch < blockSourceEpoch && blockTargetEpoch < triggerTargetEpoch) ||
           (blockSourceEpoch < triggerSourceEpoch && triggerTargetEpoch < blockTargetEpoch);
 
-        // Double vote check: different data, same target epoch
-        const isDoubleVote =
-          blockTargetEpoch === triggerTargetEpoch &&
-          toRootHex(ssz.phase0.AttestationData.hashTreeRoot(blockAttData)) !==
-            toRootHex(ssz.phase0.AttestationData.hashTreeRoot(triggerAttestation.data));
+        // Note: We intentionally don't check for double votes here. Without committee
+        // reconstruction, we can't determine validator intersection - every attestation
+        // in the same target epoch would appear to be a "double vote" even if signed
+        // by completely different validators. This would produce excessive noise.
 
-        if (isSurround || isDoubleVote) {
+        if (isSurround) {
           foundPotentialSlashing = true;
           // Log for monitoring - actual slashing creation needs committee reconstruction
-          this.logger.warn("Potential slashable attestation detected (verification incomplete)", {
+          this.logger.debug("Potential surround vote detected (verification incomplete)", {
             blockSlot: block.message.slot,
             blockSource: blockSourceEpoch,
             blockTarget: blockTargetEpoch,
             triggerSource: triggerSourceEpoch,
             triggerTarget: triggerTargetEpoch,
-            type: isSurround ? "surround" : "double-vote",
             triggerValidatorCount: triggerValidatorSet.size,
           });
 
