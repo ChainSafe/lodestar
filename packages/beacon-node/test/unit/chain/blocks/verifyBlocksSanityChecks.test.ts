@@ -197,7 +197,7 @@ function getForkChoice(knownBlocks: SignedBeaconBlock[], finalizedEpoch = 0): IF
       return blocks.has(blockRoot);
     },
     getFinalizedCheckpoint() {
-      return {epoch: finalizedEpoch, root: Buffer.alloc(32), rootHex: ""};
+      return {epoch: finalizedEpoch, root: Buffer.alloc(32), rootHex: "", payloadStatus: PayloadStatus.FULL};
     },
   } as Partial<IForkChoice> as IForkChoice;
 }
