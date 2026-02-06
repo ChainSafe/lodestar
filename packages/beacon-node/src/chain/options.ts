@@ -4,6 +4,8 @@ import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 import {ShufflingCacheOpts} from "./shufflingCache.js";
+import {defaultLazySlasherConfig} from "./slasher/index.js";
+import type {LazySlasherConfig} from "./slasher/index.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {
   DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
@@ -24,6 +26,8 @@ export type IChainOptions = BlockProcessOpts &
   ShufflingCacheOpts &
   ValidatorMonitorOpts &
   LightClientServerOpts & {
+    /** Lazy slasher configuration for lightweight slashing detection */
+    slasher?: LazySlasherConfig;
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
     blacklistedBlocks?: string[];
@@ -100,6 +104,7 @@ export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMultiThread: false,
   blacklistedBlocks: [],
   disableBlsBatchVerify: false,
+  slasher: defaultLazySlasherConfig,
   proposerBoost: true,
   proposerBoostReorg: true,
   computeUnrealized: true,

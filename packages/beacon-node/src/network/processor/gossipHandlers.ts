@@ -665,6 +665,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
       }
 
+      // Optional slashing detection hook
+      void chain.processGossipIndexedAttestation(indexedAttestation);
+
       chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
 
@@ -941,6 +944,9 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
             logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
           }
         }
+
+        // Optional slashing detection hook
+        void chain.processGossipIndexedAttestation(indexedAttestation);
 
         if (isForkPostElectra(fork)) {
           chain.emitter.emit(

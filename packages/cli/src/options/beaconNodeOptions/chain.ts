@@ -36,9 +36,18 @@ export type ChainArgs = {
   "chain.maxCPStateEpochsOnDisk"?: number;
 
   "chain.pruneHistory"?: boolean;
+
+  "chain.slasher.enabled"?: boolean;
+  "chain.slasher.historyLength"?: number;
+  "chain.slasher.broadcastSlashings"?: boolean;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
+  const hasSlasherOpts =
+    args["chain.slasher.enabled"] !== undefined ||
+    args["chain.slasher.historyLength"] !== undefined ||
+    args["chain.slasher.broadcastSlashings"] !== undefined;
+
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     serveHistoricalState: args.serveHistoricalState,
@@ -75,6 +84,14 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
     pruneHistory: args["chain.pruneHistory"],
+
+    slasher: hasSlasherOpts
+      ? {
+          enabled: args["chain.slasher.enabled"] ?? false,
+          historyLength: args["chain.slasher.historyLength"] ?? 4096,
+          broadcastSlashings: args["chain.slasher.broadcastSlashings"] ?? true,
+        }
+      : undefined,
   };
 }
 
@@ -84,6 +101,31 @@ export const options: CliCommandOptions<ChainArgs> = {
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling `produceBlock`.",
     default: defaultOptions.chain.suggestedFeeRecipient,
+    group: "chain",
+  },
+
+  "chain.slasher.enabled": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "EXPERIMENTAL: Enable the lazy slasher (lightweight slashing detection using aggregate min-max functions).",
+    defaultDescription: String(defaultOptions.chain.slasher?.enabled ?? false),
+    group: "chain",
+  },
+
+  "chain.slasher.historyLength": {
+    hidden: true,
+    type: "number",
+    description: "EXPERIMENTAL: Number of epochs of history to track for lazy slasher surround detection.",
+    defaultDescription: String(defaultOptions.chain.slasher?.historyLength ?? 4096),
+    group: "chain",
+  },
+
+  "chain.slasher.broadcastSlashings": {
+    hidden: true,
+    type: "boolean",
+    description: "EXPERIMENTAL: Broadcast discovered slashings to the network.",
+    defaultDescription: String(defaultOptions.chain.slasher?.broadcastSlashings ?? true),
     group: "chain",
   },
 

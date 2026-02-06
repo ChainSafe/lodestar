@@ -29,6 +29,7 @@ import {
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
   Epoch,
+  IndexedAttestation,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -85,6 +86,7 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
+import {LazySlasher} from "./slasher/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
@@ -162,6 +164,9 @@ export class BeaconChain implements IBeaconChain {
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
+
+  /** Optional lazy slasher for lightweight slashing detection */
+  readonly lazySlasher: LazySlasher | null;
 
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
@@ -289,6 +294,12 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
+
+    this.lazySlasher = opts.slasher?.enabled
+      ? new LazySlasher(opts.slasher, this.logger, this.db, metrics, this.opPool)
+      : null;
+    // Initialize epoch tracking so prune logic has a sane baseline
+    this.lazySlasher?.setCurrentEpoch(computeEpochAtSlot(clock.currentSlot));
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
@@ -473,6 +484,20 @@ export class BeaconChain implements IBeaconChain {
 
   blsThreadPoolCanAcceptWork(): boolean {
     return this.bls.canAcceptWork();
+  }
+
+  /**
+   * Optional hook for slashing detection.
+   * Called by gossip handlers with validated IndexedAttestations.
+   */
+  async processGossipIndexedAttestation(indexedAttestation: IndexedAttestation): Promise<void> {
+    if (!this.lazySlasher) return;
+
+    try {
+      await this.lazySlasher.processAttestation(indexedAttestation);
+    } catch (e) {
+      this.logger.debug("Lazy slasher error", {}, e as Error);
+    }
   }
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
@@ -1327,6 +1352,8 @@ export class BeaconChain implements IBeaconChain {
     this.seenAggregatedAttestations.prune(epoch);
     this.seenBlockAttesters.prune(epoch);
     this.beaconProposerCache.prune(epoch);
+
+    this.lazySlasher?.setCurrentEpoch(epoch);
   }
 
   protected onNewHead(head: ProtoBlock): void {

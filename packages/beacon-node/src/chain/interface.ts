@@ -12,6 +12,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   Epoch,
+  IndexedAttestation,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -283,6 +284,9 @@ export interface IBeaconChain {
 
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
+
+  /** Optional hook for slashing detection on validated gossip attestations */
+  processGossipIndexedAttestation(indexedAttestation: IndexedAttestation): Promise<void>;
 
   getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
   getAttestationsRewards(
