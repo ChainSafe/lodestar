@@ -1,5 +1,5 @@
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithPayload, IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, CachedBeaconStateAllForks, PubkeyCache} from "@lodestar/state-transition";
 import {
@@ -19,7 +19,7 @@ import {ApiError, ValidationError} from "../../errors.js";
 export function resolveStateId(
   forkChoice: IForkChoice,
   stateId: routes.beacon.StateId
-): RootHex | Slot | CheckpointWithHex {
+): RootHex | Slot | CheckpointWithPayload {
   if (stateId === "head") {
     return forkChoice.getHead().stateRoot;
   }

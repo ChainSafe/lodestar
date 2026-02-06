@@ -1,4 +1,4 @@
-import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {CheckpointWithPayload} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq} from "@lodestar/params";
 import {Checkpoint} from "@lodestar/types/phase0";
@@ -44,7 +44,7 @@ export enum ArchiveStoreTask {
  */
 export class ArchiveStore {
   private archiveMode: ArchiveMode;
-  private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
+  private jobQueue: JobItemQueue<[CheckpointWithPayload], void>;
 
   private archiveDataEpochs?: number;
   private readonly statesArchiverStrategy: StateArchiveStrategy;
@@ -67,7 +67,7 @@ export class ArchiveStore {
     this.archiveMode = opts.archiveMode;
     this.archiveDataEpochs = opts.archiveDataEpochs;
 
-    this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
+    this.jobQueue = new JobItemQueue<[CheckpointWithPayload], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
       signal,
     });
@@ -168,7 +168,7 @@ export class ArchiveStore {
   //-------------------------------------------------------------------------
   // Event handlers
   //-------------------------------------------------------------------------
-  private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
+  private onFinalizedCheckpoint = (finalized: CheckpointWithPayload): void => {
     this.jobQueue.push(finalized).catch((e) => {
       if (!isQueueErrorAborted(e)) {
         this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
@@ -189,7 +189,7 @@ export class ArchiveStore {
     });
   };
 
-  private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
+  private processFinalizedCheckpoint = async (finalized: CheckpointWithPayload): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
       const finalizedFork = this.chain.config.getForkSeqAtEpoch(finalizedEpoch);

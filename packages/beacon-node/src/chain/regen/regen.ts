@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
@@ -111,9 +111,19 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const {blockRoot} = block;
     const {checkpointStateCache} = this.modules;
     const epoch = computeEpochAtSlot(slot);
+
+    // Convert PayloadStatus to payloadPresent boolean
+    if (block.payloadStatus === PayloadStatus.PENDING) {
+      throw new RegenError({
+        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
+        blockRoot: fromHex(blockRoot),
+      });
+    }
+    const payloadPresent = block.payloadStatus === PayloadStatus.FULL;
+
     const latestCheckpointStateCtx = allowDiskReload
-      ? await checkpointStateCache.getOrReloadLatest(blockRoot, epoch)
-      : checkpointStateCache.getLatest(blockRoot, epoch);
+      ? await checkpointStateCache.getOrReloadLatest(blockRoot, epoch, payloadPresent)
+      : checkpointStateCache.getLatest(blockRoot, epoch, payloadPresent);
 
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
@@ -166,9 +176,18 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       const lastBlockToReplay = blocksToReplay.at(-1);
       if (!lastBlockToReplay) continue;
       const epoch = computeEpochAtSlot(lastBlockToReplay.slot - 1);
+
+      // Convert PayloadStatus to payloadPresent boolean
+      if (b.payloadStatus === PayloadStatus.PENDING) {
+        // Should not happen. iterateAncestorBlocks should yield EMPTY or FULL
+        blocksToReplay.push(b);
+        continue;
+      }
+      const payloadPresent = b.payloadStatus === PayloadStatus.FULL;
+
       state = allowDiskReload
-        ? await checkpointStateCache.getOrReloadLatest(b.blockRoot, epoch)
-        : checkpointStateCache.getLatest(b.blockRoot, epoch);
+        ? await checkpointStateCache.getOrReloadLatest(b.blockRoot, epoch, payloadPresent)
+        : checkpointStateCache.getLatest(b.blockRoot, epoch, payloadPresent);
       if (state) {
         break;
       }
@@ -332,6 +351,11 @@ async function processSlotsByCheckpoint(
  * emitting "checkpoint" events after every epoch processed.
  *
  * Stops processing after no more full epochs can be processed.
+ *
+ * Output state variant:
+ * - Post-Gloas: If slots are processed, returns block state (payloadPresent=false).
+ *               If no slots processed, returns preState as-is (preserves variant).
+ * - Pre-Gloas: Always payloadPresent=true (no block/payload distinction).
  */
 export async function processSlotsToNearestCheckpoint(
   modules: {
@@ -374,7 +398,11 @@ export async function processSlotsToNearestCheckpoint(
     // This may becomes the "official" checkpoint state if the 1st block of epoch is skipped
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    checkpointStateCache.add(cp, checkpointState);
+    // processSlots() only does epoch transitions, never processes payloads
+    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
+    // Post-Gloas: result is a block state (payloadPresent=false)
+    const isGloas = checkpointState.config.getForkSeq(checkpointState.slot) >= ForkSeq.gloas;
+    checkpointStateCache.add(cp, checkpointState, !isGloas);
     // consumers should not mutate state ever
     emitter?.emit(ChainEvent.checkpoint, cp, checkpointState);
 
@@ -386,6 +414,7 @@ export async function processSlotsToNearestCheckpoint(
       // cannot use getBlockRootAtSlot() because nextEpochSlot = postState
       const latestBlockHex = toRootHex(cp.root);
       try {
+        // processState manages both block state and payload state variants together for memory/disk management
         const persistCount = await checkpointStateCache.processState(latestBlockHex, checkpointState);
         logger?.verbose("pruning checkpointStateCache during processSlotsToNearestCheckpoint", {
           root: latestBlockHex,
