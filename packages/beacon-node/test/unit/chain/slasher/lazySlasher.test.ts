@@ -23,6 +23,7 @@ describe("LazySlasher", () => {
   const defaultConfig: LazySlasherConfig = {
     enabled: true,
     historyLength: 4096,
+    updateWindow: 64,
     broadcastSlashings: true,
   };
 

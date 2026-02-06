@@ -124,11 +124,10 @@ export class LazySlasher {
     });
 
     // On-demand verification: fetch historical blocks and find actual slashings
+    // Note: falsePositives are tracked inside verifyAndFindSlashings
     const slashings = await this.verifyAndFindSlashings(checkResult, indexedAttestation);
 
-    if (slashings.length === 0) {
-      this.internalMetrics.falsePositives++;
-    } else {
+    if (slashings.length > 0) {
       this.internalMetrics.slashingsFound += slashings.length;
       this.logger.info("Slashings found!", {count: slashings.length});
 
@@ -182,11 +181,13 @@ export class LazySlasher {
     // Using aggregate: if t > m(s), there exists some a' that might be surrounded
     const minTarget = this.state.minTargetBySource.get(sourceEpoch);
     if (minTarget !== undefined && targetEpoch > minTarget) {
+      // Search range: attestations can be included up to 1 epoch after their target
+      // so we search [minTarget, minTarget + 2) to catch inclusion delays
       return {
         type: "surrounds",
         triggerAttestation: record,
         surroundedTargetEpoch: minTarget,
-        searchEpochs: [minTarget, minTarget + 1],
+        searchEpochs: [minTarget, minTarget + 2],
       };
     }
 
@@ -195,11 +196,12 @@ export class LazySlasher {
     // Using aggregate: if t < M(s), there exists some a' that might surround this
     const maxTarget = this.state.maxTargetBySource.get(sourceEpoch);
     if (maxTarget !== undefined && targetEpoch < maxTarget) {
+      // Search range extended for inclusion delays
       return {
         type: "surrounded",
         triggerAttestation: record,
         surroundingTargetEpoch: maxTarget,
-        searchEpochs: [targetEpoch, targetEpoch + 1],
+        searchEpochs: [targetEpoch, targetEpoch + 2],
       };
     }
 
@@ -208,34 +210,34 @@ export class LazySlasher {
 
   /**
    * Update aggregate min-max state with a new attestation.
+   *
+   * Performance: We limit updates to `updateWindow` recent epochs to avoid O(historyLength)
+   * iterations per attestation. This is a trade-off: very old slashings might be missed,
+   * but the common case (slashings within a few epochs) is covered efficiently.
    */
   private updateAggregates(record: AttestationRecord): void {
     const {sourceEpoch, targetEpoch} = record;
 
-    // Update m(i) for all epochs i where source > i
-    // This attestation with source=s could be surrounded by future attestations with source < s
-    // So we need to track: for any future att with source=i (where i < s), this att's target
-    // m(i) = min target where source > i
-    // When we see (s, t), we potentially update m(i) for i < s
-    // But we can't iterate all - instead, we note that m(s-1) should consider t
-    // Actually, the definition is: m(i) = min{t : (s,t) in A, s > i}
-    // For the new attestation (s,t), it contributes to m(i) for all i < s
+    // Calculate the window of epochs we'll update
+    // For m(i): epochs in [max(0, sourceEpoch - updateWindow), sourceEpoch)
+    // For M(i): epochs in (sourceEpoch, min(currentEpoch, sourceEpoch + updateWindow)]
+    const windowStart = Math.max(0, sourceEpoch - this.config.updateWindow);
+    const windowEnd = Math.min(this.currentEpoch, sourceEpoch + this.config.updateWindow);
 
-    // Efficient update: only update if this is a new minimum for the relevant bucket
-    // For epochs i where i < sourceEpoch, this attestation's target might be the new minimum
-    // Start from cutoff epoch to avoid O(currentEpoch) iterations on mainnet
-    const cutoffEpoch = Math.max(0, this.currentEpoch - this.config.historyLength);
-    for (let i = cutoffEpoch; i < sourceEpoch; i++) {
+    // Update m(i) for epochs i in our update window where i < sourceEpoch
+    // m(i) = min{t : (s,t) in A, s > i}
+    // For the new attestation (s,t), it contributes to m(i) for all i < s
+    for (let i = windowStart; i < sourceEpoch; i++) {
       const current = this.state.minTargetBySource.get(i);
       if (current === undefined || targetEpoch < current) {
         this.state.minTargetBySource.set(i, targetEpoch);
       }
     }
 
-    // Update M(i) for all epochs i where source < i
+    // Update M(i) for epochs i in our update window where i > sourceEpoch
     // M(i) = max{t : (s,t) in A, s < i}
     // For the new attestation (s,t), it contributes to M(i) for all i > s
-    for (let i = sourceEpoch + 1; i <= this.currentEpoch && i <= sourceEpoch + this.config.historyLength; i++) {
+    for (let i = sourceEpoch + 1; i <= windowEnd; i++) {
       const current = this.state.maxTargetBySource.get(i);
       if (current === undefined || targetEpoch > current) {
         this.state.maxTargetBySource.set(i, targetEpoch);
@@ -249,9 +251,20 @@ export class LazySlasher {
   /**
    * Verify a potential surround by fetching historical blocks and checking validators.
    *
-   * Note: Full implementation requires committee reconstruction to get IndexedAttestations
-   * from block attestations. This is a placeholder that detects slashable data but
-   * cannot yet produce complete AttesterSlashing proofs without committee info.
+   * CURRENT LIMITATION: Full implementation requires committee reconstruction to convert
+   * block attestations into IndexedAttestations (which have explicit validator indices).
+   * Block attestations only contain aggregation bits, not validator indices.
+   *
+   * To complete this, we would need:
+   * 1. Historical beacon state at the attestation slot
+   * 2. Committee shuffling to map aggregation bits → validator indices
+   * 3. Intersection check between trigger and historical attestation validators
+   *
+   * For now, this function detects *potential* slashable data and logs it for monitoring.
+   * A complete implementation would need to integrate with state replay or maintain
+   * committee caches for historical epochs.
+   *
+   * @returns Empty array currently - slashings are logged but not yet returned
    */
   private async verifyAndFindSlashings(
     checkResult: Exclude<SurroundCheckResult, {type: "none"}>,
@@ -264,24 +277,24 @@ export class LazySlasher {
     const blocks = await this.fetchBlocksInEpochs([searchEpoch1, searchEpoch2]);
 
     if (blocks.length === 0) {
-      this.logger.debug("No blocks found in search epochs", {
+      // Could not verify - archive may be pruned. Don't count as false positive.
+      this.logger.debug("No blocks found in search epochs (archive pruned?)", {
         searchEpoch1,
         searchEpoch2,
       });
+      // Note: We don't increment falsePositives here - we couldn't verify either way
       return [];
     }
 
-    // Get the validator indices from the trigger attestation for future use
+    // Get the validator indices from the trigger attestation
     const triggerValidatorSet = new Set(Array.from(triggerAttestation.attestingIndices).map(Number));
+    let foundPotentialSlashing = false;
 
     // Search through attestations in those blocks
     for (const block of blocks) {
       for (const blockAttestation of block.message.body.attestations) {
-        // Check if attestation data could form a slashable pair
         const blockAttData = blockAttestation.data;
 
-        // Quick check: do source/target epochs suggest a surround?
-        // isSlashableAttestationData expects bigint types, so we compare epochs directly
         const blockSourceEpoch = Number(blockAttData.source.epoch);
         const blockTargetEpoch = Number(blockAttData.target.epoch);
         const triggerSourceEpoch = triggerAttestation.data.source.epoch;
@@ -293,13 +306,15 @@ export class LazySlasher {
           (blockSourceEpoch < triggerSourceEpoch && triggerTargetEpoch < blockTargetEpoch);
 
         // Double vote check: different data, same target epoch
-        const isDoubleVote = blockTargetEpoch === triggerTargetEpoch;
+        const isDoubleVote =
+          blockTargetEpoch === triggerTargetEpoch &&
+          toRootHex(ssz.phase0.AttestationData.hashTreeRoot(blockAttData)) !==
+            toRootHex(ssz.phase0.AttestationData.hashTreeRoot(triggerAttestation.data));
 
         if (isSurround || isDoubleVote) {
-          // Found potentially slashable attestation data
-          // Full implementation would reconstruct IndexedAttestation from committee
-          // and check validator overlap with triggerValidatorSet
-          this.logger.debug("Found potentially slashable attestation data", {
+          foundPotentialSlashing = true;
+          // Log for monitoring - actual slashing creation needs committee reconstruction
+          this.logger.warn("Potential slashable attestation detected (verification incomplete)", {
             blockSlot: block.message.slot,
             blockSource: blockSourceEpoch,
             blockTarget: blockTargetEpoch,
@@ -309,10 +324,19 @@ export class LazySlasher {
             triggerValidatorCount: triggerValidatorSet.size,
           });
 
-          // TODO: Reconstruct IndexedAttestation from committee and create AttesterSlashing
-          // This requires access to historical state/shuffling data
+          // TODO: To create actual AttesterSlashing proof:
+          // 1. Get beacon state at block.message.slot
+          // 2. Compute committee for blockAttestation.data.slot and index
+          // 3. Map aggregation bits to validator indices
+          // 4. Check intersection with triggerValidatorSet
+          // 5. If overlap, create AttesterSlashing with both IndexedAttestations
         }
       }
+    }
+
+    // Only count as false positive if we searched blocks but found no potential slashings
+    if (!foundPotentialSlashing) {
+      this.internalMetrics.falsePositives++;
     }
 
     return slashings;

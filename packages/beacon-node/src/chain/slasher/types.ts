@@ -23,6 +23,14 @@ export interface LazySlasherConfig {
   historyLength: number;
 
   /**
+   * Number of recent epochs to eagerly update aggregate state for.
+   * Larger values catch more edge cases but increase CPU cost per attestation.
+   * The aggregate is O(updateWindow) per attestation vs O(historyLength).
+   * Default: 64 (covers ~6.8 hours, sufficient for most slashing scenarios)
+   */
+  updateWindow: number;
+
+  /**
    * Whether to broadcast discovered slashings to the network.
    * Default: true
    */
@@ -32,6 +40,7 @@ export interface LazySlasherConfig {
 export const defaultLazySlasherConfig: LazySlasherConfig = {
   enabled: false,
   historyLength: 4096,
+  updateWindow: 64,
   broadcastSlashings: true,
 };
 

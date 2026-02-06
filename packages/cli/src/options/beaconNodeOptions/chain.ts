@@ -39,6 +39,7 @@ export type ChainArgs = {
 
   "chain.slasher.enabled"?: boolean;
   "chain.slasher.historyLength"?: number;
+  "chain.slasher.updateWindow"?: number;
   "chain.slasher.broadcastSlashings"?: boolean;
 };
 
@@ -46,6 +47,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   const hasSlasherOpts =
     args["chain.slasher.enabled"] !== undefined ||
     args["chain.slasher.historyLength"] !== undefined ||
+    args["chain.slasher.updateWindow"] !== undefined ||
     args["chain.slasher.broadcastSlashings"] !== undefined;
 
   return {
@@ -89,6 +91,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
       ? {
           enabled: args["chain.slasher.enabled"] ?? false,
           historyLength: args["chain.slasher.historyLength"] ?? 4096,
+          updateWindow: args["chain.slasher.updateWindow"] ?? 64,
           broadcastSlashings: args["chain.slasher.broadcastSlashings"] ?? true,
         }
       : undefined,
@@ -118,6 +121,16 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "number",
     description: "EXPERIMENTAL: Number of epochs of history to track for lazy slasher surround detection.",
     defaultDescription: String(defaultOptions.chain.slasher?.historyLength ?? 4096),
+    group: "chain",
+  },
+
+  "chain.slasher.updateWindow": {
+    hidden: true,
+    type: "number",
+    description:
+      "EXPERIMENTAL: Number of recent epochs to eagerly update aggregate state for. " +
+      "Larger values catch more edge cases but increase CPU cost per attestation.",
+    defaultDescription: String(defaultOptions.chain.slasher?.updateWindow ?? 64),
     group: "chain",
   },
 
