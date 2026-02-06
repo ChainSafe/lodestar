@@ -214,15 +214,19 @@ export class LazySlasher {
    * Performance: We limit updates to `updateWindow` recent epochs to avoid O(historyLength)
    * iterations per attestation. This is a trade-off: very old slashings might be missed,
    * but the common case (slashings within a few epochs) is covered efficiently.
+   *
+   * IMPORTANT: For M(i), we must update beyond currentEpoch because future attestations
+   * may have source > currentEpoch. If we only update up to currentEpoch, we'd miss
+   * detecting when those future attestations are surrounded by this one.
    */
   private updateAggregates(record: AttestationRecord): void {
     const {sourceEpoch, targetEpoch} = record;
 
     // Calculate the window of epochs we'll update
     // For m(i): epochs in [max(0, sourceEpoch - updateWindow), sourceEpoch)
-    // For M(i): epochs in (sourceEpoch, min(currentEpoch, sourceEpoch + updateWindow)]
+    // For M(i): epochs in (sourceEpoch, sourceEpoch + updateWindow]
+    //   Note: M(i) is NOT capped at currentEpoch - we need to cover future source epochs
     const windowStart = Math.max(0, sourceEpoch - this.config.updateWindow);
-    const windowEnd = Math.min(this.currentEpoch, sourceEpoch + this.config.updateWindow);
 
     // Update m(i) for epochs i in our update window where i < sourceEpoch
     // m(i) = min{t : (s,t) in A, s > i}
@@ -237,7 +241,9 @@ export class LazySlasher {
     // Update M(i) for epochs i in our update window where i > sourceEpoch
     // M(i) = max{t : (s,t) in A, s < i}
     // For the new attestation (s,t), it contributes to M(i) for all i > s
-    for (let i = sourceEpoch + 1; i <= windowEnd; i++) {
+    // NOT capped at currentEpoch: future attestations with source in this range need M(source) populated
+    const maxWindowEnd = sourceEpoch + this.config.updateWindow;
+    for (let i = sourceEpoch + 1; i <= maxWindowEnd; i++) {
       const current = this.state.maxTargetBySource.get(i);
       if (current === undefined || targetEpoch > current) {
         this.state.maxTargetBySource.set(i, targetEpoch);
