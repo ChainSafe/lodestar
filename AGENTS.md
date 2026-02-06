@@ -98,12 +98,14 @@ Lodestar uses [Biome](https://biomejs.dev/) for linting and formatting.
 ### Import organization
 
 Imports are auto-sorted by Biome in this order:
+
 1. Node.js/Bun built-ins
 2. External packages
 3. `@chainsafe/*` and `@lodestar/*` packages
 4. Relative paths
 
 Always use `.js` extension for relative imports (even for `.ts` files):
+
 ```typescript
 import {something} from "./utils.js";
 ```
@@ -118,6 +120,7 @@ import {something} from "./utils.js";
 ### Metrics
 
 Metrics are critical for production monitoring:
+
 - Follow [Prometheus naming conventions](https://prometheus.io/docs/practices/naming/)
 - Always suffix metric names with units: `_seconds`, `_bytes`, `_total`
 - Do NOT suffix code variables with units (no `Sec` suffix)
@@ -128,6 +131,7 @@ Metrics are critical for production monitoring:
 ### Test organization
 
 Tests live alongside source code in `test/` directories:
+
 ```
 packages/beacon-node/
   src/
@@ -161,6 +165,7 @@ pnpm vitest run test/unit/chain/validation/block.test.ts -t "should reject"
 ```
 
 For spec tests with minimal preset (faster):
+
 ```bash
 LODESTAR_PRESET=minimal pnpm vitest run --config vitest.spec.config.ts
 ```
@@ -170,6 +175,7 @@ LODESTAR_PRESET=minimal pnpm vitest run --config vitest.spec.config.ts
 ### Branch naming
 
 If contributing from the main repository:
+
 ```
 username/short-description
 ```
@@ -177,6 +183,7 @@ username/short-description
 ### Commit messages
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
 - `feat:` new features
 - `fix:` bug fixes
 - `refactor:` code changes that don't add features or fix bugs
@@ -186,6 +193,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `docs:` documentation changes
 
 Examples:
+
 ```
 feat: add lodestar prover for execution api
 fix: ignore known block in publish blinded block flow
@@ -195,6 +203,7 @@ refactor(reqresp)!: support byte based handlers
 ### AI assistance disclosure
 
 **Required**: Disclose any AI assistance in your PR description:
+
 ```
 > This PR was written primarily by Claude Code.
 > I consulted Claude Code to understand the codebase, but the solution
@@ -258,6 +267,7 @@ follow the existing style in that file. Don't add unnecessary markers.
 ### Error handling patterns
 
 Use specific error codes when available:
+
 ```typescript
 // Preferred
 throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN});
@@ -269,6 +279,7 @@ throw new Error("Parent not found");
 ### Config value coercion
 
 When reading optional config values, handle undefined explicitly:
+
 ```typescript
 const peers = config.directPeers ?? [];
 const trimmed = value?.trim() ?? "";
@@ -284,13 +295,13 @@ evolved over time (though no longer actively maintained).
 
 When implementing changes from the consensus specs, the mapping is typically:
 
-| Spec Document | Lodestar Package |
-|---------------|------------------|
-| beacon-chain.md (containers) | `@lodestar/types` |
-| beacon-chain.md (functions) | `@lodestar/state-transition` |
-| p2p-interface.md | `@lodestar/beacon-node` (networking, gossip) |
-| validator.md | `@lodestar/validator` |
-| fork-choice.md | `@lodestar/fork-choice` |
+| Spec Document                | Lodestar Package                             |
+| ---------------------------- | -------------------------------------------- |
+| beacon-chain.md (containers) | `@lodestar/types`                            |
+| beacon-chain.md (functions)  | `@lodestar/state-transition`                 |
+| p2p-interface.md             | `@lodestar/beacon-node` (networking, gossip) |
+| validator.md                 | `@lodestar/validator`                        |
+| fork-choice.md               | `@lodestar/fork-choice`                      |
 
 ### Fork organization
 
@@ -313,6 +324,7 @@ All PRs should target `unstable`. The `stable` branch is for releases only
 ### Spec tests require download
 
 Before running `pnpm test:spec`, download test vectors:
+
 ```bash
 pnpm download-spec-tests
 ```
@@ -320,6 +332,7 @@ pnpm download-spec-tests
 ### E2E tests require Docker
 
 Start the e2e environment before running e2e tests:
+
 ```bash
 ./scripts/run_e2e_env.sh start
 pnpm test:e2e
