@@ -29,7 +29,7 @@ export type JustifiedBalances = EffectiveBalanceIncrements;
  * @param blockState state that declares justified checkpoint `checkpoint`
  */
 export type JustifiedBalancesGetter = (
-  checkpoint: CheckpointWithHex,
+  checkpoint: CheckpointWithPayload,
   blockState: CachedBeaconStateAllForks
 ) => JustifiedBalances;
 

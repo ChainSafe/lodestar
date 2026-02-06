@@ -124,8 +124,8 @@ export interface IForkChoice {
    * Retrieve all nodes for the debug API.
    */
   getAllNodes(): ProtoNode[];
-  getFinalizedCheckpoint(): CheckpointWithHex;
-  getJustifiedCheckpoint(): CheckpointWithHex;
+  getFinalizedCheckpoint(): CheckpointWithPayload;
+  getJustifiedCheckpoint(): CheckpointWithPayload;
   /**
    * Add `block` to the fork choice DAG.
    *

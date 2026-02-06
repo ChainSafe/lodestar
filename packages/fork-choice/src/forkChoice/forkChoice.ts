@@ -1103,11 +1103,15 @@ export class ForkChoice implements IForkChoice {
       return node.executionPayloadBlockHash === blockHash ? node : null;
     }
 
-    // Post-Gloas
-    for (const variantIndex of variantIndices) {
-      const node = this.protoArray.nodes[variantIndex];
-      if (node.executionPayloadBlockHash === blockHash) {
-        return node;
+    // Post-Gloas: Prioritize FULL > EMPTY > PENDING
+    // EMPTY and PENDING have the same block hash (parent hash), so we prefer EMPTY over PENDING
+    for (const status of [PayloadStatus.FULL, PayloadStatus.EMPTY, PayloadStatus.PENDING]) {
+      const variantIndex = variantIndices[status];
+      if (variantIndex !== undefined) {
+        const node = this.protoArray.nodes[variantIndex];
+        if (node.executionPayloadBlockHash === blockHash) {
+          return node;
+        }
       }
     }
 
