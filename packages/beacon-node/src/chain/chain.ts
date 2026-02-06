@@ -296,7 +296,7 @@ export class BeaconChain implements IBeaconChain {
     this.opPool = new OpPool(config);
 
     this.lazySlasher = opts.slasher?.enabled
-      ? new LazySlasher(opts.slasher, this.logger, this.db, metrics, this.opPool)
+      ? new LazySlasher(opts.slasher, this.config, this.logger, this.db, metrics, this.opPool)
       : null;
     // Initialize epoch tracking so prune logic has a sane baseline
     this.lazySlasher?.setCurrentEpoch(computeEpochAtSlot(clock.currentSlot));

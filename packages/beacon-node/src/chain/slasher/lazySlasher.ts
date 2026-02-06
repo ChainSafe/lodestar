@@ -1,6 +1,7 @@
 // Note: isSlashableAttestationData from state-transition uses bigint types
 // We do manual epoch comparison to avoid type conversion overhead
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconConfig} from "@lodestar/config";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {AttesterSlashing, Epoch, IndexedAttestation, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import type {IBeaconDb} from "../../db/interface.js";
@@ -31,6 +32,7 @@ import {
  */
 export class LazySlasher {
   private readonly config: LazySlasherConfig;
+  private readonly beaconConfig: BeaconConfig;
   private readonly logger: Logger;
   private readonly db: IBeaconDb;
   private readonly opPool: OpPool | null;
@@ -46,12 +48,14 @@ export class LazySlasher {
 
   constructor(
     config: Partial<LazySlasherConfig>,
+    beaconConfig: BeaconConfig,
     logger: Logger,
     db: IBeaconDb,
     _metrics: Metrics | null,
     opPool: OpPool | null = null
   ) {
     this.config = {...defaultLazySlasherConfig, ...config};
+    this.beaconConfig = beaconConfig;
     // Logger in production is a LoggerNode with `.child()`, but the Logger type does not expose it
     this.logger = ((logger as any).child?.({module: "lazy-slasher"}) as Logger) ?? logger;
     this.db = db;
@@ -132,8 +136,9 @@ export class LazySlasher {
       if (this.opPool && this.config.broadcastSlashings) {
         for (const slashing of slashings) {
           try {
-            // Use electra fork for modern slashings
-            this.opPool.insertAttesterSlashing(ForkName.electra, slashing);
+            // Use fork at attestation slot for proper serialization
+            const fork = this.beaconConfig.getForkName(Number(slashing.attestation1.data.slot));
+            this.opPool.insertAttesterSlashing(fork, slashing);
             this.logger.info("Inserted attester slashing into opPool", {
               slashableCount: slashing.attestation1.attestingIndices.length,
             });
@@ -218,8 +223,9 @@ export class LazySlasher {
 
     // Efficient update: only update if this is a new minimum for the relevant bucket
     // For epochs i where i < sourceEpoch, this attestation's target might be the new minimum
-    // We store m(sourceEpoch - 1) and compare
-    for (let i = 0; i < sourceEpoch && i >= this.currentEpoch - this.config.historyLength; i++) {
+    // Start from cutoff epoch to avoid O(currentEpoch) iterations on mainnet
+    const cutoffEpoch = Math.max(0, this.currentEpoch - this.config.historyLength);
+    for (let i = cutoffEpoch; i < sourceEpoch; i++) {
       const current = this.state.minTargetBySource.get(i);
       if (current === undefined || targetEpoch < current) {
         this.state.minTargetBySource.set(i, targetEpoch);

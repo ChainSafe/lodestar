@@ -1,4 +1,5 @@
-import {describe, it, expect, beforeEach, vi} from "vitest";
+import {beforeEach, describe, expect, it, vi} from "vitest";
+import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {LazySlasher} from "../../../../src/chain/slasher/lazySlasher.js";
 import {LazySlasherConfig} from "../../../../src/chain/slasher/types.js";
@@ -10,6 +11,10 @@ describe("LazySlasher", () => {
     warn: vi.fn(),
     error: vi.fn(),
     child: vi.fn(() => mockLogger),
+  } as any;
+
+  const mockBeaconConfig = {
+    getForkName: vi.fn(() => ForkName.deneb),
   } as any;
 
   const mockDb = {} as any;
@@ -39,12 +44,12 @@ describe("LazySlasher", () => {
 
   describe("initialization", () => {
     it("should initialize with default config", () => {
-      const slasher = new LazySlasher({enabled: true}, mockLogger, mockDb, mockMetrics);
+      const slasher = new LazySlasher({enabled: true}, mockBeaconConfig, mockLogger, mockDb, mockMetrics);
       expect(slasher).toBeDefined();
     });
 
     it("should log initialization", () => {
-      new LazySlasher(defaultConfig, mockLogger, mockDb, mockMetrics);
+      new LazySlasher(defaultConfig, mockBeaconConfig, mockLogger, mockDb, mockMetrics);
       expect(mockLogger.child).toHaveBeenCalledWith({module: "lazy-slasher"});
     });
   });
@@ -54,7 +59,7 @@ describe("LazySlasher", () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
-      slasher = new LazySlasher(defaultConfig, mockLogger, mockDb, mockMetrics);
+      slasher = new LazySlasher(defaultConfig, mockBeaconConfig, mockLogger, mockDb, mockMetrics);
     });
 
     it("should report initial state size as zero", () => {
@@ -74,14 +79,14 @@ describe("LazySlasher", () => {
     it("should prune old epochs when current epoch advances", () => {
       // Set initial epoch
       slasher.setCurrentEpoch(5000);
-      
+
       // Get state size before pruning (should be 0 since we haven't processed any attestations)
       const sizeBefore = slasher.getStateSize();
       expect(sizeBefore.minMapSize).toBe(0);
-      
+
       // Advance epoch significantly
       slasher.setCurrentEpoch(10000);
-      
+
       // State should still be clean
       const sizeAfter = slasher.getStateSize();
       expect(sizeAfter.minMapSize).toBe(0);
@@ -90,7 +95,7 @@ describe("LazySlasher", () => {
 
   describe("metrics", () => {
     it("should track attestations processed when enabled", async () => {
-      const slasher = new LazySlasher(defaultConfig, mockLogger, mockDb, mockMetrics);
+      const slasher = new LazySlasher(defaultConfig, mockBeaconConfig, mockLogger, mockDb, mockMetrics);
       slasher.setCurrentEpoch(100);
 
       const attestation = createIndexedAttestation(90, 100, 3200, [1, 2, 3]);
@@ -102,7 +107,7 @@ describe("LazySlasher", () => {
 
     it("should not process when disabled", async () => {
       const disabledConfig = {...defaultConfig, enabled: false};
-      const slasher = new LazySlasher(disabledConfig, mockLogger, mockDb, mockMetrics);
+      const slasher = new LazySlasher(disabledConfig, mockBeaconConfig, mockLogger, mockDb, mockMetrics);
 
       const attestation = createIndexedAttestation(90, 100, 3200, [1, 2, 3]);
       await slasher.processAttestation(attestation);
@@ -118,7 +123,7 @@ describe("LazySlasher", () => {
     // - Using aggregate: if t > m(s), there exists some a' that might be surrounded
 
     it("should detect potential surround when new attestation has larger target", async () => {
-      const slasher = new LazySlasher(defaultConfig, mockLogger, mockDb, mockMetrics);
+      const slasher = new LazySlasher(defaultConfig, mockBeaconConfig, mockLogger, mockDb, mockMetrics);
       slasher.setCurrentEpoch(100);
 
       // First attestation: source=80, target=90
@@ -139,7 +144,7 @@ describe("LazySlasher", () => {
     });
 
     it("should not trigger false surround for non-overlapping epochs", async () => {
-      const slasher = new LazySlasher(defaultConfig, mockLogger, mockDb, mockMetrics);
+      const slasher = new LazySlasher(defaultConfig, mockBeaconConfig, mockLogger, mockDb, mockMetrics);
       slasher.setCurrentEpoch(100);
 
       // First attestation: source=80, target=90
@@ -159,7 +164,7 @@ describe("LazySlasher", () => {
 
   describe("storage efficiency", () => {
     it("should maintain constant storage regardless of validator count", async () => {
-      const slasher = new LazySlasher(defaultConfig, mockLogger, mockDb, mockMetrics);
+      const slasher = new LazySlasher(defaultConfig, mockBeaconConfig, mockLogger, mockDb, mockMetrics);
       slasher.setCurrentEpoch(100);
 
       // Process attestations from many different validators
@@ -176,9 +181,9 @@ describe("LazySlasher", () => {
     });
 
     it("should report storage in bytes", () => {
-      const slasher = new LazySlasher(defaultConfig, mockLogger, mockDb, mockMetrics);
+      const slasher = new LazySlasher(defaultConfig, mockBeaconConfig, mockLogger, mockDb, mockMetrics);
       const size = slasher.getStateSize();
-      
+
       // Each entry is 16 bytes (epoch key + epoch value)
       expect(size.totalBytes).toBe((size.minMapSize + size.maxMapSize) * 16);
     });
@@ -187,7 +192,7 @@ describe("LazySlasher", () => {
 
 describe("LazySlasher algorithm correctness", () => {
   // These tests verify the mathematical properties of the lazy slasher algorithm
-  
+
   describe("aggregate min-max properties", () => {
     it("m(i) should be minimum target where source > i", () => {
       // Property: m(i) = min{t : (s,t) in A, s > i}
@@ -195,7 +200,6 @@ describe("LazySlasher algorithm correctness", () => {
       // Then m(79) should be min(90, 88) = 88 (both have source > 79)
       // And m(82) should be 88 (only s2=85 > 82)
       // And m(86) should be undefined (no source > 86)
-      
       // This is verified through the aggregate update logic
     });
 
