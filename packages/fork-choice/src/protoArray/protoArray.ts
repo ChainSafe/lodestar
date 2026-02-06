@@ -170,44 +170,93 @@ export class ProtoArray {
   /**
    * Determine which parent payload status a block extends
    * Spec: gloas/fork-choice.md#new-get_parent_payload_status
+   *   def get_parent_payload_status(store: Store, block: BeaconBlock) -> PayloadStatus:
+   *     parent = store.blocks[block.parent_root]
+   *     parent_block_hash = block.body.signed_execution_payload_bid.message.parent_block_hash
+   *     message_block_hash = parent.body.signed_execution_payload_bid.message.block_hash
+   *     return PAYLOAD_STATUS_FULL if parent_block_hash == message_block_hash else PAYLOAD_STATUS_EMPTY
    *
-   * Compares parent_block_hash in child's bid with executionPayloadBlockHash in parent:
-   * - Match → child extends FULL parent (parent has payload)
-   * - No match → child extends EMPTY parent (parent has no payload)
+   * In lodestar forkchoice, we don't store the full bid, so we compares parent_block_hash in child's bid with executionPayloadBlockHash in parent:
+   * - If it matches EMPTY variant, return EMPTY
+   * - If it matches FULL variant, return FULL
+   * - If no match, throw UNKNOWN_PARENT_BLOCK error
    *
    * For pre-Gloas blocks: always returns FULL
    */
   getParentPayloadStatus(block: ProtoBlock): PayloadStatus {
     // Pre-Gloas blocks have payloads embedded, so parents are always FULL
-    if (!isGloasBlock(block)) {
+    const {parentBlockHash} = block;
+    if (parentBlockHash === null) {
       return PayloadStatus.FULL;
     }
 
-    // Gloas block must have parentBlockHash from its SignedExecutionPayloadBid
-    // Get parent node to compare execution payload hash
-    // Use variants[0] which works for both pre-Gloas (FULL) and Gloas (PENDING)
-    const parentVariants = this.indices.get(block.parentRoot);
-    if (parentVariants == null) {
-      // Parent not found
+    const parentBlock = this.getBlockHexAndBlockHash(block.parentRoot, parentBlockHash);
+    if (parentBlock == null) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.UNKNOWN_BLOCK,
-        root: block.parentRoot,
+        code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
+        parentRoot: block.parentRoot,
+        parentHash: parentBlockHash,
       });
     }
 
-    const parentBlockHash = block.parentBlockHash;
-    // Pre-Gloas blocks don't have parentBlockHash
-    if (parentBlockHash === null || !Array.isArray(parentVariants)) {
-      return PayloadStatus.FULL;
+    return parentBlock.payloadStatus;
+  }
+
+  /**
+   * Return the parent `ProtoBlock` given its root and block hash.
+   */
+  getParent(parentRoot: RootHex, parentBlockHash: RootHex | null): ProtoBlock | null {
+    // pre-gloas
+    if (parentBlockHash === null) {
+      const parentIndex = this.indices.get(parentRoot);
+      if (parentIndex === undefined) {
+        return null;
+      }
+      if (Array.isArray(parentIndex)) {
+        // Gloas block found when pre-gloas expected
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
+          parentRoot,
+          parentHash: parentBlockHash,
+        });
+      }
+      return this.nodes[parentIndex] ?? null;
     }
 
-    const parentIndex = parentVariants[0];
-    const parentExecutionHash = this.nodes[parentIndex].executionPayloadBlockHash;
+    // post-gloas
+    return this.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
+  }
 
-    // Compare parent_block_hash from child's bid with parent's execution payload hash
-    // Match means child extends FULL variant (parent has payload)
-    // No match means child extends EMPTY variant (parent has no payload)
-    return parentBlockHash === parentExecutionHash ? PayloadStatus.FULL : PayloadStatus.EMPTY;
+  /**
+   * Returns an EMPTY or FULL `ProtoBlock` that has matching block root and block hash
+   */
+  getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null {
+    const variantIndices = this.indices.get(blockRoot);
+    if (variantIndices === undefined) {
+      return null;
+    }
+
+    // Pre-Gloas
+    if (!Array.isArray(variantIndices)) {
+      const node = this.nodes[variantIndices];
+      return node.executionPayloadBlockHash === blockHash ? node : null;
+    }
+
+    // Post-Gloas, check empty and full variants
+    const emptyNode = this.nodes[variantIndices[PayloadStatus.EMPTY]];
+    if (emptyNode.executionPayloadBlockHash === blockHash) {
+      return emptyNode;
+    }
+
+    const fullNodeIndex = variantIndices[PayloadStatus.FULL];
+    if (fullNodeIndex !== undefined) {
+      const fullNode = this.nodes[fullNodeIndex];
+      if (fullNode.executionPayloadBlockHash === blockHash) {
+        return fullNode;
+      }
+    }
+
+    return null;
   }
 
   /**

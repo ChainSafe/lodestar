@@ -496,17 +496,17 @@ describe("Gloas Fork Choice", () => {
 
     it("inter-block: new PENDING extends parent's EMPTY or FULL", () => {
       // Block A
-      const blockA = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
       protoArray.onBlock(blockA, gloasForkSlot);
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot);
+      protoArray.onExecutionPayload("0x02Root", gloasForkSlot, "0x02Hash", gloasForkSlot, stateRoot);
 
       // Block B extends A's FULL (parentBlockHash matches)
-      const blockB = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02");
+      const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02Hash");
       protoArray.onBlock(blockB, gloasForkSlot + 1);
 
-      const blockAPending = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
-      const blockAFull = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
-      const blockBPending = getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.PENDING);
+      const blockAPending = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.PENDING);
+      const blockAFull = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.FULL);
+      const blockBPending = getNodeByPayloadStatus(protoArray, "0x03Root", PayloadStatus.PENDING);
 
       // Block B's PENDING should NOT point to A's PENDING
       expect(blockBPending?.parent).not.toBe(blockAPending);

@@ -9,7 +9,7 @@ export enum InvalidBlockCode {
 }
 
 export type InvalidBlock =
-  | {code: InvalidBlockCode.UNKNOWN_PARENT; root: RootHex}
+  | {code: InvalidBlockCode.UNKNOWN_PARENT; root: RootHex; hash: RootHex | null}
   | {code: InvalidBlockCode.FUTURE_SLOT; currentSlot: Slot; blockSlot: Slot}
   | {code: InvalidBlockCode.FINALIZED_SLOT; finalizedSlot: Slot; blockSlot: Slot}
   | {code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT; finalizedRoot: RootHex; blockAncestor?: RootHex};

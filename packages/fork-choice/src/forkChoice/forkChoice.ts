@@ -594,17 +594,18 @@ export class ForkChoice implements IForkChoice {
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toRootHex(parentRoot);
-    // Parent block must be known
-    // We do not care about the variant here, we just need to find the parent block
-    const defaultStatus = this.protoArray.getDefaultVariant(parentRootHex);
-    const parentBlock =
-      defaultStatus !== undefined ? this.protoArray.getBlock(parentRootHex, defaultStatus) : undefined;
+    // Parent block must be known because state_transition would have failed otherwise.
+    const parentHashHex = isGloasBeaconBlock(block)
+      ? toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
+      : null;
+    const parentBlock = this.protoArray.getParent(parentRootHex, parentHashHex);
     if (!parentBlock) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.UNKNOWN_PARENT,
           root: parentRootHex,
+          hash: parentHashHex,
         },
       });
     }
@@ -834,9 +835,7 @@ export class ForkChoice implements IForkChoice {
       blockHashFromBid: isGloasBeaconBlock(block)
         ? toRootHex(block.body.signedExecutionPayloadBid.message.blockHash)
         : null,
-      parentBlockHash: isGloasBeaconBlock(block)
-        ? toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
-        : null,
+      parentBlockHash: parentHashHex,
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
@@ -1089,33 +1088,10 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Returns a `ProtoBlock` that has matching block root and block hash
+   * Returns EMPTY or FULL `ProtoBlock` that has matching block root and block hash
    */
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null {
-    const variantIndices = this.protoArray.indices.get(blockRoot);
-    if (variantIndices === undefined) {
-      return null;
-    }
-
-    // Pre-Gloas
-    if (!Array.isArray(variantIndices)) {
-      const node = this.protoArray.nodes[variantIndices];
-      return node.executionPayloadBlockHash === blockHash ? node : null;
-    }
-
-    // Post-Gloas: Prioritize FULL > EMPTY > PENDING
-    // EMPTY and PENDING have the same block hash (parent hash), so we prefer EMPTY over PENDING
-    for (const status of [PayloadStatus.FULL, PayloadStatus.EMPTY, PayloadStatus.PENDING]) {
-      const variantIndex = variantIndices[status];
-      if (variantIndex !== undefined) {
-        const node = this.protoArray.nodes[variantIndex];
-        if (node.executionPayloadBlockHash === blockHash) {
-          return node;
-        }
-      }
-    }
-
-    return null;
+    return this.protoArray.getBlockHexAndBlockHash(blockRoot, blockHash);
   }
 
   getJustifiedBlock(): ProtoBlock {
