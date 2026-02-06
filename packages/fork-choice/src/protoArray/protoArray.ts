@@ -243,11 +243,6 @@ export class ProtoArray {
     }
 
     // Post-Gloas, check empty and full variants
-    const emptyNode = this.nodes[variantIndices[PayloadStatus.EMPTY]];
-    if (emptyNode.executionPayloadBlockHash === blockHash) {
-      return emptyNode;
-    }
-
     const fullNodeIndex = variantIndices[PayloadStatus.FULL];
     if (fullNodeIndex !== undefined) {
       const fullNode = this.nodes[fullNodeIndex];
@@ -255,6 +250,14 @@ export class ProtoArray {
         return fullNode;
       }
     }
+
+    const emptyNode = this.nodes[variantIndices[PayloadStatus.EMPTY]];
+    if (emptyNode.executionPayloadBlockHash === blockHash) {
+      return emptyNode;
+    }
+
+    // PENDING is the same to EMPTY so not likely we can return it
+    // also it's only specific for fork-choice
 
     return null;
   }
