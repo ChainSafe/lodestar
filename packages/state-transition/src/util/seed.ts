@@ -5,7 +5,6 @@ import {
 } from "@chainsafe/swap-or-not-shuffle";
 import {
   DOMAIN_BEACON_PROPOSER,
-  DOMAIN_PTC_ATTESTER,
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -21,7 +20,7 @@ import {
 import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
 import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {BeaconStateAllForks, BeaconStateGloas, CachedBeaconStateAllForks} from "../types.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
 /**
@@ -268,27 +267,29 @@ export function getNextSyncCommitteeIndices(
   );
 }
 
-export function naiveGetPayloadTimlinessCommitteeIndices(
-  state: BeaconStateGloas,
-  shuffling: {committees: Uint32Array[][]},
-  effectiveBalanceIncrements: EffectiveBalanceIncrements,
-  epoch: Epoch
-): ValidatorIndex[][] {
-  const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
-  const startSlot = computeStartSlotAtEpoch(epoch);
-  const committeeIndices = [];
-
-  for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
-    const slotCommittees = shuffling.committees[slot % SLOTS_PER_EPOCH];
-    const indices = naiveComputePayloadTimelinessCommitteeIndices(
-      effectiveBalanceIncrements,
-      slotCommittees.flatMap((c) => Array.from(c)),
-      digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
-    );
-    committeeIndices.push(indices);
+/**
+ * Compute PTC for a single slot, using the correct spec algorithm (shuffle_indices=False).
+ * This is computed lazily on demand rather than eagerly for all slots.
+ */
+export function computePayloadTimelinessCommitteeForSlot(
+  epochSeed: Uint8Array,
+  slot: number,
+  slotCommittees: Uint32Array[],
+  effectiveBalanceIncrements: EffectiveBalanceIncrements
+): Uint32Array {
+  // Concatenate all committee Uint32Arrays for this slot
+  const totalLen = slotCommittees.reduce((sum, c) => sum + c.length, 0);
+  const allIndices = new Uint32Array(totalLen);
+  let offset = 0;
+  for (const c of slotCommittees) {
+    allIndices.set(c, offset);
+    offset += c.length;
   }
-
-  return committeeIndices;
+  const slotSeed = digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]));
+  // Use the correct spec algorithm: shuffle_indices=False (no shuffling)
+  return new Uint32Array(
+    naiveComputePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, allIndices, slotSeed)
+  );
 }
 
 export function naiveComputePayloadTimelinessCommitteeIndices(
@@ -305,10 +306,26 @@ export function naiveComputePayloadTimelinessCommitteeIndices(
   const MAX_RANDOM_VALUE = 2 ** 16 - 1;
   const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
 
+  // Pre-allocate buffer to avoid repeated Buffer.concat allocations
+  const hashInput = Buffer.alloc(seed.length + 8);
+  hashInput.set(seed, 0);
+
   let i = 0;
+  let lastBlock = -1;
+  let randomBytes: Uint8Array = new Uint8Array(0);
   while (result.length < PTC_SIZE) {
     const candidateIndex = indices[i % indices.length];
-    const randomBytes = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
+
+    // Only recompute hash every 16 iterations (digest result changes with Math.floor(i / 16))
+    const block = Math.floor(i / 16);
+    if (block !== lastBlock) {
+      hashInput.writeUInt32LE(block, seed.length);
+      // Zero the upper 4 bytes for correct 8-byte little-endian encoding
+      hashInput.writeUInt32LE(0, seed.length + 4);
+      randomBytes = digest(hashInput);
+      lastBlock = block;
+    }
+
     const offset = (i % 16) * 2;
     const randomValue = bytesToInt(randomBytes.subarray(offset, offset + 2));
 

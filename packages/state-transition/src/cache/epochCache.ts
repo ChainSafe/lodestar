@@ -4,6 +4,7 @@ import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_PROPOSER,
+  DOMAIN_PTC_ATTESTER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   ForkSeq,
@@ -36,6 +37,7 @@ import {
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
+  computePayloadTimelinessCommitteeForSlot,
   computeProposers,
   computeSyncPeriodAtEpoch,
   getActivationChurnLimit,
@@ -43,7 +45,6 @@ import {
   getSeed,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
-  naiveGetPayloadTimlinessCommitteeIndices,
 } from "../util/index.js";
 import {
   AttesterDuty,
@@ -64,7 +65,7 @@ import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
 } from "./syncCommitteeCache.js";
-import {BeaconStateAllForks, BeaconStateAltair, BeaconStateGloas, ShufflingGetter} from "./types.js";
+import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -234,9 +235,10 @@ export class EpochCache {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
-  // TODO GLOAS: See if we need to cached PTC for prev/next epoch
-  // PTC for current epoch
-  payloadTimelinessCommittee: ValidatorIndex[][];
+  // PTC for current epoch, lazily computed per-slot
+  payloadTimelinessCommittee: (Uint32Array | null)[];
+  // Seed for computing PTC on demand (null if pre-gloas)
+  ptcEpochSeed: Uint8Array | null;
 
   // TODO: Helper stats
   syncPeriod: SyncPeriod;
@@ -275,7 +277,8 @@ export class EpochCache {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
-    payloadTimelinessCommittee: ValidatorIndex[][];
+    payloadTimelinessCommittee: (Uint32Array | null)[];
+    ptcEpochSeed: Uint8Array | null;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
@@ -307,6 +310,7 @@ export class EpochCache {
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.payloadTimelinessCommittee = data.payloadTimelinessCommittee;
+    this.ptcEpochSeed = data.ptcEpochSeed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -457,15 +461,11 @@ export class EpochCache {
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
     }
 
-    // Compute PTC for this epoch
-    let payloadTimelinessCommittee: ValidatorIndex[][] = [];
+    // PTC is computed lazily per-slot on demand. Just store the seed here.
+    let ptcEpochSeed: Uint8Array | null = null;
+    const payloadTimelinessCommittee: (Uint32Array | null)[] = new Array(SLOTS_PER_EPOCH).fill(null);
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
-      payloadTimelinessCommittee = naiveGetPayloadTimlinessCommitteeIndices(
-        state as BeaconStateGloas,
-        currentShuffling,
-        effectiveBalanceIncrements,
-        currentEpoch
-      );
+      ptcEpochSeed = getSeed(state, currentEpoch, DOMAIN_PTC_ATTESTER);
     }
 
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
@@ -542,6 +542,7 @@ export class EpochCache {
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
       payloadTimelinessCommittee: payloadTimelinessCommittee,
+      ptcEpochSeed,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
     });
@@ -588,6 +589,7 @@ export class EpochCache {
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       payloadTimelinessCommittee: this.payloadTimelinessCommittee,
+      ptcEpochSeed: this.ptcEpochSeed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });
@@ -698,12 +700,9 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
-      this.payloadTimelinessCommittee = naiveGetPayloadTimlinessCommitteeIndices(
-        state as BeaconStateGloas,
-        this.currentShuffling,
-        this.effectiveBalanceIncrements,
-        upcomingEpoch
-      );
+      // Store seed for lazy per-slot PTC computation and reset cache
+      this.ptcEpochSeed = getSeed(state, upcomingEpoch, DOMAIN_PTC_ATTESTER);
+      this.payloadTimelinessCommittee = new Array(SLOTS_PER_EPOCH).fill(null);
     }
     if (upcomingEpoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
@@ -1022,18 +1021,33 @@ export class EpochCache {
     return this.epoch >= this.config.ELECTRA_FORK_EPOCH;
   }
 
-  getPayloadTimelinessCommittee(slot: Slot): ValidatorIndex[] {
+  getPayloadTimelinessCommittee(slot: Slot): Uint32Array {
     const epoch = computeEpochAtSlot(slot);
 
     if (epoch < this.config.GLOAS_FORK_EPOCH) {
       throw new Error("Payload Timeliness Committee is not available before gloas fork");
     }
 
-    if (epoch === this.epoch) {
-      return this.payloadTimelinessCommittee[slot % SLOTS_PER_EPOCH];
+    if (epoch !== this.epoch) {
+      throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
     }
 
-    throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
+    const slotIndex = slot % SLOTS_PER_EPOCH;
+    let cached = this.payloadTimelinessCommittee[slotIndex];
+    if (cached === null) {
+      if (this.ptcEpochSeed === null) {
+        throw new Error("PTC epoch seed is not available");
+      }
+      const slotCommittees = this.currentShuffling.committees[slotIndex];
+      cached = computePayloadTimelinessCommitteeForSlot(
+        this.ptcEpochSeed,
+        slot,
+        slotCommittees,
+        this.effectiveBalanceIncrements
+      );
+      this.payloadTimelinessCommittee[slotIndex] = cached;
+    }
+    return cached;
   }
 
   getIndexedPayloadAttestation(
