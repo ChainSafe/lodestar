@@ -1,14 +1,7 @@
 import {digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkAll,
-  ForkName,
-  ForkPostFulu,
-  ForkPreGloas,
-  KZG_COMMITMENTS_GINDEX,
-  NUMBER_OF_COLUMNS,
-} from "@lodestar/params";
+import {ForkAll, ForkName, ForkPostFulu, KZG_COMMITMENTS_GINDEX, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   BeaconBlockBody,
@@ -22,7 +15,7 @@ import {
   ssz,
 } from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
-import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
+import {BlockInputColumns, getBlobKzgCommitmentsFromBlock} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -310,9 +303,7 @@ export function getDataColumnSidecarsFromBlock(
   signedBlock: SignedBeaconBlock<ForkPostFulu>,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): fulu.DataColumnSidecars {
-  // TODO GLOAS: Need to get blobKzgCommitments from somewhere else
-  const blobKzgCommitments = (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>)
-    .blobKzgCommitments;
+  const blobKzgCommitments = getBlobKzgCommitmentsFromBlock(signedBlock);
 
   // No need to create data column sidecars if there are no blobs
   if (blobKzgCommitments.length === 0) {
