@@ -1,5 +1,6 @@
 import {PeerId, Stream} from "@libp2p/interface";
 import {pipe} from "it-pipe";
+import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
@@ -8,7 +9,7 @@ import {Metrics} from "../metrics.js";
 import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
 import {RequestError, RequestErrorCode} from "../request/errors.js";
 import {Protocol, ReqRespRequest} from "../types.js";
-import {prettyPrintPeerId} from "../utils/index.js";
+import {abortableSource, prettyPrintPeerId} from "../utils/index.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
@@ -30,6 +31,20 @@ export interface HandleRequestOpts {
   peerClient?: string;
   /** Non-spec timeout from sending request until write stream closed by responder */
   requestTimeoutMs?: number;
+}
+
+async function writeToStream(
+  stream: Stream,
+  source: AsyncIterable<Uint8Array | Uint8ArrayList>,
+  signal?: AbortSignal
+): Promise<void> {
+  for await (const chunk of source) {
+    if (!stream.send(chunk)) {
+      await stream.onDrain({signal});
+    }
+  }
+
+  await stream.close({signal});
 }
 
 /**
@@ -73,11 +88,20 @@ export async function handleRequest({
     // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
     (async function* requestHandlerSource() {
       try {
-        // TODO: Does the TTFB timer start on opening stream or after receiving request
-        const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method: protocol.method});
-
         const requestBody = await withTimeout(
-          () => pipe(stream.source, requestDecode(protocol)),
+          async (timeoutAndParentSignal) => {
+            const timeoutSignal = timeoutAndParentSignal ?? signal;
+            const requestSource = timeoutSignal
+              ? abortableSource(stream as AsyncIterable<Uint8ArrayList>, [
+                  {
+                    signal: timeoutSignal,
+                    getError: () => new TimeoutError(),
+                  },
+                ])
+              : (stream as AsyncIterable<Uint8ArrayList>);
+
+            return pipe(requestSource, requestDecode(protocol));
+          },
           REQUEST_TIMEOUT,
           signal
         ).catch((e: unknown) => {
@@ -107,11 +131,7 @@ export async function handleRequest({
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),
-          responseEncodeSuccess(protocol, {
-            onChunk(chunkIndex) {
-              if (chunkIndex === 0) timerTTFB?.();
-            },
-          })
+          responseEncodeSuccess(protocol)
         );
       } catch (e) {
         const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;
@@ -122,7 +142,9 @@ export async function handleRequest({
         responseError = e as Error;
       }
     })(),
-    stream.sink
+    async (source) => {
+      await writeToStream(stream, source, signal);
+    }
   );
 
   // If streak.sink throws, libp2p-mplex will close stream.source

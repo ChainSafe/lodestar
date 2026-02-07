@@ -69,20 +69,6 @@ export function getMetrics(register: MetricsRegisterExtra) {
       help: "Counts total failed responses handled per method",
       labelNames: ["method"],
     }),
-    outgoingResponseTTFB: register.histogram<{method: string}>({
-      name: "beacon_reqresp_outgoing_response_ttfb_seconds",
-      help: "Time to first byte (TTFB) for outgoing responses",
-      labelNames: ["method"],
-      // Spec sets TTFB_TIMEOUT = 5 sec
-      buckets: [0.1, 1, 5],
-    }),
-    incomingResponseTTFB: register.histogram<{method: string}>({
-      name: "beacon_reqresp_incoming_response_ttfb_seconds",
-      help: "Time to first byte (TTFB) for incoming responses",
-      labelNames: ["method"],
-      // Spec sets TTFB_TIMEOUT = 5 sec
-      buckets: [0.1, 1, 5],
-    }),
     dialErrors: register.gauge({
       name: "beacon_reqresp_dial_errors_total",
       help: "Count total dial errors",

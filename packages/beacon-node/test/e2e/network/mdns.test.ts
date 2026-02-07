@@ -38,7 +38,7 @@ describe.skip("mdns", () => {
   async function getOpts(privateKey: PrivateKey): Promise<NetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
     const enr = SignableENR.createFromPrivateKey(privateKey);
-    enr.setLocationMultiaddr(multiaddr(bindAddrUdp));
+    enr.setLocationMultiaddr(multiaddr(bindAddrUdp) as Parameters<typeof enr.setLocationMultiaddr>[0]);
 
     return {
       ...defaultNetworkOptions,

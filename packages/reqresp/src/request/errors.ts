@@ -25,8 +25,6 @@ export enum RequestErrorCode {
   RESPONSE_TIMEOUT = "REQUEST_ERROR_RESPONSE_TIMEOUT",
   /** A single-response method returned 0 chunks */
   EMPTY_RESPONSE = "REQUEST_ERROR_EMPTY_RESPONSE",
-  /** Time to first byte timeout */
-  TTFB_TIMEOUT = "REQUEST_ERROR_TTFB_TIMEOUT",
   /** Timeout between `<response_chunk>` exceed */
   RESP_TIMEOUT = "REQUEST_ERROR_RESP_TIMEOUT",
   /** Request rate limited */
@@ -50,7 +48,6 @@ type RequestErrorType =
   | {code: RequestErrorCode.REQUEST_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_ERROR; error: Error}
   | {code: RequestErrorCode.EMPTY_RESPONSE}
-  | {code: RequestErrorCode.TTFB_TIMEOUT}
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED}
   | {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}

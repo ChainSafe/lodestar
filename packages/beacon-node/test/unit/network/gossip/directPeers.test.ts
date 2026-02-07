@@ -104,7 +104,7 @@ describe("network / gossip / directPeers", () => {
     it("should parse valid ENR with TCP multiaddr", async () => {
       const privateKey = await generateKeyPair("secp256k1");
       const enr = SignableENR.createFromPrivateKey(privateKey);
-      enr.setLocationMultiaddr(multiaddr("/ip4/192.168.1.1/tcp/9000"));
+      enr.setLocationMultiaddr(multiaddr("/ip4/192.168.1.1/tcp/9000") as Parameters<typeof enr.setLocationMultiaddr>[0]);
       const enrStr = enr.encodeTxt();
 
       const result = parseDirectPeers([enrStr], logger);
@@ -123,7 +123,7 @@ describe("network / gossip / directPeers", () => {
       const privateKey = await generateKeyPair("secp256k1");
       const enr = SignableENR.createFromPrivateKey(privateKey);
       // Only set UDP, not TCP
-      enr.setLocationMultiaddr(multiaddr("/ip4/192.168.1.1/udp/9000"));
+      enr.setLocationMultiaddr(multiaddr("/ip4/192.168.1.1/udp/9000") as Parameters<typeof enr.setLocationMultiaddr>[0]);
       const enrStr = enr.encodeTxt();
 
       const result = parseDirectPeers([enrStr], logger);
@@ -145,7 +145,7 @@ describe("network / gossip / directPeers", () => {
       const peerIdStr = "16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu";
       const privateKey = await generateKeyPair("secp256k1");
       const enr = SignableENR.createFromPrivateKey(privateKey);
-      enr.setLocationMultiaddr(multiaddr("/ip4/10.0.0.1/tcp/9001"));
+      enr.setLocationMultiaddr(multiaddr("/ip4/10.0.0.1/tcp/9001") as Parameters<typeof enr.setLocationMultiaddr>[0]);
       const enrStr = enr.encodeTxt();
 
       const mixedPeers = [`/ip4/192.168.1.1/tcp/9000/p2p/${peerIdStr}`, enrStr];

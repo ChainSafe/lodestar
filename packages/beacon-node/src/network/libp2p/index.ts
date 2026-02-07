@@ -93,7 +93,7 @@ export async function createNodeJsLibp2p(
         },
       }),
     ],
-    streamMuxers: [mplex({maxInboundStreams: 256, disconnectThreshold: networkOpts.disconnectThreshold})],
+    streamMuxers: [mplex({disconnectThreshold: networkOpts.disconnectThreshold})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics
       ? prometheusMetrics({
@@ -124,7 +124,6 @@ export async function createNodeJsLibp2p(
     datastore,
     services: {
       identify: identify({
-        agentVersion: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
         runOnConnectionOpen: false,
       }),
       // individual components are specified because the components object is a Proxy

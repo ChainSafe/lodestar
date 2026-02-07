@@ -93,7 +93,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
    * This throws error if not found
    * see https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8edb31590ec0bc/src/index.js#L102
    */
-  async get(key: Key): Promise<Uint8Array> {
+  async get(key: Key, _options?: AbortOptions): Promise<Uint8Array> {
     const keyStr = key.toString();
     const memoryItem = this._memoryDatastore.get(keyStr);
     if (memoryItem) {
@@ -109,7 +109,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     return dbValue;
   }
 
-  async has(key: Key): Promise<boolean> {
+  async has(key: Key, _options?: AbortOptions): Promise<boolean> {
     try {
       await this.get(key);
     } catch (err) {
@@ -121,12 +121,12 @@ export class Eth2PeerDataStore extends BaseDatastore {
     return true;
   }
 
-  async delete(key: Key): Promise<void> {
+  async delete(key: Key, _options?: AbortOptions): Promise<void> {
     this._memoryDatastore.delete(key.toString());
     await this._dbDatastore.delete(key);
   }
 
-  async *_all(q: Query): AsyncIterable<Pair> {
+  async *_all(q: Query, _options?: AbortOptions): AsyncGenerator<Pair> {
     for (const [key, value] of this._memoryDatastore.entries()) {
       yield {
         key: new Key(key),
@@ -136,7 +136,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     yield* this._dbDatastore.query(q);
   }
 
-  async *_allKeys(q: KeyQuery): AsyncIterable<Key> {
+  async *_allKeys(q: KeyQuery, _options?: AbortOptions): AsyncGenerator<Key> {
     for (const key of this._memoryDatastore.keys()) {
       yield new Key(key);
     }

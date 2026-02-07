@@ -3,7 +3,7 @@ import {
   PeerScoreThresholds,
   TopicScoreParams,
   defaultTopicScoreParams,
-} from "@chainsafe/libp2p-gossipsub/score";
+} from "@libp2p/gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, PTC_SIZE, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
@@ -238,7 +238,7 @@ function getAllTopicsScoreParams(
 
     // Checks to prevent unwanted errors in gossipsub
     // Error: invalid score parameters for topic /eth2/4a26c58b/beacon_attestation_0/ssz_snappy: invalid FirstMessageDeliveriesCap; must be positive
-    //   at Object.validatePeerScoreParams (/usr/app/node_modules/libp2p-gossipsub/src/score/peer-score-params.js:62:27)
+    //   at Object.validatePeerScoreParams (/usr/app/node_modules/gossipsub/src/score/peer-score-params.js:62:27)
     if (activeValidatorCount === 0) throw Error("activeValidatorCount === 0");
     if (aggregatorsPerslot === 0) throw Error("aggregatorsPerslot === 0");
 

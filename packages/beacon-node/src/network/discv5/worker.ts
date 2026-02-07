@@ -1,7 +1,7 @@
 import worker from "node:worker_threads";
 import {privateKeyFromProtobuf} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
+import {multiaddr} from "@multiformats/multiaddr";
 import {Discv5, Discv5EventEmitter} from "@chainsafe/discv5";
 import {ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
 import {Observable, Subject} from "@chainsafe/threads/observable";
@@ -47,14 +47,24 @@ const peerId = peerIdFromPrivateKey(privateKey);
 
 const config = createBeaconConfig(workerData.chainConfig, workerData.genesisValidatorsRoot);
 
+const bindAddrs = (workerData.bindAddrs.ip4 && workerData.bindAddrs.ip6
+  ? {
+      ip4: multiaddr(workerData.bindAddrs.ip4),
+      ip6: multiaddr(workerData.bindAddrs.ip6),
+    }
+  : workerData.bindAddrs.ip4
+    ? {
+        ip4: multiaddr(workerData.bindAddrs.ip4),
+      }
+    : {
+        ip6: multiaddr(workerData.bindAddrs.ip6),
+      }) as Parameters<(typeof Discv5)["create"]>[0]["bindAddrs"];
+
 // Initialize discv5
 const discv5 = Discv5.create({
   enr: SignableENR.decodeTxt(workerData.enr, privateKey.raw),
   privateKey,
-  bindAddrs: {
-    ip4: (workerData.bindAddrs.ip4 ? multiaddr(workerData.bindAddrs.ip4) : undefined) as Multiaddr,
-    ip6: workerData.bindAddrs.ip6 ? multiaddr(workerData.bindAddrs.ip6) : undefined,
-  },
+  bindAddrs,
   config: workerData.config,
   metricsRegistry,
 }) as Discv5 & Discv5EventEmitter;

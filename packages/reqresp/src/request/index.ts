@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface";
+import {PeerId, Stream} from "@libp2p/interface";
 import {pipe} from "it-pipe";
 import type {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
@@ -16,7 +16,6 @@ export {RequestError, RequestErrorCode};
 // Default spec values from https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#configuration
 export const DEFAULT_DIAL_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
-export const DEFAULT_TTFB_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_RESP_TIMEOUT = 10 * 1000; // 10 sec
 
 export interface SendRequestOpts {
@@ -24,8 +23,6 @@ export interface SendRequestOpts {
   respTimeoutMs?: number;
   /** Non-spec timeout from sending request until write stream closed by responder */
   requestTimeoutMs?: number;
-  /** The maximum time to wait for first byte of request response (time-to-first-byte). */
-  ttfbTimeoutMs?: number;
   /** Non-spec timeout from dialing protocol until stream opened */
   dialTimeoutMs?: number;
 }
@@ -36,6 +33,24 @@ type SendRequestModules = {
   metrics: Metrics | null;
   peerClient?: string;
 };
+
+async function writeToStream(
+  stream: Stream,
+  source: AsyncIterable<Uint8Array | Uint8ArrayList>,
+  signal?: AbortSignal
+): Promise<void> {
+  for await (const chunk of source) {
+    if (signal?.aborted) {
+      throw new ErrorAborted("sendRequest");
+    }
+
+    if (!stream.send(chunk)) {
+      await stream.onDrain({signal});
+    }
+  }
+
+  await stream.close({signal});
+}
 
 /**
  * Sends ReqResp request to a peer. Throws on error. Logs each step of the request lifecycle.
@@ -64,7 +79,6 @@ export async function* sendRequest(
 
   const DIAL_TIMEOUT = opts?.dialTimeoutMs ?? DEFAULT_DIAL_TIMEOUT;
   const REQUEST_TIMEOUT = opts?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
-  const TTFB_TIMEOUT = opts?.ttfbTimeoutMs ?? DEFAULT_TTFB_TIMEOUT;
   const RESP_TIMEOUT = opts?.respTimeoutMs ?? DEFAULT_RESP_TIMEOUT;
 
   const peerIdStrShort = prettyPrintPeerId(peerId);
@@ -112,9 +126,6 @@ export async function* sendRequest(
 
     metrics?.outgoingOpenedStreams?.inc({method});
 
-    // TODO: Does the TTFB timer start on opening stream or after receiving request
-    const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method});
-
     // Parse protocol selected by the responder
     const protocolId = stream.protocol ?? "unknown";
     const protocol = protocolsMap.get(protocolId);
@@ -130,17 +141,19 @@ export async function* sendRequest(
 
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
     // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
-    await withTimeout(() => pipe(requestEncode(protocol, requestBody), stream.sink), REQUEST_TIMEOUT, signal).catch(
-      (e) => {
-        // Must close the stream read side (stream.source) manually AND the write side
-        stream.abort(e);
+    await withTimeout(
+      async (timeoutAndParentSignal) => writeToStream(stream, requestEncode(protocol, requestBody), timeoutAndParentSignal),
+      REQUEST_TIMEOUT,
+      signal
+    ).catch((e) => {
+      // Must close the stream read side manually AND the write side
+      stream.abort(e as Error);
 
-        if (e instanceof TimeoutError) {
-          throw new RequestError({code: RequestErrorCode.REQUEST_TIMEOUT});
-        }
-        throw new RequestError({code: RequestErrorCode.REQUEST_ERROR, error: e as Error});
+      if (e instanceof TimeoutError) {
+        throw new RequestError({code: RequestErrorCode.REQUEST_TIMEOUT});
       }
-    );
+      throw new RequestError({code: RequestErrorCode.REQUEST_ERROR, error: e as Error});
+    });
 
     logger.debug("Req  request sent", logCtx);
 
@@ -150,20 +163,12 @@ export async function* sendRequest(
       return;
     }
 
-    // - TTFB_TIMEOUT: The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
-    // - RESP_TIMEOUT: Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
+    // - RESP_TIMEOUT: Requester allows RESP_TIMEOUT for each response_chunk
     // - Max total timeout: This timeout is not required by the spec. It may not be necessary, but it's kept as
-    //   safe-guard to close. streams in case of bugs on other timeout mechanisms.
-    const ttfbTimeoutController = new AbortController();
+    //   safe-guard to close streams in case of bugs on other timeout mechanisms.
     const respTimeoutController = new AbortController();
 
     let timeoutRESP: NodeJS.Timeout | null = null;
-
-    const timeoutTTFB = setTimeout(() => {
-      // If we abort on first byte delay, don't need to abort for response delay
-      if (timeoutRESP) clearTimeout(timeoutRESP);
-      ttfbTimeoutController.abort();
-    }, TTFB_TIMEOUT);
 
     const restartRespTimeout = (): void => {
       if (timeoutRESP) clearTimeout(timeoutRESP);
@@ -171,13 +176,10 @@ export async function* sendRequest(
     };
 
     try {
+      restartRespTimeout();
       // Note: libp2p.stop() will close all connections, so not necessary to abort this pipe on parent stop
       yield* pipe(
-        abortableSource(stream.source as AsyncIterable<Uint8ArrayList>, [
-          {
-            signal: ttfbTimeoutController.signal,
-            getError: () => new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
-          },
+        abortableSource(stream as AsyncIterable<Uint8ArrayList>, [
           {
             signal: respTimeoutController.signal,
             getError: () => new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
@@ -186,14 +188,7 @@ export async function* sendRequest(
 
         // Transforms `Buffer` chunks to yield `ResponseBody` chunks
         responseDecode(protocol, {
-          onFirstHeader() {
-            // On first byte, cancel the single use TTFB_TIMEOUT, and start RESP_TIMEOUT
-            clearTimeout(timeoutTTFB);
-            timerTTFB?.();
-            restartRespTimeout();
-          },
-          onFirstResponseChunk() {
-            // On <response_chunk>, cancel this chunk's RESP_TIMEOUT and start next's
+          onResponseChunk() {
             restartRespTimeout();
           },
         })
@@ -204,7 +199,6 @@ export async function* sendRequest(
       // NOTE: add double space after "Req  " to align log with the "Resp " log
       logger.verbose("Req  done", logCtx);
     } finally {
-      clearTimeout(timeoutTTFB);
       if (timeoutRESP !== null) clearTimeout(timeoutRESP);
 
       // Necessary to call `stream.close()` since collectResponses() may break out of the source before exhausting it

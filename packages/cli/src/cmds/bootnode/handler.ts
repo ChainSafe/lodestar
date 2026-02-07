@@ -1,6 +1,6 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
+import {multiaddr} from "@multiformats/multiaddr";
 import {Discv5, Discv5EventEmitter} from "@chainsafe/discv5";
 import {ENR, ENRData, SignableENR} from "@chainsafe/enr";
 import {
@@ -56,19 +56,29 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
       metricsServer = await getHttpMetricsServer(metricsArgs, {register: metricsRegistry, logger});
     }
 
+    const bindAddrsConfig = (bindAddrs.ip4 && bindAddrs.ip6
+      ? {
+          ip4: multiaddr(bindAddrs.ip4),
+          ip6: multiaddr(bindAddrs.ip6),
+        }
+      : bindAddrs.ip4
+        ? {
+            ip4: multiaddr(bindAddrs.ip4),
+          }
+        : {
+            ip6: multiaddr(bindAddrs.ip6),
+          }) as Parameters<(typeof Discv5)["create"]>[0]["bindAddrs"];
+
     const discv5 = Discv5.create({
       enr,
       privateKey,
-      bindAddrs: {
-        ip4: (bindAddrs.ip4 ? multiaddr(bindAddrs.ip4) : undefined) as Multiaddr,
-        ip6: bindAddrs.ip6 ? multiaddr(bindAddrs.ip6) : undefined,
-      },
+      bindAddrs: bindAddrsConfig,
       config: {enrUpdate: !enr.ip && !enr.ip6},
       metricsRegistry,
     }) as Discv5 & Discv5EventEmitter;
 
     // If there are any bootnodes, add them to the routing table
-    for (const bootEnrStr of Array.from(new Set(discv5Args.bootEnrs).values())) {
+    for (const bootEnrStr of Array.from(new Set<string>(discv5Args.bootEnrs).values())) {
       const bootEnr = ENR.decodeTxt(bootEnrStr);
       logger.info("Adding bootnode", {
         ip4: bootEnr.getLocationMultiaddr("udp4")?.toString(),

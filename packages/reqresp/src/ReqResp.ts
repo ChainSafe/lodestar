@@ -221,7 +221,7 @@ export class ReqResp {
   }
 
   private getRequestHandler(protocol: MixedProtocol, protocolID: string) {
-    return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
+    return async (stream: Stream, connection: Connection) => {
       if (this.dialOnlyProtocols.get(protocolID)) {
         throw new Error(`Received request on dial only protocol '${protocolID}'`);
       }

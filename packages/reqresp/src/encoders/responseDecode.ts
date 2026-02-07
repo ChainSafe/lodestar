@@ -29,16 +29,12 @@ enum StreamStatus {
  */
 export function responseDecode(
   protocol: MixedProtocol,
-  cbs: {
-    onFirstHeader: () => void;
-    onFirstResponseChunk: () => void;
+  cbs?: {
+    onResponseChunk?: () => void;
   }
 ): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<ResponseIncoming> {
   return async function* responseDecodeSink(source) {
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
-
-    let readFirstHeader = false;
-    let readFirstResponseChunk = false;
 
     // Consumers of `responseDecode()` may limit the number of <response_chunk> and break out of the while loop
     while (!bufferedSource.isDone) {
@@ -48,11 +44,6 @@ export function responseDecode(
       // The happens when source ends before readResultHeader() can fetch 1 byte
       if (status === StreamStatus.Ended) {
         break;
-      }
-
-      if (!readFirstHeader) {
-        cbs.onFirstHeader();
-        readFirstHeader = true;
       }
 
       // For multiple chunks, only the last chunk is allowed to have a non-zero error
@@ -72,10 +63,7 @@ export function responseDecode(
         protocolVersion: protocol.version,
       };
 
-      if (!readFirstResponseChunk) {
-        cbs.onFirstResponseChunk();
-        readFirstResponseChunk = true;
-      }
+      cbs?.onResponseChunk?.();
     }
   };
 }

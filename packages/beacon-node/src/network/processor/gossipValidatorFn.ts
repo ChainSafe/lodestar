@@ -1,4 +1,4 @@
-import {TopicValidatorResult} from "@libp2p/interface";
+import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {AttestationError, GossipAction, GossipActionError} from "../../chain/errors/index.js";

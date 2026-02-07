@@ -5,6 +5,7 @@ import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {tcp} from "@libp2p/tcp";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import all from "it-all";
+import {Uint8ArrayList} from "uint8arraylist";
 import {Libp2p, createLibp2p} from "libp2p";
 import {afterEach, describe, expect, it} from "vitest";
 import {noise} from "@chainsafe/libp2p-noise";
@@ -108,12 +109,17 @@ describe("reqresp encoder", () => {
   }) {
     const stream = await dialer.dialProtocol(toMultiaddr, protocol);
     if (requestChunks) {
-      await stream.sink(requestChunks.map(fromHex));
+      for (const chunk of requestChunks) {
+        stream.send(fromHex(chunk));
+      }
+      await stream.close();
     }
 
-    const chunks = await all(stream.source);
+    const chunks = await all(stream as AsyncIterable<Uint8Array | Uint8ArrayList>);
     const join = (c: string[]): string => c.join("").replace(/0x/g, "");
-    const chunksHex = chunks.map((chunk) => toHex(chunk.slice(0, chunk.byteLength)));
+    const chunksHex = chunks.map((chunk) =>
+      toHex((chunk instanceof Uint8ArrayList ? chunk.subarray() : chunk).slice(0))
+    );
     expect(join(chunksHex)).toEqual(join(expectedChunks));
   }
 

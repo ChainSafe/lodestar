@@ -94,16 +94,16 @@ describe("request / sendRequest", () => {
       error?: LodestarError<any>;
     }[] = [
       {
-        id: "trigger a TTFB_TIMEOUT",
-        opts: {ttfbTimeoutMs: 0},
+        id: "trigger a RESP_TIMEOUT before first chunk",
+        opts: {respTimeoutMs: 0},
         source: async function* () {
           await sleep(30); // Pause for too long before first byte
           yield sszSnappyPing.chunks[0];
         },
-        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
+        error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
       {
-        id: "trigger a RESP_TIMEOUT",
+        id: "trigger a RESP_TIMEOUT between chunks",
         opts: {respTimeoutMs: 0},
         source: async function* () {
           yield sszSnappyPing.chunks[0];
@@ -115,16 +115,16 @@ describe("request / sendRequest", () => {
       {
         // Upstream "abortable-iterator" never throws with an infinite sleep.
         id: "Infinite sleep on first byte",
-        opts: {ttfbTimeoutMs: 1, respTimeoutMs: 1},
+        opts: {respTimeoutMs: 1},
         source: async function* () {
           await sleep(100000, controller.signal);
           yield sszSnappyPing.chunks[0];
         },
-        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
+        error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
       {
         id: "Infinite sleep on second chunk",
-        opts: {ttfbTimeoutMs: 1, respTimeoutMs: 1},
+        opts: {respTimeoutMs: 1},
         source: async function* () {
           yield sszSnappyPing.chunks[0];
           await sleep(100000, controller.signal);

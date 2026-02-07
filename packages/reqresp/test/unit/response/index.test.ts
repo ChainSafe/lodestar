@@ -59,7 +59,7 @@ describe("response / handleRequest", () => {
   afterEach(() => controller.abort());
 
   it.each(testCases)("$id", async ({requestChunks, protocol, expectedResponseChunks, expectedError}) => {
-    const stream = new MockLibP2pStream(requestChunks as any);
+    const stream = new MockLibP2pStream(requestChunks);
     const rateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
 
     const resultPromise = handleRequest({

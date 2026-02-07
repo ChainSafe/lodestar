@@ -13,7 +13,7 @@ describe("encoders / responseDecode", () => {
     it.each(responseEncodersTestCases)("$id", async ({protocol, responseChunks, chunks}) => {
       const responses = (await pipe(
         arrToSource(chunks),
-        responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}}),
+        responseDecode(protocol, {onResponseChunk: () => {}}),
         all
       )) as ResponseIncoming[];
 
@@ -31,7 +31,7 @@ describe("encoders / responseDecode", () => {
         await expectRejectedWithLodestarError(
           pipe(
             arrToSource(chunks as Uint8Array[]),
-            responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}}),
+            responseDecode(protocol, {onResponseChunk: () => {}}),
             all
           ),
           decodeError as LodestarError<any>

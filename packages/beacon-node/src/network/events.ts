@@ -1,5 +1,6 @@
 import {EventEmitter} from "node:events";
-import {PeerId, TopicValidatorResult} from "@libp2p/interface";
+import {TopicValidatorResult} from "@libp2p/gossipsub";
+import {PeerId} from "@libp2p/interface";
 import {CustodyIndex, Status} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
