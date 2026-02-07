@@ -422,9 +422,9 @@ export async function validateBlockDataColumnSidecars(
         });
       }
 
-      const timer = chain?.metrics?.peerDas.dataColumnSidecarInclusionProofVerificationTime.startTimer();
+      const inclusionProofTimer = chain?.metrics?.peerDas.dataColumnSidecarInclusionProofVerificationTime.startTimer();
       const validInclusionProof = verifyDataColumnSidecarInclusionProof(columnSidecar);
-      timer?.();
+      inclusionProofTimer?.();
       if (!validInclusionProof) {
         throw new DataColumnSidecarValidationError(
           {
