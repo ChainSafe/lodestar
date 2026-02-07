@@ -394,9 +394,9 @@ export async function produceBlockBody<T extends BlockType>(
           const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
           timer?.();
           if (this.opts.sanityCheckExecutionEngineBlobs) {
-            const timer = this.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
+            const validationTimer = this.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
             await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells).finally(() =>
-              timer?.()
+              validationTimer?.()
             );
           }
 
