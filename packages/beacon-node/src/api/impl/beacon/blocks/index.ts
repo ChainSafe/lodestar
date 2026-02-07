@@ -27,7 +27,6 @@ import {
   WithOptionalBytes,
   deneb,
   fulu,
-  gloas,
   isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";

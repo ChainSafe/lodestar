@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {fulu, ssz} from "@lodestar/types";
 import {reconstructBlobs} from "../../../src/util/blobs.js";
 import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
@@ -28,7 +28,8 @@ describe("reconstructBlobs", () => {
   const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
   signedBeaconBlock.message.body.blobKzgCommitments = kzgCommitments;
 
-  const sidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
+  // Cast to fulu since we're testing with Fulu fork
+  const sidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs) as fulu.DataColumnSidecars;
 
   it("should reconstruct all blobs from a complete set of data columns", async () => {
     expect(await reconstructBlobs(sidecars)).toEqual(blobs);

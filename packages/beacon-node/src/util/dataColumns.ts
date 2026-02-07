@@ -5,9 +5,9 @@ import {
   ForkAll,
   ForkName,
   ForkPostFulu,
-  isForkPostGloas,
   KZG_COMMITMENTS_GINDEX,
   NUMBER_OF_COLUMNS,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {

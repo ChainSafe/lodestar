@@ -1,7 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {createChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {fulu, ssz} from "@lodestar/types";
 import {reconstructBlobs} from "../../../src/util/blobs.ts";
 import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.ts";
 import {kzg} from "../../../src/util/kzg.ts";
@@ -35,7 +35,11 @@ describe("reconstructBlobs", () => {
       const signedBeaconBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
       signedBeaconBlock.message.body.blobKzgCommitments = kzgCommitments;
 
-      const allSidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
+      const allSidecars = getDataColumnSidecarsFromBlock(
+        config,
+        signedBeaconBlock,
+        cellsAndProofs
+      ) as fulu.DataColumnSidecars;
       const halfSidecars = allSidecars.sort(() => Math.random() - 0.5).slice(0, NUMBER_OF_COLUMNS / 2);
 
       const scenarios = [

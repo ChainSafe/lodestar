@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {ChainForkConfig, createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {fulu, ssz} from "@lodestar/types";
 import {bigIntToBytes, fromHex} from "@lodestar/utils";
 import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {
@@ -167,7 +167,11 @@ describe("data column sidecars", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
-    const columnSidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
+    const columnSidecars = getDataColumnSidecarsFromBlock(
+      config,
+      signedBeaconBlock,
+      cellsAndProofs
+    ) as fulu.DataColumnSidecars;
 
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
@@ -204,7 +208,11 @@ describe("data column sidecars", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
-    const columnSidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
+    const columnSidecars = getDataColumnSidecarsFromBlock(
+      config,
+      signedBeaconBlock,
+      cellsAndProofs
+    ) as fulu.DataColumnSidecars;
 
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
