@@ -772,6 +772,7 @@ export async function validateColumnsByRangeResponse(
 
     validationPromises.push(
       validateBlockDataColumnSidecars(
+        // Todo: need to pass chain to update fulu metrics
         null, // do not pass chain here so we do not validate header signature
         slot,
         blockRoot,

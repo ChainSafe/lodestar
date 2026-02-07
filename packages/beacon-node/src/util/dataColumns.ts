@@ -376,7 +376,8 @@ export async function recoverDataColumnSidecars(
     partialSidecars.set(columnSidecar.index, columnSidecar);
   }
 
-  const timer = metrics?.recoverDataColumnSidecars.recoverTime.startTimer();
+  const timer = metrics?.peerDas.dataColumnsReconstructionTime.startTimer();
+
   // if this function throws, we catch at the consumer side
   const fullSidecars = await dataColumnMatrixRecovery(partialSidecars).catch(() => null);
   timer?.();
@@ -386,6 +387,7 @@ export async function recoverDataColumnSidecars(
 
   if (blockInput.getAllColumns().length === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
+    metrics?.dataColumns.alreadyAdded.inc(fullSidecars.length);
     return DataColumnReconstructionCode.SuccessLate;
   }
 
@@ -409,8 +411,10 @@ export async function recoverDataColumnSidecars(
       sidecarsToPublish.push(columnSidecar);
     }
   }
+  metrics?.peerDas.reconstructedColumns.inc(sidecarsToPublish.length);
+  metrics?.dataColumns.bySource.inc({source: BlockInputSource.recovery}, sidecarsToPublish.length);
   emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);
-
+  // Todo: Can we record dataColumns.sentPeersPerSubnet metric somehow
   return DataColumnReconstructionCode.SuccessResolved;
 }
 
