@@ -56,6 +56,11 @@ export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus
 
 export type BlockExtraMeta =
   | {
+      // Pre-gloas:
+      //   - block hash of payload of the block
+      // Post-gloas:
+      //   - this is parentBlockHash of block bid because payload is only received later
+      //   - payload block hash for FULL variant
       executionPayloadBlockHash: RootHex;
       executionPayloadNumber: UintNum64;
       executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
