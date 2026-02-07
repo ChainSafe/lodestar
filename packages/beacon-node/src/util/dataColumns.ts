@@ -1,17 +1,27 @@
 import {digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkAll, ForkName, ForkPostFulu, KZG_COMMITMENTS_GINDEX, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {
+  ForkAll,
+  ForkName,
+  ForkPostFulu,
+  isForkPostGloas,
+  KZG_COMMITMENTS_GINDEX,
+  NUMBER_OF_COLUMNS,
+} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   BeaconBlockBody,
   ColumnIndex,
   CustodyIndex,
+  Root,
   SSZTypesFor,
   SignedBeaconBlock,
   SignedBeaconBlockHeader,
+  Slot,
   deneb,
   fulu,
+  gloas,
   ssz,
 } from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
@@ -292,8 +302,45 @@ export function getDataColumnSidecars(
 }
 
 /**
+ * Given slot, beacon block root, and cells/proofs associated with each blob in the block,
+ * assemble Gloas sidecars which can be distributed to peers.
+ *
+ * In Gloas (EIP-7732), DataColumnSidecar removes signedBlockHeader, kzgCommitments, and
+ * kzgCommitmentsInclusionProof. Instead, it uses slot and beaconBlockRoot.
+ *
+ * SPEC FUNCTION
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.2/specs/gloas/p2p-interface.md#datacolumnsidecar
+ */
+export function getGloasDataColumnSidecars(
+  slot: Slot,
+  beaconBlockRoot: Root,
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
+): gloas.DataColumnSidecars {
+  const sidecars: gloas.DataColumnSidecars = [];
+  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+    const columnCells = [];
+    const columnProofs = [];
+    for (const {cells, proofs} of cellsAndKzgProofs) {
+      columnCells.push(cells[columnIndex]);
+      columnProofs.push(proofs[columnIndex]);
+    }
+    sidecars.push({
+      index: columnIndex,
+      column: columnCells,
+      kzgProofs: columnProofs,
+      slot,
+      beaconBlockRoot,
+    });
+  }
+  return sidecars;
+}
+
+/**
  * Given a signed block and the cells/proofs associated with each blob in the
  * block, assemble the sidecars which can be distributed to peers.
+ *
+ * Fork-aware: Returns Fulu-style sidecars (with inclusion proof) or Gloas-style
+ * sidecars (with slot/beaconBlockRoot) depending on the block's fork.
  *
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_block
@@ -302,7 +349,7 @@ export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock<ForkPostFulu>,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): fulu.DataColumnSidecars {
+): fulu.DataColumnSidecars | gloas.DataColumnSidecars {
   const blobKzgCommitments = getBlobKzgCommitmentsFromBlock(signedBlock);
 
   // No need to create data column sidecars if there are no blobs
@@ -311,8 +358,15 @@ export function getDataColumnSidecarsFromBlock(
   }
 
   const fork = config.getForkName(signedBlock.message.slot);
-  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
 
+  // Gloas: simplified sidecar without inclusion proof
+  if (isForkPostGloas(fork)) {
+    const beaconBlockRoot = config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message);
+    return getGloasDataColumnSidecars(signedBlock.message.slot, beaconBlockRoot, cellsAndKzgProofs);
+  }
+
+  // Fulu: sidecar with signedBlockHeader, kzgCommitments, and inclusion proof
+  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
   const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
 
   return getDataColumnSidecars(signedBlockHeader, blobKzgCommitments, kzgCommitmentsInclusionProof, cellsAndKzgProofs);

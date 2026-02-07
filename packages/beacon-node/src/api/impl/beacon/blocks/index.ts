@@ -27,6 +27,7 @@ import {
   WithOptionalBytes,
   deneb,
   fulu,
+  gloas,
   isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
@@ -99,6 +100,7 @@ export function getBeaconBlockApi({
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
+    // TODO: Handle gloas.DataColumnSidecars when Gloas block publishing is implemented
     let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
 
     if (isDenebBlockContents(signedBlockContents)) {
@@ -113,11 +115,13 @@ export function getBeaconBlockApi({
           cells: rowCells,
           proofs: signedBlockContents.kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
         }));
+        // Cast to fulu.DataColumnSidecars since we're in the Fulu fork path
+        // TODO: Handle Gloas fork separately when implemented
         dataColumnSidecars = getDataColumnSidecarsFromBlock(
           config,
           signedBlock as SignedBeaconBlock<ForkPostFulu>,
           cellsAndProofs
-        );
+        ) as fulu.DataColumnSidecars;
         timer?.();
         blobSidecars = [];
       } else if (isForkPostDeneb(fork)) {

@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
@@ -55,6 +55,7 @@ export type BlockWithSource = SourceMeta & {block: SignedBeaconBlock; blockRootH
 
 export type BlobWithSource = SourceMeta & {blobSidecar: deneb.BlobSidecar};
 
+// TODO: Add gloas.DataColumnSidecar support when Gloas block input handling is implemented
 export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar};
 
 export type BlockHeaderMeta = {

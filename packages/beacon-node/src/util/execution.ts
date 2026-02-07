@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {deneb, fulu} from "@lodestar/types";
+import {deneb, fulu, gloas} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -172,14 +172,16 @@ export async function getDataColumnSidecarsFromExecution(
     return DataColumnEngineResult.SuccessLate;
   }
 
+  // TODO: Handle gloas.DataColumnSidecars when Gloas execution handling is implemented
   let dataColumnSidecars: fulu.DataColumnSidecars;
   const cellsAndProofs = await getCellsAndProofs(blobs);
   if (blockInput.hasBlock()) {
+    // Cast to fulu.DataColumnSidecars - Gloas handling to be added separately
     dataColumnSidecars = getDataColumnSidecarsFromBlock(
       config,
       blockInput.getBlock() as fulu.SignedBeaconBlock,
       cellsAndProofs
-    );
+    ) as fulu.DataColumnSidecars;
   } else {
     const firstSidecar = blockInput.getAllColumns()[0];
     dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar, cellsAndProofs);
