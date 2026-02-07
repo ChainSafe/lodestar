@@ -213,7 +213,7 @@ describe("External signer sync", () => {
 
       expect(testValidatorStore.hasSomeValidators()).toBe(true);
       expect(testValidatorStore.votingPubkeys()).toHaveLength(2);
-      
+
       // Verify keys are associated with correct URLs
       const signer1 = testValidatorStore.getSigner(pubkeys[0]);
       expect(signer1).toEqual<SignerRemote>({

@@ -1,10 +1,10 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {SignerType} from "@lodestar/validator";
-import {getSignersFromArgs} from "../../../src/cmds/validator/signers/index.js";
-import type {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
-import type {GlobalArgs} from "../../../src/options/index.js";
 import * as validator from "@lodestar/validator";
+import {SignerType} from "@lodestar/validator";
+import type {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
+import {getSignersFromArgs} from "../../../src/cmds/validator/signers/index.js";
+import type {GlobalArgs} from "../../../src/options/index.js";
 
 vi.mock("@lodestar/validator", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@lodestar/validator")>();
@@ -38,9 +38,7 @@ describe("getSignersFromArgs / external signer fetch", () => {
   it("returns signers from all URLs when each returns pubkeys", async () => {
     const pk1 = pubkeyHex(0);
     const pk2 = pubkeyHex(1);
-    externalSignerGetKeysMock
-      .mockResolvedValueOnce([pk1])
-      .mockResolvedValueOnce([pk2]);
+    externalSignerGetKeysMock.mockResolvedValueOnce([pk1]).mockResolvedValueOnce([pk2]);
 
     const signers = await getSignersFromArgs(baseArgs, network, {logger, signal});
 
@@ -52,9 +50,7 @@ describe("getSignersFromArgs / external signer fetch", () => {
 
   it("continues with available signers when one returns empty array", async () => {
     const pk1 = pubkeyHex(0);
-    externalSignerGetKeysMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([pk1]);
+    externalSignerGetKeysMock.mockResolvedValueOnce([]).mockResolvedValueOnce([pk1]);
 
     const signers = await getSignersFromArgs(baseArgs, network, {logger, signal});
 
@@ -65,9 +61,7 @@ describe("getSignersFromArgs / external signer fetch", () => {
 
   it("warns and uses first occurrence when same pubkey appears on multiple signers", async () => {
     const pk = pubkeyHex(0);
-    externalSignerGetKeysMock
-      .mockResolvedValueOnce([pk])
-      .mockResolvedValueOnce([pk]);
+    externalSignerGetKeysMock.mockResolvedValueOnce([pk]).mockResolvedValueOnce([pk]);
 
     const signers = await getSignersFromArgs(baseArgs, network, {logger, signal});
 

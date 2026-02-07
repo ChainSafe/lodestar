@@ -159,7 +159,7 @@ async function getRemoteSigners(
 ): Promise<Signer[]> {
   const {logger} = context;
   const externalSignerUrls = args["externalSigner.url"] ?? [];
-  
+
   if (externalSignerUrls.length === 0) {
     throw new YargsError(
       `Must set externalSigner.url with ${
@@ -210,13 +210,13 @@ async function getRemoteSigners(
         return {url, pubkeys: [], error: errorMsg};
       }
     });
-    
+
     const results = await Promise.all(pubkeyPromises);
-    
+
     // Check if all signers failed
     const failedSigners = results.filter((r) => r.error !== null);
     const successfulSigners = results.filter((r) => r.pubkeys.length > 0);
-    
+
     if (failedSigners.length === results.length) {
       // All signers failed - throw error to prevent silent failure
       const errorMessages = failedSigners.map((r) => `  ${r.url}: ${r.error}`).join("\n");
@@ -225,7 +225,7 @@ async function getRemoteSigners(
           "Please verify the signer URLs are correct and accessible."
       );
     }
-    
+
     // Warn if some signers failed but at least one succeeded
     if (failedSigners.length > 0 && successfulSigners.length > 0) {
       const failedUrls = failedSigners.map((r) => r.url).join(", ");
@@ -234,7 +234,7 @@ async function getRemoteSigners(
           "Validator will continue with available signers."
       );
     }
-    
+
     const seenPubkeys = new Set<string>();
     for (const {url, pubkeys} of results) {
       if (pubkeys.length > 0) {
