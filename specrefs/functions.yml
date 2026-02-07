@@ -5171,6 +5171,29 @@
         )
     </spec>
 
+- name: is_data_available#gloas
+  sources:
+    - file: packages/beacon-node/src/chain/blocks/verifyBlocksDataAvailability.ts
+      search: export async function verifyBlocksDataAvailability(
+  spec: |
+    <spec fn="is_data_available" fork="gloas" hash="92002d87">
+    def is_data_available(beacon_block_root: Root) -> bool:
+        # `retrieve_column_sidecars_and_kzg_commitments` is implementation and
+        # context dependent, replacing `retrieve_column_sidecars`. For the given
+        # block root, it returns all column sidecars to sample, or raises an
+        # exception if they are not available, in addition it returns all the
+        # corresponding kzg commitments. The p2p network does not guarantee sidecar
+        # retrieval outside of `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` epochs.
+        column_sidecars, kzg_commitments = retrieve_column_sidecars_and_kzg_commitments(
+            beacon_block_root
+        )
+        return all(
+            verify_data_column_sidecar(column_sidecar, kzg_commitments)
+            and verify_data_column_sidecar_kzg_proofs(column_sidecar, kzg_commitments)
+            for column_sidecar in column_sidecars
+        )
+    </spec>
+
 - name: is_eligible_for_activation#phase0
   sources:
     - file: packages/state-transition/src/cache/epochTransitionCache.ts
@@ -6549,6 +6572,60 @@
             update_checkpoints(
                 store, store.unrealized_justified_checkpoint, store.unrealized_finalized_checkpoint
             )
+    </spec>
+
+- name: onboard_builders_from_pending_deposits#gloas
+  sources:
+    - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
+      search: function onboardBuildersFromPendingDeposits(
+  spec: |
+    <spec fn="onboard_builders_from_pending_deposits" fork="gloas" hash="2bd662c7">
+    def onboard_builders_from_pending_deposits(state: BeaconState) -> None:
+        """
+        Applies any pending deposit for builders, effectively
+        onboarding builders at the fork.
+        """
+        validator_pubkeys = [v.pubkey for v in state.validators]
+
+        pending_deposits = []
+        for deposit in state.pending_deposits:
+            # Deposits for existing validators stay in pending queue
+            if deposit.pubkey in validator_pubkeys:
+                pending_deposits.append(deposit)
+                continue
+
+            # If the pubkey is associated with a builder that was created in a
+            # previous iteration or it is a builder deposit, try to apply the
+            # deposit to the new/existing builder. Note that the function
+            # apply_deposit_for_builder can mutate the state and may add a builder
+            # to the registry. For this reason, the list of builder pubkeys must
+            # be recomputed each iteration.
+            builder_pubkeys = [b.pubkey for b in state.builders]
+            is_existing_builder = deposit.pubkey in builder_pubkeys
+            has_builder_credentials = is_builder_withdrawal_credential(deposit.withdrawal_credentials)
+            if is_existing_builder or has_builder_credentials:
+                apply_deposit_for_builder(
+                    state,
+                    deposit.pubkey,
+                    deposit.withdrawal_credentials,
+                    deposit.amount,
+                    deposit.signature,
+                    deposit.slot,
+                )
+                continue
+
+            # If there is a pending deposit for a new validator that has a valid
+            # signature, track the pubkey so that subsequent builder deposits for
+            # the same pubkey stay in pending (applied to the validator later)
+            # rather than creating a builder. Deposits with invalid signatures are
+            # dropped here since they would fail in apply_pending_deposit anyway.
+            if is_valid_deposit_signature(
+                deposit.pubkey, deposit.withdrawal_credentials, deposit.amount, deposit.signature
+            ):
+                validator_pubkeys.append(deposit.pubkey)
+                pending_deposits.append(deposit)
+
+        state.pending_deposits = pending_deposits
     </spec>
 
 - name: prepare_execution_payload#bellatrix
@@ -11197,6 +11274,33 @@
         # Batch verify that the cells match the corresponding commitments and proofs
         return verify_cell_kzg_proof_batch(
             commitments_bytes=sidecar.kzg_commitments,
+            cell_indices=cell_indices,
+            cells=sidecar.column,
+            proofs_bytes=sidecar.kzg_proofs,
+        )
+    </spec>
+
+- name: verify_data_column_sidecar_kzg_proofs#gloas
+  sources:
+    - file: packages/beacon-node/src/chain/validation/dataColumnSidecar.ts
+      search: export async function verifyDataColumnSidecarKzgProofs(
+  spec: |
+    <spec fn="verify_data_column_sidecar_kzg_proofs" fork="gloas" hash="1c4cf857">
+    def verify_data_column_sidecar_kzg_proofs(
+        sidecar: DataColumnSidecar,
+        # [New in Gloas:EIP7732]
+        kzg_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK],
+    ) -> bool:
+        """
+        Verify if the KZG proofs are correct.
+        """
+        # The column index also represents the cell index
+        cell_indices = [CellIndex(sidecar.index)] * len(sidecar.column)
+
+        # Batch verify that the cells match the corresponding commitments and proofs
+        return verify_cell_kzg_proof_batch(
+            # [Modified in Gloas:EIP7732]
+            commitments_bytes=kzg_commitments,
             cell_indices=cell_indices,
             cells=sidecar.column,
             proofs_bytes=sidecar.kzg_proofs,
