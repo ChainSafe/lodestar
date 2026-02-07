@@ -13,7 +13,7 @@ import {CliCommand, fromHex, toPubkeyHex} from "@lodestar/utils";
 import {SignableMessageType, Signer, SignerType, externalSignerPostSignature} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
-import {YargsError, ensure0xPrefix, wrapError} from "../../util/index.js";
+import {YargsError, consoleLogger, ensure0xPrefix, wrapError} from "../../util/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 
@@ -37,7 +37,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     },
     {
       command:
-        "validator voluntary-exit --network hoodi --externalSigner.url http://signer:9000 --externalSigner.fetch --pubkeys 0xF00",
+        "validator voluntary-exit --network hoodi --externalSigner.urls http://signer:9000 --externalSigner.fetch --pubkeys 0xF00",
       description:
         "Perform a voluntary exit for the validator who has a public key 0xF00 and its secret key is on an external signer",
     },
@@ -82,7 +82,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     args.force = true;
 
     // Select signers to exit
-    const signers = await getSignersFromArgs(args, network, {logger: console, signal: new AbortController().signal});
+    const signers = await getSignersFromArgs(args, network, {logger: consoleLogger, signal: new AbortController().signal});
     if (signers.length === 0) {
       throw new YargsError(`No validators to exit found with current args.
    Ensure --dataDir and --network match values used when importing keys via validator import

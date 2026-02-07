@@ -7,7 +7,7 @@ import {LoggerVc} from "../util/index.js";
 import {SignerType, ValidatorStore} from "./validatorStore.js";
 
 export type ExternalSignerOptions = {
-  url?: string | string[]; // Single URL or array of URLs
+  urls?: string[];
   fetch?: boolean;
   fetchInterval?: number;
 };
@@ -25,13 +25,7 @@ export function pollExternalSignerPubkeys(
   opts?: ExternalSignerOptions
 ): void {
   const externalSigner = opts ?? {};
-
-  // Normalize url to array (handle both string and string[])
-  const externalSignerUrls = externalSigner.url
-    ? Array.isArray(externalSigner.url)
-      ? externalSigner.url
-      : [externalSigner.url]
-    : [];
+  const externalSignerUrls = externalSigner.urls ?? [];
 
   if (externalSignerUrls.length === 0 || !externalSigner.fetch) {
     return; // Disabled

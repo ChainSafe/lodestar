@@ -18,7 +18,7 @@ describe("External signer sync", () => {
 
   const externalSignerUrl = "http://localhost";
   const opts: Required<ExternalSignerOptions> = {
-    url: externalSignerUrl,
+    urls: [externalSignerUrl],
     fetch: true,
     fetchInterval: 100,
   };
@@ -179,7 +179,7 @@ describe("External signer sync", () => {
     const externalSignerUrl1 = "http://signer1:9000";
     const externalSignerUrl2 = "http://signer2:9000";
     const optsMultiple: ExternalSignerOptions = {
-      url: [externalSignerUrl1, externalSignerUrl2],
+      urls: [externalSignerUrl1, externalSignerUrl2],
       fetch: true,
       fetchInterval: 100,
     };
@@ -262,15 +262,15 @@ describe("External signer sync", () => {
     });
 
     it("should handle single URL as string (backward compatibility)", async () => {
-      const optsSingleString: ExternalSignerOptions = {
-        url: externalSignerUrl1, // Single string instead of array
+      const optsSingle: ExternalSignerOptions = {
+        urls: [externalSignerUrl1], // Single URL = urls.length === 1
         fetch: true,
         fetchInterval: 100,
       };
 
       externalSignerGetKeysStub.mockResolvedValueOnce([pubkeys[0]]);
 
-      pollExternalSignerPubkeys(config, loggerVc, testController.signal, testValidatorStore, optsSingleString);
+      pollExternalSignerPubkeys(config, loggerVc, testController.signal, testValidatorStore, optsSingle);
 
       await waitForFetchInterval();
 

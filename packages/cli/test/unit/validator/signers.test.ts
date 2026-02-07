@@ -23,11 +23,17 @@ function pubkeyHex(index: number): string {
 describe("getSignersFromArgs / external signer fetch", () => {
   const network = "sepolia";
   const signal = new AbortController().signal;
-  const logger = {warn: vi.fn(), info: vi.fn(), debug: vi.fn()};
+  const logger = {
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    error: vi.fn(),
+    verbose: vi.fn(),
+  };
 
   const baseArgs = {
     network,
-    "externalSigner.url": ["http://signer1:9000", "http://signer2:9000"],
+    "externalSigner.urls": ["http://signer1:9000", "http://signer2:9000"],
     "externalSigner.fetch": true,
   } as IValidatorCliArgs & GlobalArgs;
 

@@ -63,7 +63,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     "clock.skipSlots"?: boolean;
 
-    "externalSigner.url"?: string[];
+    "externalSigner.urls"?: string[];
     "externalSigner.pubkeys"?: string[];
     "externalSigner.fetch"?: boolean;
     "externalSigner.fetchInterval"?: number;
@@ -341,7 +341,8 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   // External signer
 
-  "externalSigner.url": {
+  "externalSigner.urls": {
+    alias: "externalSigner.url",
     description:
       "URL(s) to connect to external signing server(s). Can specify multiple URLs to connect to multiple signers",
     type: "array",
@@ -361,7 +362,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
       "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
     type: "array",
     string: true, // Ensures the pubkey string is not automatically converted to numbers
-    implies: ["externalSigner.url"],
+    implies: ["externalSigner.urls"],
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
       pubkeys
@@ -372,7 +373,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.fetch": {
     conflicts: ["externalSigner.pubkeys"],
-    implies: ["externalSigner.url"],
+    implies: ["externalSigner.urls"],
     description:
       "Fetch the list of public keys to validate from external signer(s). Cannot be used in combination with `--externalSigner.pubkeys`",
     type: "boolean",

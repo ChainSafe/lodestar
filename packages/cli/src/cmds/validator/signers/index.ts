@@ -2,7 +2,7 @@ import path from "node:path";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
+import {Logger, isValidHttpUrl} from "@lodestar/utils";
 import {Signer, SignerType, externalSignerGetKeys} from "@lodestar/validator";
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
 import {YargsError, assertValidPubkeysHex} from "../../../util/index.js";
@@ -20,8 +20,8 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
  * --interopIndexes
  * --fromMnemonic, then requires --mnemonicIndexes
  * --importKeystores, then requires --importKeystoresPassword
- * --externalSigner.fetch, then requires --externalSigner.url
- * --externalSigner.pubkeys, then requires --externalSigner.url
+ * --externalSigner.fetch, then requires --externalSigner.urls
+ * --externalSigner.pubkeys, then requires --externalSigner.urls
  * else load from persisted
  * - both remote keys and local keystores
  *
@@ -43,7 +43,7 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 export async function getSignersFromArgs(
   args: IValidatorCliArgs & GlobalArgs,
   network: string,
-  {logger, signal}: {logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>; signal: AbortSignal}
+  {logger, signal}: {logger: Logger; signal: AbortSignal}
 ): Promise<Signer[]> {
   const accountPaths = getAccountPaths(args, network);
 
@@ -52,7 +52,7 @@ export async function getSignersFromArgs(
     const indexes = args.interopIndexes;
     // Using a remote signer with TESTNETS
     if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-      return getRemoteSigners(args, {logger});
+      return getRemoteSigners(args, logger);
     }
     return indexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
   }
@@ -105,7 +105,7 @@ export async function getSignersFromArgs(
 
   // Remote keys are declared manually or will be fetched from external signer
   if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-    return getRemoteSigners(args, {logger});
+    return getRemoteSigners(args, logger);
   }
 
   // Read keys from local account manager
@@ -155,20 +155,18 @@ export function getSignerPubkeyHex(signer: Signer): string {
 
 async function getRemoteSigners(
   args: IValidatorCliArgs & GlobalArgs,
-  context: {logger: Pick<Logger, LogLevel.warn>}
+  logger: Logger
 ): Promise<Signer[]> {
-  const {logger} = context;
-  const externalSignerUrls = args["externalSigner.url"] ?? [];
+  const externalSignerUrls = args["externalSigner.urls"] ?? [];
 
   if (externalSignerUrls.length === 0) {
     throw new YargsError(
-      `Must set externalSigner.url with ${
+      `Must set externalSigner.urls with ${
         args["externalSigner.pubkeys"] ? "externalSigner.pubkeys" : "externalSigner.fetch"
       }`
     );
   }
 
-  // Validate all URLs
   for (const url of externalSignerUrls) {
     if (!isValidHttpUrl(url)) {
       throw new YargsError(`Invalid external signer URL: ${url}`);
@@ -185,7 +183,7 @@ async function getRemoteSigners(
     // If pubkeys are explicitly provided with multiple URLs, warn user about limitation
     if (externalSignerUrls.length > 1) {
       throw new YargsError(
-        "Cannot use --externalSigner.pubkeys with multiple --externalSigner.url values. " +
+        "Cannot use --externalSigner.pubkeys with multiple --externalSigner.urls values. " +
           "When explicitly providing pubkeys, all pubkeys are associated with the first URL. " +
           "To use multiple signers, use --externalSigner.fetch instead to fetch pubkeys from each signer."
       );
@@ -198,40 +196,23 @@ async function getRemoteSigners(
       signers.push({type: SignerType.Remote, pubkey, url: externalSignerUrls[0]});
     }
   } else {
-    // Fetch pubkeys from all external signer URLs
-    // Handle errors per signer to allow validator to start even if some signers are unavailable
-    const pubkeyPromises = externalSignerUrls.map(async (url) => {
+    // Fetch pubkeys from all external signer URLs; fail startup if any signer is unavailable
+    const results: {url: string; pubkeys: string[]}[] = [];
+    const failures: {url: string; error: string}[] = [];
+    for (const url of externalSignerUrls) {
       try {
         const pubkeys = await externalSignerGetKeys(url);
-        return {url, pubkeys, error: null};
+        results.push({url, pubkeys});
       } catch (e) {
         const errorMsg = e instanceof Error ? e.message : String(e);
-        logger.warn(`Failed to fetch pubkeys from external signer ${url}: ${errorMsg}`);
-        return {url, pubkeys: [], error: errorMsg};
+        failures.push({url, error: errorMsg});
       }
-    });
-
-    const results = await Promise.all(pubkeyPromises);
-
-    // Check if all signers failed
-    const failedSigners = results.filter((r) => r.error !== null);
-    const successfulSigners = results.filter((r) => r.pubkeys.length > 0);
-
-    if (failedSigners.length === results.length) {
-      // All signers failed - throw error to prevent silent failure
-      const errorMessages = failedSigners.map((r) => `  ${r.url}: ${r.error}`).join("\n");
-      throw new YargsError(
-        `Failed to fetch pubkeys from all external signer(s):\n${errorMessages}\n` +
-          "Please verify the signer URLs are correct and accessible."
-      );
     }
-
-    // Warn if some signers failed but at least one succeeded
-    if (failedSigners.length > 0 && successfulSigners.length > 0) {
-      const failedUrls = failedSigners.map((r) => r.url).join(", ");
-      logger.warn(
-        `Failed to fetch pubkeys from some external signer(s): ${failedUrls}. ` +
-          "Validator will continue with available signers."
+    if (failures.length > 0) {
+      const errorMessages = failures.map((f) => `  ${f.url}: ${f.error}`).join("\n");
+      throw new YargsError(
+        `Failed to fetch pubkeys from external signer(s):\n${errorMessages}\n` +
+          "Please verify the signer URLs are correct and accessible. Use docker-compose, systemd, etc. to retry."
       );
     }
 
