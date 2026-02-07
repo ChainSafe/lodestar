@@ -5,7 +5,7 @@ import {isValidDepositSignature} from "../block/processDeposit.js";
 import {applyDepositForBuilder} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 
 /**
@@ -84,6 +84,12 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
   const trackedValidatorPubkeys = new Set<string>();
 
+  // Pre-compute builder pubkeys set for O(1) lookup instead of O(n) per deposit
+  const builderPubkeys = new Set<string>();
+  for (let i = 0; i < state.builders.length; i++) {
+    builderPubkeys.add(toHex(state.builders.getReadonly(i).pubkey));
+  }
+
   const remainingPendingDeposits = state.pendingDeposits.sliceFrom(state.pendingDeposits.length);
   for (let i = 0; i < state.pendingDeposits.length; i++) {
     const deposit = state.pendingDeposits.getReadonly(i);
@@ -98,7 +104,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     }
 
     // If deposit is for an existing builder or has builder credentials, apply it
-    const isExistingBuilder = findBuilderIndexByPubkey(state, deposit.pubkey) !== null;
+    const isExistingBuilder = builderPubkeys.has(pubkeyHex);
     const hasBuilderCredentials = isBuilderWithdrawalCredential(deposit.withdrawalCredentials);
     if (isExistingBuilder || hasBuilderCredentials) {
       applyDepositForBuilder(
@@ -109,6 +115,8 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
         deposit.signature,
         deposit.slot
       );
+      // Track newly added builder pubkeys for subsequent deposits
+      builderPubkeys.add(pubkeyHex);
       continue;
     }
 
