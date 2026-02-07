@@ -1,5 +1,5 @@
 import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
 import {byteArrayEquals, fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -35,6 +35,21 @@ export function isBlockInputBlobs(blockInput: IBlockInput): blockInput is BlockI
 
 export function isBlockInputColumns(blockInput: IBlockInput): blockInput is BlockInputColumns {
   return blockInput.type === DAType.Columns;
+}
+
+/**
+ * Get blob KZG commitments from a block.
+ * In Fulu (pre-Gloas): blobKzgCommitments are in the beacon block body
+ * In Gloas: blobKzgCommitments are in the ExecutionPayloadBid (inside signedExecutionPayloadBid)
+ */
+export function getBlobKzgCommitmentsFromBlock(block: SignedBeaconBlock<ForkColumnsDA>): deneb.BlobKzgCommitments {
+  const body = block.message.body;
+  if ("blobKzgCommitments" in body) {
+    // Fulu (pre-Gloas): commitments in block body
+    return (body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
+  }
+  // Gloas: commitments in ExecutionPayloadBid
+  return (body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments;
 }
 
 function createPromise<T>(): PromiseParts<T> {
@@ -555,7 +570,7 @@ function assertBlockAndBlobArePaired(
 
 // Columns DA
 
-export type ForkColumnsDA = ForkName.fulu;
+export type ForkColumnsDA = ForkName.fulu | ForkName.gloas;
 
 type BlockInputColumnsState =
   | {
@@ -629,15 +644,14 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     props: AddBlock<ForkColumnsDA> &
       CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
   ): BlockInputColumns {
+    const blobKzgCommitments = getBlobKzgCommitmentsFromBlock(props.block);
     const hasAllData =
-      props.daOutOfRange ||
-      props.block.message.body.blobKzgCommitments.length === 0 ||
-      props.sampledColumns.length === 0;
+      props.daOutOfRange || blobKzgCommitments.length === 0 || props.sampledColumns.length === 0;
     const state = {
       hasBlock: true,
       hasAllData,
       hasComputedAllData: hasAllData,
-      versionedHashes: props.block.message.body.blobKzgCommitments.map(kzgCommitmentToVersionedHash),
+      versionedHashes: blobKzgCommitments.map(kzgCommitmentToVersionedHash),
       block: props.block,
       source: {
         source: props.source,
@@ -698,7 +712,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       blockRoot: prettyBytes(this.blockRootHex),
       timeCreatedSec: this.timeCreatedSec,
       expectedColumns:
-        this.state.hasBlock && this.state.block.message.body.blobKzgCommitments.length === 0
+        this.state.hasBlock && getBlobKzgCommitmentsFromBlock(this.state.block).length === 0
           ? 0
           : this.sampledColumns.length,
       receivedColumns: this.getSampledColumns().length,
@@ -733,11 +747,9 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       );
     }
 
-    const hasAllData =
-      (props.block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments.length === 0 ||
-      this.state.hasAllData;
-    const hasComputedAllData =
-      props.block.message.body.blobKzgCommitments.length === 0 || this.state.hasComputedAllData;
+    const blobKzgCommitments = getBlobKzgCommitmentsFromBlock(props.block);
+    const hasAllData = blobKzgCommitments.length === 0 || this.state.hasAllData;
+    const hasComputedAllData = blobKzgCommitments.length === 0 || this.state.hasComputedAllData;
 
     this.state = {
       ...this.state,

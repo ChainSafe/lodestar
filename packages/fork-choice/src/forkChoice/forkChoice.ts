@@ -743,27 +743,35 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-      ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
-        ? {
-            executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
-            executionPayloadNumber: block.body.executionPayload.blockNumber,
-            executionStatus: this.getPostMergeExecStatus(executionStatus),
-            dataAvailabilityStatus,
-          }
-        : {
-            executionPayloadBlockHash: null,
-            executionStatus: this.getPreMergeExecStatus(executionStatus),
-            dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
-          }),
+      // Handle execution status differently for gloas blocks (which have execution payload bids, not execution payloads)
       ...(isGloasBeaconBlock(block)
         ? {
+            // Gloas blocks are always post-merge, get block hash from execution payload bid
+            executionPayloadBlockHash: toRootHex(block.body.signedExecutionPayloadBid.message.blockHash),
+            // Gloas doesn't have execution payload number in the block body, use 0 as placeholder
+            // The actual block number will be known when the execution payload is revealed
+            executionPayloadNumber: 0,
+            executionStatus: this.getPostMergeExecStatus(executionStatus),
+            dataAvailabilityStatus,
             builderIndex: block.body.signedExecutionPayloadBid.message.builderIndex,
             blockHashHex: toRootHex(block.body.signedExecutionPayloadBid.message.blockHash),
           }
-        : {
-            builderIndex: undefined,
-            blockHashHex: undefined,
-          }),
+        : isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
+          ? {
+              executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
+              executionPayloadNumber: block.body.executionPayload.blockNumber,
+              executionStatus: this.getPostMergeExecStatus(executionStatus),
+              dataAvailabilityStatus,
+              builderIndex: undefined,
+              blockHashHex: undefined,
+            }
+          : {
+              executionPayloadBlockHash: null,
+              executionStatus: this.getPreMergeExecStatus(executionStatus),
+              dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
+              builderIndex: undefined,
+              blockHashHex: undefined,
+            }),
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);

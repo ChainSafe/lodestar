@@ -14,7 +14,7 @@ import {
   isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
-import {bellatrix, electra} from "@lodestar/types";
+import {bellatrix, electra, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -148,6 +148,16 @@ export async function verifyBlockExecutionPayload(
   preState0: CachedBeaconStateAllForks
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
+
+  // Gloas blocks don't have execution payloads in the block body - they use execution payload bids
+  // The execution payload is revealed separately and verified via a different mechanism
+  // For fork choice purposes, treat gloas blocks as Syncing until the execution payload is revealed
+  if (isGloasBeaconBlock(block.message)) {
+    // TODO: Implement proper gloas execution payload bid verification
+    // For now, return Syncing status as the execution payload will be verified when revealed
+    return {executionStatus: ExecutionStatus.Syncing, lvhResponse: undefined, execError: null};
+  }
+
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
     isExecutionStateType(preState0) &&

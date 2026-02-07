@@ -9,6 +9,7 @@ import {
   ACTIVE_PRESET,
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreDeneb,
   ForkPreFulu,
   ForkPreGloas,
@@ -238,7 +239,41 @@ const forkChoiceTest =
                 let blockImport;
                 const forkSeq = config.getForkSeq(slot);
 
-                if (forkSeq >= ForkSeq.fulu) {
+                if (forkSeq >= ForkSeq.gloas) {
+                  if (columns === undefined) {
+                    columns = [];
+                  }
+
+                  // In Gloas, blobKzgCommitments are in the ExecutionPayloadBid, not the block body
+                  const gloasBlock = signedBlock as SignedBeaconBlock<ForkPostGloas>;
+                  const blobKzgCommitmentsLen =
+                    gloasBlock.message.body.signedExecutionPayloadBid.message.blobKzgCommitments.length;
+
+                  await validateBlockDataColumnSidecars(chain, slot, blockRoot, blobKzgCommitmentsLen, columns);
+
+                  blockImport = BlockInputColumns.createFromBlock({
+                    forkName: fork,
+                    block: gloasBlock,
+                    blockRootHex,
+                    custodyColumns:
+                      testCaseName !== "on_block_peerdas__not_available" ? columns.map((c) => c.index) : [2, 4, 6, 8],
+                    sampledColumns:
+                      testCaseName !== "on_block_peerdas__not_available"
+                        ? columns.map((c) => c.index)
+                        : [2, 4, 6, 8, 10, 12, 14, 16],
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
+                  for (const column of columns) {
+                    blockImport.addColumn({
+                      blockRootHex,
+                      columnSidecar: column,
+                      source: BlockInputSource.gossip,
+                      seenTimestampSec: 0,
+                    });
+                  }
+                } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
                     columns = [];
                   }
