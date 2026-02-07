@@ -52,7 +52,7 @@ export async function getSignersFromArgs(
     const indexes = args.interopIndexes;
     // Using a remote signer with TESTNETS
     if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-      return getRemoteSigners(args);
+      return getRemoteSigners(args, {logger});
     }
     return indexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
   }
@@ -105,7 +105,7 @@ export async function getSignersFromArgs(
 
   // Remote keys are declared manually or will be fetched from external signer
   if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-    return getRemoteSigners(args);
+    return getRemoteSigners(args, {logger});
   }
 
   // Read keys from local account manager
@@ -153,7 +153,11 @@ export function getSignerPubkeyHex(signer: Signer): string {
   }
 }
 
-async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<Signer[]> {
+async function getRemoteSigners(
+  args: IValidatorCliArgs & GlobalArgs,
+  context: {logger: Pick<Logger, LogLevel.warn>}
+): Promise<Signer[]> {
+  const {logger} = context;
   const externalSignerUrls = args["externalSigner.url"] ?? [];
   
   if (externalSignerUrls.length === 0) {
@@ -202,8 +206,7 @@ async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<S
         return {url, pubkeys, error: null};
       } catch (e) {
         const errorMsg = e instanceof Error ? e.message : String(e);
-        // Warn user about failed signer (logger not available in this context)
-        console.warn(`Warning: Failed to fetch pubkeys from external signer ${url}: ${errorMsg}`);
+        logger.warn(`Failed to fetch pubkeys from external signer ${url}: ${errorMsg}`);
         return {url, pubkeys: [], error: errorMsg};
       }
     });
@@ -226,16 +229,22 @@ async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<S
     // Warn if some signers failed but at least one succeeded
     if (failedSigners.length > 0 && successfulSigners.length > 0) {
       const failedUrls = failedSigners.map((r) => r.url).join(", ");
-      console.warn(
-        `Warning: Failed to fetch pubkeys from some external signer(s): ${failedUrls}. ` +
+      logger.warn(
+        `Failed to fetch pubkeys from some external signer(s): ${failedUrls}. ` +
           "Validator will continue with available signers."
       );
     }
     
+    const seenPubkeys = new Set<string>();
     for (const {url, pubkeys} of results) {
       if (pubkeys.length > 0) {
         assertValidPubkeysHex(pubkeys);
         for (const pubkey of pubkeys) {
+          if (seenPubkeys.has(pubkey)) {
+            logger.warn(`Pubkey ${pubkey} found on multiple signers; using first occurrence only`);
+            continue;
+          }
+          seenPubkeys.add(pubkey);
           signers.push({type: SignerType.Remote, pubkey, url});
         }
       }
