@@ -445,7 +445,7 @@ export async function validateBlockDataColumnSidecars(
     let reason: string | undefined;
     // Todo: what to do when chain is not passed
     // batch verification for the cases: downloadByRange and downloadByRoot
-    const timer = chain?.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
+    const kzgVerificationTimer = chain?.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
     try {
       const valid = await kzg.asyncVerifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
       if (!valid) {
@@ -454,7 +454,7 @@ export async function validateBlockDataColumnSidecars(
     } catch (e) {
       reason = (e as Error).message;
     } finally {
-      timer?.();
+      kzgVerificationTimer?.();
     }
     if (reason !== undefined) {
       throw new DataColumnSidecarValidationError(
