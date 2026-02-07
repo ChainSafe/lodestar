@@ -33,38 +33,42 @@ export function pollExternalSignerPubkeys(
 
   async function fetchExternalSignerPubkeys(): Promise<void> {
     // Fetch from all external signer URLs in parallel
-    const fetchPromises = externalSignerUrls.map(async (externalSignerUrl: string) => {
-      const printableUrl = toPrintableUrl(externalSignerUrl);
+    const fetchPromises: Promise<void>[] = [];
+    for (const externalSignerUrl of externalSignerUrls) {
+      fetchPromises.push(
+        (async () => {
+          const printableUrl = toPrintableUrl(externalSignerUrl);
 
-      try {
-        logger.debug("Fetching public keys from external signer", {url: printableUrl});
-        const externalPubkeys = await externalSignerGetKeys(externalSignerUrl);
-        assertValidPubkeysHex(externalPubkeys);
-        logger.debug("Received public keys from external signer", {url: printableUrl, count: externalPubkeys.length});
+          try {
+            logger.debug("Fetching public keys from external signer", {url: printableUrl});
+            const externalPubkeys = await externalSignerGetKeys(externalSignerUrl);
+            assertValidPubkeysHex(externalPubkeys);
+            logger.debug("Received public keys from external signer", {url: printableUrl, count: externalPubkeys.length});
 
-        const localPubkeys = validatorStore.getRemoteSignerPubkeys(externalSignerUrl);
-        logger.debug("Local public keys stored for external signer", {url: printableUrl, count: localPubkeys.length});
+            const localPubkeys = validatorStore.getRemoteSignerPubkeys(externalSignerUrl);
+            logger.debug("Local public keys stored for external signer", {url: printableUrl, count: localPubkeys.length});
 
-        const localPubkeysSet = new Set(localPubkeys);
-        for (const pubkey of externalPubkeys) {
-          if (!localPubkeysSet.has(pubkey)) {
-            await validatorStore.addSigner({type: SignerType.Remote, pubkey, url: externalSignerUrl});
-            logger.info("Added remote signer", {pubkey, url: printableUrl});
+            const localPubkeysSet = new Set(localPubkeys);
+            for (const pubkey of externalPubkeys) {
+              if (!localPubkeysSet.has(pubkey)) {
+                await validatorStore.addSigner({type: SignerType.Remote, pubkey, url: externalSignerUrl});
+                logger.info("Added remote signer", {pubkey, url: printableUrl});
+              }
+            }
+
+            const externalPubkeysSet = new Set(externalPubkeys);
+            for (const pubkey of localPubkeys) {
+              if (!externalPubkeysSet.has(pubkey)) {
+                validatorStore.removeSigner(pubkey);
+                logger.info("Removed remote signer", {pubkey, url: printableUrl});
+              }
+            }
+          } catch (e) {
+            logger.error("Failed to fetch public keys from external signer", {url: printableUrl}, e as Error);
           }
-        }
-
-        const externalPubkeysSet = new Set(externalPubkeys);
-        for (const pubkey of localPubkeys) {
-          if (!externalPubkeysSet.has(pubkey)) {
-            validatorStore.removeSigner(pubkey);
-            logger.info("Removed remote signer", {pubkey, url: printableUrl});
-          }
-        }
-      } catch (e) {
-        logger.error("Failed to fetch public keys from external signer", {url: printableUrl}, e as Error);
-      }
-    });
-
+        })()
+      );
+    }
     await Promise.all(fetchPromises);
   }
 
