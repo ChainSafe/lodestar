@@ -1,7 +1,12 @@
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
+import {isValidDepositSignature} from "../block/processDeposit.js";
+import {applyDepositForBuilder} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
+import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {isValidatorKnown} from "../util/index.js";
 
 /**
  * Upgrade a state from Fulu to Gloas.
@@ -64,10 +69,64 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
 
+  // Applies any pending deposits for builders, effectively onboarding builders at the fork.
+  // Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.2/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
+  onboardBuildersFromPendingDeposits(stateGloas);
+
   stateGloas.commit();
   // Clear cache to ensure the cache of fulu fields is not used by new gloas fields
   // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateGloas["clearCache"]();
 
   return stateGloas;
+}
+
+function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
+  const trackedValidatorPubkeys = new Set<string>();
+
+  const remainingPendingDeposits = state.pendingDeposits.sliceFrom(state.pendingDeposits.length);
+  for (let i = 0; i < state.pendingDeposits.length; i++) {
+    const deposit = state.pendingDeposits.getReadonly(i);
+
+    const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
+    const pubkeyHex = toHex(deposit.pubkey);
+
+    // Deposits for existing validators stay in pending queue
+    if (isValidatorKnown(state, validatorIndex) || trackedValidatorPubkeys.has(pubkeyHex)) {
+      remainingPendingDeposits.push(deposit);
+      continue;
+    }
+
+    // If deposit is for an existing builder or has builder credentials, apply it
+    const isExistingBuilder = findBuilderIndexByPubkey(state, deposit.pubkey) !== null;
+    const hasBuilderCredentials = isBuilderWithdrawalCredential(deposit.withdrawalCredentials);
+    if (isExistingBuilder || hasBuilderCredentials) {
+      applyDepositForBuilder(
+        state,
+        deposit.pubkey,
+        deposit.withdrawalCredentials,
+        deposit.amount,
+        deposit.signature,
+        deposit.slot
+      );
+      continue;
+    }
+
+    // Track new validator pubkeys with valid signatures so subsequent deposits don't create a builder
+    // Deposits with invalid signatures are dropped here since they would fail in apply_pending_deposit anyway.
+    if (
+      isValidDepositSignature(
+        state.config,
+        deposit.pubkey,
+        deposit.withdrawalCredentials,
+        deposit.amount,
+        deposit.signature
+      )
+    ) {
+      trackedValidatorPubkeys.add(pubkeyHex);
+      remainingPendingDeposits.push(deposit);
+    }
+  }
+
+  state.pendingDeposits = remainingPendingDeposits;
 }

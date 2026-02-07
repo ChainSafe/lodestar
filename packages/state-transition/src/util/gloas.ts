@@ -33,7 +33,8 @@ export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas):
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-is_builder_index
  */
 export function isBuilderIndex(validatorIndex: number): boolean {
-  return (validatorIndex & BUILDER_INDEX_FLAG) !== 0;
+  // Note: Can't use bitwise AND (&) because BUILDER_INDEX_FLAG exceeds 32 bits
+  return validatorIndex >= BUILDER_INDEX_FLAG;
 }
 
 /**
@@ -41,7 +42,8 @@ export function isBuilderIndex(validatorIndex: number): boolean {
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_builder_index_to_validator_index
  */
 export function convertBuilderIndexToValidatorIndex(builderIndex: BuilderIndex): ValidatorIndex {
-  return builderIndex | BUILDER_INDEX_FLAG;
+  // Note: Can't use bitwise OR (|) because BUILDER_INDEX_FLAG exceeds 32 bits
+  return builderIndex + BUILDER_INDEX_FLAG;
 }
 
 /**
@@ -49,7 +51,8 @@ export function convertBuilderIndexToValidatorIndex(builderIndex: BuilderIndex):
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_validator_index_to_builder_index
  */
 export function convertValidatorIndexToBuilderIndex(validatorIndex: ValidatorIndex): BuilderIndex {
-  return validatorIndex & ~BUILDER_INDEX_FLAG;
+  // Note: Can't use bitwise AND (&) because BUILDER_INDEX_FLAG exceeds 32 bits
+  return validatorIndex - BUILDER_INDEX_FLAG;
 }
 
 /**
