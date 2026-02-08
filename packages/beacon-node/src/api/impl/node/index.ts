@@ -67,8 +67,7 @@ export function getNodeApi(
       return {
         data: {
           beaconNode: getLodestarClientVersion(opts),
-          executionClient:
-            chain.executionEngine.clientVersion != null ? chain.executionEngine.clientVersion : undefined,
+          executionClient: chain.executionEngine.clientVersion ?? undefined,
         },
       };
     },
