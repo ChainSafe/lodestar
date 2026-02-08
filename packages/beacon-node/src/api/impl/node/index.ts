@@ -64,18 +64,11 @@ export function getNodeApi(
     },
 
     async getNodeVersionV2() {
-      const beaconNode = getLodestarClientVersion(opts);
-      const executionClient = chain.executionEngine.clientVersion ?? {
-        code: routes.node.ClientCode.XX,
-        name: "Unknown",
-        version: "",
-        commit: "",
-      };
-
       return {
         data: {
-          beaconNode,
-          executionClient,
+          beaconNode: getLodestarClientVersion(opts),
+          executionClient:
+            chain.executionEngine.clientVersion != null ? chain.executionEngine.clientVersion : undefined,
         },
       };
     },
