@@ -8,6 +8,7 @@ import {
   createCachedBeaconState,
   stateTransition,
 } from "@lodestar/state-transition";
+import {byteArrayEquals} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {getStateTypeFromBytes} from "../../../util/multifork.js";
 import {HistoricalStateRegenMetrics} from "./metrics.js";
@@ -98,7 +99,7 @@ export async function getHistoricalState(
       throw e;
     }
     blockCount++;
-    if (Buffer.compare(state.hashTreeRoot(), block.message.stateRoot) !== 0) {
+    if (!byteArrayEquals(state.hashTreeRoot(), block.message.stateRoot)) {
       metrics?.regenErrorCount.inc({reason: RegenErrorType.invalidStateRoot});
     }
   }

@@ -44,6 +44,7 @@
     "@lodestar/params": "workspace:^",
     "@lodestar/reqresp": "workspace:^",
     "@lodestar/types": "workspace:^",
+    "@lodestar/utils": "workspace:^",
     "uint8arraylist": "^2.4.7"
   }
 }

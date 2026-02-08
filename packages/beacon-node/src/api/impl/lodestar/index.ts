@@ -154,6 +154,23 @@ export function getLodestarApi({
       await network.disconnectPeer(peerId);
     },
 
+    async addDirectPeer({peer}) {
+      const peerId = await network.addDirectPeer(peer);
+      if (peerId === null) {
+        throw new ApiError(400, `Failed to add direct peer: invalid peer address or ENR "${peer}"`);
+      }
+      return {data: {peerId}};
+    },
+
+    async removeDirectPeer({peerId}) {
+      const removed = await network.removeDirectPeer(peerId);
+      return {data: {removed}};
+    },
+
+    async getDirectPeers() {
+      return {data: await network.getDirectPeers()};
+    },
+
     async getPeers({state, direction}) {
       const peers = (await network.dumpPeers()).filter(
         (nodePeer) =>

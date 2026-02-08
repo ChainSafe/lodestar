@@ -1,5 +1,4 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   BUILDER_INDEX_SELF_BUILD,
   DOMAIN_BEACON_BUILDER,
@@ -7,7 +6,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.ts";
 import {computeSigningRoot, computeTimeAtSlot} from "../util/index.ts";
 import {processConsolidationRequest} from "./processConsolidationRequest.ts";

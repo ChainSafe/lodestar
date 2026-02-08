@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   BUILDER_INDEX_FLAG,
   BUILDER_PAYMENT_THRESHOLD_DENOMINATOR,
@@ -11,6 +10,7 @@ import {
 } from "@lodestar/params";
 import {BuilderIndex, Epoch, ValidatorIndex, gloas} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
+import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";

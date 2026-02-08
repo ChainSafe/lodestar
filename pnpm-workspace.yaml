@@ -23,7 +23,7 @@ onlyBuiltDependencies:
   - "@parcel/watcher"
   - "@swc/core"
   - aws-sdk
-  - bigint-buffer
+  - "@vekexasia/bigint-buffer2"
   - classic-level
   - core-js
   - cpu-features

@@ -20,7 +20,8 @@ export async function serializeState<T>(
       stateBytes = bufferWithKey.buffer;
       const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
       state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
-      return processFn(stateBytes);
+      // Await to ensure buffer is not released back to pool until processFn completes
+      return await processFn(stateBytes);
     }
     // release the buffer back to the pool automatically
   }

@@ -30,7 +30,6 @@ export type ChainArgs = {
   "chain.archiveStateEpochFrequency": number;
   "chain.archiveDataEpochs"?: number;
   "chain.archiveMode": ArchiveMode;
-  "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
@@ -70,7 +69,6 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveDataEpochs: args["chain.archiveDataEpochs"],
     archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
-    nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
@@ -271,15 +269,6 @@ Will double processing times. Use only for debugging purposes.",
     description:
       "Number of epochs to retain finalized blobs/columns (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS/MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS)",
     type: "number",
-    group: "chain",
-  },
-
-  "chain.nHistoricalStates": {
-    hidden: true,
-    description:
-      "Use the new FIFOBlockStateCache and PersistentCheckpointStateCache or not which make lodestar heap size bounded instead of unbounded as before",
-    type: "boolean",
-    default: defaultOptions.chain.nHistoricalStates,
     group: "chain",
   },
 

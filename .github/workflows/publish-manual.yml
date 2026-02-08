@@ -1,0 +1,49 @@
+name: Publish manual Docker image
+
+# Manual workflow for tagging Docker images from any commit
+# Useful for testing specific commits or creating custom releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build from (commit SHA, branch, or tag)"
+        required: true
+        type: string
+      tag:
+        description: "Docker tag to apply (e.g., test-feature, debug-v1.2.3)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Validate inputs
+        run: |
+          # Ensure tag doesn't conflict with protected tags
+          if [[ "${{ inputs.tag }}" =~ ^(latest|next|stable|rc)$ ]]; then
+            echo "Error: Cannot use reserved tag '${{ inputs.tag }}'. Use a custom tag name."
+            exit 1
+          fi
+          echo "Building from ref: ${{ inputs.ref }}"
+          echo "Commit: $(git rev-parse HEAD)"
+          echo "Tag: ${{ inputs.tag }}"
+
+  docker:
+    name: Build and publish Docker
+    needs: validate
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: ${{ inputs.tag }}
+      ref: ${{ inputs.ref }}
+    secrets: inherit
