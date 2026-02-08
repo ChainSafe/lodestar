@@ -19,7 +19,9 @@ import {
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   DataAvailabilityStatus,
+  StateHashTreeRootSource,
   attesterShufflingDecisionRoot,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
@@ -32,6 +34,7 @@ import {
   loadState,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
+import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
 import {
   BLSSignature,
   BeaconBlock,
@@ -72,7 +75,7 @@ import {
 } from "../../../chain/errors/index.js";
 import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
-import {BlockType, ProduceFullDeneb} from "../../../chain/produceBlock/index.js";
+import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
@@ -1592,7 +1595,8 @@ export function getValidatorApi(
       }
 
       // For self-builds, the proposer is also the builder
-      const proposerIndex = chain.getHeadState().epochCtx.getBeaconProposer(slot);
+      const headState = chain.getHeadState();
+      const proposerIndex = headState.epochCtx.getBeaconProposer(slot);
       if (builderIndex !== proposerIndex) {
         // TODO GLOAS: For external builders, fetch envelope via P2P or builder API
         throw new ApiError(
@@ -1603,30 +1607,12 @@ export function getValidatorApi(
 
       // Search the block production cache for a block produced at this slot
       // The cache is keyed by block root, so we need to search through entries
-      let cachedResult: {
-        blockRootHex: string;
-        executionPayload: gloas.ExecutionPayloadEnvelope["payload"];
-        executionRequests: gloas.ExecutionPayloadEnvelope["executionRequests"];
-        blobKzgCommitments: gloas.ExecutionPayloadEnvelope["blobKzgCommitments"];
-      } | null = null;
+      let cachedResult: {blockRootHex: string; produceResult: ProduceFullGloas} | null = null;
 
       for (const [blockRootHex, produceResult] of chain.blockProductionCache.entries()) {
-        if (produceResult.fork === fork && "executionPayload" in produceResult) {
-          const gloasResult = produceResult as {
-            fork: typeof fork;
-            executionPayload: gloas.ExecutionPayloadEnvelope["payload"];
-            executionRequests: gloas.ExecutionPayloadEnvelope["executionRequests"];
-            blobKzgCommitments: gloas.ExecutionPayloadEnvelope["blobKzgCommitments"];
-          };
-          // Check if the payload matches the requested slot
-          if (gloasResult.executionPayload && Number(gloasResult.executionPayload.timestamp) > 0) {
-            // For self-builds at this slot, this should be our produced block
-            cachedResult = {
-              blockRootHex,
-              ...gloasResult,
-            };
-            break;
-          }
+        if (produceResult.fork === fork && produceResult.type === BlockType.Full && "executionPayload" in produceResult) {
+          cachedResult = {blockRootHex, produceResult: produceResult as ProduceFullGloas};
+          break;
         }
       }
 
@@ -1634,22 +1620,44 @@ export function getValidatorApi(
         throw new ApiError(404, `No cached block production result found for slot ${slot}`);
       }
 
+      const {blockRootHex, produceResult} = cachedResult;
+
       // Build the envelope
       // For self-builds, builder_index = BUILDER_INDEX_SELF_BUILD (UINT64_MAX)
-      const beaconBlockRoot = fromHex(cachedResult.blockRootHex);
+      const beaconBlockRoot = fromHex(blockRootHex);
 
       const envelope: gloas.ExecutionPayloadEnvelope = {
-        payload: cachedResult.executionPayload,
-        executionRequests: cachedResult.executionRequests,
+        payload: produceResult.executionPayload,
+        executionRequests: produceResult.executionRequests,
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
         slot,
-        blobKzgCommitments: cachedResult.blobKzgCommitments,
-        // TODO GLOAS: Compute state root properly - for now use zero hash
-        // The state root should be computed by calling process_execution_payload with verify=false
-        // and then taking hash_tree_root(state) as per the builder spec
-        stateRoot: new Uint8Array(32),
+        blobKzgCommitments: produceResult.blobKzgCommitments,
+        stateRoot: ZERO_HASH,
       };
+
+      // Compute state root by running processExecutionPayloadEnvelope with verify=false
+      // as per the builder spec, then taking hash_tree_root(state)
+      if (headState.slot !== slot) {
+        chain.logger.warn("Head state slot mismatch for envelope state root computation, using zero hash", {
+          headSlot: headState.slot,
+          requestedSlot: slot,
+        });
+      } else {
+        const postBlockState = headState.clone(true) as CachedBeaconStateGloas;
+        const tempSignedEnvelope: gloas.SignedExecutionPayloadEnvelope = {
+          message: envelope,
+          signature: new Uint8Array(96),
+        };
+
+        processExecutionPayloadEnvelope(postBlockState, tempSignedEnvelope, false);
+
+        const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+          source: StateHashTreeRootSource.computeNewStateRoot,
+        });
+        envelope.stateRoot = postBlockState.hashTreeRoot();
+        hashTreeRootTimer?.();
+      }
 
       return {
         data: envelope,

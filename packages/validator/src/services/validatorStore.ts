@@ -514,12 +514,9 @@ export class ValidatorStore {
     const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
     const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
 
-    // TODO GLOAS: Add slashing protection for envelope signing if needed
-    // For self-builds, this is similar to block proposal protection
-
     const signableMessage: SignableMessage = {
-      type: SignableMessageType.BLOCK_V2, // TODO GLOAS: Add dedicated type for envelope signing
-      data: envelope as unknown as BeaconBlock,
+      type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE,
+      data: envelope,
     };
 
     return {
