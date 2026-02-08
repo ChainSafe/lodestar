@@ -11,6 +11,7 @@ import {
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
@@ -144,6 +145,15 @@ export function initializeForkChoiceFromFinalizedState(
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        ...(computeEpochAtSlot(blockHeader.slot) < state.config.GLOAS_FORK_EPOCH
+          ? {
+              builderIndex: undefined,
+              blockHashHex: undefined,
+            }
+          : {
+              builderIndex: (state as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex,
+              blockHashHex: toRootHex((state as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash),
+            }),
       },
       currentSlot
     ),
@@ -225,6 +235,15 @@ export function initializeForkChoiceFromUnfinalizedState(
       : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+    ...(computeEpochAtSlot(blockHeader.slot) < unfinalizedState.config.GLOAS_FORK_EPOCH
+      ? {
+          builderIndex: undefined,
+          blockHashHex: undefined,
+        }
+      : {
+          builderIndex: (unfinalizedState as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex,
+          blockHashHex: toRootHex((unfinalizedState as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash),
+        }),
   };
 
   const parentSlot = blockHeader.slot - 1;

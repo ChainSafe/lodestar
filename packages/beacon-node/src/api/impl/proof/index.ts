@@ -27,8 +27,7 @@ export function getProofApi(
       const state =
         res.state instanceof Uint8Array ? loadState(config, chain.getHeadState(), res.state).state : res.state;
 
-      // Commit any changes before computing the state root. In normal cases the state should have no changes here
-      state.commit();
+      // there should be no state changes in beacon-node so no need to commit() here
       const stateNode = state.node;
 
       const proof = createProof(stateNode, {type: ProofType.compactMulti, descriptor});

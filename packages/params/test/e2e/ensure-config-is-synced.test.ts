@@ -1,36 +1,28 @@
 import axios from "axios";
 import {describe, expect, it, vi} from "vitest";
+import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
 import {loadConfigYaml} from "../yaml.js";
 
 // Not e2e, but slow. Run with e2e tests
-
-/** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.6.1";
 /**
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant
  */
-// TODO GLOAS: These fields are supposed to be in the preset. However Gloas's preset in consensus-specs are still not up to date.
-/// Remove these fields after a spec is released that includes this fix https://github.com/ethereum/consensus-specs/pull/4607
-const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [
-  "MAX_PAYLOAD_ATTESTATIONS",
-  "PTC_SIZE",
-  "BUILDER_PENDING_WITHDRAWALS_LIMIT",
-];
+const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
 
 describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
   it("mainnet", async () => {
-    const remotePreset = await downloadRemoteConfig("mainnet", specConfigCommit);
+    const remotePreset = await downloadRemoteConfig("mainnet", ethereumConsensusSpecsTests.specVersion);
     assertCorrectPreset({...mainnetPreset}, remotePreset);
   });
 
   it("minimal", async () => {
-    const remotePreset = await downloadRemoteConfig("minimal", specConfigCommit);
+    const remotePreset = await downloadRemoteConfig("minimal", ethereumConsensusSpecsTests.specVersion);
     assertCorrectPreset({...minimalPreset}, remotePreset);
   });
 });
@@ -61,10 +53,6 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   const downloadedParams: Record<string, unknown>[] = [];
 
   for (const forkName of Object.values(ForkName)) {
-    // TODO GLOAS: Remove this when gloas spec is available
-    if (forkName === ForkName.gloas) {
-      continue;
-    }
     const response = await axios({
       url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
       timeout: 30 * 1000,

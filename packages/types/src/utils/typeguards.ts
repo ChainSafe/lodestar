@@ -1,4 +1,10 @@
-import {FINALIZED_ROOT_DEPTH_ELECTRA, ForkPostBellatrix, ForkPostDeneb, ForkPostElectra} from "@lodestar/params";
+import {
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPostElectra,
+  ForkPostGloas,
+} from "@lodestar/params";
 import {
   Attestation,
   BeaconBlock,
@@ -95,4 +101,8 @@ export function isELectraLightClientFinalityUpdate(
     updatePostElectra.finalityBranch !== undefined &&
     updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
   );
+}
+
+export function isGloasBeaconBlock(block: BeaconBlock): block is BeaconBlock<ForkPostGloas> {
+  return (block.body as BeaconBlockBody<ForkPostGloas>).signedExecutionPayloadBid !== undefined;
 }

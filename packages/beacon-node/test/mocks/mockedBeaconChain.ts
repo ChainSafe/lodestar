@@ -148,6 +148,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
+      getBlockByRoot: vi.fn(),
       recomputeForkChoiceHead: vi.fn(),
       predictProposerHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),

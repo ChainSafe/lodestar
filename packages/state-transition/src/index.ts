@@ -21,8 +21,6 @@ export {
 } from "./cache/effectiveBalanceIncrements.js";
 export {
   EpochCache,
-  EpochCacheError,
-  EpochCacheErrorCode,
   type EpochCacheImmutableData,
   createEmptyEpochCacheImmutableData,
 } from "./cache/epochCache.js";

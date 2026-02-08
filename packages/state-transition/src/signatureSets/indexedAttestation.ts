@@ -1,7 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {
   ISignatureSet,
   computeSigningRoot,
@@ -22,13 +21,12 @@ export function getAttestationDataSigningRoot(
 
 export function getAttestationWithIndicesSignatureSet(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   stateSlot: Slot,
   attestation: Pick<phase0.Attestation, "data" | "signature">,
   attestingIndices: number[]
 ): ISignatureSet {
   return createAggregateSignatureSetFromComponents(
-    attestingIndices.map((i) => index2pubkey[i]),
+    attestingIndices,
     getAttestationDataSigningRoot(config, stateSlot, attestation.data),
     attestation.signature
   );
@@ -36,13 +34,11 @@ export function getAttestationWithIndicesSignatureSet(
 
 export function getIndexedAttestationSignatureSet(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   stateSlot: Slot,
   indexedAttestation: IndexedAttestation
 ): ISignatureSet {
   return getAttestationWithIndicesSignatureSet(
     config,
-    index2pubkey,
     stateSlot,
     indexedAttestation,
     indexedAttestation.attestingIndices
@@ -51,7 +47,6 @@ export function getIndexedAttestationSignatureSet(
 
 export function getAttestationsSignatureSets(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   signedBlock: SignedBeaconBlock,
   indexedAttestations: IndexedAttestation[]
 ): ISignatureSet[] {
@@ -64,6 +59,6 @@ export function getAttestationsSignatureSets(
   // and the same epoch when we verify blocks in batch in beacon-node. So we can safely use block.slot here.
   const blockSlot = signedBlock.message.slot;
   return indexedAttestations.map((indexedAttestation) =>
-    getIndexedAttestationSignatureSet(config, index2pubkey, blockSlot, indexedAttestation)
+    getIndexedAttestationSignatureSet(config, blockSlot, indexedAttestation)
   );
 }

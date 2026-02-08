@@ -2,7 +2,7 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
@@ -41,30 +41,10 @@ export function resolveStateId(
   return blockSlot;
 }
 
-export async function getStateResponse(
-  chain: IBeaconChain,
-  inStateId: routes.beacon.StateId
-): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
-  const stateId = resolveStateId(chain.forkChoice, inStateId);
-
-  const res =
-    typeof stateId === "string"
-      ? await chain.getStateByStateRoot(stateId)
-      : typeof stateId === "number"
-        ? await chain.getStateBySlot(stateId)
-        : chain.getStateByCheckpoint(stateId);
-
-  if (!res) {
-    throw new ApiError(404, `State not found for id '${inStateId}'`);
-  }
-
-  return res;
-}
-
 export async function getStateResponseWithRegen(
   chain: IBeaconChain,
   inStateId: routes.beacon.StateId
-): Promise<{state: BeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
+): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
   const stateId = resolveStateId(chain.forkChoice, inStateId);
 
   const res =

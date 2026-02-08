@@ -5,7 +5,7 @@ import {
   defaultTopicScoreParams,
 } from "@chainsafe/libp2p-gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, PTC_SIZE, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
 import {getActiveForkBoundaries} from "../forks.js";
 import {Eth2Context} from "./gossipsub.js";
@@ -24,6 +24,9 @@ const VOLUNTARY_EXIT_WEIGHT = 0.05;
 const PROPOSER_SLASHING_WEIGHT = 0.05;
 const ATTESTER_SLASHING_WEIGHT = 0.05;
 const BLS_TO_EXECUTION_CHANGE_WEIGHT = 0.05;
+const EXECUTION_PAYLOAD_WEIGHT = 0.5;
+const PAYLOAD_ATTESTATION_WEIGHT = 0.05;
+const EXECUTION_PAYLOAD_BID_WEIGHT = 0.05;
 
 const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
 const maxPositiveScore =
@@ -34,7 +37,10 @@ const maxPositiveScore =
     VOLUNTARY_EXIT_WEIGHT +
     PROPOSER_SLASHING_WEIGHT +
     ATTESTER_SLASHING_WEIGHT +
-    BLS_TO_EXECUTION_CHANGE_WEIGHT);
+    BLS_TO_EXECUTION_CHANGE_WEIGHT +
+    EXECUTION_PAYLOAD_WEIGHT +
+    PAYLOAD_ATTESTATION_WEIGHT +
+    EXECUTION_PAYLOAD_BID_WEIGHT);
 
 /**
  * The following params is implemented by Lighthouse at
@@ -172,6 +178,26 @@ function getAllTopicsScoreParams(
       expectedMessageRate: 1 / 5 / SLOTS_PER_EPOCH,
       firstMessageDecayTime: epochDurationMs * 100,
     });
+    topicsParams[
+      stringifyGossipTopic(config, {
+        type: GossipType.payload_attestation_message,
+        boundary,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: PAYLOAD_ATTESTATION_WEIGHT,
+      expectedMessageRate: PTC_SIZE,
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
+    topicsParams[
+      stringifyGossipTopic(config, {
+        type: GossipType.execution_payload_bid,
+        boundary,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: EXECUTION_PAYLOAD_BID_WEIGHT,
+      expectedMessageRate: 1024, // TODO GLOAS: Need an estimate for this
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
 
     // other topics
     topicsParams[
@@ -181,6 +207,22 @@ function getAllTopicsScoreParams(
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: BEACON_BLOCK_WEIGHT,
+      expectedMessageRate: 1,
+      firstMessageDecayTime: epochDurationMs * 20,
+      meshMessageInfo: {
+        decaySlots: SLOTS_PER_EPOCH * 5,
+        capFactor: 3,
+        activationWindow: epochDurationMs,
+        currentSlot: eth2Context.currentSlot,
+      },
+    });
+    topicsParams[
+      stringifyGossipTopic(config, {
+        type: GossipType.execution_payload,
+        boundary,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: EXECUTION_PAYLOAD_WEIGHT,
       expectedMessageRate: 1,
       firstMessageDecayTime: epochDurationMs * 20,
       meshMessageInfo: {

@@ -30,11 +30,10 @@ import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
-import {toCheckpointHex} from "../stateCache/index.js";
+import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
-import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -91,11 +90,8 @@ export async function importBlock(
     throw Error("Unavailable block can not be imported in forkchoice");
   }
 
-  // 1. Persist block to hot DB (pre-emptively)
-  // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
-  if (!opts.eagerPersistBlock) {
-    await writeBlockInputToDb.call(this, [blockInput]);
-  }
+  // 1. Persist block to hot DB (performed asynchronously to avoid blocking head selection)
+  void this.unfinalizedBlockWrites.push([blockInput]);
 
   // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
   this.serializedCache.clear();
@@ -418,13 +414,20 @@ export async function importBlock(
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
 
+  // Cache shufflings when crossing an epoch boundary
+  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
+  if (parentEpoch < blockEpoch) {
+    this.shufflingCache.processState(postState);
+    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+  }
+
   if (blockSlot % SLOTS_PER_EPOCH === 0) {
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     this.regen.addCheckpointState(cp, checkpointState);
-    // consumers should not mutate or get the transfered cache
-    this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone(true));
+    // consumers should not mutate state ever
+    this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
@@ -584,7 +587,10 @@ export function addAttestationPostElectra(
       true
     );
   } else {
-    const committees = epochCtx.getBeaconCommittees(attestation.data.slot, committeeIndices);
+    const attSlot = attestation.data.slot;
+    const attEpoch = computeEpochAtSlot(attSlot);
+    const decisionRoot = epochCtx.getShufflingDecisionRoot(attEpoch);
+    const committees = this.shufflingCache.getBeaconCommittees(attEpoch, decisionRoot, attSlot, committeeIndices);
     const aggregationBools = attestation.aggregationBits.toBoolArray();
     let offset = 0;
     for (let i = 0; i < committees.length; i++) {

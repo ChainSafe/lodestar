@@ -154,6 +154,23 @@ export function getLodestarApi({
       await network.disconnectPeer(peerId);
     },
 
+    async addDirectPeer({peer}) {
+      const peerId = await network.addDirectPeer(peer);
+      if (peerId === null) {
+        throw new ApiError(400, `Failed to add direct peer: invalid peer address or ENR "${peer}"`);
+      }
+      return {data: {peerId}};
+    },
+
+    async removeDirectPeer({peerId}) {
+      const removed = await network.removeDirectPeer(peerId);
+      return {data: {removed}};
+    },
+
+    async getDirectPeers() {
+      return {data: await network.getDirectPeers()};
+    },
+
     async getPeers({state, direction}) {
       const peers = (await network.dumpPeers()).filter(
         (nodePeer) =>
@@ -198,7 +215,7 @@ export function getLodestarApi({
       const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
 
       const stateView = (
-        state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state.clone()
+        state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state
       ) as BeaconStateCapella;
 
       const fork = config.getForkName(stateView.slot);
@@ -238,6 +255,24 @@ export function getLodestarApi({
         },
       };
     },
+
+    async getMonitoredValidatorIndices() {
+      return {
+        data: chain.validatorMonitor?.getMonitoredValidatorIndices() ?? [],
+      };
+    },
+
+    async getCustodyInfo() {
+      const {custodyColumns, targetCustodyGroupCount} = chain.custodyConfig;
+
+      return {
+        data: {
+          earliestCustodiedSlot: chain.earliestAvailableSlot,
+          custodyGroupCount: targetCustodyGroupCount,
+          custodyColumns,
+        },
+      };
+    },
   };
 }
 
@@ -248,9 +283,6 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
         root: regenRequest.args[0],
         slot: regenRequest.args[1],
       };
-
-    case "getCheckpointState":
-      return ssz.phase0.Checkpoint.toJson(regenRequest.args[0]);
 
     case "getPreState": {
       const slot = regenRequest.args[0].slot;

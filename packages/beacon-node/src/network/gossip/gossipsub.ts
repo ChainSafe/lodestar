@@ -1,7 +1,11 @@
+import {peerIdFromString} from "@libp2p/peer-id";
+import {multiaddr} from "@multiformats/multiaddr";
+import {ENR} from "@chainsafe/enr";
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
-import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
+import {AddrInfo, SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
+import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
@@ -55,6 +59,12 @@ export type Eth2GossipsubOpts = {
   disableFloodPublish?: boolean;
   skipParamsLog?: boolean;
   disableLightClientServer?: boolean;
+  /**
+   * Direct peers for GossipSub - these peers maintain permanent mesh connections without GRAFT/PRUNE.
+   * Supports multiaddr strings with peer ID (e.g., "/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...")
+   * or ENR strings (e.g., "enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...")
+   */
+  directPeers?: string[];
 };
 
 export type ForkBoundaryLabel = string;
@@ -78,6 +88,7 @@ export class Eth2Gossipsub extends GossipSub {
   private readonly logger: Logger;
   private readonly peersData: PeersData;
   private readonly events: NetworkEventBus;
+  private readonly libp2p: Libp2p;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
@@ -97,6 +108,9 @@ export class Eth2Gossipsub extends GossipSub {
       );
     }
 
+    // Parse direct peers from multiaddr strings to AddrInfo objects
+    const directPeers = parseDirectPeers(opts.directPeers ?? [], logger);
+
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super(modules.libp2p.services.components, {
@@ -106,6 +120,7 @@ export class Eth2Gossipsub extends GossipSub {
       Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
       Dhi: gossipsubDHigh ?? GOSSIP_D_HIGH,
       Dlazy: 6,
+      directPeers,
       heartbeatInterval: GOSSIPSUB_HEARTBEAT_INTERVAL,
       fanoutTTL: 60 * 1000,
       mcacheLength: 6,
@@ -146,6 +161,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.logger = logger;
     this.peersData = peersData;
     this.events = events;
+    this.libp2p = modules.libp2p;
     this.gossipTopicCache = gossipTopicCache;
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
@@ -328,6 +344,64 @@ export class Eth2Gossipsub extends GossipSub {
       this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
     });
   }
+
+  /**
+   * Add a peer as a direct peer at runtime. Accepts multiaddr with peer ID or ENR string.
+   * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
+   */
+  async addDirectPeer(peerStr: routes.lodestar.DirectPeer): Promise<string | null> {
+    const parsed = parseDirectPeers([peerStr], this.logger);
+    if (parsed.length === 0) {
+      return null;
+    }
+
+    const {id: peerId, addrs} = parsed[0];
+    const peerIdStr = peerId.toString();
+
+    // Prevent adding self as a direct peer
+    if (peerId.equals(this.libp2p.peerId)) {
+      this.logger.warn("Cannot add self as a direct peer", {peerId: peerIdStr});
+      return null;
+    }
+
+    // Direct peers need addresses to connect - reject if none provided
+    if (addrs.length === 0) {
+      this.logger.warn("Cannot add direct peer without addresses", {peerId: peerIdStr});
+      return null;
+    }
+
+    // Add addresses to peer store first so we can connect
+    try {
+      await this.libp2p.peerStore.merge(peerId, {multiaddrs: addrs});
+    } catch (e) {
+      this.logger.warn("Failed to add direct peer addresses to peer store", {peerId: peerIdStr}, e as Error);
+      return null;
+    }
+
+    // Add to direct peers set only after addresses are stored
+    this.direct.add(peerIdStr);
+
+    this.logger.info("Added direct peer via API", {peerId: peerIdStr});
+    return peerIdStr;
+  }
+
+  /**
+   * Remove a peer from direct peers.
+   */
+  removeDirectPeer(peerIdStr: string): boolean {
+    const removed = this.direct.delete(peerIdStr);
+    if (removed) {
+      this.logger.info("Removed direct peer via API", {peerId: peerIdStr});
+    }
+    return removed;
+  }
+
+  /**
+   * Get list of current direct peer IDs.
+   */
+  getDirectPeers(): string[] {
+    return Array.from(this.direct);
+  }
 }
 
 /**
@@ -380,4 +454,76 @@ function getForkBoundaryLabel(boundary: ForkBoundary): ForkBoundaryLabel {
   }
 
   return label;
+}
+
+/**
+ * Parse direct peer strings into AddrInfo objects for GossipSub.
+ * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
+ *
+ * Supported formats:
+ * - Multiaddr with peer ID: `/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...`
+ * - ENR: `enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...`
+ *
+ * For multiaddrs, the string must contain a /p2p/ component with the peer ID.
+ * For ENRs, the TCP multiaddr and peer ID are extracted from the encoded record.
+ */
+export function parseDirectPeers(directPeerStrs: routes.lodestar.DirectPeer[], logger: Logger): AddrInfo[] {
+  const directPeers: AddrInfo[] = [];
+
+  for (const peerStr of directPeerStrs) {
+    // Check if this is an ENR (starts with "enr:")
+    if (peerStr.startsWith("enr:")) {
+      try {
+        const enr = ENR.decodeTxt(peerStr);
+        const peerId = enr.peerId;
+
+        // Get TCP multiaddr from ENR
+        const multiaddrTCP = enr.getLocationMultiaddr("tcp");
+        if (!multiaddrTCP) {
+          logger.warn("ENR does not contain TCP multiaddr", {enr: peerStr});
+          continue;
+        }
+
+        directPeers.push({
+          id: peerId,
+          addrs: [multiaddrTCP],
+        });
+
+        logger.info("Added direct peer from ENR", {peerId: peerId.toString(), addr: multiaddrTCP.toString()});
+      } catch (e) {
+        logger.warn("Failed to parse direct peer ENR", {enr: peerStr}, e as Error);
+      }
+    } else {
+      // Parse as multiaddr
+      try {
+        const ma = multiaddr(peerStr);
+
+        const peerIdStr = ma.getPeerId();
+        if (!peerIdStr) {
+          logger.warn("Direct peer multiaddr must contain /p2p/ component with peer ID", {multiaddr: peerStr});
+          continue;
+        }
+
+        try {
+          const peerId = peerIdFromString(peerIdStr);
+
+          // Get the address without the /p2p/ component
+          const addr = ma.decapsulate("/p2p/" + peerIdStr);
+
+          directPeers.push({
+            id: peerId,
+            addrs: [addr],
+          });
+
+          logger.info("Added direct peer", {peerId: peerIdStr, addr: addr.toString()});
+        } catch (e) {
+          logger.warn("Invalid peer ID in direct peer multiaddr", {multiaddr: peerStr, peerId: peerIdStr}, e as Error);
+        }
+      } catch (e) {
+        logger.warn("Failed to parse direct peer multiaddr", {multiaddr: peerStr}, e as Error);
+      }
+    }
+  }
+
+  return directPeers;
 }

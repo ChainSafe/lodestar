@@ -91,35 +91,6 @@ jobs:
           name: sim-test-endpoints-logs
           path: packages/cli/test-logs
 
-  sim-test-deneb:
-    name: Deneb sim tests
-    needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2204
-    steps:
-      # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
-      - uses: "./.github/actions/setup-and-build"
-        with:
-          node: 24
-      - name: Load env variables
-        uses: ./.github/actions/dotenv
-      - name: Download required docker images before running tests
-        run: |
-          docker pull ${{env.GETH_DOCKER_IMAGE}}
-          docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
-          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
-      - name: Sim tests deneb
-        run: DEBUG='${{github.event.inputs.debug}}' pnpm test:sim:deneb
-        working-directory: packages/cli
-        env:
-          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
-      - name: Upload debug log test files for "packages/cli"
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: sim-test-deneb-logs
-          path: packages/cli/test-logs
-
   sim-test-eth-backup-provider:
     name: Eth backup provider sim tests
     needs: build

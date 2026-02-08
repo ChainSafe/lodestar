@@ -27,6 +27,7 @@ export type Epoch = UintNumInf64;
 export type SyncPeriod = UintNum64;
 export type CommitteeIndex = UintNum64;
 export type SubcommitteeIndex = UintNum64;
+export type BuilderIndex = UintNumInf64;
 export type ValidatorIndex = UintNum64;
 export type WithdrawalIndex = UintNum64;
 export type BlobIndex = UintNum64;

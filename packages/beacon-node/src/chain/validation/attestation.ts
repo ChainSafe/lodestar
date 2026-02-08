@@ -10,16 +10,17 @@ import {
   ForkSeq,
   SLOTS_PER_EPOCH,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
-  EpochCacheError,
-  EpochCacheErrorCode,
   EpochShuffling,
-  SingleSignatureSet,
+  IndexedSignatureSet,
+  ShufflingError,
+  ShufflingErrorCode,
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  createSingleSignatureSetFromComponents,
+  createIndexedSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {
   CommitteeIndex,
@@ -89,7 +90,7 @@ export type GossipAttestation = {
 };
 
 export type Step0Result = AttestationValidationResult & {
-  signatureSet: SingleSignatureSet;
+  signatureSet: IndexedSignatureSet;
   validatorIndex: number;
 };
 
@@ -124,7 +125,7 @@ export async function validateGossipAttestationsSameAttData(
   // step1: verify signatures of all valid attestations
   // map new index to index in resultOrErrors
   const newIndexToOldIndex = new Map<number, number>();
-  const signatureSets: SingleSignatureSet[] = [];
+  const signatureSets: IndexedSignatureSet[] = [];
   let newIndex = 0;
   const step0Results: Step0Result[] = [];
   for (const [i, resultOrError] of step0ResultOrErrors.entries()) {
@@ -142,7 +143,7 @@ export async function validateGossipAttestationsSameAttData(
   if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
     signatureValids = await chain.bls.verifySignatureSetsSameMessage(
-      signatureSets.map((set) => ({publicKey: set.pubkey, signature: set.signature})),
+      signatureSets.map((set) => ({publicKey: chain.index2pubkey[set.index], signature: set.signature})),
       signatureSets[0].signingRoot
     );
   } else {
@@ -224,7 +225,7 @@ export async function validateApiAttestation(
       code: AttestationErrorCode.INVALID_SIGNATURE,
     });
   } catch (err) {
-    if (err instanceof EpochCacheError && err.type.code === EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
+    if (err instanceof ShufflingError && err.type.code === ShufflingErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.BAD_TARGET_EPOCH,
       });
@@ -293,9 +294,29 @@ async function validateAttestationNoSignatureCheck(
       // api or first time validation of a gossip attestation
       committeeIndex = attestationOrCache.attestation.committeeIndex;
 
-      // [REJECT] attestation.data.index == 0
-      if (attData.index !== 0) {
-        throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
+      if (isForkPostGloas(fork)) {
+        // [REJECT] `attestation.data.index < 2`.
+        if (attData.index >= 2) {
+          throw new AttestationError(GossipAction.REJECT, {
+            code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE,
+            attDataIndex: attData.index,
+          });
+        }
+
+        // [REJECT] `attestation.data.index == 0` if `block.slot == attestation.data.slot`.
+        const block = chain.forkChoice.getBlock(attData.beaconBlockRoot);
+
+        // block being null will be handled by `verifyHeadBlockAndTargetRoot`
+        if (block !== null && block.slot === attSlot && attData.index !== 0) {
+          throw new AttestationError(GossipAction.REJECT, {
+            code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT,
+          });
+        }
+      } else {
+        // [REJECT] attestation.data.index == 0
+        if (attData.index !== 0) {
+          throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
+        }
       }
     } else {
       // phase0 attestation
@@ -477,7 +498,7 @@ async function validateAttestationNoSignatureCheck(
 
   // [REJECT] The signature of attestation is valid.
   const attestingIndices = [validatorIndex];
-  let signatureSet: SingleSignatureSet;
+  let signatureSet: IndexedSignatureSet;
   let attDataRootHex: RootHex;
   const signature = attestationOrCache.attestation
     ? attestationOrCache.attestation.signature
@@ -492,18 +513,14 @@ async function validateAttestationNoSignatureCheck(
 
   if (attestationOrCache.cache) {
     // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
-    signatureSet = createSingleSignatureSetFromComponents(
-      chain.index2pubkey[validatorIndex],
+    signatureSet = createIndexedSignatureSetFromComponents(
+      validatorIndex,
       attestationOrCache.cache.signingRoot,
       signature
     );
     attDataRootHex = attestationOrCache.cache.attDataRootHex;
   } else {
-    signatureSet = createSingleSignatureSetFromComponents(
-      chain.index2pubkey[validatorIndex],
-      getSigningRoot(),
-      signature
-    );
+    signatureSet = createIndexedSignatureSetFromComponents(validatorIndex, getSigningRoot(), signature);
 
     // add cached attestation data before verifying signature
     attDataRootHex = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));

@@ -35,7 +35,6 @@ describe("options / beaconNodeOptions", () => {
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
       "chain.archiveDataEpochs": 10000,
-      "chain.nHistoricalStates": true,
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
       "chain.maxCPStateEpochsInMemory": 100,
@@ -94,6 +93,7 @@ describe("options / beaconNodeOptions", () => {
       "network.useWorker": true,
       "network.maxYoungGenerationSizeMb": 152,
       "network.targetGroupPeers": 12,
+      directPeers: ["/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu"],
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -136,7 +136,6 @@ describe("options / beaconNodeOptions", () => {
         maxShufflingCacheEpochs: 100,
         archiveDataEpochs: 10000,
         archiveMode: ArchiveMode.Frequency,
-        nHistoricalStates: true,
         nHistoricalStatesFileDataStore: true,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
@@ -197,6 +196,7 @@ describe("options / beaconNodeOptions", () => {
         useWorker: true,
         maxYoungGenerationSizeMb: 152,
         targetGroupPeers: 12,
+        directPeers: ["/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu"],
       },
       sync: {
         isSingleNode: true,

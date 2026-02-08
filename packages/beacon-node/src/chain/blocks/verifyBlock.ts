@@ -21,7 +21,6 @@ import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
-import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Verifies 1 or more blocks are fully valid; from a linear sequence of blocks.
@@ -75,6 +74,10 @@ export async function verifyBlocksInEpoch(
       throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
     });
 
+  // in forky condition, make sure to populate ShufflingCache with regened state
+  // otherwise it may fail to get indexed attestations from shuffling cache later
+  this.shufflingCache.processState(preState0);
+
   if (!isStateValidatorsNodesPopulated(preState0)) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
       slot: preState0.slot,
@@ -105,9 +108,11 @@ export async function verifyBlocksInEpoch(
     // Store indexed attestations for each block to avoid recomputing them during import
     const indexedAttestationsByBlock: IndexedAttestation[][] = [];
     for (const [i, block] of blocks.entries()) {
-      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) =>
-        preState0.epochCtx.getIndexedAttestation(fork, attestation)
-      );
+      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
+        const attEpoch = computeEpochAtSlot(attestation.data.slot);
+        const decisionRoot = preState0.epochCtx.getShufflingDecisionRoot(attEpoch);
+        return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
+      });
     }
 
     // batch all I/O operations to reduce overhead
@@ -140,7 +145,6 @@ export async function verifyBlocksInEpoch(
       opts.skipVerifyBlockSignatures !== true
         ? verifyBlocksSignatures(
             this.config,
-            this.index2pubkey,
             this.bls,
             this.logger,
             this.metrics,
@@ -150,13 +154,6 @@ export async function verifyBlocksInEpoch(
             opts
           )
         : Promise.resolve({verifySignaturesTime: Date.now()}),
-
-      // ideally we want to only persist blocks after verifying them however the reality is there are
-      // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
-      // an error, we'll remove blocks not in forkchoice
-      opts.verifyOnly !== true && opts.eagerPersistBlock
-        ? writeBlockInputToDb.call(this, blockInputs)
-        : Promise.resolve(),
     ]);
 
     if (opts.verifyOnly !== true) {

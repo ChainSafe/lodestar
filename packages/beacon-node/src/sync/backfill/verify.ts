@@ -1,6 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {ISignatureSet, Index2PubkeyCache, getBlockProposerSignatureSet} from "@lodestar/state-transition";
+import {ISignatureSet, getBlockProposerSignatureSet} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {IBlsVerifier} from "../../chain/bls/index.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
@@ -42,14 +42,13 @@ export function verifyBlockSequence(
 
 export async function verifyBlockProposerSignature(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
   bls: IBlsVerifier,
   blocks: SignedBeaconBlock[]
 ): Promise<void> {
   if (blocks.length === 1 && blocks[0].message.slot === GENESIS_SLOT) return;
   const signatures = blocks.reduce((sigs: ISignatureSet[], block) => {
     // genesis block doesn't have valid signature
-    if (block.message.slot !== GENESIS_SLOT) sigs.push(getBlockProposerSignatureSet(config, index2pubkey, block));
+    if (block.message.slot !== GENESIS_SLOT) sigs.push(getBlockProposerSignatureSet(config, block));
     return sigs;
   }, []);
 

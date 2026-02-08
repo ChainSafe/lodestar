@@ -22,6 +22,8 @@ import {
   Wei,
   altair,
   capella,
+  deneb,
+  fulu,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -44,7 +46,14 @@ import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
+import {
+  AttestationPool,
+  ExecutionPayloadBidPool,
+  OpPool,
+  PayloadAttestationPool,
+  SyncCommitteeMessagePool,
+  SyncContributionAndProofPool,
+} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -54,6 +63,9 @@ import {
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
+  SeenExecutionPayloadBids,
+  SeenExecutionPayloadEnvelopes,
+  SeenPayloadAttesters,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -114,12 +126,17 @@ export interface IBeaconChain {
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
+  readonly executionPayloadBidPool: ExecutionPayloadBidPool;
+  readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 
   // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
   readonly seenAggregators: SeenAggregators;
+  readonly seenPayloadAttesters: SeenPayloadAttesters;
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
+  readonly seenExecutionPayloadEnvelopes: SeenExecutionPayloadEnvelopes;
+  readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
@@ -168,12 +185,12 @@ export interface IBeaconChain {
   getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: CachedBeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Returns a local state by state root */
   getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Return serialized bytes of a persisted checkpoint state */
   getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
   /** Returns a cached state by checkpoint */
@@ -196,9 +213,23 @@ export interface IBeaconChain {
   /**
    * Get local block by root, does not fetch from the network
    */
+  getSerializedBlockByRoot(
+    root: RootHex
+  ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null>;
+  /**
+   * Get local block by root, does not fetch from the network
+   */
   getBlockByRoot(
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
+  getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
+  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<fulu.DataColumnSidecars>;
+  getSerializedDataColumnSidecars(
+    blockSlot: Slot,
+    blockRootHex: string,
+    indices: number[]
+  ): Promise<(Uint8Array | undefined)[]>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{

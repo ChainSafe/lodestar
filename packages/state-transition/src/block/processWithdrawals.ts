@@ -1,23 +1,29 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   FAR_FUTURE_EPOCH,
   ForkSeq,
+  MAX_BUILDERS_PER_WITHDRAWALS_SWEEP,
   MAX_EFFECTIVE_BALANCE,
   MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
-import {ValidatorIndex, capella, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {BuilderIndex, ValidatorIndex, capella, ssz} from "@lodestar/types";
+import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
-import {isBuilderPaymentWithdrawable, isParentBlockFull} from "../util/gloas.ts";
+import {
+  convertBuilderIndexToValidatorIndex,
+  convertValidatorIndexToBuilderIndex,
+  isBuilderIndex,
+  isParentBlockFull,
+} from "../util/gloas.ts";
 import {
   decreaseBalance,
   getMaxEffectiveBalance,
   hasEth1WithdrawalCredential,
   hasExecutionWithdrawalCredential,
   isCapellaPayloadHeader,
+  isPartiallyWithdrawableValidator,
 } from "../util/index.js";
 
 export function processWithdrawals(
@@ -32,9 +38,14 @@ export function processWithdrawals(
 
   // processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas (EIP-7732)
   // processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
+  // processedBuildersSweepCount is withdrawals from builder sweep since gloas (EIP-7732)
   // processedValidatorSweepCount is withdrawals coming from validator sweep
-  const {expectedWithdrawals, processedBuilderWithdrawalsCount, processedPartialWithdrawalsCount} =
-    getExpectedWithdrawals(fork, state);
+  const {
+    expectedWithdrawals,
+    processedBuilderWithdrawalsCount,
+    processedPartialWithdrawalsCount,
+    processedBuildersSweepCount,
+  } = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
   // After gloas, withdrawals are verified later in processExecutionPayloadEnvelope
@@ -78,20 +89,20 @@ export function processWithdrawals(
 
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
-    stateGloas.latestWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(expectedWithdrawals);
 
-    const unprocessedWithdrawals = stateGloas.builderPendingWithdrawals
-      .getAllReadonly()
-      .slice(0, processedBuilderWithdrawalsCount)
-      .filter((w) => !isBuilderPaymentWithdrawable(stateGloas, w));
-    const remainingWithdrawals = stateGloas.builderPendingWithdrawals
-      .sliceFrom(processedBuilderWithdrawalsCount)
-      .getAllReadonly();
+    // Store expected withdrawals for verification
+    stateGloas.payloadExpectedWithdrawals = ssz.capella.Withdrawals.toViewDU(expectedWithdrawals);
 
-    stateGloas.builderPendingWithdrawals = ssz.gloas.BeaconState.fields.builderPendingWithdrawals.toViewDU([
-      ...unprocessedWithdrawals,
-      ...remainingWithdrawals,
-    ]);
+    // Update builder pending withdrawals queue
+    stateGloas.builderPendingWithdrawals = stateGloas.builderPendingWithdrawals.sliceFrom(
+      processedBuilderWithdrawalsCount
+    );
+
+    // Update next builder index for sweep
+    if (stateGloas.builders.length > 0) {
+      const nextIndex = stateGloas.nextWithdrawalBuilderIndex + processedBuildersSweepCount;
+      stateGloas.nextWithdrawalBuilderIndex = nextIndex % stateGloas.builders.length;
+    }
   }
   // Update the nextWithdrawalIndex
   // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/capella/beacon-chain.md#new-update_next_withdrawal_index
@@ -116,10 +127,14 @@ export function processWithdrawals(
 function getBuilderWithdrawals(
   state: CachedBeaconStateGloas,
   withdrawalIndex: number,
-  balanceAfterWithdrawals: Map<ValidatorIndex, number>
+  priorWithdrawals: capella.Withdrawal[],
+  builderBalanceAfterWithdrawals: Map<number, number>
 ): {builderWithdrawals: capella.Withdrawal[]; withdrawalIndex: number; processedCount: number} {
+  const withdrawalsLimit = MAX_WITHDRAWALS_PER_PAYLOAD - 1;
+  if (priorWithdrawals.length > withdrawalsLimit) {
+    throw Error(`Prior withdrawals exceed limit: ${priorWithdrawals.length} > ${withdrawalsLimit}`);
+  }
   const builderWithdrawals: capella.Withdrawal[] = [];
-  const epoch = state.epochCtx.epoch;
   const allBuilderPendingWithdrawals =
     state.builderPendingWithdrawals.length <= MAX_WITHDRAWALS_PER_PAYLOAD
       ? state.builderPendingWithdrawals.getAllReadonly()
@@ -127,55 +142,103 @@ function getBuilderWithdrawals(
 
   let processedCount = 0;
   for (let i = 0; i < state.builderPendingWithdrawals.length; i++) {
+    // Check combined length against limit
+    const allWithdrawals = priorWithdrawals.length + builderWithdrawals.length;
+    if (allWithdrawals >= withdrawalsLimit) {
+      break;
+    }
+
     const withdrawal = allBuilderPendingWithdrawals
       ? allBuilderPendingWithdrawals[i]
       : state.builderPendingWithdrawals.getReadonly(i);
 
-    if (withdrawal.withdrawableEpoch > epoch || builderWithdrawals.length === MAX_WITHDRAWALS_PER_PAYLOAD) {
-      break;
+    const builderIndex = withdrawal.builderIndex;
+
+    // Get builder balance (from builder.balance, not state.balances)
+    let balance = builderBalanceAfterWithdrawals.get(builderIndex);
+    if (balance === undefined) {
+      balance = state.builders.getReadonly(builderIndex).balance;
+      builderBalanceAfterWithdrawals.set(builderIndex, balance);
     }
 
-    if (isBuilderPaymentWithdrawable(state, withdrawal)) {
-      const builderIndex = withdrawal.builderIndex;
-      const builder = state.validators.get(withdrawal.builderIndex);
+    // Use the withdrawal amount directly as specified in the spec
+    builderWithdrawals.push({
+      index: withdrawalIndex,
+      validatorIndex: convertBuilderIndexToValidatorIndex(builderIndex),
+      address: withdrawal.feeRecipient,
+      amount: BigInt(withdrawal.amount),
+    });
+    withdrawalIndex++;
+    builderBalanceAfterWithdrawals.set(builderIndex, balance - withdrawal.amount);
 
-      let balance = balanceAfterWithdrawals.get(builderIndex);
-      if (balance === undefined) {
-        balance = state.balances.get(builderIndex);
-        balanceAfterWithdrawals.set(builderIndex, balance);
-      }
-
-      let withdrawableBalance = 0;
-
-      if (builder.slashed) {
-        withdrawableBalance = balance < withdrawal.amount ? balance : withdrawal.amount;
-      } else if (balance > MIN_ACTIVATION_BALANCE) {
-        withdrawableBalance =
-          balance - MIN_ACTIVATION_BALANCE < withdrawal.amount ? balance - MIN_ACTIVATION_BALANCE : withdrawal.amount;
-      }
-
-      if (withdrawableBalance > 0) {
-        builderWithdrawals.push({
-          index: withdrawalIndex,
-          validatorIndex: withdrawal.builderIndex,
-          address: withdrawal.feeRecipient,
-          amount: BigInt(withdrawableBalance),
-        });
-        withdrawalIndex++;
-        balanceAfterWithdrawals.set(builderIndex, balance - withdrawableBalance);
-      }
-    }
     processedCount++;
   }
 
   return {builderWithdrawals, withdrawalIndex, processedCount};
 }
 
+function getBuildersSweepWithdrawals(
+  state: CachedBeaconStateGloas,
+  withdrawalIndex: number,
+  numPriorWithdrawal: number,
+  builderBalanceAfterWithdrawals: Map<number, number>
+): {buildersSweepWithdrawals: capella.Withdrawal[]; withdrawalIndex: number; processedCount: number} {
+  const withdrawalsLimit = MAX_WITHDRAWALS_PER_PAYLOAD - 1;
+  if (numPriorWithdrawal > withdrawalsLimit) {
+    throw Error(`Prior withdrawals exceed limit: ${numPriorWithdrawal} > ${withdrawalsLimit}`);
+  }
+  const buildersSweepWithdrawals: capella.Withdrawal[] = [];
+  const epoch = state.epochCtx.epoch;
+  const builders = state.builders;
+
+  // Return early if no builders
+  if (builders.length === 0) {
+    return {buildersSweepWithdrawals, withdrawalIndex, processedCount: 0};
+  }
+
+  const buildersLimit = Math.min(builders.length, MAX_BUILDERS_PER_WITHDRAWALS_SWEEP);
+  let processedCount = 0;
+
+  for (let n = 0; n < buildersLimit; n++) {
+    if (buildersSweepWithdrawals.length + numPriorWithdrawal >= withdrawalsLimit) {
+      break;
+    }
+
+    // Get next builder in turn
+    const builderIndex = (state.nextWithdrawalBuilderIndex + n) % builders.length;
+    const builder = builders.getReadonly(builderIndex);
+
+    // Get builder balance
+    let balance = builderBalanceAfterWithdrawals.get(builderIndex);
+    if (balance === undefined) {
+      balance = builder.balance;
+      builderBalanceAfterWithdrawals.set(builderIndex, balance);
+    }
+
+    // Check if builder is withdrawable and has balance
+    if (builder.withdrawableEpoch <= epoch && balance > 0) {
+      // Withdraw full balance to builder's execution address
+      buildersSweepWithdrawals.push({
+        index: withdrawalIndex,
+        validatorIndex: convertBuilderIndexToValidatorIndex(builderIndex),
+        address: builder.executionAddress,
+        amount: BigInt(balance),
+      });
+      withdrawalIndex++;
+      builderBalanceAfterWithdrawals.set(builderIndex, 0);
+    }
+
+    processedCount++;
+  }
+
+  return {buildersSweepWithdrawals, withdrawalIndex, processedCount};
+}
+
 function getPendingPartialWithdrawals(
   state: CachedBeaconStateElectra,
   withdrawalIndex: number,
   numPriorWithdrawal: number,
-  balanceAfterWithdrawals: Map<ValidatorIndex, number>
+  validatorBalanceAfterWithdrawals: Map<ValidatorIndex, number>
 ): {pendingPartialWithdrawals: capella.Withdrawal[]; withdrawalIndex: number; processedCount: number} {
   const epoch = state.epochCtx.epoch;
   const pendingPartialWithdrawals: capella.Withdrawal[] = [];
@@ -203,17 +266,17 @@ function getPendingPartialWithdrawals(
       : state.pendingPartialWithdrawals.getReadonly(i);
     if (
       withdrawal.withdrawableEpoch > epoch ||
-      pendingPartialWithdrawals.length + numPriorWithdrawal === partialWithdrawalBound
+      pendingPartialWithdrawals.length + numPriorWithdrawal >= partialWithdrawalBound
     ) {
       break;
     }
 
     const validatorIndex = withdrawal.validatorIndex;
     const validator = validators.getReadonly(validatorIndex);
-    let balance = balanceAfterWithdrawals.get(validatorIndex);
+    let balance = validatorBalanceAfterWithdrawals.get(validatorIndex);
     if (balance === undefined) {
       balance = state.balances.get(validatorIndex);
-      balanceAfterWithdrawals.set(validatorIndex, balance);
+      validatorBalanceAfterWithdrawals.set(validatorIndex, balance);
     }
 
     if (
@@ -231,7 +294,7 @@ function getPendingPartialWithdrawals(
         amount: withdrawableBalance,
       });
       withdrawalIndex++;
-      balanceAfterWithdrawals.set(validatorIndex, balance - Number(withdrawableBalance));
+      validatorBalanceAfterWithdrawals.set(validatorIndex, balance - Number(withdrawableBalance));
     }
     processedCount++;
   }
@@ -244,7 +307,7 @@ function getValidatorsSweepWithdrawals(
   state: CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas,
   withdrawalIndex: number,
   numPriorWithdrawal: number,
-  balanceAfterWithdrawals: Map<ValidatorIndex, number>
+  validatorBalanceAfterWithdrawals: Map<ValidatorIndex, number>
 ): {sweepWithdrawals: capella.Withdrawal[]; processedCount: number} {
   const sweepWithdrawals: capella.Withdrawal[] = [];
   const epoch = state.epochCtx.epoch;
@@ -264,13 +327,13 @@ function getValidatorsSweepWithdrawals(
     const validatorIndex = (nextWithdrawalValidatorIndex + n) % validators.length;
 
     const validator = validators.getReadonly(validatorIndex);
-    let balance = balanceAfterWithdrawals.get(validatorIndex);
+    let balance = validatorBalanceAfterWithdrawals.get(validatorIndex);
     if (balance === undefined) {
       balance = balances.get(validatorIndex);
-      balanceAfterWithdrawals.set(validatorIndex, balance);
+      validatorBalanceAfterWithdrawals.set(validatorIndex, balance);
     }
 
-    const {withdrawableEpoch, withdrawalCredentials, effectiveBalance} = validator;
+    const {withdrawableEpoch, withdrawalCredentials} = validator;
     const hasWithdrawableCredentials = isPostElectra
       ? hasExecutionWithdrawalCredential(withdrawalCredentials)
       : hasEth1WithdrawalCredential(withdrawalCredentials);
@@ -290,13 +353,11 @@ function getValidatorsSweepWithdrawals(
         amount: BigInt(balance),
       });
       withdrawalIndex++;
-      balanceAfterWithdrawals.set(validatorIndex, 0);
-    } else if (
-      effectiveBalance === (isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE) &&
-      balance > effectiveBalance
-    ) {
+      validatorBalanceAfterWithdrawals.set(validatorIndex, 0);
+    } else if (isPartiallyWithdrawableValidator(fork, validator, balance)) {
       // capella partial withdrawal
-      const partialAmount = balance - effectiveBalance;
+      const maxEffectiveBalance = isPostElectra ? getMaxEffectiveBalance(withdrawalCredentials) : MAX_EFFECTIVE_BALANCE;
+      const partialAmount = balance - maxEffectiveBalance;
       sweepWithdrawals.push({
         index: withdrawalIndex,
         validatorIndex,
@@ -304,7 +365,7 @@ function getValidatorsSweepWithdrawals(
         amount: BigInt(partialAmount),
       });
       withdrawalIndex++;
-      balanceAfterWithdrawals.set(validatorIndex, balance - partialAmount);
+      validatorBalanceAfterWithdrawals.set(validatorIndex, balance - partialAmount);
     }
     processedCount++;
   }
@@ -317,7 +378,16 @@ function applyWithdrawals(
   withdrawals: capella.Withdrawal[]
 ): void {
   for (const withdrawal of withdrawals) {
-    decreaseBalance(state, withdrawal.validatorIndex, Number(withdrawal.amount));
+    if (isBuilderIndex(withdrawal.validatorIndex)) {
+      // Handle builder withdrawal
+      const builderIndex = convertValidatorIndexToBuilderIndex(withdrawal.validatorIndex);
+      const builder = (state as CachedBeaconStateGloas).builders.get(builderIndex);
+      const withdrawalAmount = Number(withdrawal.amount);
+      builder.balance -= Math.min(withdrawalAmount, builder.balance);
+    } else {
+      // Handle validator withdrawal
+      decreaseBalance(state, withdrawal.validatorIndex, Number(withdrawal.amount));
+    }
   }
 }
 
@@ -328,6 +398,7 @@ export function getExpectedWithdrawals(
   expectedWithdrawals: capella.Withdrawal[];
   processedBuilderWithdrawalsCount: number;
   processedPartialWithdrawalsCount: number;
+  processedBuildersSweepCount: number;
   processedValidatorSweepCount: number;
 } {
   if (fork < ForkSeq.capella) {
@@ -337,20 +408,28 @@ export function getExpectedWithdrawals(
   let withdrawalIndex = state.nextWithdrawalIndex;
 
   const expectedWithdrawals: capella.Withdrawal[] = [];
-  // Map to track balances after applying withdrawals
+  // Separate maps to track balances after applying withdrawals
   // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/capella/beacon-chain.md#new-get_balance_after_withdrawals
-  const balanceAfterWithdrawals = new Map<ValidatorIndex, number>();
+  const builderBalanceAfterWithdrawals = new Map<BuilderIndex, number>();
+  const validatorBalanceAfterWithdrawals = new Map<ValidatorIndex, number>();
   // partialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
   let processedPartialWithdrawalsCount = 0;
   // builderWithdrawalsCount is withdrawals coming from builder payments since Gloas (EIP-7732)
   let processedBuilderWithdrawalsCount = 0;
+  // buildersSweepCount is withdrawals from builder sweep since Gloas (EIP-7732)
+  let processedBuildersSweepCount = 0;
 
   if (fork >= ForkSeq.gloas) {
     const {
       builderWithdrawals,
       withdrawalIndex: newWithdrawalIndex,
       processedCount,
-    } = getBuilderWithdrawals(state as CachedBeaconStateGloas, withdrawalIndex, balanceAfterWithdrawals);
+    } = getBuilderWithdrawals(
+      state as CachedBeaconStateGloas,
+      withdrawalIndex,
+      expectedWithdrawals,
+      builderBalanceAfterWithdrawals
+    );
 
     expectedWithdrawals.push(...builderWithdrawals);
     withdrawalIndex = newWithdrawalIndex;
@@ -366,7 +445,7 @@ export function getExpectedWithdrawals(
       state as CachedBeaconStateElectra,
       withdrawalIndex,
       expectedWithdrawals.length,
-      balanceAfterWithdrawals
+      validatorBalanceAfterWithdrawals
     );
 
     expectedWithdrawals.push(...pendingPartialWithdrawals);
@@ -374,12 +453,29 @@ export function getExpectedWithdrawals(
     processedPartialWithdrawalsCount = processedCount;
   }
 
+  if (fork >= ForkSeq.gloas) {
+    const {
+      buildersSweepWithdrawals,
+      withdrawalIndex: newWithdrawalIndex,
+      processedCount,
+    } = getBuildersSweepWithdrawals(
+      state as CachedBeaconStateGloas,
+      withdrawalIndex,
+      expectedWithdrawals.length,
+      builderBalanceAfterWithdrawals
+    );
+
+    expectedWithdrawals.push(...buildersSweepWithdrawals);
+    withdrawalIndex = newWithdrawalIndex;
+    processedBuildersSweepCount = processedCount;
+  }
+
   const {sweepWithdrawals, processedCount: processedValidatorSweepCount} = getValidatorsSweepWithdrawals(
     fork,
     state,
     withdrawalIndex,
     expectedWithdrawals.length,
-    balanceAfterWithdrawals
+    validatorBalanceAfterWithdrawals
   );
 
   expectedWithdrawals.push(...sweepWithdrawals);
@@ -388,6 +484,7 @@ export function getExpectedWithdrawals(
     expectedWithdrawals,
     processedBuilderWithdrawalsCount,
     processedPartialWithdrawalsCount,
+    processedBuildersSweepCount,
     processedValidatorSweepCount,
   };
 }

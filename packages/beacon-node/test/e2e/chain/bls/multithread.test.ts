@@ -13,6 +13,7 @@ describe("chain / bls / multithread queue", () => {
   const sets: ISignatureSet[] = [];
   const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
   const sameMessage = Buffer.alloc(32, 100);
+  const index2pubkey: PublicKey[] = [];
 
   beforeAll(() => {
     for (let i = 0; i < 3; i++) {
@@ -30,6 +31,7 @@ describe("chain / bls / multithread queue", () => {
         publicKey: pk,
         signature: sk.sign(sameMessage).toBytes(),
       });
+      index2pubkey.push(pk);
     }
   });
 
@@ -47,7 +49,7 @@ describe("chain / bls / multithread queue", () => {
   });
 
   async function initializePool(): Promise<BlsMultiThreadWorkerPool> {
-    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null});
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null, index2pubkey});
     // await terminating all workers
     afterEachCallbacks.push(() => pool.close());
     // Wait until initialized

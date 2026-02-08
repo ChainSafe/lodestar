@@ -56,3 +56,8 @@ export class SeenAttesters {
  * Keeps a cache to filter aggregated attestations from the same aggregators in the same epoch
  */
 export class SeenAggregators extends SeenAttesters {}
+
+/**
+ * Keeps a cache to filter payload attestations from the same attesters in the same epoch
+ */
+export class SeenPayloadAttesters extends SeenAttesters {}

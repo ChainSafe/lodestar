@@ -9,9 +9,11 @@ describe("BlsVerifier ", () => {
   // take time for creating thread pool
   const numKeys = 3;
   const secretKeys = Array.from({length: numKeys}, (_, i) => SecretKey.fromKeygen(Buffer.alloc(32, i)));
+  // Create a mock index2pubkey that maps indices to public keys
+  const index2pubkey = secretKeys.map((sk) => sk.toPublicKey());
   const verifiers = [
-    new BlsSingleThreadVerifier({metrics: null}),
-    new BlsMultiThreadWorkerPool({}, {metrics: null, logger: testLogger()}),
+    new BlsSingleThreadVerifier({metrics: null, index2pubkey}),
+    new BlsMultiThreadWorkerPool({}, {metrics: null, logger: testLogger(), index2pubkey}),
   ];
 
   for (const verifier of verifiers) {

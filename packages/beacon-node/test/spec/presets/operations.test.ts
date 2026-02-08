@@ -103,12 +103,12 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   },
 
   deposit_request: (state, testCase: {deposit_request: electra.DepositRequest}) => {
-    blockFns.processDepositRequest(state as CachedBeaconStateElectra, testCase.deposit_request);
+    const fork = state.config.getForkSeq(state.slot);
+    blockFns.processDepositRequest(fork, state as CachedBeaconStateElectra, testCase.deposit_request);
   },
 
   consolidation_request: (state, testCase: {consolidation_request: electra.ConsolidationRequest}) => {
-    const fork = state.config.getForkSeq(state.slot);
-    blockFns.processConsolidationRequest(fork, state as CachedBeaconStateElectra, testCase.consolidation_request);
+    blockFns.processConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation_request);
   },
 
   execution_payload_bid: (state, testCase: {block: gloas.BeaconBlock}) => {

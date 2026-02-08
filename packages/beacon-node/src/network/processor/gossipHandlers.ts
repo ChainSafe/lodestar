@@ -48,6 +48,8 @@ import {
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {validateGossipDataColumnSidecar} from "../../chain/validation/dataColumnSidecar.js";
+import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
+import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
 import {
   AggregateAndProofValidationResult,
   GossipAttestation,
@@ -64,6 +66,7 @@ import {
 } from "../../chain/validation/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
+import {validateGossipPayloadAttestationMessage} from "../../chain/validation/payloadAttestationMessage.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -436,14 +439,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         blsVerifyOnMainThread: true,
         // to track block process steps
         seenTimestampSec,
-        // gossip block is validated, we want to process it asap
-        eagerPersistBlock: true,
       })
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
-        chain.seenBlockInputCache.prune(blockInput.blockRootHex);
       })
       .catch((e) => {
         // Adjust verbosity based on error type
@@ -579,7 +579,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           break;
       }
 
-      if (!blockInput.hasAllData()) {
+      if (!blockInput.hasComputedAllData()) {
         // immediately attempt fetch of data columns from execution engine
         chain.getBlobsTracker.triggerGetBlobs(blockInput);
         // if we've received at least half of the columns, trigger reconstruction of the rest
@@ -817,6 +817,51 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+    },
+    [GossipType.execution_payload]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
+      const {serializedData} = gossipData;
+      const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
+      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+
+      // TODO GLOAS: Handle valid envelope. Need an import flow that calls `processExecutionPayloadEnvelope` and fork choice
+    },
+    [GossipType.payload_attestation_message]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.payload_attestation_message>) => {
+      const {serializedData} = gossipData;
+      const payloadAttestationMessage = sszDeserialize(topic, serializedData);
+      const validationResult = await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
+
+      try {
+        const insertOutcome = chain.payloadAttestationPool.add(
+          payloadAttestationMessage,
+          validationResult.attDataRootHex,
+          validationResult.validatorCommitteeIndex
+        );
+        metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
+      } catch (e) {
+        logger.error("Error adding to payloadAttestation pool", {}, e as Error);
+      }
+    },
+    [GossipType.execution_payload_bid]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
+      const {serializedData} = gossipData;
+      const executionPayloadBid = sszDeserialize(topic, serializedData);
+      await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
+
+      // Handle valid payload bid by storing in a bid pool
+      try {
+        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid.message);
+        metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
+      } catch (e) {
+        logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
+      }
     },
   };
 }

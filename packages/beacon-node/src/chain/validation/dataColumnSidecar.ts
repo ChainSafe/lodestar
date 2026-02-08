@@ -11,7 +11,7 @@ import {
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
 import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
-import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
 import {
@@ -106,7 +106,7 @@ export async function validateGossipDataColumnSidecar(
   // this is something we should change this in the future to make the code airtight to the spec.
   // 7) [REJECT] The sidecar's block's parent passes validation.
   const blockState = await chain.regen
-    .getBlockSlotState(parentRoot, blockHeader.slot, {dontTransferCache: true}, RegenCaller.validateGossipDataColumn)
+    .getBlockSlotState(parentBlock, blockHeader.slot, {dontTransferCache: true}, RegenCaller.validateGossipDataColumn)
     .catch(() => {
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
         code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
@@ -136,7 +136,6 @@ export async function validateGossipDataColumnSidecar(
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
     const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
       chain.config,
-      chain.index2pubkey,
       blockState.slot,
       dataColumnSidecar.signedBlockHeader
     );
@@ -319,7 +318,7 @@ export async function validateBlockDataColumnSidecars(
   const firstSidecarSignedBlockHeader = dataColumnSidecars[0].signedBlockHeader;
   const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
-  if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
+  if (!byteArrayEquals(blockRoot, firstBlockRoot)) {
     throw new DataColumnSidecarValidationError(
       {
         code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
@@ -337,11 +336,7 @@ export async function validateBlockDataColumnSidecars(
     const slot = firstSidecarSignedBlockHeader.message.slot;
     const signature = firstSidecarSignedBlockHeader.signature;
     if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, rootHex, signature)) {
-      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
-        chain.config,
-        chain.index2pubkey,
-        firstSidecarSignedBlockHeader
-      );
+      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(chain.config, firstSidecarSignedBlockHeader);
 
       if (
         !(await chain.bls.verifySignatureSets([signatureSet], {

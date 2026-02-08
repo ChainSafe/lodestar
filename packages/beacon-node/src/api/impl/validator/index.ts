@@ -1,7 +1,7 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostBellatrix,
@@ -67,10 +67,11 @@ import {
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
-import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
+import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
+import {CheckpointHex} from "../../../chain/stateCache/types.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -413,10 +414,10 @@ export function getValidatorApi(
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
       commonBlockBodyPromise,
-      parentBlockRoot,
+      parentBlock,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
-      parentBlockRoot: Root;
+      parentBlock: ProtoBlock;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -447,7 +448,7 @@ export function getValidatorApi(
       timer = metrics?.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
-        parentBlockRoot,
+        parentBlock,
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
@@ -482,10 +483,10 @@ export function getValidatorApi(
       feeRecipient,
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
-      parentBlockRoot,
+      parentBlock,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
-      parentBlockRoot: Root;
+      parentBlock: ProtoBlock;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -496,7 +497,7 @@ export function getValidatorApi(
       timer = metrics?.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
-        parentBlockRoot,
+        parentBlock,
         randaoReveal,
         graffiti,
         feeRecipient,
@@ -569,7 +570,8 @@ export function getValidatorApi(
     notWhileSyncing();
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-    const {blockRoot: parentBlockRootHex, slot: parentSlot} = chain.getProposerHead(slot);
+    const parentBlock = chain.getProposerHead(slot);
+    const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
     const parentBlockRoot = fromHex(parentBlockRootHex);
     notOnOutOfRangeData(parentBlockRoot);
     metrics?.blockProductionSlotDelta.set(slot - parentSlot);
@@ -638,7 +640,7 @@ export function getValidatorApi(
           // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
-          parentBlockRoot,
+          parentBlock,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -647,7 +649,7 @@ export function getValidatorApi(
           feeRecipient,
           strictFeeRecipientCheck,
           commonBlockBodyPromise,
-          parentBlockRoot,
+          parentBlock,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
@@ -689,7 +691,7 @@ export function getValidatorApi(
       chain
         .produceCommonBlockBody({
           slot,
-          parentBlockRoot,
+          parentBlock,
           randaoReveal,
           graffiti: graffitiBytes,
         })
@@ -1040,9 +1042,7 @@ export function getValidatorApi(
           const res = await getStateResponseWithRegen(chain, startSlot);
 
           const stateViewDU =
-            res.state instanceof Uint8Array
-              ? loadState(config, chain.getHeadState(), res.state).state
-              : res.state.clone();
+            res.state instanceof Uint8Array ? loadState(config, chain.getHeadState(), res.state).state : res.state;
 
           state = createCachedBeaconState(
             stateViewDU,

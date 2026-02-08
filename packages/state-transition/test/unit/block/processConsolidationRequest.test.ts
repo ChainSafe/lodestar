@@ -5,7 +5,6 @@ import {
   BLS_WITHDRAWAL_PREFIX,
   COMPOUNDING_WITHDRAWAL_PREFIX,
   FAR_FUTURE_EPOCH,
-  ForkSeq,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
@@ -52,7 +51,7 @@ describe("processConsolidationRequest", () => {
 
     expect(state.pendingConsolidations.length).eq(0);
 
-    processConsolidationRequest(ForkSeq.electra, state, request);
+    processConsolidationRequest(state, request);
 
     expect(state.pendingConsolidations.length).eq(0);
   });

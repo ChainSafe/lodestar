@@ -5,9 +5,8 @@ import {
   StateHashTreeRootSource,
   stateTransition,
 } from "@lodestar/state-transition";
-import {ErrorAborted, Logger} from "@lodestar/utils";
+import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -59,6 +58,7 @@ export async function verifyBlocksStateTransitionOnly(
         // if block is trusted don't verify proposer or op signature
         verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
         verifySignatures: !useBlsBatchVerify && !validSignatures,
+        dontTransferCache: false,
       },
       {metrics, validatorMonitor}
     );

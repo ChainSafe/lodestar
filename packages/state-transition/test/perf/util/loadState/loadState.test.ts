@@ -57,15 +57,15 @@ describe("loadState", () => {
           pubkey2index.set(pubkey, validatorIndex);
           index2pubkey[validatorIndex] = PublicKey.fromBytes(pubkey);
         }
+        const shufflingGetter = () => seedState.epochCtx.currentShuffling;
         createCachedBeaconState(
           migratedState,
           {
             config: seedState.config,
             pubkey2index,
             index2pubkey,
-            shufflingCache: seedState.epochCtx.shufflingCache,
           },
-          {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
+          {skipSyncPubkeys: true, skipSyncCommitteeCache: true, shufflingGetter}
         );
       },
     });

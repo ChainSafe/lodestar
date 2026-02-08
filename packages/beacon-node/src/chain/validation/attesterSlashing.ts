@@ -43,7 +43,14 @@ export async function validateAttesterSlashing(
   // [REJECT] All of the conditions within process_attester_slashing pass validation.
   try {
     // verifySignature = false, verified in batch below
-    assertValidAttesterSlashing(chain.index2pubkey, state, attesterSlashing, false);
+    assertValidAttesterSlashing(
+      chain.config,
+      chain.index2pubkey,
+      state.slot,
+      state.validators.length,
+      attesterSlashing,
+      false
+    );
   } catch (e) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
@@ -51,12 +58,7 @@ export async function validateAttesterSlashing(
     });
   }
 
-  const signatureSets = getAttesterSlashingSignatureSets(
-    chain.config,
-    chain.index2pubkey,
-    state.slot,
-    attesterSlashing
-  );
+  const signatureSets = getAttesterSlashingSignatureSets(chain.config, state.slot, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,

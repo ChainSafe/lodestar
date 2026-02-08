@@ -1,6 +1,4 @@
-# --platform=$BUILDPLATFORM is used build javascript source with host arch
-# Otherwise TS builds on emulated archs and can be extremely slow (+1h)
-FROM --platform=${BUILDPLATFORM:-amd64} node:24-slim AS build_src
+FROM node:24-slim AS build_src
 ARG COMMIT
 WORKDIR /usr/app
 RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -20,23 +18,11 @@ RUN corepack enable && corepack prepare --activate && \
 # the terminal and in the logs; which is very useful to track tests better.
 RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
-
-# Copy built src + node_modules to build native packages for archs different than host.
-# Note: This step is redundant for the host arch
-FROM node:24-slim AS build_deps
-WORKDIR /usr/app
-RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-COPY --from=build_src /usr/app .
-
-# Rebuild native deps
-RUN corepack enable && pnpm rebuild
-
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
 FROM node:24-slim
 WORKDIR /usr/app
-COPY --from=build_deps /usr/app .
+COPY --from=build_src /usr/app .
 
 # NodeJS applications have a default memory limit of 4GB on most machines.
 # This limit is bit tight for a Mainnet node, it is recommended to raise the limit

@@ -30,7 +30,7 @@ import {
   isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromAsync, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
@@ -133,21 +133,31 @@ export function getBeaconBlockApi({
 
     if (isBlockInputColumns(blockForImport)) {
       for (const dataColumnSidecar of dataColumnSidecars) {
-        blockForImport.addColumn({
-          blockRootHex: blockRoot,
-          columnSidecar: dataColumnSidecar,
-          source: BlockInputSource.api,
-          seenTimestampSec,
-        });
+        blockForImport.addColumn(
+          {
+            blockRootHex: blockRoot,
+            columnSidecar: dataColumnSidecar,
+            source: BlockInputSource.api,
+            seenTimestampSec,
+          },
+          // In multi-BN setups (DVT, fallback), the same block may be published to multiple nodes.
+          // Data columns may arrive via gossip from another node before the API publish completes,
+          // so we allow duplicates here instead of throwing an error.
+          {throwOnDuplicateAdd: false}
+        );
       }
     } else if (isBlockInputBlobs(blockForImport)) {
       for (const blobSidecar of blobSidecars) {
-        blockForImport.addBlob({
-          blockRootHex: blockRoot,
-          blobSidecar,
-          source: BlockInputSource.api,
-          seenTimestampSec,
-        });
+        blockForImport.addBlob(
+          {
+            blockRootHex: blockRoot,
+            blobSidecar,
+            source: BlockInputSource.api,
+            seenTimestampSec,
+          },
+          // Same as above for columns
+          {throwOnDuplicateAdd: false}
+        );
       }
     }
 
@@ -285,7 +295,7 @@ export function getBeaconBlockApi({
       () =>
         // there is no rush to persist block since we published it to gossip anyway
         chain
-          .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
+          .processBlock(blockForImport, opts)
           .catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               chain.emitter.emit(ChainEvent.unknownParent, {
@@ -434,11 +444,13 @@ export function getBeaconBlockApi({
         const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
           nonFinalizedBlocks.map(async (summary) => {
-            const block = await db.block.get(fromHex(summary.blockRoot));
-            if (block) {
-              const canonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
+            const blockResult = await chain.getBlockByRoot(summary.blockRoot);
+            if (blockResult) {
+              const canonical = chain.forkChoice.getCanonicalBlockAtSlot(blockResult.block.message.slot);
               if (canonical) {
-                result.push(toBeaconHeaderResponse(config, block, canonical.blockRoot === summary.blockRoot));
+                result.push(
+                  toBeaconHeaderResponse(config, blockResult.block, canonical.blockRoot === summary.blockRoot)
+                );
                 if (isOptimisticBlock(canonical)) {
                   executionOptimistic = true;
                 }
@@ -492,9 +504,9 @@ export function getBeaconBlockApi({
             finalized = false;
 
             if (summary.blockRoot !== toRootHex(canonicalRoot)) {
-              const block = await db.block.get(fromHex(summary.blockRoot));
-              if (block) {
-                result.push(toBeaconHeaderResponse(config, block));
+              const blockResult = await chain.getBlockByRoot(summary.blockRoot);
+              if (blockResult) {
+                result.push(toBeaconHeaderResponse(config, blockResult.block));
               }
             }
           })
@@ -626,6 +638,7 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
 
       let data: deneb.BlobSidecars;
 
@@ -642,10 +655,7 @@ export function getBeaconBlockApi({
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
-          let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
-          if (dataColumnSidecars.length === 0) {
-            dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
-          }
+          const dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, blockRootHex);
 
           if (dataColumnSidecars.length === 0) {
             throw new ApiError(
@@ -682,10 +692,7 @@ export function getBeaconBlockApi({
           data = [];
         }
       } else if (isForkPostDeneb(fork)) {
-        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
-        if (!blobSidecars) {
-          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
-        }
+        const blobSidecars = await chain.getBlobSidecars(block.message.slot, blockRootHex);
 
         if (!blobSidecars) {
           throw new ApiError(
@@ -715,6 +722,7 @@ export function getBeaconBlockApi({
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
 
       let blobs: deneb.Blobs;
 
@@ -731,10 +739,7 @@ export function getBeaconBlockApi({
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
-          let dataColumnSidecars = await fromAsync(db.dataColumnSidecar.valuesStream(blockRoot));
-          if (dataColumnSidecars.length === 0) {
-            dataColumnSidecars = await fromAsync(db.dataColumnSidecarArchive.valuesStream(block.message.slot));
-          }
+          const dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, blockRootHex);
 
           if (dataColumnSidecars.length === 0) {
             throw new ApiError(
@@ -766,10 +771,7 @@ export function getBeaconBlockApi({
           blobs = [];
         }
       } else if (isForkPostDeneb(fork)) {
-        let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
-        if (!blobSidecars) {
-          ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
-        }
+        const blobSidecars = await chain.getBlobSidecars(block.message.slot, blockRootHex);
 
         if (!blobSidecars) {
           throw new ApiError(
