@@ -96,12 +96,8 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  const envelopeKzgRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(envelope.blobKzgCommitments);
-  if (!byteArrayEquals(committedBid.blobKzgCommitmentsRoot, envelopeKzgRoot)) {
-    throw new Error(
-      `Kzg commitment root mismatch between envelope and committed bid envelope=${toRootHex(envelopeKzgRoot)} committedBid=${toRootHex(committedBid.blobKzgCommitmentsRoot)}`
-    );
-  }
+  // [Removed in v1.7.0-alpha.2] blobKzgCommitments now in bid, not envelope
+  // Verification of commitments is done at bid processing time (process_execution_payload_bid)
 
   if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
     throw new Error(
@@ -146,13 +142,8 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // Verify commitments are under limit
-  const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
-  if (envelope.blobKzgCommitments.length > maxBlobsPerBlock) {
-    throw new Error(
-      `Kzg commitments exceed limit commitment.length=${envelope.blobKzgCommitments.length} limit=${maxBlobsPerBlock}`
-    );
-  }
+  // [Removed in v1.7.0-alpha.2] Commitments limit check moved to process_execution_payload_bid
+  // blobKzgCommitments now in bid, not envelope
 
   // Skipped: Verify the execution payload is valid
 }

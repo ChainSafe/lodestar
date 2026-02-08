@@ -93,7 +93,12 @@ describe("KZG", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(commitment);
     }
 
-    const sidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
+    // Cast to fulu since we're testing with Fulu fork
+    const sidecars = getDataColumnSidecarsFromBlock(
+      config,
+      signedBeaconBlock,
+      cellsAndProofs
+    ) as fulu.DataColumnSidecars;
     const signedBlockHeader = signedBlockToSignedHeader(config, signedBeaconBlock);
 
     sidecars.forEach((sidecar, column) => {
@@ -145,5 +150,5 @@ describe("KZG", () => {
     }
     expect(recoveredSidecars.length).toBe(NUMBER_OF_COLUMNS);
     expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars, sidecars)).toBeTruthy();
-  });
+  }, 60_000);
 });

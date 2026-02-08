@@ -17,10 +17,13 @@ export function getIndexedPayloadAttestationSignatureSet(
 
 export function getPayloadAttestationDataSigningRoot(
   config: BeaconConfig,
-  stateSlot: Slot,
+  _stateSlot: Slot,
   data: gloas.PayloadAttestationData
 ): Uint8Array {
-  const domain = config.getDomain(stateSlot, DOMAIN_PTC_ATTESTER);
+  // Use attestation data's slot for domain epoch calculation, not state slot
+  // Spec: get_domain(state, DOMAIN_PTC_ATTESTER, compute_epoch_at_slot(attestation.data.slot))
+  // https://github.com/ethereum/consensus-specs/pull/4836
+  const domain = config.getDomain(data.slot, DOMAIN_PTC_ATTESTER);
 
   return computeSigningRoot(ssz.gloas.PayloadAttestationData, data, domain);
 }

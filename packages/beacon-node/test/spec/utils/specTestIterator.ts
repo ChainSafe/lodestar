@@ -72,7 +72,8 @@ export const defaultSkipOpts: SkipOpts = {
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    /^gloas\/(finality|fork_choice|sanity|transition)\/.*$/,
+    // Skip finality/fork_choice for Gloas (still WIP), but run sanity and transition tests
+    /^gloas\/(finality|fork_choice)\/.*$/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
   ],
   skippedTests: [],

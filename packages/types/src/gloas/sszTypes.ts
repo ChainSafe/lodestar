@@ -133,7 +133,8 @@ export const ExecutionPayloadBid = new ContainerType(
     slot: Slot,
     value: UintNum64,
     executionPayment: UintNum64,
-    blobKzgCommitmentsRoot: Root,
+    // [Modified in v1.7.0-alpha.2] was blobKzgCommitmentsRoot: Root
+    blobKzgCommitments: denebSsz.BlobKzgCommitments,
   },
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
@@ -153,7 +154,7 @@ export const ExecutionPayloadEnvelope = new ContainerType(
     builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
     slot: Slot,
-    blobKzgCommitments: denebSsz.BlobKzgCommitments,
+    // [Removed in v1.7.0-alpha.2] blobKzgCommitments now in ExecutionPayloadBid
     stateRoot: Root,
   },
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
@@ -272,7 +273,7 @@ export const DataColumnSidecar = new ContainerType(
   {
     index: fuluSsz.DataColumnSidecar.fields.index,
     column: fuluSsz.DataColumnSidecar.fields.column,
-    kzgCommitments: fuluSsz.DataColumnSidecar.fields.kzgCommitments,
+    // [Removed in v1.7.0-alpha.2] kzgCommitments now retrieved from bid via block lookup
     kzgProofs: fuluSsz.DataColumnSidecar.fields.kzgProofs,
     // signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader, // Removed in GLOAS:EIP7732
     // kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof, // Removed in GLOAS:EIP7732

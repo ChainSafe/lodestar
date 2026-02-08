@@ -319,7 +319,7 @@ function getValidatorsSweepWithdrawals(
   // Just run a bounded loop max iterating over all withdrawals
   // however breaks out once we have MAX_WITHDRAWALS_PER_PAYLOAD
   for (let n = 0; n < validatorsLimit; n++) {
-    if (sweepWithdrawals.length + numPriorWithdrawal === MAX_WITHDRAWALS_PER_PAYLOAD) {
+    if (sweepWithdrawals.length + numPriorWithdrawal >= MAX_WITHDRAWALS_PER_PAYLOAD) {
       break;
     }
 
