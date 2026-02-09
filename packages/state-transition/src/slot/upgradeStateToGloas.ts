@@ -80,7 +80,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 }
 
 /**
- * Applies any pending deposits for builders, effectively onboarding builders at the fork
+ * Applies any pending deposits for builders to onboard builders during the fork transition
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.2/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
  */
 function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
