@@ -90,15 +90,20 @@ export class JobItemQueue<Args extends any[], R> {
     }
 
     return new Promise<void>((resolve, reject) => {
-      this.spaceWaiters.push(resolve);
+      const wrappedResolve = (): void => {
+        this.opts.signal.removeEventListener("abort", onAbort);
+        resolve();
+      };
 
       const onAbort = (): void => {
-        const index = this.spaceWaiters.indexOf(resolve);
+        const index = this.spaceWaiters.indexOf(wrappedResolve);
         if (index >= 0) {
           this.spaceWaiters.splice(index, 1);
         }
         reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
       };
+
+      this.spaceWaiters.push(wrappedResolve);
       this.opts.signal.addEventListener("abort", onAbort, {once: true});
     });
   }
