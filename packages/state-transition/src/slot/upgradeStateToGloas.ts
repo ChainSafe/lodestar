@@ -69,8 +69,6 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
 
-  // Applies any pending deposits for builders, effectively onboarding builders at the fork.
-  // Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.2/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
   onboardBuildersFromPendingDeposits(stateGloas);
 
   stateGloas.commit();
@@ -81,14 +79,12 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   return stateGloas;
 }
 
+/**
+ * Applies any pending deposits for builders, effectively onboarding builders at the fork
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.2/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
+ */
 function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
-  const trackedValidatorPubkeys = new Set<string>();
-
-  // Pre-compute builder pubkeys set for O(1) lookup instead of O(n) per deposit
-  const builderPubkeys = new Set<string>();
-  for (let i = 0; i < state.builders.length; i++) {
-    builderPubkeys.add(toHex(state.builders.getReadonly(i).pubkey));
-  }
+  const validatorPubkeys = new Set<string>();
 
   const remainingPendingDeposits = state.pendingDeposits.sliceFrom(state.pendingDeposits.length);
   for (let i = 0; i < state.pendingDeposits.length; i++) {
@@ -98,12 +94,19 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     const pubkeyHex = toHex(deposit.pubkey);
 
     // Deposits for existing validators stay in pending queue
-    if (isValidatorKnown(state, validatorIndex) || trackedValidatorPubkeys.has(pubkeyHex)) {
+    if (isValidatorKnown(state, validatorIndex) || validatorPubkeys.has(pubkeyHex)) {
       remainingPendingDeposits.push(deposit);
       continue;
     }
 
-    // If deposit is for an existing builder or has builder credentials, apply it
+    // If the pubkey is associated with a builder that was created in a previous iteration or it
+    // is a builder deposit, try to apply the deposit to the new/existing builder. Note that the
+    // function applyDepositForBuilder can mutate the state and may add a builder to the registry.
+    // For this reason, the set of builder pubkeys must be recomputed each iteration.
+    const builderPubkeys = new Set<string>();
+    for (let j = 0; j < state.builders.length; j++) {
+      builderPubkeys.add(toHex(state.builders.getReadonly(j).pubkey));
+    }
     const isExistingBuilder = builderPubkeys.has(pubkeyHex);
     const hasBuilderCredentials = isBuilderWithdrawalCredential(deposit.withdrawalCredentials);
     if (isExistingBuilder || hasBuilderCredentials) {
@@ -115,13 +118,13 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
         deposit.signature,
         deposit.slot
       );
-      // Track newly added builder pubkeys for subsequent deposits
-      builderPubkeys.add(pubkeyHex);
       continue;
     }
 
-    // Track new validator pubkeys with valid signatures so subsequent deposits don't create a builder
-    // Deposits with invalid signatures are dropped here since they would fail in apply_pending_deposit anyway.
+    // If there is a pending deposit for a new validator that has a valid signature, track the
+    // pubkey so that subsequent builder deposits for the same pubkey stay in pending (applied to
+    // the validator later) rather than creating a builder. Deposits with invalid signatures are
+    // dropped here since they would fail in apply_pending_deposit anyway.
     if (
       isValidDepositSignature(
         state.config,
@@ -131,7 +134,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
         deposit.signature
       )
     ) {
-      trackedValidatorPubkeys.add(pubkeyHex);
+      validatorPubkeys.add(pubkeyHex);
       remainingPendingDeposits.push(deposit);
     }
   }

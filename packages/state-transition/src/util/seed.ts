@@ -268,8 +268,7 @@ export function getNextSyncCommitteeIndices(
 }
 
 /**
- * Compute PTC for a single slot, using the correct spec algorithm (shuffle_indices=False).
- * This is computed lazily on demand rather than eagerly for all slots.
+ * Compute PTC for a single slot lazily on demand rather than eagerly for all slots.
  */
 export function computePayloadTimelinessCommitteeForSlot(
   epochSeed: Uint8Array,
@@ -286,7 +285,7 @@ export function computePayloadTimelinessCommitteeForSlot(
     offset += c.length;
   }
   const slotSeed = digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]));
-  // Use the correct spec algorithm: shuffle_indices=False (no shuffling)
+  // Use shuffle_indices=False (no shuffling)
   return new Uint32Array(
     naiveComputePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, allIndices, slotSeed)
   );
@@ -319,9 +318,7 @@ export function naiveComputePayloadTimelinessCommitteeIndices(
     // Only recompute hash every 16 iterations (digest result changes with Math.floor(i / 16))
     const block = Math.floor(i / 16);
     if (block !== lastBlock) {
-      hashInput.writeUInt32LE(block, seed.length);
-      // Zero the upper 4 bytes for correct 8-byte little-endian encoding
-      hashInput.writeUInt32LE(0, seed.length + 4);
+      hashInput.writeBigUInt64LE(BigInt(block), seed.length);
       randomBytes = digest(hashInput);
       lastBlock = block;
     }

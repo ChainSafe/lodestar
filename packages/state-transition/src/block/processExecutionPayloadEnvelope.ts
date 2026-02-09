@@ -96,9 +96,6 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // [Removed in v1.7.0-alpha.2] blobKzgCommitments now in bid, not envelope
-  // Verification of commitments is done at bid processing time (process_execution_payload_bid)
-
   if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
     throw new Error(
       `Prev randao mismatch between committed bid and payload committedBid=${toHex(committedBid.prevRandao)} payload=${toHex(payload.prevRandao)}`
@@ -141,9 +138,6 @@ function validateExecutionPayloadEnvelope(
       `Timestamp mismatch between envelope's payload and state envelope=${payload.timestamp} state=${computeTimeAtSlot(state.config, state.slot, state.genesisTime)}`
     );
   }
-
-  // [Removed in v1.7.0-alpha.2] Commitments limit check moved to process_execution_payload_bid
-  // blobKzgCommitments now in bid, not envelope
 
   // Skipped: Verify the execution payload is valid
 }

@@ -93,12 +93,7 @@ describe("KZG", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(commitment);
     }
 
-    // Cast to fulu since we're testing with Fulu fork
-    const sidecars = getDataColumnSidecarsFromBlock(
-      config,
-      signedBeaconBlock,
-      cellsAndProofs
-    ) as fulu.DataColumnSidecars;
+    const sidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
     const signedBlockHeader = signedBlockToSignedHeader(config, signedBeaconBlock);
 
     sidecars.forEach((sidecar, column) => {
