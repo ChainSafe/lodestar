@@ -174,6 +174,42 @@ describe("Job queue", () => {
       await expectRejectedWithLodestarError(waitPromise, new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
       await Promise.allSettled(jobs);
     });
+
+    it("should only wake one waiter per available slot (no thundering herd)", async () => {
+      const controller = new AbortController();
+      const jobQueue = new JobItemQueue<[number], number>(
+        async (n) => {
+          await sleep(jobDuration);
+          return n;
+        },
+        {maxLength, signal: controller.signal}
+      );
+
+      // Fill the queue
+      const jobs = Array.from({length: maxLength}, (_, i) => jobQueue.push(i));
+
+      // Register multiple waiters
+      const resolved: number[] = [];
+      const waiter1 = jobQueue.waitForSpace().then(() => resolved.push(1));
+      const waiter2 = jobQueue.waitForSpace().then(() => resolved.push(2));
+
+      // Wait for one job to complete (frees 1 slot)
+      await sleep(jobDuration + 10);
+
+      // Give microtasks time to settle
+      await sleep(5);
+
+      // Only one waiter should have been resolved (1 slot freed)
+      expect(resolved).toHaveLength(1);
+      expect(resolved[0]).toBe(1);
+
+      // Wait for the rest to complete
+      await Promise.all(jobs);
+      await Promise.all([waiter1, waiter2]);
+      expect(resolved).toHaveLength(2);
+
+      controller.abort();
+    });
   });
 });
 

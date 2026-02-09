@@ -90,17 +90,23 @@ export class JobItemQueue<Args extends any[], R> {
     }
 
     return new Promise<void>((resolve, reject) => {
-      const wrappedResolve = (): void => {
-        this.opts.signal.removeEventListener("abort", onAbort);
-        resolve();
-      };
+      let settled = false;
 
       const onAbort = (): void => {
+        if (settled) return;
+        settled = true;
         const index = this.spaceWaiters.indexOf(wrappedResolve);
         if (index >= 0) {
           this.spaceWaiters.splice(index, 1);
         }
         reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
+      };
+
+      const wrappedResolve = (): void => {
+        if (settled) return;
+        settled = true;
+        this.opts.signal.removeEventListener("abort", onAbort);
+        resolve();
       };
 
       this.spaceWaiters.push(wrappedResolve);
@@ -159,9 +165,14 @@ export class JobItemQueue<Args extends any[], R> {
   };
 
   private notifySpaceWaiters(): void {
-    while (this.spaceWaiters.length > 0 && this.jobs.length < this.opts.maxLength) {
+    // Compute available slots once to avoid thundering herd: resolved waiters
+    // won't push() until the next microtask, so jobs.length doesn't change
+    // inside this loop. Without the cap we'd wake ALL waiters on a single slot.
+    let available = this.opts.maxLength - this.jobs.length;
+    while (available > 0 && this.spaceWaiters.length > 0) {
       const resolve = this.spaceWaiters.shift();
       if (resolve) resolve();
+      available--;
     }
   }
 
