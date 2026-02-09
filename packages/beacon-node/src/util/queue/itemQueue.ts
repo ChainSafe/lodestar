@@ -111,6 +111,10 @@ export class JobItemQueue<Args extends any[], R> {
 
       this.spaceWaiters.push(wrappedResolve);
       this.opts.signal.addEventListener("abort", onAbort, {once: true});
+
+      // Re-check after attaching listener to close the race window where
+      // signal.abort() fires between the initial check and addEventListener
+      if (this.opts.signal.aborted) onAbort();
     });
   }
 
