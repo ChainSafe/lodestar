@@ -1,4 +1,3 @@
-import {pipe} from "it-pipe";
 import {responseEncodeError, responseEncodeSuccess} from "../../src/encoders/responseEncode.js";
 import {RespStatus} from "../../src/interface.js";
 import {Protocol} from "../../src/types.js";
@@ -10,11 +9,8 @@ export async function* responseEncode(responseChunks: ResponseChunk[], protocol:
   for (const chunk of responseChunks) {
     if (chunk.status === RespStatus.SUCCESS) {
       const payload = chunk.payload;
-      yield* pipe(
-        arrToSource([
-          {...payload, boundary: beaconConfig.getForkBoundaryAtEpoch(beaconConfig.forks[payload.fork].epoch)},
-        ]),
-        responseEncodeSuccess(protocol, {onChunk: () => {}})
+      yield* responseEncodeSuccess(protocol, {onChunk: () => {}})(
+        arrToSource([{...payload, boundary: beaconConfig.getForkBoundaryAtEpoch(beaconConfig.forks[payload.fork].epoch)}])
       );
     } else {
       yield* responseEncodeError(protocol, chunk.status, chunk.errorMessage);

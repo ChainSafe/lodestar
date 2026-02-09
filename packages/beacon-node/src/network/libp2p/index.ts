@@ -1,6 +1,6 @@
 import {bootstrap} from "@libp2p/bootstrap";
 import {identify} from "@libp2p/identify";
-import {PrivateKey} from "@libp2p/interface";
+import type {PrivateKey} from "@libp2p/interface";
 import {mdns} from "@libp2p/mdns";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
@@ -74,6 +74,11 @@ export async function createNodeJsLibp2p(
 
   return createLibp2p({
     privateKey,
+    nodeInfo: {
+      name: "lodestar",
+      version: networkOpts.version ?? "unknown",
+      userAgent: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
+    },
     addresses: {
       listen: localMultiaddrs,
       announce: [],
@@ -93,7 +98,7 @@ export async function createNodeJsLibp2p(
         },
       }),
     ],
-    streamMuxers: [mplex({maxInboundStreams: 256, disconnectThreshold: networkOpts.disconnectThreshold})],
+    streamMuxers: [mplex({disconnectThreshold: networkOpts.disconnectThreshold})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics
       ? prometheusMetrics({
@@ -124,7 +129,6 @@ export async function createNodeJsLibp2p(
     datastore,
     services: {
       identify: identify({
-        agentVersion: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
         runOnConnectionOpen: false,
       }),
       // individual components are specified because the components object is a Proxy

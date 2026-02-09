@@ -1,11 +1,12 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {PrivateKey} from "@libp2p/interface";
+import type {PrivateKey} from "@libp2p/interface";
 import {mplex} from "@libp2p/mplex";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {tcp} from "@libp2p/tcp";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import all from "it-all";
-import {Libp2p, createLibp2p} from "libp2p";
+import {createLibp2p} from "libp2p";
+import type {Libp2p} from "libp2p";
 import {afterEach, describe, expect, it} from "vitest";
 import {noise} from "@chainsafe/libp2p-noise";
 import {createBeaconConfig} from "@lodestar/config";
@@ -108,10 +109,15 @@ describe("reqresp encoder", () => {
   }) {
     const stream = await dialer.dialProtocol(toMultiaddr, protocol);
     if (requestChunks) {
-      await stream.sink(requestChunks.map(fromHex));
+      for (const chunk of requestChunks) {
+        if (!stream.send(fromHex(chunk))) {
+          await stream.onDrain();
+        }
+      }
     }
 
-    const chunks = await all(stream.source);
+    await stream.close();
+    const chunks = await all(stream);
     const join = (c: string[]): string => c.join("").replace(/0x/g, "");
     const chunksHex = chunks.map((chunk) => toHex(chunk.slice(0, chunk.byteLength)));
     expect(join(chunksHex)).toEqual(join(expectedChunks));

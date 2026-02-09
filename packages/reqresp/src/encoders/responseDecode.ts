@@ -35,7 +35,7 @@ export function responseDecode(
   }
 ): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<ResponseIncoming> {
   return async function* responseDecodeSink(source) {
-    const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
+    const bufferedSource = new BufferedSource(source[Symbol.asyncIterator]() as AsyncGenerator<Uint8ArrayList>);
 
     let readFirstHeader = false;
     let readFirstResponseChunk = false;

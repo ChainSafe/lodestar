@@ -1,4 +1,4 @@
-import {Libp2p} from "libp2p";
+import type {Libp2p} from "libp2p";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {Logger} from "@lodestar/utils";

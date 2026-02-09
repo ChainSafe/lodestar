@@ -12,7 +12,7 @@ export function abortableSource<T>(
     getError: () => Error;
   }[]
 ): AsyncIterable<T> {
-  const source = sourceArg as AsyncGenerator<T>;
+  const source = sourceArg[Symbol.asyncIterator]() as AsyncGenerator<T>;
 
   async function* abortable(): AsyncIterable<T> {
     // Handler that will hold a reference to the `abort()` promise,
