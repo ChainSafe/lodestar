@@ -91,6 +91,10 @@ export async function importBlock(
   }
 
   // 1. Persist block to hot DB (performed asynchronously to avoid blocking head selection)
+  // Wait for space in the write queue to apply backpressure during sync.
+  // Without this, a supernode syncing from behind can accumulate 30+ blocks worth of column
+  // data in memory (128 columns × 30 blocks) causing OOM before persistence catches up.
+  await this.unfinalizedBlockWrites.waitForSpace();
   void this.unfinalizedBlockWrites.push([blockInput]);
 
   // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable

@@ -24,6 +24,8 @@ export class JobItemQueue<Args extends any[], R> {
   private readonly metrics?: QueueMetrics;
   private runningJobs = 0;
   private lastYield = 0;
+  /** Resolvers waiting for space in the queue */
+  private spaceWaiters: (() => void)[] = [];
 
   constructor(
     private readonly itemProcessor: (...args: Args) => Promise<R>,
@@ -72,6 +74,35 @@ export class JobItemQueue<Args extends any[], R> {
     });
   }
 
+  /**
+   * Returns a promise that resolves when there is space in the queue.
+   * If the queue already has space, resolves immediately (noop).
+   * Use this to apply backpressure when the caller should wait rather than
+   * have push() throw QUEUE_MAX_LENGTH.
+   */
+  async waitForSpace(): Promise<void> {
+    if (this.opts.signal.aborted) {
+      throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
+    }
+
+    if (this.jobs.length < this.opts.maxLength) {
+      return;
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      this.spaceWaiters.push(resolve);
+
+      const onAbort = (): void => {
+        const index = this.spaceWaiters.indexOf(resolve);
+        if (index >= 0) {
+          this.spaceWaiters.splice(index, 1);
+        }
+        reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
+      };
+      this.opts.signal.addEventListener("abort", onAbort, {once: true});
+    });
+  }
+
   getItems(): {args: Args; addedTimeMs: number}[] {
     return this.jobs.map((job) => ({args: job.args, addedTimeMs: job.addedTimeMs}));
   }
@@ -115,9 +146,19 @@ export class JobItemQueue<Args extends any[], R> {
 
     this.runningJobs = Math.max(0, this.runningJobs - 1);
 
+    // Notify any waiters that space is available
+    this.notifySpaceWaiters();
+
     // Potentially run a new job
     void this.runJob();
   };
+
+  private notifySpaceWaiters(): void {
+    while (this.spaceWaiters.length > 0 && this.jobs.length < this.opts.maxLength) {
+      const resolve = this.spaceWaiters.shift();
+      if (resolve) resolve();
+    }
+  }
 
   private abortAllJobs = (): void => {
     while (this.jobs.length > 0) {

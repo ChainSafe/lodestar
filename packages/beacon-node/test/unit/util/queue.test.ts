@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {sleep} from "@lodestar/utils";
-import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue/index.js";
+import {JobFnQueue, JobItemQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue/index.js";
 import {expectLodestarError, expectRejectedWithLodestarError} from "../../utils/errors.js";
 
 describe("Job queue", () => {
@@ -108,6 +108,72 @@ describe("Job queue", () => {
         expect(results).toEqual(expectedResults);
       });
     }
+  });
+
+  describe("waitForSpace", () => {
+    const maxLength = 2;
+    const jobDuration = 50;
+
+    it("should resolve immediately when queue has space", async () => {
+      const controller = new AbortController();
+      const jobQueue = new JobItemQueue<[number], number>(async (n) => n, {maxLength, signal: controller.signal});
+
+      // Queue is empty, waitForSpace should resolve immediately
+      await jobQueue.waitForSpace();
+      controller.abort();
+    });
+
+    it("should wait until space is available when queue is full", async () => {
+      const controller = new AbortController();
+      const jobQueue = new JobItemQueue<[number], number>(
+        async (n) => {
+          await sleep(jobDuration);
+          return n;
+        },
+        {maxLength, signal: controller.signal}
+      );
+
+      // Fill the queue
+      const jobs = Array.from({length: maxLength}, (_, i) => jobQueue.push(i));
+
+      // Queue is full, waitForSpace should block
+      let spaceAvailable = false;
+      const waitPromise = jobQueue.waitForSpace().then(() => {
+        spaceAvailable = true;
+      });
+
+      // Give a tick for the wait to register
+      await sleep(5);
+      expect(spaceAvailable).toBe(false);
+
+      // Wait for a job to complete, which should free space
+      await Promise.all(jobs);
+      await waitPromise;
+      expect(spaceAvailable).toBe(true);
+
+      controller.abort();
+    });
+
+    it("should reject when aborted while waiting", async () => {
+      const controller = new AbortController();
+      const jobQueue = new JobItemQueue<[number], number>(
+        async (n) => {
+          await sleep(jobDuration);
+          return n;
+        },
+        {maxLength, signal: controller.signal}
+      );
+
+      // Fill the queue (catch rejections from abort to avoid unhandled rejection errors)
+      const jobs = Array.from({length: maxLength}, (_, i) => jobQueue.push(i).catch(() => 0));
+
+      // Wait for space, then abort
+      const waitPromise = jobQueue.waitForSpace();
+      controller.abort();
+
+      await expectRejectedWithLodestarError(waitPromise, new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
+      await Promise.allSettled(jobs);
+    });
   });
 });
 
