@@ -127,7 +127,7 @@ const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
 /**
  * The maximum number of pending unfinalized block writes to the database before backpressure is applied.
  */
-const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 16;
+const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 5;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
