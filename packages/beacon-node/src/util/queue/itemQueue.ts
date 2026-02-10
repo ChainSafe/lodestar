@@ -124,6 +124,7 @@ export class JobItemQueue<Args extends any[], R> {
 
   dropAllJobs = (): void => {
     this.jobs.clear();
+    this.notifySpaceWaiters();
   };
 
   private runJob = async (): Promise<void> => {
