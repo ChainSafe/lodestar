@@ -6,11 +6,6 @@ import {ApiOptions} from "../../options.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 
-/** Prefix commit with 0x as required by the beacon-APIs spec */
-function toSpecClientVersion(cv: ClientVersion): routes.node.ClientVersion {
-  return {...cv, commit: `0x${cv.commit}`};
-}
-
 export function getNodeApi(
   opts: ApiOptions,
   {network, sync, chain}: Pick<ApiModules, "network" | "sync" | "chain">
@@ -104,4 +99,9 @@ export function getNodeApi(
       // }
     },
   };
+}
+
+/** Prefix commit with 0x as required by the beacon-APIs spec */
+function toSpecClientVersion(cv: ClientVersion): routes.node.ClientVersion {
+  return {...cv, commit: `0x${cv.commit}`};
 }
