@@ -1,33 +1,5 @@
 import type {Stream} from "@libp2p/interface";
 import {Uint8ArrayList} from "uint8arraylist";
-import {expect} from "vitest";
-import {toHexString} from "@chainsafe/ssz";
-import {Root} from "@lodestar/types";
-
-export function generateRoots(count: number, offset = 0): Root[] {
-  const roots: Root[] = [];
-  for (let i = 0; i < count; i++) {
-    roots.push(Buffer.alloc(32, i + offset));
-  }
-  return roots;
-}
-
-/**
- * Helper for it-pipe when first argument is an array.
- * it-pipe does not convert the chunks array to a generator and BufferedSource breaks
- */
-export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
-  for (const item of arr) {
-    yield item;
-  }
-}
-
-/**
- * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
- */
-export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[]): void {
-  expect(chunks.map(toHexString)).toEqual(expectedChunks.map(toHexString));
-}
 
 type SourceChunk = Uint8Array | Uint8ArrayList;
 
@@ -40,7 +12,7 @@ function toUint8Array(chunk: SourceChunk): Uint8Array {
 }
 
 /**
- * Minimal stream test double for reqresp unit tests.
+ * Minimal stream test double for reqresp tests.
  * It captures sent chunks and yields a provided source for reads.
  */
 export function createMockStream({

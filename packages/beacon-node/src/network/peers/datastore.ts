@@ -8,6 +8,9 @@ type MemoryItem = {
   data: Uint8Array;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: used below (copied from upstream)
+type AwaitGenerator<T, TReturn = any, TNext = any> = Generator<T, TReturn, TNext> | AsyncGenerator<T, TReturn, TNext>;
+
 /**
  * Before libp2p 0.35, peerstore stays in memory and periodically write to db after n dirty items
  * This has a memory issue because all peer data stays in memory and loaded at startup time
@@ -126,7 +129,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     await this._dbDatastore.delete(key, options);
   }
 
-  async *_all(q: Query, options?: AbortOptions): AsyncIterable<Pair> {
+  async *_all(q: Query, options?: AbortOptions): AwaitGenerator<Pair> {
     for (const [key, value] of this._memoryDatastore.entries()) {
       yield {
         key: new Key(key),
@@ -136,7 +139,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     yield* this._dbDatastore.query(q, options);
   }
 
-  async *_allKeys(q: KeyQuery, options?: AbortOptions): AsyncIterable<Key> {
+  async *_allKeys(q: KeyQuery, options?: AbortOptions): AwaitGenerator<Key> {
     for (const key of this._memoryDatastore.keys()) {
       yield new Key(key);
     }

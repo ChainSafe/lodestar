@@ -51,7 +51,7 @@ const config = createBeaconConfig(workerData.chainConfig, workerData.genesisVali
 type Discv5BindAddrs = Parameters<typeof Discv5.create>[0]["bindAddrs"];
 type Discv5Multiaddr = Discv5BindAddrs["ip4"];
 
-const bindAddrs: Discv5BindAddrs = {};
+const bindAddrs = {} as Discv5BindAddrs;
 if (workerData.bindAddrs.ip4) {
   bindAddrs.ip4 = multiaddr(workerData.bindAddrs.ip4) as Discv5Multiaddr;
 }

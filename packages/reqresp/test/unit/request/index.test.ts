@@ -10,7 +10,7 @@ import {MixedProtocol, Protocol, ResponseIncoming} from "../../../src/types.js";
 import {getEmptyHandler, sszSnappyPing} from "../../fixtures/messages.js";
 import {pingProtocol} from "../../fixtures/protocols.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
-import {MockLibP2pStream} from "../../utils/index.js";
+import {createMockStream} from "../../utils/mockStream.js";
 import {getValidPeerId} from "../../utils/peer.js";
 import {responseEncode} from "../../utils/response.js";
 
@@ -60,10 +60,10 @@ describe("request / sendRequest", () => {
         dialProtocol: vi
           .fn()
           .mockResolvedValue(
-            new MockLibP2pStream(
-              responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol),
-              protocols[0].method
-            )
+            createMockStream({
+              protocol: protocols[0].method,
+              source: responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol),
+            }).stream
           ),
       } as unknown as Libp2p;
 
@@ -134,7 +134,7 @@ describe("request / sendRequest", () => {
     for (const {id, source, opts, error} of timeoutTestCases) {
       it(id, async () => {
         libp2p = {
-          dialProtocol: vi.fn().mockResolvedValue(new MockLibP2pStream(source(), testMethod)),
+          dialProtocol: vi.fn().mockResolvedValue(createMockStream({protocol: testMethod, source: source()}).stream),
         } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(

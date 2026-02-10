@@ -8,7 +8,7 @@ import {RateLimiterQuota} from "../../src/rate_limiter/rateLimiterGRCA.js";
 import {Protocol} from "../../src/types.js";
 import {getEmptyHandler, sszSnappyPing} from "../fixtures/messages.js";
 import {numberToStringProtocol, numberToStringProtocolDialOnly, pingProtocol} from "../fixtures/protocols.js";
-import {MockLibP2pStream} from "../utils/index.js";
+import {createMockStream} from "../utils/mockStream.js";
 import {responseEncode} from "../utils/response.js";
 
 describe("ResResp", () => {
@@ -20,8 +20,9 @@ describe("ResResp", () => {
   beforeEach(() => {
     libp2p = {
       dialProtocol: vi.fn().mockResolvedValue(
-        new MockLibP2pStream(
-          responseEncode(
+        createMockStream({
+          protocol: ping.method,
+          source: responseEncode(
             [
               {
                 status: RespStatus.SUCCESS,
@@ -30,8 +31,7 @@ describe("ResResp", () => {
             ],
             ping
           ),
-          ping.method
-        )
+        }).stream
       ),
       handle: vi.fn(),
     } as unknown as Libp2p;

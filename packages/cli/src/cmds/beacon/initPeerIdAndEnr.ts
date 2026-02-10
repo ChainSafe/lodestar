@@ -18,16 +18,15 @@ import {BeaconArgs} from "./options.js";
 export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
   if (!multiaddr) return false;
 
-  const protoNames = multiaddr.protoNames();
-  if (protoNames.length !== 2 && protoNames[1] !== "udp") {
+  const components = multiaddr.getComponents();
+  if (components.length !== 2 && components[1].name !== "udp") {
     throw new Error("Invalid udp multiaddr");
   }
 
   const interfaces = os.networkInterfaces();
-  const tuples = multiaddr.tuples();
-  const family = tuples[0][0];
+  const family = components[0].name === "ip4" ? 4 : 6;
   const isIPv4: boolean = family === 4;
-  const ip = tuples[0][1];
+  const ip = components[0].value;
 
   if (!ip) {
     return false;

@@ -220,11 +220,11 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/discv5':
-        specifier: ^11.0.4
-        version: 11.0.4
+        specifier: ^12.0.0
+        version: 12.0.0
       '@chainsafe/enr':
-        specifier: ^5.0.1
-        version: 5.0.1
+        specifier: ^6.0.0
+        version: 6.0.0
       '@chainsafe/libp2p-noise':
         specifier: ^17.0.0
         version: 17.0.0
@@ -391,6 +391,9 @@ importers:
       '@libp2p/logger':
         specifier: ^6.2.2
         version: 6.2.2
+      '@libp2p/utils':
+        specifier: ^7.0.10
+        version: 7.0.10
       '@lodestar/spec-test-util':
         specifier: workspace:^
         version: link:../spec-test-util
@@ -440,11 +443,11 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/discv5':
-        specifier: ^11.0.4
-        version: 11.0.4
+        specifier: ^12.0.0
+        version: 12.0.0
       '@chainsafe/enr':
-        specifier: ^5.0.1
-        version: 5.0.1
+        specifier: ^6.0.0
+        version: 6.0.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -938,6 +941,9 @@ importers:
       '@libp2p/peer-id':
         specifier: ^6.0.4
         version: 6.0.4
+      '@libp2p/utils':
+        specifier: ^7.0.10
+        version: 7.0.10
       '@lodestar/logger':
         specifier: workspace:^
         version: link:../logger
@@ -1393,11 +1399,11 @@ packages:
     resolution: {integrity: sha512-VBaQoNE2a9d9+skAjQKv3Suk0yGKqp3mZM0YWYJNPj/Ae/f6lAyeVSgKqo2LrsNQBzD/LqrJLKUY8rJT3vDKLA==}
     engines: {node: '>= 16'}
 
-  '@chainsafe/discv5@11.0.4':
-    resolution: {integrity: sha512-8bUqQXlh3+VBO3f3kzvFL0CLOeShZLjUexlmjCyfXfOgwpP1e46F4G6a9tneEEXaU+AMLPMz8uRCwtP/YsESbw==}
+  '@chainsafe/discv5@12.0.0':
+    resolution: {integrity: sha512-ESP0UU1K9WySq35/9d6usB1B3jNP2QYtlbknriddQFwWMtp7bBY9aIK4X2/g6ccutD1ILt1RYxdBrccj555nXg==}
 
-  '@chainsafe/enr@5.0.1':
-    resolution: {integrity: sha512-RP5XxJOSYt0f775ne6NqlaG33Qia+IaMjWlP7PlWagz6SOpXlfbm+vaqHx3by6lKPb9aW4UQtO+fiRxz85XwaQ==}
+  '@chainsafe/enr@6.0.0':
+    resolution: {integrity: sha512-uRnTpjJlafTQI6RinhN1EgEGZL3VMOcHUcnpDCL9LclTglKUmDB7RdTi+Qqj8tJbYEehYXhCwZiWq2dgbnpKww==}
 
   '@chainsafe/fast-crc32c@4.2.0':
     resolution: {integrity: sha512-wbVJ3q1DBuYqs1VGwLe9o5VIDQtxGpSVzr7UY9Hq2SQ283fU6AouII/pwioS9MbiiIK42jDxtY0uLFmTuenb0g==}
@@ -1841,14 +1847,14 @@ packages:
     resolution: {integrity: sha512-9PzshkvwO8YBkSD9+vyhJuzM6hxfZlljGnuUbXQlTSGEod7we8BRyzJW53W7nw/WRw5U6wf9Q2fpWypfZFkrbw==}
     engines: {node: '>=14'}
 
+  '@ethereumjs/rlp@10.1.1':
+    resolution: {integrity: sha512-jbnWTEwcpoY+gE0r+wxfDG9zgiu54DcTcwnc9sX3DsqKR4l5K7x2V8mQL3Et6hURa4DuT9g7z6ukwpBLFchszg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   '@ethereumjs/rlp@4.0.1':
     resolution: {integrity: sha512-tqsQiBQDQdmPWE1xkkBq4rlSW5QZpLOUJ5RJh2/9fug+q9tnUhuZoVLk7s0scUIKTOzEtR72DFBXI4WiZcMpvw==}
     engines: {node: '>=14'}
-    hasBin: true
-
-  '@ethereumjs/rlp@5.0.2':
-    resolution: {integrity: sha512-DziebCdg4JpGlEqEdGgXmjqcFoJi+JGulUXwEjsZGAscAQ7MyD/7LE/GVCP29vEQxKc7AAwjT3A2ywHp2xfoCA==}
-    engines: {node: '>=18'}
     hasBin: true
 
   '@ethereumjs/statemanager@1.0.5':
@@ -2221,9 +2227,6 @@ packages:
   '@libp2p/interface-internal@3.0.10':
     resolution: {integrity: sha512-Gd/eQAoAlXqeCRJ6wOwcnTQ/SDe95bQow8osY8zq0nbfFBu26aChQHjAd+CjcCADJRh+Sd+7+dYG7BrhpxGt1A==}
 
-  '@libp2p/interface@2.10.5':
-    resolution: {integrity: sha512-Z52n04Mph/myGdwyExbFi5S/HqrmZ9JOmfLc2v4r2Cik3GRdw98vrGH19PFvvwjLwAjaqsweCtlGaBzAz09YDw==}
-
   '@libp2p/interface@3.1.0':
     resolution: {integrity: sha512-RE7/XyvC47fQBe1cHxhMvepYKa5bFCUyFrrpj8PuM0E7JtzxU7F+Du5j4VXbg2yLDcToe0+j8mB7jvwE2AThYw==}
 
@@ -2241,9 +2244,6 @@ packages:
 
   '@libp2p/peer-collections@7.0.10':
     resolution: {integrity: sha512-OvlSY5N3J6q8U+EbTrQGbW8zdyOa3y7nz9Y3IbuE55tIiMd7pwm1U3Lknfb6IPkOWkHNfQDfCGGfGVQcMRodvQ==}
-
-  '@libp2p/peer-id@5.1.8':
-    resolution: {integrity: sha512-pGaM4BwjnXdGtAtd84L4/wuABpsnFYE+AQ+h3GxNFme0IsTaTVKWd1jBBE5YFeKHBHGUOhF3TlHsdjFfjQA7TA==}
 
   '@libp2p/peer-id@6.0.4':
     resolution: {integrity: sha512-Z3xK0lwwKn4bPg3ozEpPr1HxsRi2CxZdghOL+MXoFah/8uhJJHxHFA8A/jxtKn4BB8xkk6F8R5vKNIS05yaCYw==}
@@ -2285,9 +2285,6 @@ packages:
 
   '@multiformats/multiaddr-matcher@3.0.1':
     resolution: {integrity: sha512-jvjwzCPysVTQ53F4KqwmcqZw73BqHMk0UUZrMP9P4OtJ/YHrfs122ikTqhVA2upe0P/Qz9l8HVlhEifVYB2q9A==}
-
-  '@multiformats/multiaddr@12.5.1':
-    resolution: {integrity: sha512-+DDlr9LIRUS8KncI1TX/FfUn8F2dl6BIxJgshS/yFQCNB5IAF0OGzcwB39g5NLE22s4qqDePv0Qof6HdpJ/4aQ==}
 
   '@multiformats/multiaddr@13.0.1':
     resolution: {integrity: sha512-XToN915cnfr6Lr9EdGWakGJbPT0ghpg/850HvdC+zFX8XvpLZElwa8synCiwa8TuvKNnny6m8j8NVBNCxhIO3g==}
@@ -2373,12 +2370,20 @@ packages:
   '@napi-rs/wasm-runtime@0.2.6':
     resolution: {integrity: sha512-z8YVS3XszxFTO73iwvFDNpQIzdMmSDTP/mB3E/ucR37V3Sx57hSExcXyMoNwaucWxnsWf4xfbZv0iZ30jr0M4Q==}
 
+  '@noble/ciphers@1.3.0':
+    resolution: {integrity: sha512-2I0gnIVPtfnMw9ee9h1dJG7tp81+8Ob3OJb3Mv37rx5L40/b0i7djjCVvGOVqc9AEIQyvyu1i6ypKdFw8R8gQw==}
+    engines: {node: ^14.21.3 || >=16}
+
   '@noble/ciphers@2.1.1':
     resolution: {integrity: sha512-bysYuiVfhxNJuldNXlFEitTVdNnYUc+XNJZd7Qm2a5j1vZHgY+fazadNFWFaMK/2vye0JVlxV3gHmC0WDfAOQw==}
     engines: {node: '>= 20.19.0'}
 
   '@noble/curves@1.4.2':
     resolution: {integrity: sha512-TavHr8qycMChk8UwMld0ZDRvatedkzWfH8IiaeGCfymOP5i0hSCozz9vHOL0nkwk7HRMlFnAiKpS2jrUmSybcw==}
+
+  '@noble/curves@1.9.0':
+    resolution: {integrity: sha512-7YDlXiNMdO1YZeH6t/kvopHHbIZzlxrCV9WLqCY6QhcXOoXiNCMDqJIglZ9Yjx5+w7Dz30TITFrlTjnRg7sKEg==}
+    engines: {node: ^14.21.3 || >=16}
 
   '@noble/curves@2.0.1':
     resolution: {integrity: sha512-vs1Az2OOTBiP4q0pwjW5aF0xp9n4MxVrmkFBxc6EKZc6ddYx5gaZiAsZoq0uRRXWbi3AT/sBqn05eRPtn1JCPw==}
@@ -2402,8 +2407,8 @@ packages:
   '@noble/secp256k1@1.7.1':
     resolution: {integrity: sha512-hOUk6AyBFmqVrv7k5WAw/LpszxVbj9gGN4JRkIX52fdFAj1UA61KXmZDvqVEm+pOyec3+fIeZB02LYa/pWOArw==}
 
-  '@noble/secp256k1@2.2.3':
-    resolution: {integrity: sha512-l7r5oEQym9Us7EAigzg30/PQAvynhMt2uoYtT3t26eGDVm9Yii5mZ5jWSWmZ/oSIR2Et0xfc6DXrG0bZ787V3w==}
+  '@noble/secp256k1@3.0.0':
+    resolution: {integrity: sha512-NJBaR352KyIvj3t6sgT/+7xrNyF9Xk9QlLSIqUGVUYlsnDTAUqY8LOmwpcgEx4AMJXRITQ5XEVHD+mMaPfr3mg==}
 
   '@node-rs/crc32-android-arm-eabi@1.10.6':
     resolution: {integrity: sha512-vZAMuJXm3TpWPOkkhxdrofWDv+Q+I2oO7ucLRbXyAPmXFNDhHtBxbO1rk9Qzz+M3eep8ieS4/+jCL1Q0zacNMQ==}
@@ -2890,14 +2895,23 @@ packages:
   '@scure/base@1.1.8':
     resolution: {integrity: sha512-6CyAclxj3Nb0XT7GHK6K4zK6k2xJm6E4Ft0Ohjt4WgegiFUHEtFb2CGzmPmGBwoIhrLsqNLYfLr04Y1GePrzZg==}
 
-  '@scure/base@1.2.4':
-    resolution: {integrity: sha512-5Yy9czTO47mqz+/J8GM6GIId4umdCk1wc1q8rKERQulIoc8VP9pzDcghv10Tl2E7R96ZUx/PhND3ESYUQX8NuQ==}
+  '@scure/base@1.2.6':
+    resolution: {integrity: sha512-g/nm5FgUa//MCj1gV09zTJTaM6KBAHqLN907YVQqf7zC49+DcO4B1so4ZX07Ef10Twr6nuqYEH9GEggFXA4Fmg==}
+
+  '@scure/base@2.0.0':
+    resolution: {integrity: sha512-3E1kpuZginKkek01ovG8krQ0Z44E3DHPjc5S2rjJw9lZn3KSQOs8S7wqikF/AH7iRanHypj85uGyxk0XAyC37w==}
 
   '@scure/bip32@1.4.0':
     resolution: {integrity: sha512-sVUpc0Vq3tXCkDGYVWGIZTRfnvu8LoTDaev7vbwh0omSvVORONr960MQWdKqJDCReIEmTj3PAr73O3aoxz7OPg==}
 
+  '@scure/bip32@1.7.0':
+    resolution: {integrity: sha512-E4FFX/N3f4B80AKWp5dP6ow+flD1LQZo/w8UnLGYZO674jS6YnYeepycOOksv+vLPSpgN35wgKgy+ybfTb2SMw==}
+
   '@scure/bip39@1.3.0':
     resolution: {integrity: sha512-disdg7gHuTDZtY+ZdkmLpPCk7fxZSu3gBiEGuoC1XYxv9cGx3Z6cpTggCgW6odSOOIXCiDjuGejW+aJKCY/pIQ==}
+
+  '@scure/bip39@1.6.0':
+    resolution: {integrity: sha512-+lF0BbLiJNwVlev4eKelw1WWLaiKXw7sSl8T6FvBlWkdX+94aGJ4o8XjUdlyhTCjd8c+B3KT3JfS8P0bLRNU6A==}
 
   '@sec-ant/readable-stream@0.4.1':
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
@@ -4159,6 +4173,10 @@ packages:
   ethereum-cryptography@2.2.1:
     resolution: {integrity: sha512-r/W8lkHSiTLxUxW8Rf3u4HGB0xQweG2RyETjywylKZSzLWoWAijRz8WCuOtJ6wah+avllXBqZuk29HCCvhEIRg==}
 
+  ethereum-cryptography@3.2.0:
+    resolution: {integrity: sha512-Urr5YVsalH+Jo0sYkTkv1MyI9bLYZwW8BENZCeE1QYaTHETEYx0Nv/SVsWkSqpYrzweg6d8KMY1wTjH/1m/BIg==}
+    engines: {node: ^14.21.3 || >=16, npm: '>=9'}
+
   ethers@5.7.2:
     resolution: {integrity: sha512-wswUsmWo1aOK8rR7DIKiWSw9DbLWe6x98Jrn8wcTflTVvaXhAMaB5zGAXy0GYQEQp9iO1iSHWVyARQm11zUtyg==}
 
@@ -5207,6 +5225,10 @@ packages:
 
   lru-cache@11.2.4:
     resolution: {integrity: sha512-B5Y16Jr9LB9dHVkh6ZevG+vAbOsNOYCX+sXvFWFu7B3Iz5mijW3zdbMyhsh8ANd2mSWBYdJgnqi+mL7/LrOPYg==}
+    engines: {node: 20 || >=22}
+
+  lru-cache@11.2.5:
+    resolution: {integrity: sha512-vFrFJkWtJvJnD5hg+hJvVE8Lh/TcMzKnTgCWmtBipwI5yLX/iX+5UB2tfuyODF5E7k9xEzMdYgGqaSb1c0c5Yw==}
     engines: {node: 20 || >=22}
 
   lru-cache@5.1.1:
@@ -7677,31 +7699,30 @@ snapshots:
       '@chainsafe/blst-linux-x64-musl': 2.2.0
       '@chainsafe/blst-win32-x64-msvc': 2.2.0
 
-  '@chainsafe/discv5@11.0.4':
+  '@chainsafe/discv5@12.0.0':
     dependencies:
-      '@chainsafe/enr': 5.0.1
-      '@ethereumjs/rlp': 5.0.2
+      '@chainsafe/enr': 6.0.0
+      '@ethereumjs/rlp': 10.1.1
       '@libp2p/crypto': 5.1.13
-      '@libp2p/interface': 2.10.5
-      '@multiformats/multiaddr': 12.5.1
-      '@noble/hashes': 1.8.0
-      '@noble/secp256k1': 2.2.3
-      debug: 4.4.3
-      lru-cache: 10.4.3
+      '@libp2p/interface': 3.1.0
+      '@libp2p/peer-id': 6.0.4
+      '@multiformats/multiaddr': 13.0.1
+      '@noble/hashes': 2.0.1
+      '@noble/secp256k1': 3.0.0
+      ethereum-cryptography: 3.2.0
+      lru-cache: 11.2.5
       strict-event-emitter-types: 2.0.0
-    transitivePeerDependencies:
-      - supports-color
+      weald: 1.1.1
 
-  '@chainsafe/enr@5.0.1':
+  '@chainsafe/enr@6.0.0':
     dependencies:
-      '@ethereumjs/rlp': 5.0.2
+      '@ethereumjs/rlp': 10.1.1
       '@libp2p/crypto': 5.1.13
-      '@libp2p/interface': 2.10.5
-      '@libp2p/peer-id': 5.1.8
-      '@multiformats/multiaddr': 12.5.1
-      '@scure/base': 1.2.4
-      ethereum-cryptography: 2.2.1
-      uint8-varint: 2.0.4
+      '@libp2p/interface': 3.1.0
+      '@libp2p/peer-id': 6.0.4
+      '@multiformats/multiaddr': 13.0.1
+      '@scure/base': 2.0.0
+      ethereum-cryptography: 3.2.0
 
   '@chainsafe/fast-crc32c@4.2.0':
     optionalDependencies:
@@ -8081,9 +8102,9 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@ethereumjs/rlp@4.0.1': {}
+  '@ethereumjs/rlp@10.1.1': {}
 
-  '@ethereumjs/rlp@5.0.2': {}
+  '@ethereumjs/rlp@4.0.1': {}
 
   '@ethereumjs/statemanager@1.0.5':
     dependencies:
@@ -8908,17 +8929,6 @@ snapshots:
       '@multiformats/multiaddr': 13.0.1
       progress-events: 1.0.1
 
-  '@libp2p/interface@2.10.5':
-    dependencies:
-      '@multiformats/dns': 1.0.6
-      '@multiformats/multiaddr': 12.5.1
-      it-pushable: 3.2.3
-      it-stream-types: 2.0.2
-      main-event: 1.0.1
-      multiformats: 13.4.2
-      progress-events: 1.0.1
-      uint8arraylist: 2.4.8
-
   '@libp2p/interface@3.1.0':
     dependencies:
       '@multiformats/dns': 1.0.6
@@ -8971,13 +8981,6 @@ snapshots:
       '@libp2p/peer-id': 6.0.4
       '@libp2p/utils': 7.0.10
       multiformats: 13.4.2
-
-  '@libp2p/peer-id@5.1.8':
-    dependencies:
-      '@libp2p/crypto': 5.1.13
-      '@libp2p/interface': 2.10.5
-      multiformats: 13.4.2
-      uint8arrays: 5.1.0
 
   '@libp2p/peer-id@6.0.4':
     dependencies:
@@ -9109,16 +9112,6 @@ snapshots:
     dependencies:
       '@multiformats/multiaddr': 13.0.1
 
-  '@multiformats/multiaddr@12.5.1':
-    dependencies:
-      '@chainsafe/is-ip': 2.1.0
-      '@chainsafe/netmask': 2.0.0
-      '@multiformats/dns': 1.0.6
-      abort-error: 1.0.1
-      multiformats: 13.4.2
-      uint8-varint: 2.0.4
-      uint8arrays: 5.1.0
-
   '@multiformats/multiaddr@13.0.1':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
@@ -9172,11 +9165,17 @@ snapshots:
       '@tybys/wasm-util': 0.9.0
     optional: true
 
+  '@noble/ciphers@1.3.0': {}
+
   '@noble/ciphers@2.1.1': {}
 
   '@noble/curves@1.4.2':
     dependencies:
       '@noble/hashes': 1.4.0
+
+  '@noble/curves@1.9.0':
+    dependencies:
+      '@noble/hashes': 1.8.0
 
   '@noble/curves@2.0.1':
     dependencies:
@@ -9192,7 +9191,7 @@ snapshots:
 
   '@noble/secp256k1@1.7.1': {}
 
-  '@noble/secp256k1@2.2.3': {}
+  '@noble/secp256k1@3.0.0': {}
 
   '@node-rs/crc32-android-arm-eabi@1.10.6':
     optional: true
@@ -9677,7 +9676,9 @@ snapshots:
 
   '@scure/base@1.1.8': {}
 
-  '@scure/base@1.2.4': {}
+  '@scure/base@1.2.6': {}
+
+  '@scure/base@2.0.0': {}
 
   '@scure/bip32@1.4.0':
     dependencies:
@@ -9685,10 +9686,21 @@ snapshots:
       '@noble/hashes': 1.4.0
       '@scure/base': 1.1.8
 
+  '@scure/bip32@1.7.0':
+    dependencies:
+      '@noble/curves': 1.9.0
+      '@noble/hashes': 1.8.0
+      '@scure/base': 1.2.6
+
   '@scure/bip39@1.3.0':
     dependencies:
       '@noble/hashes': 1.4.0
       '@scure/base': 1.1.8
+
+  '@scure/bip39@1.6.0':
+    dependencies:
+      '@noble/hashes': 1.8.0
+      '@scure/base': 1.2.6
 
   '@sec-ant/readable-stream@0.4.1': {}
 
@@ -11133,6 +11145,14 @@ snapshots:
       '@scure/bip32': 1.4.0
       '@scure/bip39': 1.3.0
 
+  ethereum-cryptography@3.2.0:
+    dependencies:
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.0
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+
   ethers@5.7.2:
     dependencies:
       '@ethersproject/abi': 5.7.0
@@ -12364,6 +12384,8 @@ snapshots:
   lru-cache@11.0.1: {}
 
   lru-cache@11.2.4: {}
+
+  lru-cache@11.2.5: {}
 
   lru-cache@5.1.1:
     dependencies:

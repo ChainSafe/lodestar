@@ -2,8 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import type {Upgrader} from "@libp2p/interface";
 import {defaultLogger} from "@libp2p/logger";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {duplexPair} from "it-pair/duplex";
-import {Uint8ArrayList} from "uint8arraylist";
+import {streamPair} from "@libp2p/utils";
 import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
 
@@ -32,7 +31,7 @@ describe("network / noise / sendData", () => {
         const noiseA = noise()({logger: defaultLogger(), privateKey: privateKeyA, peerId: peerA, upgrader});
         const noiseB = noise()({logger: defaultLogger(), privateKey: privateKeyB, peerId: peerB, upgrader});
 
-        const [inboundConnection, outboundConnection] = duplexPair<Uint8Array | Uint8ArrayList>();
+        const [outboundConnection, inboundConnection] = await streamPair();
         const [outbound, inbound] = await Promise.all([
           noiseA.secureOutbound(outboundConnection, {remotePeer: peerB}),
           noiseB.secureInbound(inboundConnection, {remotePeer: peerA}),
