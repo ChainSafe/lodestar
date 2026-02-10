@@ -57,12 +57,14 @@ export const testData: GenericServerTestCases<Endpoints> = {
           version: "v1.38.0",
           commit: "dbd94781",
         },
-        executionClient: {
-          code: ClientCode.NM,
-          name: "Nethermind",
-          version: "v1.35.8",
-          commit: "c066aee2",
-        },
+        executionClient: [
+          {
+            code: ClientCode.NM,
+            name: "Nethermind",
+            version: "v1.35.8",
+            commit: "c066aee2",
+          },
+        ],
       },
     },
   },
