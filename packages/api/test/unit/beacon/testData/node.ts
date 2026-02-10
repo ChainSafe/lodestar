@@ -55,14 +55,14 @@ export const testData: GenericServerTestCases<Endpoints> = {
           code: ClientCode.LS,
           name: "Lodestar",
           version: "v1.38.0",
-          commit: "dbd94781",
+          commit: "0xdbd94781",
         },
         executionClient: [
           {
             code: ClientCode.NM,
             name: "Nethermind",
             version: "v1.35.8",
-            commit: "c066aee2",
+            commit: "0xc066aee2",
           },
         ],
       },
