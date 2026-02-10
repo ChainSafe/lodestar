@@ -131,7 +131,7 @@ export type ClientVersion = {
 
 export type NodeVersionV2 = {
   beaconNode: ClientVersion;
-  executionClient?: ClientVersion;
+  executionClient?: ClientVersion[];
 };
 
 /**

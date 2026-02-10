@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
+import {ClientVersion} from "../../../execution/index.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {ApiError} from "../errors.js";
@@ -66,8 +67,11 @@ export function getNodeApi(
     async getNodeVersionV2() {
       return {
         data: {
-          beaconNode: getLodestarClientVersion(opts),
-          executionClient: chain.executionEngine.clientVersion ?? undefined,
+          beaconNode: toSpecClientVersion(getLodestarClientVersion(opts)),
+          executionClient:
+            chain.executionEngine.clientVersion != null
+              ? [toSpecClientVersion(chain.executionEngine.clientVersion)]
+              : undefined,
         },
       };
     },
@@ -95,4 +99,9 @@ export function getNodeApi(
       // }
     },
   };
+}
+
+/** Prefix commit with 0x as required by the beacon-APIs spec */
+function toSpecClientVersion(cv: ClientVersion): routes.node.ClientVersion {
+  return {...cv, commit: `0x${cv.commit}`};
 }
