@@ -828,7 +828,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   }
 
   getColumn(columnIndex: number): fulu.DataColumnSidecar | undefined {
-    return this.columnsCache.get(columnIndex)?.columnSidecar;
+    return this.columnsCache.get(columnIndex)?.columnSidecar as fulu.DataColumnSidecar | undefined;
   }
 
   getVersionedHashes(): VersionedHashes {
@@ -914,10 +914,12 @@ type BlockInputEpbsState =
   | {
       // Complete: Have everything needed
       hasBlock: true;
-      // Note: hasAllData means all data requirement is satisified.
-      // If payloadAvailable === true, this means all data columns + payload are present
+      // Note: hasAllData means all data requirement is satisfied OR can be reconstructed (>= NUMBER_OF_COLUMNS/2).
+      // hasComputedAllData means all actual sampled columns are present (not just recoverable).
+      // If payloadAvailable === true, this means all data columns + payload are present (or recoverable)
       // If payloadAvailable === false, this means no payload and no columns since we don't need them
       hasAllData: true;
+      hasComputedAllData: boolean;
       block: SignedBeaconBlock<ForkPostGloas>;
       versionedHashes: VersionedHashes;
       source: SourceMeta;
@@ -928,6 +930,7 @@ type BlockInputEpbsState =
       // Have block, missing payload and/or columns
       hasBlock: true;
       hasAllData: false;
+      hasComputedAllData: false;
       block: SignedBeaconBlock<ForkPostGloas>;
       versionedHashes: VersionedHashes;
       source: SourceMeta;
@@ -937,6 +940,7 @@ type BlockInputEpbsState =
       // versionedHashes not available yet — only known when block arrives (from bid's blobKzgCommitments)
       hasBlock: false;
       hasAllData: true;
+      hasComputedAllData: boolean;
       timeCompleteSec: number;
     }
   | {
@@ -944,6 +948,7 @@ type BlockInputEpbsState =
       // versionedHashes not available yet — only known when block arrives (from bid's blobKzgCommitments)
       hasBlock: false;
       hasAllData: false;
+      hasComputedAllData: false;
     };
 
 /**
@@ -978,6 +983,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
   // - Builder non-reveal (markPayloadUnavailable called) → proceed without payload
   // When false, addPayloadEnvelope() and addColumn() will throw.
   private payloadAvailable = true;
+  protected computedDataPromise = createPromise<GloasDAData | null>();
 
   private constructor(
     init: BlockInputInit,
@@ -1005,11 +1011,14 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     // or no sampled columns.
     const hasAllData =
       props.daOutOfRange || blobKzgCommitments.length === 0 || props.sampledColumns.length === 0;
+    // hasComputedAllData is always true when no columns needed
+    const hasComputedAllData = hasAllData;
 
     const state: BlockInputEpbsState = hasAllData
       ? {
           hasBlock: true,
           hasAllData: true,
+          hasComputedAllData,
           versionedHashes,
           block: props.block,
           source: {
@@ -1023,6 +1032,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
       : {
           hasBlock: true,
           hasAllData: false,
+          hasComputedAllData: false,
           versionedHashes,
           block: props.block,
           source: {
@@ -1046,6 +1056,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     if (hasAllData) {
       blockInput.payloadAvailable = false;
       blockInput.dataPromise.resolve(null);
+      blockInput.computedDataPromise.resolve(null);
     }
     return blockInput;
   }
@@ -1054,16 +1065,19 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     // Without the block, we can't determine blob count. Complete only if daOutOfRange or no sampled columns.
     // versionedHashes are not available yet — they come from the block's bid blobKzgCommitments.
     const hasAllData = props.daOutOfRange || props.sampledColumns.length === 0;
+    const hasComputedAllData = hasAllData;
 
     const state: BlockInputEpbsState = hasAllData
       ? {
           hasBlock: false,
           hasAllData: true,
+          hasComputedAllData,
           timeCompleteSec: props.seenTimestampSec,
         }
       : {
           hasBlock: false,
           hasAllData: false,
+          hasComputedAllData: false,
         };
 
     const init: BlockInputInit = {
@@ -1082,6 +1096,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
       // DA requirement satisfied immediately - no further payload/column data expected
       blockInput.payloadAvailable = false;
       blockInput.dataPromise.resolve(null);
+      blockInput.computedDataPromise.resolve(null);
     }
     return blockInput;
   }
@@ -1090,16 +1105,19 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     // Without the block, we can't determine blob count. Complete only if daOutOfRange or no sampled columns.
     // versionedHashes are not available yet — they come from the block's bid blobKzgCommitments.
     const hasAllData = props.daOutOfRange || props.sampledColumns.length === 0;
+    const hasComputedAllData = hasAllData;
 
     const state: BlockInputEpbsState = hasAllData
       ? {
           hasBlock: false,
           hasAllData: true,
+          hasComputedAllData,
           timeCompleteSec: props.seenTimestampSec,
         }
       : {
           hasBlock: false,
           hasAllData: false,
+          hasComputedAllData: false,
         };
 
     const init: BlockInputInit = {
@@ -1118,6 +1136,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
       // DA requirement satisfied immediately - no further payload/column data expected
       blockInput.payloadAvailable = false;
       blockInput.dataPromise.resolve(null);
+      blockInput.computedDataPromise.resolve(null);
     }
     return blockInput;
   }
@@ -1169,10 +1188,20 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
 
     // Check if we already have all data (payload + columns OR payload unavailable OR no blobs)
     const hasPayloadEnvelope = this.payloadEnvelope !== null;
-    const hasAllColumns = this.getSampledColumns().length === this.sampledColumns.length;
+    const sampledColumnsReceived = this.getSampledColumns().length;
+    const hasAllSampledColumns = sampledColumnsReceived === this.sampledColumns.length;
+    const hasEnoughColumnsToReconstruct = this.columnsCache.size >= NUMBER_OF_COLUMNS / 2;
     const noBlobs = blobKzgCommitments.length === 0;
+
+    // hasAllData = can start block import (may need reconstruction)
     const hasAllData =
-      !this.payloadAvailable || noBlobs || (hasPayloadEnvelope && hasAllColumns) || this.state.hasAllData;
+      !this.payloadAvailable ||
+      noBlobs ||
+      (hasPayloadEnvelope && (hasAllSampledColumns || hasEnoughColumnsToReconstruct)) ||
+      this.state.hasAllData;
+
+    // hasComputedAllData = all actual sampled columns present (no reconstruction needed)
+    const hasComputedAllData = noBlobs || (hasPayloadEnvelope && hasAllSampledColumns) || this.state.hasComputedAllData;
 
     // If block reveals no blobs, mark payload unavailable since no further data is expected
     if (noBlobs && this.payloadAvailable) {
@@ -1183,6 +1212,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
       ...this.state,
       hasBlock: true,
       hasAllData,
+      hasComputedAllData,
       versionedHashes,
       block: props.block,
       source: {
@@ -1195,6 +1225,16 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     } as BlockInputEpbsState;
 
     this.blockPromise.resolve(props.block);
+    if (hasAllData) {
+      const sampledColumns = this.getSampledColumns();
+      const daData = this.payloadEnvelope && sampledColumns ? {payloadEnvelope: this.payloadEnvelope, columns: sampledColumns} : null;
+      this.dataPromise.resolve(daData);
+    }
+    if (hasComputedAllData) {
+      const sampledColumns = this.getSampledColumns();
+      const daData = this.payloadEnvelope && sampledColumns ? {payloadEnvelope: this.payloadEnvelope, columns: sampledColumns} : null;
+      this.computedDataPromise.resolve(daData);
+    }
   }
 
   addPayloadEnvelope(props: AddPayloadEnvelope, opts = {throwOnDuplicateAdd: true}): void {
@@ -1254,16 +1294,29 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     this.payloadEnvelope = props.payloadEnvelope;
     // Check if we now have all data (payload + all columns)
     const sampledColumns = this.getSampledColumns();
-    const hasAllColumns = sampledColumns.length === this.sampledColumns.length;
-    const hasAllData = hasAllColumns;
+    const hasAllSampledColumns = sampledColumns.length === this.sampledColumns.length;
+    const hasEnoughColumnsToReconstruct = this.columnsCache.size >= NUMBER_OF_COLUMNS / 2;
+
+    // hasAllData = can start block import (may need reconstruction)
+    const hasAllData = hasAllSampledColumns || hasEnoughColumnsToReconstruct;
+    // hasComputedAllData = all actual sampled columns present (no reconstruction needed)
+    const hasComputedAllData = hasAllSampledColumns;
 
     if (hasAllData && this.payloadEnvelope) {
       this.state = {
         ...this.state,
         hasAllData: true,
+        hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
         timeCompleteSec: props.seenTimestampSec,
       } as BlockInputEpbsState;
       this.dataPromise.resolve({
+        payloadEnvelope: this.payloadEnvelope,
+        columns: sampledColumns,
+      });
+    }
+
+    if (hasComputedAllData && this.payloadEnvelope) {
+      this.computedDataPromise.resolve({
         payloadEnvelope: this.payloadEnvelope,
         columns: sampledColumns,
       });
@@ -1316,17 +1369,30 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
 
     // Check if we now have all data (payload + all columns)
     const sampledColumns = this.getSampledColumns();
-    const hasAllColumns = sampledColumns.length === this.sampledColumns.length;
+    const hasAllSampledColumns = sampledColumns.length === this.sampledColumns.length;
+    const hasEnoughColumnsToReconstruct = this.columnsCache.size >= NUMBER_OF_COLUMNS / 2;
     const hasPayloadEnvelope = this.payloadEnvelope !== null;
-    const hasAllData = hasPayloadEnvelope && hasAllColumns;
+
+    // hasAllData = can start block import (may need reconstruction)
+    const hasAllData = hasPayloadEnvelope && (hasAllSampledColumns || hasEnoughColumnsToReconstruct);
+    // hasComputedAllData = all actual sampled columns present (no reconstruction needed)
+    const hasComputedAllData = hasPayloadEnvelope && hasAllSampledColumns;
 
     if (hasAllData && this.payloadEnvelope) {
       this.state = {
         ...this.state,
         hasAllData: true,
+        hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
         timeCompleteSec: seenTimestampSec,
       } as BlockInputEpbsState;
       this.dataPromise.resolve({
+        payloadEnvelope: this.payloadEnvelope,
+        columns: sampledColumns,
+      });
+    }
+
+    if (hasComputedAllData && this.payloadEnvelope) {
+      this.computedDataPromise.resolve({
         payloadEnvelope: this.payloadEnvelope,
         columns: sampledColumns,
       });
@@ -1347,10 +1413,12 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     this.state = {
       ...this.state,
       hasAllData: true,
+      hasComputedAllData: true, // No payload needed, so no reconstruction needed
       timeCompleteSec: Date.now() / 1000,
       payloadAvailable: false,
     } as BlockInputEpbsState;
     this.dataPromise.resolve(null);
+    this.computedDataPromise.resolve(null);
   }
 
   hasPayloadEnvelope(): boolean {
@@ -1444,5 +1512,21 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
       missing,
       versionedHashes,
     };
+  }
+
+  hasComputedAllData(): boolean {
+    return this.state.hasComputedAllData;
+  }
+
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<GloasDAData | null> {
+    if (!this.state.hasComputedAllData) {
+      return withTimeout(() => this.computedDataPromise.promise, timeout, signal);
+    }
+
+    if (this.payloadEnvelope) {
+      const sampledColumns = this.getSampledColumns();
+      return Promise.resolve({payloadEnvelope: this.payloadEnvelope, columns: sampledColumns});
+    }
+    return Promise.resolve(null);
   }
 }

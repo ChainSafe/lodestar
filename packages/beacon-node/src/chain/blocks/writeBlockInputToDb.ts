@@ -1,7 +1,7 @@
 import {fulu} from "@lodestar/types";
 import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
-import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {IBlockInput, isBlockInputBlobs, isBlockInputColumns, isBlockInputEpbs} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
 /**
@@ -42,8 +42,11 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
       await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
     }
 
+    if (isBlockInputEpbs(blockInput)) {
+      // TODO GLOAS: Handle this when implementing block import pipeline
+    }
     // NOTE: Old data is pruned on archive
-    if (isBlockInputColumns(blockInput)) {
+    else if (isBlockInputColumns(blockInput)) {
       if (!blockInput.hasComputedAllData()) {
         // Supernodes may only have a subset of the data columns by the time the block begins to be imported
         // because full data availability can be assumed after NUMBER_OF_COLUMNS / 2 columns are available.
