@@ -122,26 +122,17 @@ export enum ClientCode {
  * Mirrors the client version specification in the Engine API.
  * https://github.com/ethereum/execution-apis/blob/c4988b1c427645d1b861c8c12488975f5a2f8cb9/src/engine/identification.md
  */
-export const ClientVersionType = new ContainerType(
-  {
-    code: new StringType<ClientCode>(),
-    name: stringType,
-    version: stringType,
-    commit: stringType,
-  },
-  {jsonCase: "eth2"}
-);
+export type ClientVersion = {
+  code: ClientCode;
+  name: string;
+  version: string;
+  commit: string;
+};
 
-export const NodeVersionV2Type = new ContainerType(
-  {
-    beaconNode: ClientVersionType,
-    executionClient: new OptionalType(ArrayOf(ClientVersionType)),
-  },
-  {jsonCase: "eth2"}
-);
-
-export type ClientVersion = ValueOf<typeof ClientVersionType>;
-export type NodeVersionV2 = ValueOf<typeof NodeVersionV2Type>;
+export type NodeVersionV2 = {
+  beaconNode: ClientVersion;
+  executionClient?: ClientVersion[];
+};
 
 /**
  * Read information about the beacon node.
@@ -340,11 +331,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       url: "/eth/v2/node/version",
       method: "GET",
       req: EmptyRequestCodec,
-      resp: {
-        data: NodeVersionV2Type,
-        meta: EmptyMetaCodec,
-        onlySupport: WireFormat.json,
-      },
+      resp: JsonOnlyResponseCodec,
     },
     getSyncingStatus: {
       url: "/eth/v1/node/syncing",
