@@ -31,7 +31,7 @@ import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 // Cache entries are references to the same objects held by the write queue, so a larger cache
 // does not meaningfully increase memory usage. The extra headroom above the write queue depth
 // accommodates blocks that arrived from the network but have not yet been processed by importBlock.
-const MAX_BLOCK_INPUT_CACHE_SIZE = 16;
+const MAX_BLOCK_INPUT_CACHE_SIZE = 12;
 
 export type SeenBlockInputCacheModules = {
   config: ChainForkConfig;
