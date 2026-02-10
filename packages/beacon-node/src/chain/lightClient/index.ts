@@ -292,8 +292,8 @@ export class LightClientServer {
     this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
       if (!this.signal.aborted) {
         this.logger.error("Error onSyncAggregate", {}, e);
+        this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
       }
-      this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
 
     this.persistPostBlockImportData(block, postState, parentBlockSlot).catch((e) => {
