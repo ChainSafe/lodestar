@@ -7,7 +7,10 @@ describe("encoders / requestEncode", () => {
   describe("valid cases", () => {
     it.each(requestEncodersCases)("$id", async ({protocol, requestBody, chunks}) => {
       const encodedChunks = await Array.fromAsync(requestEncode(protocol, requestBody));
-      expectEqualByteChunks(encodedChunks, chunks.map((c) => c.subarray()));
+      expectEqualByteChunks(
+        encodedChunks,
+        chunks.map((c) => c.subarray())
+      );
     });
   });
 });

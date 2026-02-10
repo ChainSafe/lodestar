@@ -10,7 +10,9 @@ export async function* responseEncode(responseChunks: ResponseChunk[], protocol:
     if (chunk.status === RespStatus.SUCCESS) {
       const payload = chunk.payload;
       yield* responseEncodeSuccess(protocol, {onChunk: () => {}})(
-        arrToSource([{...payload, boundary: beaconConfig.getForkBoundaryAtEpoch(beaconConfig.forks[payload.fork].epoch)}])
+        arrToSource([
+          {...payload, boundary: beaconConfig.getForkBoundaryAtEpoch(beaconConfig.forks[payload.fork].epoch)},
+        ])
       );
     } else {
       yield* responseEncodeError(protocol, chunk.status, chunk.errorMessage);

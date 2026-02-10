@@ -1,18 +1,18 @@
-import {peerIdFromString} from "@libp2p/peer-id";
-import {multiaddr} from "@multiformats/multiaddr";
-import {ENR} from "@chainsafe/enr";
 import {
-  StrictNoSign,
-  gossipsub,
   type GossipSub,
   type GossipSubEvents,
   type PublishResult,
+  StrictNoSign,
   type TopicValidatorResult,
+  gossipsub,
 } from "@libp2p/gossipsub";
 import type {MetricsRegister, TopicLabel, TopicStrToLabel} from "@libp2p/gossipsub/metrics";
 import type {PeerScoreParams, PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {AddrInfo, PublishOpts, TopicStr} from "@libp2p/gossipsub/types";
 import type {PeerId} from "@libp2p/interface";
+import {peerIdFromString} from "@libp2p/peer-id";
+import {multiaddr} from "@multiformats/multiaddr";
+import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -89,11 +89,7 @@ type GossipSubInternal = GossipSub & {
   getMeshPeers: (topic: TopicStr) => string[];
   dumpPeerScoreStats: () => PeerScoreStatsDump;
   getScore: (peerIdStr: string) => number;
-  reportMessageValidationResult: (
-    msgId: string,
-    propagationSource: string,
-    acceptance: TopicValidatorResult
-  ) => void;
+  reportMessageValidationResult: (msgId: string, propagationSource: string, acceptance: TopicValidatorResult) => void;
 };
 
 /**

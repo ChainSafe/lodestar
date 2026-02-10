@@ -10,7 +10,10 @@ describe("encoders / responseEncode", () => {
       "$id",
       async ({protocol, responseChunks, chunks}) => {
         const encodedChunks = await Array.fromAsync(responseEncode(responseChunks, protocol as Protocol));
-        expectEqualByteChunks(encodedChunks, chunks.map((c) => c.subarray()));
+        expectEqualByteChunks(
+          encodedChunks,
+          chunks.map((c) => c.subarray())
+        );
       }
     );
   });

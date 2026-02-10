@@ -348,12 +348,6 @@ importers:
       interface-datastore:
         specifier: ^9.0.2
         version: 9.0.2
-      it-all:
-        specifier: ^3.0.4
-        version: 3.0.9
-      it-pipe:
-        specifier: ^3.0.1
-        version: 3.0.1
       jwt-simple:
         specifier: 0.5.6
         version: 0.5.6
@@ -406,12 +400,6 @@ importers:
       '@types/tmp':
         specifier: ^0.2.3
         version: 0.2.3
-      it-drain:
-        specifier: ^3.0.3
-        version: 3.0.10
-      it-pair:
-        specifier: ^2.0.6
-        version: 2.0.6
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -614,9 +602,6 @@ importers:
       classic-level:
         specifier: ^1.4.1
         version: 1.4.1
-      it-all:
-        specifier: ^3.0.4
-        version: 3.0.9
     devDependencies:
       '@lodestar/logger':
         specifier: workspace:^
@@ -4967,10 +4952,6 @@ packages:
 
   it-merge@3.0.12:
     resolution: {integrity: sha512-nnnFSUxKlkZVZD7c0jYw6rDxCcAQYcMsFj27thf7KkDhpj0EA0g9KHPxbFzHuDoc6US2EPS/MtplkNj8sbCx4Q==}
-
-  it-pair@2.0.6:
-    resolution: {integrity: sha512-5M0t5RAcYEQYNG5BV7d7cqbdwbCAp5yLdzvkxsZmkuZsLbTdZzah6MQySYfaAQjNDCq6PUnDt0hqBZ4NwMfW6g==}
-    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
 
   it-parallel-batch@3.0.9:
     resolution: {integrity: sha512-TszXWqqLG8IG5DUEnC4cgH9aZI6CsGS7sdkXTiiacMIj913bFy7+ohU3IqsFURCcZkpnXtNLNzrYnXISsKBhbQ==}
@@ -12059,11 +12040,6 @@ snapshots:
   it-merge@3.0.12:
     dependencies:
       it-queueless-pushable: 2.0.2
-
-  it-pair@2.0.6:
-    dependencies:
-      it-stream-types: 2.0.2
-      p-defer: 4.0.1
 
   it-parallel-batch@3.0.9:
     dependencies:

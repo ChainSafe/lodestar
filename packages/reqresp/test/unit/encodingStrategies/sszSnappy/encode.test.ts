@@ -7,7 +7,10 @@ import {expectEqualByteChunks} from "../../../utils/index.js";
 describe("encodingStrategies / sszSnappy / encode", () => {
   it.each(encodingStrategiesTestCases)("$id", async ({binaryPayload, chunks}) => {
     const encodedChunks = await Array.fromAsync(writeSszSnappyPayload(Buffer.from(binaryPayload.data)));
-    expectEqualByteChunks(encodedChunks, chunks.map((c) => c.subarray()));
+    expectEqualByteChunks(
+      encodedChunks,
+      chunks.map((c) => c.subarray())
+    );
   });
 
   describe("mainnet cases", () => {

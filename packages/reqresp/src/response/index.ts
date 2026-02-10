@@ -75,16 +75,14 @@ export async function handleRequest({
       try {
         const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method: protocol.method});
 
-        const requestBody = await withTimeout(
-          () => requestDecode(protocol, stream),
-          REQUEST_TIMEOUT,
-          signal
-        ).catch((e: unknown) => {
-          if (e instanceof TimeoutError) {
-            throw e; // Let outter catch (_e) {} re-type the error as SERVER_ERROR
+        const requestBody = await withTimeout(() => requestDecode(protocol, stream), REQUEST_TIMEOUT, signal).catch(
+          (e: unknown) => {
+            if (e instanceof TimeoutError) {
+              throw e; // Let outter catch (_e) {} re-type the error as SERVER_ERROR
+            }
+            throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
           }
-          throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
-        });
+        );
 
         logger.debug("Req  received", logCtx);
 

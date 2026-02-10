@@ -56,14 +56,12 @@ describe("request / sendRequest", () => {
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
       libp2p = {
-        dialProtocol: vi
-          .fn()
-          .mockResolvedValue(
-            createMockStream({
-              protocol: protocols[0].method,
-              source: responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol),
-            }).stream
-          ),
+        dialProtocol: vi.fn().mockResolvedValue(
+          createMockStream({
+            protocol: protocols[0].method,
+            source: responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol),
+          }).stream
+        ),
       } as unknown as Libp2p;
 
       const responses = await Array.fromAsync(

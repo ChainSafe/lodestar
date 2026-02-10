@@ -26,7 +26,6 @@ export function getConnection(libp2p: Libp2p, peerIdStr: string): Connection | u
 // https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3475242ed254f7647798ab7f36b21909f6cb61da/src/index.ts#L2009
 export function isPublishToZeroPeersError(e: Error): boolean {
   return (
-    e.message.includes("PublishError.NoPeersSubscribedToTopic") ||
-    e.message.includes("PublishError.InsufficientPeers")
+    e.message.includes("PublishError.NoPeersSubscribedToTopic") || e.message.includes("PublishError.InsufficientPeers")
   );
 }
