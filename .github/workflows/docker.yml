@@ -105,4 +105,7 @@ jobs:
             chainsafe/lodestar-prometheus:${{ inputs.tag }}-amd64 \
             chainsafe/lodestar-prometheus:${{ inputs.tag }}-arm64
 
-      - run: docker image history chainsafe/lodestar:${{ inputs.tag }}
+      - name: Verify lodestar manifest
+        run: |
+          docker pull chainsafe/lodestar:${{ inputs.tag }}
+          docker image history chainsafe/lodestar:${{ inputs.tag }}
