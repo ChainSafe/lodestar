@@ -103,7 +103,7 @@ export async function dataColumnMatrixRecovery(
     // should not happen because we check the size of the cache before this
     throw new Error("No data column found in cache to recover from");
   }
-  const blobCount = firstDataColumn.kzgCommitments.length;
+  const blobCount = firstDataColumn.column.length;
 
   // Detect if this is a Fulu or Gloas column
   const isGloasColumn = isGloasDataColumnSidecar(firstDataColumn);
@@ -146,12 +146,11 @@ export async function dataColumnMatrixRecovery(
     }
 
     if (isGloasColumn) {
-      // Construct Gloas column
+      // Construct Gloas column (no kzgCommitments — moved to ExecutionPayloadBid in Gloas)
       const gloasColumn = firstDataColumn as gloas.DataColumnSidecar;
       sidecar = {
         index: columnIndex,
         column: fullColumns[columnIndex],
-        kzgCommitments: firstDataColumn.kzgCommitments,
         kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
         slot: gloasColumn.slot,
         beaconBlockRoot: gloasColumn.beaconBlockRoot,
@@ -162,7 +161,7 @@ export async function dataColumnMatrixRecovery(
       sidecar = {
         index: columnIndex,
         column: fullColumns[columnIndex],
-        kzgCommitments: firstDataColumn.kzgCommitments,
+        kzgCommitments: fuluColumn.kzgCommitments,
         kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
         signedBlockHeader: fuluColumn.signedBlockHeader,
         kzgCommitmentsInclusionProof: fuluColumn.kzgCommitmentsInclusionProof,

@@ -655,14 +655,14 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   }
 
   static createFromColumn(props: AddColumn & CreateBlockInputMeta & ColumnConfig): BlockInputColumns {
+    const fuluColumn = props.columnSidecar as fulu.DataColumnSidecar;
     const hasAllData =
-      props.daOutOfRange || props.columnSidecar.kzgCommitments.length === 0 || props.sampledColumns.length === 0;
+      props.daOutOfRange || fuluColumn.kzgCommitments.length === 0 || props.sampledColumns.length === 0;
     const state: BlockInputColumnsState = {
       hasBlock: false,
       hasAllData,
-      versionedHashes: props.columnSidecar.kzgCommitments.map(kzgCommitmentToVersionedHash),
+      versionedHashes: fuluColumn.kzgCommitments.map(kzgCommitmentToVersionedHash),
     };
-    const fuluColumn = props.columnSidecar as fulu.DataColumnSidecar;
     const init: BlockInputInit = {
       daOutOfRange: false,
       timeCreated: props.seenTimestampSec,
@@ -883,31 +883,35 @@ type BlockInputEpbsState =
     }
   | {
       // Have both payload and all columns, but no block yet (rare)
+      // versionedHashes not available yet — only known when block arrives (from bid's blobKzgCommitments)
       hasBlock: false;
       hasAllData: true;
-      versionedHashes: VersionedHashes;
       timeCompleteSec: number;
     }
   | {
       // Missing block, and missing payload or columns or both
+      // versionedHashes not available yet — only known when block arrives (from bid's blobKzgCommitments)
       hasBlock: false;
       hasAllData: false;
-      versionedHashes: VersionedHashes;
     };
 
 /**
  * With Gloas ePBS, BlockInput has several states:
  * - The block is seen, execution payload envelope is seen, and all required sampled columns are seen
- * - The block is seen but missing payload envelope and/or columns
+ * - The block is seen, no execution payload envelope or columns are seen, but DA is not required (daOutOfRange or no sampled columns)
+ * - The block is seen but missing payload envelope and/or columns.
+ * - The block is seen but builder chose not to reveal payload (markPayloadUnavailable called after ~1 slot timeout)
  * - The block is not yet seen but payload envelope and all columns are seen
  * - The block is not yet seen and missing payload envelope and/or columns
  *
  * In Gloas ePBS:
- * - Beacon blocks contain SignedExecutionPayloadBid but NOT the actual payload
  * - Execution payloads arrive separately as SignedExecutionPayloadEnvelope
  * - Data columns provide DA proof required by is_data_available()
  * - Both payload envelope AND all sampled columns are required for completion
- * - Builder may not reveal: Valid for beacon block to proceed without execution payload
+ * - Alternatively, if daOutOfRange or no sampled columns are required, the block can be complete without payload or columns
+ * - Builder may not reveal: After sufficient time (~1 slot), if PTC votes indicate payload absent,
+ *   markPayloadUnavailable() is called which marks data as complete (hasAllData=true) with null payload.
+ *   This is valid even when the block had non-zero expected data columns.
  */
 export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDAData | null> {
   type = DAType.Epbs as const;
@@ -918,6 +922,10 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
   private readonly sampledColumns: ColumnIndex[];
   private readonly custodyColumns: ColumnIndex[];
+  // Whether payload data is expected. Set to false when:
+  // - DA not required (daOutOfRange, no sampled columns, no blobs) → data already complete
+  // - Builder non-reveal (markPayloadUnavailable called) → proceed without payload
+  // When false, addPayloadEnvelope() and addColumn() will throw.
   private payloadAvailable = true;
 
   private constructor(
@@ -937,11 +945,15 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
   }
 
   static createFromBlock(props: AddBlock<ForkPostGloas> & CreateBlockInputMeta & ColumnConfig): BlockInputEpbs {
-    // VersionedHashes can only be determined from the execution payload envelope, not from the block
-    // Block only contains SignedExecutionPayloadBid (commitment), not the actual blobKzgCommitments
-    const versionedHashes: VersionedHashes = [];
-    // When block arrives first without payload, we can't determine if data is complete yet
-    const hasAllData = props.daOutOfRange || props.sampledColumns.length === 0;
+    // In Gloas, blobKzgCommitments are on the ExecutionPayloadBid (in the block body),
+    // so versionedHashes can be determined immediately when the block arrives.
+    const blobKzgCommitments = props.block.message.body.signedExecutionPayloadBid.message
+      .blobKzgCommitments;
+    const versionedHashes = blobKzgCommitments.map(kzgCommitmentToVersionedHash);
+    // Block is immediately complete if DA not required (daOutOfRange), no blobs (no columns needed),
+    // or no sampled columns.
+    const hasAllData =
+      props.daOutOfRange || blobKzgCommitments.length === 0 || props.sampledColumns.length === 0;
 
     const state: BlockInputEpbsState = hasAllData
       ? {
@@ -988,21 +1000,19 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
   }
 
   static createFromPayload(props: AddPayloadEnvelope & CreateBlockInputMeta & ColumnConfig): BlockInputEpbs {
-    // Extract versioned hashes from payload envelope (the only source of blobKzgCommitments)
-    const versionedHashes = props.payloadEnvelope.message.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
-    const hasAllData = props.daOutOfRange || versionedHashes.length === 0 || props.sampledColumns.length === 0;
+    // Without the block, we can't determine blob count. Complete only if daOutOfRange or no sampled columns.
+    // versionedHashes are not available yet — they come from the block's bid blobKzgCommitments.
+    const hasAllData = props.daOutOfRange || props.sampledColumns.length === 0;
 
     const state: BlockInputEpbsState = hasAllData
       ? {
           hasBlock: false,
           hasAllData: true,
-          versionedHashes,
           timeCompleteSec: props.seenTimestampSec,
         }
       : {
           hasBlock: false,
           hasAllData: false,
-          versionedHashes,
         };
 
     const init: BlockInputInit = {
@@ -1018,7 +1028,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     const blockInput = new BlockInputEpbs(init, state, props.sampledColumns, props.custodyColumns);
     blockInput.payloadEnvelope = props.payloadEnvelope;
     if (hasAllData) {
-      // DA not needed (daOutOfRange, no columns to sample)
+      // DA requirement satisfied immediately - no further payload/column data expected
       blockInput.payloadAvailable = false;
       blockInput.dataPromise.resolve(null);
     }
@@ -1026,20 +1036,19 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
   }
 
   static createFromColumn(props: AddColumn & CreateBlockInputMeta & ColumnConfig): BlockInputEpbs {
-    const versionedHashes = props.columnSidecar.kzgCommitments.map(kzgCommitmentToVersionedHash);
-    const hasAllData = props.daOutOfRange || versionedHashes.length === 0 || props.sampledColumns.length === 0;
+    // Without the block, we can't determine blob count. Complete only if daOutOfRange or no sampled columns.
+    // versionedHashes are not available yet — they come from the block's bid blobKzgCommitments.
+    const hasAllData = props.daOutOfRange || props.sampledColumns.length === 0;
 
     const state: BlockInputEpbsState = hasAllData
       ? {
           hasBlock: false,
           hasAllData: true,
-          versionedHashes,
           timeCompleteSec: props.seenTimestampSec,
         }
       : {
           hasBlock: false,
           hasAllData: false,
-          versionedHashes,
         };
 
     const init: BlockInputInit = {
@@ -1055,7 +1064,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     const blockInput = new BlockInputEpbs(init, state, props.sampledColumns, props.custodyColumns);
     blockInput.addColumn(props, {throwOnDuplicateAdd: false});
     if (hasAllData) {
-      // DA not needed (daOutOfRange, no columns to sample)
+      // DA requirement satisfied immediately - no further payload/column data expected
       blockInput.payloadAvailable = false;
       blockInput.dataPromise.resolve(null);
     }
@@ -1102,15 +1111,28 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
       );
     }
 
-    // Check if we already have all data (payload + columns OR payload unavailable)
+    // Extract versionedHashes from the block's bid 
+    const blobKzgCommitments = props.block.message.body.signedExecutionPayloadBid.message
+      .blobKzgCommitments;
+    const versionedHashes = blobKzgCommitments.map(kzgCommitmentToVersionedHash);
+
+    // Check if we already have all data (payload + columns OR payload unavailable OR no blobs)
     const hasPayloadEnvelope = this.payloadEnvelope !== null;
     const hasAllColumns = this.getSampledColumns().length === this.sampledColumns.length;
-    const hasAllData = !this.payloadAvailable || (hasPayloadEnvelope && hasAllColumns) || this.state.hasAllData;
+    const noBlobs = blobKzgCommitments.length === 0;
+    const hasAllData =
+      !this.payloadAvailable || noBlobs || (hasPayloadEnvelope && hasAllColumns) || this.state.hasAllData;
+
+    // If block reveals no blobs, mark payload unavailable since no further data is expected
+    if (noBlobs && this.payloadAvailable) {
+      this.payloadAvailable = false;
+    }
 
     this.state = {
       ...this.state,
       hasBlock: true,
       hasAllData,
+      versionedHashes,
       block: props.block,
       source: {
         source: props.source,
@@ -1159,7 +1181,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
           code: BlockInputErrorCode.PAYLOAD_UNAVAILABLE_MARKED,
           blockRoot: this.blockRootHex,
         },
-        "Cannot add payload envelope after marking payload unavailable"
+        "Cannot add payload envelope after payload marked unavailable (DA requirement already satisfied)"
       );
     }
 
@@ -1179,10 +1201,6 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     }
 
     this.payloadEnvelope = props.payloadEnvelope;
-
-    // Extract versioned hashes from payload envelope
-    const versionedHashes = props.payloadEnvelope.message.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
-
     // Check if we now have all data (payload + all columns)
     const sampledColumns = this.getSampledColumns();
     const hasAllColumns = sampledColumns.length === this.sampledColumns.length;
@@ -1192,19 +1210,12 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
       this.state = {
         ...this.state,
         hasAllData: true,
-        versionedHashes,
         timeCompleteSec: props.seenTimestampSec,
       } as BlockInputEpbsState;
       this.dataPromise.resolve({
         payloadEnvelope: this.payloadEnvelope,
         columns: sampledColumns,
       });
-    } else {
-      // Update versionedHashes even if not complete yet
-      this.state = {
-        ...this.state,
-        versionedHashes,
-      } as BlockInputEpbsState;
     }
   }
 
@@ -1221,7 +1232,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
           source: source,
           peerId: `${peerIdStr}`,
         },
-        "Column BeaconBlockHeader blockRootHex does not match BlockInput.blockRootHex"
+        "Column blockRootHex does not match BlockInput.blockRootHex"
       );
     }
 
@@ -1231,7 +1242,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
           code: BlockInputErrorCode.PAYLOAD_UNAVAILABLE_MARKED,
           blockRoot: this.blockRootHex,
         },
-        "Cannot add column after marking payload unavailable"
+        "Cannot add column after payload marked unavailable (DA requirement already satisfied)"
       );
     }
 
@@ -1252,13 +1263,6 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
 
     this.columnsCache.set(columnSidecar.index, {columnSidecar, source, seenTimestampSec, peerIdStr});
 
-    // Update versioned hashes from column if not set yet (happens when block arrives before payload/columns)
-    const currentVersionedHashes = this.state.versionedHashes;
-    const versionedHashes =
-      currentVersionedHashes.length === 0
-        ? columnSidecar.kzgCommitments.map(kzgCommitmentToVersionedHash)
-        : currentVersionedHashes;
-
     // Check if we now have all data (payload + all columns)
     const sampledColumns = this.getSampledColumns();
     const hasAllColumns = sampledColumns.length === this.sampledColumns.length;
@@ -1269,24 +1273,20 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
       this.state = {
         ...this.state,
         hasAllData: true,
-        versionedHashes,
         timeCompleteSec: seenTimestampSec,
       } as BlockInputEpbsState;
       this.dataPromise.resolve({
         payloadEnvelope: this.payloadEnvelope,
         columns: sampledColumns,
       });
-    } else if (versionedHashes !== currentVersionedHashes) {
-      // Update versionedHashes even if not complete yet
-      this.state = {
-        ...this.state,
-        versionedHashes,
-      } as BlockInputEpbsState;
     }
   }
 
-  // This may be potentially called every time we receive new PTC votes.
-  // If our fork choice decides EMPTY variant of the block. (> 50% PTC votes for payload absent)
+  // Called when fork choice decides EMPTY variant of the block based on PTC votes
+  // (> 50% PTC votes for payload absent). This typically happens ~1 slot after the block,
+  // when the builder has had enough time to reveal but chose not to.
+  // Marks data as complete even if payload and columns were expected but never arrived.
+  // Idempotent - safe to call multiple times as PTC votes accumulate.
   markPayloadUnavailable(): void {
     if (!this.payloadAvailable) {
       return;
@@ -1328,7 +1328,8 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
   }
 
   getVersionedHashes(): VersionedHashes {
-    return this.state.versionedHashes;
+    // versionedHashes are only available when the block has arrived (from bid's blobKzgCommitments)
+    return this.state.hasBlock ? this.state.versionedHashes : [];
   }
 
   getCustodyColumns(): gloas.DataColumnSidecars {
@@ -1373,10 +1374,12 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
   }
 
   getMissingSampledColumnMeta(): MissingColumnMeta {
+    const versionedHashes = this.state.hasBlock ? this.state.versionedHashes : [];
+
     if (this.state.hasAllData) {
       return {
         missing: [],
-        versionedHashes: this.state.versionedHashes,
+        versionedHashes,
       };
     }
 
@@ -1388,7 +1391,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     }
     return {
       missing,
-      versionedHashes: this.state.versionedHashes,
+      versionedHashes,
     };
   }
 }

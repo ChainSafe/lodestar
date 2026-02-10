@@ -100,13 +100,6 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // Verify consistency with the committed bid
-  const envelopeKzgRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(envelope.blobKzgCommitments);
-  if (!byteArrayEquals(committedBid.blobKzgCommitmentsRoot, envelopeKzgRoot)) {
-    throw new Error(
-      `Kzg commitment root mismatch between envelope and committed bid envelope=${toRootHex(envelopeKzgRoot)} committedBid=${toRootHex(committedBid.blobKzgCommitmentsRoot)}`
-    );
-  }
 
   // Verify the withdrawals root
   const envelopeWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(envelope.payload.withdrawals);
@@ -151,13 +144,6 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // Verify commitments are under limit
-  const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
-  if (envelope.blobKzgCommitments.length > maxBlobsPerBlock) {
-    throw new Error(
-      `Kzg commitments exceed limit commitment.length=${envelope.blobKzgCommitments.length} limit=${maxBlobsPerBlock}`
-    );
-  }
 
   // Skipped: Verify the execution payload is valid
 }
