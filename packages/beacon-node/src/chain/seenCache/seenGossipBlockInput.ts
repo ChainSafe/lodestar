@@ -26,7 +26,9 @@ import {
 } from "../blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
-const MAX_BLOCK_INPUT_CACHE_SIZE = 5;
+// Must be at least as large as DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES to ensure
+// blocks are not evicted from the cache before they are persisted to the database.
+const MAX_BLOCK_INPUT_CACHE_SIZE = 16;
 
 export type SeenBlockInputCacheModules = {
   config: ChainForkConfig;
@@ -65,13 +67,13 @@ export type GetByBlobOptions = {
  *   are before the finalized checkpoint will be pruned.
  * - Range-sync periods.  The range process uses this cache to store and sync blocks with DA data as the chain is pulled
  *   from peers.  We pull batches, by epoch, so 32 slots are pulled at a time and several batches are pulled concurrently.
- *   It is important to set the MAX_BLOCK_INPUT_CACHE_SIZE high enough to support range sync activities.  Currently the
- *   value is set for 5 batches of 32 slots.  As process block is called (similar to following head) the BlockInput and
- *   its ancestors will be pruned.
+ *   It is important to set the MAX_BLOCK_INPUT_CACHE_SIZE high enough to support range sync activities and the async
+ *   block write queue depth.  As process block is called (similar to following head) the BlockInput and its ancestors
+ *   will be pruned.
  * - Non-Finality times.  This is a bit more tricky.  There can be long periods of non-finality and storing everything
  *   will cause OOM.  The pruneToMax will help ensure a hard limit on the number of stored blocks (with DA) that are held
- *   in memory at any one time.  The value for MAX_BLOCK_INPUT_CACHE_SIZE is set to accommodate range-sync but in
- *   practice this value may need to be massaged in the future if we find issues when debugging non-finality
+ *   in memory at any one time.  The value for MAX_BLOCK_INPUT_CACHE_SIZE must be at least as large as the async block
+ *   write queue to ensure blocks are never evicted before being persisted
  */
 
 export class SeenBlockInput {
