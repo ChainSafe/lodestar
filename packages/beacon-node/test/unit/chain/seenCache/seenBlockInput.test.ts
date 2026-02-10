@@ -2,8 +2,10 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
+  BlockInputEpbs,
   BlockInputSource,
   IBlockInput,
   isBlockInputBlobs,
@@ -21,6 +23,7 @@ import {
   generateBlock,
   generateBlockWithBlobSidecars,
   generateChainOfBlocks,
+  slots,
 } from "../../../utils/blocksAndData.js";
 import {testLogger} from "../../../utils/logger.js";
 
@@ -505,113 +508,312 @@ describe("SeenBlockInputCache", async () => {
   });
 
   // describe("getByColumn()", () => {
-  //   it("should return a new BlockInput for a new block root", () => {
-  //     const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
-  //     expect(cache.get(rootHex)).toBeUndefined();
-  //     const blockInput = cache.getByBlob({
-  //       blobSidecar,
-  //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now() / 1000,
-  //     });
-  //     expect(cache.get(rootHex)).toBe(blockInput);
-  //   });
-  //   it("should return the same BlockInput for an existing block root", () => {
-  //     const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
-
-  //     const blockInput1 = cache.getByBlob({
-  //       blobSidecar,
-  //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now() / 1000,
-  //     });
-  //     expect(cache.get(rootHex)).toBe(blockInput1);
-  //     const blockInput2 = cache.getByBlob({
-  //       blobSidecar,
-  //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now() / 1000,
-  //     });
-  //     expect(blockInput1).toBe(blockInput2);
-  //   });
-  //   it("should throw if attempting to add a blob to wrong type of BlockInput", () => {
-  //     const {block} = buildBlockTestSet(ForkName.capella);
-  //     const blockInput = cache.getByBlock({
-  //       block,
-  //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now() / 1000,
-  //     });
-  //     expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
-
-  //     const {blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
-  //     blobSidecar.signedBlockHeader = signedBlockToSignedHeader(config, block);
-  //     expect(() =>
-  //       cache.getByBlob({blobSidecar, source: BlockInputSource.gossip, seenTimestampSec: Date.now()})
-  //     ).toThrow();
-  //   });
-  //   it("should add blob to an existing BlockInput", () => {
-  //     const {block, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
-
-  //     const blockInput1 = cache.getByBlock({
-  //       block,
-  //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now() / 1000,
-  //     });
-  //     const blockInput2 = cache.getByBlob({
-  //       blobSidecar,
-  //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now() / 1000,
-  //     });
-
-  //     expect(blockInput1).toBe(blockInput2);
-  //     expect(blockInput2.getBlobs()[0]).toBe(blobSidecar);
-  //   });
-  //   it("should not throw for a BlockInput with an existing blob", () => {
-  //     const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
-
-  //     expect(cache.get(rootHex)).toBeUndefined();
-  //     const blockInput = cache.getByBlob({
-  //       blobSidecar,
-  //       source: BlockInputSource.gossip,
-  //       seenTimestampSec: Date.now() / 1000,
-  //     });
-  //     expect(cache.get(rootHex)).toBe(blockInput);
-  //     expect(() =>
-  //       blockInput.addBlob({
-  //         blobSidecar,
-  //         source: BlockInputSource.gossip,
-  //         seenTimestampSec: Date.now() / 1000,
-  //         blockRootHex: rootHex,
-  //       })
-  //     ).toThrow();
-  //     expect(() =>
-  //       cache.getByBlob({
-  //         blobSidecar,
-  //         source: BlockInputSource.gossip,
-  //         seenTimestampSec: Date.now() / 1000,
-  //       })
-  //     ).not.toThrow();
-  //   });
-  //   it("should throw for an existing blob with opts.throwGossipErrorIfAlreadyKnown", () => {
-  //     const {rootHex, blobSidecar} = buildBlockAndBlobTestSet(ForkName.electra);
-
-  //     expect(cache.get(rootHex)).toBeUndefined();
-  //     const blockInput = cache.getByBlob(
-  //       {
-  //         blobSidecar,
-  //         source: BlockInputSource.gossip,
-  //         seenTimestampSec: Date.now() / 1000,
-  //       },
-  //       {throwErrorIfAlreadyKnown: true}
-  //     );
-  //     expect(cache.get(rootHex)).toBe(blockInput);
-  //     expect(() =>
-  //       cache.getByBlob(
-  //         {
-  //           blobSidecar,
-  //           source: BlockInputSource.gossip,
-  //           seenTimestampSec: Date.now() / 1000,
-  //         },
-  //         {throwErrorIfAlreadyKnown: true}
-  //       )
-  //     ).toThrow();
-  //   });
+  //   ... (commented out Fulu column tests - TODO)
   // });
+
+  describe("getByPayloadEnvelope()", () => {
+    function buildGloasPayloadEnvelope(blockRootHex: string): gloas.SignedExecutionPayloadEnvelope {
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.beaconBlockRoot = new Uint8Array(Buffer.from(blockRootHex.slice(2), "hex"));
+      envelope.message.slot = slots.gloas;
+      return envelope;
+    }
+
+    it("should create a new BlockInputEpbs for a new block root", () => {
+      const {rootHex} = generateBlock({forkName: ForkName.gloas});
+      const envelope = buildGloasPayloadEnvelope(rootHex);
+      expect(cache.get(rootHex)).toBeUndefined();
+      const blockInput = cache.getByPayloadEnvelope({
+        payloadEnvelope: envelope,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      expect(cache.get(rootHex)).toBe(blockInput);
+      expect(isBlockInputEpbs(blockInput)).toBeTruthy();
+      expect(blockInput.hasPayloadEnvelope()).toBeTruthy();
+      expect(blockInput.hasBlock()).toBeFalsy();
+    });
+
+    it("should return the same BlockInputEpbs for an existing block root", () => {
+      const {rootHex} = generateBlock({forkName: ForkName.gloas});
+      const envelope = buildGloasPayloadEnvelope(rootHex);
+
+      const blockInput1 = cache.getByPayloadEnvelope({
+        payloadEnvelope: envelope,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      const blockInput2 = cache.getByPayloadEnvelope({
+        payloadEnvelope: envelope,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(blockInput1).toBe(blockInput2);
+    });
+
+    it("should add payload to BlockInputEpbs created by getByBlock", () => {
+      const {block, rootHex} = generateBlock({forkName: ForkName.gloas});
+      // Add blob commitments so the block requires payload/columns (payloadAvailable=true)
+      (block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments = [
+        Buffer.alloc(48, 0x01),
+      ];
+      const blockInput1 = cache.getByBlock({
+        block,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      expect(isBlockInputEpbs(blockInput1)).toBeTruthy();
+
+      const envelope = buildGloasPayloadEnvelope(rootHex);
+      const blockInput2 = cache.getByPayloadEnvelope({
+        payloadEnvelope: envelope,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(blockInput1).toBe(blockInput2);
+      expect((blockInput2 as BlockInputEpbs).hasPayloadEnvelope()).toBeTruthy();
+      expect((blockInput2 as BlockInputEpbs).hasBlock()).toBeTruthy();
+    });
+
+    it("should add block to BlockInputEpbs created by getByPayloadEnvelope", () => {
+      const {block, rootHex} = generateBlock({forkName: ForkName.gloas});
+      const envelope = buildGloasPayloadEnvelope(rootHex);
+
+      const blockInput1 = cache.getByPayloadEnvelope({
+        payloadEnvelope: envelope,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      expect(blockInput1.hasBlock()).toBeFalsy();
+
+      const blockInput2 = cache.getByBlock({
+        block,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(blockInput1).toBe(blockInput2);
+      expect(isBlockInputEpbs(blockInput2)).toBeTruthy();
+      expect((blockInput2 as BlockInputEpbs).hasBlock()).toBeTruthy();
+      expect((blockInput2 as BlockInputEpbs).hasPayloadEnvelope()).toBeTruthy();
+    });
+
+    it("should throw if attempting to add payload to wrong type of BlockInput", () => {
+      const {block, rootHex} = generateBlock({forkName: ForkName.capella});
+      cache.getByBlock({
+        block,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      const envelope = buildGloasPayloadEnvelope(rootHex);
+      expect(() =>
+        cache.getByPayloadEnvelope({
+          payloadEnvelope: envelope,
+          blockRootHex: rootHex,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+        })
+      ).toThrow();
+    });
+
+    it("should throw for existing payload with throwErrorIfAlreadyKnown", () => {
+      const {rootHex} = generateBlock({forkName: ForkName.gloas});
+      const envelope = buildGloasPayloadEnvelope(rootHex);
+
+      cache.getByPayloadEnvelope({
+        payloadEnvelope: envelope,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(() =>
+        cache.getByPayloadEnvelope(
+          {
+            payloadEnvelope: envelope,
+            blockRootHex: rootHex,
+            source: BlockInputSource.gossip,
+            seenTimestampSec: Date.now() / 1000,
+          },
+          {throwErrorIfAlreadyKnown: true}
+        )
+      ).toThrow();
+    });
+
+    it("should not throw for existing payload without throwErrorIfAlreadyKnown", () => {
+      const {rootHex} = generateBlock({forkName: ForkName.gloas});
+      const envelope = buildGloasPayloadEnvelope(rootHex);
+
+      cache.getByPayloadEnvelope({
+        payloadEnvelope: envelope,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(() =>
+        cache.getByPayloadEnvelope({
+          payloadEnvelope: envelope,
+          blockRootHex: rootHex,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+        })
+      ).not.toThrow();
+    });
+  });
+
+  describe("getByColumn() Gloas routing", () => {
+    function buildGloasColumn(rootHex: string, index: number): gloas.DataColumnSidecar {
+      const column = ssz.gloas.DataColumnSidecar.defaultValue();
+      column.index = index;
+      column.slot = slots.gloas;
+      column.beaconBlockRoot = new Uint8Array(Buffer.from(rootHex.slice(2), "hex"));
+      // In Gloas, kzgCommitments are on the ExecutionPayloadBid (block body), not the column
+      return column;
+    }
+
+    it("should create BlockInputEpbs for Gloas column", () => {
+      const {rootHex} = generateBlock({forkName: ForkName.gloas});
+      const column = buildGloasColumn(rootHex, 0);
+
+      const blockInput = cache.getByColumn({
+        columnSidecar: column,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(isBlockInputEpbs(blockInput)).toBeTruthy();
+      expect((blockInput as BlockInputEpbs).hasColumn(0)).toBeTruthy();
+    });
+
+    it("should return the same BlockInputEpbs for an existing block root", () => {
+      const {rootHex} = generateBlock({forkName: ForkName.gloas});
+      const col0 = buildGloasColumn(rootHex, 0);
+      const col1 = buildGloasColumn(rootHex, 1);
+
+      const blockInput1 = cache.getByColumn({
+        columnSidecar: col0,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      const blockInput2 = cache.getByColumn({
+        columnSidecar: col1,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(blockInput1).toBe(blockInput2);
+      expect(isBlockInputEpbs(blockInput2)).toBeTruthy();
+      expect((blockInput2 as BlockInputEpbs).hasColumn(0)).toBeTruthy();
+      expect((blockInput2 as BlockInputEpbs).hasColumn(1)).toBeTruthy();
+    });
+
+    it("should add Gloas column to existing BlockInputEpbs created by getByBlock", () => {
+      const {block, rootHex} = generateBlock({forkName: ForkName.gloas});
+      // Add blob commitments so the block requires payload/columns (payloadAvailable=true)
+      (block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments = [
+        Buffer.alloc(48, 0x01),
+      ];
+      const blockInput1 = cache.getByBlock({
+        block,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      const column = buildGloasColumn(rootHex, 0);
+      const blockInput2 = cache.getByColumn({
+        columnSidecar: column,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(blockInput1).toBe(blockInput2);
+      expect(isBlockInputEpbs(blockInput2)).toBeTruthy();
+      expect((blockInput2 as BlockInputEpbs).hasColumn(0)).toBeTruthy();
+    });
+
+    it("should throw if attempting to add Gloas column to wrong type of BlockInput", () => {
+      const {block, rootHex} = generateBlock({forkName: ForkName.capella});
+      cache.getByBlock({
+        block,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      const column = buildGloasColumn(rootHex, 0);
+      expect(() =>
+        cache.getByColumn({
+          columnSidecar: column,
+          blockRootHex: rootHex,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+        })
+      ).toThrow();
+    });
+
+    it("should not throw for duplicate column without throwErrorIfAlreadyKnown", () => {
+      const {rootHex} = generateBlock({forkName: ForkName.gloas});
+      const column = buildGloasColumn(rootHex, 0);
+
+      cache.getByColumn({
+        columnSidecar: column,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(() =>
+        cache.getByColumn({
+          columnSidecar: column,
+          blockRootHex: rootHex,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+        })
+      ).not.toThrow();
+    });
+
+    it("should throw for duplicate column with throwErrorIfAlreadyKnown", () => {
+      const {rootHex} = generateBlock({forkName: ForkName.gloas});
+      const column = buildGloasColumn(rootHex, 0);
+
+      cache.getByColumn(
+        {
+          columnSidecar: column,
+          blockRootHex: rootHex,
+          source: BlockInputSource.gossip,
+          seenTimestampSec: Date.now() / 1000,
+        },
+        {throwErrorIfAlreadyKnown: true}
+      );
+
+      expect(() =>
+        cache.getByColumn(
+          {
+            columnSidecar: column,
+            blockRootHex: rootHex,
+            source: BlockInputSource.gossip,
+            seenTimestampSec: Date.now() / 1000,
+          },
+          {throwErrorIfAlreadyKnown: true}
+        )
+      ).toThrow();
+    });
+  });
 });
