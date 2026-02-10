@@ -82,7 +82,7 @@ importers:
         version: 4.0.7(@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7))(vitest@4.0.7)
       axios:
         specifier: ^1.13.2
-        version: 1.13.3(debug@4.4.3)
+        version: 1.13.5(debug@4.4.3)
       bun-types:
         specifier: ^1.2.21
         version: 1.2.21(@types/react@19.1.12)
@@ -794,7 +794,7 @@ importers:
         version: 4.0.5
       axios:
         specifier: ^1.13.2
-        version: 1.13.3(debug@4.4.3)
+        version: 1.13.5(debug@4.4.3)
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -882,7 +882,7 @@ importers:
         version: 17.0.24
       axios:
         specifier: ^1.13.2
-        version: 1.13.3(debug@4.4.3)
+        version: 1.13.5(debug@4.4.3)
       deepmerge:
         specifier: ^4.3.1
         version: 4.3.1
@@ -1034,7 +1034,7 @@ importers:
         version: link:../utils
       axios:
         specifier: ^1.13.2
-        version: 1.13.3(debug@4.4.3)
+        version: 1.13.5(debug@4.4.3)
       tmp:
         specifier: ^0.2.1
         version: 0.2.4
@@ -3452,8 +3452,8 @@ packages:
     engines: {node: '>= 0.8.0'}
     deprecated: The AWS SDK for JavaScript (v2) has reached end-of-support, and no longer receives updates. Please migrate your code to use AWS SDK for JavaScript (v3). More info https://a.co/cUPnyil
 
-  axios@1.13.3:
-    resolution: {integrity: sha512-ERT8kdX7DZjtUm7IitEyV7InTHAF42iJuMArIiDIV5YtPanJkgw4hw5Dyg9fh0mihdWNn1GKaeIWErfe56UQ1g==}
+  axios@1.13.5:
+    resolution: {integrity: sha512-cz4ur7Vb0xS4/KUN0tPWe44eqxrIu31me+fbang3ijiNscE129POzipJJA6zniq2C/Z6sJCjMimjS8Lc/GAs8Q==}
 
   babel-runtime@6.26.0:
     resolution: {integrity: sha512-ITKNuq2wKlW1fJg9sSW52eepoYgZBggvOAHC0u/CYu/qxQ9EVzThCgR69BnSXLHjy2f7SY5zaQ4yt7H9ZVxY2g==}
@@ -4445,11 +4445,13 @@ packages:
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@11.0.0:
     resolution: {integrity: sha512-9UiX/Bl6J2yaBbxKoEBRm4Cipxgok8kQYcOPEhScPwebu2I0HoQOuYdIO6S3hLuWoZgpDpwQZMzTFxgpkyT76g==}
     engines: {node: 20 || >=22}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@13.0.0:
@@ -4458,16 +4460,17 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Glob versions prior to v9 are no longer supported
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   glob@8.1.0:
     resolution: {integrity: sha512-r8hpEjiQEYlF2QU0df3dS+nxxSIreXQS1qRhMJM0Q5NDdR386C7jb7Hwwod8Fgiuex+k0GFjgft18yvxm5XoCQ==}
     engines: {node: '>=12'}
-    deprecated: Glob versions prior to v9 are no longer supported
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   glob@9.3.5:
     resolution: {integrity: sha512-e1LleDykUz2Iu+MTYdkSsuWX8lvAjAcs0Xef0lNIu0S2wOAzuTxCJtcd9S3cijlwYF18EsU3rzb8jPVobxDh9Q==}
     engines: {node: '>=16 || 14 >=14.17'}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   global-agent@3.0.0:
     resolution: {integrity: sha512-PT6XReJ+D07JvGoxQMkT6qji/jVNfX/h364XHZOWeRzy64sSFr+xJ5OX7LI3b4MPQzdL4H8Y8M0xzPpsVMwA8Q==}
@@ -5892,8 +5895,18 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  playwright-core@1.58.2:
+    resolution: {integrity: sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   playwright@1.56.1:
     resolution: {integrity: sha512-aFi5B0WovBHTEvpM3DzXTUaeN6eN0qWnTkKx4NQaH4Wvcmc153PdaY2UBdSYKaGYw+UyWXSVyxDUg5DoPEttjw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.58.2:
+    resolution: {integrity: sha512-vA30H8Nvkq/cPBnNw4Q8TWz1EJyqgpuinBcHET0YVJVFldr8JDNiU9LaWAE1KqSkRYazuaBhTpB5ZzShOezQ6A==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -6578,12 +6591,12 @@ packages:
   tar@6.2.1:
     resolution: {integrity: sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==}
     engines: {node: '>=10'}
-    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   tar@7.5.2:
     resolution: {integrity: sha512-7NyxrTE4Anh8km8iEy7o0QYPs+0JKBTj5ZaqHg6B39erLg0qYXN3BijtShwbsNSvQ+LN75+KV+C4QR/f6Gwnpg==}
     engines: {node: '>=18'}
-    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   tdigest@0.1.1:
     resolution: {integrity: sha512-CXcDY/NIgIbKZPx5H4JJNpq6JwJhU5Z4+yWj4ZghDc7/9nVajiRlPPyMXRePPPlBfcayUqtoCXjo7/Hm82ecUA==}
@@ -9961,6 +9974,20 @@ snapshots:
       - utf-8-validate
       - vite
 
+  '@vitest/browser-playwright@4.0.7(playwright@1.58.2)(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)':
+    dependencies:
+      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))
+      playwright: 1.58.2
+      tinyrainbow: 3.0.3
+      vitest: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
+    transitivePeerDependencies:
+      - bufferutil
+      - msw
+      - utf-8-validate
+      - vite
+    optional: true
+
   '@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
       '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))
@@ -10292,7 +10319,7 @@ snapshots:
       uuid: 3.3.2
       xml2js: 0.4.19
 
-  axios@1.13.3(debug@4.4.3):
+  axios@1.13.5(debug@4.4.3):
     dependencies:
       follow-redirects: 1.15.11(debug@4.4.3)
       form-data: 4.0.5
@@ -13151,11 +13178,21 @@ snapshots:
 
   playwright-core@1.56.1: {}
 
+  playwright-core@1.58.2:
+    optional: true
+
   playwright@1.56.1:
     dependencies:
       playwright-core: 1.56.1
     optionalDependencies:
       fsevents: 2.3.2
+
+  playwright@1.58.2:
+    dependencies:
+      playwright-core: 1.58.2
+    optionalDependencies:
+      fsevents: 2.3.2
+    optional: true
 
   pngjs@7.0.0: {}
 
@@ -14268,7 +14305,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.10.1
-      '@vitest/browser-playwright': 4.0.7(playwright@1.56.1)(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/browser-playwright': 4.0.7(playwright@1.58.2)(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)
       jsdom: 23.0.1
     transitivePeerDependencies:
       - jiti
