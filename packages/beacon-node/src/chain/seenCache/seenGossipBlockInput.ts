@@ -13,6 +13,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {
@@ -39,12 +40,12 @@ import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 // (e.g. 32 blocks inserted per batch) but is trimmed back after blocks are processed.
 //
 // Must be large enough to hold blocks from all concurrently downloaded range sync batches.
-// Range sync downloads up to MAX_LOOK_AHEAD_EPOCHS (2) batches ahead of the processing head,
-// so up to 3 batches (current + 2 look-ahead) of SLOTS_PER_EPOCH blocks can be in the cache
-// simultaneously. If this value is too small, pruneToMaxSize() will evict blocks from the
-// batch being processed before they are persisted to the database, causing errors when
-// async handlers like onForkChoiceFinalized run.
-const MAX_BLOCK_INPUT_CACHE_SIZE = 3 * SLOTS_PER_EPOCH;
+// Range sync downloads up to MAX_LOOK_AHEAD_EPOCHS batches ahead of the processing head,
+// so up to (MAX_LOOK_AHEAD_EPOCHS + 1) batches (current + look-ahead) of SLOTS_PER_EPOCH
+// blocks can be in the cache simultaneously. If this value is too small, pruneToMaxSize()
+// will evict blocks from the batch being processed before they are persisted to the database,
+// causing errors when async handlers like onForkChoiceFinalized run.
+const MAX_BLOCK_INPUT_CACHE_SIZE = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
 
 export type SeenBlockInputCacheModules = {
   config: ChainForkConfig;
