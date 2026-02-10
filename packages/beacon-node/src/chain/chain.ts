@@ -126,8 +126,10 @@ const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
 
 /**
  * The maximum number of pending unfinalized block writes to the database before backpressure is applied.
+ * Must not exceed MAX_BLOCK_INPUT_CACHE_SIZE in seenGossipBlockInput.ts to ensure blocks are not
+ * evicted from the cache before they are persisted to the database.
  */
-const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 5;
+const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 8;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;

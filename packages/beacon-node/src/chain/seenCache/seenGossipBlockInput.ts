@@ -26,8 +26,11 @@ import {
 } from "../blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
-// Must be at least as large as DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES to ensure
-// blocks are not evicted from the cache before they are persisted to the database.
+// Must be at least as large as DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES in chain.ts
+// to ensure blocks are not evicted from the cache before they are persisted to the database.
+// Cache entries are references to the same objects held by the write queue, so a larger cache
+// does not meaningfully increase memory usage. The extra headroom above the write queue depth
+// accommodates blocks that arrived from the network but have not yet been processed by importBlock.
 const MAX_BLOCK_INPUT_CACHE_SIZE = 16;
 
 export type SeenBlockInputCacheModules = {
