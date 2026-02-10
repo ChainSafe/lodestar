@@ -1,29 +1,45 @@
 import crypto from "node:crypto";
 import {bench, describe} from "@chainsafe/benchmark";
-import {byteArrayEquals} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@lodestar/utils";
 import {generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 /**
- *   compare Uint8Array, the longer the array, the better performance Buffer.compare() is
- *   - with 32 bytes, Buffer.compare() is 1.5x faster (rootEquals.test.ts showed > 2x faster)
- *    ✔ byteArrayEquals 32                                               1.004480e+7 ops/s    99.55400 ns/op        -      19199 runs   2.08 s
- *    ✔ Buffer.compare 32                                                1.553495e+7 ops/s    64.37100 ns/op        -       3634 runs  0.303 s
- *
- *   - with 1024 bytes, Buffer.compare() is 21.8x faster
- *    ✔ byteArrayEquals 1024                                                379239.7 ops/s    2.636855 us/op        -        117 runs  0.811 s
- *    ✔ Buffer.compare 1024                                                  8269999 ops/s    120.9190 ns/op        -       3330 runs  0.525 s
- *
- *   - with 16384 bytes, Buffer.compare() is 41x faster
- *    ✔ byteArrayEquals 16384                                               23808.76 ops/s    42.00135 us/op        -         13 runs   1.05 s
- *    ✔ Buffer.compare 16384                                                975058.0 ops/s    1.025580 us/op        -        297 runs  0.806 s
- *
- *   - with 123687377 bytes, Buffer.compare() is 38x faster
- *    ✔ byteArrayEquals 123687377                                           3.077884 ops/s    324.8985 ms/op        -          1 runs   64.5 s
- *    ✔ Buffer.compare 123687377                                            114.7834 ops/s    8.712061 ms/op        -         13 runs   12.1 s
- *
+ * Original loop-based implementation from @chainsafe/ssz for benchmark comparison.
+ * This is what byteArrayEquals used to be before switching to Buffer.compare.
  */
-describe.skip("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () => {
+function byteArrayEqualsLoop(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Compare loop-based byteArrayEquals (original @chainsafe/ssz implementation)
+ * vs hybrid byteArrayEquals (new @lodestar/utils implementation).
+ *
+ * Node v24.13.0 benchmark results:
+ *
+ * For small arrays (<=48 bytes), loop is faster due to V8 JIT optimizations:
+ *   - 32 bytes: Loop 14.7 ns/op vs Buffer.compare 49.7 ns/op (Loop 3.4x faster)
+ *
+ * For medium arrays, loop is still competitive:
+ *   - 48 bytes: Loop 36 ns/op vs Buffer.compare 56 ns/op (Loop 1.5x faster)
+ *
+ * For larger arrays, Buffer.compare is faster due to native code:
+ *   - 96 bytes:    Loop 130 ns/op vs Buffer.compare 50 ns/op (Buffer 2.6x faster)
+ *   - 1024 bytes:  Loop 940 ns/op vs Buffer.compare 55 ns/op (Buffer 17x faster)
+ *   - 16384 bytes: Loop 14.8 μs/op vs Buffer.compare 270 ns/op (Buffer 55x faster)
+ *
+ * The @lodestar/utils implementation uses a hybrid approach:
+ *   - Loop for <=48 bytes (common case: roots, pubkeys)
+ *   - Buffer.compare for >48 bytes (signatures, large data)
+ */
+describe.skip("compare Uint8Array using loop-based vs Buffer.compare-based byteArrayEquals", () => {
   const numValidator = 1_000_000;
   const validators = generateValidators(numValidator);
   const state = generateState({validators: validators});
@@ -36,20 +52,20 @@ describe.skip("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", 
       const bytes = stateBytes.subarray(0, length);
       const bytes2 = bytes.slice();
       bench({
-        id: `byteArrayEquals ${length}`,
+        id: `byteArrayEqualsLoop ${length}`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
-            byteArrayEquals(bytes, bytes2);
+            byteArrayEqualsLoop(bytes, bytes2);
           }
         },
         runsFactor,
       });
 
       bench({
-        id: `Buffer.compare ${length}`,
+        id: `byteArrayEquals ${length}`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
-            Buffer.compare(bytes, bytes2);
+            byteArrayEquals(bytes, bytes2);
           }
         },
         runsFactor,
@@ -64,20 +80,20 @@ describe.skip("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", 
       const bytes2 = bytes.slice();
       bytes2[bytes2.length - 1] = (bytes2.at(-1) as number) + 1;
       bench({
-        id: `byteArrayEquals ${length} - diff last byte`,
+        id: `byteArrayEqualsLoop ${length} - diff last byte`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
-            byteArrayEquals(bytes, bytes2);
+            byteArrayEqualsLoop(bytes, bytes2);
           }
         },
         runsFactor,
       });
 
       bench({
-        id: `Buffer.compare ${length} - diff last byte`,
+        id: `byteArrayEquals ${length} - diff last byte`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
-            Buffer.compare(bytes, bytes2);
+            byteArrayEquals(bytes, bytes2);
           }
         },
         runsFactor,
@@ -92,20 +108,20 @@ describe.skip("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", 
       const bytes2 = crypto.randomBytes(length);
 
       bench({
-        id: `byteArrayEquals ${length} - random bytes`,
+        id: `byteArrayEqualsLoop ${length} - random bytes`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
-            byteArrayEquals(bytes, bytes2);
+            byteArrayEqualsLoop(bytes, bytes2);
           }
         },
         runsFactor,
       });
 
       bench({
-        id: `Buffer.compare ${length} - random bytes`,
+        id: `byteArrayEquals ${length} - random bytes`,
         fn: () => {
           for (let i = 0; i < runsFactor; i++) {
-            Buffer.compare(bytes, bytes2);
+            byteArrayEquals(bytes, bytes2);
           }
         },
         runsFactor,

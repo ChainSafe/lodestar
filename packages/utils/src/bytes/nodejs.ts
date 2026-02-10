@@ -62,4 +62,31 @@ export function fromHex(hex: string): Uint8Array {
 
 /// the performance of fromHexInto using a preallocated buffer is very bad compared to browser so I moved it to the benchmark
 
+/**
+ * Compare two byte arrays for equality using the most performant method based on size.
+ *
+ * Node v24.13.0 benchmark results:
+ * - 32 bytes:   Loop 14.7 ns/op vs Buffer.compare 49.7 ns/op (Loop 3.4x faster)
+ * - 48 bytes:   Loop 36 ns/op vs Buffer.compare 56 ns/op (Loop 1.5x faster)
+ * - 96 bytes:   Loop 130 ns/op vs Buffer.compare 50 ns/op (Buffer 2.6x faster)
+ * - 1024 bytes: Loop 940 ns/op vs Buffer.compare 55 ns/op (Buffer 17x faster)
+ *
+ * Uses loop for small arrays (<=48 bytes) where V8 JIT is more efficient,
+ * and Buffer.compare for larger arrays where native code wins.
+ */
+export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  // For small arrays (<=48 bytes: roots, pubkeys), loop is faster due to V8 JIT optimizations
+  if (a.length <= 48) {
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+  // For larger arrays, Buffer.compare uses native code and is significantly faster
+  return Buffer.compare(a, b) === 0;
+}
+
 export {bigIntToBytes, bytesToBigInt, bytesToInt, fromHexInto, intToBytes, toHexString, xor} from "./browser.ts";

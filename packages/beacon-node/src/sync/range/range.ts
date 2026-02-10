@@ -188,9 +188,6 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       // when this runs, syncing is the most important thing and gossip is not likely to run
       // so we can utilize worker threads to verify signatures
       blsVerifyOnMainThread: false,
-      // we want to be safe to only persist blocks after verifying it to avoid any attacks that may cause our DB
-      // to grow too much
-      eagerPersistBlock: false,
     };
 
     if (this.opts?.disableProcessAsChainSegment) {

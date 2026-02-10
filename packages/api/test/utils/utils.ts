@@ -8,7 +8,9 @@ import {ApplicationMethods, addSszContentTypeParser} from "../../src/utils/serve
 export function getTestServer(): {server: FastifyInstance; start: () => Promise<string>} {
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
+    routerOptions: {
+      querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
+    },
   });
 
   addSszContentTypeParser(server);

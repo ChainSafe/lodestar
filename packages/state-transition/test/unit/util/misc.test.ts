@@ -1,4 +1,4 @@
-import {toBigIntLE} from "bigint-buffer";
+import {toBigIntLE} from "@vekexasia/bigint-buffer2";
 import {describe, expect, it} from "vitest";
 import {GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {getBlockRoot} from "../../../src/util/index.js";

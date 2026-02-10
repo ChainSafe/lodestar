@@ -1,6 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ssz} from "@lodestar/types";
+import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 import {
   EmptyArgs,
   EmptyMeta,
@@ -54,6 +54,18 @@ export type GossipPeerScoreStat = {
   // + Other un-typed options
 };
 
+/**
+ * A multiaddr with peer ID or ENR string.
+ *
+ * Supported formats:
+ * - Multiaddr with peer ID: `/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...`
+ * - ENR: `enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...`
+ *
+ * For multiaddrs, the string must contain a /p2p/ component with the peer ID.
+ * For ENRs, the TCP multiaddr and peer ID are extracted from the encoded record.
+ */
+export type DirectPeer = string;
+
 export type RegenQueueItem = {
   key: string;
   args: unknown;
@@ -100,6 +112,15 @@ const HistoricalSummariesResponseType = new ContainerType(
 );
 
 export type HistoricalSummariesResponse = ValueOf<typeof HistoricalSummariesResponseType>;
+
+export type CustodyInfo = {
+  /** Earliest slot for which the node has custodied data columns */
+  earliestCustodiedSlot: Slot;
+  /** Number of custody groups the node is responsible for */
+  custodyGroupCount: number;
+  /** List of column indices the node is custodying */
+  custodyColumns: number[];
+};
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
@@ -231,6 +252,41 @@ export type Endpoints = {
     EmptyResponseData,
     EmptyMeta
   >;
+
+  /**
+   * Add a direct peer at runtime.
+   * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
+   * Accepts either a multiaddr with peer ID or an ENR string.
+   */
+  addDirectPeer: Endpoint<
+    // ⏎
+    "POST",
+    {peer: DirectPeer},
+    {query: {peer: string}},
+    {peerId: string},
+    EmptyMeta
+  >;
+
+  /** Remove a peer from direct peers */
+  removeDirectPeer: Endpoint<
+    // ⏎
+    "DELETE",
+    {peerId: string},
+    {query: {peerId: string}},
+    {removed: boolean},
+    EmptyMeta
+  >;
+
+  /** Get list of direct peer IDs */
+  getDirectPeers: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    string[],
+    EmptyMeta
+  >;
+
   /** Same to node api with new fields */
   getPeers: Endpoint<
     "GET",
@@ -271,6 +327,18 @@ export type Endpoints = {
     VersionMeta
   >;
 
+  /**
+   * Returns the validator indices that are currently being monitored by the validator monitor.
+   */
+  getMonitoredValidatorIndices: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ValidatorIndex[],
+    EmptyMeta
+  >;
+
   /** Dump Discv5 Kad values */
   discv5GetKadValues: Endpoint<
     // ⏎
@@ -302,6 +370,16 @@ export type Endpoints = {
     EmptyArgs,
     EmptyRequest,
     {root: RootHex; slot: Slot}[],
+    EmptyMeta
+  >;
+
+  /** Get custody information for data columns */
+  getCustodyInfo: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    CustodyInfo,
     EmptyMeta
   >;
 };
@@ -412,6 +490,32 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
       resp: EmptyResponseCodec,
     },
+    addDirectPeer: {
+      url: "/eth/v1/lodestar/direct_peers",
+      method: "POST",
+      req: {
+        writeReq: ({peer}) => ({query: {peer}}),
+        parseReq: ({query}) => ({peer: query.peer}),
+        schema: {query: {peer: Schema.StringRequired}},
+      },
+      resp: JsonOnlyResponseCodec,
+    },
+    removeDirectPeer: {
+      url: "/eth/v1/lodestar/direct_peers",
+      method: "DELETE",
+      req: {
+        writeReq: ({peerId}) => ({query: {peerId}}),
+        parseReq: ({query}) => ({peerId: query.peerId}),
+        schema: {query: {peerId: Schema.StringRequired}},
+      },
+      resp: JsonOnlyResponseCodec,
+    },
+    getDirectPeers: {
+      url: "/eth/v1/lodestar/direct_peers",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
     getPeers: {
       url: "/eth/v1/lodestar/peers",
       method: "GET",
@@ -462,6 +566,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         timeoutMs: 5 * 60 * 1000,
       },
     },
+    getMonitoredValidatorIndices: {
+      url: "/eth/v1/lodestar/monitored_validators",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
     discv5GetKadValues: {
       url: "/eth/v1/debug/discv5_kad_values",
       method: "GET",
@@ -480,6 +590,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
     },
     dumpDbStateIndex: {
       url: "/eth/v1/debug/dump_db_state_index",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    getCustodyInfo: {
+      url: "/eth/v1/lodestar/custody_info",
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,

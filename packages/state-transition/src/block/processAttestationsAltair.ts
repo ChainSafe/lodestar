@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
@@ -15,7 +14,7 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
 import {Attestation, Epoch, phase0} from "@lodestar/types";
-import {intSqrt} from "@lodestar/utils";
+import {byteArrayEquals, intSqrt} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
 import {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
@@ -64,14 +63,8 @@ export function processAttestationsAltair(
     // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature
     // we can verify only that and nothing else.
     if (verifySignature) {
-      const sigSet = getAttestationWithIndicesSignatureSet(
-        state.config,
-        epochCtx.index2pubkey,
-        state.slot,
-        attestation,
-        attestingIndices
-      );
-      if (!verifySignatureSet(sigSet)) {
+      const sigSet = getAttestationWithIndicesSignatureSet(state.config, state.slot, attestation, attestingIndices);
+      if (!verifySignatureSet(sigSet, state.epochCtx.index2pubkey)) {
         throw new Error("Attestation signature is not valid");
       }
     }

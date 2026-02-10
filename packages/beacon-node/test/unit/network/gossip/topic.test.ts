@@ -6,7 +6,7 @@ import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/networ
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 
 describe("network / gossip / topic", () => {
-  const config = createBeaconConfig(chainConfig, ZERO_HASH);
+  const config = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
@@ -135,6 +135,36 @@ describe("network / gossip / topic", () => {
           encoding,
         },
         topicStr: "/eth2/16abab34/light_client_optimistic_update/ssz_snappy",
+      },
+    ],
+    [GossipType.execution_payload]: [
+      {
+        topic: {
+          type: GossipType.execution_payload,
+          boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/a41d57bd/execution_payload/ssz_snappy",
+      },
+    ],
+    [GossipType.payload_attestation_message]: [
+      {
+        topic: {
+          type: GossipType.payload_attestation_message,
+          boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/a41d57bd/payload_attestation_message/ssz_snappy",
+      },
+    ],
+    [GossipType.execution_payload_bid]: [
+      {
+        topic: {
+          type: GossipType.execution_payload_bid,
+          boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/a41d57bd/execution_payload_bid/ssz_snappy",
       },
     ],
   };

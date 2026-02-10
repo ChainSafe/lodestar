@@ -67,7 +67,7 @@ jobs:
 
       - name: Build docs
         working-directory: docs
-        run: pnpm && pnpm build
+        run: pnpm install && pnpm build
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3

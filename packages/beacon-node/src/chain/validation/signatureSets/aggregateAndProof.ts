@@ -1,13 +1,7 @@
-import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_AGGREGATE_AND_PROOF, ForkSeq} from "@lodestar/params";
-import {
-  ISignatureSet,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  createSingleSignatureSetFromComponents,
-} from "@lodestar/state-transition";
-import {Epoch, SignedAggregateAndProof, ssz} from "@lodestar/types";
+import {ISignatureSet, SignatureSetType, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, SignedAggregateAndProof, ValidatorIndex, ssz} from "@lodestar/types";
 
 export function getAggregateAndProofSigningRoot(
   config: BeaconConfig,
@@ -27,12 +21,13 @@ export function getAggregateAndProofSigningRoot(
 export function getAggregateAndProofSignatureSet(
   config: BeaconConfig,
   epoch: Epoch,
-  aggregator: PublicKey,
+  aggregatorIndex: ValidatorIndex,
   aggregateAndProof: SignedAggregateAndProof
 ): ISignatureSet {
-  return createSingleSignatureSetFromComponents(
-    aggregator,
-    getAggregateAndProofSigningRoot(config, epoch, aggregateAndProof),
-    aggregateAndProof.signature
-  );
+  return {
+    type: SignatureSetType.indexed,
+    index: aggregatorIndex,
+    signingRoot: getAggregateAndProofSigningRoot(config, epoch, aggregateAndProof),
+    signature: aggregateAndProof.signature,
+  };
 }

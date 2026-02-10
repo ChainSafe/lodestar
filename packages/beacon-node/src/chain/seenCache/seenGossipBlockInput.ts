@@ -11,7 +11,7 @@ import {
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
-import {LodestarError, Logger, pruneSetToMax} from "@lodestar/utils";
+import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {isGloasDataColumnSidecar} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
@@ -514,7 +514,7 @@ export class SeenBlockInput {
       return false;
     }
     // Only consider verified if the signature matches
-    return Buffer.compare(cachedSignature, signature) === 0;
+    return byteArrayEquals(cachedSignature, signature);
   }
 
   /**
@@ -549,7 +549,7 @@ export class SeenBlockInput {
     let itemsToDelete = this.blockInputs.size - MAX_BLOCK_INPUT_CACHE_SIZE;
 
     if (itemsToDelete > 0) {
-      const sorted = [...this.blockInputs.entries()].sort((a, b) => b[1].slot - a[1].slot);
+      const sorted = [...this.blockInputs.entries()].sort((a, b) => a[1].slot - b[1].slot);
       for (const [rootHex] of sorted) {
         this.blockInputs.delete(rootHex);
         itemsToDelete--;

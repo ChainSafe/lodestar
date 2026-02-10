@@ -1,10 +1,11 @@
+import {byteArrayEquals} from "@lodestar/utils";
 import {VALIDATOR_BYTES_SIZE} from "../sszBytes.js";
 
 /**
- * Find modified validators by comparing two validators bytes using Buffer.compare() recursively
+ * Find modified validators by comparing two validators bytes using byteArrayEquals() recursively
  * - As noted in packages/state-transition/test/perf/util/loadState/findModifiedValidators.test.ts, serializing validators and compare Uint8Array is the fastest way
  * - The performance is quite stable and can afford a lot of difference in validators (the benchmark tested up to 10k but it's not likely we have that difference in mainnet)
- * - Also packages/state-transition/test/perf/misc/byteArrayEquals.test.ts shows that Buffer.compare() is very efficient for large Uint8Array
+ * - byteArrayEquals() uses the optimal comparison method based on array size
  *
  * @returns output parameter modifiedValidators: validator indices that are modified
  */
@@ -20,7 +21,7 @@ export function findModifiedValidators(
     );
   }
 
-  if (Buffer.compare(validatorsBytes, validatorsBytes2) === 0) {
+  if (byteArrayEquals(validatorsBytes, validatorsBytes2)) {
     return;
   }
 

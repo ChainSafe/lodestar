@@ -1,5 +1,6 @@
 import type {FileHandle} from "node:fs/promises";
 import {Slot} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 import {readInt48, readUint16, readUint32, writeInt48, writeUint16, writeUint32} from "./util.ts";
 
 /**
@@ -94,7 +95,7 @@ export function parseEntryHeader(header: Uint8Array): {type: EntryType; length: 
 export async function readVersion(fh: FileHandle, offset: number): Promise<void> {
   const versionHeader = new Uint8Array(E2STORE_HEADER_SIZE);
   await fh.read(versionHeader, 0, E2STORE_HEADER_SIZE, offset);
-  if (Buffer.compare(versionHeader, VERSION_RECORD_BYTES) !== 0) {
+  if (!byteArrayEquals(versionHeader, VERSION_RECORD_BYTES)) {
     throw new Error("Invalid E2Store version record");
   }
 }
