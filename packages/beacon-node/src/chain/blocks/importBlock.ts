@@ -91,7 +91,11 @@ export async function importBlock(
   }
 
   // 1. Persist block to hot DB (performed asynchronously to avoid blocking head selection)
-  void this.unfinalizedBlockWrites.push([blockInput]);
+  this.unfinalizedBlockWrites.push([blockInput]).catch((e) => {
+    if (!isQueueErrorAborted(e)) {
+      this.logger.error("Error pushing block to unfinalized write queue", {slot: blockSlot}, e as Error);
+    }
+  });
 
   // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
   this.serializedCache.clear();

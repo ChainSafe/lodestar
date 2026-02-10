@@ -57,7 +57,8 @@ export async function archiveBlocks(
   currentEpoch: Epoch,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
-  persistOrphanedBlocksDir?: string
+  persistOrphanedBlocksDir?: string,
+  signal?: AbortSignal
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
   // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
@@ -100,7 +101,8 @@ export async function archiveBlocks(
         db,
         logger,
         finalizedCanonicalBlockRoots,
-        currentEpoch
+        currentEpoch,
+        signal
       );
       logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
     }
@@ -322,10 +324,13 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
   db: IBeaconDb,
   logger: Logger,
   blocks: BlockRootSlot[],
-  currentEpoch: Epoch
+  currentEpoch: Epoch,
+  signal?: AbortSignal
 ): Promise<number> {
   let migratedWrappedDataColumns = 0;
   for (let i = 0; i < blocks.length; i += BLOB_SIDECAR_BATCH_SIZE) {
+    if (signal?.aborted) break;
+
     const toIdx = Math.min(i + BLOB_SIDECAR_BATCH_SIZE, blocks.length);
     const canonicalBlocks = blocks.slice(i, toIdx);
 
@@ -335,6 +340,8 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 
     // load Buffer instead of ssz deserialized to improve performance
     for (const block of canonicalBlocks) {
+      if (signal?.aborted) break;
+
       const blockSlot = block.slot;
       const blockEpoch = computeEpochAtSlot(blockSlot);
 

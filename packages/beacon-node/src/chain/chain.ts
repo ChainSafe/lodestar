@@ -385,7 +385,7 @@ export class BeaconChain implements IBeaconChain {
     });
 
     if (!opts.disableLightClientServer) {
-      this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger});
+      this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
     }
 
     this.reprocessController = new ReprocessController(this.metrics);
