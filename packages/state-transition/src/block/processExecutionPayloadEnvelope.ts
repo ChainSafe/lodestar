@@ -139,7 +139,6 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-
   // Skipped: Verify the execution payload is valid
 }
 

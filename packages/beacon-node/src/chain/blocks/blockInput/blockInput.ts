@@ -1004,13 +1004,11 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
   static createFromBlock(props: AddBlock<ForkPostGloas> & CreateBlockInputMeta & ColumnConfig): BlockInputEpbs {
     // In Gloas, blobKzgCommitments are on the ExecutionPayloadBid (in the block body),
     // so versionedHashes can be determined immediately when the block arrives.
-    const blobKzgCommitments = props.block.message.body.signedExecutionPayloadBid.message
-      .blobKzgCommitments;
+    const blobKzgCommitments = props.block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments;
     const versionedHashes = blobKzgCommitments.map(kzgCommitmentToVersionedHash);
     // Block is immediately complete if DA not required (daOutOfRange), no blobs (no columns needed),
     // or no sampled columns.
-    const hasAllData =
-      props.daOutOfRange || blobKzgCommitments.length === 0 || props.sampledColumns.length === 0;
+    const hasAllData = props.daOutOfRange || blobKzgCommitments.length === 0 || props.sampledColumns.length === 0;
     // hasComputedAllData is always true when no columns needed
     const hasComputedAllData = hasAllData;
 
@@ -1181,9 +1179,8 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
       );
     }
 
-    // Extract versionedHashes from the block's bid 
-    const blobKzgCommitments = props.block.message.body.signedExecutionPayloadBid.message
-      .blobKzgCommitments;
+    // Extract versionedHashes from the block's bid
+    const blobKzgCommitments = props.block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments;
     const versionedHashes = blobKzgCommitments.map(kzgCommitmentToVersionedHash);
 
     // Check if we already have all data (payload + columns OR payload unavailable OR no blobs)
@@ -1227,12 +1224,18 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, GloasDADat
     this.blockPromise.resolve(props.block);
     if (hasAllData) {
       const sampledColumns = this.getSampledColumns();
-      const daData = this.payloadEnvelope && sampledColumns ? {payloadEnvelope: this.payloadEnvelope, columns: sampledColumns} : null;
+      const daData =
+        this.payloadEnvelope && sampledColumns
+          ? {payloadEnvelope: this.payloadEnvelope, columns: sampledColumns}
+          : null;
       this.dataPromise.resolve(daData);
     }
     if (hasComputedAllData) {
       const sampledColumns = this.getSampledColumns();
-      const daData = this.payloadEnvelope && sampledColumns ? {payloadEnvelope: this.payloadEnvelope, columns: sampledColumns} : null;
+      const daData =
+        this.payloadEnvelope && sampledColumns
+          ? {payloadEnvelope: this.payloadEnvelope, columns: sampledColumns}
+          : null;
       this.computedDataPromise.resolve(daData);
     }
   }

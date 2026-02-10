@@ -3,6 +3,7 @@ import {ForkName, ForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {BlockInputErrorCode} from "../../../../src/chain/blocks/blockInput/errors.js";
 import {
   AddBlock,
   AddColumn,
@@ -14,16 +15,17 @@ import {
   DAType,
   isBlockInputEpbs,
 } from "../../../../src/chain/blocks/blockInput/index.js";
-import {BlockInputErrorCode} from "../../../../src/chain/blocks/blockInput/errors.js";
 
 const GLOAS_FORK_EPOCH = 4;
 const gloasSlot = computeStartSlotAtEpoch(GLOAS_FORK_EPOCH);
 
 // --- Test helpers ---
 
-function buildGloasBlock(
-  numCommitments = 2
-): {block: SignedBeaconBlock<ForkPostGloas>; blockRoot: Uint8Array; rootHex: string} {
+function buildGloasBlock(numCommitments = 2): {
+  block: SignedBeaconBlock<ForkPostGloas>;
+  blockRoot: Uint8Array;
+  rootHex: string;
+} {
   const block = ssz.gloas.SignedBeaconBlock.defaultValue();
   block.message.slot = gloasSlot;
   // In Gloas, blobKzgCommitments are on the ExecutionPayloadBid (in the block body)
@@ -85,7 +87,10 @@ function payloadProps(
   };
 }
 
-function columnProps(rootHex: string, column: gloas.DataColumnSidecar): AddColumn & CreateBlockInputMeta & ColumnConfig {
+function columnProps(
+  rootHex: string,
+  column: gloas.DataColumnSidecar
+): AddColumn & CreateBlockInputMeta & ColumnConfig {
   return {
     columnSidecar: column,
     blockRootHex: rootHex,
