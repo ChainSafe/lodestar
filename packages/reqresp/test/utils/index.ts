@@ -5,8 +5,7 @@ import {RespStatus, ResponseIncoming} from "../../src/index.js";
 import {ResponseChunk} from "../fixtures/index.js";
 
 /**
- * Helper for it-pipe when first argument is an array.
- * it-pipe does not convert the chunks array to a generator and BufferedSource breaks
+ * Converts an array to an async source.
  */
 export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
   for (const item of arr) {

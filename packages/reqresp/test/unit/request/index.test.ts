@@ -1,5 +1,4 @@
 import {PeerId} from "@libp2p/interface";
-import all from "it-all";
 import type {Libp2p} from "libp2p";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEmptyLogger} from "@lodestar/logger/empty";
@@ -67,7 +66,7 @@ describe("request / sendRequest", () => {
           ),
       } as unknown as Libp2p;
 
-      const responses = await all(
+      const responses = await Array.fromAsync(
         sendRequest(
           {logger, libp2p, metrics: null},
           peerId,
@@ -138,7 +137,7 @@ describe("request / sendRequest", () => {
         } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(
-          all(
+          Array.fromAsync(
             sendRequest(
               {logger, libp2p, metrics: null},
               peerId,

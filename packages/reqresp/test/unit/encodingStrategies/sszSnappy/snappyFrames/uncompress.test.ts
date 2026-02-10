@@ -1,4 +1,3 @@
-import {pipe} from "it-pipe";
 import {Uint8ArrayList} from "uint8arraylist";
 import {describe, expect, it} from "vitest";
 import {
@@ -17,15 +16,15 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
 
       const decompress = new SnappyFramesUncompress();
 
-      void pipe(compressIterable, async (source) => {
-        for await (const data of source) {
+      void (async () => {
+        for await (const data of compressIterable) {
           const result = decompress.uncompress(new Uint8ArrayList(data));
           if (result) {
             expect(result.subarray().toString()).toBe(testData);
             done();
           }
         }
-      });
+      })();
     }));
 
   it("should work with huge input", () =>
@@ -35,8 +34,8 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
       let result = Buffer.alloc(0);
       const decompress = new SnappyFramesUncompress();
 
-      void pipe(compressIterable, async (source) => {
-        for await (const data of source) {
+      void (async () => {
+        for await (const data of compressIterable) {
           // testData will come compressed as two or more chunks
           result = Buffer.concat([
             result,
@@ -47,7 +46,7 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
             done();
           }
         }
-      });
+      })();
     }));
 
   it("should detect malformed input", () => {
