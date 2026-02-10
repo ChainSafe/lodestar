@@ -1,6 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {ForkName, ForkPostFulu, ForkPreGloas, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPreGloas,
+  SLOTS_PER_EPOCH,
+  isForkPostDeneb,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
@@ -26,12 +34,17 @@ import {
 } from "../blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
-// Must be at least as large as DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES in chain.ts
-// to ensure blocks are not evicted from the cache before they are persisted to the database.
-// Cache entries are references to the same objects held by the write queue, so a larger cache
-// does not meaningfully increase memory usage. The extra headroom above the write queue depth
-// accommodates blocks that arrived from the network but have not yet been processed by importBlock.
-const MAX_BLOCK_INPUT_CACHE_SIZE = 16;
+// Target size for the block input cache, enforced by pruneToMaxSize() which runs after prune()
+// and onFinalized() — NOT on insertion. The cache can temporarily exceed this during range sync
+// (e.g. 32 blocks inserted per batch) but is trimmed back after blocks are processed.
+//
+// Must be large enough to hold blocks from all concurrently downloaded range sync batches.
+// Range sync downloads up to MAX_LOOK_AHEAD_EPOCHS (2) batches ahead of the processing head,
+// so up to 3 batches (current + 2 look-ahead) of SLOTS_PER_EPOCH blocks can be in the cache
+// simultaneously. If this value is too small, pruneToMaxSize() will evict blocks from the
+// batch being processed before they are persisted to the database, causing errors when
+// async handlers like onForkChoiceFinalized run.
+const MAX_BLOCK_INPUT_CACHE_SIZE = 3 * SLOTS_PER_EPOCH;
 
 export type SeenBlockInputCacheModules = {
   config: ChainForkConfig;
@@ -69,14 +82,14 @@ export type GetByBlobOptions = {
  * - onFinalized event handler will help to prune any non-canonical forks once the chain finalizes. Any block-slots that
  *   are before the finalized checkpoint will be pruned.
  * - Range-sync periods.  The range process uses this cache to store and sync blocks with DA data as the chain is pulled
- *   from peers.  We pull batches, by epoch, so 32 slots are pulled at a time and several batches are pulled concurrently.
- *   It is important to set the MAX_BLOCK_INPUT_CACHE_SIZE high enough to support range sync activities and the async
- *   block write queue depth. As process block is called (similar to following head) the BlockInput and its ancestors
- *   will be pruned.
+ *   from peers.  We pull batches, by epoch, so 32 slots are pulled at a time and several batches are downloaded
+ *   concurrently (up to MAX_LOOK_AHEAD_EPOCHS ahead).  All downloaded blocks are added to this shared cache, so it
+ *   must be large enough to hold blocks from all concurrent batches.  If pruneToMaxSize() evicts blocks from the batch
+ *   currently being processed, those blocks may not yet be persisted to the database, causing getBlockByRoot() to fail
+ *   when async event handlers (e.g. onForkChoiceFinalized) try to look them up.
  * - Non-Finality times.  This is a bit more tricky.  There can be long periods of non-finality and storing everything
- *   will cause OOM.  The pruneToMax will help ensure a hard limit on the number of stored blocks (with DA) that are held
- *   in memory at any one time.  The value for MAX_BLOCK_INPUT_CACHE_SIZE must be at least as large as the async block
- *   write queue to ensure blocks are never evicted before being persisted
+ *   will cause OOM.  The pruneToMaxSize will help ensure the number of stored blocks (with DA) is trimmed back to
+ *   MAX_BLOCK_INPUT_CACHE_SIZE after each prune() or onFinalized() call
  */
 
 export class SeenBlockInput {
