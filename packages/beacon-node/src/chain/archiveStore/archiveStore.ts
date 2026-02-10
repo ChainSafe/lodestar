@@ -202,8 +202,7 @@ export class ArchiveStore {
         this.chain.clock.currentEpoch,
         this.archiveDataEpochs,
         this.chain.opts.persistOrphanedBlocks,
-        this.chain.opts.persistOrphanedBlocksDir,
-        this.signal
+        this.chain.opts.persistOrphanedBlocksDir
       );
       timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
