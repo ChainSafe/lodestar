@@ -375,7 +375,7 @@ export function computePayloadTimelinessCommitteeIndices(
 
 /**
  * Naive (spec-like) version of PTC indices computation.
- * Used for spec tests validation. See `computePayloadTimelinessCommitteeIndices` for the optimized version.
+ * Used to verify the optimized `computePayloadTimelinessCommitteeIndices`.
  *
  * SLOW CODE - 🐢
  */
@@ -393,24 +393,11 @@ export function naiveComputePayloadTimelinessCommitteeIndices(
   const MAX_RANDOM_VALUE = 2 ** 16 - 1;
   const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
 
-  // Pre-allocate buffer to avoid repeated Buffer.concat allocations
-  const hashInput = Buffer.alloc(seed.length + 8);
-  hashInput.set(seed, 0);
-
   let i = 0;
-  let lastBlock = -1;
-  let randomBytes: Uint8Array = new Uint8Array(0);
   while (result.length < PTC_SIZE) {
     const candidateIndex = indices[i % indices.length];
 
-    // Only recompute hash every 16 iterations (digest result changes with Math.floor(i / 16))
-    const block = Math.floor(i / 16);
-    if (block !== lastBlock) {
-      hashInput.writeBigUInt64LE(BigInt(block), seed.length);
-      randomBytes = digest(hashInput);
-      lastBlock = block;
-    }
-
+    const randomBytes = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
     const offset = (i % 16) * 2;
     const randomValue = bytesToInt(randomBytes.subarray(offset, offset + 2));
 
