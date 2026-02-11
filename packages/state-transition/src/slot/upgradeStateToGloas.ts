@@ -69,6 +69,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
 
+  // Process pending builder deposits at the fork boundary
   onboardBuildersFromPendingDeposits(stateGloas);
 
   stateGloas.commit();
