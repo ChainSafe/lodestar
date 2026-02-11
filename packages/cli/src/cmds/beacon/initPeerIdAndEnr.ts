@@ -25,18 +25,11 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
 
   const interfaces = os.networkInterfaces();
   const family = components[0].name === "ip4" ? 4 : 6;
-  const isIPv4: boolean = family === 4;
-  const ip = components[0].value;
+  const ipStr = components[0].value;
 
-  if (!ip) {
+  if (!ipStr) {
     return false;
   }
-
-  const ipStr = isIPv4
-    ? Array.from(ip).join(".")
-    : Array.from(Uint16Array.from(ip))
-        .map((n) => n.toString(16))
-        .join(":");
 
   for (const networkInterfaces of Object.values(interfaces)) {
     for (const networkInterface of networkInterfaces || []) {
