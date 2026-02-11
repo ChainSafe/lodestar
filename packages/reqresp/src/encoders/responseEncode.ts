@@ -17,7 +17,7 @@ const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
 export function responseEncodeSuccess(
   protocol: Protocol,
   cbs: {onChunk: (chunkIndex: number) => void}
-): (source: AsyncIterable<ResponseOutgoing>) => AsyncIterable<Buffer> {
+): (source: AsyncIterable<ResponseOutgoing>) => AsyncIterable<Uint8Array> {
   return async function* responseEncodeSuccessTransform(source) {
     let chunkIndex = 0;
 
@@ -31,7 +31,7 @@ export function responseEncodeSuccess(
       // <context-bytes> - from altair
       const contextBytes = getContextBytes(protocol.contextBytes, chunk);
       if (contextBytes) {
-        yield contextBytes as Buffer;
+        yield contextBytes;
       }
 
       // <encoding-dependent-header> | <encoded-payload>
@@ -50,11 +50,11 @@ export function responseEncodeSuccess(
  * Only the last `<response_chunk>` is allowed to have a non-zero error code, so this
  * fn yields exactly one `<error_response>` and afterwards the stream must be terminated
  */
-export async function* responseEncodeError(
+export function* responseEncodeError(
   protocol: Pick<MixedProtocol, "encoding">,
   status: RpcResponseStatusError,
   errorMessage: string
-): AsyncGenerator<Buffer> {
+): Generator<Buffer> {
   // <result>
   yield Buffer.from([status]);
 

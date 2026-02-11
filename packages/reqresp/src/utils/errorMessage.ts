@@ -1,8 +1,7 @@
 import {decode as varintDecode, encodingLength as varintEncodingLength} from "uint8-varint";
-import {Uint8ArrayList} from "uint8arraylist";
 import {writeSszSnappyPayload} from "../encodingStrategies/sszSnappy/encode.js";
 import {Encoding} from "../types.js";
-import {SnappyFramesUncompress} from "./snappyIndex.js";
+import {decodeSnappyFrames} from "./snappyIndex.js";
 
 // ErrorMessage schema:
 //
@@ -18,34 +17,36 @@ import {SnappyFramesUncompress} from "./snappyIndex.js";
 /**
  * Encodes a UTF-8 string to 256 bytes max
  */
-export async function* encodeErrorMessage(errorMessage: string, encoding: Encoding): AsyncGenerator<Buffer> {
+export function* encodeErrorMessage(errorMessage: string, encoding: Encoding): Generator<Buffer> {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(errorMessage).slice(0, 256);
 
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
       yield* writeSszSnappyPayload(bytes);
+      break;
+    default:
+      throw Error("Unsupported encoding");
   }
 }
 
 /**
  * Decodes error message from network bytes and removes non printable, non ascii characters.
  */
-export async function decodeErrorMessage(encodedErrorMessage: Uint8Array): Promise<string> {
-  const encoder = new TextDecoder();
+export function decodeErrorMessage(encodedErrorMessage: Uint8Array): string {
+  const decoder = new TextDecoder();
   let sszDataLength: number;
   try {
     sszDataLength = varintDecode(encodedErrorMessage);
-    const decompressor = new SnappyFramesUncompress();
     const varintBytes = varintEncodingLength(sszDataLength);
-    const errorMessage = decompressor.uncompress(new Uint8ArrayList(encodedErrorMessage.subarray(varintBytes)));
-    if (errorMessage == null || errorMessage.length !== sszDataLength) {
+    const errorMessage = decodeSnappyFrames(encodedErrorMessage.subarray(varintBytes));
+    if (errorMessage.length !== sszDataLength) {
       throw new Error("Malformed input: data length mismatch");
     }
     // remove non ascii characters from string
-    return encoder.decode(errorMessage.subarray(0)).replace(/[^\x20-\x7F]/g, "");
+    return decoder.decode(errorMessage.subarray(0)).replace(/[^\x20-\x7F]/g, "");
   } catch (_e) {
     // remove non ascii characters from string
-    return encoder.decode(encodedErrorMessage.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");
+    return decoder.decode(encodedErrorMessage.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");
   }
 }

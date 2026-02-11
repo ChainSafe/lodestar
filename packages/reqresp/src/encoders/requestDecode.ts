@@ -1,7 +1,7 @@
-import {Uint8ArrayList} from "uint8arraylist";
+import type {Stream} from "@libp2p/interface";
+import {byteStream} from "@libp2p/utils";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 import {MixedProtocol} from "../types.js";
-import {BufferedSource} from "../utils/index.js";
 
 const EMPTY_DATA = new Uint8Array();
 
@@ -13,7 +13,7 @@ const EMPTY_DATA = new Uint8Array();
  */
 export async function requestDecode(
   protocol: MixedProtocol,
-  source: AsyncIterable<Uint8Array | Uint8ArrayList>
+  stream: Stream
 ): Promise<Uint8Array> {
   const type = protocol.requestSizes;
   if (type === null) {
@@ -22,6 +22,10 @@ export async function requestDecode(
   }
 
   // Request has a single payload, so return immediately
-  const bufferedSource = new BufferedSource(source[Symbol.asyncIterator]() as AsyncGenerator<Uint8ArrayList>);
-  return readEncodedPayload(bufferedSource, protocol.encoding, type);
+  const bytes = byteStream(stream);
+  try {
+    return await readEncodedPayload(bytes, protocol.encoding, type);
+  } finally {
+    bytes.unwrap();
+  }
 }

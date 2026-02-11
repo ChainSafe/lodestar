@@ -4,7 +4,7 @@ import {ErrorAborted} from "@lodestar/utils";
 
 export async function sendChunks(
   stream: Stream,
-  source: AsyncIterable<Uint8Array | Uint8ArrayList>,
+  source: Iterable<Uint8Array | Uint8ArrayList> | AsyncIterable<Uint8Array | Uint8ArrayList>,
   signal?: AbortSignal
 ): Promise<void> {
   for await (const chunk of source) {

@@ -25,7 +25,6 @@ describe("request / sendRequest", () => {
     id: string;
     protocols: MixedProtocol[];
     requestBody: ResponseIncoming;
-    maxResponses?: number;
     expectedReturn: unknown[];
   }[] = [
     {
@@ -34,13 +33,6 @@ describe("request / sendRequest", () => {
       requestBody: sszSnappyPing.binaryPayload,
       expectedReturn: [{...sszSnappyPing.binaryPayload, data: Buffer.from(sszSnappyPing.binaryPayload.data)}],
     },
-    // limit to max responses is no longer the responsibility of this package
-    // {
-    //   id: "Return up to maxResponses for a multi-chunk method",
-    //   protocols: [customProtocol({})],
-    //   requestBody: sszSnappySignedBeaconBlockPhase0.binaryPayload,
-    //   expectedReturn: [sszSnappySignedBeaconBlockPhase0.binaryPayload],
-    // },
   ];
 
   beforeEach(() => {
@@ -55,12 +47,18 @@ describe("request / sendRequest", () => {
 
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
+      const encodedResponse = await Array.fromAsync(
+        responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol)
+      );
+
       libp2p = {
-        dialProtocol: vi.fn().mockResolvedValue(
-          createMockStream({
+        dialProtocol: vi.fn().mockImplementation(async () =>
+          (await createMockStream({
             protocol: protocols[0].method,
-            source: responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol),
-          }).stream
+            source: (async function* (): AsyncIterable<Uint8Array> {
+              yield Buffer.concat(encodedResponse);
+            })(),
+          })).stream
         ),
       } as unknown as Libp2p;
 
@@ -74,7 +72,7 @@ describe("request / sendRequest", () => {
           controller.signal
         )
       );
-      expect(responses).toEqual(expectedReturn);
+      expect(responses.map((r) => ({...r, data: Buffer.from(r.data)}))).toEqual(expectedReturn);
     });
   }
 
@@ -108,7 +106,6 @@ describe("request / sendRequest", () => {
         error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
       {
-        // Upstream "abortable-iterator" never throws with an infinite sleep.
         id: "Infinite sleep on first byte",
         opts: {respTimeoutMs: 1},
         source: async function* () {
@@ -131,7 +128,7 @@ describe("request / sendRequest", () => {
     for (const {id, source, opts, error} of timeoutTestCases) {
       it(id, async () => {
         libp2p = {
-          dialProtocol: vi.fn().mockResolvedValue(createMockStream({protocol: testMethod, source: source()}).stream),
+          dialProtocol: vi.fn().mockImplementation(async () => (await createMockStream({protocol: testMethod, source: source()})).stream),
         } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(

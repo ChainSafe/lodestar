@@ -5,7 +5,7 @@ import {ResponseChunk} from "../fixtures/encoders.js";
 import {beaconConfig} from "../fixtures/messages.js";
 import {arrToSource} from "../utils/index.js";
 
-export async function* responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): AsyncIterable<Buffer> {
+export async function* responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): AsyncIterable<Uint8Array> {
   for (const chunk of responseChunks) {
     if (chunk.status === RespStatus.SUCCESS) {
       const payload = chunk.payload;

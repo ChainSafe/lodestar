@@ -21,8 +21,6 @@ export enum RequestErrorCode {
   REQUEST_TIMEOUT = "REQUEST_ERROR_REQUEST_TIMEOUT",
   /** Error when sending request to responder */
   REQUEST_ERROR = "REQUEST_ERROR_REQUEST_ERROR",
-  /** Reponder did not deliver a full reponse before max maxTotalResponseTimeout() */
-  RESPONSE_TIMEOUT = "REQUEST_ERROR_RESPONSE_TIMEOUT",
   /** A single-response method returned 0 chunks */
   EMPTY_RESPONSE = "REQUEST_ERROR_EMPTY_RESPONSE",
   /** Timeout between `<response_chunk>` exceed */

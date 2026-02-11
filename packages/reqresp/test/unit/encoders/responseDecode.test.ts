@@ -5,12 +5,14 @@ import {ResponseIncoming} from "../../../src/types.js";
 import {responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {arrToSource, onlySuccessResp} from "../../utils/index.js";
+import {createMockStream} from "../../utils/mockStream.js";
 
 describe("encoders / responseDecode", () => {
   describe("valid cases", () => {
     it.each(responseEncodersTestCases)("$id", async ({protocol, responseChunks, chunks}) => {
       const decodeResponses = responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}});
-      const responses = (await Array.fromAsync(decodeResponses(arrToSource(chunks)))) as ResponseIncoming[];
+      const {stream} = await createMockStream({source: arrToSource(chunks)});
+      const responses = (await Array.fromAsync(decodeResponses(stream))) as ResponseIncoming[];
 
       const expectedResponses = responseChunks.filter(onlySuccessResp).map((r) => r.payload);
       expect(responses.map((r) => ({...r, data: Buffer.from(r.data)}))).toEqual(
@@ -24,8 +26,9 @@ describe("encoders / responseDecode", () => {
       "$id",
       async ({protocol, chunks, decodeError}) => {
         const decodeResponses = responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}});
+        const {stream} = await createMockStream({source: arrToSource(chunks as Uint8Array[])});
         await expectRejectedWithLodestarError(
-          Array.fromAsync(decodeResponses(arrToSource(chunks as Uint8Array[]))),
+          Array.fromAsync(decodeResponses(stream)),
           decodeError as LodestarError<any>
         );
       }

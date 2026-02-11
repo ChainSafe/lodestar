@@ -6,7 +6,7 @@ import {responseDecode} from "../encoders/responseDecode.js";
 import {Metrics} from "../metrics.js";
 import {ResponseError} from "../response/index.js";
 import {MixedProtocol, ResponseIncoming} from "../types.js";
-import {abortableSource, prettyPrintPeerId, sendChunks} from "../utils/index.js";
+import {prettyPrintPeerId, sendChunks} from "../utils/index.js";
 import {RequestError, RequestErrorCode, responseStatusErrorToRequestError} from "./errors.js";
 
 export {RequestError, RequestErrorCode};
@@ -150,6 +150,10 @@ export async function* sendRequest(
     // - Max total timeout: This timeout is not required by the spec. It may not be necessary, but it's kept as
     //   safe-guard to close. streams in case of bugs on other timeout mechanisms.
     const respTimeoutController = new AbortController();
+    const onParentAbort = (): void => {
+      respTimeoutController.abort();
+    };
+    signal?.addEventListener("abort", onParentAbort, {once: true});
 
     let timeoutRESP: NodeJS.Timeout | null = null;
 
@@ -170,14 +174,11 @@ export async function* sendRequest(
           // On <response_chunk>, cancel this chunk's RESP_TIMEOUT and start next's
           restartRespTimeout();
         },
-      })(
-        abortableSource(stream, [
-          {
-            signal: respTimeoutController.signal,
-            getError: () => new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
-          },
-        ])
-      );
+      }, {
+        signal: respTimeoutController.signal,
+        getError: () =>
+          signal?.aborted ? new ErrorAborted("sendRequest") : new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
+      })(stream);
 
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
@@ -185,6 +186,7 @@ export async function* sendRequest(
       logger.verbose("Req  done", logCtx);
     } finally {
       if (timeoutRESP !== null) clearTimeout(timeoutRESP);
+      signal?.removeEventListener("abort", onParentAbort);
 
       // Necessary to call `stream.close()` since collectResponses() may break out of the source before exhausting it
       await stream.close();

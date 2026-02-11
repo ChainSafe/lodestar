@@ -19,8 +19,8 @@ describe("ResResp", () => {
 
   beforeEach(() => {
     libp2p = {
-      dialProtocol: vi.fn().mockResolvedValue(
-        createMockStream({
+      dialProtocol: vi.fn().mockImplementation(async () =>
+        (await createMockStream({
           protocol: ping.method,
           source: responseEncode(
             [
@@ -31,7 +31,7 @@ describe("ResResp", () => {
             ],
             ping
           ),
-        }).stream
+        })).stream
       ),
       handle: vi.fn(),
     } as unknown as Libp2p;

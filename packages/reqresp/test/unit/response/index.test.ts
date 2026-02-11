@@ -60,7 +60,7 @@ describe("response / handleRequest", () => {
   afterEach(() => controller.abort());
 
   it.each(testCases)("$id", async ({requestChunks, protocol, expectedResponseChunks, expectedError}) => {
-    const {stream, sentChunks} = createMockStream({
+    const {stream, sentChunks} = await createMockStream({
       source: (async function* (): AsyncIterable<Uint8Array> {
         for (const chunk of requestChunks) {
           yield chunk;
@@ -86,6 +86,9 @@ describe("response / handleRequest", () => {
     } else {
       await expect(resultPromise).resolves.toBeUndefined();
     }
+
+    // Allow stream message events to be delivered before asserting on captured chunks
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expectEqualByteChunks(sentChunks, expectedResponseChunks, "Wrong response chunks");
   });
