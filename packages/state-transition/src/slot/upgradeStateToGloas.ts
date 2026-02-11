@@ -87,6 +87,9 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
   const validatorPubkeys = new Set<string>();
 
+  // Track builder pubkeys added during the loop (builders list starts empty at fork transition)
+  const builderPubkeys = new Set<string>();
+
   const remainingPendingDeposits = state.pendingDeposits.sliceFrom(state.pendingDeposits.length);
   for (let i = 0; i < state.pendingDeposits.length; i++) {
     const deposit = state.pendingDeposits.getReadonly(i);
@@ -101,16 +104,11 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     }
 
     // If the pubkey is associated with a builder that was created in a previous iteration or it
-    // is a builder deposit, try to apply the deposit to the new/existing builder. Note that the
-    // function applyDepositForBuilder can mutate the state and may add a builder to the registry.
-    // For this reason, the set of builder pubkeys must be recomputed each iteration.
-    const builderPubkeys = new Set<string>();
-    for (let j = 0; j < state.builders.length; j++) {
-      builderPubkeys.add(toHex(state.builders.getReadonly(j).pubkey));
-    }
+    // is a builder deposit, try to apply the deposit to the new/existing builder
     const isExistingBuilder = builderPubkeys.has(pubkeyHex);
     const hasBuilderCredentials = isBuilderWithdrawalCredential(deposit.withdrawalCredentials);
     if (isExistingBuilder || hasBuilderCredentials) {
+      const buildersLenBefore = state.builders.length;
       applyDepositForBuilder(
         state,
         deposit.pubkey,
@@ -119,6 +117,10 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
         deposit.signature,
         deposit.slot
       );
+      // Track newly added builders for subsequent iterations
+      if (!isExistingBuilder && state.builders.length > buildersLenBefore) {
+        builderPubkeys.add(pubkeyHex);
+      }
       continue;
     }
 
