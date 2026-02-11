@@ -3,11 +3,11 @@ import {describe, expect, it} from "vitest";
 import {
   ChunkType,
   IDENTIFIER_FRAME,
+  crc,
   decodeSnappyFrameData,
   decodeSnappyFrames,
-  parseSnappyFrameHeader,
-  crc,
   encodeSnappy,
+  parseSnappyFrameHeader,
 } from "../../../../../src/utils/snappyIndex.js";
 
 describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {

@@ -11,10 +11,7 @@ const EMPTY_DATA = new Uint8Array();
  * request  ::= <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function requestDecode(
-  protocol: MixedProtocol,
-  stream: Stream
-): Promise<Uint8Array> {
+export async function requestDecode(protocol: MixedProtocol, stream: Stream): Promise<Uint8Array> {
   const type = protocol.requestSizes;
   if (type === null) {
     // method has no body

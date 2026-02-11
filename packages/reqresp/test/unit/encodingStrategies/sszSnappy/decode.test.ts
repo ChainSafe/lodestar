@@ -1,7 +1,7 @@
+import {byteStream} from "@libp2p/utils";
 import {encode as varintEncode} from "uint8-varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {describe, expect, it} from "vitest";
-import {byteStream} from "@libp2p/utils";
 import {readSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
 import {
   encodingStrategiesDecodingErrorCases,

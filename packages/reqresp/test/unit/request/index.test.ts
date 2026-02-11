@@ -52,13 +52,16 @@ describe("request / sendRequest", () => {
       );
 
       libp2p = {
-        dialProtocol: vi.fn().mockImplementation(async () =>
-          (await createMockStream({
-            protocol: protocols[0].method,
-            source: (async function* (): AsyncIterable<Uint8Array> {
-              yield Buffer.concat(encodedResponse);
-            })(),
-          })).stream
+        dialProtocol: vi.fn().mockImplementation(
+          async () =>
+            (
+              await createMockStream({
+                protocol: protocols[0].method,
+                source: (async function* (): AsyncIterable<Uint8Array> {
+                  yield Buffer.concat(encodedResponse);
+                })(),
+              })
+            ).stream
         ),
       } as unknown as Libp2p;
 
@@ -128,7 +131,9 @@ describe("request / sendRequest", () => {
     for (const {id, source, opts, error} of timeoutTestCases) {
       it(id, async () => {
         libp2p = {
-          dialProtocol: vi.fn().mockImplementation(async () => (await createMockStream({protocol: testMethod, source: source()})).stream),
+          dialProtocol: vi
+            .fn()
+            .mockImplementation(async () => (await createMockStream({protocol: testMethod, source: source()})).stream),
         } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(

@@ -19,19 +19,22 @@ describe("ResResp", () => {
 
   beforeEach(() => {
     libp2p = {
-      dialProtocol: vi.fn().mockImplementation(async () =>
-        (await createMockStream({
-          protocol: ping.method,
-          source: responseEncode(
-            [
-              {
-                status: RespStatus.SUCCESS,
-                payload: sszSnappyPing.binaryPayload,
-              },
-            ],
-            ping
-          ),
-        })).stream
+      dialProtocol: vi.fn().mockImplementation(
+        async () =>
+          (
+            await createMockStream({
+              protocol: ping.method,
+              source: responseEncode(
+                [
+                  {
+                    status: RespStatus.SUCCESS,
+                    payload: sszSnappyPing.binaryPayload,
+                  },
+                ],
+                ping
+              ),
+            })
+          ).stream
       ),
       handle: vi.fn(),
     } as unknown as Libp2p;
