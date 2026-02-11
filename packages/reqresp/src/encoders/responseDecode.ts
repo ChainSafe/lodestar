@@ -69,7 +69,11 @@ export async function* responseDecode(
     }
     throw e;
   } finally {
-    bytes.unwrap();
+    try {
+      bytes.unwrap();
+    } catch {
+      // Ignore unwrap errors - stream may already be closed
+    }
   }
 }
 

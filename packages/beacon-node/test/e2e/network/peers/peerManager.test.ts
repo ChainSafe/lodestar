@@ -167,7 +167,9 @@ describe("network / peers / PeerManager", () => {
     direction: "outbound",
     status: "open",
     remotePeer: peerId1,
-  } as Connection;
+    close: async () => {},
+    abort: () => {},
+  } as unknown as Connection;
 
   it("Should emit peer connected event on relevant peer status", async () => {
     const {statusCache, libp2p, networkEventBus} = await mockModules();

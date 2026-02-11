@@ -23,6 +23,10 @@ export async function requestDecode(protocol: MixedProtocol, stream: Stream): Pr
   try {
     return await readEncodedPayload(bytes, protocol.encoding, type);
   } finally {
-    bytes.unwrap();
+    try {
+      bytes.unwrap();
+    } catch {
+      // Ignore unwrap errors - stream may already be closed
+    }
   }
 }
