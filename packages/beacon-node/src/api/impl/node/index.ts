@@ -70,7 +70,7 @@ export function getNodeApi(
           beaconNode: toSpecClientVersion(getLodestarClientVersion(opts)),
           executionClient:
             chain.executionEngine.clientVersion != null
-              ? [toSpecClientVersion(chain.executionEngine.clientVersion)]
+              ? toSpecClientVersion(chain.executionEngine.clientVersion)
               : undefined,
         },
       };
