@@ -116,6 +116,7 @@ export class BlockInputSync {
       this.chain.emitter.on(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
       this.chain.emitter.on(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
       this.chain.emitter.on(ChainEvent.unknownParent, this.onUnknownParent);
+      this.chain.emitter.on(ChainEvent.unknownPayloadEnvelope, this.onUnknownPayloadEnvelope);
       this.network.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
       this.network.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
       this.subscribedToNetworkEvents = true;
@@ -127,6 +128,7 @@ export class BlockInputSync {
     this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
     this.chain.emitter.off(ChainEvent.unknownParent, this.onUnknownParent);
+    this.chain.emitter.off(ChainEvent.unknownPayloadEnvelope, this.onUnknownPayloadEnvelope);
     this.network.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.network.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
     this.subscribedToNetworkEvents = false;
@@ -180,6 +182,35 @@ export class BlockInputSync {
       this.metrics?.blockInputSync.source.inc({source: data.source});
     } catch (e) {
       this.logger.debug("Error handling unknownParent event", {}, e as Error);
+    }
+  };
+
+  /**
+   * Handle missing payload envelope for a Gloas block.
+   * Triggered when block exists but payload is missing.
+   *
+   * TODO: Full implementation depends on Phase 4 (Block Input) for payload import logic.
+   */
+  private onUnknownPayloadEnvelope = (data: ChainEventData[ChainEvent.unknownPayloadEnvelope]): void => {
+    try {
+      // TODO: Add to tracking map (similar to pendingBlocks)
+      // TODO: Trigger fetch via ExecutionPayloadEnvelopesByRoot
+      // TODO: Store fetched payload in db.executionPayloadEnvelope
+      // TODO: Trigger payload import (needs Phase 4 integration)
+      // TODO: Handle case where payload doesn't exist (builder didn't reveal)
+      //       - Mark block as EMPTY variant (no error)
+      //       - Don't retry indefinitely
+
+      this.logger.debug("Unknown payload envelope event received", {
+        blockRoot: data.rootHex,
+        slot: data.slot,
+        peer: data.peer ?? "unknown peer",
+      });
+
+      // Placeholder: Log the event for now
+      // Full implementation will be added once Phase 4 (Block Input) is complete
+    } catch (e) {
+      this.logger.debug("Error handling unknownPayloadEnvelope event", {}, e as Error);
     }
   };
 

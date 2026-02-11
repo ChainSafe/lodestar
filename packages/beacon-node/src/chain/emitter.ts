@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {RootHex, deneb, fulu, phase0} from "@lodestar/types";
+import {Root, RootHex, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 
@@ -66,6 +66,11 @@ export enum ChainEvent {
    * cut-off window passes for waiting on gossip
    */
   incompleteBlockInput = "incompleteBlockInput",
+  /**
+   * Trigger a BlockInputSync for execution payload envelopes that are missing for Gloas blocks.
+   * When a block exists but the payload envelope is missing.
+   */
+  unknownPayloadEnvelope = "unknownPayloadEnvelope",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -78,6 +83,7 @@ export type ChainEventData = {
   [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
   [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownPayloadEnvelope]: {blockRoot: Root; rootHex: RootHex; slot: Slot; peer?: PeerIdStr};
 };
 
 export type IChainEvents = ApiEvents & {
@@ -99,6 +105,7 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.unknownParent]: (data: ChainEventData[ChainEvent.unknownParent]) => void;
   [ChainEvent.unknownBlockRoot]: (data: ChainEventData[ChainEvent.unknownBlockRoot]) => void;
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
+  [ChainEvent.unknownPayloadEnvelope]: (data: ChainEventData[ChainEvent.unknownPayloadEnvelope]) => void;
 };
 
 /**

@@ -1,5 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
+import {ForkSeq} from "@lodestar/params";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
@@ -206,6 +207,9 @@ export class ArchiveStore {
       );
       timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
+      // Archive execution payload envelopes for Gloas blocks
+      await this.archiveExecutionPayloadEnvelopes(finalized);
+
       if (this.opts.pruneHistory) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
         await pruneHistory(
@@ -252,4 +256,78 @@ export class ArchiveStore {
       }
     }
   };
+
+  /**
+   * Move execution payload envelopes from hot storage to archive storage.
+   * Only processes Gloas blocks (fork >= gloas).
+   *
+   * CRITICAL: Only archive payloads for blocks where FULL variant is canonical.
+   * If EMPTY variant is canonical (builder didn't reveal), DISCARD the payload.
+   */
+  private async archiveExecutionPayloadEnvelopes(finalized: CheckpointWithHex): Promise<void> {
+    // Get finalized block
+    const finalizedBlock = this.chain.forkChoice.getFinalizedBlock();
+    if (!finalizedBlock) return;
+
+    // Check if Gloas fork is active
+    const finalizedSlot = finalizedBlock.slot;
+    const forkSeq = this.chain.config.getForkSeq(finalizedSlot);
+    if (forkSeq < ForkSeq.gloas) {
+      // Pre-Gloas blocks don't have separate payload envelopes
+      return;
+    }
+
+    // TODO: Iterate through finalized blocks and process their payload envelopes
+    // This requires iterating from last archived slot to finalized slot
+    //
+    // For each Gloas block:
+    //   1. Check fork choice to get canonical variant (via getBlock and check payload status)
+    //   2. If FULL variant is canonical:
+    //      - Move envelope from hot to archive storage
+    //   3. If EMPTY variant is canonical:
+    //      - DISCARD the envelope (delete from hot storage, don't archive)
+    //      - This happens when builder didn't reveal payload
+    //
+    // Example logic:
+    // for (let slot = lastArchivedSlot + 1; slot <= finalizedSlot; slot++) {
+    //   // Get block at this slot from fork choice
+    //   const blockRoot = await db.blockArchive.getBySlot(slot);
+    //   if (!blockRoot) continue;
+    //   const blockRootHex = toHex(blockRoot);
+    //
+    //   // Check if block exists in fork choice
+    //   // NOTE: Using hasBlock (signature unchanged between unstable and nc/epbs-fc)
+    //   if (!chain.forkChoice.hasBlock(blockRootHex)) continue;
+    //
+    //   // NOTE: On nc/epbs-fc, to get the canonical payload status:
+    //   //   Use getBlockHexDefaultStatus(blockRoot) to get the default (canonical) variant
+    //   //   Or use getParentPayloadStatus() helper if available
+    //   //   Or check ProtoBlock's payloadStatus field directly
+    //   //
+    //   // For now on unstable, we need to determine payload status differently:
+    //   // - Check if payload envelope exists in hot DB
+    //   // - If exists and block is Gloas, it's FULL variant (we have the payload)
+    //   // - Otherwise it's EMPTY variant (payload not revealed)
+    //
+    //   const forkSeq = chain.config.getForkSeq(slot);
+    //   if (forkSeq < ForkSeq.gloas) {
+    //     // Pre-Gloas blocks don't have payloads, skip
+    //     continue;
+    //   }
+    //
+    //   // Determine payload status (on unstable branch)
+    //   // TODO: When merging with nc/epbs-fc, use fork choice API to get canonical payload status
+    //   const envelope = await db.executionPayloadEnvelope.get(blockRoot);
+    //   const hasPayload = envelope !== null;
+    //
+    //   if (hasPayload) {
+    //     // FULL variant - move to archive
+    //     await db.executionPayloadEnvelopeArchive.put(slot, envelope);
+    //     await db.executionPayloadEnvelope.delete(blockRoot);
+    //   } else {
+    //     // EMPTY variant - nothing to archive or discard
+    //     // (payload never existed or was already discarded)
+    //   }
+    // }
+  }
 }

@@ -31,3 +31,20 @@ export enum Libp2pEvent {
   connectionOpen = "connection:open",
   connectionClose = "connection:close",
 }
+
+/**
+ * Maximum number of payload envelopes that can be requested in a single
+ * ExecutionPayloadEnvelopesByRoot request.
+ *
+ * Mirrors MAX_REQUEST_BLOCKS (128) since payloads correspond 1:1 with blocks.
+ */
+export const MAX_REQUEST_PAYLOAD_ENVELOPES_BY_ROOT = 128;
+
+/**
+ * Maximum number of payload envelopes that can be requested in a single
+ * ExecutionPayloadEnvelopesByRange request.
+ *
+ * TODO: Determine appropriate value based on bandwidth and processing constraints.
+ * Suggestion: Match MAX_REQUEST_BLOB_SIDECARS or similar.
+ */
+export const MAX_REQUEST_PAYLOAD_ENVELOPES_BY_RANGE = 128; // TODO: Adjust as needed
