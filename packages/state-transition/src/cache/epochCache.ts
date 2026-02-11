@@ -37,7 +37,7 @@ import {
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
-  computePayloadTimelinessCommitteeForSlot,
+  computePayloadTimelinessCommittee,
   computeProposers,
   computeSyncPeriodAtEpoch,
   getActivationChurnLimit,
@@ -235,10 +235,8 @@ export class EpochCache {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
-  // PTC for current epoch, lazily computed per-slot
-  payloadTimelinessCommittee: (Uint32Array | null)[];
-  // Seed for computing PTC on demand (null if pre-gloas)
-  ptcEpochSeed: Uint8Array | null;
+  // PTC for current epoch, computed eagerly at epoch transition
+  payloadTimelinessCommittee: Uint32Array[];
 
   // TODO: Helper stats
   syncPeriod: SyncPeriod;
@@ -277,8 +275,7 @@ export class EpochCache {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
-    payloadTimelinessCommittee: (Uint32Array | null)[];
-    ptcEpochSeed: Uint8Array | null;
+    payloadTimelinessCommittee: Uint32Array[];
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
@@ -310,7 +307,6 @@ export class EpochCache {
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.payloadTimelinessCommittee = data.payloadTimelinessCommittee;
-    this.ptcEpochSeed = data.ptcEpochSeed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -461,11 +457,16 @@ export class EpochCache {
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
     }
 
-    // PTC is computed lazily per-slot on demand. Just store the seed here.
-    let ptcEpochSeed: Uint8Array | null = null;
-    const payloadTimelinessCommittee: (Uint32Array | null)[] = new Array(SLOTS_PER_EPOCH).fill(null);
+    // Compute PTC eagerly for all slots in the epoch
+    let payloadTimelinessCommittee: Uint32Array[] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
-      ptcEpochSeed = getSeed(state, currentEpoch, DOMAIN_PTC_ATTESTER);
+      const ptcSeed = getSeed(state, currentEpoch, DOMAIN_PTC_ATTESTER);
+      payloadTimelinessCommittee = computePayloadTimelinessCommittee(
+        ptcSeed,
+        currentEpoch,
+        currentShuffling.committees,
+        effectiveBalanceIncrements
+      );
     }
 
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
@@ -541,8 +542,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
-      payloadTimelinessCommittee: payloadTimelinessCommittee,
-      ptcEpochSeed,
+      payloadTimelinessCommittee,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
     });
@@ -589,7 +589,6 @@ export class EpochCache {
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       payloadTimelinessCommittee: this.payloadTimelinessCommittee,
-      ptcEpochSeed: this.ptcEpochSeed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });
@@ -700,9 +699,13 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
-      // Store seed for lazy per-slot PTC computation and reset cache
-      this.ptcEpochSeed = getSeed(state, upcomingEpoch, DOMAIN_PTC_ATTESTER);
-      this.payloadTimelinessCommittee = new Array(SLOTS_PER_EPOCH).fill(null);
+      const ptcSeed = getSeed(state, upcomingEpoch, DOMAIN_PTC_ATTESTER);
+      this.payloadTimelinessCommittee = computePayloadTimelinessCommittee(
+        ptcSeed,
+        upcomingEpoch,
+        this.currentShuffling.committees,
+        this.effectiveBalanceIncrements
+      );
     }
     if (upcomingEpoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
@@ -1032,22 +1035,7 @@ export class EpochCache {
       throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
     }
 
-    const slotIndex = slot % SLOTS_PER_EPOCH;
-    let cached = this.payloadTimelinessCommittee[slotIndex];
-    if (cached === null) {
-      if (this.ptcEpochSeed === null) {
-        throw new Error("PTC epoch seed is not available");
-      }
-      const slotCommittees = this.currentShuffling.committees[slotIndex];
-      cached = computePayloadTimelinessCommitteeForSlot(
-        this.ptcEpochSeed,
-        slot,
-        slotCommittees,
-        this.effectiveBalanceIncrements
-      );
-      this.payloadTimelinessCommittee[slotIndex] = cached;
-    }
-    return cached;
+    return this.payloadTimelinessCommittee[slot % SLOTS_PER_EPOCH];
   }
 
   getIndexedPayloadAttestation(

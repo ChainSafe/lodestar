@@ -268,7 +268,29 @@ export function getNextSyncCommitteeIndices(
 }
 
 /**
- * Compute PTC for a single slot lazily on demand rather than eagerly for all slots.
+ * Compute PTC for all slots in an epoch eagerly.
+ */
+export function computePayloadTimelinessCommittee(
+  epochSeed: Uint8Array,
+  epoch: number,
+  committees: Uint32Array[][],
+  effectiveBalanceIncrements: EffectiveBalanceIncrements
+): Uint32Array[] {
+  const startSlot = epoch * SLOTS_PER_EPOCH;
+  const result: Uint32Array[] = new Array(SLOTS_PER_EPOCH);
+  for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+    result[i] = computePayloadTimelinessCommitteeForSlot(
+      epochSeed,
+      startSlot + i,
+      committees[i],
+      effectiveBalanceIncrements
+    );
+  }
+  return result;
+}
+
+/**
+ * Compute PTC for a single slot.
  */
 export function computePayloadTimelinessCommitteeForSlot(
   epochSeed: Uint8Array,
