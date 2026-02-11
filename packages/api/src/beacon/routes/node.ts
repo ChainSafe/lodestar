@@ -97,7 +97,7 @@ export enum NodeHealth {
 }
 
 /**
- * Client code as defined in https://github.com/ethereum/execution-apis/blob/c4988b1c427645d1b861c8c12488975f5a2f8cb9/src/engine/identification.md#clientcode
+ * Client code as defined in https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/identification.md#clientcode
  * ClientCode.XX is dedicated to other clients which do not have their own code
  */
 export enum ClientCode {
@@ -120,7 +120,7 @@ export enum ClientCode {
 /**
  * A structure which uniquely identifies a client implementation and its version.
  * Mirrors the client version specification in the Engine API.
- * https://github.com/ethereum/execution-apis/blob/c4988b1c427645d1b861c8c12488975f5a2f8cb9/src/engine/identification.md
+ * https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/identification.md
  */
 export type ClientVersion = {
   code: ClientCode;
@@ -205,8 +205,13 @@ export type Endpoints = {
   /**
    * Get version information for the beacon node and execution client.
    * Retrieves structured information about the version of the beacon node and its attached execution client
-   * in the same format as used on the Engine API.
-   * https://github.com/ethereum/execution-apis/blob/c4988b1c427645d1b861c8c12488975f5a2f8cb9/src/engine/identification.md
+   * in the same format as used on the
+   * [Engine API](https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/identification.md).
+   *
+   * Version information about the execution client may not be available at all times and is therefore optional.
+   *
+   * If the beacon node receives multiple values from `engine_getClientVersionV1`,
+   * the first value should be returned on this endpoint.
    */
   getNodeVersionV2: Endpoint<
     // ⏎
