@@ -85,9 +85,10 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.2/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
  */
 function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
+  // Track pubkeys of new validators to keep their deposits pending
   const validatorPubkeys = new Set<string>();
 
-  // Track builder pubkeys added during the loop (builders list starts empty at fork transition)
+  // Track pubkeys of new builders added when applying deposits
   const builderPubkeys = new Set<string>();
 
   const remainingPendingDeposits = state.pendingDeposits.sliceFrom(state.pendingDeposits.length);
@@ -103,8 +104,8 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
       continue;
     }
 
-    // If the pubkey is associated with a builder that was created in a previous iteration or it
-    // is a builder deposit, try to apply the deposit to the new/existing builder
+    // If the pubkey is associated with a builder that was created in a previous iteration
+    // or it is a builder deposit, try to apply the deposit to the new/existing builder
     const isExistingBuilder = builderPubkeys.has(pubkeyHex);
     const hasBuilderCredentials = isBuilderWithdrawalCredential(deposit.withdrawalCredentials);
     if (isExistingBuilder || hasBuilderCredentials) {
