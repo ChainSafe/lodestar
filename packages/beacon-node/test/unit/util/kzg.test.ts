@@ -145,5 +145,5 @@ describe("KZG", () => {
     }
     expect(recoveredSidecars.length).toBe(NUMBER_OF_COLUMNS);
     expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars, sidecars)).toBeTruthy();
-  }, 60_000);
+  });
 });
