@@ -23,6 +23,7 @@ export async function validateGossipBlock(
 ): Promise<void> {
   const block = signedBlock.message;
   const blockSlot = block.slot;
+  const blockEpoch = computeEpochAtSlot(blockSlot);
 
   // [IGNORE] The block is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) -- i.e.validate
   // that signed_beacon_block.message.slot <= current_slot (a client MAY queue future blocks for processing at the
@@ -113,7 +114,7 @@ export async function validateGossipBlock(
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
   if (isForkPostDeneb(fork) && !isForkPostGloas(fork)) {
     const blobKzgCommitmentsLen = (block as deneb.BeaconBlock).body.blobKzgCommitments.length;
-    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(computeEpochAtSlot(blockSlot));
+    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(blockEpoch);
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
@@ -129,7 +130,7 @@ export async function validateGossipBlock(
     // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
     // -- i.e. validate that len(bid.blob_kzg_commitments) <= max_blobs_per_block
     const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
-    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(computeEpochAtSlot(blockSlot));
+    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(blockEpoch);
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
