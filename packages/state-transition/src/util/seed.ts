@@ -5,6 +5,7 @@ import {
 } from "@chainsafe/swap-or-not-shuffle";
 import {
   DOMAIN_BEACON_PROPOSER,
+  DOMAIN_PTC_ATTESTER,
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -271,11 +272,12 @@ export function getNextSyncCommitteeIndices(
  * Compute PTC for all slots in an epoch eagerly.
  */
 export function computePayloadTimelinessCommittee(
-  epochSeed: Uint8Array,
+  state: BeaconStateAllForks,
   epoch: number,
   committees: Uint32Array[][],
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array[] {
+  const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
   const startSlot = epoch * SLOTS_PER_EPOCH;
   const result: Uint32Array[] = new Array(SLOTS_PER_EPOCH);
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
