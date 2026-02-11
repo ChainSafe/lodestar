@@ -374,7 +374,7 @@ export function computePayloadTimelinessCommitteeIndices(
 }
 
 /**
- * Naive (spec-like) version of PTC indices computation.
+ * Naive version of PTC indices computation.
  * Used to verify the optimized `computePayloadTimelinessCommitteeIndices`.
  *
  * SLOW CODE - 🐢
@@ -396,7 +396,6 @@ export function naiveComputePayloadTimelinessCommitteeIndices(
   let i = 0;
   while (result.length < PTC_SIZE) {
     const candidateIndex = indices[i % indices.length];
-
     const randomBytes = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8, "le")]));
     const offset = (i % 16) * 2;
     const randomValue = bytesToInt(randomBytes.subarray(offset, offset + 2));
