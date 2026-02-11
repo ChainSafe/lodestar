@@ -271,7 +271,7 @@ export function getNextSyncCommitteeIndices(
 /**
  * Compute PTC for all slots in an epoch eagerly.
  */
-export function computePayloadTimelinessCommittee(
+export function computePayloadTimelinessCommitteesForEpoch(
   state: BeaconStateAllForks,
   epoch: number,
   committees: Uint32Array[][],

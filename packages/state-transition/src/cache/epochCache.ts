@@ -36,7 +36,7 @@ import {
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
-  computePayloadTimelinessCommittee,
+  computePayloadTimelinessCommitteesForEpoch,
   computeProposers,
   computeSyncPeriodAtEpoch,
   getActivationChurnLimit,
@@ -460,7 +460,7 @@ export class EpochCache {
     // Compute PTC eagerly for all slots in the epoch
     let payloadTimelinessCommittee: Uint32Array[] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
-      payloadTimelinessCommittee = computePayloadTimelinessCommittee(
+      payloadTimelinessCommittee = computePayloadTimelinessCommitteesForEpoch(
         state,
         currentEpoch,
         currentShuffling.committees,
@@ -698,7 +698,7 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
-      this.payloadTimelinessCommittee = computePayloadTimelinessCommittee(
+      this.payloadTimelinessCommittee = computePayloadTimelinessCommitteesForEpoch(
         state,
         upcomingEpoch,
         this.currentShuffling.committees,
