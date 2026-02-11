@@ -236,7 +236,7 @@ export class EpochCache {
 
   // TODO GLOAS: See if we need to cached PTC for prev/next epoch
   // PTC for current epoch, computed eagerly at epoch transition
-  payloadTimelinessCommittee: Uint32Array[];
+  payloadTimelinessCommittees: Uint32Array[];
 
   // TODO: Helper stats
   syncPeriod: SyncPeriod;
@@ -306,7 +306,7 @@ export class EpochCache {
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
-    this.payloadTimelinessCommittee = data.payloadTimelinessCommittee;
+    this.payloadTimelinessCommittees = data.payloadTimelinessCommittee;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -587,7 +587,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
-      payloadTimelinessCommittee: this.payloadTimelinessCommittee,
+      payloadTimelinessCommittee: this.payloadTimelinessCommittees,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });
@@ -698,7 +698,7 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
-      this.payloadTimelinessCommittee = computePayloadTimelinessCommitteesForEpoch(
+      this.payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
         upcomingEpoch,
         this.currentShuffling.committees,
@@ -1033,7 +1033,7 @@ export class EpochCache {
       throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
     }
 
-    return this.payloadTimelinessCommittee[slot % SLOTS_PER_EPOCH];
+    return this.payloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
   }
 
   getIndexedPayloadAttestation(
