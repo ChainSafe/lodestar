@@ -1,9 +1,10 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import type {Multiaddr, PrivateKey} from "@libp2p/interface";
+import type {PrivateKey} from "@libp2p/interface";
 import {mplex} from "@libp2p/mplex";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {tcp} from "@libp2p/tcp";
 import {byteStream} from "@libp2p/utils";
+import type {Multiaddr} from "@multiformats/multiaddr";
 import type {Libp2p} from "libp2p";
 import {createLibp2p} from "libp2p";
 import {afterEach, describe, expect, it} from "vitest";
