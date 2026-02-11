@@ -1,14 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPreFulu,
-  ForkPreGloas,
-  isForkPostDeneb,
-  isForkPostFulu,
-} from "@lodestar/params";
-import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -17,6 +10,7 @@ import {IBeaconChain} from "../../chain/interface.ts";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -378,14 +372,14 @@ export async function fetchAndValidateColumns({
   chain,
   network,
   peerMeta,
+  forkName,
   block,
   blockRoot,
   missing,
 }: FetchByRootAndValidateColumnsProps): Promise<WarnResult<fulu.DataColumnSidecars, DownloadByRootError>> {
   const {peerId: peerIdStr} = peerMeta;
   const slot = block.message.slot;
-  // TODO GLOAS: Get blob count from somewhere else since blobKzgCommitments is absent from block body
-  const blobCount = (block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments.length;
+  const blobCount = getBlobKzgCommitments(forkName, block).length;
   if (blobCount === 0) {
     return {result: [], warnings: null};
   }
