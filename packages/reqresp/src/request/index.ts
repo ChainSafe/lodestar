@@ -11,7 +11,7 @@ import {RequestError, RequestErrorCode, responseStatusErrorToRequestError} from 
 
 export {RequestError, RequestErrorCode};
 
-// Default spec values from https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#configuration
+// https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#the-reqresp-domain
 export const DEFAULT_DIAL_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_RESP_TIMEOUT = 10 * 1000; // 10 sec
@@ -77,17 +77,6 @@ export async function* sendRequest(
     // the picked protocol in `connection.protocol`
     const protocolsMap = new Map<string, MixedProtocol>(protocols.map((protocol, i) => [protocolIDs[i], protocol]));
 
-    // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
-    // this function wraps the dialProtocol promise with an extra timeout
-    //
-    // > The issue might be: you add the peer's addresses to the AddressBook,
-    //   which will result in autoDial to kick in and dial your peer. In parallel,
-    //   you do a manual dial and it will wait for the previous one without using
-    //   the abort signal:
-    //
-    // https://github.com/ChainSafe/lodestar/issues/1597#issuecomment-703394386
-
-    // DIAL_TIMEOUT: Non-spec timeout from dialing protocol until stream opened
     const stream = await withTimeout(
       async (timeoutAndParentSignal) => {
         const protocolIds = Array.from(protocolsMap.keys());
@@ -105,8 +94,6 @@ export async function* sendRequest(
     });
 
     metrics?.outgoingOpenedStreams?.inc({method});
-
-    const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method});
 
     // Parse protocol selected by the responder
     const protocolId = stream.protocol ?? "unknown";
@@ -146,48 +133,23 @@ export async function* sendRequest(
       return;
     }
 
-    // - RESP_TIMEOUT: Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
-    // - Max total timeout: This timeout is not required by the spec. It may not be necessary, but it's kept as
-    //   safe-guard to close. streams in case of bugs on other timeout mechanisms.
-    const respTimeoutController = new AbortController();
-    const onParentAbort = (): void => {
-      respTimeoutController.abort();
-    };
-    signal?.addEventListener("abort", onParentAbort, {once: true});
-
-    let timeoutRESP: NodeJS.Timeout | null = null;
-
-    const restartRespTimeout = (): void => {
-      if (timeoutRESP) clearTimeout(timeoutRESP);
-      timeoutRESP = setTimeout(() => respTimeoutController.abort(), RESP_TIMEOUT);
-    };
+    // RESP_TIMEOUT: Maximum time for complete response transfer
+    const respSignal = signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(RESP_TIMEOUT)])
+      : AbortSignal.timeout(RESP_TIMEOUT);
 
     try {
-      restartRespTimeout();
-      // Note: libp2p.stop() will close all connections, so not necessary to abort this iterator on parent stop
-      yield* responseDecode(protocol, {
-        onFirstHeader() {
-          timerTTFB?.();
-          restartRespTimeout();
-        },
-        onFirstResponseChunk() {
-          // On <response_chunk>, cancel this chunk's RESP_TIMEOUT and start next's
-          restartRespTimeout();
-        },
-      }, {
-        signal: respTimeoutController.signal,
+      yield* responseDecode(protocol, stream, {
+        signal: respSignal,
         getError: () =>
           signal?.aborted ? new ErrorAborted("sendRequest") : new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
-      })(stream);
+      });
 
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
       // NOTE: add double space after "Req  " to align log with the "Resp " log
       logger.verbose("Req  done", logCtx);
     } finally {
-      if (timeoutRESP !== null) clearTimeout(timeoutRESP);
-      signal?.removeEventListener("abort", onParentAbort);
-
       // Necessary to call `stream.close()` since collectResponses() may break out of the source before exhausting it
       await stream.close();
       metrics?.outgoingClosedStreams?.inc({method});

@@ -14,30 +14,23 @@ const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
  * ```
  * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
-export function responseEncodeSuccess(
+export async function* responseEncodeSuccess(
   protocol: Protocol,
-  cbs: {onChunk: (chunkIndex: number) => void}
-): (source: AsyncIterable<ResponseOutgoing>) => AsyncIterable<Uint8Array> {
-  return async function* responseEncodeSuccessTransform(source) {
-    let chunkIndex = 0;
+  source: AsyncIterable<ResponseOutgoing>
+): AsyncIterable<Uint8Array> {
+  for await (const chunk of source) {
+    // <result>
+    yield SUCCESS_BUFFER;
 
-    for await (const chunk of source) {
-      // Postfix increment, return 0 as first chunk
-      cbs.onChunk(chunkIndex++);
-
-      // <result>
-      yield SUCCESS_BUFFER;
-
-      // <context-bytes> - from altair
-      const contextBytes = getContextBytes(protocol.contextBytes, chunk);
-      if (contextBytes) {
-        yield contextBytes;
-      }
-
-      // <encoding-dependent-header> | <encoded-payload>
-      yield* writeEncodedPayload(chunk.data, protocol.encoding);
+    // <context-bytes> - from altair
+    const contextBytes = getContextBytes(protocol.contextBytes, chunk);
+    if (contextBytes) {
+      yield contextBytes;
     }
-  };
+
+    // <encoding-dependent-header> | <encoded-payload>
+    yield* writeEncodedPayload(chunk.data, protocol.encoding);
+  }
 }
 
 /**

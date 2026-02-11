@@ -29,66 +29,48 @@ enum StreamStatus {
  * result          ::= "0" | "1" | "2" | ["128" ... "255"]
  * ```
  */
-export function responseDecode(
+export async function* responseDecode(
   protocol: MixedProtocol,
-  cbs: {
-    onFirstHeader: () => void;
-    onFirstResponseChunk: () => void;
-  },
+  stream: Stream,
   opts: {signal?: AbortSignal; getError?: () => Error} = {}
-): (stream: Stream) => AsyncIterable<ResponseIncoming> {
-  return async function* responseDecodeSink(stream) {
-    const bytes = byteStream(stream);
+): AsyncIterable<ResponseIncoming> {
+  const bytes = byteStream(stream);
 
-    let readFirstHeader = false;
-    let readFirstResponseChunk = false;
+  try {
+    while (true) {
+      const status = await readResultHeader(bytes, opts);
 
-    try {
-      while (true) {
-        const status = await readResultHeader(bytes, opts);
-
-        // Stream is only allowed to end at the start of a <response_chunk> block
-        // The happens when source ends before readResultHeader() can fetch 1 byte
-        if (status === StreamStatus.Ended) {
-          break;
-        }
-
-        if (!readFirstHeader) {
-          cbs.onFirstHeader();
-          readFirstHeader = true;
-        }
-
-        // For multiple chunks, only the last chunk is allowed to have a non-zero error
-        // code (i.e. The chunk stream is terminated once an error occurs
-        if (status !== RespStatus.SUCCESS) {
-          const errorMessage = await readErrorMessage(bytes, opts);
-          throw new ResponseError(status, errorMessage);
-        }
-
-        const forkName = await readContextBytes(protocol.contextBytes, bytes, opts);
-        const typeSizes = protocol.responseSizes(forkName);
-        const chunkData = await readEncodedPayload(bytes, protocol.encoding, typeSizes, opts.signal);
-
-        yield {
-          data: chunkData,
-          fork: forkName,
-          protocolVersion: protocol.version,
-        };
-
-        if (!readFirstResponseChunk) {
-          cbs.onFirstResponseChunk();
-          readFirstResponseChunk = true;
-        }
+      // Stream is only allowed to end at the start of a <response_chunk> block
+      // The happens when source ends before readResultHeader() can fetch 1 byte
+      if (status === StreamStatus.Ended) {
+        break;
       }
-    } catch (e) {
-      if (opts.signal?.aborted && opts.getError) {
-        throw opts.getError();
+
+      // For multiple chunks, only the last chunk is allowed to have a non-zero error
+      // code (i.e. The chunk stream is terminated once an error occurs
+      if (status !== RespStatus.SUCCESS) {
+        const errorMessage = await readErrorMessage(bytes, opts);
+        throw new ResponseError(status, errorMessage);
       }
-      throw e;
-    } finally {
-      bytes.unwrap();
+
+      const forkName = await readContextBytes(protocol.contextBytes, bytes, opts);
+      const typeSizes = protocol.responseSizes(forkName);
+      const chunkData = await readEncodedPayload(bytes, protocol.encoding, typeSizes, opts.signal);
+
+      yield {
+        data: chunkData,
+        fork: forkName,
+        protocolVersion: protocol.version,
+      };
     }
-  };
+  } catch (e) {
+    if (opts.signal?.aborted && opts.getError) {
+      throw opts.getError();
+    }
+    throw e;
+  } finally {
+    bytes.unwrap();
+  }
 }
 
 /**

@@ -23,7 +23,7 @@ export enum RequestErrorCode {
   REQUEST_ERROR = "REQUEST_ERROR_REQUEST_ERROR",
   /** A single-response method returned 0 chunks */
   EMPTY_RESPONSE = "REQUEST_ERROR_EMPTY_RESPONSE",
-  /** Timeout between `<response_chunk>` exceed */
+  /** Response transfer timeout exceeded */
   RESP_TIMEOUT = "REQUEST_ERROR_RESP_TIMEOUT",
   /** Request rate limited */
   REQUEST_RATE_LIMITED = "REQUEST_ERROR_RATE_LIMITED",

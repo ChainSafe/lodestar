@@ -12,7 +12,7 @@ import {ResponseError} from "./errors.js";
 
 export {ResponseError};
 
-// Default spec values from https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#configuration
+// https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#the-reqresp-domain
 export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
 
 export interface HandleRequestOpts {
@@ -27,7 +27,7 @@ export interface HandleRequestOpts {
   requestId?: number;
   /** Peer client type for logging and metrics: 'prysm' | 'lighthouse' */
   peerClient?: string;
-  /** Non-spec timeout from sending request until write stream closed by responder */
+  /** Timeout for reading the incoming request payload */
   requestTimeoutMs?: number;
 }
 
@@ -73,12 +73,10 @@ export async function handleRequest({
     stream,
     (async function* requestHandlerSource() {
       try {
-        const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method: protocol.method});
-
         const requestBody = await withTimeout(() => requestDecode(protocol, stream), REQUEST_TIMEOUT, signal).catch(
           (e: unknown) => {
             if (e instanceof TimeoutError) {
-              throw e; // Let outter catch (_e) {} re-type the error as SERVER_ERROR
+              throw e; // Let outer catch re-type the error as SERVER_ERROR
             }
             throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
           }
@@ -98,11 +96,7 @@ export async function handleRequest({
           version: protocol.version,
         };
 
-        yield* responseEncodeSuccess(protocol, {
-          onChunk(chunkIndex) {
-            if (chunkIndex === 0) timerTTFB?.();
-          },
-        })(protocol.handler(requestChunk, peerId, peerClient));
+        yield* responseEncodeSuccess(protocol, protocol.handler(requestChunk, peerId, peerClient));
       } catch (e) {
         const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;
         yield* responseEncodeError(protocol, status, (e as Error).message);

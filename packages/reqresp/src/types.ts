@@ -6,7 +6,7 @@ import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
 /**
  * Available request/response encoding strategies:
- * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#encoding-strategies
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#encoding-strategies
  */
 export enum Encoding {
   SSZ_SNAPPY = "ssz_snappy",

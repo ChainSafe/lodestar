@@ -10,9 +10,8 @@ import {createMockStream} from "../../utils/mockStream.js";
 describe("encoders / responseDecode", () => {
   describe("valid cases", () => {
     it.each(responseEncodersTestCases)("$id", async ({protocol, responseChunks, chunks}) => {
-      const decodeResponses = responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}});
       const {stream} = await createMockStream({source: arrToSource(chunks)});
-      const responses = (await Array.fromAsync(decodeResponses(stream))) as ResponseIncoming[];
+      const responses = (await Array.fromAsync(responseDecode(protocol, stream))) as ResponseIncoming[];
 
       const expectedResponses = responseChunks.filter(onlySuccessResp).map((r) => r.payload);
       expect(responses.map((r) => ({...r, data: Buffer.from(r.data)}))).toEqual(
@@ -25,10 +24,9 @@ describe("encoders / responseDecode", () => {
     it.each(responseEncodersErrorTestCases.filter((r) => r.decodeError !== undefined))(
       "$id",
       async ({protocol, chunks, decodeError}) => {
-        const decodeResponses = responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}});
         const {stream} = await createMockStream({source: arrToSource(chunks as Uint8Array[])});
         await expectRejectedWithLodestarError(
-          Array.fromAsync(decodeResponses(stream)),
+          Array.fromAsync(responseDecode(protocol, stream)),
           decodeError as LodestarError<any>
         );
       }

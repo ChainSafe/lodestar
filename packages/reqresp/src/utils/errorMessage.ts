@@ -12,7 +12,7 @@ import {decodeSnappyFrames} from "./snappyIndex.js";
 // By convention, the error_message is a sequence of bytes that MAY be interpreted as a
 // UTF-8 string (for debugging purposes). Clients MUST treat as valid any byte sequences
 //
-// Spec v1.1.10 https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#responding-side
+// https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#responding-side
 
 /**
  * Encodes a UTF-8 string to 256 bytes max

@@ -5,7 +5,7 @@ import {readSszSnappyPayload} from "./sszSnappy/decode.js";
 import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
 
 // For more info about Ethereum Consensus request/response encoding strategies, see:
-// https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#encoding-strategies
+// https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#encoding-strategies
 // Supported encoding strategies:
 // - ssz_snappy
 
