@@ -275,7 +275,7 @@ export class EpochCache {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
-    payloadTimelinessCommittee: Uint32Array[];
+    payloadTimelinessCommittees: Uint32Array[];
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
@@ -306,7 +306,7 @@ export class EpochCache {
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
-    this.payloadTimelinessCommittees = data.payloadTimelinessCommittee;
+    this.payloadTimelinessCommittees = data.payloadTimelinessCommittees;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -458,9 +458,9 @@ export class EpochCache {
     }
 
     // Compute PTC eagerly for all slots in the epoch
-    let payloadTimelinessCommittee: Uint32Array[] = [];
+    let payloadTimelinessCommittees: Uint32Array[] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
-      payloadTimelinessCommittee = computePayloadTimelinessCommitteesForEpoch(
+      payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
         currentEpoch,
         currentShuffling.committees,
@@ -541,7 +541,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
-      payloadTimelinessCommittee,
+      payloadTimelinessCommittees,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
     });
@@ -587,7 +587,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
-      payloadTimelinessCommittee: this.payloadTimelinessCommittees,
+      payloadTimelinessCommittees: this.payloadTimelinessCommittees,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });
