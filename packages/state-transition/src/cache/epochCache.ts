@@ -4,7 +4,6 @@ import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_PROPOSER,
-  DOMAIN_PTC_ATTESTER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   ForkSeq,
