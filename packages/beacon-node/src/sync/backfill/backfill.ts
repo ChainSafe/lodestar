@@ -150,6 +150,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private peers = new Set<PeerIdStr>();
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
   private signal: AbortSignal;
+  private syncPromise: Promise<void>;
 
   constructor(opts: BackfillSyncOpts, modules: BackfillModules) {
     super();
@@ -172,21 +173,23 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
     this.signal = modules.signal;
 
-    this.sync()
+    this.syncPromise = this.sync()
       .then((oldestSlotSynced) => {
         if (this.status !== BackfillSyncStatus.completed) {
           throw new ErrorAborted(`Invalid BackfillSyncStatus at the completion of sync loop status=${this.status}`);
         }
         this.emit(BackfillSyncEvent.completed, oldestSlotSynced);
         this.logger.info("BackfillSync completed", {oldestSlotSynced});
-        // Sync completed, unsubscribe listeners and don't run the processor again.
-        // Backfill is never necessary again until the node shuts down
-        this.close();
       })
       .catch((e) => {
         this.logger.error("BackfillSync processor error", e);
         this.status = BackfillSyncStatus.aborted;
-        this.close();
+      })
+      .finally(() => {
+        // Clean up event listeners when sync loop exits, whether from
+        // natural completion, abort, or error
+        this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
+        this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
       });
 
     const metrics = this.metrics;
@@ -271,11 +274,10 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     }) as T;
   }
 
-  /** Throw / return all AsyncGenerators */
-  close(): void {
-    this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
-    this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
+  /** Signal the sync loop to stop and wait for in-flight operations (including DB writes) to complete */
+  async close(): Promise<void> {
     this.processor.end(new ErrorAborted("BackfillSync"));
+    await this.syncPromise;
   }
 
   /**
