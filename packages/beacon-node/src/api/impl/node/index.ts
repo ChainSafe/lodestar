@@ -65,12 +65,14 @@ export function getNodeApi(
     },
 
     async getNodeVersionV2() {
+      const {clientVersion} = chain.executionEngine;
+
       return {
         data: {
           beaconNode: toSpecClientVersion(getLodestarClientVersion(opts)),
           executionClient:
-            chain.executionEngine.clientVersion != null && chain.executionEngine.clientVersion.code !== ClientCode.XX
-              ? toSpecClientVersion(chain.executionEngine.clientVersion)
+            clientVersion != null && clientVersion.code !== ClientCode.XX
+              ? toSpecClientVersion(clientVersion)
               : undefined,
         },
       };
