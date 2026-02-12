@@ -248,13 +248,9 @@ describe("network / peers / PeerManager", () => {
       resolveFirstIdentify = resolve;
     });
 
-    vi.spyOn(libp2p.services.identify, "identify")
-      .mockImplementationOnce(
-        () => firstIdentifyResult as unknown as ReturnType<typeof libp2p.services.identify.identify>
-      )
-      .mockImplementationOnce(
-        () => Promise.resolve({agentVersion: undefined}) as ReturnType<typeof libp2p.services.identify.identify>
-      );
+    vi.spyOn(libp2p.services.identify, "identify").mockImplementationOnce(
+      () => firstIdentifyResult as unknown as ReturnType<typeof libp2p.services.identify.identify>
+    );
 
     const inboundConnection = {
       direction: "inbound",
@@ -264,10 +260,42 @@ describe("network / peers / PeerManager", () => {
 
     await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
     await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+    expect(libp2p.services.identify.identify).toHaveBeenCalledTimes(1);
 
     resolveFirstIdentify({agentVersion: "Lighthouse/v6.0.1"});
     await sleep(0);
 
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Lighthouse/v6.0.1");
+    expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);
+  });
+
+  it("Should retry identify after transient EOF", async () => {
+    const {libp2p, peerManager} = await mockModules();
+
+    const eofError = new Error("stream closed after reading 0/1 bytes");
+    eofError.name = "UnexpectedEOFError";
+
+    vi.spyOn(libp2p.services.identify, "identify")
+      .mockImplementationOnce(() => Promise.reject(eofError) as ReturnType<typeof libp2p.services.identify.identify>)
+      .mockImplementationOnce(
+        () =>
+          Promise.resolve({agentVersion: "Lighthouse/v6.0.1"}) as ReturnType<typeof libp2p.services.identify.identify>
+      );
+
+    const inboundConnection = {
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+    await sleep(550);
+
+    expect(libp2p.services.identify.identify).toHaveBeenCalledTimes(2);
     const peerData = peerManager["connectedPeers"].get(peerId1.toString());
     expect(peerData?.agentVersion).toBe("Lighthouse/v6.0.1");
     expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);

@@ -186,8 +186,17 @@ export async function* sendRequest(
           stream.abort(e as Error);
         });
 
-        if (!responseFullyConsumed && stream.remoteWriteStatus === "writable") {
-          scheduleStreamAbortIfNotClosed(stream, RESP_TIMEOUT);
+        if (!responseFullyConsumed) {
+          // Stop buffering unread inbound data after caller exits early.
+          // mplex does not support propagating closeRead to the remote, so still
+          // abort later if the remote never closes write.
+          await stream.closeRead().catch(() => {
+            // Ignore closeRead errors - close/abort path below will reclaim stream.
+          });
+
+          if (stream.remoteWriteStatus === "writable") {
+            scheduleStreamAbortIfNotClosed(stream, RESP_TIMEOUT);
+          }
         }
       }
       metrics?.outgoingClosedStreams?.inc({method});

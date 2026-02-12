@@ -91,8 +91,9 @@ describe("request / sendRequest", () => {
     );
 
     let abortCalled = false;
-    let getStreamState = (): {status: string; writeStatus: string} => ({
+    let getStreamState = (): {status: string; readStatus: string; writeStatus: string} => ({
       status: "not-created",
+      readStatus: "not-created",
       writeStatus: "not-created",
     });
     libp2p = {
@@ -106,6 +107,7 @@ describe("request / sendRequest", () => {
         });
         const reqStream = streamResult.stream as unknown as {
           status: string;
+          readStatus: string;
           writeStatus: string;
           abort: (error: Error) => void;
         };
@@ -114,7 +116,11 @@ describe("request / sendRequest", () => {
           abortCalled = true;
           abort(error);
         };
-        getStreamState = () => ({status: reqStream.status, writeStatus: reqStream.writeStatus});
+        getStreamState = () => ({
+          status: reqStream.status,
+          readStatus: reqStream.readStatus,
+          writeStatus: reqStream.writeStatus,
+        });
         return streamResult.stream;
       }),
     } as unknown as Libp2p;
@@ -136,6 +142,7 @@ describe("request / sendRequest", () => {
     expect(abortCalled).toBe(false);
     const streamState = getStreamState();
     expect(streamState.status).not.toBe("aborted");
+    expect(streamState.readStatus).toBe("closed");
     expect(streamState.writeStatus).toBe("closed");
   });
 

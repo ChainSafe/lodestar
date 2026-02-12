@@ -5,7 +5,7 @@ import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {Metadata, Status, altair, fulu, phase0} from "@lodestar/types";
-import {prettyPrintIndices, toHex, withTimeout} from "@lodestar/utils";
+import {prettyPrintIndices, sleep, toHex, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
 import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../util/dataColumns.js";
@@ -46,6 +46,9 @@ const STATUS_INBOUND_GRACE_PERIOD = 15 * 1000;
 const CHECK_PING_STATUS_INTERVAL = 10 * 1000;
 /** A peer is considered long connection if it's >= 1 day */
 const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
+/** Retry identify once for transient EOFs on the identify stream */
+const IDENTIFY_MAX_ATTEMPTS = 2;
+const IDENTIFY_RETRY_DELAY_MS = 500;
 /** Ref https://github.com/ChainSafe/lodestar/issues/3423 */
 const DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS = 1000;
 /**
@@ -132,6 +135,15 @@ enum RelevantPeerStatus {
   irrelevant = "irrelevant",
 }
 
+function isRetryableIdentifyError(error: Error): boolean {
+  if (error.name === "UnexpectedEOFError") {
+    return true;
+  }
+
+  const message = error.message.toLowerCase();
+  return message.includes("stream closed while reading") || message.includes("stream closed after reading");
+}
+
 /**
  * Performs all peer management functionality in a single grouped class:
  * - Ping peers every `PING_INTERVAL_MS`
@@ -161,6 +173,8 @@ export class PeerManager {
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
+  /** Avoid opening multiple identify streams for the same peer concurrently */
+  private readonly peersIdentifying = new Set<PeerIdStr>();
 
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
@@ -761,30 +775,12 @@ export class PeerManager {
       void this.requestStatus(remotePeer, this.statusCache.get());
     }
 
-    this.libp2p.services.identify
-      .identify(evt.detail)
-      .then((result) => {
-        const agentVersion = result.agentVersion;
-        if (agentVersion) {
-          // A newer connection event may have replaced the object in `connectedPeers`.
-          // Always patch the map entry, not the captured local object.
-          const connectedPeerData = this.connectedPeers.get(remotePeerStr);
-          if (connectedPeerData) {
-            connectedPeerData.agentVersion = agentVersion;
-            connectedPeerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
-          }
-        }
-      })
-      .catch((err) => {
-        if (evt.detail.status !== "open") {
-          this.logger.debug("Peer disconnected during identify protocol", {
-            peerId: remotePeerPrettyStr,
-            error: (err as Error).message,
-          });
-        } else {
-          this.logger.debug("Error setting agentVersion for the peer", {peerId: remotePeerPrettyStr}, err);
-        }
+    if (peerData.agentVersion === null && !this.peersIdentifying.has(remotePeerStr)) {
+      this.peersIdentifying.add(remotePeerStr);
+      void this.identifyPeer(evt.detail, remotePeerStr, remotePeerPrettyStr).finally(() => {
+        this.peersIdentifying.delete(remotePeerStr);
       });
+    }
   };
 
   /**
@@ -824,6 +820,7 @@ export class PeerManager {
 
     // remove the ping and status timer for the peer
     this.connectedPeers.delete(peerIdStr);
+    this.peersIdentifying.delete(peerIdStr);
 
     this.logger.verbose(logMessage, logContext);
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
@@ -838,6 +835,49 @@ export class PeerManager {
       await this.libp2p.hangUp(peer);
     } catch (e) {
       this.logger.debug("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
+    }
+  }
+
+  private async identifyPeer(connection: Connection, peerIdStr: string, peerIdPretty: string): Promise<void> {
+    for (let attempt = 1; attempt <= IDENTIFY_MAX_ATTEMPTS; attempt++) {
+      try {
+        const result = await this.libp2p.services.identify.identify(connection);
+        const agentVersion = result.agentVersion;
+        if (agentVersion) {
+          // A newer connection event may have replaced the object in `connectedPeers`.
+          // Always patch the map entry, not the captured local object.
+          const connectedPeerData = this.connectedPeers.get(peerIdStr);
+          if (connectedPeerData) {
+            connectedPeerData.agentVersion = agentVersion;
+            connectedPeerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
+          }
+        }
+        return;
+      } catch (e) {
+        const error = e as Error;
+        const isConnected = getConnection(this.libp2p, peerIdStr)?.status === "open";
+        if (!isConnected) {
+          this.logger.debug("Peer disconnected during identify protocol", {
+            peerId: peerIdPretty,
+            error: error.message,
+            attempt,
+          });
+          return;
+        }
+
+        if (attempt < IDENTIFY_MAX_ATTEMPTS && isRetryableIdentifyError(error)) {
+          this.logger.debug("Retrying identify after transient stream failure", {
+            peerId: peerIdPretty,
+            attempt,
+            error: error.message,
+          });
+          await sleep(IDENTIFY_RETRY_DELAY_MS);
+          continue;
+        }
+
+        this.logger.debug("Error setting agentVersion for the peer", {peerId: peerIdPretty}, error);
+        return;
+      }
     }
   }
 

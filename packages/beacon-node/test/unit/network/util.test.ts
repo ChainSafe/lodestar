@@ -3,6 +3,7 @@ import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {getCurrentAndNextForkBoundary} from "../../../src/network/forks.js";
 import {getDiscv5Multiaddrs} from "../../../src/network/libp2p/index.js";
+import {defaultNetworkOptions} from "../../../src/network/options.js";
 
 describe("getCurrentAndNextForkBoundary", () => {
   const altairEpoch = config.forkBoundariesAscendingEpochOrder[1].epoch;
@@ -51,5 +52,11 @@ describe("getDiscv5Multiaddrs", () => {
     ];
     const bootMultiaddrs = await getDiscv5Multiaddrs(enrWithoutTcp);
     expect(bootMultiaddrs.length).toBe(0);
+  });
+});
+
+describe("defaultNetworkOptions", () => {
+  it("sets a safe mplex disconnectThreshold", () => {
+    expect(defaultNetworkOptions.disconnectThreshold).toBe(255);
   });
 });
