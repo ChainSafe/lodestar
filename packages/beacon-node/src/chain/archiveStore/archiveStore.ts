@@ -5,7 +5,7 @@ import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
-import {JobItemQueue} from "../../util/queue/index.js";
+import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH} from "./constants.js";
@@ -165,8 +165,12 @@ export class ArchiveStore {
   //-------------------------------------------------------------------------
   // Event handlers
   //-------------------------------------------------------------------------
-  private onFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
-    return this.jobQueue.push(finalized);
+  private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
+    this.jobQueue.push(finalized).catch((e) => {
+      if (!isQueueErrorAborted(e)) {
+        this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+      }
+    });
   };
 
   private onCheckpoint = (): void => {
@@ -243,7 +247,9 @@ export class ArchiveStore {
         prunedBlocks: prunedBlocks.length,
       });
     } catch (e) {
-      this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+      if (!this.signal.aborted) {
+        this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+      }
     }
   };
 }

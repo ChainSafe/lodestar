@@ -1,10 +1,19 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {ForkName, ForkPostFulu, ForkPreGloas, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPreGloas,
+  SLOTS_PER_EPOCH,
+  isForkPostDeneb,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {
@@ -26,7 +35,17 @@ import {
 } from "../blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
-const MAX_BLOCK_INPUT_CACHE_SIZE = 5;
+// Target size for the block input cache, enforced by pruneToMaxSize() which runs after prune()
+// and onFinalized() — NOT on insertion. The cache can temporarily exceed this during range sync
+// (e.g. 32 blocks inserted per batch) but is trimmed back after blocks are processed.
+//
+// Must be large enough to hold blocks from all concurrently downloaded range sync batches.
+// Range sync downloads up to MAX_LOOK_AHEAD_EPOCHS batches ahead of the processing head,
+// so up to (MAX_LOOK_AHEAD_EPOCHS + 1) batches (current + look-ahead) of SLOTS_PER_EPOCH
+// blocks can be in the cache simultaneously. If this value is too small, pruneToMaxSize()
+// will evict blocks from the batch being processed before they are persisted to the database,
+// causing errors when async handlers like onForkChoiceFinalized run.
+const MAX_BLOCK_INPUT_CACHE_SIZE = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
 
 export type SeenBlockInputCacheModules = {
   config: ChainForkConfig;
@@ -64,14 +83,14 @@ export type GetByBlobOptions = {
  * - onFinalized event handler will help to prune any non-canonical forks once the chain finalizes. Any block-slots that
  *   are before the finalized checkpoint will be pruned.
  * - Range-sync periods.  The range process uses this cache to store and sync blocks with DA data as the chain is pulled
- *   from peers.  We pull batches, by epoch, so 32 slots are pulled at a time and several batches are pulled concurrently.
- *   It is important to set the MAX_BLOCK_INPUT_CACHE_SIZE high enough to support range sync activities.  Currently the
- *   value is set for 5 batches of 32 slots.  As process block is called (similar to following head) the BlockInput and
- *   its ancestors will be pruned.
+ *   from peers.  We pull batches, by epoch, so 32 slots are pulled at a time and several batches are downloaded
+ *   concurrently (up to MAX_LOOK_AHEAD_EPOCHS ahead).  All downloaded blocks are added to this shared cache, so it
+ *   must be large enough to hold blocks from all concurrent batches.  If pruneToMaxSize() evicts blocks from the batch
+ *   currently being processed, those blocks may not yet be persisted to the database, causing getBlockByRoot() to fail
+ *   when async event handlers (e.g. onForkChoiceFinalized) try to look them up.
  * - Non-Finality times.  This is a bit more tricky.  There can be long periods of non-finality and storing everything
- *   will cause OOM.  The pruneToMax will help ensure a hard limit on the number of stored blocks (with DA) that are held
- *   in memory at any one time.  The value for MAX_BLOCK_INPUT_CACHE_SIZE is set to accommodate range-sync but in
- *   practice this value may need to be massaged in the future if we find issues when debugging non-finality
+ *   will cause OOM.  The pruneToMaxSize will help ensure the number of stored blocks (with DA) is trimmed back to
+ *   MAX_BLOCK_INPUT_CACHE_SIZE after each prune() or onFinalized() call
  */
 
 export class SeenBlockInput {
