@@ -91,7 +91,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
   // Track pubkeys of new builders added when applying deposits
   const builderPubkeys = new Set<string>();
 
-  const remainingPendingDeposits = ssz.electra.PendingDeposits.defaultViewDU(); 
+  const remainingPendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
   for (let i = 0; i < state.pendingDeposits.length; i++) {
     const deposit = state.pendingDeposits.getReadonly(i);
 
