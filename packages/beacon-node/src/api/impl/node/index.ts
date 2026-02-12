@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ClientVersion} from "../../../execution/index.js";
+import {ClientCode, ClientVersion} from "../../../execution/index.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {ApiError} from "../errors.js";
@@ -69,7 +69,7 @@ export function getNodeApi(
         data: {
           beaconNode: toSpecClientVersion(getLodestarClientVersion(opts)),
           executionClient:
-            chain.executionEngine.clientVersion != null
+            chain.executionEngine.clientVersion != null && chain.executionEngine.clientVersion.code !== ClientCode.XX
               ? toSpecClientVersion(chain.executionEngine.clientVersion)
               : undefined,
         },
