@@ -79,7 +79,7 @@ describe("request / sendRequest", () => {
     });
   }
 
-  it("aborts stream when caller stops consuming responses early", async () => {
+  it("closes stream gracefully when caller stops consuming responses early", async () => {
     const encodedResponse = await Array.fromAsync(
       responseEncode(
         [
@@ -90,7 +90,11 @@ describe("request / sendRequest", () => {
       )
     );
 
-    let getStreamStatus = (): string => "not-created";
+    let abortCalled = false;
+    let getStreamState = (): {status: string; writeStatus: string} => ({
+      status: "not-created",
+      writeStatus: "not-created",
+    });
     libp2p = {
       dialProtocol: vi.fn().mockImplementation(async () => {
         const streamResult = await createMockStream({
@@ -100,8 +104,17 @@ describe("request / sendRequest", () => {
             await sleep(100000, controller.signal);
           })(),
         });
-        const reqStream = streamResult.stream as unknown as {status: string};
-        getStreamStatus = () => reqStream.status;
+        const reqStream = streamResult.stream as unknown as {
+          status: string;
+          writeStatus: string;
+          abort: (error: Error) => void;
+        };
+        const abort = reqStream.abort.bind(reqStream);
+        reqStream.abort = (error: Error): void => {
+          abortCalled = true;
+          abort(error);
+        };
+        getStreamState = () => ({status: reqStream.status, writeStatus: reqStream.writeStatus});
         return streamResult.stream;
       }),
     } as unknown as Libp2p;
@@ -120,6 +133,47 @@ describe("request / sendRequest", () => {
     }
 
     expect(responseCount).toBe(1);
+    expect(abortCalled).toBe(false);
+    const streamState = getStreamState();
+    expect(streamState.status).not.toBe("aborted");
+    expect(streamState.writeStatus).toBe("closed");
+  });
+
+  it("aborts stream if remote never closes after early consumer exit", async () => {
+    const encodedResponse = await Array.fromAsync(
+      responseEncode([{status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload}], emptyProtocol as Protocol)
+    );
+
+    let getStreamStatus = (): string => "not-created";
+    libp2p = {
+      dialProtocol: vi.fn().mockImplementation(async () => {
+        const streamResult = await createMockStream({
+          protocol: emptyProtocol.method,
+          source: (async function* (): AsyncIterable<Uint8Array> {
+            yield Buffer.concat(encodedResponse);
+            await sleep(100000, controller.signal);
+          })(),
+        });
+        const reqStream = streamResult.stream as unknown as {status: string};
+        getStreamStatus = () => reqStream.status;
+        return streamResult.stream;
+      }),
+    } as unknown as Libp2p;
+
+    for await (const _ of sendRequest(
+      {logger, libp2p, metrics: null},
+      peerId,
+      [emptyProtocol],
+      [emptyProtocol.method],
+      EMPTY_REQUEST,
+      controller.signal,
+      {respTimeoutMs: 20}
+    )) {
+      break;
+    }
+
+    expect(getStreamStatus()).not.toBe("aborted");
+    await sleep(50, controller.signal);
     expect(getStreamStatus()).toBe("aborted");
   });
 

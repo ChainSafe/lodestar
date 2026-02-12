@@ -1,3 +1,4 @@
+import type {Stream} from "@libp2p/interface";
 import {PeerId} from "@libp2p/interface";
 import type {Libp2p} from "libp2p";
 import {ErrorAborted, Logger, TimeoutError, withTimeout} from "@lodestar/utils";
@@ -18,6 +19,21 @@ export const DEFAULT_RESP_TIMEOUT = 10 * 1000; // 10 sec
 
 function getStreamNotFullyConsumedError(): Error {
   return new Error("ReqResp stream was not fully consumed");
+}
+
+function scheduleStreamAbortIfNotClosed(stream: Stream, timeoutMs: number): void {
+  const onClose = (): void => {
+    clearTimeout(timeout);
+  };
+
+  const timeout = setTimeout(() => {
+    stream.removeEventListener("close", onClose);
+    if (stream.status === "open" && stream.remoteWriteStatus === "writable") {
+      stream.abort(getStreamNotFullyConsumedError());
+    }
+  }, timeoutMs);
+
+  stream.addEventListener("close", onClose, {once: true});
 }
 
 export interface SendRequestOpts {
@@ -142,6 +158,7 @@ export async function* sendRequest(
       ? AbortSignal.any([signal, AbortSignal.timeout(RESP_TIMEOUT)])
       : AbortSignal.timeout(RESP_TIMEOUT);
 
+    let responseError: Error | null = null;
     let responseFullyConsumed = false;
 
     try {
@@ -156,15 +173,22 @@ export async function* sendRequest(
       // NOTE: Do not log the response, logs get extremely cluttered
       // NOTE: add double space after "Req  " to align log with the "Resp " log
       logger.verbose("Req  done", logCtx);
+    } catch (e) {
+      responseError = e as Error;
+      throw e;
     } finally {
-      // If the caller stops iterating early or decoding fails, close the stream
-      // forcefully so mplex can reclaim it.
-      if (!responseFullyConsumed && stream.remoteWriteStatus === "writable") {
-        stream.abort(getStreamNotFullyConsumedError());
+      // On decode/timeout failures abort immediately so mplex can reclaim stream state.
+      // On normal early consumer exit, close gracefully to avoid stream-id desync with peers.
+      if (responseError !== null || signal?.aborted) {
+        stream.abort(responseError ?? new ErrorAborted("sendRequest"));
       } else {
         await stream.close().catch((e) => {
           stream.abort(e as Error);
         });
+
+        if (!responseFullyConsumed && stream.remoteWriteStatus === "writable") {
+          scheduleStreamAbortIfNotClosed(stream, RESP_TIMEOUT);
+        }
       }
       metrics?.outgoingClosedStreams?.inc({method});
       logger.verbose("Req  stream closed", logCtx);
