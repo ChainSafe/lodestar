@@ -97,7 +97,10 @@ function createMockChainForImportBlock(opts: {currentSlot?: number; blockSlot?: 
     config,
     opts: {},
     forkChoice: forkChoice as unknown as IForkChoice,
-    unfinalizedBlockWrites: {push: vi.fn()},
+    unfinalizedBlockWrites: {
+      push: vi.fn().mockResolvedValue(undefined),
+      waitForSpace: vi.fn().mockResolvedValue(undefined),
+    },
     serializedCache: {clear: vi.fn()},
     checkpointBalancesCache: {processState: vi.fn()},
     regen,
@@ -230,6 +233,7 @@ describe("chain / blocks / importBlock", () => {
       const callOrder: string[] = [];
       (chain.unfinalizedBlockWrites.push as ReturnType<typeof vi.fn>).mockImplementation(() => {
         callOrder.push("dbWrite");
+        return Promise.resolve();
       });
       forkChoice.onBlock.mockImplementation(() => {
         callOrder.push("onBlock");
