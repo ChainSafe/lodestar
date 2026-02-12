@@ -1,3 +1,4 @@
+import {routes} from "@lodestar/api";
 import {
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
@@ -14,6 +15,8 @@ import {ExecutionPayloadBody} from "./types.js";
 import {DATA} from "./utils.js";
 
 export {PayloadIdCache, type PayloadId, type WithdrawalV1};
+export type ClientVersion = routes.node.ClientVersion;
+export const ClientCode = routes.node.ClientCode;
 
 export enum ExecutionPayloadStatus {
   /** given payload is valid */
@@ -43,26 +46,6 @@ export enum ExecutionEngineState {
   SYNCING = "SYNCING",
   SYNCED = "SYNCED",
   AUTH_FAILED = "AUTH_FAILED",
-}
-
-/**
- * Client code as defined in https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#clientcode
- * ClientCode.XX is dedicated to other clients which do not have their own code
- */
-export enum ClientCode {
-  BU = "BU", // besu
-  EJ = "EJ", // ethereumJS
-  EG = "EG", // erigon
-  GE = "GE", // go-ethereum
-  GR = "GR", // grandine
-  LH = "LH", // lighthouse
-  LS = "LS", // lodestar
-  NM = "NM", // nethermind
-  NB = "NB", // nimbus
-  TK = "TK", // teku
-  PM = "PM", // prysm
-  RH = "RH", // reth
-  XX = "XX", // unknown
 }
 
 export type ExecutionRequestType =
@@ -104,13 +87,6 @@ export type PayloadAttributes = {
   suggestedFeeRecipient: string;
   withdrawals?: capella.Withdrawal[];
   parentBeaconBlockRoot?: Uint8Array;
-};
-
-export type ClientVersion = {
-  code: ClientCode;
-  name: string;
-  version: string;
-  commit: string;
 };
 
 export type VersionedHashes = Uint8Array[];
