@@ -1610,7 +1610,11 @@ export function getValidatorApi(
       let cachedResult: {blockRootHex: string; produceResult: ProduceFullGloas} | null = null;
 
       for (const [blockRootHex, produceResult] of chain.blockProductionCache.entries()) {
-        if (produceResult.fork === fork && produceResult.type === BlockType.Full && "executionPayload" in produceResult) {
+        if (
+          produceResult.fork === fork &&
+          produceResult.type === BlockType.Full &&
+          "executionPayload" in produceResult
+        ) {
           cachedResult = {blockRootHex, produceResult: produceResult as ProduceFullGloas};
           break;
         }
