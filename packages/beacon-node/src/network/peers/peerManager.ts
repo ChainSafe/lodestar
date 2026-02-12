@@ -476,6 +476,13 @@ export class PeerManager {
         clientAgent,
         custodyColumns,
       });
+
+      // Some peers close identify streams right after connection open but respond
+      // fine once status succeeds. Retry identify only after status proves the
+      // connection is usable.
+      if (peerData?.agentVersion === null) {
+        this.triggerIdentify(peer.toString(), prettyPrintPeerId(peer), getConnection(this.libp2p, peer.toString()));
+      }
     }
   }
 
@@ -874,8 +881,8 @@ export class PeerManager {
           return a.direction === "outbound" ? -1 : 1;
         }
 
-        const aOpenTs = a.timeline.open ?? 0;
-        const bOpenTs = b.timeline.open ?? 0;
+        const aOpenTs = a.timeline?.open ?? 0;
+        const bOpenTs = b.timeline?.open ?? 0;
         return bOpenTs - aOpenTs;
       });
 

@@ -324,4 +324,45 @@ describe("network / peers / PeerManager", () => {
     expect(peerData?.agentVersion).toBe("Lighthouse/v6.0.1");
     expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);
   });
+
+  it("Should retry identify after status if initial identify fails", async () => {
+    const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+    const eofError = new Error("stream closed after reading 0/1 bytes");
+    eofError.name = "UnexpectedEOFError";
+
+    const identifySpy = vi
+      .spyOn(libp2p.services.identify, "identify")
+      .mockImplementationOnce(() => Promise.reject(eofError) as ReturnType<typeof libp2p.services.identify.identify>)
+      .mockImplementationOnce(
+        () => Promise.resolve({agentVersion: "Nimbus/v25.0.0"}) as ReturnType<typeof libp2p.services.identify.identify>
+      );
+
+    const inboundConnection = {
+      id: "connection-status-retry",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+    await sleep(0);
+    expect(identifySpy).toHaveBeenCalledTimes(1);
+
+    const remoteStatus = statusCache.get();
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    await sleep(0);
+
+    expect(identifySpy).toHaveBeenCalledTimes(2);
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Nimbus/v25.0.0");
+    expect(peerData?.agentClient).toBe(ClientKind.Nimbus);
+  });
 });
