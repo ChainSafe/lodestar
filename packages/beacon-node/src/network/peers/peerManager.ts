@@ -732,21 +732,26 @@ export class PeerManager {
       return;
     }
 
+    const existingPeerData = this.connectedPeers.get(remotePeerStr);
     const nodeId = computeNodeId(remotePeer);
     const peerData: PeerData = {
-      lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
+      // Keep existing timestamps if this peer already had another open connection.
+      // libp2p may emit multiple connection:open events per peer.
+      lastReceivedMsgUnixTsMs: existingPeerData?.lastReceivedMsgUnixTsMs ?? (direction === "outbound" ? 0 : now),
       // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
-      lastStatusUnixTsMs: direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD,
-      connectedUnixTsMs: now,
-      relevantStatus: RelevantPeerStatus.Unknown,
+      lastStatusUnixTsMs:
+        existingPeerData?.lastStatusUnixTsMs ??
+        (direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD),
+      connectedUnixTsMs: existingPeerData?.connectedUnixTsMs ?? now,
+      relevantStatus: existingPeerData?.relevantStatus ?? RelevantPeerStatus.Unknown,
       direction,
       nodeId,
       peerId: remotePeer,
-      status: null,
-      metadata: null,
-      agentVersion: null,
-      agentClient: null,
-      encodingPreference: null,
+      status: existingPeerData?.status ?? null,
+      metadata: existingPeerData?.metadata ?? null,
+      agentVersion: existingPeerData?.agentVersion ?? null,
+      agentClient: existingPeerData?.agentClient ?? null,
+      encodingPreference: existingPeerData?.encodingPreference ?? null,
     };
     this.connectedPeers.set(remotePeerStr, peerData);
 
@@ -761,8 +766,13 @@ export class PeerManager {
       .then((result) => {
         const agentVersion = result.agentVersion;
         if (agentVersion) {
-          peerData.agentVersion = agentVersion;
-          peerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
+          // A newer connection event may have replaced the object in `connectedPeers`.
+          // Always patch the map entry, not the captured local object.
+          const connectedPeerData = this.connectedPeers.get(remotePeerStr);
+          if (connectedPeerData) {
+            connectedPeerData.agentVersion = agentVersion;
+            connectedPeerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
+          }
         }
       })
       .catch((err) => {
@@ -783,6 +793,19 @@ export class PeerManager {
   private onLibp2pPeerDisconnect = (evt: CustomEvent<Connection>): void => {
     const {direction, status, remotePeer} = evt.detail;
     const peerIdStr = remotePeer.toString();
+
+    const hasOpenConnection = getConnectionsMap(this.libp2p)
+      .get(peerIdStr)
+      ?.value.some((connection) => connection.status === "open");
+
+    if (hasOpenConnection) {
+      this.logger.debug("Ignoring peer disconnect event while another connection is still open", {
+        peerId: prettyPrintPeerIdStr(peerIdStr),
+        direction,
+        status,
+      });
+      return;
+    }
 
     let logMessage = "onLibp2pPeerDisconnect";
     const logContext: Record<string, string | number> = {

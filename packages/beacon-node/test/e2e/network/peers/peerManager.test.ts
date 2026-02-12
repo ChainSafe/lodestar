@@ -8,6 +8,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus, getConnectionsMap} from "../../../../src/network/index.js";
 import {NetworkConfig} from "../../../../src/network/networkConfig.js";
+import {ClientKind} from "../../../../src/network/peers/client.js";
 import {IReqRespBeaconNodePeerManager, PeerManager, PeerRpcScoreStore} from "../../../../src/network/peers/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
@@ -237,5 +238,38 @@ describe("network / peers / PeerManager", () => {
     expect(reqResp.sendMetadata).toHaveBeenCalledOnce();
 
     expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).toEqual(remoteMetadata);
+  });
+
+  it("Should preserve agentVersion across repeated connection events", async () => {
+    const {libp2p, peerManager} = await mockModules();
+
+    let resolveFirstIdentify!: (result: {agentVersion?: string}) => void;
+    const firstIdentifyResult = new Promise<{agentVersion?: string}>((resolve) => {
+      resolveFirstIdentify = resolve;
+    });
+
+    vi.spyOn(libp2p.services.identify, "identify")
+      .mockImplementationOnce(
+        () => firstIdentifyResult as unknown as ReturnType<typeof libp2p.services.identify.identify>
+      )
+      .mockImplementationOnce(
+        () => Promise.resolve({agentVersion: undefined}) as ReturnType<typeof libp2p.services.identify.identify>
+      );
+
+    const inboundConnection = {
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+    } as Connection;
+
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+
+    resolveFirstIdentify({agentVersion: "Lighthouse/v6.0.1"});
+    await sleep(0);
+
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Lighthouse/v6.0.1");
+    expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);
   });
 });
