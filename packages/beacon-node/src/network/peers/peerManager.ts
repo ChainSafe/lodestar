@@ -5,7 +5,7 @@ import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {Metadata, Status, altair, fulu, phase0} from "@lodestar/types";
-import {prettyPrintIndices, sleep, toHex, withTimeout} from "@lodestar/utils";
+import {prettyPrintIndices, toHex, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
 import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../util/dataColumns.js";
@@ -46,9 +46,6 @@ const STATUS_INBOUND_GRACE_PERIOD = 15 * 1000;
 const CHECK_PING_STATUS_INTERVAL = 10 * 1000;
 /** A peer is considered long connection if it's >= 1 day */
 const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
-/** Retry identify once for transient EOFs on the identify stream */
-const IDENTIFY_MAX_ATTEMPTS = 2;
-const IDENTIFY_RETRY_DELAY_MS = 500;
 /** Ref https://github.com/ChainSafe/lodestar/issues/3423 */
 const DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS = 1000;
 /**
@@ -135,15 +132,6 @@ enum RelevantPeerStatus {
   irrelevant = "irrelevant",
 }
 
-function isRetryableIdentifyError(error: Error): boolean {
-  if (error.name === "UnexpectedEOFError") {
-    return true;
-  }
-
-  const message = error.message.toLowerCase();
-  return message.includes("stream closed while reading") || message.includes("stream closed after reading");
-}
-
 /**
  * Performs all peer management functionality in a single grouped class:
  * - Ping peers every `PING_INTERVAL_MS`
@@ -175,6 +163,8 @@ export class PeerManager {
   private connectedPeers: Map<PeerIdStr, PeerData>;
   /** Avoid opening multiple identify streams for the same peer concurrently */
   private readonly peersIdentifying = new Set<PeerIdStr>();
+  /** Re-run identify once after in-flight identify completes if a new connection opened in-between */
+  private readonly peersPendingIdentify = new Set<PeerIdStr>();
 
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
@@ -775,11 +765,8 @@ export class PeerManager {
       void this.requestStatus(remotePeer, this.statusCache.get());
     }
 
-    if (peerData.agentVersion === null && !this.peersIdentifying.has(remotePeerStr)) {
-      this.peersIdentifying.add(remotePeerStr);
-      void this.identifyPeer(evt.detail, remotePeerStr, remotePeerPrettyStr).finally(() => {
-        this.peersIdentifying.delete(remotePeerStr);
-      });
+    if (peerData.agentVersion === null) {
+      this.triggerIdentify(remotePeerStr, remotePeerPrettyStr, evt.detail);
     }
   };
 
@@ -790,11 +777,7 @@ export class PeerManager {
     const {direction, status, remotePeer} = evt.detail;
     const peerIdStr = remotePeer.toString();
 
-    const hasOpenConnection = getConnectionsMap(this.libp2p)
-      .get(peerIdStr)
-      ?.value.some((connection) => connection.status === "open");
-
-    if (hasOpenConnection) {
+    if (this.getOpenPeerConnections(peerIdStr).length > 0) {
       this.logger.debug("Ignoring peer disconnect event while another connection is still open", {
         peerId: prettyPrintPeerIdStr(peerIdStr),
         direction,
@@ -821,6 +804,7 @@ export class PeerManager {
     // remove the ping and status timer for the peer
     this.connectedPeers.delete(peerIdStr);
     this.peersIdentifying.delete(peerIdStr);
+    this.peersPendingIdentify.delete(peerIdStr);
 
     this.logger.verbose(logMessage, logContext);
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
@@ -838,8 +822,74 @@ export class PeerManager {
     }
   }
 
-  private async identifyPeer(connection: Connection, peerIdStr: string, peerIdPretty: string): Promise<void> {
-    for (let attempt = 1; attempt <= IDENTIFY_MAX_ATTEMPTS; attempt++) {
+  private triggerIdentify(peerIdStr: string, peerIdPretty: string, preferredConnection?: Connection): void {
+    if (this.peersIdentifying.has(peerIdStr)) {
+      this.peersPendingIdentify.add(peerIdStr);
+      return;
+    }
+
+    this.peersIdentifying.add(peerIdStr);
+    void this.identifyPeer(peerIdStr, peerIdPretty, preferredConnection).finally(() => {
+      this.peersIdentifying.delete(peerIdStr);
+
+      if (this.peersPendingIdentify.delete(peerIdStr)) {
+        const peerData = this.connectedPeers.get(peerIdStr);
+        if (peerData?.agentVersion === null) {
+          this.triggerIdentify(peerIdStr, peerIdPretty);
+        }
+      }
+    });
+  }
+
+  private getOpenPeerConnections(peerIdStr: string): Connection[] {
+    return (
+      getConnectionsMap(this.libp2p)
+        .get(peerIdStr)
+        ?.value.filter((connection) => connection.status === "open") ?? []
+    );
+  }
+
+  private getIdentifyConnectionKey(connection: Connection): string {
+    // `Connection.id` always exists on real connections. Fallback keeps tests simple.
+    const connectionId = (connection as unknown as {id?: string}).id;
+    return connectionId ?? `${connection.direction}:${connection.remotePeer.toString()}`;
+  }
+
+  private pickIdentifyConnection(
+    peerIdStr: string,
+    attemptedConnections: Set<string>,
+    preferredConnection?: Connection
+  ): Connection | null {
+    if (preferredConnection?.status === "open") {
+      const preferredConnectionKey = this.getIdentifyConnectionKey(preferredConnection);
+      if (!attemptedConnections.has(preferredConnectionKey)) {
+        return preferredConnection;
+      }
+    }
+
+    const openConnections = this.getOpenPeerConnections(peerIdStr)
+      .filter((connection) => !attemptedConnections.has(this.getIdentifyConnectionKey(connection)))
+      .sort((a, b) => {
+        if (a.direction !== b.direction) {
+          return a.direction === "outbound" ? -1 : 1;
+        }
+
+        const aOpenTs = a.timeline.open ?? 0;
+        const bOpenTs = b.timeline.open ?? 0;
+        return bOpenTs - aOpenTs;
+      });
+
+    return openConnections[0] ?? null;
+  }
+
+  private async identifyPeer(peerIdStr: string, peerIdPretty: string, preferredConnection?: Connection): Promise<void> {
+    const attemptedConnections = new Set<string>();
+    let lastError: Error | null = null;
+    let connection = this.pickIdentifyConnection(peerIdStr, attemptedConnections, preferredConnection);
+
+    while (connection !== null) {
+      attemptedConnections.add(this.getIdentifyConnectionKey(connection));
+
       try {
         const result = await this.libp2p.services.identify.identify(connection);
         const agentVersion = result.agentVersion;
@@ -854,30 +904,29 @@ export class PeerManager {
         }
         return;
       } catch (e) {
-        const error = e as Error;
-        const isConnected = getConnection(this.libp2p, peerIdStr)?.status === "open";
-        if (!isConnected) {
+        lastError = e as Error;
+        const openConnectionCount = this.getOpenPeerConnections(peerIdStr).length;
+        if (openConnectionCount === 0) {
           this.logger.debug("Peer disconnected during identify protocol", {
             peerId: peerIdPretty,
-            error: error.message,
-            attempt,
+            error: lastError.message,
           });
           return;
         }
 
-        if (attempt < IDENTIFY_MAX_ATTEMPTS && isRetryableIdentifyError(error)) {
-          this.logger.debug("Retrying identify after transient stream failure", {
+        connection = this.pickIdentifyConnection(peerIdStr, attemptedConnections);
+        if (connection !== null) {
+          this.logger.debug("Identify failed on one connection, trying another open connection", {
             peerId: peerIdPretty,
-            attempt,
-            error: error.message,
+            error: lastError.message,
+            openConnectionCount,
           });
-          await sleep(IDENTIFY_RETRY_DELAY_MS);
-          continue;
         }
-
-        this.logger.debug("Error setting agentVersion for the peer", {peerId: peerIdPretty}, error);
-        return;
       }
+    }
+
+    if (lastError !== null) {
+      this.logger.debug("Error setting agentVersion for the peer", {peerId: peerIdPretty}, lastError);
     }
   }
 

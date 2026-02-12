@@ -270,20 +270,33 @@ describe("network / peers / PeerManager", () => {
     expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);
   });
 
-  it("Should retry identify after transient EOF", async () => {
+  it("Should identify on another open connection if the first one closes", async () => {
     const {libp2p, peerManager} = await mockModules();
 
-    const eofError = new Error("stream closed after reading 0/1 bytes");
-    eofError.name = "UnexpectedEOFError";
-
-    vi.spyOn(libp2p.services.identify, "identify")
-      .mockImplementationOnce(() => Promise.reject(eofError) as ReturnType<typeof libp2p.services.identify.identify>)
+    let rejectFirstIdentify!: (error: Error) => void;
+    const firstIdentifyPromise = new Promise<never>((_resolve, reject) => {
+      rejectFirstIdentify = reject;
+    });
+    const identifySpy = vi
+      .spyOn(libp2p.services.identify, "identify")
+      .mockImplementationOnce(
+        () => firstIdentifyPromise as unknown as ReturnType<typeof libp2p.services.identify.identify>
+      )
       .mockImplementationOnce(
         () =>
           Promise.resolve({agentVersion: "Lighthouse/v6.0.1"}) as ReturnType<typeof libp2p.services.identify.identify>
       );
 
-    const inboundConnection = {
+    const inboundConnection1 = {
+      id: "connection-1",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+    const inboundConnection2 = {
+      id: "connection-2",
       direction: "inbound",
       status: "open",
       remotePeer: peerId1,
@@ -291,11 +304,22 @@ describe("network / peers / PeerManager", () => {
       abort: () => {},
     } as unknown as Connection;
 
-    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
-    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
-    await sleep(550);
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection1]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection1}));
 
-    expect(libp2p.services.identify.identify).toHaveBeenCalledTimes(2);
+    // Open a second connection while identify is still in-flight on the first.
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection1, inboundConnection2]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection2}));
+
+    // First connection closes before identify completes, second remains open.
+    const closedMuxerError = new Error('The connection muxer is "closed" and not "open"');
+    inboundConnection1.status = "closed";
+    rejectFirstIdentify(closedMuxerError);
+    await sleep(0);
+
+    expect(identifySpy).toHaveBeenCalledTimes(2);
+    expect(identifySpy.mock.calls[0]?.[0]).toBe(inboundConnection1);
+    expect(identifySpy.mock.calls[1]?.[0]).toBe(inboundConnection2);
     const peerData = peerManager["connectedPeers"].get(peerId1.toString());
     expect(peerData?.agentVersion).toBe("Lighthouse/v6.0.1");
     expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);
