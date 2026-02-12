@@ -39,11 +39,14 @@ export async function* onDataColumnSidecarsByRange(
 
   const finalized = db.dataColumnSidecarArchive;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  const finalizedEndSlot = Math.min(endSlot, finalizedSlot + 1);
 
   // Finalized range of columns
   if (startSlot <= finalizedSlot) {
-    for (let slot = startSlot; slot < endSlot; slot++) {
-      const dataColumnSidecars = await finalized.getManyBinary(slot, availableColumns);
+    for (let slot = startSlot; slot < finalizedEndSlot; slot++) {
+      const dataColumnSidecars = db.flatFileStore
+        ? await db.flatFileStore.getDataColumnsBinaryBySlot(slot, availableColumns)
+        : await finalized.getManyBinary(slot, availableColumns);
 
       const unavailableColumnIndices: ColumnIndex[] = [];
       for (let i = 0; i < dataColumnSidecars.length; i++) {
@@ -78,6 +81,7 @@ export async function* onDataColumnSidecarsByRange(
 
   // Non-finalized range of columns
   if (endSlot > finalizedSlot) {
+    const unfinalizedStartSlot = Math.max(startSlot, finalizedSlot + 1);
     const headRoot = chain.forkChoice.getHeadRoot();
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
 
@@ -86,7 +90,7 @@ export async function* onDataColumnSidecarsByRange(
       const block = headChain[i];
 
       // Must include only columns in the range requested
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      if (block.slot >= unfinalizedStartSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of columns must be consistent, but on
         // re-org there's no need to abort the request

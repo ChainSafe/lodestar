@@ -75,6 +75,8 @@ export async function archiveBlocks(
 
   const logCtx = {currentEpoch, finalizedEpoch: finalizedCheckpoint.epoch, finalizedRoot: finalizedCheckpoint.rootHex};
 
+  const flatFileStore = db.flatFileStore;
+
   if (finalizedCanonicalBlockRoots.length > 0) {
     await migrateBlocksFromHotToColdDb(db, finalizedCanonicalBlockRoots);
     logger.verbose("Migrated blocks from hot DB to cold DB", {
@@ -84,25 +86,29 @@ export async function archiveBlocks(
       size: finalizedCanonicalBlockRoots.length,
     });
 
-    if (finalizedPostDeneb) {
-      const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
-        config,
-        db,
-        finalizedCanonicalBlockRoots,
-        currentEpoch
-      );
-      logger.verbose("Migrated blobSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
-    }
+    // When flat file store is enabled, blobs/columns are already in their final location
+    // — no migration needed
+    if (!flatFileStore) {
+      if (finalizedPostDeneb) {
+        const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
+          config,
+          db,
+          finalizedCanonicalBlockRoots,
+          currentEpoch
+        );
+        logger.verbose("Migrated blobSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
+      }
 
-    if (finalizedPostFulu) {
-      const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
-        config,
-        db,
-        logger,
-        finalizedCanonicalBlockRoots,
-        currentEpoch
-      );
-      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
+      if (finalizedPostFulu) {
+        const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
+          config,
+          db,
+          logger,
+          finalizedCanonicalBlockRoots,
+          currentEpoch
+        );
+        logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
+      }
     }
   }
 
@@ -136,14 +142,24 @@ export async function archiveBlocks(
       slots: finalizedNonCanonicalBlocks.map((summary) => summary.slot).join(","),
     });
 
-    if (finalizedPostDeneb) {
-      await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical blobSidecars from hot DB", logCtx);
-    }
+    if (flatFileStore) {
+      // Delete non-canonical blobs/columns from flat file store
+      const items = finalizedNonCanonicalBlocks.map((summary) => ({
+        slot: summary.slot,
+        blockRoot: summary.blockRoot,
+      }));
+      await flatFileStore.deleteNonCanonical(items);
+      logger.verbose("Deleted non canonical blobs/columns from flat file store", logCtx);
+    } else {
+      if (finalizedPostDeneb) {
+        await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
+        logger.verbose("Deleted non canonical blobSidecars from hot DB", logCtx);
+      }
 
-    if (finalizedPostFulu) {
-      await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical dataColumnSidecars from hot DB", logCtx);
+      if (finalizedPostFulu) {
+        await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
+        logger.verbose("Deleted non canonical dataColumnSidecars from hot DB", logCtx);
+      }
     }
   }
 
@@ -155,12 +171,21 @@ export async function archiveBlocks(
       const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveDataEpochs ?? 0);
       const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
-        const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
-        if (slotsToDelete.length > 0) {
-          await db.blobSidecarsArchive.batchDelete(slotsToDelete);
-          logger.verbose(`blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`, logCtx);
+        const blobsPruneSlot = computeStartSlotAtEpoch(blobSidecarsMinEpoch);
+        if (flatFileStore) {
+          await flatFileStore.pruneBlobsBeforeSlot(blobsPruneSlot);
+          logger.verbose(`blobSidecars prune (flat file): pruned before slot ${blobsPruneSlot}`, logCtx);
         } else {
-          logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`, logCtx);
+          const slotsToDelete = await db.blobSidecarsArchive.keys({lt: blobsPruneSlot});
+          if (slotsToDelete.length > 0) {
+            await db.blobSidecarsArchive.batchDelete(slotsToDelete);
+            logger.verbose(
+              `blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete.at(-1)}`,
+              logCtx
+            );
+          } else {
+            logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`, logCtx);
+          }
         }
       }
     } else {
@@ -178,23 +203,29 @@ export async function archiveBlocks(
       );
       const dataColumnSidecarsMinEpoch = currentEpoch - dataColumnSidecarsArchiveWindow;
       if (dataColumnSidecarsMinEpoch >= config.FULU_FORK_EPOCH) {
-        const prefixedKeys = await db.dataColumnSidecarArchive.keys({
-          // The `id` value `0` refers to the column index. So we want to fetch all sidecars less than zero column of `dataColumnSidecarsMinEpoch`
-          lt: {prefix: computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch), id: 0},
-        });
-        // for each slot there could be multiple dataColumnSidecar, so we need to deduplicate it
-        const slotsToDelete = [...new Set(prefixedKeys.map(({prefix}) => prefix))].sort((a, b) => a - b);
-
-        if (slotsToDelete.length > 0) {
-          await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
-          logger.verbose("dataColumnSidecars prune", {
-            ...logCtx,
-            slotRange: prettyPrintIndices(slotsToDelete),
-            numOfSlots: slotsToDelete.length,
-            totalNumOfSidecars: prefixedKeys.length,
-          });
+        const columnsPruneSlot = computeStartSlotAtEpoch(dataColumnSidecarsMinEpoch);
+        if (flatFileStore) {
+          await flatFileStore.pruneColumnsBeforeSlot(columnsPruneSlot);
+          logger.verbose(`dataColumnSidecars prune (flat file): pruned before slot ${columnsPruneSlot}`, logCtx);
         } else {
-          logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`, logCtx);
+          const prefixedKeys = await db.dataColumnSidecarArchive.keys({
+            // The `id` value `0` refers to the column index. So we want to fetch all sidecars less than zero column of `dataColumnSidecarsMinEpoch`
+            lt: {prefix: columnsPruneSlot, id: 0},
+          });
+          // for each slot there could be multiple dataColumnSidecar, so we need to deduplicate it
+          const slotsToDelete = [...new Set(prefixedKeys.map(({prefix}) => prefix))].sort((a, b) => a - b);
+
+          if (slotsToDelete.length > 0) {
+            await db.dataColumnSidecarArchive.deleteMany(slotsToDelete);
+            logger.verbose("dataColumnSidecars prune", {
+              ...logCtx,
+              slotRange: prettyPrintIndices(slotsToDelete),
+              numOfSlots: slotsToDelete.length,
+              totalNumOfSidecars: prefixedKeys.length,
+            });
+          } else {
+            logger.verbose(`dataColumnSidecars prune: no entries before epoch ${dataColumnSidecarsMinEpoch}`, logCtx);
+          }
         }
       } else {
         logger.verbose(

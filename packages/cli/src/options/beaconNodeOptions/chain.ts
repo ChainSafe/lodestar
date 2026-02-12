@@ -36,6 +36,7 @@ export type ChainArgs = {
   "chain.maxCPStateEpochsOnDisk"?: number;
 
   "chain.pruneHistory"?: boolean;
+  "chain.flatFileStorage"?: boolean;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -75,6 +76,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
     pruneHistory: args["chain.pruneHistory"],
+    flatFileStorage: args["chain.flatFileStorage"] ?? defaultOptions.chain.flatFileStorage,
   };
 }
 
@@ -308,6 +310,13 @@ Will double processing times. Use only for debugging purposes.",
     description: "Prune historical blocks and state",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
+    group: "chain",
+  },
+
+  "chain.flatFileStorage": {
+    description: "Use flat file storage for blobs and data columns instead of LevelDB",
+    type: "boolean",
+    default: defaultOptions.chain.flatFileStorage,
     group: "chain",
   },
 };

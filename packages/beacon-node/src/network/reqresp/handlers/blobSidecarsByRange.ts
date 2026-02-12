@@ -20,20 +20,32 @@ export async function* onBlobSidecarsByRange(
   const finalized = db.blobSidecarsArchive;
   const unfinalized = db.blobSidecars;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  const finalizedEndSlot = Math.min(endSlot, finalizedSlot + 1);
 
   // Finalized range of blobs
   if (startSlot <= finalizedSlot) {
-    // Chain of blobs won't change
-    for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
-      gte: startSlot,
-      lt: endSlot,
-    })) {
-      yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key));
+    if (db.flatFileStore) {
+      for (let slot = startSlot; slot < finalizedEndSlot; slot++) {
+        const blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinaryBySlot(slot);
+        if (!blobSideCarsBytesWrapped) {
+          continue;
+        }
+        yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, slot);
+      }
+    } else {
+      // Chain of blobs won't change
+      for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
+        gte: startSlot,
+        lt: finalizedEndSlot,
+      })) {
+        yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key));
+      }
     }
   }
 
   // Non-finalized range of blobs
   if (endSlot > finalizedSlot) {
+    const unfinalizedStartSlot = Math.max(startSlot, finalizedSlot + 1);
     const headRoot = chain.forkChoice.getHeadRoot();
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
@@ -43,13 +55,18 @@ export async function* onBlobSidecarsByRange(
       const block = headChain[i];
 
       // Must include only blobs in the range requested
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      if (block.slot >= unfinalizedStartSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
+        let blobSideCarsBytesWrapped: Uint8Array | null | undefined;
+        if (db.flatFileStore) {
+          blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinary(block.slot, block.blockRoot);
+        } else {
+          blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
+        }
         if (!blobSideCarsBytesWrapped) {
           // Handle the same to onBeaconBlocksByRange
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);

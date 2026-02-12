@@ -199,6 +199,11 @@ export class BeaconNode {
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
+    // Initialize flat file store if enabled
+    if (opts.chain.flatFileStorage && db.initFlatFileStore) {
+      await db.initFlatFileStore(dataDir, logger);
+    }
+
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();

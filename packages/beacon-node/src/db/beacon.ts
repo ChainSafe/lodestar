@@ -1,6 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
+import {Logger} from "@lodestar/utils";
 import {Bucket} from "./buckets.js";
+import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
+import type {IFlatFileStore} from "./flatFileStore/interface.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
@@ -52,6 +55,8 @@ export class BeaconDb implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
+  flatFileStore: IFlatFileStore | null = null;
+
   constructor(
     config: ChainForkConfig,
     protected readonly db: Db
@@ -81,7 +86,16 @@ export class BeaconDb implements IBeaconDb {
     this.backfilledRanges = new BackfilledRanges(config, db);
   }
 
-  close(): Promise<void> {
+  async initFlatFileStore(dataDir: string, logger: Logger): Promise<void> {
+    const store = new FlatFileStore(dataDir, logger);
+    await store.init();
+    this.flatFileStore = store;
+  }
+
+  async close(): Promise<void> {
+    if (this.flatFileStore) {
+      await this.flatFileStore.close();
+    }
     return this.db.close();
   }
 
@@ -90,8 +104,12 @@ export class BeaconDb implements IBeaconDb {
   }
 
   async pruneHotDb(): Promise<void> {
-    // Prune all hot blobs
-    await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
+    if (this.flatFileStore) {
+      await this.flatFileStore.pruneHotBlobs();
+    } else {
+      // Prune all hot blobs
+      await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
+    }
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());

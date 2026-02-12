@@ -169,4 +169,56 @@ describe("block archiver task", () => {
       lt: {prefix: computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS), id: 0},
     });
   });
+
+  it("should prune flat file store blobs and columns by retained sidecar window", async () => {
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      DENEB_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4,
+      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
+    });
+
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
+
+    const blocks = Array.from({length: 3}, (_, i) =>
+      generateProtoBlock({
+        slot: 100 + i,
+        blockRoot: toHexString(Buffer.alloc(32, i + 1)),
+      })
+    );
+    const canonicalBlocks = [blocks[2], blocks[1], blocks[0]];
+
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocks").mockReturnValue({
+      ancestors: canonicalBlocks,
+      nonAncestors: [],
+    });
+
+    const flatFileStore = {
+      pruneBlobsBeforeSlot: vi.fn().mockResolvedValue(undefined),
+      pruneColumnsBeforeSlot: vi.fn().mockResolvedValue(undefined),
+      deleteNonCanonical: vi.fn().mockResolvedValue(undefined),
+    };
+    dbStub.flatFileStore = flatFileStore as any;
+
+    const currentEpoch = 10;
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: currentEpoch, rootHex: ZERO_HASH_HEX},
+      currentEpoch
+    );
+
+    const blobsPruneSlot = computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS);
+    const columnsPruneSlot = computeStartSlotAtEpoch(
+      currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+    );
+    expect(flatFileStore.pruneBlobsBeforeSlot).toHaveBeenCalledWith(blobsPruneSlot);
+    expect(flatFileStore.pruneColumnsBeforeSlot).toHaveBeenCalledWith(columnsPruneSlot);
+  });
 });

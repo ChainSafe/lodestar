@@ -1,5 +1,6 @@
-import {fulu} from "@lodestar/types";
+import {fulu, ssz} from "@lodestar/types";
 import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {blobSidecarsWrapperSsz} from "../../db/repositories/blobSidecars.js";
 import {BeaconChain} from "../chain.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
@@ -69,19 +70,31 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
         );
       }
 
-      const binaryPuts = [];
-      const nonbinaryPuts = [];
-      for (const dataColumnSidecar of dataColumnSidecars) {
-        // skip reserializing column if we already have it
-        const serialized = this.serializedCache.get(dataColumnSidecar);
-        if (serialized) {
-          binaryPuts.push({key: dataColumnSidecar.index, value: serialized});
-        } else {
-          nonbinaryPuts.push(dataColumnSidecar);
+      if (this.db.flatFileStore) {
+        const binaryColumns: {index: number; data: Uint8Array}[] = [];
+        for (const dataColumnSidecar of dataColumnSidecars) {
+          const serialized = this.serializedCache.get(dataColumnSidecar);
+          binaryColumns.push({
+            index: dataColumnSidecar.index,
+            data: serialized ?? ssz.fulu.DataColumnSidecar.serialize(dataColumnSidecar),
+          });
         }
+        fnPromises.push(this.db.flatFileStore.putDataColumnsBinary(slot, blockRootHex, binaryColumns));
+      } else {
+        const binaryPuts = [];
+        const nonbinaryPuts = [];
+        for (const dataColumnSidecar of dataColumnSidecars) {
+          // skip reserializing column if we already have it
+          const serialized = this.serializedCache.get(dataColumnSidecar);
+          if (serialized) {
+            binaryPuts.push({key: dataColumnSidecar.index, value: serialized});
+          } else {
+            nonbinaryPuts.push(dataColumnSidecar);
+          }
+        }
+        fnPromises.push(this.db.dataColumnSidecar.putManyBinary(blockRoot, binaryPuts));
+        fnPromises.push(this.db.dataColumnSidecar.putMany(blockRoot, nonbinaryPuts));
       }
-      fnPromises.push(this.db.dataColumnSidecar.putManyBinary(blockRoot, binaryPuts));
-      fnPromises.push(this.db.dataColumnSidecar.putMany(blockRoot, nonbinaryPuts));
       this.logger.debug("Persisted dataColumnSidecars to hot DB", {
         slot: block.message.slot,
         root: blockRootHex,
@@ -91,7 +104,12 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
       });
     } else if (isBlockInputBlobs(blockInput)) {
       const blobSidecars = blockInput.getBlobs();
-      fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
+      if (this.db.flatFileStore) {
+        const wrapperBytes = blobSidecarsWrapperSsz.serialize({blockRoot, slot: block.message.slot, blobSidecars});
+        fnPromises.push(this.db.flatFileStore.putBlobSidecars(block.message.slot, blockRootHex, wrapperBytes));
+      } else {
+        fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
+      }
       this.logger.debug("Persisted blobSidecars to hot DB", {
         blobsLen: blobSidecars.length,
         slot: block.message.slot,

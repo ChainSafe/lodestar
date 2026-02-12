@@ -779,6 +779,10 @@ export class BeaconChain implements IBeaconChain {
       }
       return blockInput.getBlobs();
     }
+    if (this.db.flatFileStore) {
+      const wrapper = await this.db.flatFileStore.getBlobSidecars(blockSlot, blockRootHex);
+      return wrapper?.blobSidecars ?? null;
+    }
     const unfinalizedBlobSidecars = (await this.db.blobSidecars.get(fromHex(blockRootHex)))?.blobSidecars ?? null;
     if (unfinalizedBlobSidecars) {
       return unfinalizedBlobSidecars;
@@ -796,6 +800,13 @@ export class BeaconChain implements IBeaconChain {
         return null;
       }
       return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
+    }
+    if (this.db.flatFileStore) {
+      const wrapper = await this.db.flatFileStore.getBlobSidecarsBinary(blockSlot, blockRootHex);
+      if (wrapper) {
+        return wrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
+      }
+      return null;
     }
     const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex));
     if (unfinalizedBlobSidecarsWrapper) {
@@ -815,6 +826,9 @@ export class BeaconChain implements IBeaconChain {
         throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
       }
       return blockInput.getAllColumns();
+    }
+    if (this.db.flatFileStore) {
+      return this.db.flatFileStore.getDataColumns(blockSlot, blockRootHex);
     }
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {
@@ -845,6 +859,9 @@ export class BeaconChain implements IBeaconChain {
         }
         return ssz.fulu.DataColumnSidecar.serialize(sidecar);
       });
+    }
+    if (this.db.flatFileStore) {
+      return this.db.flatFileStore.getDataColumnsBinary(blockSlot, blockRootHex, indices);
     }
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
     if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
