@@ -2,7 +2,7 @@ import path from "node:path";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {SecretKey} from "@chainsafe/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {Logger, isValidHttpUrl} from "@lodestar/utils";
+import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
 import {Signer, SignerType, externalSignerGetKeys} from "@lodestar/validator";
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";
 import {YargsError, assertValidPubkeysHex} from "../../../util/index.js";
@@ -43,7 +43,7 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 export async function getSignersFromArgs(
   args: IValidatorCliArgs & GlobalArgs,
   network: string,
-  {logger, signal}: {logger: Logger; signal: AbortSignal}
+  {logger, signal}: {logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>; signal: AbortSignal}
 ): Promise<Signer[]> {
   const accountPaths = getAccountPaths(args, network);
 
@@ -155,7 +155,7 @@ export function getSignerPubkeyHex(signer: Signer): string {
 
 async function getRemoteSigners(
   args: IValidatorCliArgs & GlobalArgs,
-  logger: Logger
+  logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>
 ): Promise<Signer[]> {
   const externalSignerUrls = args["externalSigner.urls"] ?? [];
 

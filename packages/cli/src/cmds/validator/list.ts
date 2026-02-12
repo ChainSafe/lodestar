@@ -1,7 +1,7 @@
 import {CliCommand} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
-import {consoleLogger} from "../../util/index.js";
+import {noopLogger} from "../../util/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignerPubkeyHex, getSignersFromArgs} from "./signers/index.js";
 import {logSigners} from "./signers/logSigners.js";
@@ -26,9 +26,9 @@ export const list: CliCommand<IValidatorCliArgs, GlobalArgs, ReturnType> = {
     // Ignore lockfiles to allow listing while validator client is running
     args.force = true;
 
-    const signers = await getSignersFromArgs(args, network, {logger: consoleLogger, signal: new AbortController().signal});
+    const signers = await getSignersFromArgs(args, network, {logger: noopLogger, signal: new AbortController().signal});
 
-    logSigners(consoleLogger, signers);
+    logSigners(noopLogger, signers);
 
     // Return values for testing
     return signers.map(getSignerPubkeyHex);

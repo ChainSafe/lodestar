@@ -12,7 +12,7 @@ export const LOG_FILE_DISABLE_KEYWORD = "none";
 
 /** No-op logger for one-off commands (e.g. voluntary-exit, list) that do not set up file logging */
 const noop = (): void => {};
-export const consoleLogger: Logger = {
+export const noopLogger: Logger = {
   [LogLevel.error]: noop,
   [LogLevel.warn]: noop,
   [LogLevel.info]: noop,
