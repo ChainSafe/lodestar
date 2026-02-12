@@ -16,6 +16,10 @@ export const DEFAULT_DIAL_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_RESP_TIMEOUT = 10 * 1000; // 10 sec
 
+function getStreamNotFullyConsumedError(): Error {
+  return new Error("ReqResp stream was not fully consumed");
+}
+
 export interface SendRequestOpts {
   /** The maximum time for complete response transfer. */
   respTimeoutMs?: number;
@@ -138,20 +142,30 @@ export async function* sendRequest(
       ? AbortSignal.any([signal, AbortSignal.timeout(RESP_TIMEOUT)])
       : AbortSignal.timeout(RESP_TIMEOUT);
 
+    let responseFullyConsumed = false;
+
     try {
       yield* responseDecode(protocol, stream, {
         signal: respSignal,
         getError: () =>
           signal?.aborted ? new ErrorAborted("sendRequest") : new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       });
+      responseFullyConsumed = true;
 
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
       // NOTE: add double space after "Req  " to align log with the "Resp " log
       logger.verbose("Req  done", logCtx);
     } finally {
-      // Necessary to call `stream.close()` since collectResponses() may break out of the source before exhausting it
-      await stream.close();
+      // If the caller stops iterating early or decoding fails, close the stream
+      // forcefully so mplex can reclaim it.
+      if (!responseFullyConsumed && stream.remoteWriteStatus === "writable") {
+        stream.abort(getStreamNotFullyConsumedError());
+      } else {
+        await stream.close().catch((e) => {
+          stream.abort(e as Error);
+        });
+      }
       metrics?.outgoingClosedStreams?.inc({method});
       logger.verbose("Req  stream closed", logCtx);
     }

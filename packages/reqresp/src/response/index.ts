@@ -66,49 +66,64 @@ export async function handleRequest({
   metrics?.incomingOpenedStreams.inc({method: protocol.method});
 
   let responseError: Error | null = null;
-  // Yields success chunks and error chunks in the same generator
-  // This syntax allows to recycle stream to send success and error chunks without returning
-  // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
-  await sendChunks(
-    stream,
-    (async function* requestHandlerSource() {
-      try {
-        const requestBody = await withTimeout(() => requestDecode(protocol, stream), REQUEST_TIMEOUT, signal).catch(
-          (e: unknown) => {
+  let streamSendError: Error | null = null;
+
+  try {
+    // Yields success chunks and error chunks in the same generator
+    // This syntax allows to recycle stream to send success and error chunks without returning
+    // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
+    await sendChunks(
+      stream,
+      (async function* requestHandlerSource() {
+        try {
+          const requestBody = await withTimeout(
+            (timeoutAndParentSignal) => requestDecode(protocol, stream, timeoutAndParentSignal),
+            REQUEST_TIMEOUT,
+            signal
+          ).catch((e: unknown) => {
             if (e instanceof TimeoutError) {
               throw e; // Let outer catch re-type the error as SERVER_ERROR
             }
             throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
+          });
+
+          logger.debug("Req  received", logCtx);
+
+          // Max count by request for byRange and byRoot
+          const requestCount = protocol?.inboundRateLimits?.getRequestCount?.(requestBody) ?? 1;
+
+          if (!rateLimiter.allows(peerId, protocolID, requestCount)) {
+            throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED});
           }
-        );
 
-        logger.debug("Req  received", logCtx);
+          const requestChunk: ReqRespRequest = {
+            data: requestBody,
+            version: protocol.version,
+          };
 
-        // Max count by request for byRange and byRoot
-        const requestCount = protocol?.inboundRateLimits?.getRequestCount?.(requestBody) ?? 1;
+          yield* responseEncodeSuccess(protocol, protocol.handler(requestChunk, peerId, peerClient));
+        } catch (e) {
+          const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;
+          yield* responseEncodeError(protocol, status, (e as Error).message);
 
-        if (!rateLimiter.allows(peerId, protocolID, requestCount)) {
-          throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED});
+          responseError = e as Error;
         }
-
-        const requestChunk: ReqRespRequest = {
-          data: requestBody,
-          version: protocol.version,
-        };
-
-        yield* responseEncodeSuccess(protocol, protocol.handler(requestChunk, peerId, peerClient));
-      } catch (e) {
-        const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;
-        yield* responseEncodeError(protocol, status, (e as Error).message);
-
-        responseError = e as Error;
-      }
-    })(),
-    signal
-  );
-
-  await stream.close();
-  metrics?.incomingClosedStreams.inc({method: protocol.method});
+      })(),
+      signal
+    );
+  } catch (e) {
+    streamSendError = e as Error;
+    throw e;
+  } finally {
+    if (streamSendError) {
+      stream.abort(streamSendError);
+    } else {
+      await stream.close().catch((e) => {
+        stream.abort(e as Error);
+      });
+    }
+    metrics?.incomingClosedStreams.inc({method: protocol.method});
+  }
 
   // TODO: It may happen that the response write completes before the request is fully read,
   // so you never see "Resp received request" in the logs and the response ends without

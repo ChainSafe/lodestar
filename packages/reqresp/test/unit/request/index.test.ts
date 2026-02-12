@@ -79,6 +79,85 @@ describe("request / sendRequest", () => {
     });
   }
 
+  it("aborts stream when caller stops consuming responses early", async () => {
+    const encodedResponse = await Array.fromAsync(
+      responseEncode(
+        [
+          {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
+          {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
+        ],
+        emptyProtocol as Protocol
+      )
+    );
+
+    let getStreamStatus = (): string => "not-created";
+    libp2p = {
+      dialProtocol: vi.fn().mockImplementation(async () => {
+        const streamResult = await createMockStream({
+          protocol: emptyProtocol.method,
+          source: (async function* (): AsyncIterable<Uint8Array> {
+            yield Buffer.concat(encodedResponse);
+            await sleep(100000, controller.signal);
+          })(),
+        });
+        const reqStream = streamResult.stream as unknown as {status: string};
+        getStreamStatus = () => reqStream.status;
+        return streamResult.stream;
+      }),
+    } as unknown as Libp2p;
+
+    let responseCount = 0;
+    for await (const _ of sendRequest(
+      {logger, libp2p, metrics: null},
+      peerId,
+      [emptyProtocol],
+      [emptyProtocol.method],
+      EMPTY_REQUEST,
+      controller.signal
+    )) {
+      responseCount++;
+      break;
+    }
+
+    expect(responseCount).toBe(1);
+    expect(getStreamStatus()).toBe("aborted");
+  });
+
+  it("aborts stream on RESP_TIMEOUT", async () => {
+    const testMethod = "req/test";
+    let getStreamStatus = (): string => "not-created";
+    libp2p = {
+      dialProtocol: vi.fn().mockImplementation(async () => {
+        const streamResult = await createMockStream({
+          protocol: testMethod,
+          source: (async function* (): AsyncIterable<Uint8Array> {
+            await sleep(100000, controller.signal);
+            yield new Uint8Array();
+          })(),
+        });
+        const reqStream = streamResult.stream as unknown as {status: string};
+        getStreamStatus = () => reqStream.status;
+        return streamResult.stream;
+      }),
+    } as unknown as Libp2p;
+
+    await expectRejectedWithLodestarError(
+      Array.fromAsync(
+        sendRequest(
+          {logger, libp2p, metrics: null},
+          peerId,
+          [emptyProtocol],
+          [testMethod],
+          EMPTY_REQUEST,
+          controller.signal,
+          {respTimeoutMs: 1}
+        )
+      ),
+      new RequestError({code: RequestErrorCode.RESP_TIMEOUT})
+    );
+    expect(getStreamStatus()).toBe("aborted");
+  });
+
   describe("timeout cases", () => {
     const peerId = getValidPeerId();
     const testMethod = "req/test";

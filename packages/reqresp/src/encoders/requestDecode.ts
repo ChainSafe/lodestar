@@ -11,7 +11,11 @@ const EMPTY_DATA = new Uint8Array();
  * request  ::= <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function requestDecode(protocol: MixedProtocol, stream: Stream): Promise<Uint8Array> {
+export async function requestDecode(
+  protocol: MixedProtocol,
+  stream: Stream,
+  signal?: AbortSignal
+): Promise<Uint8Array> {
   const type = protocol.requestSizes;
   if (type === null) {
     // method has no body
@@ -20,10 +24,22 @@ export async function requestDecode(protocol: MixedProtocol, stream: Stream): Pr
 
   // Request has a single payload, so return immediately
   const bytes = byteStream(stream);
+  let requestReadDone = false;
   try {
-    return await readEncodedPayload(bytes, protocol.encoding, type);
+    const requestBody = await readEncodedPayload(bytes, protocol.encoding, type, signal);
+    requestReadDone = true;
+    return requestBody;
   } finally {
     try {
+      if (!requestReadDone) {
+        // Do not push partial bytes back into the stream on decode failure/abort.
+        // This stream is consumed by req/resp only once.
+        const readBuffer = (bytes as unknown as {readBuffer?: {byteLength: number; consume: (bytes: number) => void}})
+          .readBuffer;
+        if (readBuffer) {
+          readBuffer.consume(readBuffer.byteLength);
+        }
+      }
       bytes.unwrap();
     } catch {
       // Ignore unwrap errors - stream may already be closed

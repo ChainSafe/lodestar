@@ -35,6 +35,7 @@ export async function* responseDecode(
   opts: {signal?: AbortSignal; getError?: () => Error} = {}
 ): AsyncIterable<ResponseIncoming> {
   const bytes = byteStream(stream);
+  let responseReadDone = false;
 
   try {
     while (true) {
@@ -63,6 +64,7 @@ export async function* responseDecode(
         protocolVersion: protocol.version,
       };
     }
+    responseReadDone = true;
   } catch (e) {
     if (opts.signal?.aborted && opts.getError) {
       throw opts.getError();
@@ -70,6 +72,15 @@ export async function* responseDecode(
     throw e;
   } finally {
     try {
+      if (!responseReadDone) {
+        // Do not push partial bytes back into the stream on decode failure/abort.
+        // This stream is consumed by req/resp only once.
+        const readBuffer = (bytes as unknown as {readBuffer?: {byteLength: number; consume: (bytes: number) => void}})
+          .readBuffer;
+        if (readBuffer) {
+          readBuffer.consume(readBuffer.byteLength);
+        }
+      }
       bytes.unwrap();
     } catch {
       // Ignore unwrap errors - stream may already be closed
