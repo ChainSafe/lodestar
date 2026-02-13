@@ -2,7 +2,7 @@
   "packages": [
     "packages/*"
   ],
-  "version": "1.39.1",
+  "version": "1.40.0",
   "stream": true,
   "command": {
     "version": {

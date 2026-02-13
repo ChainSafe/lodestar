@@ -133,7 +133,7 @@ export const ExecutionPayloadBid = new ContainerType(
     slot: Slot,
     value: UintNum64,
     executionPayment: UintNum64,
-    blobKzgCommitments: denebSsz.BlobKzgCommitments, // Modified in GLOAS:EIP7732
+    blobKzgCommitments: denebSsz.BlobKzgCommitments,
   },
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
@@ -271,7 +271,7 @@ export const DataColumnSidecar = new ContainerType(
   {
     index: fuluSsz.DataColumnSidecar.fields.index,
     column: fuluSsz.DataColumnSidecar.fields.column,
-    // kzgCommitments: fuluSsz.DataColumnSidecar.fields.kzgCommitments, // Removed in GLOAS:EIP7732
+    // kzgCommitments: denebSsz.BlobKzgCommitments, // Removed in GLOAS:EIP7732
     kzgProofs: fuluSsz.DataColumnSidecar.fields.kzgProofs,
     // signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader, // Removed in GLOAS:EIP7732
     // kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof, // Removed in GLOAS:EIP7732
