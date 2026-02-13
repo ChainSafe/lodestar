@@ -5,7 +5,6 @@ import {
   ForkPostFulu,
   ForkPostGloas,
   ForkPreGloas,
-  ForkPreGloas,
   SLOTS_PER_EPOCH,
   isForkPostDeneb,
   isForkPostFulu,
@@ -15,8 +14,8 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
-import {isGloasDataColumnSidecar} from "../../util/blobs.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
+import {isGloasDataColumnSidecar} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {
