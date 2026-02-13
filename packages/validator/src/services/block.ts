@@ -223,8 +223,10 @@ export class BlockProposingService {
       throw new Error(`Validator index not found for ${pubkeyHex}`);
     }
 
+    const beaconBlockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
       slot,
+      beaconBlockRoot,
       builderIndex: validatorIndex,
     });
     const envelope = envelopeRes.value();
