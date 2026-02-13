@@ -112,12 +112,22 @@ jobs:
             # Checkout the tag
             git checkout "$TAG"
 
+            # Detect package manager (older versions use yarn, newer use pnpm)
+            if grep -q '"packageManager": "pnpm' package.json 2>/dev/null; then
+              PM="pnpm"
+              INSTALL="pnpm install --frozen-lockfile"
+            else
+              PM="yarn"
+              INSTALL="yarn install --frozen-lockfile"
+            fi
+            echo "Using package manager: $PM"
+
             # Install and build at that tag
-            pnpm install --frozen-lockfile
-            pnpm build
+            $INSTALL
+            $PM build
 
             # Generate docs
-            pnpm docs:build
+            $PM docs:build
 
             # Restore existing versioned content into docs/
             cp -r "$VERSIONED_DIR/versioned_docs" docs/ 2>/dev/null || true
@@ -126,7 +136,7 @@ jobs:
 
             # Install docs deps and create version snapshot
             cd docs
-            pnpm install
+            $PM install
             npx docusaurus docs:version "$VERSION"
             cd ..
 
