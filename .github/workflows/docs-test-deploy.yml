@@ -1,0 +1,79 @@
+name: Test deploy docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Ref to deploy"
+        required: false
+        default: "feat/docs-versioning"
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || 'feat/docs-versioning' }}
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          check-latest: true
+          cache: pnpm
+
+      - name: Install & build
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      - name: Build and collect docs
+        run: pnpm docs:build
+
+      - name: Lint built docs
+        run: pnpm docs:lint:fix
+
+      # Fetch versioned docs from docs-versions branch (if it exists)
+      - name: Fetch versioned docs
+        run: |
+          git fetch origin docs-versions 2>/dev/null || true
+          if git rev-parse origin/docs-versions >/dev/null 2>&1; then
+            echo "Found docs-versions branch, fetching versioned content..."
+            git worktree add /tmp/docs-versions origin/docs-versions
+            cp -r /tmp/docs-versions/versioned_docs docs/ 2>/dev/null || echo "No versioned_docs"
+            cp -r /tmp/docs-versions/versioned_sidebars docs/ 2>/dev/null || echo "No versioned_sidebars"
+            cp /tmp/docs-versions/versions.json docs/ 2>/dev/null || echo "No versions.json"
+            git worktree remove /tmp/docs-versions
+            echo "Versioned docs fetched successfully"
+            echo "versions.json contents:"
+            cat docs/versions.json 2>/dev/null || echo "(none)"
+          else
+            echo "No docs-versions branch found, building without versioning"
+          fi
+
+      # Override org/project for fork deployment
+      - name: Configure for fork deployment
+        run: |
+          OWNER=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
+          REPO=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
+          sed -i "s|organizationName: \"ChainSafe\"|organizationName: \"$OWNER\"|" docs/docusaurus.config.ts
+          sed -i "s|url: \"https://chainsafe.github.io/\"|url: \"https://$OWNER.github.io/\"|" docs/docusaurus.config.ts
+          echo "Configured for $OWNER/$REPO"
+
+      - name: Build docs
+        working-directory: docs
+        run: pnpm install && pnpm build
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/build
