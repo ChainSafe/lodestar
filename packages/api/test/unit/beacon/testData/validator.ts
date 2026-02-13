@@ -92,7 +92,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     },
   },
   getExecutionPayloadEnvelope: {
-    args: {slot: 32000, builderIndex: 1},
+    args: {slot: 32000, beaconBlockRoot: ZERO_HASH, builderIndex: 1},
     res: {
       data: ssz.gloas.ExecutionPayloadEnvelope.defaultValue(),
       meta: {version: ForkName.gloas},

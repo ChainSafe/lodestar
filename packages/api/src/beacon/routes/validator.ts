@@ -415,10 +415,12 @@ export type Endpoints = {
     {
       /** Slot for which the execution payload envelope is requested */
       slot: Slot;
+      /** Root of the beacon block that this envelope is for */
+      beaconBlockRoot: Root;
       /** Index of the builder from which the execution payload envelope is requested */
       builderIndex: ValidatorIndex;
     },
-    {params: {slot: Slot; builder_index: ValidatorIndex}},
+    {params: {slot: Slot; beacon_block_root: string; builder_index: ValidatorIndex}},
     gloas.ExecutionPayloadEnvelope,
     VersionMeta
   >;
@@ -894,13 +896,23 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     getExecutionPayloadEnvelope: {
-      url: "/eth/v1/validator/execution_payload_envelope/{slot}/{builder_index}",
+      url: "/eth/v1/validator/execution_payload_envelope/{slot}/{beacon_block_root}/{builder_index}",
       method: "GET",
       req: {
-        writeReq: ({slot, builderIndex}) => ({params: {slot, builder_index: builderIndex}}),
-        parseReq: ({params}) => ({slot: params.slot, builderIndex: params.builder_index}),
+        writeReq: ({slot, beaconBlockRoot, builderIndex}) => ({
+          params: {slot, beacon_block_root: toRootHex(beaconBlockRoot), builder_index: builderIndex},
+        }),
+        parseReq: ({params}) => ({
+          slot: params.slot,
+          beaconBlockRoot: fromHex(params.beacon_block_root),
+          builderIndex: params.builder_index,
+        }),
         schema: {
-          params: {slot: Schema.UintRequired, builder_index: Schema.UintRequired},
+          params: {
+            slot: Schema.UintRequired,
+            beacon_block_root: Schema.StringRequired,
+            builder_index: Schema.UintRequired,
+          },
         },
       },
       resp: {
