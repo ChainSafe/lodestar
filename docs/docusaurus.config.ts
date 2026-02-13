@@ -1,13 +1,20 @@
 // There are various equivalent ways to declare your Docusaurus config.
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
-import {readFileSync, existsSync} from "node:fs";
+import {readFileSync} from "node:fs";
 import type {Config} from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 import {themes as prismThemes} from "prism-react-renderer";
 
 // Read the latest version from versions.json (created by `docusaurus docs:version`)
-const versions: string[] = existsSync("./versions.json") ? JSON.parse(readFileSync("./versions.json", "utf-8")) : [];
+// Gracefully handles missing file, empty file, or invalid JSON
+const versions: string[] = (() => {
+  try {
+    return JSON.parse(readFileSync("./versions.json", "utf-8"));
+  } catch {
+    return [];
+  }
+})();
 const lastVersion = versions[0]; // Most recent versioned release
 
 const config: Config = {
