@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - "v*"
-      - "!v*-rc.*"
-      - "!v*-beta.*"
       - "!v*-alpha.*"
       - "!v*-dev.*"
 
@@ -22,7 +20,19 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Versioning docs for: $VERSION"
+
+          # Determine if this is a stable release or pre-release
+          if echo "$VERSION" | grep -qE '-(rc|beta)\.'; then
+            echo "is_stable=false" >> $GITHUB_OUTPUT
+            # Extract base version (e.g., 1.40.0 from 1.40.0-rc.0)
+            BASE_VERSION=$(echo "$VERSION" | sed 's/-.*//')
+            echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+            echo "Pre-release detected: $VERSION (base: $BASE_VERSION)"
+          else
+            echo "is_stable=true" >> $GITHUB_OUTPUT
+            echo "base_version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Stable release detected: $VERSION"
+          fi
 
       # Checkout the tagged release to build its docs
       - uses: actions/checkout@v4
@@ -74,12 +84,45 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+      # For stable releases, remove any pre-release versions (rc/beta) for the same base version
+      - name: Remove pre-release versions for this release
+        if: steps.check.outputs.exists == 'false' && steps.version.outputs.is_stable == 'true'
+        run: |
+          if [ ! -f docs/versions.json ]; then
+            echo "No versions.json, nothing to clean up"
+            exit 0
+          fi
+
+          BASE="${{ steps.version.outputs.base_version }}"
+          echo "Cleaning up pre-release versions matching $BASE-*..."
+
+          # Find pre-release versions to remove (e.g., 1.40.0-rc.0, 1.40.0-beta.1)
+          PRE_RELEASES=$(cat docs/versions.json | jq -r --arg base "$BASE" '.[] | select(startswith($base + "-"))')
+
+          if [ -z "$PRE_RELEASES" ]; then
+            echo "No pre-release versions found for $BASE"
+            exit 0
+          fi
+
+          for PRE in $PRE_RELEASES; do
+            echo "Removing pre-release version: $PRE"
+            rm -rf "docs/versioned_docs/version-$PRE"
+            rm -f "docs/versioned_sidebars/version-$PRE-sidebars.json"
+          done
+
+          # Update versions.json to exclude the removed pre-releases
+          cat docs/versions.json | jq --arg base "$BASE" '[.[] | select(startswith($base + "-") | not)]' > docs/versions.json.tmp
+          mv docs/versions.json.tmp docs/versions.json
+          echo "Updated versions.json:"
+          cat docs/versions.json
+
       - name: Create docs version snapshot
         if: steps.check.outputs.exists == 'false'
         working-directory: docs
         run: npx docusaurus docs:version ${{ steps.version.outputs.version }}
 
-      - name: Prune old versions (keep last 5)
+      # Prune old versions: keep last 5 stable + any active pre-releases
+      - name: Prune old versions (keep last 5 stable)
         if: steps.check.outputs.exists == 'false'
         run: |
           if [ ! -f docs/versions.json ]; then
@@ -87,16 +130,18 @@ jobs:
             exit 0
           fi
 
-          VERSIONS=$(cat docs/versions.json | jq -r '.[]')
-          COUNT=$(echo "$VERSIONS" | wc -l)
+          # Count only stable versions (no hyphens)
+          STABLE_COUNT=$(cat docs/versions.json | jq '[.[] | select(contains("-") | not)] | length')
 
-          if [ "$COUNT" -le 5 ]; then
-            echo "Only $COUNT versions, no pruning needed"
+          if [ "$STABLE_COUNT" -le 5 ]; then
+            echo "Only $STABLE_COUNT stable versions, no pruning needed"
             exit 0
           fi
 
-          echo "Found $COUNT versions, pruning to keep last 5..."
-          TO_REMOVE=$(echo "$VERSIONS" | tail -n +6)
+          echo "Found $STABLE_COUNT stable versions, pruning to keep last 5..."
+
+          # Get stable versions to remove (beyond the 5 most recent)
+          TO_REMOVE=$(cat docs/versions.json | jq -r '[.[] | select(contains("-") | not)][5:] | .[]')
 
           for OLD_VERSION in $TO_REMOVE; do
             echo "Removing old version: $OLD_VERSION"
@@ -104,8 +149,12 @@ jobs:
             rm -f "docs/versioned_sidebars/version-$OLD_VERSION-sidebars.json"
           done
 
-          cat docs/versions.json | jq '.[0:5]' > docs/versions.json.tmp
+          # Rebuild versions.json excluding pruned versions
+          REMOVE_JSON=$(echo "$TO_REMOVE" | jq -R . | jq -s .)
+          cat docs/versions.json | jq --argjson remove "$REMOVE_JSON" '[.[] | select(. as $v | $remove | index($v) | not)]' > docs/versions.json.tmp
           mv docs/versions.json.tmp docs/versions.json
+          echo "Pruned versions.json:"
+          cat docs/versions.json
 
       - name: Push versioned docs to docs-versions branch
         if: steps.check.outputs.exists == 'false'

@@ -15,7 +15,8 @@ const versions: string[] = (() => {
     return [];
   }
 })();
-const lastVersion = versions[0]; // Most recent versioned release
+// Default to the latest stable version (skip pre-releases like rc/beta)
+const lastVersion = versions.find((v) => !v.includes("-"));
 
 const config: Config = {
   title: "Lodestar",
