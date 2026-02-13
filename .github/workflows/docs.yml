@@ -9,6 +9,10 @@ on:
       - "docs/**"
       - "packages/*/README.md"
       - ".github/workflows/docs.yml"
+  workflow_run:
+    workflows: ["Version docs"]
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       ref:
@@ -19,6 +23,8 @@ on:
 
 jobs:
   docs:
+    # For workflow_run, only deploy if Version docs succeeded
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
       # Always build "current" (Next) docs from unstable
