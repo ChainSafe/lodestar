@@ -4,27 +4,32 @@ on:
   push:
     branches:
       - stable
+      - unstable
+  workflow_run:
+    workflows: ["Version docs"]
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       ref:
-        description: "Ref to deploy, defaults to `unstable`"
+        description: "Ref to deploy docs from, defaults to `unstable`"
         required: false
         default: "unstable"
         type: string
 
 jobs:
   docs:
+    # For workflow_run, only deploy if Version docs succeeded
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
-      DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'stable' }}
+      # Always build "current" (Next) docs from unstable
+      # Versioned docs come from docs-versions branch
+      DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'unstable' }}
     steps:
-      # Log out the ref being deployed
       - name: Log Deployment Ref
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "Deploying ref: $DEPLOY_REF"
+        run: echo "Deploying docs from ref $DEPLOY_REF"
 
-      # Checkout the correct ref being deployed
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.DEPLOY_REF }}
@@ -64,6 +69,22 @@ jobs:
 
       - name: Lint built docs
         run: pnpm docs:lint:fix
+
+      # Fetch versioned docs from docs-versions branch (if it exists)
+      - name: Fetch versioned docs
+        run: |
+          git fetch origin docs-versions 2>/dev/null || true
+          if git rev-parse origin/docs-versions >/dev/null 2>&1; then
+            echo "Found docs-versions branch, fetching versioned content..."
+            git worktree add /tmp/docs-versions origin/docs-versions
+            cp -r /tmp/docs-versions/versioned_docs docs/ 2>/dev/null || echo "No versioned_docs"
+            cp -r /tmp/docs-versions/versioned_sidebars docs/ 2>/dev/null || echo "No versioned_sidebars"
+            cp /tmp/docs-versions/versions.json docs/ 2>/dev/null || echo "No versions.json"
+            git worktree remove /tmp/docs-versions
+            echo "Versioned docs fetched successfully"
+          else
+            echo "No docs-versions branch found, building without versioning"
+          fi
 
       - name: Build docs
         working-directory: docs
