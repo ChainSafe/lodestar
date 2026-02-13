@@ -144,3 +144,10 @@ jobs:
           git add versioned_docs versioned_sidebars versions.json
           git commit -m "docs: add versioned docs for v${{ steps.version.outputs.version }}" || echo "Nothing to commit"
           git push origin docs-versions
+
+      # Trigger docs redeploy to pick up the new version
+      - name: Trigger docs deploy
+        if: steps.check.outputs.exists == 'false'
+        run: gh workflow run docs.yml
+        env:
+          GH_TOKEN: ${{ github.token }}

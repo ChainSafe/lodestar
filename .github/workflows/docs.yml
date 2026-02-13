@@ -4,10 +4,15 @@ on:
   push:
     branches:
       - stable
+      - unstable
+    paths:
+      - "docs/**"
+      - "packages/*/README.md"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
     inputs:
       ref:
-        description: "Ref to deploy, defaults to `unstable`"
+        description: "Ref to deploy docs from, defaults to `unstable`"
         required: false
         default: "unstable"
         type: string
@@ -16,15 +21,13 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     env:
-      DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'stable' }}
+      # Always build "current" (Next) docs from unstable
+      # Versioned docs come from docs-versions branch
+      DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'unstable' }}
     steps:
-      # Log out the ref being deployed
       - name: Log Deployment Ref
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "Deploying ref: $DEPLOY_REF"
+        run: echo "Deploying docs from ref $DEPLOY_REF"
 
-      # Checkout the correct ref being deployed
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.DEPLOY_REF }}
