@@ -8,17 +8,7 @@ import {testData} from "../testData/beacon.js";
 
 describe("beacon / beacon", () => {
   runGenericServerTest<Endpoints>(
-    // TODO: revisit
-    createChainForkConfig({
-      ...defaultChainConfig,
-      ALTAIR_FORK_EPOCH: 0,
-      BELLATRIX_FORK_EPOCH: 0,
-      CAPELLA_FORK_EPOCH: 0,
-      DENEB_FORK_EPOCH: 0,
-      ELECTRA_FORK_EPOCH: 0,
-      FULU_FORK_EPOCH: 0,
-      GLOAS_FORK_EPOCH: 2,
-    }),
+    createChainForkConfig({...defaultChainConfig, GLOAS_FORK_EPOCH: 0}),
     getClient,
     getRoutes,
     testData

@@ -75,7 +75,9 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishBlockV2: {
     args: {
-      signedBlockContents: ssz.electra.SignedBlockContents.defaultValue(),
+      signedBlockContents: {
+        signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue(),
+      },
       broadcastValidation: BroadcastValidation.consensus,
     },
     res: undefined,
@@ -91,16 +93,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     },
     res: undefined,
   },
-  publishExecutionPayloadEnvelope: (() => {
-    // TODO: revisit
-    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    // Slot must be in the gloas epoch (GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH)
-    envelope.message.slot = 32000;
-    return {
-      args: {signedExecutionPayloadEnvelope: envelope},
-      res: undefined,
-    };
-  })(),
+  publishExecutionPayloadEnvelope: {
+    args: {signedExecutionPayloadEnvelope: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()},
+    res: undefined,
+  },
   getBlobSidecars: {
     args: {blockId: "head", indices: [0]},
     res: {
