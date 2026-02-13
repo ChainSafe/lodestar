@@ -86,6 +86,7 @@ PoS
 Prysm
 Quickstart
 README
+READMEs
 RPC
 Reth
 Ryzen
@@ -247,6 +248,7 @@ vite
 vitest
 webpack
 wip
+wordlist
 xRelayPubKey
 xcode
 yaml
