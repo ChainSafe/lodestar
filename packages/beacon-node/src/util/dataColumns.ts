@@ -15,9 +15,12 @@ import {
   BeaconBlockBody,
   ColumnIndex,
   CustodyIndex,
+  DataColumnSidecar,
+  Root,
   SSZTypesFor,
   SignedBeaconBlock,
   SignedBeaconBlockHeader,
+  Slot,
   deneb,
   fulu,
   gloas,
@@ -277,6 +280,11 @@ export function getBlobKzgCommitments(
   return (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
 }
 
+/** Type guard for gloas.DataColumnSidecar */
+export function isGloasDataColumnSidecar(sidecar: DataColumnSidecar): sidecar is gloas.DataColumnSidecar {
+  return (sidecar as gloas.DataColumnSidecar).beaconBlockRoot !== undefined;
+}
+
 /**
  * Given a signed block header and the commitments, inclusion proof, cells/proofs associated with
  * each blob in the block, assemble the sidecars which can be distributed to peers.
@@ -361,26 +369,36 @@ export function getDataColumnSidecarsFromColumnSidecar(
 
 /**
  * For GLOAS self-builds: build DataColumnSidecars from the envelope data.
- * In GLOAS, blobKzgCommitments are in the ExecutionPayloadEnvelope, not the BeaconBlockBody.
- * The inclusion proof is computed against the envelope's blobKzgCommitments field.
+ * In GLOAS, DataColumnSidecar has a simplified structure with `slot` and `beaconBlockRoot`
+ * instead of `signedBlockHeader`, `kzgCommitments`, and `kzgCommitmentsInclusionProof`.
  */
 export function getDataColumnSidecarsForGloas(
-  signedBlockHeader: SignedBeaconBlockHeader,
-  blobKzgCommitments: deneb.BlobKzgCommitments,
+  slot: Slot,
+  beaconBlockRoot: Root,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): fulu.DataColumnSidecars {
+): gloas.DataColumnSidecars {
   // No need to create data column sidecars if there are no blobs
-  if (blobKzgCommitments.length === 0) {
+  if (cellsAndKzgProofs.length === 0) {
     return [];
   }
 
-  // For GLOAS, the inclusion proof is for the envelope's blobKzgCommitments field
-  // The envelope structure has a different gindex than the block body
-  // TODO GLOAS: Compute proper inclusion proof for envelope's blobKzgCommitments
-  // For now, use an empty proof since the envelope already contains the commitments explicitly
-  const kzgCommitmentsInclusionProof = new Array(17).fill(new Uint8Array(32)) as fulu.KzgCommitmentsInclusionProof;
-
-  return getDataColumnSidecars(signedBlockHeader, blobKzgCommitments, kzgCommitmentsInclusionProof, cellsAndKzgProofs);
+  const sidecars: gloas.DataColumnSidecars = [];
+  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+    const column: Uint8Array[] = [];
+    const kzgProofs: Uint8Array[] = [];
+    for (const {cells, proofs} of cellsAndKzgProofs) {
+      column.push(cells[columnIndex]);
+      kzgProofs.push(proofs[columnIndex]);
+    }
+    sidecars.push({
+      index: columnIndex,
+      column,
+      kzgProofs,
+      slot,
+      beaconBlockRoot,
+    });
+  }
+  return sidecars;
 }
 
 /**

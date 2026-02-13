@@ -548,7 +548,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
       const {serializedData} = gossipData;
-      const dataColumnSidecar = sszDeserialize(topic, serializedData);
+      // TODO GLOAS: handle gloas.DataColumnSidecar
+      const dataColumnSidecar = sszDeserialize(topic, serializedData) as fulu.DataColumnSidecar;
       const dataColumnSlot = dataColumnSidecar.signedBlockHeader.message.slot;
       const index = dataColumnSidecar.index;
 

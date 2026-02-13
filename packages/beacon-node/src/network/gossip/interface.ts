@@ -4,6 +4,7 @@ import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
   AttesterSlashing,
+  DataColumnSidecar,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
@@ -14,7 +15,6 @@ import {
   altair,
   capella,
   deneb,
-  fulu,
   gloas,
   phase0,
 } from "@lodestar/types";
@@ -98,7 +98,7 @@ export type GossipTypeMap = {
   [GossipType.blob_sidecar]: deneb.BlobSidecar;
   [GossipType.beacon_aggregate_and_proof]: SignedAggregateAndProof;
   [GossipType.beacon_attestation]: SingleAttestation;
-  [GossipType.data_column_sidecar]: fulu.DataColumnSidecar;
+  [GossipType.data_column_sidecar]: DataColumnSidecar;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
   [GossipType.proposer_slashing]: phase0.ProposerSlashing;
   [GossipType.attester_slashing]: AttesterSlashing;
@@ -117,7 +117,7 @@ export type GossipFnByType = {
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: SingleAttestation) => Promise<void> | void;
-  [GossipType.data_column_sidecar]: (dataColumnSidecar: fulu.DataColumnSidecar) => Promise<void> | void;
+  [GossipType.data_column_sidecar]: (dataColumnSidecar: DataColumnSidecar) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
   [GossipType.proposer_slashing]: (proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void;
   [GossipType.attester_slashing]: (attesterSlashing: AttesterSlashing) => Promise<void> | void;

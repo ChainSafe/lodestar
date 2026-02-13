@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostGloas} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, isForkPostGloas} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -217,17 +217,11 @@ export class BlockProposingService {
     this.logger.debug("Published Gloas beacon block", debugLogCtx);
 
     // Step 3: Get the execution payload envelope
-    // For self-builds, the builder index is the proposer's validator index
-    const validatorIndex = this.validatorStore.getValidatorIndex(pubkeyHex);
-    if (validatorIndex === undefined) {
-      throw new Error(`Validator index not found for ${pubkeyHex}`);
-    }
-
     const beaconBlockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
       slot,
       beaconBlockRoot,
-      builderIndex: validatorIndex,
+      builderIndex: BUILDER_INDEX_SELF_BUILD,
     });
     const envelope = envelopeRes.value();
 

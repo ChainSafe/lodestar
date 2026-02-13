@@ -1,14 +1,14 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
+  CachedBeaconStateGloas,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
-  isExecutionStateType,
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
@@ -120,10 +120,10 @@ export class PrepareNextSlotScheduler {
         RegenCaller.precomputeEpoch
       );
 
-      if (isExecutionStateType(prepareState)) {
+      if (isForkPostBellatrix(fork)) {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
-        let updatedPrepareState = prepareState;
+        let updatedPrepareState = prepareState as CachedBeaconStateExecutions | CachedBeaconStateGloas;
         let updatedHeadRoot = headRoot;
 
         if (feeRecipient) {
@@ -146,7 +146,7 @@ export class PrepareNextSlotScheduler {
               // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
-            )) as CachedBeaconStateExecutions;
+            )) as CachedBeaconStateExecutions | CachedBeaconStateGloas;
             updatedHeadRoot = proposerHeadRoot;
           }
 

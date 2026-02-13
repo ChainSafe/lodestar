@@ -19,9 +19,7 @@ import {
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
-  CachedBeaconStateGloas,
   DataAvailabilityStatus,
-  StateHashTreeRootSource,
   attesterShufflingDecisionRoot,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
@@ -34,7 +32,6 @@ import {
   loadState,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
-import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
 import {
   BLSSignature,
   BeaconBlock,
@@ -917,9 +914,13 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
+      // TODO GLOAS: needs to be updated after fork choice changes are merged
       const parentBlock = chain.getProposerHead(slot);
+      const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
+      const parentBlockRoot = fromHex(parentBlockRootHex);
+      notOnOutOfRangeData(parentBlockRoot);
+      metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
-      // Build a common block body for later processes
       const graffitiBytes = toGraffitiBytes(
         graffiti ?? getDefaultGraffiti(getLodestarClientVersion(), chain.executionEngine.clientVersion, {})
       );
@@ -930,7 +931,6 @@ export function getValidatorApi(
         graffiti: graffitiBytes,
       });
 
-      // For gloas, we return a beacon block with separate execution payload bid
       const {block, consensusBlockValue} = await chain.produceBlock({
         slot,
         parentBlock,
@@ -940,14 +940,12 @@ export function getValidatorApi(
         commonBlockBodyPromise,
       });
 
-      const version = config.getForkName(block.slot);
-
       metrics?.blockProductionSuccess.inc({source: ProducedBlockSource.engine});
 
       return {
         data: block as gloas.BeaconBlock,
         meta: {
-          version,
+          version: fork,
           consensusBlockValue,
         },
       };
@@ -1585,82 +1583,44 @@ export function getValidatorApi(
       });
     },
 
-    async getExecutionPayloadEnvelope({slot, builderIndex}) {
+    async getExecutionPayloadEnvelope({slot, beaconBlockRoot, builderIndex}) {
+      const fork = config.getForkName(slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `getExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
+      }
+
       notWhileSyncing();
       await waitForSlot(slot);
 
-      const fork = config.getForkName(slot);
-      if (!isForkPostGloas(fork)) {
-        throw new ApiError(400, `getExecutionPayloadEnvelope not supported for fork=${fork}`);
+      // TODO GLOAS: add support for acting as builder
+      if (builderIndex !== BUILDER_INDEX_SELF_BUILD) {
+        throw new ApiError(400, `Builder index must be BUILDER_INDEX_SELF_BUILD but got ${builderIndex}`);
       }
 
-      // For self-builds, the proposer is also the builder
-      const headState = chain.getHeadState();
-      const proposerIndex = headState.epochCtx.getBeaconProposer(slot);
-      if (builderIndex !== proposerIndex) {
-        // TODO GLOAS: For external builders, fetch envelope via P2P or builder API
-        throw new ApiError(
-          404,
-          `Builder index ${builderIndex} does not match proposer ${proposerIndex} for self-build`
-        );
+      const blockRootHex = toRootHex(beaconBlockRoot);
+      const produceResult = chain.blockProductionCache.get(blockRootHex);
+
+      if (produceResult === undefined) {
+        throw new ApiError(404, `No cached block production result found for block root ${blockRootHex}`);
+      }
+      if (!isForkPostGloas(produceResult.fork)) {
+        throw Error(`Cached block production result is for pre-gloas fork=${produceResult.fork}`);
+      }
+      if (produceResult.type !== BlockType.Full) {
+        throw Error("Cached block production result is not full block");
       }
 
-      // Search the block production cache for a block produced at this slot
-      // The cache is keyed by block root, so we need to search through entries
-      let cachedResult: {blockRootHex: string; produceResult: ProduceFullGloas} | null = null;
-
-      for (const [blockRootHex, produceResult] of chain.blockProductionCache.entries()) {
-        if (
-          produceResult.fork === fork &&
-          produceResult.type === BlockType.Full &&
-          "executionPayload" in produceResult
-        ) {
-          cachedResult = {blockRootHex, produceResult: produceResult as ProduceFullGloas};
-          break;
-        }
-      }
-
-      if (!cachedResult) {
-        throw new ApiError(404, `No cached block production result found for slot ${slot}`);
-      }
-
-      const {blockRootHex, produceResult} = cachedResult;
-
-      // Build the envelope
-      // For self-builds, builder_index = BUILDER_INDEX_SELF_BUILD (UINT64_MAX)
-      const beaconBlockRoot = fromHex(blockRootHex);
+      const {executionPayload, executionRequests, envelopeStateRoot} = produceResult as ProduceFullGloas;
 
       const envelope: gloas.ExecutionPayloadEnvelope = {
-        payload: produceResult.executionPayload,
-        executionRequests: produceResult.executionRequests,
+        payload: executionPayload,
+        executionRequests: executionRequests,
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
         slot,
-        stateRoot: ZERO_HASH,
+        stateRoot: envelopeStateRoot,
       };
-
-      // Compute state root by running processExecutionPayloadEnvelope with verify=false
-      // as per the builder spec, then taking hash_tree_root(state)
-      if (headState.slot !== slot) {
-        chain.logger.warn("Head state slot mismatch for envelope state root computation, using zero hash", {
-          headSlot: headState.slot,
-          requestedSlot: slot,
-        });
-      } else {
-        const postBlockState = headState.clone(true) as CachedBeaconStateGloas;
-        const tempSignedEnvelope: gloas.SignedExecutionPayloadEnvelope = {
-          message: envelope,
-          signature: new Uint8Array(96),
-        };
-
-        processExecutionPayloadEnvelope(postBlockState, tempSignedEnvelope, false);
-
-        const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-          source: StateHashTreeRootSource.computeNewStateRoot,
-        });
-        envelope.stateRoot = postBlockState.hashTreeRoot();
-        hashTreeRootTimer?.();
-      }
 
       return {
         data: envelope,

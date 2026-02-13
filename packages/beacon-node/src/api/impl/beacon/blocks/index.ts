@@ -28,6 +28,7 @@ import {
   WithOptionalBytes,
   deneb,
   fulu,
+  gloas,
   isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
@@ -653,37 +654,27 @@ export function getBeaconBlockApi({
       }
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
-      let dataColumnSidecars: fulu.DataColumnSidecars = [];
+      let dataColumnSidecars: gloas.DataColumnSidecars = [];
 
       // For self-builds, retrieve cached production data and build DataColumnSidecars
       if (isSelfBuild) {
         const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
-        if (cachedResult?.cells && cachedResult.cellProofs && cachedResult.blobKzgCommitments.length > 0) {
-          // Get the signed block header from the block we produced
-          const blockResult = await chain.getBlockByRoot(blockRootHex);
-          if (blockResult) {
-            const signedBlockHeader = signedBlockToSignedHeader(config, blockResult.block);
+        if (cachedResult?.cells && cachedResult.blobKzgCommitments.length > 0) {
+          // TODO GLOAS: cell proofs are not currently cached, need to store them during block production
+          // Build cellsAndProofs from the cached cells
+          const cellsAndProofs = cachedResult.cells.map((rowCells) => ({
+            cells: rowCells,
+            proofs: [] as Uint8Array[],
+          }));
 
-            // Build cellsAndProofs from the cached cells and proofs
-            // cellProofs is a flat array: 128 proofs per blob
-            const cellsAndProofs = cachedResult.cells.map((rowCells, rowIndex) => ({
-              cells: rowCells,
-              proofs: cachedResult.cellProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
-            }));
-
-            // Build DataColumnSidecars for GLOAS (commitments from envelope)
-            dataColumnSidecars = getDataColumnSidecarsForGloas(
-              signedBlockHeader,
-              cachedResult.blobKzgCommitments,
-              cellsAndProofs
-            );
-          }
+          dataColumnSidecars = getDataColumnSidecarsForGloas(slot, envelope.beaconBlockRoot, cellsAndProofs);
         }
       }
 
       // TODO GLOAS: Verify execution payload envelope signature
-      // For self-builds with G2_POINT_AT_INFINITY signature, this is a no-op
-      // For external builders, verify using verify_execution_payload_envelope_signature(state, signed_envelope)
+      // For self-builds, the proposer signs with their own key (NOT G2_POINT_AT_INFINITY — that's only for the bid)
+      // For external builders, verify using the builder's registered pubkey
+      // Use verify_execution_payload_envelope_signature(state, signed_envelope)
 
       // TODO GLOAS: Process execution payload via state transition
       // Call process_execution_payload(state, signed_envelope, execution_engine)

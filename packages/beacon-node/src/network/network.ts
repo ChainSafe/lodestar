@@ -10,6 +10,7 @@ import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
+  DataColumnSidecar,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -34,7 +35,7 @@ import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnS
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {CustodyConfig} from "../util/dataColumns.js";
+import {CustodyConfig, isGloasDataColumnSidecar} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
@@ -355,8 +356,11 @@ export class Network implements INetwork {
     });
   }
 
-  async publishDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): Promise<number> {
-    const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
+  async publishDataColumnSidecar(dataColumnSidecar: DataColumnSidecar): Promise<number> {
+    const slot = isGloasDataColumnSidecar(dataColumnSidecar)
+      ? dataColumnSidecar.slot
+      : dataColumnSidecar.signedBlockHeader.message.slot;
+    const epoch = computeEpochAtSlot(slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
@@ -777,7 +781,7 @@ export class Network implements INetwork {
     this.core.setTargetGroupCount(count);
   };
 
-  private onPublishDataColumns = (sidecars: fulu.DataColumnSidecar[]): Promise<number[]> => {
+  private onPublishDataColumns = (sidecars: DataColumnSidecar[]): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 
