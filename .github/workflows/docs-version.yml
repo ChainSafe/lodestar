@@ -110,32 +110,37 @@ jobs:
       - name: Push versioned docs to docs-versions branch
         if: steps.check.outputs.exists == 'false'
         run: |
-          # Create a temporary directory for the orphan branch content
+          # Save versioned content to a temp directory
           TMPDIR=$(mktemp -d)
-
-          # Copy versioned content
           cp -r docs/versioned_docs "$TMPDIR/" 2>/dev/null || true
           cp -r docs/versioned_sidebars "$TMPDIR/" 2>/dev/null || true
           cp docs/versions.json "$TMPDIR/" 2>/dev/null || true
 
-          # Switch to orphan branch
-          git fetch origin docs-versions 2>/dev/null || true
-          if git rev-parse origin/docs-versions >/dev/null 2>&1; then
-            git checkout origin/docs-versions
+          # Clone just the docs-versions branch (or create orphan) in a clean directory
+          WORK=$(mktemp -d)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --heads origin docs-versions | grep -q docs-versions; then
+            git clone --branch docs-versions --single-branch --depth 1 \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "$WORK"
           else
+            git init "$WORK"
+            cd "$WORK"
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
             git checkout --orphan docs-versions
-            git rm -rf . >/dev/null 2>&1 || true
+            cd -
           fi
 
-          # Clean and copy new content
+          # Replace content with updated versioned docs
+          cd "$WORK"
           rm -rf versioned_docs versioned_sidebars versions.json
           cp -r "$TMPDIR/versioned_docs" . 2>/dev/null || true
           cp -r "$TMPDIR/versioned_sidebars" . 2>/dev/null || true
           cp "$TMPDIR/versions.json" . 2>/dev/null || true
 
-          # Commit and push
-          git add -A
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add versioned_docs versioned_sidebars versions.json
           git commit -m "docs: add versioned docs for v${{ steps.version.outputs.version }}" || echo "Nothing to commit"
-          git push origin HEAD:docs-versions
+          git push origin docs-versions
