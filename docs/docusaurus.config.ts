@@ -65,6 +65,14 @@ const config: Config = {
           sidebarPath: "./sidebars.ts",
           editUrl: "https://github.com/ChainSafe/lodestar/tree/unstable/docs/",
           routeBasePath: "/",
+          includeCurrentVersion: true,
+          lastVersion: "1.40.0",
+          versions: {
+            current: {
+              label: "Next 🚧",
+              path: "next",
+            },
+          },
         },
         theme: {
           customCss: "./src/css/custom.css",
@@ -86,6 +94,11 @@ const config: Config = {
         src: "images/logo.png",
       },
       items: [
+        {
+          type: "docsVersionDropdown",
+          position: "right",
+          dropdownActiveClassDisabled: true,
+        },
         {
           href: "https://github.com/ChainSafe/lodestar",
           label: "GitHub",
