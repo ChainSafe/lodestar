@@ -4,16 +4,32 @@ This documentation is built using [Docusaurus](https://docusaurus.io/) and is pu
 
 ## Versioning
 
-Documentation supports versioning so users can view docs for specific releases. The version dropdown in the navbar allows switching between versions.
+Documentation supports versioning so users can view docs for specific releases. A version dropdown in the navbar allows switching between versions. The latest stable release is always the default.
 
 ### How it works
 
-Versioned docs are **not stored in source control** — they're maintained on a separate `docs-versions` branch and fetched at build time by CI:
+Versioned docs are **not stored in source control** — they're maintained on a separate `docs-versions` branch and fetched at build time by CI.
 
-- **`docs-version.yml`**: Triggers on stable release tags. Builds the docs at that tag, creates a Docusaurus version snapshot, prunes old versions (keeps last 5), and pushes to the `docs-versions` branch.
-- **`docs.yml`**: Before building, fetches versioned content from the `docs-versions` branch so the deployed site includes all versions.
+**Automated workflows:**
 
-The config reads `versions.json` dynamically — when no versions exist (e.g. local dev), the site builds without versioning.
+- **`docs-version.yml`**: Triggers on release tags (`v*`, including RC/beta, excluding alpha/dev). Creates a Docusaurus version snapshot and pushes to the `docs-versions` branch.
+  - **Stable releases** (e.g., `v1.40.0`) automatically replace matching pre-release versions (`1.40.0-rc.*`)
+  - Keeps the last 10 stable versions; older ones are pruned automatically
+- **`docs.yml`**: Deploys the docs site. Triggers on:
+  - `unstable` pushes (docs changes only) — updates "Next 🚧" development docs
+  - `workflow_run` after "Version docs" completes — picks up new releases
+  - `stable` pushes
+  - Manual `workflow_dispatch`
+
+**Pre-release lifecycle:**
+
+```
+v1.41.0-rc.0 tag → dropdown: 1.41.0-rc.0 | 1.40.0 (default) | ... | Next 🚧
+v1.41.0 tag      → dropdown: 1.41.0 (default) | 1.40.0 | ... | Next 🚧
+                              (1.41.0-rc.0 automatically removed)
+```
+
+**Config** (`docusaurus.config.ts`) reads `versions.json` dynamically with a try-catch fallback — local development works without any versioning files present.
 
 ### Manual versioning (if needed)
 
