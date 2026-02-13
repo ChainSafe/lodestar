@@ -5,10 +5,6 @@ on:
     branches:
       - stable
       - unstable
-    paths:
-      - "docs/**"
-      - "packages/*/README.md"
-      - ".github/workflows/docs.yml"
   workflow_run:
     workflows: ["Version docs"]
     types:

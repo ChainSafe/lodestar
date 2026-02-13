@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - "v*"
-      - "!v*-alpha.*"
-      - "!v*-dev.*"
 
 permissions:
   contents: write
@@ -96,7 +94,7 @@ jobs:
           BASE="${{ steps.version.outputs.base_version }}"
           echo "Cleaning up pre-release versions matching $BASE-*..."
 
-          # Find pre-release versions to remove (e.g., 1.40.0-rc.0, 1.40.0-beta.1)
+          # Find pre-release versions to remove (e.g., 1.40.0-rc.0)
           PRE_RELEASES=$(cat docs/versions.json | jq -r --arg base "$BASE" '.[] | select(startswith($base + "-"))')
 
           if [ -z "$PRE_RELEASES" ]; then
