@@ -1636,7 +1636,6 @@ export function getValidatorApi(
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
         slot,
-        blobKzgCommitments: produceResult.blobKzgCommitments,
         stateRoot: ZERO_HASH,
       };
 
