@@ -75,9 +75,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishBlockV2: {
     args: {
-      signedBlockContents: {
-        signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue(),
-      },
+      signedBlockContents: {signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue()},
       broadcastValidation: BroadcastValidation.consensus,
     },
     res: undefined,
