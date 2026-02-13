@@ -121,8 +121,8 @@ jobs:
         working-directory: docs
         run: npx docusaurus docs:version ${{ steps.version.outputs.version }}
 
-      # Prune old versions: keep last 5 stable + any active pre-releases
-      - name: Prune old versions (keep last 5 stable)
+      # Prune old versions: keep last 10 stable + any active pre-releases
+      - name: Prune old versions (keep last 10 stable)
         if: steps.check.outputs.exists == 'false'
         run: |
           if [ ! -f docs/versions.json ]; then
@@ -133,15 +133,15 @@ jobs:
           # Count only stable versions (no hyphens)
           STABLE_COUNT=$(cat docs/versions.json | jq '[.[] | select(contains("-") | not)] | length')
 
-          if [ "$STABLE_COUNT" -le 5 ]; then
+          if [ "$STABLE_COUNT" -le 10 ]; then
             echo "Only $STABLE_COUNT stable versions, no pruning needed"
             exit 0
           fi
 
-          echo "Found $STABLE_COUNT stable versions, pruning to keep last 5..."
+          echo "Found $STABLE_COUNT stable versions, pruning to keep last 10..."
 
           # Get stable versions to remove (beyond the 5 most recent)
-          TO_REMOVE=$(cat docs/versions.json | jq -r '[.[] | select(contains("-") | not)][5:] | .[]')
+          TO_REMOVE=$(cat docs/versions.json | jq -r '[.[] | select(contains("-") | not)][10:] | .[]')
 
           for OLD_VERSION in $TO_REMOVE; do
             echo "Removing old version: $OLD_VERSION"
