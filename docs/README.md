@@ -26,18 +26,23 @@ cd docs
 npx docusaurus docs:version <VERSION>
 ```
 
-## Development
+## Development & Build
+
+From the repository root, set up the docs environment:
 
 ```bash
 cd docs
 pnpm install
+```
+
+Start the local development server:
+
+```bash
 pnpm start
 ```
 
-## Build
+Build the static site:
 
 ```bash
-cd docs
-pnpm install
 pnpm build
 ```
