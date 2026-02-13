@@ -85,6 +85,7 @@ Plaintext
 PoS
 Prysm
 Quickstart
+README
 RPC
 Reth
 Ryzen
