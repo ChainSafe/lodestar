@@ -34,7 +34,7 @@ jobs:
           COUNT=${{ github.event.inputs.count || '10' }}
 
           # Get the last N stable release tags (exclude rc pre-releases)
-          STABLE_TAGS=$(git tag -l 'v*' --sort=-v:refname | grep -v '-rc\.' | head -n "$COUNT")
+          STABLE_TAGS=$(git tag -l 'v*' --sort=-v:refname | grep -vF -- '-rc.' | head -n "$COUNT")
           echo "Found stable tags:"
           echo "$STABLE_TAGS"
 

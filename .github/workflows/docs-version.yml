@@ -20,7 +20,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
           # Determine if this is a stable release or pre-release
-          if echo "$VERSION" | grep -q '-rc\.'; then
+          if echo "$VERSION" | grep -qF -- '-rc.'; then
             echo "is_stable=false" >> $GITHUB_OUTPUT
             # Extract base version (e.g., 1.40.0 from 1.40.0-rc.0)
             BASE_VERSION=$(echo "$VERSION" | sed 's/-.*//')
