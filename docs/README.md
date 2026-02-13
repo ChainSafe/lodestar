@@ -6,41 +6,25 @@ This documentation is built using [Docusaurus](https://docusaurus.io/) and is pu
 
 Documentation supports versioning so users can view docs for specific releases. The version dropdown in the navbar allows switching between versions.
 
-### Creating a new version
+### How it works
 
-When cutting a new release, create a versioned snapshot of the current documentation:
+Versioned docs are **not stored in source control** — they're maintained on a separate `docs-versions` branch and fetched at build time by CI:
+
+- **`docs-version.yml`**: Triggers on stable release tags. Builds the docs at that tag, creates a Docusaurus version snapshot, prunes old versions (keeps last 5), and pushes to the `docs-versions` branch.
+- **`docs.yml`**: Before building, fetches versioned content from the `docs-versions` branch so the deployed site includes all versions.
+
+The config reads `versions.json` dynamically — when no versions exist (e.g. local dev), the site builds without versioning.
+
+### Manual versioning (if needed)
 
 ```bash
-# 1. Make sure generated docs are up to date (from the repo root)
+# 1. Generate docs (from repo root)
 pnpm docs:build
 
-# 2. Create the version snapshot (from the docs/ directory)
+# 2. Create version snapshot (from docs/)
 cd docs
 npx docusaurus docs:version <VERSION>
 ```
-
-For example, to create docs for version `1.41.0`:
-
-```bash
-pnpm docs:build
-cd docs
-npx docusaurus docs:version 1.41.0
-```
-
-This will:
-- Copy `docs/pages/` into `docs/versioned_docs/version-1.41.0/`
-- Create `docs/versioned_sidebars/version-1.41.0-sidebars.json`
-- Add the version to `docs/versions.json`
-
-After creating a new version, update `lastVersion` in `docusaurus.config.ts` to point to the new version.
-
-### Removing old versions
-
-To keep the repository size manageable, remove versions older than the last 5 releases:
-
-1. Remove the version from `versions.json`
-2. Delete the `versioned_docs/version-<VERSION>/` directory
-3. Delete the `versioned_sidebars/version-<VERSION>-sidebars.json` file
 
 ## Development
 

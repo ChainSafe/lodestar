@@ -11,7 +11,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   version-docs:
@@ -21,16 +20,49 @@ jobs:
       - name: Get version from tag
         id: version
         run: |
-          # Strip the 'v' prefix from the tag
           VERSION="${GITHUB_REF_NAME#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Versioning docs for: $VERSION"
 
+      # Checkout the tagged release to build its docs
       - uses: actions/checkout@v4
         with:
-          ref: unstable
-          # Use a token that can trigger workflows and push to protected branches
-          token: ${{ secrets.GH_PAGES_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          check-latest: true
+          cache: pnpm
+
+      - name: Install dependencies & build
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      - name: Generate docs (CLI references, READMEs, assets)
+        run: pnpm docs:build
+
+      - name: Install docs dependencies
+        working-directory: docs
+        run: pnpm install
+
+      # Fetch existing versioned docs from the docs-versions branch
+      - name: Fetch existing versioned docs
+        run: |
+          git fetch origin docs-versions || true
+          if git rev-parse origin/docs-versions >/dev/null 2>&1; then
+            echo "Found existing docs-versions branch"
+            git worktree add /tmp/docs-versions origin/docs-versions
+            # Copy existing versioned content into docs/
+            cp -r /tmp/docs-versions/versioned_docs docs/ 2>/dev/null || true
+            cp -r /tmp/docs-versions/versioned_sidebars docs/ 2>/dev/null || true
+            cp /tmp/docs-versions/versions.json docs/ 2>/dev/null || true
+            git worktree remove /tmp/docs-versions
+          else
+            echo "No existing docs-versions branch, starting fresh"
+          fi
 
       - name: Check if version already exists
         id: check
@@ -41,30 +73,6 @@ jobs:
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Install pnpm
-        if: steps.check.outputs.exists == 'false'
-        uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v6
-        if: steps.check.outputs.exists == 'false'
-        with:
-          node-version: 24
-          check-latest: true
-          cache: pnpm
-
-      - name: Install dependencies & build
-        if: steps.check.outputs.exists == 'false'
-        run: pnpm install --frozen-lockfile && pnpm build
-
-      - name: Generate docs (CLI references, READMEs, assets)
-        if: steps.check.outputs.exists == 'false'
-        run: pnpm docs:build
-
-      - name: Install docs dependencies
-        if: steps.check.outputs.exists == 'false'
-        working-directory: docs
-        run: pnpm install
 
       - name: Create docs version snapshot
         if: steps.check.outputs.exists == 'false'
@@ -79,7 +87,6 @@ jobs:
             exit 0
           fi
 
-          # Get all versions
           VERSIONS=$(cat docs/versions.json | jq -r '.[]')
           COUNT=$(echo "$VERSIONS" | wc -l)
 
@@ -89,8 +96,6 @@ jobs:
           fi
 
           echo "Found $COUNT versions, pruning to keep last 5..."
-
-          # Get versions to remove (all but the first 5)
           TO_REMOVE=$(echo "$VERSIONS" | tail -n +6)
 
           for OLD_VERSION in $TO_REMOVE; do
@@ -99,31 +104,38 @@ jobs:
             rm -f "docs/versioned_sidebars/version-$OLD_VERSION-sidebars.json"
           done
 
-          # Update versions.json to keep only first 5
           cat docs/versions.json | jq '.[0:5]' > docs/versions.json.tmp
           mv docs/versions.json.tmp docs/versions.json
 
-      - name: Verify docs build
+      - name: Push versioned docs to docs-versions branch
         if: steps.check.outputs.exists == 'false'
-        working-directory: docs
-        run: npx docusaurus build
+        run: |
+          # Create a temporary directory for the orphan branch content
+          TMPDIR=$(mktemp -d)
 
-      - name: Create pull request
-        if: steps.check.outputs.exists == 'false'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GH_PAGES_TOKEN }}
-          branch: docs/version-${{ steps.version.outputs.version }}
-          base: unstable
-          title: "docs: add versioned docs for v${{ steps.version.outputs.version }}"
-          body: |
-            Automated PR to add versioned documentation for v${{ steps.version.outputs.version }}.
+          # Copy versioned content
+          cp -r docs/versioned_docs "$TMPDIR/" 2>/dev/null || true
+          cp -r docs/versioned_sidebars "$TMPDIR/" 2>/dev/null || true
+          cp docs/versions.json "$TMPDIR/" 2>/dev/null || true
 
-            This was triggered by the `v${{ steps.version.outputs.version }}` release tag.
+          # Switch to orphan branch
+          git fetch origin docs-versions 2>/dev/null || true
+          if git rev-parse origin/docs-versions >/dev/null 2>&1; then
+            git checkout origin/docs-versions
+          else
+            git checkout --orphan docs-versions
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
 
-            Changes:
-            - Created docs snapshot in `versioned_docs/version-${{ steps.version.outputs.version }}/`
-            - Updated `lastVersion` in `docusaurus.config.ts`
-            - Pruned old versions (keeping last 5)
-          commit-message: "docs: add versioned docs for v${{ steps.version.outputs.version }}"
-          delete-branch: true
+          # Clean and copy new content
+          rm -rf versioned_docs versioned_sidebars versions.json
+          cp -r "$TMPDIR/versioned_docs" . 2>/dev/null || true
+          cp -r "$TMPDIR/versioned_sidebars" . 2>/dev/null || true
+          cp "$TMPDIR/versions.json" . 2>/dev/null || true
+
+          # Commit and push
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: add versioned docs for v${{ steps.version.outputs.version }}" || echo "Nothing to commit"
+          git push origin HEAD:docs-versions
