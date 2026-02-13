@@ -252,9 +252,6 @@ export async function produceBlockBody<T extends BlockType>(
       await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
     }
 
-    // Compute blobKzgCommitmentsRoot for the bid
-    const blobKzgCommitmentsRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(blobsBundle.commitments);
-
     // Create self-build execution payload bid
     // For self-builds, builder_index = BUILDER_INDEX_SELF_BUILD (UINT64_MAX)
     // and value/executionPayment are 0
@@ -269,7 +266,7 @@ export async function produceBlockBody<T extends BlockType>(
       slot: blockSlot,
       value: 0,
       executionPayment: 0,
-      blobKzgCommitmentsRoot,
+      blobKzgCommitments: blobsBundle.commitments,
     };
 
     // For self-builds, signature is G2_POINT_AT_INFINITY
