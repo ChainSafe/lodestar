@@ -15,7 +15,7 @@ const versions: string[] = (() => {
     return [];
   }
 })();
-// Default to the latest stable version (skip pre-releases like rc/beta)
+// Default to the latest stable version (skip RC pre-releases)
 const lastVersion = versions.find((v) => !v.includes("-"));
 
 const config: Config = {

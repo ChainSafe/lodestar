@@ -20,7 +20,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
           # Determine if this is a stable release or pre-release
-          if echo "$VERSION" | grep -qE '-(rc|beta)\.'; then
+          if echo "$VERSION" | grep -q '-rc\.'; then
             echo "is_stable=false" >> $GITHUB_OUTPUT
             # Extract base version (e.g., 1.40.0 from 1.40.0-rc.0)
             BASE_VERSION=$(echo "$VERSION" | sed 's/-.*//')
@@ -82,7 +82,7 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      # For stable releases, remove any pre-release versions (rc/beta) for the same base version
+      # For stable releases, remove any RC pre-release versions for the same base version
       - name: Remove pre-release versions for this release
         if: steps.check.outputs.exists == 'false' && steps.version.outputs.is_stable == 'true'
         run: |
