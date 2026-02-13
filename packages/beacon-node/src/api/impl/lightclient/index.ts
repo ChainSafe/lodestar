@@ -24,9 +24,7 @@ export function getLightclientApi({
           const update = await lightClientServer.getUpdate(startPeriod + i);
           updates.push(update);
         } catch (e) {
-          if (
-            (e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE
-          ) {
+          if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
             // Period not available — if we already have results, stop to preserve
             // consecutive order. If not, skip and try the next period.
             if (updates.length > 0) break;
