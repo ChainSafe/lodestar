@@ -282,3 +282,13 @@ export const DataColumnSidecar = new ContainerType(
 );
 
 export const DataColumnSidecars = new ListCompositeType(DataColumnSidecar, NUMBER_OF_COLUMNS);
+
+// Fork-choice types
+
+export const ForkChoiceNode = new ContainerType(
+  {
+    root: Root,
+    payloadStatus: Uint8, // PayloadStatus is uint8 in spec
+  },
+  {typeName: "ForkChoiceNode", jsonCase: "eth2"}
+);
