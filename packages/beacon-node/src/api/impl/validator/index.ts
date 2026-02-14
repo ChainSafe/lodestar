@@ -1622,6 +1622,14 @@ export function getValidatorApi(
         stateRoot: envelopeStateRoot,
       };
 
+      logger.info("Produced execution payload envelope", {
+        slot,
+        blockRoot: blockRootHex,
+        builderIndex,
+        transactions: executionPayload.transactions.length,
+        blockHash: toRootHex(executionPayload.blockHash),
+      });
+
       return {
         data: envelope,
         meta: {
