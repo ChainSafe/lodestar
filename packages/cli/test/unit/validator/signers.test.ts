@@ -5,6 +5,7 @@ import {SignerType} from "@lodestar/validator";
 import type {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {getSignersFromArgs} from "../../../src/cmds/validator/signers/index.js";
 import type {GlobalArgs} from "../../../src/options/index.js";
+import {getMockedLogger} from "../../utils/loggerMock.js";
 
 vi.mock("@lodestar/validator", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@lodestar/validator")>();
@@ -23,13 +24,7 @@ function pubkeyHex(index: number): string {
 describe("getSignersFromArgs / external signer fetch", () => {
   const network = "sepolia";
   const signal = new AbortController().signal;
-  const logger = {
-    warn: vi.fn(),
-    info: vi.fn(),
-    debug: vi.fn(),
-    error: vi.fn(),
-    verbose: vi.fn(),
-  };
+  const logger = getMockedLogger();
 
   const baseArgs = {
     network,
