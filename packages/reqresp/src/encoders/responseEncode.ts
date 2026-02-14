@@ -55,20 +55,23 @@ export async function* responseEncodeError(
   status: RpcResponseStatusError,
   errorMessage: string
 ): AsyncGenerator<Buffer> {
-  if (errorMessage) {
-    // Collect <result> and <error_message> into a single chunk to ensure they are delivered
-    // atomically through the stream. Yielding them separately can cause a race condition where
-    // the stream closes after the status byte is flushed but before the error message arrives
-    // on the reader side, resulting in an empty errorMessage on the request side.
-    const chunks: Buffer[] = [Buffer.from([status])];
-    for await (const chunk of encodeErrorMessage(errorMessage, protocol.encoding)) {
-      chunks.push(chunk);
-    }
-    yield Buffer.concat(chunks);
-  } else {
+  const statusChunk = Buffer.from([status]);
+
+  if (!errorMessage) {
     // <result> only, no error message
-    yield Buffer.from([status]);
+    yield statusChunk;
+    return;
   }
+
+  // Collect <result> and <error_message> into a single chunk to ensure they are delivered
+  // atomically through the stream. Yielding them separately can cause a race condition where
+  // the stream closes after the status byte is flushed but before the error message arrives
+  // on the reader side, resulting in an empty errorMessage on the request side.
+  const chunks: Buffer[] = [statusChunk];
+  for await (const chunk of encodeErrorMessage(errorMessage, protocol.encoding)) {
+    chunks.push(chunk);
+  }
+  yield Buffer.concat(chunks);
 }
 
 /**
