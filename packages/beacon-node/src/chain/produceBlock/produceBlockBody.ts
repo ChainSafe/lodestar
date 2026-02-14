@@ -114,8 +114,7 @@ export type ProduceFullGloas = {
   /**
    * Cached envelope state root computed during block production.
    * This is the state root after running `processExecutionPayloadEnvelope` on the
-   * post-block state, avoiding an expensive state clone when the validator API
-   * later constructs the `ExecutionPayloadEnvelope`.
+   * post-block state, and later used to construct the `ExecutionPayloadEnvelope`.
    */
   envelopeStateRoot: Root;
 };
