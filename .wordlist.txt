@@ -85,6 +85,8 @@ Plaintext
 PoS
 Prysm
 Quickstart
+README
+READMEs
 RPC
 Reth
 Ryzen
@@ -147,6 +149,7 @@ devnet
 devnets
 devtools
 distutils
+dropdown
 eg
 enodes
 enum
@@ -174,6 +177,7 @@ keyrings
 keystore
 keystores
 libp
+lifecycle
 lightclient
 linter
 liveness
@@ -194,6 +198,7 @@ multifork
 namespace
 namespaced
 namespaces
+navbar
 nodemodule
 orchestrator
 osx
@@ -243,6 +248,7 @@ vite
 vitest
 webpack
 wip
+wordlist
 xRelayPubKey
 xcode
 yaml
