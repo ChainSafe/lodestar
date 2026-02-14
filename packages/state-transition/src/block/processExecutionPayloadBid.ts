@@ -63,6 +63,14 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     throw Error(`Prev randao ${toHex(bid.prevRandao)} of bid does not match state's randao mix ${toHex(stateRandao)}`);
   }
 
+  // Verify commitments are under limit
+  const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
+  if (bid.blobKzgCommitments.length > maxBlobsPerBlock) {
+    throw Error(
+      `Kzg commitments exceed limit commitments.length=${bid.blobKzgCommitments.length} limit=${maxBlobsPerBlock}`
+    );
+  }
+
   if (amount > 0) {
     const pendingPaymentView = ssz.gloas.BuilderPendingPayment.toViewDU({
       weight: 0,
