@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.1
+version: v1.7.0-alpha.2
 style: full
 
 specrefs:
@@ -185,7 +185,6 @@ exceptions:
     - get_lc_execution_root#deneb
     - hash_to_bls_field#deneb
     - is_power_of_two#deneb
-    - multi_exp#deneb
     - reverse_bits#deneb
     - validate_kzg_g1#deneb
     - verify_blob_kzg_proof#deneb
@@ -251,7 +250,6 @@ exceptions:
     - get_ancestor#gloas
     - get_attestation_participation_flag_indices#gloas
     - get_attestation_score#gloas
-    - get_builder_from_deposit#gloas
     - get_builder_withdrawals#gloas
     - get_builders_sweep_withdrawals#gloas
     - get_checkpoint_block#gloas
