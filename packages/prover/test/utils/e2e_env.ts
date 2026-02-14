@@ -13,12 +13,18 @@ const bellatrixForkEpoch = 0;
 const capellaForkEpoch = 0;
 const denebForkEpoch = 0;
 const electraForkEpoch = 0;
+
+// Minimal preset constants used by prover e2e env
+const SLOTS_PER_EPOCH_MINIMAL = 8;
+const EPOCHS_TO_FINALIZE = 3;
+
 const genesisDelaySeconds = 30 * secondsPerSlot;
 
 // Wait for genesis delay + at least 3 epochs to ensure light client can sync from a finalized checkpoint.
 // The e2e test env has a genesis delay of ~24-30 slots (96-120s) before the chain starts producing blocks,
 // then needs 3 epochs (96s) to reach finalization. The hook timeout must cover both.
-export const minFinalizedTimeMs = (genesisDelaySeconds + 3 * 8 * secondsPerSlot) * 1000;
+export const minFinalizedTimeMs =
+  (genesisDelaySeconds + EPOCHS_TO_FINALIZE * SLOTS_PER_EPOCH_MINIMAL * secondsPerSlot) * 1000;
 
 export const config = {
   ALTAIR_FORK_EPOCH: altairForkEpoch,
@@ -32,5 +38,5 @@ export const config = {
 
 export function waitForFinalized(): Promise<void> {
   // Wait for 2 epochs to pass so that the light client can sync from a finalized checkpoint
-  return waitForEndpoint(`${beaconUrl}/eth/v1/beacon/headers/${2 * 8}`);
+  return waitForEndpoint(`${beaconUrl}/eth/v1/beacon/headers/${2 * SLOTS_PER_EPOCH_MINIMAL}`);
 }
