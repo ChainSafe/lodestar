@@ -344,7 +344,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "externalSigner.urls": {
     alias: "externalSigner.url",
     description:
-      "URL(s) to connect to external signing server(s). Can specify multiple URLs to connect to multiple signers",
+      "URL(s) to connect to external signing server(s)",
     type: "array",
     string: true,
     // Support backward compatibility: allow string in config files, convert to array

@@ -196,7 +196,7 @@ async function getRemoteSigners(
       signers.push({type: SignerType.Remote, pubkey, url: externalSignerUrls[0]});
     }
   } else {
-    // Fetch pubkeys from all external signer URLs; fail startup if any signer is unavailable
+    // Fetch pubkeys from all external signer URLs, fail startup if any signer is unavailable
     const results: {url: string; pubkeys: string[]}[] = [];
     const failures: {url: string; error: string}[] = [];
     await Promise.all(
@@ -214,7 +214,7 @@ async function getRemoteSigners(
       const errorMessages = failures.map((f) => `  ${f.url}: ${f.error}`).join("\n");
       throw new YargsError(
         `Failed to fetch pubkeys from external signer(s):\n${errorMessages}\n` +
-          "Please verify the signer URLs are correct and accessible. Use docker-compose, systemd, etc. to retry."
+          "Please verify the signer URLs are correct and reachable."
       );
     }
 
