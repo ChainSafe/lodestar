@@ -343,8 +343,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.urls": {
     alias: "externalSigner.url",
-    description:
-      "URL(s) to connect to external signing server(s)",
+    description: "URL(s) to connect to external signing server(s)",
     type: "array",
     string: true,
     // Support backward compatibility: allow string in config files, convert to array
