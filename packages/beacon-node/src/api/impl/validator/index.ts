@@ -914,12 +914,16 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
+      // TODO GLOAS: support producing blocks from builder bids
+      const source = ProducedBlockSource.engine;
+
       // TODO GLOAS: needs to be updated after fork choice changes are merged
       const parentBlock = chain.getProposerHead(slot);
       const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
       const parentBlockRoot = fromHex(parentBlockRootHex);
       notOnOutOfRangeData(parentBlockRoot);
       metrics?.blockProductionSlotDelta.set(slot - parentSlot);
+      metrics?.blockProductionRequests.inc({source});
 
       const graffitiBytes = toGraffitiBytes(
         graffiti ?? getDefaultGraffiti(getLodestarClientVersion(), chain.executionEngine.clientVersion, {})
@@ -931,24 +935,44 @@ export function getValidatorApi(
         graffiti: graffitiBytes,
       });
 
-      const {block, consensusBlockValue} = await chain.produceBlock({
-        slot,
-        parentBlock,
-        randaoReveal,
-        graffiti: graffitiBytes,
-        feeRecipient,
-        commonBlockBodyPromise,
-      });
+      let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
+      try {
+        timer = metrics?.blockProductionTime.startTimer();
+        const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlock({
+          slot,
+          parentBlock,
+          randaoReveal,
+          graffiti: graffitiBytes,
+          feeRecipient,
+          commonBlockBodyPromise,
+        });
 
-      metrics?.blockProductionSuccess.inc({source: ProducedBlockSource.engine});
+        metrics?.blockProductionSuccess.inc({source});
+        metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+        metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
+        metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
 
-      return {
-        data: block as gloas.BeaconBlock,
-        meta: {
-          version: fork,
+        const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
+        logger.verbose("Produced block", {
+          slot,
+          executionPayloadValue,
           consensusBlockValue,
-        },
-      };
+          root: blockRoot,
+        });
+        if (chain.opts.persistProducedBlocks) {
+          void chain.persistBlock(block, "produced_engine_block");
+        }
+
+        return {
+          data: block as gloas.BeaconBlock,
+          meta: {
+            version: fork,
+            consensusBlockValue,
+          },
+        };
+      } finally {
+        if (timer) timer({source});
+      }
     },
 
     async produceAttestationData({committeeIndex, slot}) {
