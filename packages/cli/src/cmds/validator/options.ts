@@ -358,11 +358,11 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   "externalSigner.pubkeys": {
+    implies: ["externalSigner.urls"],
     description:
       "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
     type: "array",
     string: true, // Ensures the pubkey string is not automatically converted to numbers
-    implies: ["externalSigner.urls"],
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
       pubkeys

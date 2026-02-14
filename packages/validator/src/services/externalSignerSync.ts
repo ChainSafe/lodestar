@@ -38,16 +38,10 @@ export function pollExternalSignerPubkeys(
       logger.debug("Fetching public keys from external signer", {url: printableUrl});
       const externalPubkeys = await externalSignerGetKeys(externalSignerUrl);
       assertValidPubkeysHex(externalPubkeys);
-      logger.debug("Received public keys from external signer", {
-        url: printableUrl,
-        count: externalPubkeys.length,
-      });
+      logger.debug("Received public keys from external signer", {url: printableUrl, count: externalPubkeys.length});
 
       const localPubkeys = validatorStore.getRemoteSignerPubkeys(externalSignerUrl);
-      logger.debug("Local public keys stored for external signer", {
-        url: printableUrl,
-        count: localPubkeys.length,
-      });
+      logger.debug("Local public keys stored for external signer", {url: printableUrl, count: localPubkeys.length});
 
       const localPubkeysSet = new Set(localPubkeys);
       for (const pubkey of externalPubkeys) {
