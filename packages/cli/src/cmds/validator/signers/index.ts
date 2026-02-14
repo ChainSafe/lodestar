@@ -183,8 +183,8 @@ async function getRemoteSigners(
     // If pubkeys are explicitly provided with multiple URLs, warn user about limitation
     if (externalSignerUrls.length > 1) {
       throw new YargsError(
-        "Cannot use --externalSigner.pubkeys with multiple --externalSigner.urls values. " +
-          "When explicitly providing pubkeys, all pubkeys are associated with the first URL. " +
+"Cannot use --externalSigner.pubkeys with multiple --externalSigner.urls. " +
+          "When using --externalSigner.pubkeys, only a single URL is allowed. " +
           "To use multiple signers, use --externalSigner.fetch instead to fetch pubkeys from each signer."
       );
     }
