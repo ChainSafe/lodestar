@@ -279,7 +279,7 @@ export async function produceBlockBody<T extends BlockType>(
     gloasBody.payloadAttestations = [];
     blockBody = gloasBody as AssembledBodyType<T>;
 
-    // Store execution payload data in produceResult for envelope creation later
+    // Store execution payload data required to construct execution payload envelope later
     const gloasResult = produceResult as ProduceFullGloas;
     gloasResult.executionPayload = executionPayload as ExecutionPayload<ForkPostGloas>;
     gloasResult.executionRequests = executionRequests;

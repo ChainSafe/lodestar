@@ -980,6 +980,7 @@ export class BeaconChain implements IBeaconChain {
       gloasResult.envelopeStateRoot = envelopeStateRoot;
     }
 
+    // Track the produced block for consensus broadcast validations, later validation, etc.
     this.blockProductionCache.set(blockRootHex, produceResult);
     this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
 
