@@ -214,10 +214,6 @@ export class ValidatorStore {
     return this.indicesService.index2pubkey.get(index);
   }
 
-  getValidatorIndex(pubkeyHex: PubkeyHex): ValidatorIndex | undefined {
-    return this.indicesService.getValidatorIndex(pubkeyHex);
-  }
-
   pollValidatorIndices(): Promise<ValidatorIndex[]> {
     // Consumers will call this function every epoch forever. If everyone has been discovered, skip
     return this.indicesService.indexCount >= this.validators.size
@@ -500,19 +496,23 @@ export class ValidatorStore {
   async signExecutionPayloadEnvelope(
     pubkey: BLSPubkey,
     envelope: gloas.ExecutionPayloadEnvelope,
-    currentSlot: Slot
+    currentSlot: Slot,
+    logger?: LoggerVc
   ): Promise<gloas.SignedExecutionPayloadEnvelope> {
     // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
     if (envelope.slot > currentSlot) {
       throw Error(`Not signing envelope with slot ${envelope.slot} greater than current slot ${currentSlot}`);
     }
 
-    // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
-    this.assertDoppelgangerSafe(pubkey);
-
     const signingSlot = envelope.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
     const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
+
+    logger?.debug("Signing execution payload envelope", {
+      slot: signingSlot,
+      beaconBlockRoot: toRootHex(envelope.beaconBlockRoot),
+      signingRoot: toRootHex(signingRoot),
+    });
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE,

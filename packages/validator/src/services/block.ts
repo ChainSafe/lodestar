@@ -228,7 +228,7 @@ export class BlockProposingService {
     this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
 
     // Step 4: Sign and publish the envelope
-    const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(pubkey, envelope, slot);
+    const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(pubkey, envelope, slot, this.logger);
 
     await this.api.beacon.publishExecutionPayloadEnvelope({
       signedExecutionPayloadEnvelope: signedEnvelope,
