@@ -73,9 +73,13 @@ describe("getSignersFromArgs / external signer fetch", () => {
 
     expect(signers).toHaveLength(1);
     expect(signers[0]).toEqual({type: SignerType.Remote, url: "http://signer1:9000", pubkey: pk});
-    expect(logger.warn).toHaveBeenCalledTimes(1);
-    const warnMsg = (logger.warn as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(warnMsg).toContain("Pubkey");
-    expect(warnMsg).toContain("multiple signers");
+    expect(logger.warn).toHaveBeenCalledWith(
+      "Duplicate pubkey found on multiple signers, using first occurrence only",
+      {
+        pubkey: pk,
+        firstUrl: "http://signer1:9000",
+        duplicateUrl: "http://signer2:9000",
+      }
+    );
   });
 });

@@ -199,15 +199,17 @@ async function getRemoteSigners(
     // Fetch pubkeys from all external signer URLs; fail startup if any signer is unavailable
     const results: {url: string; pubkeys: string[]}[] = [];
     const failures: {url: string; error: string}[] = [];
-    for (const url of externalSignerUrls) {
-      try {
-        const pubkeys = await externalSignerGetKeys(url);
-        results.push({url, pubkeys});
-      } catch (e) {
-        const errorMsg = e instanceof Error ? e.message : String(e);
-        failures.push({url, error: errorMsg});
-      }
-    }
+    await Promise.all(
+      externalSignerUrls.map(async (url) => {
+        try {
+          const pubkeys = await externalSignerGetKeys(url);
+          results.push({url, pubkeys});
+        } catch (e) {
+          const errorMsg = e instanceof Error ? e.message : String(e);
+          failures.push({url, error: errorMsg});
+        }
+      })
+    );
     if (failures.length > 0) {
       const errorMessages = failures.map((f) => `  ${f.url}: ${f.error}`).join("\n");
       throw new YargsError(
@@ -216,16 +218,21 @@ async function getRemoteSigners(
       );
     }
 
-    const seenPubkeys = new Set<string>();
+    const seenPubkeys = new Map<string, string>();
     for (const {url, pubkeys} of results) {
       if (pubkeys.length > 0) {
         assertValidPubkeysHex(pubkeys);
         for (const pubkey of pubkeys) {
-          if (seenPubkeys.has(pubkey)) {
-            logger.warn(`Pubkey ${pubkey} found on multiple signers; using first occurrence only`);
+          const firstUrl = seenPubkeys.get(pubkey);
+          if (firstUrl !== undefined) {
+            logger.warn("Duplicate pubkey found on multiple signers, using first occurrence only", {
+              pubkey,
+              firstUrl,
+              duplicateUrl: url,
+            });
             continue;
           }
-          seenPubkeys.add(pubkey);
+          seenPubkeys.set(pubkey, url);
           signers.push({type: SignerType.Remote, pubkey, url});
         }
       }
