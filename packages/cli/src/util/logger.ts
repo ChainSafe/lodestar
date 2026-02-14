@@ -4,21 +4,11 @@ import {ChainForkConfig} from "@lodestar/config";
 import {LogFormat, TimestampFormatCode, logFormats} from "@lodestar/logger";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {LogLevel, Logger} from "@lodestar/utils";
+import {LogLevel} from "@lodestar/utils";
 import {GlobalArgs} from "../options/globalOptions.js";
 import {LogArgs} from "../options/logOptions.js";
 
 export const LOG_FILE_DISABLE_KEYWORD = "none";
-
-/** No-op logger for one-off commands (e.g. voluntary-exit, list) that do not set up file logging */
-const noop = (): void => {};
-export const noopLogger: Logger = {
-  [LogLevel.error]: noop,
-  [LogLevel.warn]: noop,
-  [LogLevel.info]: noop,
-  [LogLevel.verbose]: noop,
-  [LogLevel.debug]: noop,
-};
 
 /**
  * Setup a CLI logger, common for beacon, validator and dev commands
