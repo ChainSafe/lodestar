@@ -17,7 +17,7 @@ const denebForkEpoch = 0;
 const electraForkEpoch = 0;
 const fuluForkEpoch = Infinity;
 const runTillEpoch = 4;
-const syncWaitEpoch = 3;
+const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
@@ -29,6 +29,9 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   runTillEpoch: runTillEpoch + syncWaitEpoch,
   additionalSlotsForTTD: 0,
   initialNodes: 5,
+  // Multifork spins up 3 additional geth+CL pairs sequentially for sync assertions,
+  // which adds significant docker startup overhead beyond the chain time budget
+  graceExtraTimeFraction: 0.6,
 });
 
 const env = await Simulation.initWithDefaults(
