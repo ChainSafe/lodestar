@@ -61,7 +61,7 @@ export function computeNewStateRoot(
  * Compute the state root after processing an execution payload envelope.
  * Similar to `computeNewStateRoot` but for payload envelope processing.
  *
- * The `postBlockState` is mutated in place callers must ensure it is not needed afterward.
+ * The `postBlockState` is mutated in place, callers must ensure it is not needed afterward.
  */
 export function computeEnvelopeStateRoot(
   metrics: Metrics | null,

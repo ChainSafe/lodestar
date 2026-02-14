@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
@@ -688,6 +688,7 @@ export function getPayloadAttributesForSSE(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
+    forkChoice: IForkChoice;
   },
   {
     prepareState,
@@ -710,13 +711,23 @@ export function getPayloadAttributesForSSE(
     parentBlockRoot,
     feeRecipient,
   });
+
+  let parentBlockNumber: number;
+  if (isForkPostGloas(fork)) {
+    // TODO GLOAS: revisit this after fork choice changes are merged
+    const parentBlock = chain.forkChoice.getBlock(parentBlockRoot);
+    if (parentBlock?.executionPayloadBlockHash == null) {
+      throw Error(`Parent block not found in fork choice root=${toRootHex(parentBlockRoot)}`);
+    }
+    parentBlockNumber = parentBlock.executionPayloadNumber;
+  } else {
+    parentBlockNumber = (prepareState as CachedBeaconStateExecutions).latestExecutionPayloadHeader.blockNumber;
+  }
+
   const ssePayloadAttributes: SSEPayloadAttributes = {
     proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
     proposalSlot: prepareSlot,
-    // TODO GLOAS: latestExecutionPayloadHeader does not exist on Gloas state, parentBlockNumber needs different source
-    parentBlockNumber: isForkPostGloas(fork)
-      ? 0
-      : (prepareState as CachedBeaconStateExecutions).latestExecutionPayloadHeader.blockNumber,
+    parentBlockNumber,
     parentBlockRoot,
     parentBlockHash: parentHash,
     payloadAttributes,
