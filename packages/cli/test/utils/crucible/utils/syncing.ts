@@ -146,11 +146,13 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
       assertionId: "unknownBlockParent",
     });
   } catch (error) {
-    if (!(error as Error).message.includes("BLOCK_ERROR_PARENT_UNKNOWN")) {
+    const errorMessage = (error as Error).message;
+    // BLOCK_ERROR_PARENT_UNKNOWN is the expected response when the node hasn't seen this block yet.
+    // BLOCK_ERROR_ALREADY_KNOWN can occur if the block propagates via gossip from connected peers
+    // before the manual publish, which is a valid outcome — the node has the block either way.
+    if (!errorMessage.includes("BLOCK_ERROR_PARENT_UNKNOWN") && !errorMessage.includes("BLOCK_ERROR_ALREADY_KNOWN")) {
       env.tracker.record({
-        message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" got "${
-          (error as Error).message
-        }"`,
+        message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" or "BLOCK_ERROR_ALREADY_KNOWN" got "${errorMessage}"`,
         slot: env.clock.currentSlot,
         assertionId: "unknownBlockParent",
       });

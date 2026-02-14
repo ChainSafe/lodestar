@@ -29,6 +29,9 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   runTillEpoch: runTillEpoch + syncWaitEpoch,
   additionalSlotsForTTD: 0,
   initialNodes: 5,
+  // Multifork spins up 3 additional geth+CL pairs sequentially for sync assertions,
+  // which adds significant docker startup overhead beyond the chain time budget
+  graceExtraTimeFraction: 0.6,
 });
 
 const env = await Simulation.initWithDefaults(
