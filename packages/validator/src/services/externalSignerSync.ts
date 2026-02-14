@@ -32,6 +32,7 @@ export function pollExternalSignerPubkeys(
   }
 
   async function syncSignerPubkeys(externalSignerUrl: string): Promise<void> {
+    // External signer URL is already validated earlier
     const printableUrl = toPrintableUrl(externalSignerUrl);
 
     try {
