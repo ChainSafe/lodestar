@@ -739,7 +739,7 @@ export function getBeaconBlockApi({
         metrics?.dataColumns.bySource.inc({source: BlockInputSource.api}, dataColumnSidecars.length);
 
         if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
-          // Gloas DataColumnSidecar does not have kzgCommitments, get from cached blobsBundle
+          // TODO GLOAS: revisit this, we likely don't wanna emit KZG commitments anymore
           const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
           const kzgCommitments = cachedResult?.blobsBundle.commitments.map(toHex) ?? [];
           for (const dataColumnSidecar of dataColumnSidecars) {
