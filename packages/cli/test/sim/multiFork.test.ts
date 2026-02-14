@@ -17,7 +17,7 @@ const denebForkEpoch = 0;
 const electraForkEpoch = 0;
 const fuluForkEpoch = Infinity;
 const runTillEpoch = 4;
-const syncWaitEpoch = 4;
+const syncWaitEpoch = 3;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
