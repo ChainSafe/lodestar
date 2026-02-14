@@ -822,10 +822,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     [GossipType.execution_payload]: async ({
       gossipData,
       topic,
+      seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+
+      const slot = executionPayloadEnvelope.message.slot;
+      const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
+      metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
 
       // TODO GLOAS: Handle valid envelope. Need an import flow that calls `processExecutionPayloadEnvelope` and fork choice
     },

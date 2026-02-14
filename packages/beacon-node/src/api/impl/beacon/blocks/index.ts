@@ -656,23 +656,26 @@ export function getBeaconBlockApi({
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       let dataColumnSidecars: gloas.DataColumnSidecars = [];
 
-      // For self-builds, retrieve cached production data and build DataColumnSidecars
       if (isSelfBuild) {
+        // For self-builds, construct and publish data column sidecars from cached block production data
         const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
-        if (cachedResult?.cells && cachedResult.blobKzgCommitments.length > 0) {
-          // TODO GLOAS: cell proofs are not currently cached, need to store them during block production
-          // Build cellsAndProofs from the cached cells
-          const cellsAndProofs = cachedResult.cells.map((rowCells) => ({
+        if (cachedResult?.cells && cachedResult.blobsBundle.commitments.length > 0) {
+          const cellsAndProofs = cachedResult.cells.map((rowCells, rowIndex) => ({
             cells: rowCells,
-            proofs: [] as Uint8Array[],
+            proofs: cachedResult.blobsBundle.proofs.slice(
+              rowIndex * NUMBER_OF_COLUMNS,
+              (rowIndex + 1) * NUMBER_OF_COLUMNS
+            ),
           }));
 
           dataColumnSidecars = getDataColumnSidecarsForGloas(slot, envelope.beaconBlockRoot, cellsAndProofs);
         }
+      } else {
+        // TODO GLOAS: will this api be used by builders or only for self-building?
       }
 
       // TODO GLOAS: Verify execution payload envelope signature
-      // For self-builds, the proposer signs with their own key (NOT G2_POINT_AT_INFINITY — that's only for the bid)
+      // For self-builds, the proposer signs with their own validator key
       // For external builders, verify using the builder's registered pubkey
       // Use verify_execution_payload_envelope_signature(state, signed_envelope)
 
@@ -682,6 +685,9 @@ export function getBeaconBlockApi({
       // TODO GLOAS: Update fork choice with the execution payload
       // Call on_execution_payload(store, signed_envelope) to update fork choice state
 
+      // TODO GLOAS: Add envelope and data columns to block input via seenBlockInputCache
+      // and trigger block import (Gloas block import requires both beacon block and envelope)
+
       const valLogMeta = {
         slot,
         blockRoot: blockRootHex,
@@ -689,6 +695,15 @@ export function getBeaconBlockApi({
         isSelfBuild,
         dataColumns: dataColumnSidecars.length,
       };
+
+      // Simple implementation of a pending envelope queue. If envelope is a bit early, hold it.
+      const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
+      if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
+        await sleep(msToBlockSlot);
+      }
+
+      const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
+      metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
 
       chain.logger.info("Publishing execution payload envelope", valLogMeta);
 
@@ -714,15 +729,30 @@ export function getBeaconBlockApi({
           }
         }
         if (columnsPublishedWithZeroPeers > 0) {
-          chain.logger.warn("Published data columns to 0 peers for GLOAS envelope", {
+          chain.logger.warn("Published data columns to 0 peers, increased risk of reorg", {
             slot,
             blockRoot: blockRootHex,
             columns: columnsPublishedWithZeroPeers,
           });
         }
+
+        metrics?.dataColumns.bySource.inc({source: BlockInputSource.api}, dataColumnSidecars.length);
+
+        if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+          // Gloas DataColumnSidecar does not have kzgCommitments, get from cached blobsBundle
+          const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
+          const kzgCommitments = cachedResult?.blobsBundle.commitments.map(toHex) ?? [];
+          for (const dataColumnSidecar of dataColumnSidecars) {
+            chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+              blockRoot: blockRootHex,
+              slot,
+              index: dataColumnSidecar.index,
+              kzgCommitments,
+            });
+          }
+        }
       }
 
-      const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       chain.logger.info("Published execution payload envelope", {
         ...valLogMeta,
         delaySec,

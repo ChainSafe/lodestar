@@ -109,10 +109,8 @@ export type ProduceFullGloas = {
   fork: ForkPostGloas;
   executionPayload: ExecutionPayload<ForkPostGloas>;
   executionRequests: electra.ExecutionRequests;
-  blobKzgCommitments: deneb.BlobKzgCommitments;
+  blobsBundle: BlobsBundle<ForkPostGloas>;
   cells: fulu.Cell[][];
-  /** Cell proofs for building `DataColumnSidecars`, 128 proofs per blob */
-  // cellProofs: Uint8Array[]; // TODO: do we need this?
   /**
    * Cached envelope state root computed during block production.
    * This is the state root after running `processExecutionPayloadEnvelope` on the
@@ -286,7 +284,7 @@ export async function produceBlockBody<T extends BlockType>(
     const gloasResult = produceResult as ProduceFullGloas;
     gloasResult.executionPayload = executionPayload as ExecutionPayload<ForkPostGloas>;
     gloasResult.executionRequests = executionRequests;
-    gloasResult.blobKzgCommitments = blobsBundle.commitments;
+    gloasResult.blobsBundle = blobsBundle;
     gloasResult.cells = cells;
 
     const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
