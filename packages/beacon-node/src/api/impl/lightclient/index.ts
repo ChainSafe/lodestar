@@ -25,12 +25,12 @@ export function getLightclientApi({
           updates.push(update);
         } catch (e) {
           if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
-            // Period not available — if we already have results, stop to preserve
+            // Period not available, if we already have results, stop to preserve
             // consecutive order. If not, skip and try the next period.
             if (updates.length > 0) break;
             continue;
           }
-          // Unexpected error — rethrow
+          // Unexpected error
           throw e;
         }
       }
