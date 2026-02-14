@@ -96,13 +96,6 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  const envelopeKzgRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(envelope.blobKzgCommitments);
-  if (!byteArrayEquals(committedBid.blobKzgCommitmentsRoot, envelopeKzgRoot)) {
-    throw new Error(
-      `Kzg commitment root mismatch between envelope and committed bid envelope=${toRootHex(envelopeKzgRoot)} committedBid=${toRootHex(committedBid.blobKzgCommitmentsRoot)}`
-    );
-  }
-
   if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
     throw new Error(
       `Prev randao mismatch between committed bid and payload committedBid=${toHex(committedBid.prevRandao)} payload=${toHex(payload.prevRandao)}`
@@ -143,14 +136,6 @@ function validateExecutionPayloadEnvelope(
   if (payload.timestamp !== computeTimeAtSlot(state.config, state.slot, state.genesisTime)) {
     throw new Error(
       `Timestamp mismatch between envelope's payload and state envelope=${payload.timestamp} state=${computeTimeAtSlot(state.config, state.slot, state.genesisTime)}`
-    );
-  }
-
-  // Verify commitments are under limit
-  const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
-  if (envelope.blobKzgCommitments.length > maxBlobsPerBlock) {
-    throw new Error(
-      `Kzg commitments exceed limit commitment.length=${envelope.blobKzgCommitments.length} limit=${maxBlobsPerBlock}`
     );
   }
 
