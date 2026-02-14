@@ -711,7 +711,7 @@ export function getBeaconBlockApi({
       const publishPromises = [
         // Gossip the signed execution payload envelope first
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
-        // For self-builds, publish all DataColumnSidecars
+        // For self-builds, publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
       ];
 

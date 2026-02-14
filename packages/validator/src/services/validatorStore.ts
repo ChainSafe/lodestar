@@ -489,10 +489,6 @@ export class ValidatorStore {
     } as SignedBeaconBlock | SignedBlindedBeaconBlock;
   }
 
-  /**
-   * Sign an execution payload envelope for Gloas self-building.
-   * Uses DOMAIN_BEACON_BUILDER domain as per the spec.
-   */
   async signExecutionPayloadEnvelope(
     pubkey: BLSPubkey,
     envelope: gloas.ExecutionPayloadEnvelope,
