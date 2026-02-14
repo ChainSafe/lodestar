@@ -280,7 +280,7 @@ export function getBlobKzgCommitments(
   return (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
 }
 
-/** Type guard for gloas.DataColumnSidecar */
+/** Type guard for `gloas.DataColumnSidecar` */
 export function isGloasDataColumnSidecar(sidecar: DataColumnSidecar): sidecar is gloas.DataColumnSidecar {
   return (sidecar as gloas.DataColumnSidecar).beaconBlockRoot !== undefined;
 }
@@ -368,8 +368,7 @@ export function getDataColumnSidecarsFromColumnSidecar(
 }
 
 /**
- * For GLOAS self-builds: build DataColumnSidecars from the envelope data.
- * In GLOAS, DataColumnSidecar has a simplified structure with `slot` and `beaconBlockRoot`
+ * In Gloas, data column sidecars have a simplified structure with `slot` and `beaconBlockRoot`
  * instead of `signedBlockHeader`, `kzgCommitments`, and `kzgCommitmentsInclusionProof`.
  */
 export function getDataColumnSidecarsForGloas(
