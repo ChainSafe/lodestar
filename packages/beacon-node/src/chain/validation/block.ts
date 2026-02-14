@@ -9,8 +9,8 @@ import {
   isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb} from "@lodestar/types";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {SignedBeaconBlock, deneb, gloas} from "@lodestar/types";
+import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
@@ -23,6 +23,7 @@ export async function validateGossipBlock(
 ): Promise<void> {
   const block = signedBlock.message;
   const blockSlot = block.slot;
+  const blockEpoch = computeEpochAtSlot(blockSlot);
 
   // [IGNORE] The block is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) -- i.e.validate
   // that signed_beacon_block.message.slot <= current_slot (a client MAY queue future blocks for processing at the
@@ -113,7 +114,7 @@ export async function validateGossipBlock(
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
   if (isForkPostDeneb(fork) && !isForkPostGloas(fork)) {
     const blobKzgCommitmentsLen = (block as deneb.BeaconBlock).body.blobKzgCommitments.length;
-    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(computeEpochAtSlot(blockSlot));
+    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(blockEpoch);
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
@@ -123,12 +124,39 @@ export async function validateGossipBlock(
     }
   }
 
+  if (isForkPostGloas(fork)) {
+    const bid = (block as gloas.BeaconBlock).body.signedExecutionPayloadBid.message;
+
+    // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
+    // -- i.e. validate that len(bid.blob_kzg_commitments) <= max_blobs_per_block
+    const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(blockEpoch);
+    if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        blobKzgCommitmentsLen,
+        commitmentLimit: maxBlobsPerBlock,
+      });
+    }
+
+    // [REJECT] The bid's parent (defined by bid.parent_block_root) equals the block's parent (defined by block.parent_root)
+    if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH,
+        bidParentRoot: toRootHex(bid.parentBlockRoot),
+        blockParentRoot: parentRoot,
+      });
+    }
+
+    // TODO GLOAS: [REJECT] The block's execution payload parent (defined by bid.parent_block_hash) passes all validation
+    // This requires execution engine integration to verify the parent block hash
+  }
+
   // use getPreState to reload state if needed. It also checks for whether the current finalized checkpoint is an ancestor of the block.
   // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
   // this is something we should change this in the future to make the code airtight to the spec.
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
-  // TODO GLOAS: post-gloas, we check the validity of bid's parent payload, not the entire beacon block
   const blockState = await chain.regen
     .getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {

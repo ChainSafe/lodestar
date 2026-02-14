@@ -97,6 +97,44 @@ export enum NodeHealth {
 }
 
 /**
+ * Client code as defined in https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/identification.md#clientcode
+ * ClientCode.XX is dedicated to other clients which do not have their own code
+ */
+export enum ClientCode {
+  BU = "BU", // besu
+  EJ = "EJ", // ethereumJS
+  EG = "EG", // erigon
+  GE = "GE", // go-ethereum
+  GR = "GR", // grandine
+  LH = "LH", // lighthouse
+  LS = "LS", // lodestar
+  NM = "NM", // nethermind
+  NB = "NB", // nimbus
+  TE = "TE", // trin-execution
+  TK = "TK", // teku
+  PM = "PM", // prysm
+  RH = "RH", // reth
+  XX = "XX", // unknown
+}
+
+/**
+ * A structure which uniquely identifies a client implementation and its version.
+ * Mirrors the client version specification in the Engine API.
+ * https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/identification.md
+ */
+export type ClientVersion = {
+  code: ClientCode;
+  name: string;
+  version: string;
+  commit: string;
+};
+
+export type NodeVersionV2 = {
+  beaconNode: ClientVersion;
+  executionClient?: ClientVersion;
+};
+
+/**
  * Read information about the beacon node.
  */
 export type Endpoints = {
@@ -161,6 +199,26 @@ export type Endpoints = {
     EmptyArgs,
     EmptyRequest,
     {version: string},
+    EmptyMeta
+  >;
+
+  /**
+   * Get version information for the beacon node and execution client.
+   * Retrieves structured information about the version of the beacon node and its attached execution client
+   * in the same format as used on the
+   * [Engine API](https://github.com/ethereum/execution-apis/blob/dc4dbca37ef8697d782f431af19120beaf5517f5/src/engine/identification.md).
+   *
+   * Version information about the execution client may not be available at all times and is therefore optional.
+   *
+   * If the beacon node receives multiple values from `engine_getClientVersionV1`,
+   * the first value should be returned on this endpoint.
+   */
+  getNodeVersionV2: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    NodeVersionV2,
     EmptyMeta
   >;
 
@@ -270,6 +328,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
     },
     getNodeVersion: {
       url: "/eth/v1/node/version",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    getNodeVersionV2: {
+      url: "/eth/v2/node/version",
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
