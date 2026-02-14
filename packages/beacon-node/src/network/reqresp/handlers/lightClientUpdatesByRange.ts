@@ -33,7 +33,7 @@ export async function* onLightClientUpdatesByRange(
       started = true;
     } catch (e) {
       if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
-        // Period not available — if we already started yielding, stop to
+        // Period not available, if we already started yielding, stop to
         // preserve consecutive order. Otherwise skip leading gaps.
         if (started) return;
         continue;
