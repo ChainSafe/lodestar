@@ -936,11 +936,14 @@ export function getValidatorApi(
         if (attestedBlock !== null && attestedBlock.slot === slot) {
           // Same-slot attestation — payload may not have arrived yet
           index = 0;
+        } else if (attestedBlock === null) {
+          // Block not in fork-choice — historical block on canonical chain,
+          // payload should be considered available
+          index = 1;
         } else {
           // Look up payload availability for the attested block's slot
-          const attestedSlot = attestedBlock?.slot ?? slot;
           index = (headState as CachedBeaconStateGloas).executionPayloadAvailability.get(
-            attestedSlot % SLOTS_PER_HISTORICAL_ROOT
+            attestedBlock.slot % SLOTS_PER_HISTORICAL_ROOT
           )
             ? 1
             : 0;
