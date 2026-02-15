@@ -659,7 +659,17 @@ export function getBeaconBlockApi({
       if (isSelfBuild) {
         // For self-builds, construct and publish data column sidecars from cached block production data
         const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
-        if (cachedResult?.cells && cachedResult.blobsBundle.commitments.length > 0) {
+        if (cachedResult === undefined) {
+          throw new ApiError(404, `No cached block production result found for block root ${blockRootHex}`);
+        }
+        if (!isForkPostGloas(cachedResult.fork)) {
+          throw new ApiError(400, `Cached block production result is for pre-gloas fork=${cachedResult.fork}`);
+        }
+        if (cachedResult.type !== BlockType.Full) {
+          throw new ApiError(400, "Cached block production result is not full block");
+        }
+
+        if (cachedResult.cells && cachedResult.blobsBundle.commitments.length > 0) {
           const cellsAndProofs = cachedResult.cells.map((rowCells, rowIndex) => ({
             cells: rowCells,
             proofs: cachedResult.blobsBundle.proofs.slice(
