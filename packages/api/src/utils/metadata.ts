@@ -76,6 +76,7 @@ export enum MetaHeader {
   Version = "Eth-Consensus-Version",
   ConsensusBlockValue = "Eth-Consensus-Block-Value",
   ExecutionPayloadBlinded = "Eth-Execution-Payload-Blinded",
+  ExecutionPayloadIncluded = "Eth-Execution-Payload-Included",
   ExecutionPayloadValue = "Eth-Execution-Payload-Value",
 
   /* Lodestar-specific (non-standardized) headers */

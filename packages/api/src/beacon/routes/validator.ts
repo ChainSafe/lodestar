@@ -94,6 +94,8 @@ export type ProduceBlockV3Meta = ValueOf<typeof ProduceBlockV3MetaType> & {
 export const ProduceBlockV4MetaType = new ContainerType(
   {
     ...VersionType.fields,
+    /** Specifies whether the response contains full block contents or only the beacon block */
+    executionPayloadIncluded: ssz.Boolean,
     /** Consensus rewards paid to the proposer for this block, in Wei */
     consensusBlockValue: ssz.UintBn64,
   },
@@ -101,6 +103,18 @@ export const ProduceBlockV4MetaType = new ContainerType(
 );
 
 export type ProduceBlockV4Meta = ValueOf<typeof ProduceBlockV4MetaType>;
+
+export const GloasBlockContentsType = new ContainerType(
+  {
+    block: ssz.gloas.BeaconBlock,
+    executionPayloadEnvelope: ssz.gloas.ExecutionPayloadEnvelope,
+    kzgProofs: ssz.fulu.KZGProofs,
+    blobs: ssz.deneb.Blobs,
+  },
+  {jsonCase: "eth2"}
+);
+
+export type GloasBlockContents = ValueOf<typeof GloasBlockContentsType>;
 
 export const AttesterDutyType = new ContainerType(
   {
@@ -388,6 +402,7 @@ export type Endpoints = {
       graffiti?: string;
       skipRandaoVerification?: boolean;
       builderBoostFactor?: UintBn64;
+      includePayload?: boolean;
     } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
     {
       params: {slot: number};
@@ -399,9 +414,10 @@ export type Endpoints = {
         builder_selection?: string;
         builder_boost_factor?: string;
         strict_fee_recipient_check?: boolean;
+        include_payload?: boolean;
       };
     },
-    BeaconBlock<ForkPostGloas>,
+    BeaconBlock<ForkPostGloas> | GloasBlockContents,
     ProduceBlockV4Meta
   >;
 
@@ -844,6 +860,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           builderSelection,
           builderBoostFactor,
           strictFeeRecipientCheck,
+          includePayload,
         }) => ({
           params: {slot},
           query: {
@@ -854,6 +871,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             builder_selection: builderSelection,
             builder_boost_factor: builderBoostFactor?.toString(),
             strict_fee_recipient_check: strictFeeRecipientCheck,
+            include_payload: includePayload,
           },
         }),
         parseReq: ({params, query}) => ({
@@ -865,6 +883,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           builderSelection: query.builder_selection as BuilderSelection,
           builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
           strictFeeRecipientCheck: query.strict_fee_recipient_check,
+          includePayload: query.include_payload,
         }),
         schema: {
           params: {slot: Schema.UintRequired},
@@ -876,20 +895,44 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             builder_selection: Schema.String,
             builder_boost_factor: Schema.String,
             strict_fee_recipient_check: Schema.Boolean,
+            include_payload: Schema.Boolean,
           },
         },
       },
       resp: {
-        data: WithVersion((fork) => getPostGloasForkTypes(fork).BeaconBlock),
+        data: {
+          toJson(data, {executionPayloadIncluded, version}) {
+            return executionPayloadIncluded
+              ? GloasBlockContentsType.toJson(data as GloasBlockContents)
+              : getPostGloasForkTypes(version).BeaconBlock.toJson(data as BeaconBlock<ForkPostGloas>);
+          },
+          fromJson(data, {executionPayloadIncluded, version}) {
+            return executionPayloadIncluded
+              ? GloasBlockContentsType.fromJson(data)
+              : getPostGloasForkTypes(version).BeaconBlock.fromJson(data);
+          },
+          serialize(data, {executionPayloadIncluded, version}) {
+            return executionPayloadIncluded
+              ? GloasBlockContentsType.serialize(data as GloasBlockContents)
+              : getPostGloasForkTypes(version).BeaconBlock.serialize(data as BeaconBlock<ForkPostGloas>);
+          },
+          deserialize(data, {executionPayloadIncluded, version}) {
+            return executionPayloadIncluded
+              ? GloasBlockContentsType.deserialize(data)
+              : getPostGloasForkTypes(version).BeaconBlock.deserialize(data);
+          },
+        },
         meta: {
           toJson: (meta) => ProduceBlockV4MetaType.toJson(meta),
           fromJson: (val) => ProduceBlockV4MetaType.fromJson(val),
           toHeadersObject: (meta) => ({
             [MetaHeader.Version]: meta.version,
+            [MetaHeader.ExecutionPayloadIncluded]: meta.executionPayloadIncluded.toString(),
             [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
           }),
           fromHeaders: (headers) => ({
             version: toForkName(headers.getRequired(MetaHeader.Version)),
+            executionPayloadIncluded: toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadIncluded)),
             consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
           }),
         },

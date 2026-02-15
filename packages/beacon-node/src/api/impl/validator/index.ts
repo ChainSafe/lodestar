@@ -904,7 +904,7 @@ export function getValidatorApi(
       return {data, meta};
     },
 
-    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient}) {
+    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload = true}) {
       const fork = config.getForkName(slot);
 
       if (!isForkPostGloas(fork)) {
@@ -963,10 +963,42 @@ export function getValidatorApi(
           void chain.persistBlock(block, "produced_engine_block");
         }
 
+        let data: gloas.BeaconBlock | routes.validator.GloasBlockContents = block as gloas.BeaconBlock;
+        if (includePayload) {
+          const produceResult = chain.blockProductionCache.get(blockRoot);
+          if (produceResult === undefined) {
+            throw Error("production result missing in cache");
+          }
+          if (!isForkPostGloas(produceResult.fork)) {
+            throw Error(`production result is for pre-gloas fork=${produceResult.fork}`);
+          }
+          if (produceResult.type !== BlockType.Full) {
+            throw Error("production result is not full block");
+          }
+
+          const {executionPayload, executionRequests, envelopeStateRoot, blobsBundle} = produceResult as ProduceFullGloas;
+          const envelope: gloas.ExecutionPayloadEnvelope = {
+            payload: executionPayload,
+            executionRequests,
+            builderIndex: BUILDER_INDEX_SELF_BUILD,
+            beaconBlockRoot: fromHex(blockRoot),
+            slot,
+            stateRoot: envelopeStateRoot,
+          };
+
+          data = {
+            block: block as gloas.BeaconBlock,
+            executionPayloadEnvelope: envelope,
+            kzgProofs: blobsBundle.proofs,
+            blobs: blobsBundle.blobs,
+          };
+        }
+
         return {
-          data: block as gloas.BeaconBlock,
+          data,
           meta: {
             version: fork,
+            executionPayloadIncluded: includePayload,
             consensusBlockValue,
           },
         };

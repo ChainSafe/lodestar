@@ -197,12 +197,18 @@ export class BlockProposingService {
         randaoReveal,
         graffiti,
         feeRecipient,
+        includePayload: false,
       })
       .catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
         throw extendError(e, "Failed to produce block");
       });
-    const block = blockRes.value();
+    const blockData = blockRes.value();
+    // TODO: improve this assertion and implement stateless flow
+    if ("block" in blockData) {
+      throw Error("produceBlockV4(includePayload=false) returned block contents instead of beacon block");
+    }
+    const block = blockData;
     const blockMeta = blockRes.meta();
     const beaconBlockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toRootHex(beaconBlockRoot);
