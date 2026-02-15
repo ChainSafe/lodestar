@@ -976,7 +976,8 @@ export function getValidatorApi(
             throw Error("production result is not full block");
           }
 
-          const {executionPayload, executionRequests, envelopeStateRoot, blobsBundle} = produceResult as ProduceFullGloas;
+          const {executionPayload, executionRequests, envelopeStateRoot, blobsBundle} =
+            produceResult as ProduceFullGloas;
           const envelope: gloas.ExecutionPayloadEnvelope = {
             payload: executionPayload,
             executionRequests,
