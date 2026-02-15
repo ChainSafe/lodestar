@@ -14,9 +14,11 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   attesterShufflingDecisionRoot,
   beaconBlockToBlinded,
@@ -915,16 +917,7 @@ export function getValidatorApi(
       const headBlockRoot = fromHex(headBlockRootHex);
       const fork = config.getForkName(slot);
 
-      let index: CommitteeIndex;
-      if (isForkPostElectra(fork)) {
-        index = 0;
-      } else {
-        if (committeeIndex === undefined) {
-          throw new ApiError(400, `Committee index must be provided for pre-electra fork=${fork}`);
-        }
-        index = committeeIndex;
-      }
-
+      // Compute beaconBlockRoot first — needed for Gloas index derivation
       const beaconBlockRoot =
         slot >= headSlot
           ? // When attesting to the head slot or later, always use the head of the chain.
@@ -932,6 +925,34 @@ export function getValidatorApi(
           : // Permit attesting to slots *prior* to the current head. This is desirable when
             // the VC and BN are out-of-sync due to time issues or overloading.
             getBlockRootAtSlot(headState, slot);
+
+      let index: CommitteeIndex;
+      if (isForkPostGloas(fork)) {
+        // In Gloas (ePBS), attestation.data.index signals payload status:
+        //   0 = payload EMPTY (not available in canonical chain)
+        //   1 = payload FULL  (available in canonical chain)
+        // Per spec: if attested block.slot == data.slot, always 0 (payload not yet known)
+        const attestedBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+        if (attestedBlock !== null && attestedBlock.slot === slot) {
+          // Same-slot attestation — payload may not have arrived yet
+          index = 0;
+        } else {
+          // Look up payload availability for the attested block's slot
+          const attestedSlot = attestedBlock?.slot ?? slot;
+          index = (headState as CachedBeaconStateGloas).executionPayloadAvailability.get(
+            attestedSlot % SLOTS_PER_HISTORICAL_ROOT
+          )
+            ? 1
+            : 0;
+        }
+      } else if (isForkPostElectra(fork)) {
+        index = 0;
+      } else {
+        if (committeeIndex === undefined) {
+          throw new ApiError(400, `Committee index must be provided for pre-electra fork=${fork}`);
+        }
+        index = committeeIndex;
+      }
 
       const targetSlot = computeStartSlotAtEpoch(attEpoch);
       const targetRoot =
