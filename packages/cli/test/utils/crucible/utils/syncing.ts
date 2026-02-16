@@ -4,7 +4,14 @@ import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
 import type {Simulation} from "../simulation.js";
-import {connectNewCLNode, connectNewELNode, connectNewNode, getCLNodeMultiaddrs, waitForHead, waitForSlot} from "./network.js";
+import {
+  connectNewCLNode,
+  connectNewELNode,
+  connectNewNode,
+  getCLNodeMultiaddrs,
+  waitForHead,
+  waitForSlot,
+} from "./network.js";
 
 export async function assertRangeSync(env: Simulation): Promise<void> {
   const currentHead = (await env.nodes[0].beacon.api.beacon.getBlockHeader({blockId: "head"})).value();
