@@ -101,9 +101,6 @@ export async function importBlock(
     }
   });
 
-  // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
-  this.serializedCache.clear();
-
   // 2. Import block to fork choice
 
   // Should compute checkpoint balances before forkchoice.onBlock
