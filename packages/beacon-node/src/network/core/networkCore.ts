@@ -167,7 +167,10 @@ export class NetworkCore implements INetworkCore {
       config,
       custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
     };
-    const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
+    const metadata = new MetadataController(
+      {activateZkvm: opts.activateZkvm},
+      {networkConfig, logger, onSetValue: onMetadataSetValue}
+    );
 
     const reqResp = new ReqRespBeaconNode(
       {
