@@ -15,8 +15,10 @@ const denebForkEpoch = 0;
 const electraForkEpoch = 0;
 const genesisDelaySeconds = 30 * secondsPerSlot;
 
-// Wait for at least 3 epochs to ensure light client can sync from a finalized checkpoint
-export const minFinalizedTimeMs = 3 * 8 * 4 * 1000;
+// Wait for genesis delay + at least 3 epochs to ensure light client can sync from a finalized checkpoint.
+// The e2e test env has a genesis delay of ~24-30 slots (96-120s) before the chain starts producing blocks,
+// then needs 3 epochs (96s) to reach finalization. The hook timeout must cover both.
+export const minFinalizedTimeMs = (genesisDelaySeconds + 3 * 8 * secondsPerSlot) * 1000;
 
 export const config = {
   ALTAIR_FORK_EPOCH: altairForkEpoch,
