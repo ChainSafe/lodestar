@@ -4,14 +4,6 @@ import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from
 import {Simulation} from "../simulation.js";
 import {SimulationTrackerEvent} from "../simulationTracker.js";
 
-/**
- * Get the cached p2p multiaddrs for all given CL nodes.
- * Multiaddrs are populated during {@link connectNewCLNode}.
- */
-export function getCLNodeMultiaddrs(nodes: BeaconNode[]): string[] {
-  return nodes.filter((n) => n.multiaddr != null).map((n) => n.multiaddr as string);
-}
-
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
   for (const node of nodes) {
     await connectNewNode(node, nodes);

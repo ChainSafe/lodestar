@@ -4,14 +4,7 @@ import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
 import type {Simulation} from "../simulation.js";
-import {
-  connectNewCLNode,
-  connectNewELNode,
-  connectNewNode,
-  getCLNodeMultiaddrs,
-  waitForHead,
-  waitForSlot,
-} from "./network.js";
+import {connectNewCLNode, connectNewELNode, connectNewNode, waitForHead, waitForSlot} from "./network.js";
 
 export async function assertRangeSync(env: Simulation): Promise<void> {
   const currentHead = (await env.nodes[0].beacon.api.beacon.getBlockHeader({blockId: "head"})).value();
@@ -20,7 +13,7 @@ export async function assertRangeSync(env: Simulation): Promise<void> {
   // Direct peers maintain permanent GossipSub mesh connections and are
   // automatically reconnected, preventing sync stalls in CI environments
   // where discv5 discovery is not available.
-  const directPeers = getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
+  const directPeers = env.nodes.map((n) => n.beacon.multiaddr).filter((m): m is string => m != null);
 
   const rangeSync = await env.createNodePair({
     id: "range-sync-node",
@@ -87,7 +80,7 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
     await env.nodes[0].beacon.api.beacon.getStateFinalityCheckpoints({stateId: "head"})
   ).value();
 
-  const directPeers = getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
+  const directPeers = env.nodes.map((n) => n.beacon.multiaddr).filter((m): m is string => m != null);
 
   const checkpointSync = await env.createNodePair({
     id: "checkpoint-sync-node",
@@ -123,7 +116,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
     await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})
   ).value();
 
-  const directPeers = getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
+  const directPeers = env.nodes.map((n) => n.beacon.multiaddr).filter((m): m is string => m != null);
 
   const unknownBlockSync = await env.createNodePair({
     id: "unknown-block-sync-node",
