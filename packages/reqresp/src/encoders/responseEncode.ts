@@ -1,7 +1,7 @@
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 import {ContextBytesFactory, ContextBytesType, MixedProtocol, Protocol, ResponseOutgoing} from "../types.js";
-import {encodeErrorMessage} from "../utils/index.js";
+import {encodeErrorMessageToBuffer} from "../utils/index.js";
 
 const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
 
@@ -55,23 +55,16 @@ export async function* responseEncodeError(
   status: RpcResponseStatusError,
   errorMessage: string
 ): AsyncGenerator<Buffer> {
-  const statusChunk = Buffer.from([status]);
-
   if (!errorMessage) {
-    // <result> only, no error message
-    yield statusChunk;
+    yield Buffer.from([status]);
     return;
   }
 
-  // Collect <result> and <error_message> into a single chunk to ensure they are delivered
-  // atomically through the stream. Yielding them separately can cause a race condition where
-  // the stream closes after the status byte is flushed but before the error message arrives
-  // on the reader side, resulting in an empty errorMessage on the request side.
-  const chunks: Buffer[] = [statusChunk];
-  for await (const chunk of encodeErrorMessage(errorMessage, protocol.encoding)) {
-    chunks.push(chunk);
-  }
-  yield Buffer.concat(chunks);
+  // Combine <result> and <error_message> into a single chunk for atomic delivery.
+  // Yielding them separately causes a race condition where the stream closes after the
+  // status byte but before the error message arrives on the reader side.
+  const errorMessageBuffer = await encodeErrorMessageToBuffer(errorMessage, protocol.encoding);
+  yield Buffer.concat([Buffer.from([status]), errorMessageBuffer]);
 }
 
 /**
