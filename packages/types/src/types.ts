@@ -1,4 +1,12 @@
-import {ForkAll, ForkName, ForkPostAltair, ForkPostBellatrix, ForkPostDeneb, ForkPostElectra} from "@lodestar/params";
+import {
+  ForkAll,
+  ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPostElectra,
+  ForkPostFulu,
+} from "@lodestar/params";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
@@ -273,6 +281,7 @@ type TypesByFork = {
     AggregateAndProof: electra.AggregateAndProof;
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
+    DataColumnSidecar: fulu.DataColumnSidecar;
   };
   [ForkName.gloas]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -311,6 +320,7 @@ type TypesByFork = {
     AggregateAndProof: electra.AggregateAndProof;
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
+    DataColumnSidecar: gloas.DataColumnSidecar;
   };
 };
 
@@ -373,3 +383,5 @@ export type IndexedAttestationBigint<F extends ForkName = ForkAll> = TypesByFork
 export type AttesterSlashing<F extends ForkName = ForkAll> = TypesByFork[F]["AttesterSlashing"];
 export type AggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["AggregateAndProof"];
 export type SignedAggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["SignedAggregateAndProof"];
+
+export type DataColumnSidecar<F extends ForkPostFulu = ForkPostFulu> = TypesByFork[F]["DataColumnSidecar"];

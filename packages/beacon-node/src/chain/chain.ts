@@ -28,6 +28,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
+  DataColumnSidecar,
   Epoch,
   Root,
   RootHex,
@@ -38,7 +39,6 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
-  fulu,
   isBlindedBeaconBlock,
   phase0,
   rewards,
@@ -808,7 +808,7 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<fulu.DataColumnSidecars> {
+  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputColumns(blockInput)) {
