@@ -17,6 +17,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlockContents,
+  BuilderIndex,
   CommitteeIndex,
   Epoch,
   ProducedBlockSource,
@@ -420,7 +421,7 @@ export type Endpoints = {
       /** Root of the beacon block that this envelope is for */
       beaconBlockRoot: Root;
       /** Index of the builder from which the execution payload envelope is requested */
-      builderIndex: ValidatorIndex;
+      builderIndex: BuilderIndex;
     },
     {params: {slot: Slot; beacon_block_root: string; builder_index: string}},
     gloas.ExecutionPayloadEnvelope,
@@ -1217,14 +1218,14 @@ function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | big
   return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
 }
 
-function serializeBuilderIndex(builderIndex: number): string {
+function serializeBuilderIndex(builderIndex: BuilderIndex): string {
   if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
     return MAX_UINT64_STR;
   }
   return builderIndex.toString(10);
 }
 
-function deserializeBuilderIndex(builderIndexInput: string | number): number {
+function deserializeBuilderIndex(builderIndexInput: string | number): BuilderIndex {
   if (String(builderIndexInput) === MAX_UINT64_STR) {
     return BUILDER_INDEX_SELF_BUILD;
   }
