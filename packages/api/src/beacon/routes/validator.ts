@@ -1,6 +1,7 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BUILDER_INDEX_SELF_BUILD,
   ForkPostDeneb,
   ForkPostGloas,
   ForkPreDeneb,
@@ -1217,7 +1218,7 @@ function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | big
 }
 
 function serializeBuilderIndex(builderIndex: number): string {
-  if (builderIndex === Infinity) {
+  if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
     return MAX_UINT64_STR;
   }
   return builderIndex.toString(10);
@@ -1225,7 +1226,7 @@ function serializeBuilderIndex(builderIndex: number): string {
 
 function deserializeBuilderIndex(builderIndexInput: string | number): number {
   if (String(builderIndexInput) === MAX_UINT64_STR) {
-    return Infinity;
+    return BUILDER_INDEX_SELF_BUILD;
   }
   return Number(builderIndexInput);
 }
