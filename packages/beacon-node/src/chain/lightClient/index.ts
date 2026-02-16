@@ -46,12 +46,11 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {Logger, MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, byteArrayEquals, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";
 import {Metrics} from "../../metrics/index.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {IClock} from "../../util/clock.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
@@ -93,6 +92,7 @@ type LightClientServerModules = {
   metrics: Metrics | null;
   emitter: ChainEventEmitter;
   logger: Logger;
+  signal: AbortSignal;
 };
 
 const MAX_CACHED_FINALIZED_HEADERS = 3;
@@ -205,6 +205,7 @@ export class LightClientServer {
   private readonly emitter: ChainEventEmitter;
   private readonly logger: Logger;
   private readonly clock: IClock;
+  private readonly signal: AbortSignal;
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependentRootHex>>(() => new Set());
   private storedCurrentSyncCommittee = false;
 
@@ -225,13 +226,14 @@ export class LightClientServer {
     private readonly opts: LightClientServerOpts,
     modules: LightClientServerModules
   ) {
-    const {config, clock, db, metrics, emitter, logger} = modules;
+    const {config, clock, db, metrics, emitter, logger, signal} = modules;
     this.config = config;
     this.clock = clock;
     this.db = db;
     this.metrics = metrics;
     this.emitter = emitter;
     this.logger = logger;
+    this.signal = signal;
 
     this.zero = {
       // Assign the hightest fork's default value because it can always be typecasted down to correct fork
@@ -288,12 +290,16 @@ export class LightClientServer {
     const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
     this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
-      this.logger.error("Error onSyncAggregate", {}, e);
-      this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
+      if (!this.signal.aborted) {
+        this.logger.error("Error onSyncAggregate", {}, e);
+        this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
+      }
     });
 
     this.persistPostBlockImportData(block, postState, parentBlockSlot).catch((e) => {
-      this.logger.error("Error persistPostBlockImportData", {}, e);
+      if (!this.signal.aborted) {
+        this.logger.error("Error persistPostBlockImportData", {}, e);
+      }
     });
   }
 

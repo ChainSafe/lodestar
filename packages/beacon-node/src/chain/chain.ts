@@ -126,8 +126,11 @@ const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
 
 /**
  * The maximum number of pending unfinalized block writes to the database before backpressure is applied.
+ * Write queue entries hold references to block inputs, keeping them in memory even after cache eviction.
+ * This is especially important for supernodes which store all 128 columns per block — each pending
+ * write can hold significant memory. Keep moderate to avoid OOM during sync.
  */
-const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 32;
+const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 16;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -387,7 +390,7 @@ export class BeaconChain implements IBeaconChain {
     });
 
     if (!opts.disableLightClientServer) {
-      this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger});
+      this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
     }
 
     this.reprocessController = new ReprocessController(this.metrics);

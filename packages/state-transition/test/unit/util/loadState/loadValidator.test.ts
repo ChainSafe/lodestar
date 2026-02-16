@@ -2,6 +2,7 @@ import {describe, expect, it} from "vitest";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 import {getEffectiveBalancesFromStateBytes, loadValidator} from "../../../../src/util/loadState/loadValidator.js";
 import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
@@ -112,8 +113,8 @@ describe("loadValidator", () => {
     const newValidator = getValidator();
     const newValidatorBytes = newValidator.serialize();
     const loadedValidator = loadValidator(validator, newValidatorBytes);
-    expect(Buffer.compare(loadedValidator.hashTreeRoot(), newValidator.hashTreeRoot())).toBe(0);
-    expect(Buffer.compare(loadedValidator.serialize(), newValidator.serialize())).toBe(0);
+    expect(byteArrayEquals(loadedValidator.hashTreeRoot(), newValidator.hashTreeRoot())).toBe(true);
+    expect(byteArrayEquals(loadedValidator.serialize(), newValidator.serialize())).toBe(true);
   });
 });
 

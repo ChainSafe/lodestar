@@ -1,14 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPreFulu,
-  ForkPreGloas,
-  isForkPostFulu,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
-import {LodestarError, Logger, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
   DAType,
@@ -20,6 +13,7 @@ import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/index.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
 
@@ -475,7 +469,7 @@ export function validateBlockByRangeResponse(
     if (i < blocks.length - 1) {
       // compare the block root against the next block's parent root
       const parentRoot = blocks[i + 1].message.parentRoot;
-      if (Buffer.compare(blockRoot, parentRoot) !== 0) {
+      if (!byteArrayEquals(blockRoot, parentRoot)) {
         throw new DownloadByRangeError(
           {
             code: DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH,
@@ -695,13 +689,7 @@ export async function validateColumnsByRangeResponse(
         dataFork: dataSlot ? config.getForkName(dataSlot) : "unknown",
       });
     }
-    if (isForkPostGloas(forkName)) {
-      // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
-      // if block without columns is passed default to zero and throw below
-      blobCount = 0;
-    } else {
-      blobCount = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
-    }
+    blobCount = getBlobKzgCommitments(forkName, block as SignedBeaconBlock<ForkPostFulu>).length;
 
     if (columnSidecars.length === 0) {
       if (!blobCount) {

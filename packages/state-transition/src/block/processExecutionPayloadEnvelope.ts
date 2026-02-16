@@ -1,5 +1,4 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   BUILDER_INDEX_SELF_BUILD,
   DOMAIN_BEACON_BUILDER,
@@ -7,7 +6,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.ts";
 import {computeSigningRoot, computeTimeAtSlot} from "../util/index.ts";
 import {processConsolidationRequest} from "./processConsolidationRequest.ts";
@@ -97,13 +96,6 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  const envelopeKzgRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(envelope.blobKzgCommitments);
-  if (!byteArrayEquals(committedBid.blobKzgCommitmentsRoot, envelopeKzgRoot)) {
-    throw new Error(
-      `Kzg commitment root mismatch between envelope and committed bid envelope=${toRootHex(envelopeKzgRoot)} committedBid=${toRootHex(committedBid.blobKzgCommitmentsRoot)}`
-    );
-  }
-
   if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
     throw new Error(
       `Prev randao mismatch between committed bid and payload committedBid=${toHex(committedBid.prevRandao)} payload=${toHex(payload.prevRandao)}`
@@ -144,14 +136,6 @@ function validateExecutionPayloadEnvelope(
   if (payload.timestamp !== computeTimeAtSlot(state.config, state.slot, state.genesisTime)) {
     throw new Error(
       `Timestamp mismatch between envelope's payload and state envelope=${payload.timestamp} state=${computeTimeAtSlot(state.config, state.slot, state.genesisTime)}`
-    );
-  }
-
-  // Verify commitments are under limit
-  const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
-  if (envelope.blobKzgCommitments.length > maxBlobsPerBlock) {
-    throw new Error(
-      `Kzg commitments exceed limit commitment.length=${envelope.blobKzgCommitments.length} limit=${maxBlobsPerBlock}`
     );
   }
 

@@ -186,3 +186,18 @@ export function xor(a: Uint8Array, b: Uint8Array): Uint8Array {
   }
   return a;
 }
+
+/**
+ * Compare two byte arrays for equality.
+ * Note: In Node.js environment, the implementation in nodejs.ts uses Buffer.compare
+ * which is significantly faster due to native code.
+ */
+export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}

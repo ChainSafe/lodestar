@@ -636,6 +636,9 @@ importers:
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
+      '@lodestar/utils':
+        specifier: workspace:^
+        version: link:../utils
       uint8arraylist:
         specifier: ^2.4.7
         version: 2.4.8

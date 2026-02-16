@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ZERO_HASH} from "@lodestar/params";
 import {BeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
-import {Logger, toHex, toRootHex} from "@lodestar/utils";
+import {Logger, byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -26,7 +26,7 @@ export async function persistAnchorState(
 
     const latestBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(latestBlockHeader);
 
-    if (Buffer.compare(blockRoot, latestBlockRoot) !== 0) {
+    if (!byteArrayEquals(blockRoot, latestBlockRoot)) {
       throw Error(
         `Genesis block root ${toRootHex(blockRoot)} does not match genesis state latest block root ${toRootHex(latestBlockRoot)}`
       );
