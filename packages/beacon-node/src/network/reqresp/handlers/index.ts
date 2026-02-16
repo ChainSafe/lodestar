@@ -72,6 +72,21 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     },
     [ReqRespMethod.LightClientFinalityUpdate]: () => onLightClientFinalityUpdate(chain),
     [ReqRespMethod.LightClientOptimisticUpdate]: () => onLightClientOptimisticUpdate(chain),
+
+    // EIP-8025: Execution proof req/resp handlers
+    // TODO: Wire up to ExecutionProofPool once implemented in Phase C
+    [ReqRespMethod.ExecutionProofsByRoot]: (_req) => {
+      // Stub: return empty response until proof pool is implemented
+      return (async function* () {
+        // No proofs to serve yet
+      })();
+    },
+    [ReqRespMethod.ExecutionProofsByRange]: (_req) => {
+      // Stub: return empty response until proof pool is implemented
+      return (async function* () {
+        // No proofs to serve yet
+      })();
+    },
   };
 
   return (method) => handlers[method];

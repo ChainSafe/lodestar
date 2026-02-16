@@ -1,6 +1,6 @@
-import {ByteListType, ContainerType} from "@chainsafe/ssz";
-import {MAX_PROOF_DATA_BYTES} from "@lodestar/params";
-import {Root, Slot, Uint8} from "../primitive/sszTypes.js";
+import {ByteListType, ContainerType, ListBasicType, UintNumberType} from "@chainsafe/ssz";
+import {EXECUTION_PROOF_TYPE_COUNT, MAX_PROOF_DATA_BYTES} from "@lodestar/params";
+import {Root, Slot, Uint8, UintNum64} from "../primitive/sszTypes.js";
 
 /**
  * ExecutionProofId identifies which zkVM/proof system + EL combination a proof belongs to.
@@ -37,4 +37,34 @@ export const ExecutionProof = new ContainerType(
     proofData: ProofData,
   },
   {typeName: "ExecutionProof", jsonCase: "eth2"}
+);
+
+/**
+ * Request proofs for a specific block root.
+ * Matches Lighthouse `ExecutionProofsByRootRequest` wire format.
+ */
+export const ExecutionProofsByRootRequest = new ContainerType(
+  {
+    /** The block root we need proofs for */
+    blockRoot: Root,
+    /** How many additional proofs we need */
+    countNeeded: UintNum64,
+    /** Proof IDs we already have (responder should exclude these) */
+    alreadyHave: new ListBasicType(new UintNumberType(1), EXECUTION_PROOF_TYPE_COUNT),
+  },
+  {typeName: "ExecutionProofsByRootRequest", jsonCase: "eth2"}
+);
+
+/**
+ * Request proofs for a range of slots.
+ * Matches Lighthouse `ExecutionProofsByRangeRequest` wire format.
+ */
+export const ExecutionProofsByRangeRequest = new ContainerType(
+  {
+    /** The starting slot to request execution proofs */
+    startSlot: UintNum64,
+    /** The number of slots from the start slot */
+    count: UintNum64,
+  },
+  {typeName: "ExecutionProofsByRangeRequest", jsonCase: "eth2"}
 );
