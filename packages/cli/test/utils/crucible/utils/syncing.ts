@@ -116,6 +116,8 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
     await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})
   ).value();
 
+  const directPeers = await getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
+
   const unknownBlockSync = await env.createNodePair({
     id: "unknown-block-sync-node",
     beacon: {
@@ -132,6 +134,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
           contributing to the overall gap. For stability in our CI, we've opted to set a higher limit on this constraint.
           */
           "sync.slotImportTolerance": currentHead.message.slot,
+          directPeers,
         },
       },
     },
