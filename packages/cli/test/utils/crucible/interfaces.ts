@@ -172,6 +172,11 @@ export interface BeaconNode<C extends BeaconClient = BeaconClient> {
   readonly restPrivateUrl: string;
   readonly api: C extends BeaconClient.Lodestar ? LodestarAPI : LighthouseAPI;
   readonly job: Job;
+  /**
+   * P2P multiaddr including peer ID, populated after the node starts.
+   * Used for configuring `--directPeers` on other nodes.
+   */
+  multiaddr?: string;
 }
 
 export interface ValidatorNode<C extends ValidatorClient = ValidatorClient> {

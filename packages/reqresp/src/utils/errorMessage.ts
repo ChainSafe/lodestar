@@ -29,6 +29,18 @@ export async function* encodeErrorMessage(errorMessage: string, encoding: Encodi
 }
 
 /**
+ * Encodes a UTF-8 error message string into a single buffer (max 256 bytes before encoding).
+ * Unlike `encodeErrorMessage`, this collects all encoded chunks into one buffer.
+ */
+export async function encodeErrorMessageToBuffer(errorMessage: string, encoding: Encoding): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of encodeErrorMessage(errorMessage, encoding)) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+/**
  * Decodes error message from network bytes and removes non printable, non ascii characters.
  */
 export async function decodeErrorMessage(encodedErrorMessage: Uint8Array): Promise<string> {

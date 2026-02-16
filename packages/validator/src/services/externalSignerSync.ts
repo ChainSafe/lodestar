@@ -7,7 +7,7 @@ import {LoggerVc} from "../util/index.js";
 import {SignerType, ValidatorStore} from "./validatorStore.js";
 
 export type ExternalSignerOptions = {
-  url?: string;
+  urls?: string[];
   fetch?: boolean;
   fetchInterval?: number;
 };
@@ -25,14 +25,14 @@ export function pollExternalSignerPubkeys(
   opts?: ExternalSignerOptions
 ): void {
   const externalSigner = opts ?? {};
+  const externalSignerUrls = externalSigner.urls ?? [];
 
-  if (!externalSigner.url || !externalSigner.fetch) {
+  if (externalSignerUrls.length === 0 || !externalSigner.fetch) {
     return; // Disabled
   }
 
-  async function fetchExternalSignerPubkeys(): Promise<void> {
+  async function syncSignerPubkeys(externalSignerUrl: string): Promise<void> {
     // External signer URL is already validated earlier
-    const externalSignerUrl = externalSigner.url as string;
     const printableUrl = toPrintableUrl(externalSignerUrl);
 
     try {
@@ -62,6 +62,14 @@ export function pollExternalSignerPubkeys(
     } catch (e) {
       logger.error("Failed to fetch public keys from external signer", {url: printableUrl}, e as Error);
     }
+  }
+
+  async function fetchExternalSignerPubkeys(): Promise<void> {
+    const promises: Promise<void>[] = [];
+    for (const url of externalSignerUrls) {
+      promises.push(syncSignerPubkeys(url));
+    }
+    await Promise.all(promises);
   }
 
   const interval = setInterval(
