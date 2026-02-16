@@ -4,6 +4,7 @@ import {
   ForkPostDeneb,
   ForkPostGloas,
   ForkPreDeneb,
+  MAX_UINT64_STR,
   VALIDATOR_REGISTRY_LIMIT,
   isForkPostDeneb,
   isForkPostElectra,
@@ -420,7 +421,7 @@ export type Endpoints = {
       /** Index of the builder from which the execution payload envelope is requested */
       builderIndex: ValidatorIndex;
     },
-    {params: {slot: Slot; beacon_block_root: string; builder_index: ValidatorIndex}},
+    {params: {slot: Slot; beacon_block_root: string; builder_index: string}},
     gloas.ExecutionPayloadEnvelope,
     VersionMeta
   >;
@@ -900,18 +901,22 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: {
         writeReq: ({slot, beaconBlockRoot, builderIndex}) => ({
-          params: {slot, beacon_block_root: toRootHex(beaconBlockRoot), builder_index: builderIndex},
+          params: {
+            slot,
+            beacon_block_root: toRootHex(beaconBlockRoot),
+            builder_index: serializeBuilderIndex(builderIndex),
+          },
         }),
         parseReq: ({params}) => ({
           slot: params.slot,
           beaconBlockRoot: fromHex(params.beacon_block_root),
-          builderIndex: params.builder_index,
+          builderIndex: deserializeBuilderIndex(params.builder_index),
         }),
         schema: {
           params: {
             slot: Schema.UintRequired,
             beacon_block_root: Schema.StringRequired,
-            builder_index: Schema.UintRequired,
+            builder_index: Schema.StringRequired,
           },
         },
       },
@@ -1209,6 +1214,20 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
 
 function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
   return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
+}
+
+function serializeBuilderIndex(builderIndex: number): string {
+  if (builderIndex === Infinity) {
+    return MAX_UINT64_STR;
+  }
+  return builderIndex.toString(10);
+}
+
+function deserializeBuilderIndex(builderIndexInput: string | number): number {
+  if (String(builderIndexInput) === MAX_UINT64_STR) {
+    return Infinity;
+  }
+  return Number(builderIndexInput);
 }
 
 function writeSkipRandaoVerification(skipRandaoVerification?: boolean): string | undefined {
