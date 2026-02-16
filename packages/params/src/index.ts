@@ -315,6 +315,14 @@ export const BYTES_PER_CELL = FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT;
 export const KZG_COMMITMENTS_GINDEX = 27;
 export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
 
+// EIP-8025: Optional Execution Proofs
+/** Maximum size of proof data in bytes (1MB, matching devnet implementations) */
+export const MAX_PROOF_DATA_BYTES = 1_048_576;
+/** Maximum number of execution proof types (zkVM+EL combinations) */
+export const EXECUTION_PROOF_TYPE_COUNT = 8;
+/** Default minimum number of distinct proof types required for DA in zkvm mode */
+export const DEFAULT_MIN_PROOFS_REQUIRED = 2;
+
 // Gloas Misc
 export const BUILDER_INDEX_FLAG = 2 ** 40;
 export const BUILDER_INDEX_SELF_BUILD = Infinity;

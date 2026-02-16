@@ -1,0 +1,40 @@
+import {ByteListType, ContainerType} from "@chainsafe/ssz";
+import {MAX_PROOF_DATA_BYTES} from "@lodestar/params";
+import {Root, Slot, Uint8} from "../primitive/sszTypes.js";
+
+/**
+ * ExecutionProofId identifies which zkVM/proof system + EL combination a proof belongs to.
+ * Examples: 0=SP1+Reth, 1=Risc0+Geth, 2=SP1+Geth, etc.
+ *
+ * Note: Uses Uint8 (uint8) per Lighthouse/Prysm devnet implementation.
+ */
+export const ExecutionProofId = Uint8;
+
+/**
+ * The actual proof data, variable length up to MAX_PROOF_DATA_BYTES (1MB).
+ */
+export const ProofData = new ByteListType(MAX_PROOF_DATA_BYTES);
+
+/**
+ * ExecutionProof represents a cryptographic proof that an execution payload is valid.
+ *
+ * Note: This type matches the Lighthouse/Prysm devnet wire format, which diverges from
+ * the consensus spec (no BLS signatures, extra fields for slot/blockHash/blockRoot).
+ * The consensus spec uses SignedExecutionProof with validator_index + BLS signature,
+ * but for devnet interop we match the actual implementation.
+ */
+export const ExecutionProof = new ContainerType(
+  {
+    /** Which proof type (zkVM+EL combination) this proof belongs to (0-7) */
+    proofId: ExecutionProofId,
+    /** The slot of the beacon block this proof validates */
+    slot: Slot,
+    /** The block hash of the execution payload this proof validates */
+    blockHash: Root,
+    /** The beacon block root corresponding to the block with the execution payload */
+    blockRoot: Root,
+    /** The actual ZK proof data */
+    proofData: ProofData,
+  },
+  {typeName: "ExecutionProof", jsonCase: "eth2"}
+);
