@@ -7,7 +7,16 @@ import {ChainConfig, chainConfigToJson} from "@lodestar/config";
 import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {sleep} from "@lodestar/utils";
 import {getLodestarProverCli} from "../../../../src/cli/cli.js";
-import {beaconUrl, chainId, config, proxyPort, proxyUrl, rpcUrl, waitForFinalized} from "../../../utils/e2e_env.js";
+import {
+  beaconUrl,
+  chainId,
+  config,
+  minFinalizedTimeMs,
+  proxyPort,
+  proxyUrl,
+  rpcUrl,
+  waitForFinalized,
+} from "../../../utils/e2e_env.js";
 
 const cli = getLodestarProverCli();
 
@@ -53,7 +62,7 @@ describe("prover/proxy", () => {
       );
       // Give sometime to the prover to start proxy server
       await sleep(3000);
-    }, 80000);
+    }, minFinalizedTimeMs);
 
     afterAll(async () => {
       if (proc) {
