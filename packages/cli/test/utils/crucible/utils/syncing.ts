@@ -20,7 +20,7 @@ export async function assertRangeSync(env: Simulation): Promise<void> {
   // Direct peers maintain permanent GossipSub mesh connections and are
   // automatically reconnected, preventing sync stalls in CI environments
   // where discv5 discovery is not available.
-  const directPeers = await getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
+  const directPeers = getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
 
   const rangeSync = await env.createNodePair({
     id: "range-sync-node",
@@ -87,7 +87,7 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
     await env.nodes[0].beacon.api.beacon.getStateFinalityCheckpoints({stateId: "head"})
   ).value();
 
-  const directPeers = await getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
+  const directPeers = getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
 
   const checkpointSync = await env.createNodePair({
     id: "checkpoint-sync-node",
@@ -123,7 +123,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
     await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})
   ).value();
 
-  const directPeers = await getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
+  const directPeers = getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
 
   const unknownBlockSync = await env.createNodePair({
     id: "unknown-block-sync-node",
