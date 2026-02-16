@@ -9,9 +9,22 @@ import {connectNewCLNode, connectNewELNode, connectNewNode, waitForHead, waitFor
 export async function assertRangeSync(env: Simulation): Promise<void> {
   const currentHead = (await env.nodes[0].beacon.api.beacon.getBlockHeader({blockId: "head"})).value();
 
+  // Get multiaddrs of existing nodes to configure as direct peers.
+  // Direct peers maintain permanent GossipSub mesh connections and are
+  // automatically reconnected, preventing sync stalls in CI environments
+  // where discv5 discovery is not available.
+  const directPeers = env.nodes.map((n) => n.beacon.multiaddr).filter((m): m is string => m != null);
+
   const rangeSync = await env.createNodePair({
     id: "range-sync-node",
-    beacon: BeaconClient.Lodestar,
+    beacon: {
+      type: BeaconClient.Lodestar,
+      options: {
+        clientOptions: {
+          directPeers,
+        },
+      },
+    },
     execution: ExecutionClient.Geth,
     keysCount: 0,
   });
@@ -67,6 +80,8 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
     await env.nodes[0].beacon.api.beacon.getStateFinalityCheckpoints({stateId: "head"})
   ).value();
 
+  const directPeers = env.nodes.map((n) => n.beacon.multiaddr).filter((m): m is string => m != null);
+
   const checkpointSync = await env.createNodePair({
     id: "checkpoint-sync-node",
     beacon: {
@@ -74,6 +89,7 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
       options: {
         clientOptions: {
           wssCheckpoint: `${toHex(finalizedCheckpoint.finalized.root)}:${finalizedCheckpoint.finalized.epoch}`,
+          directPeers,
         },
       },
     },
@@ -100,6 +116,8 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
     await env.nodes[0].beacon.api.beacon.getBlobSidecars({blockId: currentHead.message.slot})
   ).value();
 
+  const directPeers = env.nodes.map((n) => n.beacon.multiaddr).filter((m): m is string => m != null);
+
   const unknownBlockSync = await env.createNodePair({
     id: "unknown-block-sync-node",
     beacon: {
@@ -116,6 +134,7 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
           contributing to the overall gap. For stability in our CI, we've opted to set a higher limit on this constraint.
           */
           "sync.slotImportTolerance": currentHead.message.slot,
+          directPeers,
         },
       },
     },
