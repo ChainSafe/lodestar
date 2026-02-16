@@ -4,6 +4,23 @@ import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from
 import {Simulation} from "../simulation.js";
 import {SimulationTrackerEvent} from "../simulationTracker.js";
 
+/**
+ * Get the p2p multiaddrs (including peer ID) for all given CL nodes.
+ * Useful for configuring `--directPeers` on new nodes to maintain
+ * permanent connections without relying on discv5 discovery.
+ */
+export async function getCLNodeMultiaddrs(nodes: BeaconNode[]): Promise<string[]> {
+  const multiaddrs: string[] = [];
+  for (const node of nodes) {
+    const identity = (await node.api.node.getNetworkIdentity()).value();
+    if (identity.peerId && identity.p2pAddresses.length > 0) {
+      // Use the first p2p address, replacing with localhost for local sim
+      multiaddrs.push(identity.p2pAddresses[0].replace(/(\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/)/, "/127.0.0.1/"));
+    }
+  }
+  return multiaddrs;
+}
+
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
   for (const node of nodes) {
     await connectNewNode(node, nodes);

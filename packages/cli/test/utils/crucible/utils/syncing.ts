@@ -4,14 +4,27 @@ import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
 import type {Simulation} from "../simulation.js";
-import {connectNewCLNode, connectNewELNode, connectNewNode, waitForHead, waitForSlot} from "./network.js";
+import {connectNewCLNode, connectNewELNode, connectNewNode, getCLNodeMultiaddrs, waitForHead, waitForSlot} from "./network.js";
 
 export async function assertRangeSync(env: Simulation): Promise<void> {
   const currentHead = (await env.nodes[0].beacon.api.beacon.getBlockHeader({blockId: "head"})).value();
 
+  // Get multiaddrs of existing nodes to configure as direct peers.
+  // Direct peers maintain permanent GossipSub mesh connections and are
+  // automatically reconnected, preventing sync stalls in CI environments
+  // where discv5 discovery is not available.
+  const directPeers = await getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
+
   const rangeSync = await env.createNodePair({
     id: "range-sync-node",
-    beacon: BeaconClient.Lodestar,
+    beacon: {
+      type: BeaconClient.Lodestar,
+      options: {
+        clientOptions: {
+          directPeers,
+        },
+      },
+    },
     execution: ExecutionClient.Geth,
     keysCount: 0,
   });
@@ -44,52 +57,13 @@ export async function assertRangeSync(env: Simulation): Promise<void> {
     env.nodes.map((node) => node.beacon)
   );
 
-  // Maintain peer connections in the background during sync. If peers drop due to
-  // transient reqresp errors (e.g. stream resets), the node has no way to recover
-  // since discv5 has no boot ENRs in sim tests. This loop periodically checks the
-  // peer count and re-establishes connections if needed.
-  const ac = new AbortController();
-  const maintainConnections = maintainPeerConnections(rangeSync, env.nodes, ac.signal);
-
-  try {
-    await waitForNodeSync(env, rangeSync, {
-      head: toHex(currentHead.root),
-      slot: currentHead.header.message.slot,
-    });
-  } finally {
-    ac.abort();
-    await maintainConnections;
-  }
+  await waitForNodeSync(env, rangeSync, {
+    head: toHex(currentHead.root),
+    slot: currentHead.header.message.slot,
+  });
 
   await rangeSync.beacon.job.stop();
   await rangeSync.execution.job.stop();
-}
-
-/**
- * Periodically check peer count and re-establish CL connections if the node
- * has lost all peers. This prevents sync from stalling due to transient
- * network errors in CI environments where discv5 discovery is not available.
- */
-async function maintainPeerConnections(node: NodePair, allNodes: NodePair[], signal: AbortSignal): Promise<void> {
-  // Check every 4 seconds (one slot duration in minimal preset)
-  const checkIntervalMs = 4000;
-
-  while (!signal.aborted) {
-    await sleep(checkIntervalMs, signal).catch(() => {});
-    if (signal.aborted) break;
-
-    try {
-      const peers = (await node.beacon.api.node.getPeers({state: ["connected"]})).value();
-      if (peers.length === 0) {
-        await connectNewCLNode(
-          node.beacon,
-          allNodes.map((n) => n.beacon)
-        );
-      }
-    } catch {
-      // Node might be shutting down, ignore errors
-    }
-  }
 }
 
 export async function assertCheckpointSync(env: Simulation): Promise<void> {
@@ -106,6 +80,8 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
     await env.nodes[0].beacon.api.beacon.getStateFinalityCheckpoints({stateId: "head"})
   ).value();
 
+  const directPeers = await getCLNodeMultiaddrs(env.nodes.map((n) => n.beacon));
+
   const checkpointSync = await env.createNodePair({
     id: "checkpoint-sync-node",
     beacon: {
@@ -113,6 +89,7 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
       options: {
         clientOptions: {
           wssCheckpoint: `${toHex(finalizedCheckpoint.finalized.root)}:${finalizedCheckpoint.finalized.epoch}`,
+          directPeers,
         },
       },
     },
@@ -124,18 +101,10 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
   await checkpointSync.beacon.job.start();
   await connectNewNode(checkpointSync, env.nodes);
 
-  const ac = new AbortController();
-  const maintainConnections = maintainPeerConnections(checkpointSync, env.nodes, ac.signal);
-
-  try {
-    await waitForNodeSync(env, checkpointSync, {
-      head: toHex(finalizedCheckpoint.finalized.root),
-      slot: env.clock.getLastSlotOfEpoch(finalizedCheckpoint.finalized.epoch),
-    });
-  } finally {
-    ac.abort();
-    await maintainConnections;
-  }
+  await waitForNodeSync(env, checkpointSync, {
+    head: toHex(finalizedCheckpoint.finalized.root),
+    slot: env.clock.getLastSlotOfEpoch(finalizedCheckpoint.finalized.epoch),
+  });
 
   await checkpointSync.beacon.job.stop();
   await checkpointSync.execution.job.stop();
