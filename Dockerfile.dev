@@ -4,7 +4,6 @@
 # Generated image is larger than production image. Do not use this for production.
 
 FROM --platform=${BUILDPLATFORM:-amd64} node:24 AS build_dev
-ARG COMMIT
 
 WORKDIR /usr/app
 
@@ -42,6 +41,8 @@ COPY . .
 
 RUN pnpm build
 
+# Declare COMMIT arg after install+build layers to avoid cache invalidation
+ARG COMMIT
 RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
 ENV NODE_OPTIONS=--max-old-space-size=8192
