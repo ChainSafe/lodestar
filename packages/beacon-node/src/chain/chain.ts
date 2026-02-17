@@ -1467,7 +1467,20 @@ export class BeaconChain implements IBeaconChain {
 
     const blockRootHex = toRootHex(proof.blockRoot);
     if (this.executionProofPool.hasEnoughProofs(blockRootHex, this.minProofsRequired)) {
-      const execBlockHash = toRootHex(proof.blockHash);
+      // Look up the block in fork choice to get the canonical execution payload block hash.
+      // We must NOT use proof.blockHash because gossip proofs from other clients may use
+      // incompatible SSZ encodings, causing the deserialized blockHash to be garbage.
+      // The fork choice proto-array is the authoritative source for execution block hashes.
+      const block = this.forkChoice.getBlockHex(blockRootHex);
+      if (block == null || block.executionPayloadBlockHash == null) {
+        this.logger.debug("Cannot transition block to valid: not found in fork choice", {
+          slot: proof.slot,
+          blockRoot: blockRootHex,
+        });
+        return;
+      }
+
+      const execBlockHash = block.executionPayloadBlockHash;
       this.forkChoice.validateLatestHash({
         executionStatus: ExecutionStatus.Valid,
         latestValidExecHash: execBlockHash,
