@@ -12,6 +12,7 @@ import {
   AttesterSlashing,
   DataColumnSidecar,
   DataColumnSidecars,
+  ExecutionProof,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -503,6 +504,17 @@ export class Network implements INetwork {
     return this.publishGossip<GossipType.execution_payload>(
       {type: GossipType.execution_payload, boundary},
       signedEnvelope,
+      {ignoreDuplicatePublishError: true}
+    );
+  }
+
+  async publishExecutionProof(executionProof: ExecutionProof): Promise<number> {
+    const epoch = computeEpochAtSlot(executionProof.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.execution_proof>(
+      {type: GossipType.execution_proof, boundary},
+      executionProof,
       {ignoreDuplicatePublishError: true}
     );
   }

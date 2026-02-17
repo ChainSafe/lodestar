@@ -256,3 +256,4 @@ xcode
 yaml
 yamux
 yml
+zkvm

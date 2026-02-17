@@ -167,6 +167,20 @@ describe("network / gossip / topic", () => {
         topicStr: "/eth2/a41d57bd/execution_payload_bid/ssz_snappy",
       },
     ],
+    [GossipType.execution_proof]: [
+      {
+        topic: {
+          type: GossipType.execution_proof,
+          boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: stringifyGossipTopic(config, {
+          type: GossipType.execution_proof,
+          boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
+          encoding,
+        }),
+      },
+    ],
   };
 
   for (const topics of Object.values(testCases)) {

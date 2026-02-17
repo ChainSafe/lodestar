@@ -29,6 +29,9 @@ export interface NetworkOptions
   useWorker?: boolean;
   maxYoungGenerationSizeMb?: number;
   disableLightClientServer?: boolean;
+  /** EIP-8025: Enable execution proof gossip and req/resp protocols */
+  activateZkvm?: boolean;
+
   /**
    * During E2E tests observe a lot of following `missing stream`:
    *
@@ -71,6 +74,8 @@ export const defaultNetworkOptions: NetworkOptions = {
   disableLightClientServer: false,
   quic: false,
   tcp: true,
+  // EIP-8025: zkvm mode disabled by default
+  activateZkvm: false,
   // specific option for fulu
   //   - this is the same to TARGET_SUBNET_PEERS
   //   - for fusaka-devnets, we have 25-30 peers per subnet

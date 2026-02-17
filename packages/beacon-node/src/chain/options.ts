@@ -1,3 +1,4 @@
+import {DEFAULT_MIN_PROOFS_REQUIRED} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
@@ -47,6 +48,12 @@ export type IChainOptions = BlockProcessOpts &
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
+    /** EIP-8025: Enable zkvm/stateless execution mode. Blocks gated by proof availability instead of EL. */
+    activateZkvm?: boolean;
+    /** EIP-8025: Minimum distinct proof types required per block in zkvm mode (default: 1) */
+    minProofsRequired?: number;
+    /** EIP-8025: Which proof type IDs this node generates (for prover mode). Empty = verify-only. */
+    zkvmGenerationProofTypes?: number[];
   };
 
 export type BlockProcessOpts = {
@@ -127,4 +134,8 @@ export const defaultChainOptions: IChainOptions = {
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,
+  // EIP-8025: zkvm/stateless execution mode
+  activateZkvm: false,
+  minProofsRequired: DEFAULT_MIN_PROOFS_REQUIRED,
+  zkvmGenerationProofTypes: [],
 };

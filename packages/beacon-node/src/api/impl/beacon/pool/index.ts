@@ -2,12 +2,14 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
   GossipAction,
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
+import {InsertOutcome} from "../../../../chain/opPools/types.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
@@ -309,6 +311,57 @@ export function getBeaconPoolApi({
       if (failures.length > 0) {
         throw new IndexedError("Error processing sync committee signatures", failures);
       }
+    },
+
+    async getPoolExecutionProofs({slot}) {
+      // Return all proofs in the pool, optionally filtered by slot
+      const allProofs: import("@lodestar/types").ExecutionProof[] = [];
+      if (slot !== undefined) {
+        // Get proofs for a single slot
+        const proofs = chain.executionProofPool.getProofsByRange(slot, 1);
+        allProofs.push(...proofs);
+      } else {
+        // Get proofs for a wide range around the current slot (recent SLOTS_RETAINED window)
+        const currentSlot = chain.clock.currentSlot;
+        const proofs = chain.executionProofPool.getProofsByRange(Math.max(0, currentSlot - 8), 9);
+        allProofs.push(...proofs);
+      }
+      return {data: allProofs};
+    },
+
+    async submitPoolExecutionProofs({executionProof}) {
+      // Validate basic fields
+      const {slot, blockRoot, proofId} = executionProof;
+      const blockRootHex = toRootHex(blockRoot);
+
+      // Check for duplicates
+      if (chain.executionProofPool.has(blockRootHex, proofId)) {
+        logger.debug("Ignoring known execution proof", {slot, blockRoot: blockRootHex, proofId});
+        return {};
+      }
+
+      // TODO EIP-8025: Add full proof verification (dummy accept for devnet)
+
+      // Add to pool (pass clock slot to reject far-future proofs)
+      const clockSlot = chain.clock.currentSlot;
+      const insertOutcome = chain.executionProofPool.add(executionProof, clockSlot);
+      logger.info("Execution proof submitted via API", {
+        slot,
+        blockRoot: blockRootHex,
+        proofId,
+        insertOutcome,
+      });
+
+      // Only publish to gossip if the proof was actually accepted
+      if (insertOutcome === InsertOutcome.NewData) {
+        try {
+          await network.publishExecutionProof(executionProof);
+        } catch (e) {
+          logger.debug("Failed to publish execution proof to gossip", {slot, proofId}, e as Error);
+        }
+      }
+
+      return {};
     },
   };
 }

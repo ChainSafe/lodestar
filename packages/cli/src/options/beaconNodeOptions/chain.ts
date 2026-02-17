@@ -36,6 +36,10 @@ export type ChainArgs = {
   "chain.maxCPStateEpochsOnDisk"?: number;
 
   "chain.pruneHistory"?: boolean;
+  // EIP-8025: zkvm/stateless execution
+  activateZkvm?: boolean;
+  "chain.minProofsRequired"?: number;
+  "chain.zkvmGenerationProofTypes"?: number[];
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -75,6 +79,10 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
     pruneHistory: args["chain.pruneHistory"],
+    // EIP-8025: zkvm/stateless execution
+    activateZkvm: args.activateZkvm,
+    minProofsRequired: args["chain.minProofsRequired"],
+    zkvmGenerationProofTypes: args["chain.zkvmGenerationProofTypes"],
   };
 }
 
@@ -308,6 +316,32 @@ Will double processing times. Use only for debugging purposes.",
     description: "Prune historical blocks and state",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
+    group: "chain",
+  },
+
+  // EIP-8025: zkvm/stateless execution options
+
+  activateZkvm: {
+    alias: ["activate-zkvm"],
+    description:
+      "Enable zkvm/stateless execution mode (EIP-8025). Blocks are gated by proof availability instead of execution layer validation.",
+    type: "boolean",
+    default: defaultOptions.chain.activateZkvm,
+    group: "chain",
+  },
+
+  "chain.minProofsRequired": {
+    description: "Minimum distinct proof types required per block in zkvm mode",
+    type: "number",
+    default: defaultOptions.chain.minProofsRequired,
+    group: "chain",
+  },
+
+  "chain.zkvmGenerationProofTypes": {
+    description: "Which proof type IDs this node generates (comma-separated). Empty = verify-only node.",
+    type: "array",
+    number: true,
+    coerce: (ids: number[]): number[] => ids.flatMap((id) => String(id).split(",").map(Number)),
     group: "chain",
   },
 };
