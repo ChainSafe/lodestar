@@ -5,6 +5,7 @@ import {
   ArrayOf,
   AttesterSlashing,
   CommitteeIndex,
+  ExecutionProof,
   SingleAttestation,
   Slot,
   capella,
@@ -37,6 +38,7 @@ const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
 const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
+const ExecutionProofListType = ArrayOf(ssz.eip8025.ExecutionProof);
 
 type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
@@ -50,6 +52,7 @@ type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;
 type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeListType>;
 type SyncCommitteeMessageList = ValueOf<typeof SyncCommitteeMessageListType>;
+type ExecutionProofList = ValueOf<typeof ExecutionProofListType>;
 
 export type Endpoints = {
   /**
@@ -240,6 +243,26 @@ export type Endpoints = {
   submitPoolSyncCommitteeSignatures: Endpoint<
     "POST",
     {signatures: SyncCommitteeMessageList},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Get ExecutionProofs from operations pool (EIP-8025)
+   * Retrieves execution proofs known by the node, optionally filtered by slot.
+   */
+  getPoolExecutionProofs: Endpoint<"GET", {slot?: Slot}, {query: {slot?: number}}, ExecutionProofList, EmptyMeta>;
+
+  /**
+   * Submit an ExecutionProof to the node's pool (EIP-8025)
+   * Submits an execution proof to the beacon node.
+   * The proof will be validated and stored in the execution proof pool.
+   * If valid, the proof will be published to the gossip network.
+   */
+  submitPoolExecutionProofs: Endpoint<
+    "POST",
+    {executionProof: ExecutionProof},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -495,6 +518,33 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body}) => ({signatures: SyncCommitteeMessageListType.deserialize(body)}),
         schema: {
           body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    getPoolExecutionProofs: {
+      url: "/eth/v1/beacon/pool/execution_proofs",
+      method: "GET",
+      req: {
+        writeReq: ({slot}) => ({query: {slot}}),
+        parseReq: ({query}) => ({slot: query.slot}),
+        schema: {query: {slot: Schema.Uint}},
+      },
+      resp: {
+        data: ExecutionProofListType,
+        meta: EmptyMetaCodec,
+      },
+    },
+    submitPoolExecutionProofs: {
+      url: "/eth/v1/beacon/pool/execution_proofs",
+      method: "POST",
+      req: {
+        writeReqJson: ({executionProof}) => ({body: ssz.eip8025.ExecutionProof.toJson(executionProof)}),
+        parseReqJson: ({body}) => ({executionProof: ssz.eip8025.ExecutionProof.fromJson(body)}),
+        writeReqSsz: ({executionProof}) => ({body: ssz.eip8025.ExecutionProof.serialize(executionProof)}),
+        parseReqSsz: ({body}) => ({executionProof: ssz.eip8025.ExecutionProof.deserialize(body)}),
+        schema: {
+          body: Schema.Object,
         },
       },
       resp: EmptyResponseCodec,

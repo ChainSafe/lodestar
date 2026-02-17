@@ -9,8 +9,8 @@ import {ssz as fuluSsz} from "./fulu/index.js";
 import {ssz as gloasSsz} from "./gloas/index.js";
 import {ssz as phase0Ssz} from "./phase0/index.js";
 
-export * from "./primitive/sszTypes.js";
 export * as eip8025 from "./eip8025/sszTypes.js";
+export * from "./primitive/sszTypes.js";
 
 /**
  * Index the ssz types that differ by fork
