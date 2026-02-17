@@ -165,6 +165,10 @@ export class BeaconChain implements IBeaconChain {
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly executionProofPool: ExecutionProofPool;
+  /** EIP-8025: When true, skip EL newPayload calls and use execution proofs for validation */
+  readonly activateZkvm: boolean;
+  /** EIP-8025: Minimum distinct proof types required per block in zkvm mode */
+  readonly minProofsRequired: number;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 
@@ -293,6 +297,8 @@ export class BeaconChain implements IBeaconChain {
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.executionProofPool = new ExecutionProofPool();
+    this.activateZkvm = opts.activateZkvm ?? false;
+    this.minProofsRequired = opts.minProofsRequired ?? 1;
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
 

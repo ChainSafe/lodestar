@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostElectra,
@@ -46,6 +47,7 @@ import {
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
+import {InsertOutcome} from "../../chain/opPools/types.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {validateGossipDataColumnSidecar} from "../../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
@@ -876,11 +878,34 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       try {
         const clockSlot = chain.clock.currentSlot;
         const insertOutcome = chain.executionProofPool.add(executionProof, clockSlot);
+        const blockRootHex = toRootHex(executionProof.blockRoot);
         logger.debug("Received execution proof via gossip", {
           proofId: executionProof.proofId,
           slot: executionProof.slot,
+          blockRoot: blockRootHex,
           insertOutcome,
         });
+
+        // EIP-8025: In zkvm mode, check if we now have enough proofs to validate this block
+        if (
+          chain.activateZkvm &&
+          insertOutcome === InsertOutcome.NewData &&
+          chain.executionProofPool.hasEnoughProofs(blockRootHex, chain.minProofsRequired)
+        ) {
+          // Look up the execution block hash from the proof to update fork choice
+          const execBlockHash = toRootHex(executionProof.blockHash);
+          chain.forkChoice.validateLatestHash({
+            executionStatus: ExecutionStatus.Valid,
+            latestValidExecHash: execBlockHash,
+          });
+          logger.info("Execution proofs sufficient, marked block as execution-valid (zkvm mode)", {
+            slot: executionProof.slot,
+            blockRoot: blockRootHex,
+            execBlockHash,
+            proofsAvailable: chain.executionProofPool.getProofsByBlockRoot(blockRootHex).length,
+            minRequired: chain.minProofsRequired,
+          });
+        }
       } catch (e) {
         logger.error("Error adding execution proof to pool", {}, e as Error);
       }

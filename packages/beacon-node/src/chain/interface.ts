@@ -130,6 +130,10 @@ export interface IBeaconChain {
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   /** EIP-8025: Pool for execution proofs */
   readonly executionProofPool: ExecutionProofPool;
+  /** EIP-8025: When true, skip EL newPayload calls and use execution proofs for validation */
+  readonly activateZkvm: boolean;
+  /** EIP-8025: Minimum distinct proof types required per block in zkvm mode */
+  readonly minProofsRequired: number;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 
