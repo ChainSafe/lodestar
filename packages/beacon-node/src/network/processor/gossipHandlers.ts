@@ -874,7 +874,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // For now, basic deserialization validation is sufficient for initial interop
 
       try {
-        const insertOutcome = chain.executionProofPool.add(executionProof);
+        const clockSlot = chain.clock.currentSlot;
+        const insertOutcome = chain.executionProofPool.add(executionProof, clockSlot);
         logger.debug("Received execution proof via gossip", {
           proofId: executionProof.proofId,
           slot: executionProof.slot,
