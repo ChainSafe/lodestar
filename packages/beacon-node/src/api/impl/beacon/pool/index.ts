@@ -9,6 +9,7 @@ import {
   GossipAction,
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
+import {InsertOutcome} from "../../../../chain/opPools/types.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
@@ -341,8 +342,9 @@ export function getBeaconPoolApi({
 
       // TODO EIP-8025: Add full proof verification (dummy accept for devnet)
 
-      // Add to pool
-      const insertOutcome = chain.executionProofPool.add(executionProof);
+      // Add to pool (pass clock slot to reject far-future proofs)
+      const clockSlot = chain.clock.currentSlot;
+      const insertOutcome = chain.executionProofPool.add(executionProof, clockSlot);
       logger.info("Execution proof submitted via API", {
         slot,
         blockRoot: blockRootHex,
@@ -350,11 +352,13 @@ export function getBeaconPoolApi({
         insertOutcome,
       });
 
-      // Publish to gossip network (best-effort — may fail if no peers subscribe)
-      try {
-        await network.publishExecutionProof(executionProof);
-      } catch (e) {
-        logger.debug("Failed to publish execution proof to gossip", {slot, proofId}, e as Error);
+      // Only publish to gossip if the proof was actually accepted
+      if (insertOutcome === InsertOutcome.NewData) {
+        try {
+          await network.publishExecutionProof(executionProof);
+        } catch (e) {
+          logger.debug("Failed to publish execution proof to gossip", {slot, proofId}, e as Error);
+        }
       }
 
       return {};

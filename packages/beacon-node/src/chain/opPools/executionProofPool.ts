@@ -45,10 +45,15 @@ export class ExecutionProofPool {
    * Add a verified proof to the pool.
    * Deduplicates by (blockRoot, proofId) — only one proof per type per block.
    */
-  add(proof: ExecutionProof): InsertOutcome {
+  add(proof: ExecutionProof, clockSlot?: Slot): InsertOutcome {
     const {slot, blockRoot, proofId} = proof;
 
     if (slot < this.lowestPermissibleSlot) {
+      return InsertOutcome.Old;
+    }
+
+    // Reject far-future slots to prevent unbounded memory growth via spam
+    if (clockSlot !== undefined && slot > clockSlot + SLOTS_RETAINED) {
       return InsertOutcome.Old;
     }
 
