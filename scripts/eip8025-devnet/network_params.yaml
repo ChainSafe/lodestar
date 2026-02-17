@@ -1,13 +1,12 @@
-# EIP-8025 Optional Execution Proofs — Lodestar Devnet
+# EIP-8025 Optional Execution Proofs — Mixed Client Devnet
 #
-# Lodestar-only devnet to validate EIP-8025 implementation.
-# Cross-client testing (Lighthouse/Prysm) pending ethpandaops image builds.
+# Lodestar + Lighthouse mixed devnet for EIP-8025 interop testing.
 #
 # Usage:
 #   kurtosis run github.com/ethpandaops/ethereum-package --args-file network_params.yaml
 
 participants:
-  # Normal supernode with real execution (produces blocks)
+  # Normal Lodestar supernode (produces blocks)
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: lodestar
@@ -18,17 +17,18 @@ participants:
     count: 1
     validator_count: 128
 
+  # Normal Lighthouse supernode (produces blocks)
   - el_type: geth
     el_image: ethereum/client-go:latest
-    cl_type: lodestar
-    cl_image: lodestar:eip8025
+    cl_type: lighthouse
+    cl_image: ethpandaops/lighthouse:eth-act-optional-proofs
     cl_extra_params:
-      - --targetPeers=5
+      - --target-peers=5
     supernode: true
     count: 1
     validator_count: 128
 
-  # Lodestar zkvm node — receives proofs via gossip/API
+  # Lodestar zkvm node
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: lodestar
@@ -37,6 +37,17 @@ participants:
       - --activateZkvm
       - --chain.minProofsRequired=1
       - --targetPeers=5
+    count: 1
+    validator_count: 0
+
+  # Lighthouse zkvm node — interop target
+  - el_type: reth
+    el_image: ghcr.io/paradigmxyz/reth:latest
+    cl_type: lighthouse
+    cl_image: ethpandaops/lighthouse:eth-act-optional-proofs
+    cl_extra_params:
+      - --activate-zkvm
+      - --target-peers=5
     count: 1
     validator_count: 0
 
