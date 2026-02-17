@@ -350,8 +350,12 @@ export function getBeaconPoolApi({
         insertOutcome,
       });
 
-      // Publish to gossip network
-      await network.publishExecutionProof(executionProof);
+      // Publish to gossip network (best-effort — may fail if no peers subscribe)
+      try {
+        await network.publishExecutionProof(executionProof);
+      } catch (e) {
+        logger.debug("Failed to publish execution proof to gossip", {slot, proofId}, e as Error);
+      }
 
       return {};
     },

@@ -1,38 +1,34 @@
-# EIP-8025 Optional Execution Proofs — Mixed Client Devnet
+# EIP-8025 Optional Execution Proofs — Lodestar Devnet
 #
-# This config runs a kurtosis devnet with:
-# - 2 normal nodes (reth EL, no zkvm)
-# - 1 Lodestar node in zkvm mode
-# - 1 Lighthouse node in zkvm mode (interop target)
+# Lodestar-only devnet to validate EIP-8025 implementation.
+# Cross-client testing (Lighthouse/Prysm) pending ethpandaops image builds.
 #
 # Usage:
 #   kurtosis run github.com/ethpandaops/ethereum-package --args-file network_params.yaml
-#
-# Build Lodestar image first:
-#   cd ~/lodestar-eip8025
-#   docker build -t lodestar:eip8025 -f Dockerfile .
 
 participants:
-  # Normal nodes with real execution (validators produce blocks)
+  # Normal supernode with real execution (produces blocks)
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: lodestar
     cl_image: lodestar:eip8025
     cl_extra_params:
       - --targetPeers=5
+    supernode: true
     count: 1
-    validator_count: 32
+    validator_count: 128
 
   - el_type: geth
     el_image: ethereum/client-go:latest
-    cl_type: lighthouse
-    cl_image: ethpandaops/lighthouse:optional-proofs
+    cl_type: lodestar
+    cl_image: lodestar:eip8025
     cl_extra_params:
-      - --target-peers=5
+      - --targetPeers=5
+    supernode: true
     count: 1
-    validator_count: 32
+    validator_count: 128
 
-  # Lodestar zkvm node — tracks chain via proofs
+  # Lodestar zkvm node — receives proofs via gossip/API
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: lodestar
@@ -41,17 +37,6 @@ participants:
       - --activateZkvm
       - --chain.minProofsRequired=1
       - --targetPeers=5
-    count: 1
-    validator_count: 0
-
-  # Lighthouse zkvm node — interop target
-  - el_type: reth
-    el_image: ghcr.io/paradigmxyz/reth:latest
-    cl_type: lighthouse
-    cl_image: ethpandaops/lighthouse:optional-proofs
-    cl_extra_params:
-      - --activate-zkvm
-      - --target-peers=5
     count: 1
     validator_count: 0
 

@@ -1,112 +1,60 @@
-# EIP-8025 Mixed Client Devnet
+# EIP-8025 Devnet (Lodestar-first)
 
-Local kurtosis devnet for testing EIP-8025 optional execution proofs across clients.
+Kurtosis devnet to validate Lodestar EIP-8025 implementation end-to-end.
 
-## Architecture
+> Current state: Lodestar-only topology is fully runnable.
+> Cross-client Lighthouse/Prysm interop in this script is pending availability of published optional-proofs images.
 
-```
-┌─────────────────────────────────────────────────┐
-│  Kurtosis Devnet                                │
-│                                                 │
-│  ┌──────────────┐    ┌──────────────┐          │
-│  │ Lodestar     │    │ Lighthouse   │          │
-│  │ + reth (EL)  │◄──►│ + geth (EL)  │          │
-│  │ validators   │    │ validators   │          │
-│  └──────┬───────┘    └──────┬───────┘          │
-│         │   gossip          │                   │
-│  ┌──────▼───────┐    ┌──────▼───────┐          │
-│  │ Lodestar     │    │ Lighthouse   │          │
-│  │ --activateZkvm│   │ --activate-  │          │
-│  │ + reth (EL)  │◄──►│   zkvm       │          │
-│  │ no validators│    │ + reth (EL)  │          │
-│  └──────────────┘    └──────────────┘          │
-└─────────────────────────────────────────────────┘
-         ▲                      ▲
-         │  POST /pool/         │
-         │  execution_proofs    │
-    ┌────┴──────────────────────┴────┐
-    │       Dummy Prover             │
-    │  (subscribes to head events,   │
-    │   submits fake proofs)         │
-    └────────────────────────────────┘
-```
+## Topology
 
-## Prerequisites
+- `cl-1-lodestar-reth`: normal node + validators (supernode)
+- `cl-2-lodestar-geth`: normal node + validators (supernode)
+- `cl-3-lodestar-reth`: zkvm node (`--activateZkvm`, no validators)
+- `el-*`: matching EL clients (reth/geth)
+- `dora`: optional dashboard
 
-- Docker
-- [Kurtosis](https://docs.kurtosis.com/install/)
-- Node.js 20+
-- Lodestar Docker image built from this branch
+Dummy prover submits proofs to zkvm node via:
+- `POST /eth/v1/beacon/pool/execution_proofs`
 
 ## Quick Start
 
 ```bash
-# 1. Build the Lodestar image from the EIP-8025 branch (Dockerfile.dev is faster)
+# 1) Build Lodestar image from this branch
 cd ~/lodestar-eip8025
-docker build -t lodestar:eip8025 -f Dockerfile.dev .
+docker build -t lodestar:eip8025 -f Dockerfile .
 
-# 2. Start the devnet
-./scripts/eip8025-devnet/start-devnet.sh
+# 2) Start devnet
+kurtosis run github.com/ethpandaops/ethereum-package \
+  --enclave eip8025-devnet \
+  --args-file scripts/eip8025-devnet/network_params.yaml
 
-# 3. Find the Lodestar zkvm node's beacon API URL
-kurtosis port print eip8025-devnet cl-3-lodestar-reth http
-
-# 4. Start the dummy prover against it
+# 3) Start dummy prover against zkvm node
 node scripts/dummy-prover.mjs \
-  --beacon-node http://127.0.0.1:<PORT> \
+  --beacon-node http://127.0.0.1:33015 \
   --proofs-per-block 1 \
-  --proof-delay-ms 500
+  --proof-delay-ms 200
 ```
 
-## Verifying Interop
+## Verify
 
-### Check proof gossip
 ```bash
-# Lodestar logs — look for "Received execution proof via gossip"
-kurtosis service logs eip8025-devnet cl-3-lodestar-reth 2>&1 | grep -i "execution.proof"
+# Proofs are being submitted
+curl -s http://127.0.0.1:33015/eth/v1/beacon/pool/execution_proofs | jq '.data | length'
 
-# Lighthouse logs — look for execution proof messages
-kurtosis service logs eip8025-devnet cl-4-lighthouse-reth 2>&1 | grep -i "execution.proof"
+# Check execution proof handling logs
+kurtosis service logs eip8025-devnet cl-3-lodestar-reth | grep -i "execution proof\|execution_proof"
+
+# Check zkvm ENR
+curl -s http://127.0.0.1:33015/eth/v1/node/identity | jq -r '.data.enr'
 ```
 
-### Query proof pool via API
-```bash
-# Get proofs from Lodestar
-curl http://127.0.0.1:<PORT>/eth/v1/beacon/pool/execution_proofs
+## Known caveats
 
-# Get proofs from Lighthouse
-curl http://127.0.0.1:<PORT>/eth/v1/beacon/pool/execution_proofs
-```
-
-### Check ENR zkvm flag
-```bash
-# Lodestar node identity
-curl http://127.0.0.1:<PORT>/eth/v1/node/identity | jq '.data.enr'
-# Should contain zkvm=1 in the ENR
-```
-
-## Configuration
-
-### network_params.yaml
-
-Key settings:
-- `fulu_fork_epoch: 1` — Fulu activates at epoch 1 (zkvm only available post-Fulu)
-- `seconds_per_slot: 6` — Faster than mainnet for quicker testing
-- `--activateZkvm` / `--activate-zkvm` — Enables zkvm mode per client
-- `--chain.minProofsRequired=1` — Only require 1 proof type for availability (Lodestar)
-
-### dummy-prover.mjs
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--beacon-node` | `http://localhost:5052` | Beacon node HTTP endpoint |
-| `--proofs-per-block` | `1` | Number of proof IDs (0..N-1) per block |
-| `--proof-delay-ms` | `1000` | Simulated proof generation time |
-| `--backfill-slots` | `0` | Backfill proofs for N recent slots on startup |
+- If no peers subscribe to `execution_proof` gossip topic, API submission still succeeds (proof is stored locally; gossip publish is best-effort).
+- For mixed-client interop, update `network_params.yaml` to include Lighthouse/Prysm optional-proofs images when available.
 
 ## Cleanup
 
 ```bash
-kurtosis enclave stop eip8025-devnet
-kurtosis enclave rm eip8025-devnet
+kurtosis enclave rm -f eip8025-devnet
 ```

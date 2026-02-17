@@ -163,9 +163,10 @@ async function subscribeToEvents(onEvent) {
 
   while (true) {
     try {
+      const controller = new AbortController();
       const resp = await fetch(url, {
         headers: {Accept: "text/event-stream"},
-        signal: AbortSignal.timeout(0), // no timeout for streaming
+        signal: controller.signal,
       });
 
       if (!resp.ok) {
