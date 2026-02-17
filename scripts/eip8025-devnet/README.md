@@ -14,6 +14,7 @@ Kurtosis devnet to validate Lodestar EIP-8025 implementation end-to-end.
 - `dora`: optional dashboard
 
 Dummy prover submits proofs to zkvm node via:
+
 - `POST /eth/v1/beacon/pool/execution_proofs`
 
 ## Quick Start
