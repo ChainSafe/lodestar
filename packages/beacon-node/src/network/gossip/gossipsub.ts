@@ -60,7 +60,7 @@ export type Eth2GossipsubOpts = {
   skipParamsLog?: boolean;
   disableLightClientServer?: boolean;
   /** EIP-8025: Enable execution proof gossip topic */
-  activateZkvm?: boolean;
+  activateZkevm?: boolean;
   /**
    * Direct peers for GossipSub - these peers maintain permanent mesh connections without GRAFT/PRUNE.
    * Supports multiaddr strings with peer ID (e.g., "/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...")
@@ -418,7 +418,7 @@ function attSubnetLabel(subnet: SubnetID): string {
 
 function getMetricsTopicStrToLabel(
   networkConfig: NetworkConfig,
-  opts: {disableLightClientServer: boolean; activateZkvm?: boolean}
+  opts: {disableLightClientServer: boolean; activateZkevm?: boolean}
 ): TopicStrToLabel {
   const {config} = networkConfig;
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
@@ -436,7 +436,7 @@ function getMetricsTopicStrToLabel(
     const topics = getCoreTopicsAtFork(networkConfig, currentForkBoundary.fork, {
       subscribeAllSubnets: true,
       disableLightClientServer: opts.disableLightClientServer,
-      activateZkvm: opts.activateZkvm,
+      activateZkevm: opts.activateZkevm,
     });
     for (const topic of topics) {
       metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, boundary: currentForkBoundary}), topic.type);

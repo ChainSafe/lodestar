@@ -166,8 +166,8 @@ export class BeaconChain implements IBeaconChain {
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly executionProofPool: ExecutionProofPool;
   /** EIP-8025: When true, skip EL newPayload calls and use execution proofs for validation */
-  readonly activateZkvm: boolean;
-  /** EIP-8025: Minimum distinct proof types required per block in zkvm mode */
+  readonly activateZkevm: boolean;
+  /** EIP-8025: Minimum distinct proof types required per block in zkEVM mode */
   readonly minProofsRequired: number;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
@@ -297,7 +297,7 @@ export class BeaconChain implements IBeaconChain {
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.executionProofPool = new ExecutionProofPool();
-    this.activateZkvm = opts.activateZkvm ?? false;
+    this.activateZkevm = opts.activateZkevm ?? false;
     this.minProofsRequired = opts.minProofsRequired ?? 1;
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
@@ -1461,7 +1461,7 @@ export class BeaconChain implements IBeaconChain {
    * Called from both gossip handler and REST API handler when a new proof is added to the pool.
    */
   maybeTransitionToValidOnProofArrival(proof: {slot: number; blockRoot: Uint8Array; blockHash: Uint8Array}): void {
-    if (!this.activateZkvm) {
+    if (!this.activateZkevm) {
       return;
     }
 
@@ -1488,7 +1488,7 @@ export class BeaconChain implements IBeaconChain {
       // Refresh the cached fork choice head so API responses reflect the updated execution status.
       // validateLatestHash updates the proto-array nodes but the cached head is a stale snapshot.
       this.recomputeForkChoiceHead(ForkchoiceCaller.onExecutionProof);
-      this.logger.info("Execution proofs sufficient, marked block as execution-valid (zkvm mode)", {
+      this.logger.info("Execution proofs sufficient, marked block as execution-valid (zkEVM mode)", {
         slot: proof.slot,
         blockRoot: blockRootHex,
         execBlockHash,

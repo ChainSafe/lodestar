@@ -18,7 +18,7 @@ type ProofId = number;
  *
  * Stores verified execution proofs received via gossip or API submission.
  * Used to:
- * - Track proof availability for blocks (zkvm mode gating)
+ * - Track proof availability for blocks (zkEVM mode gating)
  * - Serve proofs via req/resp to peers
  * - Deduplicate incoming proofs
  */

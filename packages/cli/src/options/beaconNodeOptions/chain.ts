@@ -36,10 +36,10 @@ export type ChainArgs = {
   "chain.maxCPStateEpochsOnDisk"?: number;
 
   "chain.pruneHistory"?: boolean;
-  // EIP-8025: zkvm/stateless execution
-  activateZkvm?: boolean;
+  // EIP-8025: zkEVM/stateless execution
+  activateZkevm?: boolean;
   "chain.minProofsRequired"?: number;
-  "chain.zkvmGenerationProofTypes"?: number[];
+  "chain.zkevmGenerationProofTypes"?: number[];
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -79,10 +79,10 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
     pruneHistory: args["chain.pruneHistory"],
-    // EIP-8025: zkvm/stateless execution
-    activateZkvm: args.activateZkvm,
+    // EIP-8025: zkEVM/stateless execution
+    activateZkevm: args.activateZkevm,
     minProofsRequired: args["chain.minProofsRequired"],
-    zkvmGenerationProofTypes: args["chain.zkvmGenerationProofTypes"],
+    zkevmGenerationProofTypes: args["chain.zkevmGenerationProofTypes"],
   };
 }
 
@@ -319,25 +319,25 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  // EIP-8025: zkvm/stateless execution options
+  // EIP-8025: zkEVM/stateless execution options
 
-  activateZkvm: {
-    alias: ["activate-zkvm"],
+  activateZkevm: {
+    alias: ["activate-zkevm"],
     description:
-      "Enable zkvm/stateless execution mode (EIP-8025). Blocks are gated by proof availability instead of execution layer validation.",
+      "Enable zkEVM/stateless execution mode (EIP-8025). Blocks are gated by proof availability instead of execution layer validation.",
     type: "boolean",
-    default: defaultOptions.chain.activateZkvm,
+    default: defaultOptions.chain.activateZkevm,
     group: "chain",
   },
 
   "chain.minProofsRequired": {
-    description: "Minimum distinct proof types required per block in zkvm mode",
+    description: "Minimum distinct proof types required per block in zkEVM mode",
     type: "number",
     default: defaultOptions.chain.minProofsRequired,
     group: "chain",
   },
 
-  "chain.zkvmGenerationProofTypes": {
+  "chain.zkevmGenerationProofTypes": {
     description: "Which proof type IDs this node generates (comma-separated). Empty = verify-only node.",
     type: "array",
     number: true,
