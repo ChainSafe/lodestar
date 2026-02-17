@@ -1,16 +1,17 @@
-import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
-import type {PublishOpts} from "@libp2p/gossipsub/types";
-import type {PeerId, PrivateKey} from "@libp2p/interface";
-import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {routes} from "@lodestar/api";
-import {BeaconConfig} from "@lodestar/config";
-import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq} from "@lodestar/params";
-import {ResponseIncoming} from "@lodestar/reqresp";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import type { PeerScoreStatsDump } from "@libp2p/gossipsub/score";
+import type { PublishOpts } from "@libp2p/gossipsub/types";
+import type { PeerId, PrivateKey } from "@libp2p/interface";
+import { peerIdFromPrivateKey } from "@libp2p/peer-id";
+import { routes } from "@lodestar/api";
+import { BeaconConfig } from "@lodestar/config";
+import { LoggerNode } from "@lodestar/logger/node";
+import { ForkSeq } from "@lodestar/params";
+import { ResponseIncoming } from "@lodestar/reqresp";
+import { computeEpochAtSlot } from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   DataColumnSidecar,
+  ExecutionProof,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -29,43 +30,43 @@ import {
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
-import {prettyPrintIndices, sleep} from "@lodestar/utils";
-import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
-import {ChainEvent, IBeaconChain} from "../chain/index.js";
-import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
-import {IBeaconDb} from "../db/interface.js";
-import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
-import {IClock} from "../util/clock.js";
-import {CustodyConfig} from "../util/dataColumns.js";
-import {PeerIdStr, peerIdToString} from "../util/peerId.js";
-import {promiseAllMaybeAsync} from "../util/promises.js";
+import { prettyPrintIndices, sleep } from "@lodestar/utils";
+import { BlockInputSource } from "../chain/blocks/blockInput/types.js";
+import { ChainEvent, IBeaconChain } from "../chain/index.js";
+import { computeSubnetForDataColumnSidecar } from "../chain/validation/dataColumnSidecar.js";
+import { IBeaconDb } from "../db/interface.js";
+import { Metrics, RegistryMetricCreator } from "../metrics/index.js";
+import { IClock } from "../util/clock.js";
+import { CustodyConfig } from "../util/dataColumns.js";
+import { PeerIdStr, peerIdToString } from "../util/peerId.js";
+import { promiseAllMaybeAsync } from "../util/promises.js";
 import {
   BeaconBlocksByRootRequest,
   BlobSidecarsByRootRequest,
   DataColumnSidecarsByRootRequest,
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
-import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
-import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
-import {getActiveForkBoundaries} from "./forks.js";
-import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
-import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
-import {INetwork} from "./interface.js";
-import {NetworkOptions} from "./options.js";
-import {PeerAction, PeerScoreStats} from "./peers/index.js";
-import {PeerSyncMeta} from "./peers/peersData.js";
-import {AggregatorTracker} from "./processor/aggregatorTracker.js";
-import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
-import {ReqRespMethod} from "./reqresp/index.js";
-import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
+import { INetworkCore, NetworkCore, WorkerNetworkCore } from "./core/index.js";
+import { INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData } from "./events.js";
+import { getActiveForkBoundaries } from "./forks.js";
+import { GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap } from "./gossip/index.js";
+import { getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic } from "./gossip/topic.js";
+import { INetwork } from "./interface.js";
+import { NetworkOptions } from "./options.js";
+import { PeerAction, PeerScoreStats } from "./peers/index.js";
+import { PeerSyncMeta } from "./peers/peersData.js";
+import { AggregatorTracker } from "./processor/aggregatorTracker.js";
+import { NetworkProcessor, PendingGossipsubMessage } from "./processor/index.js";
+import { ReqRespMethod } from "./reqresp/index.js";
+import { GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod } from "./reqresp/types.js";
 import {
   collectExactOneTyped,
   collectMaxResponseTyped,
   collectMaxResponseTypedWithBytes,
 } from "./reqresp/utils/collect.js";
-import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
-import {CommitteeSubscription} from "./subnets/index.js";
-import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
+import { collectSequentialBlocksInRange } from "./reqresp/utils/collectSequentialBlocksInRange.js";
+import { CommitteeSubscription } from "./subnets/index.js";
+import { isPublishToZeroPeersError, prettyPrintPeerIdStr } from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -138,10 +139,10 @@ export class Network implements INetwork {
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
     this.chain.emitter.on(routes.events.EventType.head, this.onHead);
-    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) =>
+    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({ data }) =>
       this.onLightClientFinalityUpdate(data)
     );
-    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) =>
+    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({ data }) =>
       this.onLightClientOptimisticUpdate(data)
     );
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
@@ -175,39 +176,39 @@ export class Network implements INetwork {
 
     const core = opts.useWorker
       ? await WorkerNetworkCore.init({
-          opts: {
-            ...opts,
-            peerStoreDir,
-            metricsEnabled: Boolean(metrics),
-            activeValidatorCount,
-            genesisTime: chain.genesisTime,
-            initialStatus,
-            initialCustodyGroupCount,
-          },
-          config,
-          privateKey,
-          logger,
-          events,
-          metrics,
-          getReqRespHandler,
-        })
-      : await NetworkCore.init({
-          opts,
-          config,
-          privateKey,
+        opts: {
+          ...opts,
           peerStoreDir,
-          logger,
-          clock: chain.clock,
-          events,
-          getReqRespHandler,
-          metricsRegistry: metrics ? new RegistryMetricCreator() : null,
+          metricsEnabled: Boolean(metrics),
+          activeValidatorCount,
+          genesisTime: chain.genesisTime,
           initialStatus,
           initialCustodyGroupCount,
-          activeValidatorCount,
-        });
+        },
+        config,
+        privateKey,
+        logger,
+        events,
+        metrics,
+        getReqRespHandler,
+      })
+      : await NetworkCore.init({
+        opts,
+        config,
+        privateKey,
+        peerStoreDir,
+        logger,
+        clock: chain.clock,
+        events,
+        getReqRespHandler,
+        metricsRegistry: metrics ? new RegistryMetricCreator() : null,
+        initialStatus,
+        initialCustodyGroupCount,
+        activeValidatorCount,
+      });
 
     const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
+      { chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker },
       opts
     );
 
@@ -303,7 +304,7 @@ export class Network implements INetwork {
     if (!syncMeta) {
       throw new Error(`peerId=${prettyPrintPeerIdStr(peerId)} not in connectedPeerSyncMeta`);
     }
-    return {peerId, ...syncMeta};
+    return { peerId, ...syncMeta };
   }
 
   getConnectedPeerCount(): number {
@@ -350,7 +351,7 @@ export class Network implements INetwork {
     const epoch = computeEpochAtSlot(signedBlock.message.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
-    return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, boundary}, signedBlock, {
+    return this.publishGossip<GossipType.beacon_block>({ type: GossipType.beacon_block, boundary }, signedBlock, {
       ignoreDuplicatePublishError: true,
     });
   }
@@ -361,7 +362,7 @@ export class Network implements INetwork {
 
     const subnet = blobSidecar.index;
 
-    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, boundary, subnet}, blobSidecar, {
+    return this.publishGossip<GossipType.blob_sidecar>({ type: GossipType.blob_sidecar, boundary, subnet }, blobSidecar, {
       ignoreDuplicatePublishError: true,
     });
   }
@@ -375,7 +376,7 @@ export class Network implements INetwork {
 
     const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
     return this.publishGossip<GossipType.data_column_sidecar>(
-      {type: GossipType.data_column_sidecar, boundary, subnet},
+      { type: GossipType.data_column_sidecar, boundary, subnet },
       dataColumnSidecar,
       {
         ignoreDuplicatePublishError: true,
@@ -393,9 +394,9 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.beacon_aggregate_and_proof>(
-      {type: GossipType.beacon_aggregate_and_proof, boundary},
+      { type: GossipType.beacon_aggregate_and_proof, boundary },
       aggregateAndProof,
-      {ignoreDuplicatePublishError: true}
+      { ignoreDuplicatePublishError: true }
     );
   }
 
@@ -404,9 +405,9 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.beacon_attestation>(
-      {type: GossipType.beacon_attestation, boundary, subnet},
+      { type: GossipType.beacon_attestation, boundary, subnet },
       attestation,
-      {ignoreDuplicatePublishError: true}
+      { ignoreDuplicatePublishError: true }
     );
   }
 
@@ -414,7 +415,7 @@ export class Network implements INetwork {
     const epoch = voluntaryExit.message.epoch;
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
-    return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit, {
+    return this.publishGossip<GossipType.voluntary_exit>({ type: GossipType.voluntary_exit, boundary }, voluntaryExit, {
       ignoreDuplicatePublishError: true,
     });
   }
@@ -426,9 +427,9 @@ export class Network implements INetwork {
 
       if (fork >= ForkSeq.capella) {
         const publishPromise = this.publishGossip<GossipType.bls_to_execution_change>(
-          {type: GossipType.bls_to_execution_change, boundary},
+          { type: GossipType.bls_to_execution_change, boundary },
           blsToExecutionChange,
-          {ignoreDuplicatePublishError: true}
+          { ignoreDuplicatePublishError: true }
         );
         publishChanges.push(publishPromise);
       }
@@ -445,7 +446,7 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.proposer_slashing>(
-      {type: GossipType.proposer_slashing, boundary},
+      { type: GossipType.proposer_slashing, boundary },
       proposerSlashing
     );
   }
@@ -455,7 +456,7 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.attester_slashing>(
-      {type: GossipType.attester_slashing, boundary},
+      { type: GossipType.attester_slashing, boundary },
       attesterSlashing
     );
   }
@@ -465,7 +466,7 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.sync_committee>(
-      {type: GossipType.sync_committee, boundary, subnet},
+      { type: GossipType.sync_committee, boundary, subnet },
       signature,
       {
         ignoreDuplicatePublishError: true,
@@ -478,9 +479,9 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.sync_committee_contribution_and_proof>(
-      {type: GossipType.sync_committee_contribution_and_proof, boundary},
+      { type: GossipType.sync_committee_contribution_and_proof, boundary },
       contributionAndProof,
-      {ignoreDuplicatePublishError: true}
+      { ignoreDuplicatePublishError: true }
     );
   }
 
@@ -489,7 +490,7 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.light_client_finality_update>(
-      {type: GossipType.light_client_finality_update, boundary},
+      { type: GossipType.light_client_finality_update, boundary },
       update
     );
   }
@@ -499,7 +500,7 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.light_client_optimistic_update>(
-      {type: GossipType.light_client_optimistic_update, boundary},
+      { type: GossipType.light_client_optimistic_update, boundary },
       update
     );
   }
@@ -509,9 +510,20 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.execution_payload>(
-      {type: GossipType.execution_payload, boundary},
+      { type: GossipType.execution_payload, boundary },
       signedEnvelope,
-      {ignoreDuplicatePublishError: true}
+      { ignoreDuplicatePublishError: true }
+    );
+  }
+
+  async publishExecutionProof(executionProof: ExecutionProof): Promise<number> {
+    const epoch = computeEpochAtSlot(executionProof.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.execution_proof>(
+      { type: GossipType.execution_proof, boundary },
+      executionProof,
+      { ignoreDuplicatePublishError: true }
     );
   }
 
@@ -529,7 +541,7 @@ export class Network implements INetwork {
     };
     const sentPeers = await this.core.publishGossip(topicStr, messageData, opts);
 
-    this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers, currentSlot: this.clock.currentSlot});
+    this.logger.verbose("Publish to topic", { topic: topicStr, sentPeers, currentSlot: this.clock.currentSlot });
     return sentPeers;
   }
 
@@ -638,7 +650,7 @@ export class Network implements INetwork {
   ): Promise<DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
-      request.reduce((total, {columns}) => total + columns.length, 0),
+      request.reduce((total, { columns }) => total + columns.length, 0),
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot],
       this.chain.serializedCache
     );
@@ -678,7 +690,7 @@ export class Network implements INetwork {
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
 
     // ReqResp outgoing request, emit from main thread to worker
-    return this.core.sendReqRespRequest({peerId, method, versions, requestData});
+    return this.core.sendReqRespRequest({ peerId, method, versions, requestData });
   }
 
   // Debug
@@ -792,7 +804,7 @@ export class Network implements INetwork {
   };
 
   private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
-    const {peer, clientAgent, custodyColumns, status} = data;
+    const { peer, clientAgent, custodyColumns, status } = data;
     const earliestAvailableSlot = (status as fulu.Status).earliestAvailableSlot;
     this.logger.verbose("onPeerConnected", {
       peer,

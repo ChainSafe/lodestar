@@ -73,6 +73,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.execution_payload:
     case GossipType.payload_attestation_message:
     case GossipType.execution_payload_bid:
+    case GossipType.execution_proof:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -124,6 +125,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.gloas.PayloadAttestationMessage;
     case GossipType.execution_payload_bid:
       return ssz.gloas.SignedExecutionPayloadBid;
+    case GossipType.execution_proof:
+      return ssz.eip8025.ExecutionProof;
   }
 }
 
@@ -203,6 +206,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.execution_payload:
       case GossipType.payload_attestation_message:
       case GossipType.execution_payload_bid:
+      case GossipType.execution_proof:
         return {type: gossipTypeStr, boundary, encoding};
     }
 
@@ -242,7 +246,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
 export function getCoreTopicsAtFork(
   networkConfig: NetworkConfig,
   fork: ForkName,
-  opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
+  opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean; activateZkvm?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   // Common topics for all forks
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
@@ -262,6 +266,11 @@ export function getCoreTopicsAtFork(
   // After fulu also track data_column_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.fulu) {
     topics.push(...getDataColumnSidecarTopics(networkConfig));
+  }
+
+  // EIP-8025: Subscribe to execution_proof gossip when zkvm mode is active on Fulu+
+  if (opts.activateZkvm && ForkSeq[fork] >= ForkSeq.fulu) {
+    topics.push({type: GossipType.execution_proof});
   }
 
   // After Deneb and before Fulu also track blob_sidecar_{subnet_id}
@@ -351,4 +360,5 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.execution_payload]: true,
   [GossipType.payload_attestation_message]: true,
   [GossipType.execution_payload_bid]: true,
+  [GossipType.execution_proof]: true,
 };
