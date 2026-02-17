@@ -41,19 +41,19 @@ participants:
     count: 1
     validator_count: 96
 
-  # Lodestar zkEVM node
+  # Lodestar zkvm node
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: lodestar
     cl_image: lodestar:eip8025
     cl_extra_params:
-      - --activateZkevm
+      - --activateZkvm
       - --chain.minProofsRequired=1
       - --targetPeers=8
     count: 1
     validator_count: 0
 
-  # Lighthouse zkEVM node
+  # Lighthouse zkvm node
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: lighthouse
@@ -64,7 +64,7 @@ participants:
     count: 1
     validator_count: 0
 
-  # Prysm zkEVM node
+  # Prysm zkvm node
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: prysm

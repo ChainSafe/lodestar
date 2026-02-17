@@ -9,11 +9,11 @@ Kurtosis devnet to validate Lodestar EIP-8025 implementation end-to-end.
 
 - `cl-1-lodestar-reth`: normal node + validators (supernode)
 - `cl-2-lodestar-geth`: normal node + validators (supernode)
-- `cl-3-lodestar-reth`: zkEVM node (`--activateZkevm`, no validators)
+- `cl-3-lodestar-reth`: zkvm node (`--activateZkvm`, no validators)
 - `el-*`: matching EL clients (reth/geth)
 - `dora`: optional dashboard
 
-Dummy prover submits proofs to zkEVM node via:
+Dummy prover submits proofs to zkvm node via:
 
 - `POST /eth/v1/beacon/pool/execution_proofs`
 
@@ -29,7 +29,7 @@ kurtosis run github.com/ethpandaops/ethereum-package \
   --enclave eip8025-devnet \
   --args-file scripts/eip8025-devnet/network_params.yaml
 
-# 3) Start dummy prover against zkEVM node
+# 3) Start dummy prover against zkvm node
 node scripts/dummy-prover.mjs \
   --beacon-node http://127.0.0.1:33015 \
   --proofs-per-block 1 \
@@ -45,7 +45,7 @@ curl -s http://127.0.0.1:33015/eth/v1/beacon/pool/execution_proofs | jq '.data |
 # Check execution proof handling logs
 kurtosis service logs eip8025-devnet cl-3-lodestar-reth | grep -i "execution proof\|execution_proof"
 
-# Check zkEVM ENR
+# Check zkvm ENR
 curl -s http://127.0.0.1:33015/eth/v1/node/identity | jq -r '.data.enr'
 ```
 

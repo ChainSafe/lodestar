@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {ExecutionProof} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {DummyZkevmExecutionProofVerifier} from "../../../../src/chain/validation/executionProofVerifier.js";
+import {DummyZkvmExecutionProofVerifier} from "../../../../src/chain/validation/executionProofVerifier.js";
 
 function bytes32(byte: number): Uint8Array {
   return Uint8Array.from({length: 32}, () => byte);
@@ -17,8 +17,8 @@ function makeProof(overrides: Partial<ExecutionProof> & {proofId: number}): Exec
   };
 }
 
-describe("DummyZkevmExecutionProofVerifier", () => {
-  const verifier = new DummyZkevmExecutionProofVerifier();
+describe("DummyZkvmExecutionProofVerifier", () => {
+  const verifier = new DummyZkvmExecutionProofVerifier();
   const blockRoot = bytes32(0xaa);
   const blockHash = bytes32(0xbb);
   const expectedBlockRootHex = toRootHex(blockRoot);

@@ -1,15 +1,15 @@
 # EIP-8025 Phase E: Proof-Driven Execution Test
 #
-# Tests that a Lodestar node with --chain.activateZkevm=true can sync
+# Tests that a Lodestar node with --chain.activateZkvm=true can sync
 # and validate blocks using execution proofs instead of an EL client.
 #
-# The zkEVM Lodestar node still has an EL paired (kurtosis requirement),
+# The zkvm Lodestar node still has an EL paired (kurtosis requirement),
 # but it does NOT call engine_newPayload — instead it uses proofs from
 # the gossip network to validate execution payloads.
 #
 # Validation criteria:
 # - Chain finalizes within 5 epochs
-# - Lodestar zkEVM node stays in sync (no stalls)
+# - Lodestar zkvm node stays in sync (no stalls)
 # - Proofs are delivered and processed successfully
 #
 # Usage:
@@ -51,14 +51,14 @@ participants:
     count: 1
     validator_count: 128
 
-  # Lodestar zkEVM node — PROOF-DRIVEN MODE (the node under test)
+  # Lodestar zkvm node — PROOF-DRIVEN MODE (the node under test)
   # Uses execution proofs instead of EL for payload verification
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: lodestar
     cl_image: lodestar-proof-driven:local
     cl_extra_params:
-      - --activateZkevm
+      - --activateZkvm
       - --chain.minProofsRequired=1
       - --targetPeers=8
     count: 1
