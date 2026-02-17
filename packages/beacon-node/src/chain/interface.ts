@@ -288,6 +288,9 @@ export interface IBeaconChain {
   ): Promise<EpochShuffling>;
   updateBuilderStatus(clockSlot: Slot): void;
 
+  /** EIP-8025: Check if enough execution proofs arrived for a block and transition it to Valid in fork choice */
+  maybeTransitionToValidOnProofArrival(proof: {slot: number; blockRoot: Uint8Array; blockHash: Uint8Array}): void;
+
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
 

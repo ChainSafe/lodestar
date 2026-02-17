@@ -1,6 +1,5 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {ExecutionStatus} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostElectra,
@@ -887,24 +886,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         });
 
         // EIP-8025: In zkvm mode, check if we now have enough proofs to validate this block
-        if (
-          chain.activateZkvm &&
-          insertOutcome === InsertOutcome.NewData &&
-          chain.executionProofPool.hasEnoughProofs(blockRootHex, chain.minProofsRequired)
-        ) {
-          // Look up the execution block hash from the proof to update fork choice
-          const execBlockHash = toRootHex(executionProof.blockHash);
-          chain.forkChoice.validateLatestHash({
-            executionStatus: ExecutionStatus.Valid,
-            latestValidExecHash: execBlockHash,
-          });
-          logger.info("Execution proofs sufficient, marked block as execution-valid (zkvm mode)", {
-            slot: executionProof.slot,
-            blockRoot: blockRootHex,
-            execBlockHash,
-            proofsAvailable: chain.executionProofPool.getProofsByBlockRoot(blockRootHex).length,
-            minRequired: chain.minProofsRequired,
-          });
+        if (insertOutcome === InsertOutcome.NewData) {
+          chain.maybeTransitionToValidOnProofArrival(executionProof);
         }
       } catch (e) {
         logger.error("Error adding execution proof to pool", {}, e as Error);

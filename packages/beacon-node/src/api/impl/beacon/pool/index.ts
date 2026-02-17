@@ -1,6 +1,5 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -362,20 +361,7 @@ export function getBeaconPoolApi({
         }
 
         // EIP-8025: In zkvm mode, check if we now have enough proofs to validate this block
-        if (chain.activateZkvm && chain.executionProofPool.hasEnoughProofs(blockRootHex, chain.minProofsRequired)) {
-          const execBlockHash = toRootHex(executionProof.blockHash);
-          chain.forkChoice.validateLatestHash({
-            executionStatus: ExecutionStatus.Valid,
-            latestValidExecHash: execBlockHash,
-          });
-          logger.info("Execution proofs sufficient, marked block as execution-valid (zkvm mode)", {
-            slot,
-            blockRoot: blockRootHex,
-            execBlockHash,
-            proofsAvailable: chain.executionProofPool.getProofsByBlockRoot(blockRootHex).length,
-            minRequired: chain.minProofsRequired,
-          });
-        }
+        chain.maybeTransitionToValidOnProofArrival(executionProof);
       }
 
       return {};

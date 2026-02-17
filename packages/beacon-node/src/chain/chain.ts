@@ -3,7 +3,7 @@ import {PrivateKey} from "@libp2p/interface";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
 import {
@@ -1453,6 +1453,32 @@ export class BeaconChain implements IBeaconChain {
         targetCustodyGroupCount,
       });
       this.emitter.emit(ChainEvent.updateTargetCustodyGroupCount, targetCustodyGroupCount);
+    }
+  }
+
+  /**
+   * EIP-8025: Check if enough execution proofs arrived for a block and transition it to Valid in fork choice.
+   * Called from both gossip handler and REST API handler when a new proof is added to the pool.
+   */
+  maybeTransitionToValidOnProofArrival(proof: {slot: number; blockRoot: Uint8Array; blockHash: Uint8Array}): void {
+    if (!this.activateZkvm) {
+      return;
+    }
+
+    const blockRootHex = toRootHex(proof.blockRoot);
+    if (this.executionProofPool.hasEnoughProofs(blockRootHex, this.minProofsRequired)) {
+      const execBlockHash = toRootHex(proof.blockHash);
+      this.forkChoice.validateLatestHash({
+        executionStatus: ExecutionStatus.Valid,
+        latestValidExecHash: execBlockHash,
+      });
+      this.logger.info("Execution proofs sufficient, marked block as execution-valid (zkvm mode)", {
+        slot: proof.slot,
+        blockRoot: blockRootHex,
+        execBlockHash,
+        proofsAvailable: this.executionProofPool.getProofsByBlockRoot(blockRootHex).length,
+        minRequired: this.minProofsRequired,
+      });
     }
   }
 
