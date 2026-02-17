@@ -1472,6 +1472,9 @@ export class BeaconChain implements IBeaconChain {
         executionStatus: ExecutionStatus.Valid,
         latestValidExecHash: execBlockHash,
       });
+      // Refresh the cached fork choice head so API responses reflect the updated execution status.
+      // validateLatestHash updates the proto-array nodes but the cached head is a stale snapshot.
+      this.recomputeForkChoiceHead(ForkchoiceCaller.onExecutionProof);
       this.logger.info("Execution proofs sufficient, marked block as execution-valid (zkvm mode)", {
         slot: proof.slot,
         blockRoot: blockRootHex,
