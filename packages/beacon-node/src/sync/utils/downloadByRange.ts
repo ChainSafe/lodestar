@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
+import {RequestErrorCode} from "@lodestar/reqresp";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
@@ -207,6 +208,14 @@ export async function downloadByRange({
       columnsRequest,
     });
   } catch (err) {
+    const errCode = (err as LodestarError<{code: string}>).type?.code;
+    if (isRateLimitRequestError(errCode)) {
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.RATE_LIMITED,
+        reason: (err as Error).message,
+        ...requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}),
+      });
+    }
     throw new DownloadByRangeError({
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR,
       reason: (err as Error).message,
@@ -842,6 +851,17 @@ function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: Download
   return logMeta;
 }
 
+/**
+ * Check whether a reqresp error code indicates the request was rate-limited.
+ */
+export function isRateLimitRequestError(code: string | undefined): boolean {
+  return (
+    code === RequestErrorCode.REQUEST_RATE_LIMITED ||
+    code === RequestErrorCode.REQUEST_SELF_RATE_LIMITED ||
+    code === RequestErrorCode.RESP_RATE_LIMITED
+  );
+}
+
 export enum DownloadByRangeErrorCode {
   MISSING_BLOCKS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOCK_RESPONSE",
   MISSING_BLOBS_RESPONSE = "DOWNLOAD_BY_RANGE_ERROR_MISSING_BLOBS_RESPONSE",
@@ -849,6 +869,9 @@ export enum DownloadByRangeErrorCode {
 
   /** Error at the reqresp layer */
   REQ_RESP_ERROR = "DOWNLOAD_BY_RANGE_ERROR_REQ_RESP_ERROR",
+
+  /** The peer or our own rate limiter throttled the request */
+  RATE_LIMITED = "DOWNLOAD_BY_RANGE_ERROR_RATE_LIMITED",
 
   // Errors validating a chain of blocks (not considering associated data)
 
@@ -901,6 +924,16 @@ export type DownloadByRangeErrorType =
     }
   | {
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR;
+      blockStartSlot?: number;
+      blockCount?: number;
+      blobStartSlot?: number;
+      blobCount?: number;
+      columnStartSlot?: number;
+      columnCount?: number;
+      reason: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.RATE_LIMITED;
       blockStartSlot?: number;
       blockCount?: number;
       blobStartSlot?: number;

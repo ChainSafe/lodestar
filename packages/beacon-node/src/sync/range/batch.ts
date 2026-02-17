@@ -10,7 +10,7 @@ import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
+import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS, MAX_RATE_LIMITED_RETRIES} from "../constants.js";
 import {DownloadByRangeRequests} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
@@ -94,6 +94,8 @@ export class Batch {
   readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
+  /** The number of consecutive rate-limited download attempts. Reset on any successful download. */
+  private rateLimitedAttempts = 0;
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
@@ -285,6 +287,7 @@ export class Batch {
     // ensure that blocks are always sorted before getting stored on the batch.state or being used to getRequests
     blocks.sort((a, b) => a.slot - b.slot);
 
+    this.rateLimitedAttempts = 0; // Reset rate-limit streak on successful download
     this.goodPeers.push(peer);
 
     let allComplete = true;
@@ -323,12 +326,40 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
+    this.rateLimitedAttempts = 0; // Reset rate-limit streak on a non-rate-limit error
     this.failedDownloadAttempts.push(peer);
     if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
     }
 
     this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
+  }
+
+  /**
+   * Downloading -> AwaitingDownload (rate-limited variant)
+   *
+   * Tracked separately from regular download failures. Rate-limited responses indicate the peer
+   * is healthy but throttling us — we should back off rather than burn through download attempts.
+   * Returns the current consecutive rate-limited attempt count for backoff calculation.
+   */
+  downloadingRateLimited(peer: PeerIdStr): number {
+    if (this.state.status !== BatchStatus.Downloading) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
+    }
+
+    this.rateLimitedAttempts++;
+    if (this.rateLimitedAttempts > MAX_RATE_LIMITED_RETRIES) {
+      // After exhausting rate-limit retries, fall through to regular download error handling
+      // so the batch can try a completely different peer or eventually give up
+      this.rateLimitedAttempts = 0;
+      this.failedDownloadAttempts.push(peer);
+      if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
+        throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
+      }
+    }
+
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
+    return this.rateLimitedAttempts;
   }
 
   /**

@@ -14,7 +14,13 @@ import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
-import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
+import {
+  BATCH_BUFFER_SIZE,
+  EPOCHS_PER_BATCH,
+  MAX_LOOK_AHEAD_EPOCHS,
+  RATE_LIMITED_INITIAL_DELAY_MS,
+  RATE_LIMITED_MAX_DELAY_MS,
+} from "../constants.js";
 import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
@@ -473,41 +479,61 @@ export class SyncChain {
         // There's several known error cases where we want to take action on the peer
         const errCode = (res.err as LodestarError<{code: string}>).type?.code;
         this.metrics?.syncRange.downloadByRange.error.inc({client: peer.client, code: errCode ?? "UNKNOWN"});
-        if (this.syncType === RangeSyncType.Finalized) {
-          // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.
-          // The below cases indicate the peer may be on a different chain, so are not penalized during head sync.
+
+        // Rate-limited responses are handled with backoff rather than peer penalties.
+        // The peer is healthy but throttling us — penalizing it would make things worse.
+        if (errCode === DownloadByRangeErrorCode.RATE_LIMITED) {
+          this.logger.debug("Batch download rate limited", {
+            id: this.logId,
+            ...batch.getMetadata(),
+            peer: prettyPrintPeerIdStr(peer.peerId),
+          });
+          const rateLimitedAttempt = batch.downloadingRateLimited(peer.peerId);
+          if (rateLimitedAttempt > 0) {
+            // Back off before retrying: double each attempt, capped at max
+            const delay = Math.min(
+              RATE_LIMITED_INITIAL_DELAY_MS * 2 ** (rateLimitedAttempt - 1),
+              RATE_LIMITED_MAX_DELAY_MS
+            );
+            await new Promise((r) => setTimeout(r, delay));
+          }
+        } else {
+          if (this.syncType === RangeSyncType.Finalized) {
+            // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.
+            // The below cases indicate the peer may be on a different chain, so are not penalized during head sync.
+            switch (errCode) {
+              case BlockInputErrorCode.MISMATCHED_ROOT_HEX:
+              case DownloadByRangeErrorCode.MISSING_BLOBS:
+              case DownloadByRangeErrorCode.EXTRA_BLOBS:
+              case DownloadByRangeErrorCode.MISSING_COLUMNS:
+              case DownloadByRangeErrorCode.EXTRA_COLUMNS:
+              case BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
+              case BlobSidecarErrorCode.INCORRECT_BLOCK:
+              case DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
+              case DataColumnSidecarErrorCode.INCORRECT_BLOCK:
+                this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
+            }
+          }
           switch (errCode) {
-            case BlockInputErrorCode.MISMATCHED_ROOT_HEX:
-            case DownloadByRangeErrorCode.MISSING_BLOBS:
-            case DownloadByRangeErrorCode.EXTRA_BLOBS:
-            case DownloadByRangeErrorCode.MISSING_COLUMNS:
-            case DownloadByRangeErrorCode.EXTRA_COLUMNS:
-            case BlobSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
-            case BlobSidecarErrorCode.INCORRECT_BLOCK:
-            case DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT:
-            case DataColumnSidecarErrorCode.INCORRECT_BLOCK:
+            case DownloadByRangeErrorCode.EXTRA_BLOCKS:
+            case DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS:
+            case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
+            case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
+            case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
+            case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
+            case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
+            case DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT:
+            case DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
+            case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
               this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
           }
+          this.logger.verbose(
+            "Batch download error",
+            {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
+            res.err
+          );
+          batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
         }
-        switch (errCode) {
-          case DownloadByRangeErrorCode.EXTRA_BLOCKS:
-          case DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS:
-          case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
-          case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
-          case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
-          case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
-          case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
-          case DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT:
-          case DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
-          case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
-            this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
-        }
-        this.logger.verbose(
-          "Batch download error",
-          {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
-          res.err
-        );
-        batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
       } else {
         this.logger.verbose("Batch download success", {
           id: this.logId,
