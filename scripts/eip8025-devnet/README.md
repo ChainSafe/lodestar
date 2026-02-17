@@ -22,7 +22,7 @@ Dummy prover submits proofs to zkvm node via:
 ```bash
 # 1) Build Lodestar image from this branch
 cd ~/lodestar-eip8025
-docker build -t lodestar:eip8025 -f Dockerfile .
+docker build -t lodestar:eip8025 -f Dockerfile.dev .
 
 # 2) Start devnet
 kurtosis run github.com/ethpandaops/ethereum-package \
