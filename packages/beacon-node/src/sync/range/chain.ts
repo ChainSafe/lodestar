@@ -18,6 +18,7 @@ import {
   BATCH_BUFFER_SIZE,
   EPOCHS_PER_BATCH,
   MAX_LOOK_AHEAD_EPOCHS,
+  MAX_RATE_LIMITED_RETRIES,
   RATE_LIMITED_INITIAL_DELAY_MS,
   RATE_LIMITED_MAX_DELAY_MS,
 } from "../constants.js";
@@ -483,20 +484,28 @@ export class SyncChain {
         // Rate-limited responses are handled with backoff rather than peer penalties.
         // The peer is healthy but throttling us — penalizing it would make things worse.
         if (errCode === DownloadByRangeErrorCode.RATE_LIMITED) {
-          this.logger.debug("Batch download rate limited", {
-            id: this.logId,
-            ...batch.getMetadata(),
-            peer: prettyPrintPeerIdStr(peer.peerId),
-          });
-          const rateLimitedAttempt = batch.downloadingRateLimited(peer.peerId);
-          if (rateLimitedAttempt > 0) {
-            // Back off before retrying: double each attempt, capped at max
-            const delay = Math.min(
-              RATE_LIMITED_INITIAL_DELAY_MS * 2 ** (rateLimitedAttempt - 1),
-              RATE_LIMITED_MAX_DELAY_MS
-            );
+          // Compute backoff delay BEFORE transitioning state. The batch stays in Downloading
+          // while we sleep, preventing other triggerBatchDownloader() calls from picking it up.
+          const nextAttempt = batch.rateLimitedAttempts + 1;
+          if (nextAttempt <= MAX_RATE_LIMITED_RETRIES) {
+            const delay = Math.min(RATE_LIMITED_INITIAL_DELAY_MS * 2 ** (nextAttempt - 1), RATE_LIMITED_MAX_DELAY_MS);
+            this.logger.debug("Batch download rate limited, backing off", {
+              id: this.logId,
+              ...batch.getMetadata(),
+              peer: prettyPrintPeerIdStr(peer.peerId),
+              attempt: nextAttempt,
+              delayMs: delay,
+            });
             await new Promise((r) => setTimeout(r, delay));
+          } else {
+            this.logger.debug("Batch download rate limited, max retries exhausted", {
+              id: this.logId,
+              ...batch.getMetadata(),
+              peer: prettyPrintPeerIdStr(peer.peerId),
+            });
           }
+          // NOW transition to AwaitingDownload (or fall through to regular error if max retries exceeded)
+          batch.downloadingRateLimited(peer.peerId);
         } else {
           if (this.syncType === RangeSyncType.Finalized) {
             // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.

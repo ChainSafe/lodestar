@@ -95,7 +95,7 @@ export class Batch {
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
   /** The number of consecutive rate-limited download attempts. Reset on any successful download. */
-  private rateLimitedAttempts = 0;
+  rateLimitedAttempts = 0;
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
