@@ -10,7 +10,8 @@ WORKDIR /usr/app
 
 COPY . .
 
-RUN pnpm install --non-interactive && pnpm build
+RUN corepack enable && corepack prepare --activate && \
+  pnpm install --non-interactive && pnpm build
 
 RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
