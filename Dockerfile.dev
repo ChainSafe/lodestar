@@ -8,10 +8,21 @@ ARG COMMIT
 
 WORKDIR /usr/app
 
+# Enable corepack for pnpm support
+RUN corepack enable
+
+# Copy dependency manifests and workspace packages first for better layer caching.
+# The install layer is only invalidated when dependency-related files change,
+# not on every source code change.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/ packages/
+
+RUN pnpm install --frozen-lockfile
+
+# Copy remaining files (root configs, scripts, etc.)
 COPY . .
 
-RUN corepack enable && corepack prepare --activate && \
-  pnpm install --non-interactive && pnpm build
+RUN pnpm build
 
 RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
