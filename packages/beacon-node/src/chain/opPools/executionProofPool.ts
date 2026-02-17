@@ -26,6 +26,8 @@ export class ExecutionProofPool {
   private readonly proofsByBlockRootBySlot = new MapDef<Slot, MapDef<BlockRootHex, Map<ProofId, ExecutionProof>>>(
     () => new MapDef<BlockRootHex, Map<ProofId, ExecutionProof>>(() => new Map())
   );
+  /** Reverse index: blockRootHex → slot for O(1) lookups */
+  private readonly blockRootToSlot = new Map<BlockRootHex, Slot>();
   private lowestPermissibleSlot = 0;
 
   /** Total number of individual proofs in the pool */
@@ -62,23 +64,19 @@ export class ExecutionProofPool {
     }
 
     proofsByProofId.set(proofId, proof);
+    this.blockRootToSlot.set(blockRootHex, slot);
     return InsertOutcome.NewData;
   }
 
   /**
-   * Get all proofs for a given block root.
+   * Get all proofs for a given block root. O(1) slot lookup via reverse index.
    */
   getProofsByBlockRoot(blockRootHex: BlockRootHex): ExecutionProof[] {
-    const proofs: ExecutionProof[] = [];
-    for (const byBlockRoot of this.proofsByBlockRootBySlot.values()) {
-      const byProofId = byBlockRoot.get(blockRootHex);
-      if (byProofId) {
-        for (const proof of byProofId.values()) {
-          proofs.push(proof);
-        }
-      }
-    }
-    return proofs;
+    const slot = this.blockRootToSlot.get(blockRootHex);
+    if (slot === undefined) return [];
+
+    const byProofId = this.proofsByBlockRootBySlot.get(slot)?.get(blockRootHex);
+    return byProofId ? Array.from(byProofId.values()) : [];
   }
 
   /**
@@ -101,29 +99,26 @@ export class ExecutionProofPool {
 
   /**
    * Check whether a block has enough distinct proof types for availability.
+   * O(1) slot lookup via reverse index.
    */
   hasEnoughProofs(blockRootHex: BlockRootHex, minRequired: number): boolean {
-    let count = 0;
-    for (const byBlockRoot of this.proofsByBlockRootBySlot.values()) {
-      const byProofId = byBlockRoot.get(blockRootHex);
-      if (byProofId) {
-        count += byProofId.size;
-        if (count >= minRequired) return true;
-      }
-    }
-    return count >= minRequired;
+    const slot = this.blockRootToSlot.get(blockRootHex);
+    if (slot === undefined) return false;
+
+    const byProofId = this.proofsByBlockRootBySlot.get(slot)?.get(blockRootHex);
+    return byProofId !== undefined && byProofId.size >= minRequired;
   }
 
   /**
    * Check if a specific (blockRoot, proofId) combination is already known.
    * Used for gossip deduplication (IGNORE if already seen).
+   * O(1) slot lookup via reverse index.
    */
   has(blockRootHex: BlockRootHex, proofId: ProofId): boolean {
-    for (const byBlockRoot of this.proofsByBlockRootBySlot.values()) {
-      const byProofId = byBlockRoot.get(blockRootHex);
-      if (byProofId?.has(proofId)) return true;
-    }
-    return false;
+    const slot = this.blockRootToSlot.get(blockRootHex);
+    if (slot === undefined) return false;
+
+    return this.proofsByBlockRootBySlot.get(slot)?.get(blockRootHex)?.has(proofId) ?? false;
   }
 
   /**
@@ -131,6 +126,13 @@ export class ExecutionProofPool {
    * Called periodically (e.g., on slot clock tick).
    */
   prune(clockSlot: Slot): void {
+    // Clean up reverse index for pruned slots
+    const cutoffSlot = clockSlot - SLOTS_RETAINED;
+    for (const [blockRootHex, slot] of this.blockRootToSlot) {
+      if (slot < cutoffSlot) {
+        this.blockRootToSlot.delete(blockRootHex);
+      }
+    }
     this.lowestPermissibleSlot = pruneBySlot(this.proofsByBlockRootBySlot, clockSlot, SLOTS_RETAINED);
   }
 }
