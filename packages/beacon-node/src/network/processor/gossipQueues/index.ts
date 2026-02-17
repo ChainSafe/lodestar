@@ -83,6 +83,12 @@ const linearGossipQueueOpts: {
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },
+  // EIP-8025: Execution proofs — expect up to EXECUTION_PROOF_TYPE_COUNT per block
+  [GossipType.execution_proof]: {
+    maxLength: 256,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
 };
 
 const indexedGossipQueueOpts: {

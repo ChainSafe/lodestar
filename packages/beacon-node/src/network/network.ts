@@ -10,6 +10,7 @@ import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
+  ExecutionProof,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -486,6 +487,17 @@ export class Network implements INetwork {
     return this.publishGossip<GossipType.light_client_optimistic_update>(
       {type: GossipType.light_client_optimistic_update, boundary},
       update
+    );
+  }
+
+  async publishExecutionProof(executionProof: ExecutionProof): Promise<number> {
+    const epoch = computeEpochAtSlot(executionProof.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.execution_proof>(
+      {type: GossipType.execution_proof, boundary},
+      executionProof,
+      {ignoreDuplicatePublishError: true}
     );
   }
 

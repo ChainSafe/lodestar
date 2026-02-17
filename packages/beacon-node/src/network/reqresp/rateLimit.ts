@@ -92,6 +92,16 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     // Allow 2 per slot and a very safe bound until there's more testing of real usage.
     byPeer: {quota: 2, quotaTimeMs: 12_000},
   },
+  // EIP-8025: Execution proof protocols
+  [ReqRespMethod.ExecutionProofsByRoot]: {
+    // Similar to BeaconBlocksByRoot — one request per block root
+    byPeer: {quota: 16, quotaTimeMs: 10_000},
+  },
+  [ReqRespMethod.ExecutionProofsByRange]: {
+    // Similar to BeaconBlocksByRange
+    byPeer: {quota: 16, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.ExecutionProofsByRange, (req) => Number(req.count)),
+  },
 });
 
 // Helper to produce a getRequestCount function

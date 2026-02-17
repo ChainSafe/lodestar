@@ -168,6 +168,14 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {signatures: [ssz.altair.SyncCommitteeMessage.defaultValue()]},
     res: undefined,
   },
+  getPoolExecutionProofs: {
+    args: {slot: 1},
+    res: {data: [ssz.eip8025.ExecutionProof.defaultValue()]},
+  },
+  submitPoolExecutionProofs: {
+    args: {executionProof: ssz.eip8025.ExecutionProof.defaultValue()},
+    res: undefined,
+  },
 
   // state
 

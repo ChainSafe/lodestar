@@ -118,6 +118,19 @@ export const LightClientUpdatesByRange = toProtocol({
   contextBytesType: ContextBytesType.ForkDigest,
 });
 
+// EIP-8025: Execution proof protocols
+export const ExecutionProofsByRoot = toProtocol({
+  method: ReqRespMethod.ExecutionProofsByRoot,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.Empty,
+});
+
+export const ExecutionProofsByRange = toProtocol({
+  method: ReqRespMethod.ExecutionProofsByRange,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.Empty,
+});
+
 type ProtocolSummary = {
   method: ReqRespMethod;
   version: Version;
