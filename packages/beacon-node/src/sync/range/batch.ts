@@ -349,13 +349,10 @@ export class Batch {
 
     this.rateLimitedAttempts++;
     if (this.rateLimitedAttempts > MAX_RATE_LIMITED_RETRIES) {
-      // After exhausting rate-limit retries, fall through to regular download error handling
-      // so the batch can try a completely different peer or eventually give up
-      this.rateLimitedAttempts = 0;
-      this.failedDownloadAttempts.push(peer);
-      if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
-        throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
-      }
+      // After exhausting rate-limit retries, fall through to regular download error handling.
+      // downloadingError() will reset the rate-limit counter and handle attempt tracking.
+      this.downloadingError(peer);
+      return 0;
     }
 
     this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
