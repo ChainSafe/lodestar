@@ -80,6 +80,7 @@ import {
   AggregatedAttestationPool,
   AttestationPool,
   ExecutionPayloadBidPool,
+  ExecutionProofPool,
   OpPool,
   PayloadAttestationPool,
   SyncCommitteeMessagePool,
@@ -163,6 +164,7 @@ export class BeaconChain implements IBeaconChain {
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
+  readonly executionProofPool: ExecutionProofPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 
@@ -290,6 +292,7 @@ export class BeaconChain implements IBeaconChain {
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
+    this.executionProofPool = new ExecutionProofPool();
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
 
@@ -1302,6 +1305,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
+    this.executionProofPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);

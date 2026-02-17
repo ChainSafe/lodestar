@@ -49,6 +49,7 @@ import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js"
 import {
   AttestationPool,
   ExecutionPayloadBidPool,
+  ExecutionProofPool,
   OpPool,
   PayloadAttestationPool,
   SyncCommitteeMessagePool,
@@ -127,6 +128,8 @@ export interface IBeaconChain {
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
+  /** EIP-8025: Pool for execution proofs */
+  readonly executionProofPool: ExecutionProofPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 

@@ -1,5 +1,7 @@
 import {ProtocolHandler} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {
@@ -74,17 +76,32 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     [ReqRespMethod.LightClientOptimisticUpdate]: () => onLightClientOptimisticUpdate(chain),
 
     // EIP-8025: Execution proof req/resp handlers
-    // TODO: Wire up to ExecutionProofPool once implemented in Phase C
-    [ReqRespMethod.ExecutionProofsByRoot]: (_req) => {
-      // Stub: return empty response until proof pool is implemented
+    [ReqRespMethod.ExecutionProofsByRoot]: (req) => {
+      const body = ssz.eip8025.ExecutionProofsByRootRequest.deserialize(req.data);
+      const blockRootHex = toRootHex(body.blockRoot);
+      const alreadyHaveSet = new Set(body.alreadyHave);
+      const proofs = chain.executionProofPool
+        .getProofsByBlockRoot(blockRootHex)
+        .filter((p) => !alreadyHaveSet.has(p.proofId));
       return (async function* () {
-        // No proofs to serve yet
+        for (const proof of proofs) {
+          yield {
+            data: ssz.eip8025.ExecutionProof.serialize(proof),
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(proof.slot)),
+          };
+        }
       })();
     },
-    [ReqRespMethod.ExecutionProofsByRange]: (_req) => {
-      // Stub: return empty response until proof pool is implemented
+    [ReqRespMethod.ExecutionProofsByRange]: (req) => {
+      const body = ssz.eip8025.ExecutionProofsByRangeRequest.deserialize(req.data);
+      const proofs = chain.executionProofPool.getProofsByRange(body.startSlot, Number(body.count));
       return (async function* () {
-        // No proofs to serve yet
+        for (const proof of proofs) {
+          yield {
+            data: ssz.eip8025.ExecutionProof.serialize(proof),
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(proof.slot)),
+          };
+        }
       })();
     },
   };

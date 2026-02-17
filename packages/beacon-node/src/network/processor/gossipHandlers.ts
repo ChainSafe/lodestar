@@ -872,12 +872,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       // TODO EIP-8025: Add full gossip validation (slot bounds, dedup, proof verification)
       // For now, basic deserialization validation is sufficient for initial interop
-      logger.debug("Received execution proof via gossip", {
-        proofId: executionProof.proofId,
-        slot: executionProof.slot,
-      });
 
-      // TODO EIP-8025: Store in ExecutionProofPool (Phase C)
+      try {
+        const insertOutcome = chain.executionProofPool.add(executionProof);
+        logger.debug("Received execution proof via gossip", {
+          proofId: executionProof.proofId,
+          slot: executionProof.slot,
+          insertOutcome,
+        });
+      } catch (e) {
+        logger.error("Error adding execution proof to pool", {}, e as Error);
+      }
     },
   };
 }
