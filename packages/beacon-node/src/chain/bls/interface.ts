@@ -1,4 +1,3 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
 
 export type VerifySignatureOpts = {
@@ -12,10 +11,12 @@ export type VerifySignatureOpts = {
   batchable?: boolean;
 
   /**
-   * Use main thread to verify signatures, use this with care.
-   * Ignore the batchable option if this is true.
+   * Use main thread (synchronous) to verify signatures. Use this for time-critical
+   * verification where the latency of async dispatch is unacceptable (e.g. gossip blocks).
+   * Ignores the batchable option if true.
    */
   verifyOnMainThread?: boolean;
+
   /**
    * Some signature sets are more important than others, and should be verified first.
    */
@@ -24,45 +25,28 @@ export type VerifySignatureOpts = {
 
 export interface IBlsVerifier {
   /**
-   * Verify 1 or more signature sets. Sets may be verified on batch or not depending on their count
+   * Verify 1 or more signature sets. Sets may be verified in batch or individually depending on opts.
    *
-   * Signatures all come from the wire (untrusted) are all bytes compressed, must be:
-   * - Parsed from bytes
-   * - Uncompressed
-   * - subgroup_check
-   * - consume in Pairing.aggregate as affine, or mul_n_aggregate as affine
-   * Just send the raw signture recevied as bytes to the thread and verify there
-   *
-   * Pubkeys all come from cache (trusted) have already been checked for subgroup and infinity
-   * - Some pubkeys will have to be aggregated, some don't
-   * - Pubkeys must be available in jacobian coordinates to make aggregation x3 faster
-   * - Then, consume in Pairing.aggregate as affine, or mul_n_aggregate as affine
-   *
-   * All signatures are not trusted and must be group checked (p2.subgroup_check)
-   *
-   * Public keys have already been checked for subgroup and infinity
-   * Signatures have already been checked for subgroup
-   * Signature checks above could be done here for convienence as well
+   * Signatures come from the wire (untrusted), compressed bytes.
+   * Public keys come from the global pubkey cache (trusted) or are provided directly.
    */
   verifySignatureSets(sets: ISignatureSet[], opts?: VerifySignatureOpts): Promise<boolean>;
 
   /**
-   * Similar to verifySignatureSets but:
-   *   - all signatures have the same message
-   *   - return an array of boolean, each element indicates whether the corresponding signature set is valid
-   *   - only support `batchable` option
+   * Verify multiple signatures over the same message, returning per-set validity.
+   * All sets are identified by validator index — pubkey resolution happens natively.
+   *
+   * On aggregate failure, retries each set individually to identify the invalid one(s).
    */
   verifySignatureSetsSameMessage(
-    sets: {publicKey: PublicKey; signature: Uint8Array}[],
-    messsage: Uint8Array,
+    sets: {index: number; signature: Uint8Array}[],
+    message: Uint8Array,
     opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
   ): Promise<boolean[]>;
 
-  /** For multithread pool awaits terminating all workers */
+  /** Cleanup resources */
   close(): Promise<void>;
 
-  /**
-   * Returns true if BLS worker pool is ready to accept more work jobs.
-   */
+  /** Returns true if the verifier can accept more work */
   canAcceptWork(): boolean;
 }

@@ -111,7 +111,6 @@ const forkChoiceTest =
           {
             ...defaultChainOptions,
             // Do not start workers
-            blsVerifyAllMainThread: true,
             // Do not run any archiver tasks
             disableArchiveOnCheckpoint: true,
             // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.

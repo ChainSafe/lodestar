@@ -18,7 +18,7 @@ import {
   computeCommitteeCount,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
+  getPubkeyCache,
   interopSecretKey,
   newFilledArray,
   processSlots,
@@ -86,7 +86,7 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
 
 function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>) {
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  const pubkeyCache = createPubkeyCache();
+  const pubkeyCache = getPubkeyCache();
   for (let i = 0; i < numValidators; i++) {
     const pubkey = pubkeysMod[i % keypairsMod];
     pubkeyCache.set(i, pubkey);
@@ -379,7 +379,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   const {pubkeys, pubkeysMod} = getPubkeys(vc);
 
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  const pubkeyCache = createPubkeyCache();
+  const pubkeyCache = getPubkeyCache();
   for (let i = 0; i < vc; i++) {
     const pubkey = pubkeysMod[i % keypairsMod];
     pubkeyCache.set(i, pubkey);

@@ -12,7 +12,7 @@ import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
 } from "../../../../state-transition/test/perf/util.js";
-import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
+import {BlsVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";
@@ -23,7 +23,6 @@ import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
-import {testLogger} from "../logger.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -32,7 +31,6 @@ export type AttestationValidDataOpts = {
   bitIndex?: number;
   targetRoot?: Uint8Array;
   beaconBlockRoot?: Uint8Array;
-  blsVerifyAllMainThread?: boolean;
   state: ReturnType<typeof generateTestCachedBeaconStateOnlyValidators>;
 };
 
@@ -51,7 +49,6 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   const bitIndex = opts.bitIndex ?? 0;
   const targetRoot = opts.targetRoot ?? ZERO_HASH;
   const beaconBlockRoot = opts.beaconBlockRoot ?? ZERO_HASH;
-  const blsVerifyAllMainThread = opts.blsVerifyAllMainThread ?? true;
   // Create cached state
   const state = opts.state;
 
@@ -170,12 +167,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     seenAttesters: new SeenAttesters(),
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
-    bls: blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics: null, pubkeyCache: state.epochCtx.pubkeyCache})
-      : new BlsMultiThreadWorkerPool(
-          {},
-          {logger: testLogger(), metrics: null, pubkeyCache: state.epochCtx.pubkeyCache}
-        ),
+    bls: new BlsVerifier(null),
     waitForBlock: () => Promise.resolve(false),
     pubkeyCache: state.epochCtx.pubkeyCache,
     shufflingCache,

@@ -305,7 +305,6 @@ describe("regen/reload states with n-historical states configuration", () => {
           network: {allowPublishToZeroPeers: true, mdns: true, useWorker: false},
           // by default, maxCPStateEpochsInMemory is 3 so that it does not have to persist/reload checkpoint states
           chain: {
-            blsVerifyAllMainThread: true,
             forkchoiceConstructor: ReorgedForkChoice,
             // this node does not need to reload state
             proposerBoost: true,
@@ -326,7 +325,6 @@ describe("regen/reload states with n-historical states configuration", () => {
           network: {mdns: true, useWorker: false},
           // configure this node to be reloaded via maxBlockStates, maxCPStateEpochsInMemory options
           chain: {
-            blsVerifyAllMainThread: true,
             forkchoiceConstructor: ReorgedForkChoice,
             maxBlockStates,
             maxCPStateEpochsInMemory,

@@ -17,8 +17,6 @@ describe("options / beaconNodeOptions", () => {
       "rest.bodyLimit": 30e6,
       "rest.stacktraces": true,
 
-      "chain.blsVerifyAllMultiThread": true,
-      "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
       "chain.persistProducedBlocks": true,
       "chain.persistInvalidSszObjects": true,
@@ -116,8 +114,6 @@ describe("options / beaconNodeOptions", () => {
         },
       },
       chain: {
-        blsVerifyAllMultiThread: true,
-        blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
         persistProducedBlocks: true,
         persistInvalidSszObjects: true,

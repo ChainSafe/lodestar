@@ -6,8 +6,6 @@ export type ChainArgs = {
   suggestedFeeRecipient: string;
   serveHistoricalState?: boolean;
   "chain.blacklistedBlocks"?: string[];
-  "chain.blsVerifyAllMultiThread"?: boolean;
-  "chain.blsVerifyAllMainThread"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistProducedBlocks"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
@@ -43,8 +41,6 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     serveHistoricalState: args.serveHistoricalState,
     blacklistedBlocks: args["chain.blacklistedBlocks"],
-    blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
-    blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistProducedBlocks: args["chain.persistProducedBlocks"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
@@ -102,22 +98,6 @@ export const options: CliCommandOptions<ChainArgs> = {
     group: "chain",
   },
 
-  "chain.blsVerifyAllMultiThread": {
-    hidden: true,
-    type: "boolean",
-    description: "Always use worker threads for BLS verification",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
-    group: "chain",
-  },
-
-  "chain.blsVerifyAllMainThread": {
-    hidden: true,
-    type: "boolean",
-    description: "Always use main threads for BLS verification",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMainThread),
-    group: "chain",
-  },
-
   "chain.blacklistedBlocks": {
     hidden: true,
     type: "array",
@@ -138,7 +118,7 @@ export const options: CliCommandOptions<ChainArgs> = {
     description:
       "Do not use BLS batch verify to validate all block signatures at once. \
 Will double processing times. Use only for debugging purposes.",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
+    defaultDescription: String(defaultOptions.chain.disableBlsBatchVerify),
     group: "chain",
   },
 

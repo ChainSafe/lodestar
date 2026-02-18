@@ -67,7 +67,6 @@ describe("sync / finalized sync for fulu", () => {
       options: {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, useWorker: false},
-        chain: {blsVerifyAllMainThread: true},
       },
       validatorCount,
       genesisTime,
@@ -113,7 +112,6 @@ describe("sync / finalized sync for fulu", () => {
       options: {
         api: {rest: {enabled: false}},
         network: {useWorker: false},
-        chain: {blsVerifyAllMainThread: true},
       },
       validatorCount,
       genesisTime,

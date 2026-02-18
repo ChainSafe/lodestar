@@ -52,7 +52,6 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
             api: ["lightclient"],
           },
         },
-        chain: {blsVerifyAllMainThread: true},
       },
       validatorCount,
       logger: loggerNodeA,

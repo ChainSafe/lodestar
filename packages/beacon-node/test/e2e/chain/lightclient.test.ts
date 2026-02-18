@@ -87,7 +87,6 @@ describe.skipIf(process.env.CI)("chain / lightclient", () => {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true},
         api: {rest: {enabled: true, api: ["lightclient", "proof"], port: restPort, address: "localhost"}},
-        chain: {blsVerifyAllMainThread: true},
       },
       validatorCount: validatorCount * validatorClientCount,
       genesisTime,

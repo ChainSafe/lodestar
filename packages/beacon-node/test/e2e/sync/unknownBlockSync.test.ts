@@ -86,7 +86,6 @@ describe("sync / unknown block sync for fulu", () => {
         options: {
           sync: {isSingleNode: true},
           network: {allowPublishToZeroPeers: true},
-          chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
         genesisTime,
@@ -123,7 +122,6 @@ describe("sync / unknown block sync for fulu", () => {
         options: {
           api: {rest: {enabled: false}},
           sync: {disableRangeSync: true},
-          chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
         genesisTime,

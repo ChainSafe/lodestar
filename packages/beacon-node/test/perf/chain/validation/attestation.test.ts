@@ -20,7 +20,6 @@ describe("validate gossip attestation", () => {
     state,
     bitIndex: 0,
     // enable this in local environment to match production
-    // blsVerifyAllMainThread: false,
   });
 
   const attSlot = attestation0.data.slot;

@@ -24,8 +24,6 @@ export type IChainOptions = BlockProcessOpts &
   ShufflingCacheOpts &
   ValidatorMonitorOpts &
   LightClientServerOpts & {
-    blsVerifyAllMainThread?: boolean;
-    blsVerifyAllMultiThread?: boolean;
     blacklistedBlocks?: string[];
     // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
@@ -97,8 +95,6 @@ export type SeenCacheOpts = {
 };
 
 export const defaultChainOptions: IChainOptions = {
-  blsVerifyAllMainThread: false,
-  blsVerifyAllMultiThread: false,
   blacklistedBlocks: [],
   disableBlsBatchVerify: false,
   proposerBoost: true,

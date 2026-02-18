@@ -78,7 +78,6 @@ describe("proposer boost reorg", () => {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, mdns: true, useWorker: false},
         chain: {
-          blsVerifyAllMainThread: true,
           forkchoiceConstructor: TimelinessForkChoice,
           proposerBoost: true,
           proposerBoostReorg,

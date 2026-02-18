@@ -1,9 +1,9 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
 import {ForkName} from "@lodestar/params";
-import {SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
+import {SignatureSetType, getPubkeyCache} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
+import {BlsVerifier} from "../../../../../src/chain/bls/blsVerifier.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {SeenAttesters} from "../../../../../src/chain/seenCache/seenAttesters.js";
@@ -56,8 +56,8 @@ describe("validateGossipAttestationsSameAttData", () => {
     return keypair;
   }
 
-  // Build pubkeyCache for test
-  const pubkeyCache = createPubkeyCache();
+  // Build pubkeyCache for test — use native cache so blsBatch can resolve by index
+  const pubkeyCache = getPubkeyCache();
   for (let i = 0; i < 10; i++) {
     pubkeyCache.set(i, getKeypair(i).publicKey.toBytes());
   }
@@ -69,7 +69,7 @@ describe("validateGossipAttestationsSameAttData", () => {
 
   beforeEach(() => {
     chain = {
-      bls: new BlsSingleThreadVerifier({metrics: null, pubkeyCache}),
+      bls: new BlsVerifier(null),
       seenAttesters: new SeenAttesters(),
       pubkeyCache,
       opts: {

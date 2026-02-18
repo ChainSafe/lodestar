@@ -59,7 +59,6 @@ export async function getNetworkForTest(
     {
       archiveStateEpochFrequency: 0,
       suggestedFeeRecipient: "",
-      blsVerifyAllMainThread: true,
       disableOnBlockError: true,
       disableArchiveOnCheckpoint: true,
       disableLightClientServerOnImportBlockHead: true,

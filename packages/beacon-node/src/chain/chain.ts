@@ -78,7 +78,7 @@ import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {persistBlockInputs} from "./blocks/writeBlockInputToDb.ts";
-import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
+import {BlsVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
@@ -283,10 +283,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionBuilder = executionBuilder;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
-    // by default, verify signatures on both main threads and worker threads
-    const bls = opts.blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics, pubkeyCache})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, pubkeyCache});
+    const bls = new BlsVerifier(metrics);
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
