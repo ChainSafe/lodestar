@@ -114,6 +114,7 @@ import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
+import {IZkvmExecutionProofVerifier, defaultZkvmExecutionProofVerifier} from "./validation/executionProofVerifier.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -169,6 +170,8 @@ export class BeaconChain implements IBeaconChain {
   readonly activateZkvm: boolean;
   /** EIP-8025: Minimum distinct proof types required per block in zkvm mode */
   readonly minProofsRequired: number;
+  /** EIP-8025: Verifier for execution proofs — swap implementation for real zkvm prover */
+  readonly executionProofVerifier: IZkvmExecutionProofVerifier;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 
@@ -299,6 +302,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionProofPool = new ExecutionProofPool();
     this.activateZkvm = opts.activateZkvm ?? false;
     this.minProofsRequired = opts.minProofsRequired ?? 1;
+    this.executionProofVerifier = opts.executionProofVerifier ?? defaultZkvmExecutionProofVerifier;
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
 

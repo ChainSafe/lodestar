@@ -74,6 +74,7 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
+import {IZkvmExecutionProofVerifier} from "./validation/executionProofVerifier.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 export {BlockType, type AssembledBlockType};
@@ -134,6 +135,8 @@ export interface IBeaconChain {
   readonly activateZkvm: boolean;
   /** EIP-8025: Minimum distinct proof types required per block in zkvm mode */
   readonly minProofsRequired: number;
+  /** EIP-8025: Verifier for execution proofs — swap implementation for real zkvm prover */
+  readonly executionProofVerifier: IZkvmExecutionProofVerifier;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 

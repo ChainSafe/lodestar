@@ -22,7 +22,7 @@ import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ExecutionProofPool} from "../opPools/executionProofPool.js";
 import {BlockProcessOpts} from "../options.js";
-import {defaultZkvmExecutionProofVerifier} from "../validation/executionProofVerifier.js";
+import {IZkvmExecutionProofVerifier, defaultZkvmExecutionProofVerifier} from "../validation/executionProofVerifier.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
@@ -40,6 +40,8 @@ export type VerifyBlockExecutionPayloadModules = {
   executionProofPool?: ExecutionProofPool;
   /** EIP-8025: Minimum distinct proof types required for a block to be considered valid */
   minProofsRequired?: number;
+  /** EIP-8025: Verifier for execution proofs — defaults to dummy verifier if not provided */
+  executionProofVerifier?: IZkvmExecutionProofVerifier;
 };
 
 type ExecAbortType = {blockIndex: number; execError: BlockError};
@@ -283,7 +285,8 @@ function verifyBlockExecutionPayloadByProof(
   };
 
   const proofs = chain.executionProofPool?.getProofsByBlockRoot(blockRootHex) ?? [];
-  const verification = defaultZkvmExecutionProofVerifier.verifyProofs({
+  const verifier = chain.executionProofVerifier ?? defaultZkvmExecutionProofVerifier;
+  const verification = verifier.verifyProofs({
     proofs,
     expectedBlockRootHex: blockRootHex,
     expectedExecBlockHashHex: execBlockHash,
