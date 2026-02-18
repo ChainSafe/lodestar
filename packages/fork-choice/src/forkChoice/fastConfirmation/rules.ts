@@ -1,9 +1,16 @@
 import {isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {equalCheckpointWithHex} from "../store.ts";
-import {FCRCache, FCRContext, FCRDecision, FCRRule, FCRSnapshot, IFCRStore} from "./types.ts";
+import {
+  FastConfirmationCache,
+  FastConfirmationContext,
+  FastConfirmationDecision,
+  FastConfirmationRule,
+  FastConfirmationSnapshot,
+  IFastConfirmationStore,
+} from "./types.ts";
 import {findLatestConfirmedDescendant, getBlockEpoch, getBlockSlot, isAncestor, isConfirmedChainSafe} from "./utils.ts";
 
-const resetIfConfirmedUnavailable: FCRRule = (snapshot, ctx, _store, cache, decision) => {
+const resetIfConfirmedUnavailable: FastConfirmationRule = (snapshot, ctx, _store, cache, decision) => {
   const confirmedEpoch = getBlockEpoch(ctx, cache, decision.confirmedRoot);
   if (confirmedEpoch === null) {
     return {confirmedRoot: snapshot.finalizedRoot, didReset: true, reason: "confirmed_not_found"};
@@ -11,7 +18,7 @@ const resetIfConfirmedUnavailable: FCRRule = (snapshot, ctx, _store, cache, deci
   return decision;
 };
 
-const resetIfBehindOrNotAncestorOrUnsafe: FCRRule = (snapshot, ctx, store, cache, decision) => {
+const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (snapshot, ctx, store, cache, decision) => {
   const confirmedEpoch = getBlockEpoch(ctx, cache, decision.confirmedRoot);
   if (confirmedEpoch === null) return decision;
 
@@ -27,7 +34,7 @@ const resetIfBehindOrNotAncestorOrUnsafe: FCRRule = (snapshot, ctx, store, cache
   return decision;
 };
 
-const advanceIfObservedJustified: FCRRule = (snapshot, ctx, store, cache, decision) => {
+const advanceIfObservedJustified: FastConfirmationRule = (snapshot, ctx, store, cache, decision) => {
   if (!isStartSlotOfEpoch(snapshot.currentSlot)) return decision;
   if (store.currentEpochObservedJustifiedCheckpoint.epoch + 1 !== snapshot.currentEpoch) return decision;
   if (!snapshot.headUnrealized) return decision;
@@ -45,7 +52,7 @@ const advanceIfObservedJustified: FCRRule = (snapshot, ctx, store, cache, decisi
   return decision;
 };
 
-const advanceToLatestConfirmedDescendant: FCRRule = (snapshot, ctx, store, cache, decision) => {
+const advanceToLatestConfirmedDescendant: FastConfirmationRule = (snapshot, ctx, store, cache, decision) => {
   const confirmedEpoch = getBlockEpoch(ctx, cache, decision.confirmedRoot);
   if (confirmedEpoch !== null && confirmedEpoch + 1 >= snapshot.currentEpoch) {
     const newConfirmed = findLatestConfirmedDescendant(snapshot, ctx, store, cache, decision.confirmedRoot);
@@ -58,17 +65,22 @@ const advanceToLatestConfirmedDescendant: FCRRule = (snapshot, ctx, store, cache
   return decision;
 };
 
-const FCR_RULES: FCRRule[] = [
+const FAST_CONFIRMATION_RULES: FastConfirmationRule[] = [
   resetIfConfirmedUnavailable,
   resetIfBehindOrNotAncestorOrUnsafe,
   advanceIfObservedJustified,
   advanceToLatestConfirmedDescendant,
 ];
 
-export function runFCRRules(snapshot: FCRSnapshot, ctx: FCRContext, store: IFCRStore, cache: FCRCache): FCRDecision {
-  let decision: FCRDecision = {confirmedRoot: snapshot.confirmedRoot, didReset: false};
+export function runFastConfirmationRules(
+  snapshot: FastConfirmationSnapshot,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): FastConfirmationDecision {
+  let decision: FastConfirmationDecision = {confirmedRoot: snapshot.confirmedRoot, didReset: false};
 
-  for (const rule of FCR_RULES) {
+  for (const rule of FAST_CONFIRMATION_RULES) {
     decision = rule(snapshot, ctx, store, cache, decision);
     if (decision.stop) break;
   }

@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {ForkChoiceStateGetter, IFCRStore} from "./fastConfirmation/types.ts";
+import {ForkChoiceStateGetter, IFastConfirmationStore} from "./fastConfirmation/types.ts";
 import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interface.js";
 
 /**
@@ -36,7 +36,7 @@ export type JustifiedBalancesGetter = (
  * - The actual block DAG in `ProtoArray`.
  * - `time` is represented using `Slot` instead of UNIX epoch `u64`.
  */
-export interface IForkChoiceStore extends IFCRStore {
+export interface IForkChoiceStore extends IFastConfirmationStore {
   currentSlot: Slot;
   get justified(): CheckpointHexWithTotalBalance;
   set justified(justified: CheckpointHexWithBalance);
@@ -94,7 +94,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this._finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
     this.unrealizedFinalizedCheckpoint = this._finalizedCheckpoint;
 
-    // Initialize FCR fields
+    // Initialize Fast Confirmation fields
     const anchorRoot = toCheckpointWithHex(finalizedCheckpoint).rootHex;
     this.confirmedRoot = anchorRoot;
     this.previousEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);

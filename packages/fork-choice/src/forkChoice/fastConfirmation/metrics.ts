@@ -1,8 +1,8 @@
 import {MetricsRegisterExtra} from "@lodestar/utils";
 
-export type FCRMetrics = ReturnType<typeof getFCRMetrics>;
+export type FastConfirmationMetrics = ReturnType<typeof getFastConfirmationMetrics>;
 
-export function getFCRMetrics(register: MetricsRegisterExtra) {
+export function getFastConfirmationMetrics(register: MetricsRegisterExtra) {
   return {
     fastConfirmation: {
       duration: register.histogram({

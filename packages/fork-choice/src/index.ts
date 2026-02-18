@@ -7,15 +7,15 @@ export {
   InvalidBlockCode,
 } from "./forkChoice/errors.js";
 export {
-  type FCRBalanceSource,
-  type FCRContext,
-  type FCRMetrics,
-  type FCRResult,
+  type FastConfirmationBalanceSource as FCRBalanceSource,
+  type FastConfirmationContext as FCRContext,
+  type FastConfirmationMetrics as FCRMetrics,
   FastConfirmationRule,
+  type FatsConfirmationResult as FCRResult,
   type ForkChoiceStateGetter,
-  type IFCRStore,
   type IFastConfirmationRule,
-  getFCRMetrics,
+  type IFastConfirmationStore as IFCRStore,
+  getFastConfirmationMetrics as getFCRMetrics,
 } from "./forkChoice/fastConfirmation/fastConfirmationRule.ts";
 export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 export {

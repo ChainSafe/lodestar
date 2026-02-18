@@ -1,8 +1,13 @@
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {FCRCache, FCRContext, FCRSnapshot, IFCRStore} from "./types.ts";
+import {
+  FastConfirmationCache,
+  FastConfirmationContext,
+  FastConfirmationSnapshot,
+  IFastConfirmationStore,
+} from "./types.ts";
 import {getBlockEpoch, getBlockSlot, getUnrealizedJustification} from "./utils.ts";
 
-export function createFCRCache(): FCRCache {
+export function createFastConfirmationCache(): FastConfirmationCache {
   return {
     blockByRoot: new Map(),
     epochByRoot: new Map(),
@@ -13,7 +18,11 @@ export function createFCRCache(): FCRCache {
   };
 }
 
-export function buildFCRSnapshot(ctx: FCRContext, store: IFCRStore, cache: FCRCache): FCRSnapshot {
+export function buildFastConfirmationSnapshot(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): FastConfirmationSnapshot {
   const currentSlot = ctx.getCurrentSlot();
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const headRoot = ctx.getHead().blockRoot;

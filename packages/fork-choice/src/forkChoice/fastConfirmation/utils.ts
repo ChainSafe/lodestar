@@ -10,11 +10,17 @@ import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {ProtoBlock} from "../../protoArray/interface.ts";
 import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.ts";
-import {FCRBalanceSource, FCRCache, FCRContext, FCRSnapshot, IFCRStore} from "./types.ts";
+import {
+  FastConfirmationBalanceSource,
+  FastConfirmationCache,
+  FastConfirmationContext,
+  FastConfirmationSnapshot,
+  IFastConfirmationStore,
+} from "./types.ts";
 
 const COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR = 5;
 
-export function getBlock(ctx: FCRContext, cache: FCRCache, root: RootHex): ProtoBlock | null {
+export function getBlock(ctx: FastConfirmationContext, cache: FastConfirmationCache, root: RootHex): ProtoBlock | null {
   if (cache.blockByRoot.has(root)) {
     return cache.blockByRoot.get(root) ?? null;
   }
@@ -23,7 +29,11 @@ export function getBlock(ctx: FCRContext, cache: FCRCache, root: RootHex): Proto
   return block;
 }
 
-export function getBlockSlot(ctx: FCRContext, cache: FCRCache, blockRoot: RootHex): Slot | null {
+export function getBlockSlot(
+  ctx: FastConfirmationContext,
+  cache: FastConfirmationCache,
+  blockRoot: RootHex
+): Slot | null {
   if (cache.slotByRoot.has(blockRoot)) {
     return cache.slotByRoot.get(blockRoot) ?? null;
   }
@@ -33,7 +43,11 @@ export function getBlockSlot(ctx: FCRContext, cache: FCRCache, blockRoot: RootHe
   return slot;
 }
 
-export function getBlockEpoch(ctx: FCRContext, cache: FCRCache, blockRoot: RootHex): Epoch | null {
+export function getBlockEpoch(
+  ctx: FastConfirmationContext,
+  cache: FastConfirmationCache,
+  blockRoot: RootHex
+): Epoch | null {
   if (cache.epochByRoot.has(blockRoot)) {
     return cache.epochByRoot.get(blockRoot) ?? null;
   }
@@ -44,8 +58,8 @@ export function getBlockEpoch(ctx: FCRContext, cache: FCRCache, blockRoot: RootH
 }
 
 export function getUnrealizedJustification(
-  ctx: FCRContext,
-  cache: FCRCache,
+  ctx: FastConfirmationContext,
+  cache: FastConfirmationCache,
   blockRoot: RootHex
 ): CheckpointWithHex | null {
   const block = getBlock(ctx, cache, blockRoot);
@@ -57,7 +71,11 @@ export function getUnrealizedJustification(
   };
 }
 
-export function getVotingSource(ctx: FCRContext, cache: FCRCache, blockRoot: RootHex): CheckpointWithHex | null {
+export function getVotingSource(
+  ctx: FastConfirmationContext,
+  cache: FastConfirmationCache,
+  blockRoot: RootHex
+): CheckpointWithHex | null {
   const block = getBlock(ctx, cache, blockRoot);
   if (!block) return null;
   const currentEpoch = computeEpochAtSlot(ctx.getCurrentSlot());
@@ -68,8 +86,8 @@ export function getVotingSource(ctx: FCRContext, cache: FCRCache, blockRoot: Roo
 }
 
 export function getCheckpointForBlock(
-  ctx: FCRContext,
-  _cache: FCRCache,
+  ctx: FastConfirmationContext,
+  _cache: FastConfirmationCache,
   blockRoot: RootHex,
   epoch: Epoch
 ): CheckpointWithHex | null {
@@ -83,8 +101,8 @@ export function getCheckpointForBlock(
 }
 
 export function getAncestorRoots(
-  ctx: FCRContext,
-  cache: FCRCache,
+  ctx: FastConfirmationContext,
+  cache: FastConfirmationCache,
   blockRoot: RootHex,
   terminalRoot: RootHex
 ): RootHex[] {
@@ -110,13 +128,22 @@ export function getAncestorRoots(
   }
 }
 
-export function isAncestor(ctx: FCRContext, cache: FCRCache, blockRoot: RootHex, ancestorRoot: RootHex): boolean {
+export function isAncestor(
+  ctx: FastConfirmationContext,
+  cache: FastConfirmationCache,
+  blockRoot: RootHex,
+  ancestorRoot: RootHex
+): boolean {
   const ancestorBlock = getBlock(ctx, cache, ancestorRoot);
   if (!ancestorBlock) return false;
   return ctx.getAncestor(blockRoot, ancestorBlock.slot) === ancestorRoot;
 }
 
-export function getHeadState(ctx: FCRContext, store: IFCRStore, cache: FCRCache): CachedBeaconStateAllForks | null {
+export function getHeadState(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): CachedBeaconStateAllForks | null {
   if (cache.headState !== undefined) return cache.headState;
   const headState = store.stateGetter({stateRoot: ctx.getHead().stateRoot});
   cache.headState = headState ?? null;
@@ -124,8 +151,8 @@ export function getHeadState(ctx: FCRContext, store: IFCRStore, cache: FCRCache)
 }
 
 export function getCheckpointState(
-  store: IFCRStore,
-  cache: FCRCache,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
   checkpoint: CheckpointWithHex
 ): CachedBeaconStateAllForks | null {
   const key = `${checkpoint.epoch}:${checkpoint.rootHex}`;
@@ -137,7 +164,11 @@ export function getCheckpointState(
   return state ?? null;
 }
 
-export function getSlotCommittee(cache: FCRCache, state: CachedBeaconStateAllForks, slot: Slot): Set<ValidatorIndex> {
+export function getSlotCommittee(
+  cache: FastConfirmationCache,
+  state: CachedBeaconStateAllForks,
+  slot: Slot
+): Set<ValidatorIndex> {
   if (cache.committeeBySlot.has(slot)) {
     return cache.committeeBySlot.get(slot) ?? new Set();
   }
@@ -154,7 +185,11 @@ export function getSlotCommittee(cache: FCRCache, state: CachedBeaconStateAllFor
   return participants;
 }
 
-export function getBalanceSource(store: IFCRStore, cache: FCRCache, kind: "previous" | "current"): FCRBalanceSource {
+export function getBalanceSource(
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  kind: "previous" | "current"
+): FastConfirmationBalanceSource {
   const checkpoint =
     kind === "previous"
       ? store.previousEpochObservedJustifiedCheckpoint
@@ -168,15 +203,21 @@ export function getBalanceSource(store: IFCRStore, cache: FCRCache, kind: "previ
   };
 }
 
-export function getCurrentBalanceSource(store: IFCRStore, cache: FCRCache): FCRBalanceSource {
+export function getCurrentBalanceSource(
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): FastConfirmationBalanceSource {
   return getBalanceSource(store, cache, "current");
 }
 
-export function getPreviousBalanceSource(store: IFCRStore, cache: FCRCache): FCRBalanceSource {
+export function getPreviousBalanceSource(
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): FastConfirmationBalanceSource {
   return getBalanceSource(store, cache, "previous");
 }
 
-export function getTotalActiveBalance(balanceSource: FCRBalanceSource): number {
+export function getTotalActiveBalance(balanceSource: FastConfirmationBalanceSource): number {
   if (balanceSource.state) {
     return balanceSource.state.epochCtx.totalActiveBalanceIncrements;
   }
@@ -184,7 +225,7 @@ export function getTotalActiveBalance(balanceSource: FCRBalanceSource): number {
 }
 
 export function estimateCommitteeWeightBetweenSlots(
-  balanceSource: FCRBalanceSource,
+  balanceSource: FastConfirmationBalanceSource,
   startSlot: Slot,
   endSlot: Slot
 ): number {
@@ -231,13 +272,20 @@ export function isFullValidatorSetCovered(startSlot: Slot, endSlot: Slot): boole
   return startFullEpoch < endFullEpoch;
 }
 
-export function computeProposerScore(ctx: FCRContext, balanceSource: FCRBalanceSource): number {
+export function computeProposerScore(
+  ctx: FastConfirmationContext,
+  balanceSource: FastConfirmationBalanceSource
+): number {
   const totalActiveBalance = getTotalActiveBalance(balanceSource);
   const committeeWeight = Math.floor(totalActiveBalance / SLOTS_PER_EPOCH);
   return Math.floor((committeeWeight * ctx.config.PROPOSER_SCORE_BOOST) / 100);
 }
 
-export function getAttestationScore(ctx: FCRContext, balanceSource: FCRBalanceSource, blockRoot: RootHex): number {
+export function getAttestationScore(
+  ctx: FastConfirmationContext,
+  balanceSource: FastConfirmationBalanceSource,
+  blockRoot: RootHex
+): number {
   const balances = balanceSource.balances;
   const state = balanceSource.state;
   const activeIndices = state?.epochCtx.currentShuffling.activeIndices ?? null;
@@ -268,10 +316,10 @@ export function getAttestationScore(ctx: FCRContext, balanceSource: FCRBalanceSo
 }
 
 export function getBlockSupportBetweenSlots(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
-  balanceSource: FCRBalanceSource,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
   blockRoot: RootHex,
   startSlot: Slot,
   endSlot: Slot
@@ -303,10 +351,10 @@ export function getBlockSupportBetweenSlots(
 }
 
 export function getEquivocationScore(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
-  balanceSource: FCRBalanceSource,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
   startSlot: Slot,
   endSlot: Slot
 ): number {
@@ -333,10 +381,10 @@ export function getEquivocationScore(
 }
 
 export function computeAdversarialWeight(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
-  balanceSource: FCRBalanceSource,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
   startSlot: Slot,
   endSlot: Slot
 ): number {
@@ -347,10 +395,10 @@ export function computeAdversarialWeight(
 }
 
 export function getAdversarialWeight(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
-  balanceSource: FCRBalanceSource,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
   blockRoot: RootHex
 ): number {
   const currentSlot = ctx.getCurrentSlot();
@@ -370,10 +418,10 @@ export function getAdversarialWeight(
 }
 
 export function computeEmptySlotSupportDiscount(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
-  balanceSource: FCRBalanceSource,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
   blockRoot: RootHex
 ): number {
   const block = getBlock(ctx, cache, blockRoot);
@@ -407,20 +455,20 @@ export function computeEmptySlotSupportDiscount(
 }
 
 export function getSupportDiscount(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
-  balanceSource: FCRBalanceSource,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
   blockRoot: RootHex
 ): number {
   return computeEmptySlotSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
 }
 
 export function isOneConfirmed(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
-  balanceSource: FCRBalanceSource,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
   blockRoot: RootHex
 ): boolean {
   const currentSlot = ctx.getCurrentSlot();
@@ -446,23 +494,27 @@ export function isOneConfirmed(
   return adversarialWeightScaled;
 }
 
-export function getCurrentTarget(ctx: FCRContext, cache: FCRCache): CheckpointWithHex | null {
+export function getCurrentTarget(ctx: FastConfirmationContext, cache: FastConfirmationCache): CheckpointWithHex | null {
   const head = ctx.getHead().blockRoot;
   const currentEpoch = computeEpochAtSlot(ctx.getCurrentSlot());
   return getCheckpointForBlock(ctx, cache, head, currentEpoch);
 }
 
 export function getCurrentTargetState(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
 ): CachedBeaconStateAllForks | null {
   const target = getCurrentTarget(ctx, cache);
   if (!target) return null;
   return getCheckpointState(store, cache, target);
 }
 
-export function getCurrentTargetScore(ctx: FCRContext, store: IFCRStore, cache: FCRCache): number {
+export function getCurrentTargetScore(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): number {
   const target = getCurrentTarget(ctx, cache);
   const targetState = getCurrentTargetState(ctx, store, cache);
   if (!target || !targetState) return 0;
@@ -483,7 +535,11 @@ export function getCurrentTargetScore(ctx: FCRContext, store: IFCRStore, cache: 
   return score;
 }
 
-export function computeHonestFfgSupportForCurrentTarget(ctx: FCRContext, store: IFCRStore, cache: FCRCache): number {
+export function computeHonestFfgSupportForCurrentTarget(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): number {
   const currentSlot = ctx.getCurrentSlot();
   if (currentSlot === 0) return 0;
   const currentEpoch = computeEpochAtSlot(currentSlot);
@@ -507,7 +563,11 @@ export function computeHonestFfgSupportForCurrentTarget(ctx: FCRContext, store: 
   return minHonestFfgSupport + remainingHonestFfgWeight;
 }
 
-export function willNoConflictingCheckpointBeJustified(ctx: FCRContext, store: IFCRStore, cache: FCRCache): boolean {
+export function willNoConflictingCheckpointBeJustified(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): boolean {
   const target = getCurrentTarget(ctx, cache);
   if (!target) return false;
   if (equalCheckpointWithHex(target, ctx.getUnrealizedJustified().checkpoint)) {
@@ -520,7 +580,11 @@ export function willNoConflictingCheckpointBeJustified(ctx: FCRContext, store: I
   return 3 * honestSupport >= 1 * totalActiveBalance;
 }
 
-export function willCurrentTargetBeJustified(ctx: FCRContext, store: IFCRStore, cache: FCRCache): boolean {
+export function willCurrentTargetBeJustified(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): boolean {
   const targetState = getCurrentTargetState(ctx, store, cache);
   if (!targetState) return false;
   const totalActiveBalance = targetState.epochCtx.totalActiveBalanceIncrements;
@@ -529,9 +593,9 @@ export function willCurrentTargetBeJustified(ctx: FCRContext, store: IFCRStore, 
 }
 
 export function willCheckpointBeJustified(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
   checkpoint: CheckpointWithHex
 ): boolean {
   const currentTarget = getCurrentTarget(ctx, cache);
@@ -584,9 +648,9 @@ export function willCheckpointBeJustified(
 }
 
 export function isConfirmedChainSafe(
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
   confirmedRoot: RootHex
 ): boolean {
   if (!isAncestor(ctx, cache, confirmedRoot, store.currentEpochObservedJustifiedCheckpoint.rootHex)) {
@@ -610,10 +674,10 @@ export function isConfirmedChainSafe(
   return chainRoots.every((root) => isOneConfirmed(ctx, store, cache, previousBalanceSource, root));
 }
 export function findLatestConfirmedDescendant(
-  snapshot: FCRSnapshot,
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
+  snapshot: FastConfirmationSnapshot,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
   latestConfirmedRoot: RootHex
 ): RootHex {
   const currentEpoch = snapshot.currentEpoch;

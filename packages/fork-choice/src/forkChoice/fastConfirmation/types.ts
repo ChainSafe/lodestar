@@ -3,7 +3,7 @@ import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {ProtoBlock} from "../../protoArray/interface.ts";
 import {CheckpointWithHex} from "../store.ts";
 
-export type FCRBalanceSource = {
+export type FastConfirmationBalanceSource = {
   state: CachedBeaconStateAllForks | null;
   balances: EffectiveBalanceIncrements;
 };
@@ -12,7 +12,7 @@ export type ForkChoiceStateGetter = (
   opts: {stateRoot: RootHex; checkpoint?: never} | {stateRoot?: never; checkpoint: CheckpointWithHex}
 ) => CachedBeaconStateAllForks | null;
 
-export type IFCRStore = {
+export type IFastConfirmationStore = {
   confirmedRoot: RootHex;
   previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
   currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
@@ -23,12 +23,12 @@ export type IFCRStore = {
   stateGetter: ForkChoiceStateGetter;
 };
 
-export type FCRResult = {
+export type FatsConfirmationResult = {
   confirmedRoot: RootHex;
   didReset?: boolean;
 };
 
-export type FCRSnapshot = {
+export type FastConfirmationSnapshot = {
   currentSlot: Slot;
   currentEpoch: Epoch;
   headRoot: RootHex;
@@ -40,22 +40,22 @@ export type FCRSnapshot = {
   finalizedRoot: RootHex;
 };
 
-export type FCRDecision = {
+export type FastConfirmationDecision = {
   confirmedRoot: RootHex;
   didReset: boolean;
   stop?: boolean;
   reason?: string;
 };
 
-export type FCRRule = (
-  snapshot: FCRSnapshot,
-  ctx: FCRContext,
-  store: IFCRStore,
-  cache: FCRCache,
-  decision: FCRDecision
-) => FCRDecision;
+export type FastConfirmationRule = (
+  snapshot: FastConfirmationSnapshot,
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  decision: FastConfirmationDecision
+) => FastConfirmationDecision;
 
-export type FCRCache = {
+export type FastConfirmationCache = {
   blockByRoot: Map<RootHex, ProtoBlock | null>;
   epochByRoot: Map<RootHex, Epoch | null>;
   slotByRoot: Map<RootHex, Slot | null>;
@@ -65,7 +65,7 @@ export type FCRCache = {
   checkpointStateByKey: Map<string, CachedBeaconStateAllForks | null>;
 };
 
-export type FCRContext = {
+export type FastConfirmationContext = {
   config: {
     CONFIRMATION_BYZANTINE_THRESHOLD: number;
     PROPOSER_SCORE_BOOST: number;
@@ -84,5 +84,5 @@ export type FCRContext = {
 
 export interface IFastConfirmationRule {
   getConfirmedRoot(): RootHex;
-  onSlotStartAfterPastAttestationsApplied(ctx: FCRContext): FCRResult;
+  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext): FatsConfirmationResult;
 }

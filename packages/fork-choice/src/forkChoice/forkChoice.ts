@@ -44,7 +44,7 @@ import {
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
-  type FCRContext,
+  type FastConfirmationContext,
   FastConfirmationRule,
   type IFastConfirmationRule,
 } from "./fastConfirmation/fastConfirmationRule.ts";
@@ -138,8 +138,8 @@ export class ForkChoice implements IForkChoice {
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
   /** Optional fast confirmation rule implementation */
-  private readonly fcr?: IFastConfirmationRule;
-  private readonly fcrContext?: FCRContext;
+  private readonly fastConfirmationRule?: IFastConfirmationRule;
+  private readonly fatConfirmationContext?: FastConfirmationContext;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -165,8 +165,8 @@ export class ForkChoice implements IForkChoice {
     this.balances = this.fcStore.justified.balances;
 
     if (this.opts?.fastConfirmation) {
-      this.fcr = new FastConfirmationRule(this.fcStore, metrics);
-      this.fcrContext = this.createFCRContext();
+      this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics);
+      this.fatConfirmationContext = this.createFastConfirmationContext();
     }
 
     metrics?.forkChoice.votes.addCollect(() => {
@@ -210,7 +210,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   getConfirmedRoot(): RootHex {
-    return this.fcr?.getConfirmedRoot() ?? this.fcStore.justified.checkpoint.rootHex;
+    return this.fastConfirmationRule?.getConfirmedRoot() ?? this.fcStore.justified.checkpoint.rootHex;
   }
 
   getConfirmedBlock(): ProtoBlock | null {
@@ -1632,11 +1632,11 @@ export class ForkChoice implements IForkChoice {
   }
 
   private runFastConfirmation(): void {
-    if (!this.fcr || !this.fcrContext) return;
+    if (!this.fastConfirmationRule || !this.fatConfirmationContext) return;
     const timer = this.metrics?.fastConfirmation.duration.startTimer();
     try {
       this.updateHead();
-      const result = this.fcr.onSlotStartAfterPastAttestationsApplied(this.fcrContext);
+      const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fatConfirmationContext);
       this.fcStore.confirmedRoot = result.confirmedRoot;
     } catch (err) {
       this.logger?.warn("Fast confirmation failed", {}, err as Error);
@@ -1645,7 +1645,7 @@ export class ForkChoice implements IForkChoice {
     }
   }
 
-  private createFCRContext(): FCRContext {
+  private createFastConfirmationContext(): FastConfirmationContext {
     const confirmationByzantineThreshold = this.config.CONFIRMATION_BYZANTINE_THRESHOLD ?? 0;
     return {
       config: {

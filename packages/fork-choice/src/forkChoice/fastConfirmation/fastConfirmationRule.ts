@@ -1,38 +1,43 @@
 import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {buildFCRSnapshot, createFCRCache} from "./data.ts";
-import {FCRMetrics} from "./metrics.ts";
-import {runFCRRules} from "./rules.ts";
-import {FCRContext, FCRResult, IFCRStore, IFastConfirmationRule} from "./types.ts";
+import {buildFastConfirmationSnapshot, createFastConfirmationCache} from "./data.ts";
+import {FastConfirmationMetrics} from "./metrics.ts";
+import {runFastConfirmationRules} from "./rules.ts";
+import {
+  FastConfirmationContext,
+  FatsConfirmationResult,
+  IFastConfirmationRule,
+  IFastConfirmationStore,
+} from "./types.ts";
 
 export * from "./metrics.ts";
 export * from "./types.ts";
 
 export class FastConfirmationRule implements IFastConfirmationRule {
   constructor(
-    private readonly store: IFCRStore,
-    readonly metrics: FCRMetrics | null
+    private readonly store: IFastConfirmationStore,
+    readonly metrics: FastConfirmationMetrics | null
   ) {}
 
   getConfirmedRoot(): RootHex {
     return this.store.confirmedRoot;
   }
 
-  onSlotStartAfterPastAttestationsApplied(ctx: FCRContext): FCRResult {
-    this.updateFCRVariables(ctx);
+  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext): FatsConfirmationResult {
+    this.updateFastConfirmationVariables(ctx);
 
-    const cache = createFCRCache();
-    const snapshot = buildFCRSnapshot(ctx, this.store, cache);
+    const cache = createFastConfirmationCache();
+    const snapshot = buildFastConfirmationSnapshot(ctx, this.store, cache);
 
-    const {confirmedRoot, didReset, reason: _} = runFCRRules(snapshot, ctx, this.store, cache);
+    const {confirmedRoot, didReset, reason: _} = runFastConfirmationRules(snapshot, ctx, this.store, cache);
 
     this.store.confirmedRoot = confirmedRoot;
-    this.updateFCRMetrics(ctx, {confirmedRoot, didReset});
+    this.updateFastConfirmationMetrics(ctx, {confirmedRoot, didReset});
 
     return {confirmedRoot, didReset};
   }
 
-  private updateFCRVariables(ctx: FCRContext): void {
+  private updateFastConfirmationVariables(ctx: FastConfirmationContext): void {
     this.store.previousSlotHead = this.store.currentSlotHead;
     this.store.currentSlotHead = ctx.getHead().blockRoot;
 
@@ -45,7 +50,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     }
   }
 
-  private updateFCRMetrics(ctx: FCRContext, result: FCRResult): void {
+  private updateFastConfirmationMetrics(ctx: FastConfirmationContext, result: FatsConfirmationResult): void {
     if (!this.metrics) return;
     const confirmedBlock = ctx.getBlock(result.confirmedRoot);
     if (confirmedBlock) {
