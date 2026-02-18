@@ -10,6 +10,7 @@ import {
   UpdateHeadOpt,
   getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -125,6 +126,7 @@ import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache, fcCheckpointToHexPayload} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
+import {IZkvmExecutionProofVerifier, defaultZkvmExecutionProofVerifier} from "./validation/executionProofVerifier.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -184,6 +186,12 @@ export class BeaconChain implements IBeaconChain {
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly executionProofPool: ExecutionProofPool;
+  /** EIP-8025: When true, skip EL newPayload calls and use execution proofs for validation */
+  readonly activateZkvm: boolean;
+  /** EIP-8025: Minimum distinct proof types required per block in zkvm mode */
+  readonly minProofsRequired: number;
+  /** EIP-8025: Verifier for execution proofs — swap implementation for real zkvm prover */
+  readonly executionProofVerifier: IZkvmExecutionProofVerifier;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 
@@ -310,6 +318,9 @@ export class BeaconChain implements IBeaconChain {
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.executionProofPool = new ExecutionProofPool();
+    this.activateZkvm = opts.activateZkvm ?? false;
+    this.minProofsRequired = opts.minProofsRequired ?? 1;
+    this.executionProofVerifier = opts.executionProofVerifier ?? defaultZkvmExecutionProofVerifier;
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
 
@@ -1521,6 +1532,53 @@ export class BeaconChain implements IBeaconChain {
         targetCustodyGroupCount,
       });
       this.emitter.emit(ChainEvent.updateTargetCustodyGroupCount, targetCustodyGroupCount);
+    }
+  }
+
+  /**
+   * EIP-8025: Check if enough execution proofs arrived for a block and transition it to Valid in fork choice.
+   * Called from both gossip handler and REST API handler when a new proof is added to the pool.
+   */
+  maybeTransitionToValidOnProofArrival(proof: {slot: number; blockRoot: Uint8Array; blockHash: Uint8Array}): void {
+    if (!this.activateZkvm) {
+      return;
+    }
+
+    const blockRootHex = toRootHex(proof.blockRoot);
+    if (this.executionProofPool.hasEnoughProofs(blockRootHex, this.minProofsRequired)) {
+      // Look up the block in fork choice to get the canonical execution payload block hash.
+      // We must NOT use proof.blockHash because gossip proofs from other clients may use
+      // incompatible SSZ encodings, causing the deserialized blockHash to be garbage.
+      // The fork choice proto-array is the authoritative source for execution block hashes.
+      const block = this.forkChoice.getBlockHex(blockRootHex);
+      if (block == null || block.executionPayloadBlockHash == null) {
+        this.logger.debug("Cannot transition block to valid: not found in fork choice", {
+          slot: proof.slot,
+          blockRoot: blockRootHex,
+        });
+        return;
+      }
+
+      // Skip if already valid — multiple proofs arriving concurrently can trigger this
+      if (block.executionStatus === ExecutionStatus.Valid) {
+        return;
+      }
+
+      const execBlockHash = block.executionPayloadBlockHash;
+      this.forkChoice.validateLatestHash({
+        executionStatus: ExecutionStatus.Valid,
+        latestValidExecHash: execBlockHash,
+      });
+      // Refresh the cached fork choice head so API responses reflect the updated execution status.
+      // validateLatestHash updates the proto-array nodes but the cached head is a stale snapshot.
+      this.recomputeForkChoiceHead(ForkchoiceCaller.onExecutionProof);
+      this.logger.info("Execution proofs sufficient, marked block as execution-valid (zkvm mode)", {
+        slot: proof.slot,
+        blockRoot: blockRootHex,
+        execBlockHash,
+        proofsAvailable: this.executionProofPool.getProofsByBlockRoot(blockRootHex).length,
+        minRequired: this.minProofsRequired,
+      });
     }
   }
 

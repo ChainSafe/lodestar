@@ -359,6 +359,9 @@ export function getBeaconPoolApi({
         } catch (e) {
           logger.debug("Failed to publish execution proof to gossip", {slot, proofId}, e as Error);
         }
+
+        // EIP-8025: In zkvm mode, check if we now have enough proofs to validate this block
+        chain.maybeTransitionToValidOnProofArrival(executionProof);
       }
 
       return {};

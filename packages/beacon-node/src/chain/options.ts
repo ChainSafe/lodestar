@@ -11,6 +11,7 @@ import {
   DEFAULT_MAX_CP_STATE_ON_DISK,
   PersistentCheckpointStateCacheOpts,
 } from "./stateCache/persistentCheckpointsCache.js";
+import {IZkvmExecutionProofVerifier} from "./validation/executionProofVerifier.js";
 import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
 export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
@@ -54,6 +55,8 @@ export type IChainOptions = BlockProcessOpts &
     minProofsRequired?: number;
     /** EIP-8025: Which proof type IDs this node generates (for prover mode). Empty = verify-only. */
     zkvmGenerationProofTypes?: number[];
+    /** EIP-8025: Custom execution proof verifier — defaults to DummyZkvmExecutionProofVerifier */
+    executionProofVerifier?: IZkvmExecutionProofVerifier;
   };
 
 export type BlockProcessOpts = {

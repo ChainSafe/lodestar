@@ -50,6 +50,7 @@ import {
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
+import {InsertOutcome} from "../../chain/opPools/types.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {validateGossipDataColumnSidecar} from "../../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
@@ -928,11 +929,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       try {
         const clockSlot = chain.clock.currentSlot;
         const insertOutcome = chain.executionProofPool.add(executionProof, clockSlot);
+        const blockRootHex = toRootHex(executionProof.blockRoot);
         logger.debug("Received execution proof via gossip", {
           proofId: executionProof.proofId,
           slot: executionProof.slot,
+          blockRoot: blockRootHex,
           insertOutcome,
         });
+
+        // EIP-8025: In zkvm mode, check if we now have enough proofs to validate this block
+        if (insertOutcome === InsertOutcome.NewData) {
+          chain.maybeTransitionToValidOnProofArrival(executionProof);
+        }
       } catch (e) {
         logger.error("Error adding execution proof to pool", {}, e as Error);
       }
