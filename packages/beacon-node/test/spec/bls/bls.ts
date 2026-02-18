@@ -39,8 +39,8 @@ function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signatu
   try {
     return aggregateVerify(
       messages.map(fromHexString),
-      pubkeys.map((pk) => PublicKey.fromHex(pk)),
-      Signature.fromHex(signature)
+      pubkeys.map((pk) => PublicKey.fromBytes(fromHexString(pk))),
+      Signature.fromBytes(fromHexString(signature))
     );
   } catch (_e) {
     return false;
@@ -54,7 +54,7 @@ function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signatu
  * ```
  */
 function aggregate(input: string[]): string {
-  const pks = input.map((pkHex) => Signature.fromHex(pkHex));
+  const pks = input.map((pkHex) => Signature.fromBytes(fromHexString(pkHex)));
   const agg = aggregateSignatures(pks);
   return agg.toHex();
 }
@@ -73,8 +73,8 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
   try {
     return fastAggregateVerify(
       fromHexString(message),
-      pubkeys.map((hex) => PublicKey.fromHex(hex, true)),
-      Signature.fromHex(signature, true)
+      pubkeys.map((hex) => PublicKey.fromBytes(fromHexString(hex), true)),
+      Signature.fromBytes(fromHexString(signature), true)
     );
   } catch (_e) {
     return false;
@@ -96,9 +96,9 @@ function batch_verify(input: {pubkeys: string[]; messages: string[]; signatures:
   try {
     return verifyMultipleAggregateSignatures(
       pubkeys.map((pubkey, i) => ({
-        pk: PublicKey.fromHex(pubkey, true),
+        pk: PublicKey.fromBytes(fromHexString(pubkey), true),
         msg: fromHexString(messages[i]),
-        sig: Signature.fromHex(signatures[i], true),
+        sig: Signature.fromBytes(fromHexString(signatures[i]), true),
       }))
     );
   } catch (_e) {
@@ -117,7 +117,7 @@ function batch_verify(input: {pubkeys: string[]; messages: string[]; signatures:
  */
 function sign(input: {privkey: string; message: string}): string | null {
   const {privkey, message} = input;
-  const signature = SecretKey.fromHex(privkey).sign(fromHexString(message));
+  const signature = SecretKey.fromBytes(fromHexString(privkey)).sign(fromHexString(message));
   return signature.toHex();
 }
 
@@ -134,7 +134,11 @@ function sign(input: {privkey: string; message: string}): string | null {
 function verify(input: {pubkey: string; message: string; signature: string}): boolean {
   const {pubkey, message, signature} = input;
   try {
-    return _verify(fromHexString(message), PublicKey.fromHex(pubkey), Signature.fromHex(signature));
+    return _verify(
+      fromHexString(message),
+      PublicKey.fromBytes(fromHexString(pubkey)),
+      Signature.fromBytes(fromHexString(signature))
+    );
   } catch (_e) {
     return false;
   }
@@ -149,7 +153,7 @@ function verify(input: {pubkey: string; message: string; signature: string}): bo
  */
 function deserialization_G1(input: {pubkey: string}): boolean {
   try {
-    PublicKey.fromHex(input.pubkey, true);
+    PublicKey.fromBytes(fromHexString(input.pubkey), true);
     return true;
   } catch (_e) {
     return false;
@@ -165,7 +169,7 @@ function deserialization_G1(input: {pubkey: string}): boolean {
  */
 function deserialization_G2(input: {signature: string}): boolean {
   try {
-    Signature.fromHex(input.signature, true);
+    Signature.fromBytes(fromHexString(input.signature), true);
     return true;
   } catch (_e) {
     return false;

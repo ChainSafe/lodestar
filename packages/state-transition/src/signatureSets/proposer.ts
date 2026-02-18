@@ -1,13 +1,13 @@
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
 
 export function verifyProposerSignature(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
+  index2pubkey: PubkeyCache,
   signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): boolean {
   const signatureSet = getBlockProposerSignatureSet(config, signedBlock);

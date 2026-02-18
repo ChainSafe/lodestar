@@ -1,6 +1,6 @@
 import {PublicKey, Signature, aggregatePublicKeys, fastAggregateVerify, verify} from "@chainsafe/lodestar-z/blst";
 import {Root} from "@lodestar/types";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+import {PubkeyCache} from "../cache/pubkeyCache.js";
 
 export enum SignatureSetType {
   single = "single",
@@ -51,16 +51,27 @@ export type ISignatureSet = SingleSignatureSet | IndexedSignatureSet | Aggregate
  * Get the pubkey for a signature set, performing aggregation if necessary.
  * Requires index2pubkey cache for indexed and aggregate sets.
  */
-export function getSignatureSetPubkey(signatureSet: ISignatureSet, index2pubkey: Index2PubkeyCache): PublicKey {
+export function getSignatureSetPubkey(signatureSet: ISignatureSet, index2pubkey: PubkeyCache): PublicKey {
   switch (signatureSet.type) {
     case SignatureSetType.single:
       return signatureSet.pubkey;
 
-    case SignatureSetType.indexed:
-      return index2pubkey[signatureSet.index];
+    case SignatureSetType.indexed: {
+      const pubkey = index2pubkey.get(signatureSet.index);
+      if (!pubkey) {
+        throw Error(`Missing pubkey for validator index ${signatureSet.index}`);
+      }
+      return pubkey;
+    }
 
     case SignatureSetType.aggregate: {
-      const pubkeys = signatureSet.indices.map((i) => index2pubkey[i]);
+      const pubkeys = signatureSet.indices.map((i) => {
+        const pubkey = index2pubkey.get(i);
+        if (!pubkey) {
+          throw Error(`Missing pubkey for validator index ${i}`);
+        }
+        return pubkey;
+      });
       return aggregatePublicKeys(pubkeys);
     }
 
@@ -69,11 +80,11 @@ export function getSignatureSetPubkey(signatureSet: ISignatureSet, index2pubkey:
   }
 }
 
-export function verifySignatureSet(signatureSet: SingleSignatureSet, index2pubkey?: Index2PubkeyCache): boolean;
-export function verifySignatureSet(signatureSet: IndexedSignatureSet, index2pubkey: Index2PubkeyCache): boolean;
-export function verifySignatureSet(signatureSet: AggregatedSignatureSet, index2pubkey: Index2PubkeyCache): boolean;
-export function verifySignatureSet(signatureSet: ISignatureSet, index2pubkey: Index2PubkeyCache): boolean;
-export function verifySignatureSet(signatureSet: ISignatureSet, index2pubkey?: Index2PubkeyCache): boolean {
+export function verifySignatureSet(signatureSet: SingleSignatureSet, index2pubkey?: PubkeyCache): boolean;
+export function verifySignatureSet(signatureSet: IndexedSignatureSet, index2pubkey: PubkeyCache): boolean;
+export function verifySignatureSet(signatureSet: AggregatedSignatureSet, index2pubkey: PubkeyCache): boolean;
+export function verifySignatureSet(signatureSet: ISignatureSet, index2pubkey: PubkeyCache): boolean;
+export function verifySignatureSet(signatureSet: ISignatureSet, index2pubkey?: PubkeyCache): boolean {
   // All signatures are not trusted and must be group checked (p2.subgroup_check)
   const signature = Signature.fromBytes(signatureSet.signature, true);
 
@@ -85,14 +96,24 @@ export function verifySignatureSet(signatureSet: ISignatureSet, index2pubkey?: I
       if (!index2pubkey) {
         throw Error("index2pubkey required for indexed signature set");
       }
-      return verify(signatureSet.signingRoot, index2pubkey[signatureSet.index], signature);
+      const pubkey = index2pubkey.get(signatureSet.index);
+      if (!pubkey) {
+        throw Error(`Missing pubkey for validator index ${signatureSet.index}`);
+      }
+      return verify(signatureSet.signingRoot, pubkey, signature);
     }
 
     case SignatureSetType.aggregate: {
       if (!index2pubkey) {
         throw Error("index2pubkey required for aggregate signature set");
       }
-      const pubkeys = signatureSet.indices.map((i) => index2pubkey[i]);
+      const pubkeys = signatureSet.indices.map((i) => {
+        const pubkey = index2pubkey.get(i);
+        if (!pubkey) {
+          throw Error(`Missing pubkey for validator index ${i}`);
+        }
+        return pubkey;
+      });
       return fastAggregateVerify(signatureSet.signingRoot, pubkeys, signature);
     }
 

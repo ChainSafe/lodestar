@@ -4,7 +4,6 @@ import deepmerge from "deepmerge";
 import tmp from "tmp";
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -12,10 +11,10 @@ import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {
   BeaconStateAllForks,
-  Index2PubkeyCache,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
   createCachedBeaconState,
+  createPubkeyCache,
   syncPubkeys,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
@@ -133,15 +132,13 @@ export async function getDevBeaconNode(
   );
 
   const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-  const pubkey2index = new PubkeyIndexMap();
-  const index2pubkey: Index2PubkeyCache = [];
-  syncPubkeys(anchorState.validators.getAllReadonlyValues(), pubkey2index, index2pubkey);
+  const pubkeyCache = createPubkeyCache();
+  syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     anchorState,
     {
       config: beaconConfig,
-      pubkey2index,
-      index2pubkey,
+      pubkeyCache,
     },
     {skipSyncPubkeys: true}
   );
@@ -149,8 +146,7 @@ export async function getDevBeaconNode(
   return BeaconNode.init({
     opts: options as IBeaconNodeOptions,
     config: beaconConfig,
-    pubkey2index,
-    index2pubkey,
+    pubkeyCache,
     db,
     logger,
     processShutdownCallback: () => {},

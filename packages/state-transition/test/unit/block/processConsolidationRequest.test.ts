@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {digest} from "@chainsafe/as-sha256";
-import bls from "@chainsafe/lodestar-z/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {
   BLS_WITHDRAWAL_PREFIX,
   COMPOUNDING_WITHDRAWAL_PREFIX,
@@ -28,7 +28,7 @@ describe("processConsolidationRequest", () => {
     for (let i = 0; i < vc; i++) {
       const buffer = Buffer.alloc(32, 0);
       buffer.writeInt16BE(i + 1, 30); // Offset to ensure the SK is less than the order
-      const sk = bls.SecretKey.fromBytes(buffer);
+      const sk = SecretKey.fromBytes(buffer);
       validators[i].pubkey = sk.toPublicKey().toBytes();
     }
 

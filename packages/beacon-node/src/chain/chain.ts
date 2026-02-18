@@ -1,6 +1,5 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
@@ -12,7 +11,7 @@ import {
   CachedBeaconStateAllForks,
   EffectiveBalanceIncrements,
   EpochShuffling,
-  Index2PubkeyCache,
+  PubkeyCache,
   computeAnchorCheckpoint,
   computeAttestationsRewards,
   computeBlockRewards,
@@ -182,8 +181,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   // Global state caches
-  readonly pubkey2index: PubkeyIndexMap;
-  readonly index2pubkey: Index2PubkeyCache;
+  readonly pubkeyCache: PubkeyCache;
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
@@ -229,8 +227,7 @@ export class BeaconChain implements IBeaconChain {
     {
       privateKey,
       config,
-      pubkey2index,
-      index2pubkey,
+      pubkeyCache,
       db,
       dbName,
       dataDir,
@@ -246,8 +243,7 @@ export class BeaconChain implements IBeaconChain {
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
-      pubkey2index: PubkeyIndexMap;
-      index2pubkey: Index2PubkeyCache;
+      pubkeyCache: PubkeyCache;
       db: IBeaconDb;
       dbName: string;
       dataDir: string;
@@ -279,8 +275,8 @@ export class BeaconChain implements IBeaconChain {
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics, index2pubkey})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, index2pubkey});
+      ? new BlsSingleThreadVerifier({metrics, pubkeyCache})
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, pubkeyCache});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
@@ -336,8 +332,7 @@ export class BeaconChain implements IBeaconChain {
     ]);
 
     // Global cache of validators pubkey/index mapping
-    this.pubkey2index = pubkey2index;
-    this.index2pubkey = index2pubkey;
+    this.pubkeyCache = pubkeyCache;
 
     const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
     const blockStateCache = new FIFOBlockStateCache(this.opts, {metrics});
@@ -909,7 +904,10 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = this.index2pubkey[proposerIndex].toBytes();
+    const proposerPubKey = this.pubkeyCache.get(proposerIndex)?.toBytes();
+    if (!proposerPubKey) {
+      throw Error(`Missing proposer pubkey for validator index ${proposerIndex}`);
+    }
 
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
@@ -1506,7 +1504,7 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`State is not in cache for slot ${slot}`);
     }
 
-    const rewards = await computeAttestationsRewards(this.config, this.pubkey2index, cachedState, validatorIds);
+    const rewards = await computeAttestationsRewards(this.config, this.pubkeyCache, cachedState, validatorIds);
 
     return {rewards, executionOptimistic, finalized};
   }
@@ -1523,6 +1521,6 @@ export class BeaconChain implements IBeaconChain {
 
     preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
-    return computeSyncCommitteeRewards(this.config, this.index2pubkey, block, preState, validatorIds);
+    return computeSyncCommitteeRewards(this.config, this.pubkeyCache, block, preState, validatorIds);
   }
 }

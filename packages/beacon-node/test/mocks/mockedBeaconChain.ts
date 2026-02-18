@@ -1,8 +1,8 @@
 import {Mock, Mocked, vi} from "vitest";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {createPubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
@@ -141,8 +141,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       // @ts-expect-error
       seenBlockInputCache: new SeenBlockInput(),
       shufflingCache: new ShufflingCache(),
-      pubkey2index: new PubkeyIndexMap(),
-      index2pubkey: [],
+      pubkeyCache: createPubkeyCache(),
       produceCommonBlockBody: vi.fn(),
       getProposerHead: vi.fn(),
       produceBlock: vi.fn(),

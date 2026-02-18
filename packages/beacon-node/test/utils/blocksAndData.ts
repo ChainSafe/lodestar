@@ -1,7 +1,6 @@
 import {randomBytes} from "node:crypto";
 import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/lodestar-z/blst";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   ForkPostCapella,
@@ -24,6 +23,8 @@ import {Clock} from "../../src/util/clock.js";
 import {CustodyConfig, computePostFuluKzgCommitmentsInclusionProof} from "../../src/util/dataColumns.js";
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
+
+const SIGNATURE_LENGTH_UNCOMPRESSED = 96;
 
 export const CAPELLA_FORK_EPOCH = 0;
 export const DENEB_FORK_EPOCH = 10;

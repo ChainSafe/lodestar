@@ -1,7 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {IndexedAttestation, IndexedAttestationBigint, Slot} from "@lodestar/types";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 import {verifySignatureSet} from "../util/index.js";
 
@@ -10,7 +10,7 @@ import {verifySignatureSet} from "../util/index.js";
  */
 export function isValidIndexedAttestation(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
+  index2pubkey: PubkeyCache,
   stateSlot: Slot,
   validatorsLen: number,
   indexedAttestation: IndexedAttestation,
@@ -28,7 +28,7 @@ export function isValidIndexedAttestation(
 
 export function isValidIndexedAttestationBigint(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
+  index2pubkey: PubkeyCache,
   stateSlot: Slot,
   validatorsLen: number,
   indexedAttestation: IndexedAttestationBigint,
