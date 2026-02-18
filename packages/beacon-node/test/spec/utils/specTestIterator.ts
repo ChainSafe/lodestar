@@ -30,6 +30,7 @@ export interface SkipOpts {
 const coveredTestRunners = [
   "light_client",
   "epoch_processing",
+  "fast_confirmation",
   "finality",
   "fork",
   "fork_choice",
