@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {digest} from "@chainsafe/as-sha256";
-import bls from "@chainsafe/blst";
+import bls from "@chainsafe/lodestar-z/blst";
 import {
   BLS_WITHDRAWAL_PREFIX,
   COMPOUNDING_WITHDRAWAL_PREFIX,

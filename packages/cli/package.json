@@ -59,9 +59,9 @@
   "dependencies": {
     "@chainsafe/bls-keygen": "^0.4.0",
     "@chainsafe/bls-keystore": "^3.1.0",
-    "@chainsafe/blst": "^2.2.0",
     "@chainsafe/discv5": "^11.0.4",
     "@chainsafe/enr": "^5.0.1",
+    "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/persistent-merkle-tree": "^1.2.1",
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.2.2",

@@ -49,7 +49,7 @@
   ],
   "dependencies": {
     "@chainsafe/bls-keygen": "^0.4.0",
-    "@chainsafe/blst": "^2.2.0",
+    "@chainsafe/lodestar-z": "catalog:",
     "@lodestar/api": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",

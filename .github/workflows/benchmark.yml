@@ -19,6 +19,9 @@ on:
       - unstable
   workflow_dispatch:
 
+env:
+  ZIG_VERSION: "0.14.1"
+
 jobs:
   run:
     runs-on: buildjet-4vcpu-ubuntu-2204

@@ -30,6 +30,13 @@ jobs:
           bun-version: latest
       - name: Install pnpm
         run: bun install -g npm:pnpm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+          cache-key: ${{ env.ZIG_VERSION }}
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Build

@@ -1,4 +1,4 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
+import {PublicKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";

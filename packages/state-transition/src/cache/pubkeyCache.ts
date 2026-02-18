@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {phase0} from "@lodestar/types";
 

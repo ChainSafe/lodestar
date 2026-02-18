@@ -109,11 +109,11 @@
   },
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
-    "@chainsafe/blst": "^2.2.0",
     "@chainsafe/discv5": "^11.0.4",
     "@chainsafe/enr": "^5.0.1",
     "@chainsafe/libp2p-gossipsub": "^14.1.2",
     "@chainsafe/libp2p-noise": "^16.1.5",
+    "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/persistent-merkle-tree": "^1.2.1",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",

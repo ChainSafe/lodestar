@@ -1,7 +1,7 @@
 import {randomBytes} from "node:crypto";
 import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/blst";
+import {SIGNATURE_LENGTH_UNCOMPRESSED} from "@chainsafe/lodestar-z/blst";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   ForkPostCapella,

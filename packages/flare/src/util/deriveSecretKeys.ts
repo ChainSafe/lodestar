@@ -1,5 +1,5 @@
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {CliCommandOptions} from "@lodestar/utils";
 import {YargsError} from "./errors.js";

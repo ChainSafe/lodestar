@@ -20,6 +20,13 @@ runs:
         # cache: pnpm
         package-manager-cache: false
 
+    - name: Install Zig
+      uses: mlugg/setup-zig@v2
+      with:
+        version: ${{ env.ZIG_VERSION }}
+        cache-key: ${{ env.ZIG_VERSION }}
+
+
     - name: Node.js version
       id: node
       shell: bash

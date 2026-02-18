@@ -1,4 +1,4 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
+import {PublicKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {
   BUILDER_INDEX_SELF_BUILD,
   DOMAIN_BEACON_BUILDER,

@@ -1,29 +1,24 @@
 packages:
   - packages/*
 
+catalog:
+  '@chainsafe/lodestar-z': github:chainsafe/lodestar-z#bing/integrate-lodestar
+  '@vitest/browser': ^4.0.7
+  '@vitest/browser-playwright': ^4.0.7
+  '@vitest/coverage-v8': ^4.0.7
+  vitest: ^4.0.7
+
 linkWorkspacePackages: true
 
 minimumReleaseAge: 2880
 
 nodeLinker: isolated
 
-catalog:
-  vitest: "^4.0.7"
-  "@vitest/browser": "^4.0.7"
-  "@vitest/browser-playwright": "^4.0.7"
-  "@vitest/coverage-v8": "^4.0.7"
-
-overrides:
-  dns-over-http-resolver": "^2.1.1"
-  loupe": "^2.3.6"
-  nan": "^2.19.0"
-  elliptic: ">=6.6.1"
-
 onlyBuiltDependencies:
-  - "@parcel/watcher"
-  - "@swc/core"
+  - '@parcel/watcher'
+  - '@swc/core'
   - aws-sdk
-  - "@vekexasia/bigint-buffer2"
+  - '@vekexasia/bigint-buffer2'
   - classic-level
   - core-js
   - cpu-features
@@ -31,3 +26,9 @@ onlyBuiltDependencies:
   - esbuild
   - nx
   - ssh2
+
+overrides:
+  dns-over-http-resolver": ^2.1.1
+  elliptic: '>=6.6.1'
+  loupe": ^2.3.6
+  nan": ^2.19.0

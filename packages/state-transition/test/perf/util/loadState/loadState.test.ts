@@ -1,5 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {Index2PubkeyCache} from "../../../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";

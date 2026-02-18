@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    '@chainsafe/lodestar-z':
+      specifier: github:chainsafe/lodestar-z#bing/integrate-lodestar
+      version: 0.1.0
     '@vitest/browser':
       specifier: ^4.0.7
       version: 4.0.7
@@ -216,9 +219,6 @@ importers:
       '@chainsafe/as-sha256':
         specifier: ^1.2.0
         version: 1.2.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
       '@chainsafe/discv5':
         specifier: ^11.0.4
         version: 11.0.4
@@ -231,6 +231,9 @@ importers:
       '@chainsafe/libp2p-noise':
         specifier: ^16.1.5
         version: 16.1.5
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -436,15 +439,15 @@ importers:
       '@chainsafe/bls-keystore':
         specifier: ^3.1.0
         version: 3.1.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
       '@chainsafe/discv5':
         specifier: ^11.0.4
         version: 11.0.4
       '@chainsafe/enr':
         specifier: ^5.0.1
         version: 5.0.1
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -621,9 +624,9 @@ importers:
 
   packages/era:
     dependencies:
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -648,9 +651,9 @@ importers:
       '@chainsafe/bls-keygen':
         specifier: ^0.4.0
         version: 0.4.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -980,9 +983,9 @@ importers:
       '@chainsafe/as-sha256':
         specifier: ^1.2.0
         version: 1.2.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -1023,9 +1026,9 @@ importers:
       '@chainsafe/bls-keystore':
         specifier: ^3.1.0
         version: 3.1.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -1094,9 +1097,9 @@ importers:
 
   packages/validator:
     dependencies:
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387
       '@chainsafe/ssz':
         specifier: ^1.2.2
         version: 1.2.2
@@ -1459,6 +1462,10 @@ packages:
   '@chainsafe/libp2p-noise@16.1.5':
     resolution: {integrity: sha512-yac0bknwfuYdXXOAFGVL4fYR0de0p1Uk7W0gIkuxlj8JSqhkHr+kEt3958PfnfmX880QJAIogsh/ZupFjg0uJA==}
 
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387':
+    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387}
+    version: 0.1.0
+
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
 
@@ -1600,6 +1607,10 @@ packages:
 
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
+
+  '@chainsafe/zapi@0.1.1':
+    resolution: {integrity: sha512-HpjNyRaXODjXMqVTpq75jaY6TfeBk3icPWYUAbkqrQFpFfYCbPUdWPJ4FCYrejxYGUbaJGFKp8IHHEmMYp2MBw==}
+    hasBin: true
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -7761,6 +7772,10 @@ snapshots:
       uint8arrays: 5.1.0
       wherearewe: 2.0.1
 
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cfa6abb2b1623bbad3525876fd830770ff255387':
+    dependencies:
+      '@chainsafe/zapi': 0.1.1
+
   '@chainsafe/netmask@2.0.0':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
@@ -7874,6 +7889,8 @@ snapshots:
       tiny-worker: 2.3.0
     transitivePeerDependencies:
       - supports-color
+
+  '@chainsafe/zapi@0.1.1': {}
 
   '@colors/colors@1.5.0': {}
 

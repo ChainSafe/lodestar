@@ -1,4 +1,4 @@
-import {PublicKey, Signature, aggregatePublicKeys, fastAggregateVerify, verify} from "@chainsafe/blst";
+import {PublicKey, Signature, aggregatePublicKeys, fastAggregateVerify, verify} from "@chainsafe/lodestar-z/blst";
 import {Root} from "@lodestar/types";
 import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 

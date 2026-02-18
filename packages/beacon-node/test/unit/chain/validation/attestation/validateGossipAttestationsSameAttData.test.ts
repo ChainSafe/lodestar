@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {PublicKey, SecretKey} from "@chainsafe/blst";
+import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";

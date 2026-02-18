@@ -1,4 +1,4 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
+import {PublicKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,

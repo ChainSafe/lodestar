@@ -1,4 +1,4 @@
-import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/blst";
+import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/lodestar-z/blst";
 import {ISignatureSet, Index2PubkeyCache} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";

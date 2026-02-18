@@ -1,5 +1,5 @@
 import inquirer from "inquirer";
-import {Signature} from "@chainsafe/blst";
+import {Signature} from "@chainsafe/lodestar-z/blst";
 import {ApiClient, getClient} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {

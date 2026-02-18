@@ -1,4 +1,4 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
+import {PublicKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";

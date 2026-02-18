@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {getClient} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";

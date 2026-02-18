@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {

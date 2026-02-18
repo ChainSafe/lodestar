@@ -7,6 +7,9 @@ concurrency: cd-publish-rc
 on:
   workflow_call:
 
+env:
+  ZIG_VERSION: "0.14.1"
+
 permissions:
   contents: write # Required for OIDC
   id-token: write # Required to create a Github release
