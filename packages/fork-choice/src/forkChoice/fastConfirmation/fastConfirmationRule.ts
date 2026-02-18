@@ -50,7 +50,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       observedJustifiedEpoch: snapshot.observedJustified.epoch,
     });
 
-    const {confirmedRoot, didReset, reason} = runFastConfirmationRules(snapshot, ctx, this.store, cache, this.logger);
+    const {confirmedRoot, didReset, reason} = runFastConfirmationRules(snapshot, ctx, this.store, cache);
 
     const changed = confirmedRoot !== previousConfirmedRoot;
     const confirmedSlot = cache.slotByRoot.get(confirmedRoot) ?? null;

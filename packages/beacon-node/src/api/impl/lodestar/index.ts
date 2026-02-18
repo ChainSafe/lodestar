@@ -273,6 +273,36 @@ export function getLodestarApi({
         },
       };
     },
+
+    async getFastConfirmationInfo() {
+      const confirmedRoot = chain.forkChoice.getConfirmedRoot();
+      const confirmedBlock = chain.forkChoice.getConfirmedBlock();
+      const justifiedCheckpoint = chain.forkChoice.getJustifiedCheckpoint();
+      const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
+      const headRoot = chain.forkChoice.getHeadRoot();
+      const head = chain.forkChoice.getHead();
+
+      return {
+        data: {
+          confirmed: {
+            rootHex: confirmedRoot,
+            slot: confirmedBlock?.slot ?? null,
+          },
+          head: {
+            rootHex: headRoot,
+            slot: head.slot,
+          },
+          justifiedCheckpoint: {
+            rootHex: justifiedCheckpoint.rootHex,
+            epoch: justifiedCheckpoint.epoch,
+          },
+          finalizedCheckpoint: {
+            rootHex: finalizedCheckpoint.rootHex,
+            epoch: finalizedCheckpoint.epoch,
+          },
+        },
+      };
+    },
   };
 }
 

@@ -677,7 +677,7 @@ export function isConfirmedChainSafe(
   const chainRoots = getAncestorRoots(ctx, cache, confirmedRoot, startRoot);
   const previousBalanceSource = getPreviousBalanceSource(store, cache);
   for (const root of chainRoots) {
-    if (!isOneConfirmed(ctx, store, cache, previousBalanceSource, root, logger)) {
+    if (!isOneConfirmed(ctx, store, cache, previousBalanceSource, root)) {
       logger?.debug("Fast confirmation chain-safety failed", {
         confirmedRoot,
         reason: "unconfirmed_block_in_chain",
@@ -742,7 +742,7 @@ export function findLatestConfirmedDescendant(
         });
         break;
       }
-      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, logger);
+      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot);
       if (!isConfirmed) {
         logger?.debug("Fast confirmation previous-epoch loop stopped", {
           reason: "block_not_one_confirmed",
@@ -783,7 +783,7 @@ export function findLatestConfirmedDescendant(
         }
       }
 
-      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, logger);
+      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot);
       if (!isConfirmed) {
         logger?.debug("Fast confirmation current-epoch loop stopped", {
           reason: "block_not_one_confirmed",
