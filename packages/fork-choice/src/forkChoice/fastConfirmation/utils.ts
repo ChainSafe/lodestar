@@ -7,7 +7,7 @@ import {
   isStartSlotOfEpoch,
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {Logger, fromHex} from "@lodestar/utils";
 import {ProtoBlock} from "../../protoArray/interface.ts";
 import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.ts";
 import {
@@ -488,10 +488,9 @@ export function isOneConfirmed(
   const supportDiscount = getSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
   const adversarialWeightBase = getAdversarialWeight(ctx, store, cache, balanceSource, blockRoot);
 
-  const adversarialWeightScaled =
-    2 * support + supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeightBase;
+  const isOneConfirmed = 2 * support + supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeightBase;
 
-  return adversarialWeightScaled;
+  return isOneConfirmed;
 }
 
 export function getCurrentTarget(ctx: FastConfirmationContext, cache: FastConfirmationCache): CheckpointWithHex | null {
@@ -651,9 +650,15 @@ export function isConfirmedChainSafe(
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
-  confirmedRoot: RootHex
+  confirmedRoot: RootHex,
+  logger?: Logger
 ): boolean {
   if (!isAncestor(ctx, cache, confirmedRoot, store.currentEpochObservedJustifiedCheckpoint.rootHex)) {
+    logger?.debug("Fast confirmation chain-safety failed", {
+      confirmedRoot,
+      reason: "confirmed_not_descendant_of_observed_justified",
+      observedJustifiedRoot: store.currentEpochObservedJustifiedCheckpoint.rootHex,
+    });
     return false;
   }
 
@@ -671,14 +676,25 @@ export function isConfirmedChainSafe(
 
   const chainRoots = getAncestorRoots(ctx, cache, confirmedRoot, startRoot);
   const previousBalanceSource = getPreviousBalanceSource(store, cache);
-  return chainRoots.every((root) => isOneConfirmed(ctx, store, cache, previousBalanceSource, root));
+  for (const root of chainRoots) {
+    if (!isOneConfirmed(ctx, store, cache, previousBalanceSource, root, logger)) {
+      logger?.debug("Fast confirmation chain-safety failed", {
+        confirmedRoot,
+        reason: "unconfirmed_block_in_chain",
+        blockRoot: root,
+      });
+      return false;
+    }
+  }
+  return true;
 }
 export function findLatestConfirmedDescendant(
   snapshot: FastConfirmationSnapshot,
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
-  latestConfirmedRoot: RootHex
+  latestConfirmedRoot: RootHex,
+  logger?: Logger
 ): RootHex {
   const currentEpoch = snapshot.currentEpoch;
   let confirmedRoot = latestConfirmedRoot;
@@ -699,21 +715,43 @@ export function findLatestConfirmedDescendant(
         ((prevSlotJustification !== null && prevSlotJustification.epoch + 1 >= currentEpoch) ||
           (headJustification !== null && headJustification.epoch + 1 >= currentEpoch))));
 
+  logger?.debug("Fast confirmation descendant search start", {
+    latestConfirmedRoot,
+    currentEpoch,
+    headRoot: snapshot.headRoot,
+    loop1Condition,
+  });
+
   if (loop1Condition) {
     const canonicalRoots = getAncestorRoots(ctx, cache, snapshot.headRoot, confirmedRoot);
     for (const blockRoot of canonicalRoots) {
       const blockEpoch = getBlockEpoch(ctx, cache, blockRoot);
       if (blockEpoch === null || blockEpoch === currentEpoch) {
+        logger?.debug("Fast confirmation previous-epoch loop stopped", {
+          reason: "reached_current_epoch_or_unknown_epoch",
+          blockRoot,
+          blockEpoch,
+        });
         break;
       }
       if (!isAncestor(ctx, cache, store.previousSlotHead, blockRoot)) {
+        logger?.debug("Fast confirmation previous-epoch loop stopped", {
+          reason: "not_ancestor_of_previous_slot_head",
+          blockRoot,
+          previousSlotHead: store.previousSlotHead,
+        });
         break;
       }
-      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot);
+      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, logger);
       if (!isConfirmed) {
+        logger?.debug("Fast confirmation previous-epoch loop stopped", {
+          reason: "block_not_one_confirmed",
+          blockRoot,
+        });
         break;
       }
       confirmedRoot = blockRoot;
+      logger?.debug("Fast confirmation previous-epoch loop advanced", {confirmedRoot});
     }
   }
 
@@ -733,15 +771,28 @@ export function findLatestConfirmedDescendant(
       if (blockEpoch > tentativeEpoch) {
         const blockCheckpoint = getCheckpointForBlock(ctx, cache, blockRoot, blockEpoch);
         if (!blockCheckpoint || !willCheckpointBeJustified(ctx, store, cache, blockCheckpoint)) {
+          logger?.debug("Fast confirmation current-epoch loop stopped", {
+            reason: "checkpoint_not_justified",
+            blockRoot,
+            blockEpoch,
+            tentativeEpoch,
+            checkpointRoot: blockCheckpoint?.rootHex,
+            checkpointEpoch: blockCheckpoint?.epoch,
+          });
           break;
         }
       }
 
-      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot);
+      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, logger);
       if (!isConfirmed) {
+        logger?.debug("Fast confirmation current-epoch loop stopped", {
+          reason: "block_not_one_confirmed",
+          blockRoot,
+        });
         break;
       }
       tentativeConfirmedRoot = blockRoot;
+      logger?.debug("Fast confirmation current-epoch loop advanced", {tentativeConfirmedRoot});
     }
 
     const tentativeEpoch = getBlockEpoch(ctx, cache, tentativeConfirmedRoot);
@@ -756,6 +807,12 @@ export function findLatestConfirmedDescendant(
       confirmedRoot = tentativeConfirmedRoot;
     }
   }
+
+  logger?.debug("Fast confirmation descendant search result", {
+    latestConfirmedRoot,
+    confirmedRoot,
+    loop2Condition,
+  });
 
   return confirmedRoot;
 }

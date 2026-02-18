@@ -165,7 +165,7 @@ export class ForkChoice implements IForkChoice {
     this.balances = this.fcStore.justified.balances;
 
     if (this.opts?.fastConfirmation) {
-      this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics);
+      this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
       this.fatConfirmationContext = this.createFastConfirmationContext();
     }
 

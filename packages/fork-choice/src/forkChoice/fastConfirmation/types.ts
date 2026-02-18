@@ -1,5 +1,6 @@
 import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {ProtoBlock} from "../../protoArray/interface.ts";
 import {CheckpointWithHex} from "../store.ts";
 
@@ -52,7 +53,8 @@ export type FastConfirmationRule = (
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
-  decision: FastConfirmationDecision
+  decision: FastConfirmationDecision,
+  logger?: Logger
 ) => FastConfirmationDecision;
 
 export type FastConfirmationCache = {
