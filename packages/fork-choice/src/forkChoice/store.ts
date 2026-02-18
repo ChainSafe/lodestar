@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {ForkChoiceStateGetter, IFCRStore} from "./fcr/types.ts";
+import {ForkChoiceStateGetter, IFCRStore} from "./fastConfirmation/types.ts";
 import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interface.js";
 
 /**

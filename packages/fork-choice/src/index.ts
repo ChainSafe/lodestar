@@ -16,7 +16,7 @@ export {
   type IFCRStore,
   type IFastConfirmationRule,
   getFCRMetrics,
-} from "./forkChoice/fcr/fastConfirmationRule.ts";
+} from "./forkChoice/fast_confirmation/fastConfirmationRule.ts";
 export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,

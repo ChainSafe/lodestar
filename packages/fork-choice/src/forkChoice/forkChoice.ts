@@ -43,7 +43,11 @@ import {
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
-import {type FCRContext, FastConfirmationRule, type IFastConfirmationRule} from "./fcr/fastConfirmationRule.ts";
+import {
+  type FCRContext,
+  FastConfirmationRule,
+  type IFastConfirmationRule,
+} from "./fastConfirmation/fastConfirmationRule.ts";
 import {
   AncestorResult,
   AncestorStatus,
