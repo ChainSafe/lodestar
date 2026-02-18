@@ -1484,6 +1484,11 @@ export class BeaconChain implements IBeaconChain {
         return;
       }
 
+      // Skip if already valid — multiple proofs arriving concurrently can trigger this
+      if (block.executionStatus === ExecutionStatus.Valid) {
+        return;
+      }
+
       const execBlockHash = block.executionPayloadBlockHash;
       this.forkChoice.validateLatestHash({
         executionStatus: ExecutionStatus.Valid,
