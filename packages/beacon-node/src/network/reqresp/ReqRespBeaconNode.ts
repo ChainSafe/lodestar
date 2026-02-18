@@ -52,7 +52,7 @@ export interface ReqRespBeaconNodeModules {
   getHandler: GetReqRespHandlerFn;
 }
 
-export type ReqRespBeaconNodeOpts = ReqRespOpts & {disableLightClientServer?: boolean; activateZkvm?: boolean};
+export type ReqRespBeaconNodeOpts = ReqRespOpts & {disableLightClientServer?: boolean; activateZkevm?: boolean};
 
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
@@ -74,7 +74,7 @@ export class ReqRespBeaconNode extends ReqResp {
   private readonly config: BeaconConfig;
   protected readonly logger: Logger;
   protected readonly disableLightClientServer: boolean;
-  protected readonly activateZkvm: boolean;
+  protected readonly activateZkevm: boolean;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
     const {events, peersData, peerRpcScores, metadata, metrics, logger} = modules;
@@ -99,7 +99,7 @@ export class ReqRespBeaconNode extends ReqResp {
     );
 
     this.disableLightClientServer = options.disableLightClientServer ?? false;
-    this.activateZkvm = options.activateZkvm ?? false;
+    this.activateZkevm = options.activateZkevm ?? false;
     this.peerRpcScores = peerRpcScores;
     this.peersData = peersData;
     this.config = modules.config;
@@ -298,8 +298,8 @@ export class ReqRespBeaconNode extends ReqResp {
         ]
       );
 
-      // EIP-8025: Register execution proof protocols when zkvm mode is active
-      if (this.activateZkvm) {
+      // EIP-8025: Register execution proof protocols when zkevm mode is active
+      if (this.activateZkevm) {
         protocolsAtFork.push(
           [protocols.ExecutionProofsByRoot(fork, this.config), this.getHandler(ReqRespMethod.ExecutionProofsByRoot)],
           [protocols.ExecutionProofsByRange(fork, this.config), this.getHandler(ReqRespMethod.ExecutionProofsByRange)]

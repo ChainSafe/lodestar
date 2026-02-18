@@ -34,43 +34,43 @@ participants:
     cl_type: prysm
     cl_image: ethpandaops/prysm-beacon-chain:developeruche-poc-optional-proofs
     cl_extra_params:
-      - --activate-zkvm
-      - --zkvm-generation-proof-types=0,1
+      - --activate-zkevm
+      - --zkevm-generation-proof-types=0,1
     vc_image: ethpandaops/prysm-validator:developeruche-poc-optional-proofs
     supernode: true
     count: 1
     validator_count: 96
 
-  # Lodestar zkvm node
+  # Lodestar zkEVM node
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: lodestar
     cl_image: lodestar:eip8025
     cl_extra_params:
-      - --activateZkvm
+      - --activateZkevm
       - --chain.minProofsRequired=1
       - --targetPeers=8
     count: 1
     validator_count: 0
 
-  # Lighthouse zkvm node
+  # Lighthouse zkEVM node
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: lighthouse
     cl_image: ethpandaops/lighthouse:eth-act-optional-proofs
     cl_extra_params:
-      - --activate-zkvm
+      - --activate-zkevm
       - --target-peers=8
     count: 1
     validator_count: 0
 
-  # Prysm zkvm node
+  # Prysm zkEVM node
   - el_type: reth
     el_image: ghcr.io/paradigmxyz/reth:latest
     cl_type: prysm
     cl_image: ethpandaops/prysm-beacon-chain:developeruche-poc-optional-proofs
     cl_extra_params:
-      - --activate-zkvm
+      - --activate-zkevm
     vc_image: ethpandaops/prysm-validator:developeruche-poc-optional-proofs
     count: 1
     validator_count: 0

@@ -22,7 +22,7 @@ import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ExecutionProofPool} from "../opPools/executionProofPool.js";
 import {BlockProcessOpts} from "../options.js";
-import {defaultZkvmExecutionProofVerifier} from "../validation/executionProofVerifier.js";
+import {defaultZkevmExecutionProofVerifier} from "../validation/executionProofVerifier.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
@@ -35,7 +35,7 @@ export type VerifyBlockExecutionPayloadModules = {
   forkChoice: IForkChoice;
   config: ChainForkConfig;
   /** EIP-8025: When true, use execution proofs instead of EL for payload verification */
-  activateZkvm?: boolean;
+  activateZkevm?: boolean;
   /** EIP-8025: Pool of execution proofs for proof-driven verification */
   executionProofPool?: ExecutionProofPool;
   /** EIP-8025: Minimum distinct proof types required for a block to be considered valid */
@@ -149,7 +149,7 @@ export async function verifyBlocksExecutionPayload(
 
 /**
  * Verifies a single block execution payload by sending it to the EL client (via HTTP),
- * or via execution proof verification when in zkvm mode (EIP-8025).
+ * or via execution proof verification when in zkevm mode (EIP-8025).
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
@@ -171,7 +171,7 @@ export async function verifyBlockExecutionPayload(
   }
 
   // EIP-8025: Proof-driven execution mode — skip EL, use execution proofs for validation
-  if (chain.activateZkvm) {
+  if (chain.activateZkevm) {
     return verifyBlockExecutionPayloadByProof(chain, blockInput, executionPayloadEnabled);
   }
 
@@ -257,7 +257,7 @@ export async function verifyBlockExecutionPayload(
 /**
  * EIP-8025: Verify execution payload using execution proofs instead of EL.
  *
- * When activateZkvm is enabled, the beacon node skips EL newPayload calls and instead:
+ * When activateZkevm is enabled, the beacon node skips EL newPayload calls and instead:
  * - Checks if sufficient execution proofs exist in the pool for this block
  * - If enough valid proofs → payload considered Valid (propagates in fork choice)
  * - If not enough proofs → payload imported optimistically (Syncing status)
@@ -283,7 +283,7 @@ function verifyBlockExecutionPayloadByProof(
   };
 
   const proofs = chain.executionProofPool?.getProofsByBlockRoot(blockRootHex) ?? [];
-  const verification = defaultZkvmExecutionProofVerifier.verifyProofs({
+  const verification = defaultZkevmExecutionProofVerifier.verifyProofs({
     proofs,
     expectedBlockRootHex: blockRootHex,
     expectedExecBlockHashHex: execBlockHash,
@@ -294,7 +294,7 @@ function verifyBlockExecutionPayloadByProof(
     // Not enough proofs yet — import optimistically (Syncing).
     // Proofs arriving later via gossip will call forkChoice.validateLatestHash()
     // to transition the block from Syncing → Valid.
-    chain.logger.debug("Importing block optimistically, insufficient execution proofs (zkvm mode)", {
+    chain.logger.debug("Importing block optimistically, insufficient execution proofs (zkevm mode)", {
       ...logCtx,
       reason: verification.error,
       proofsAvailable: proofs.length,
@@ -304,7 +304,7 @@ function verifyBlockExecutionPayloadByProof(
     return {executionStatus: ExecutionStatus.Syncing, execError: null};
   }
 
-  chain.logger.debug("Execution payload verified by zkvm proofs (dummy verifier)", {
+  chain.logger.debug("Execution payload verified by zkEVM proofs (dummy verifier)", {
     ...logCtx,
     distinctProofTypes: verification.distinctProofTypes,
     minRequired,

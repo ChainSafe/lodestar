@@ -226,9 +226,9 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({chain: {disableLightClientServer: true}});
   }
 
-  // EIP-8025: Bridge activateZkvm from chain to network options
-  if (args.activateZkvm) {
-    beaconNodeOptions.set({network: {activateZkvm: true}});
+  // EIP-8025: Bridge activateZkevm from chain to network options
+  if (args.activateZkevm) {
+    beaconNodeOptions.set({network: {activateZkevm: true}});
   }
 
   if (args.private) {

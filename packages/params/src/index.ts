@@ -320,7 +320,7 @@ export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_C
 export const MAX_PROOF_DATA_BYTES = 1_048_576;
 /** Maximum number of execution proof types (zkVM+EL combinations) */
 export const EXECUTION_PROOF_TYPE_COUNT = 8;
-/** Default minimum number of distinct proof types required for DA in zkvm mode */
+/** Default minimum number of distinct proof types required for DA in zkevm mode */
 export const DEFAULT_MIN_PROOFS_REQUIRED = 2;
 
 // Gloas Misc
