@@ -129,7 +129,7 @@ const fastConfirmationTest =
             assertCorrectProgressiveBalances,
             proposerBoost: true,
             proposerBoostReorg: true,
-            enableFastConfirmation: true,
+            fastConfirmation: true,
           },
           {
             privateKey: await generateKeyPair("secp256k1"),
@@ -374,7 +374,7 @@ const fastConfirmationTest =
               const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
               const justifiedCheckpoint = chain.forkChoice.getJustifiedCheckpoint();
               const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-              const confirmedRoot = chain.forkChoice.getConfirmedRoot?.();
+              const confirmedRoot = chain.forkChoice.getConfirmedRoot();
 
               if (step.checks.head) {
                 expect({slot: head.slot, root: head.blockRoot}).toEqualWithMessage(
