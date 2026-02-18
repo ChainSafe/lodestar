@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {DCOL_VERSION} from "../../../../src/db/flatFileStore/dcolFormat.js";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
 
 // Minimal logger for tests
@@ -173,6 +174,21 @@ describe("FlatFileStore", () => {
 
       expect(store.hasDataColumn(100, ROOT_A, 0)).toBe(false);
       expect(store.hasDataColumn(200, ROOT_B, 0)).toBe(true);
+    });
+  });
+
+  describe("on-disk format", () => {
+    it("should write dcol files with correct version byte", async () => {
+      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array(50).fill(0x42)}]);
+
+      // Read the raw file and check version byte
+      const slotDir = path.join(tmpDir, "data_columns", "000000001000");
+      const files = await fs.promises.readdir(slotDir);
+      const dcolFile = files.find((f) => f.endsWith(".dcol"));
+      expect(dcolFile).toBeDefined();
+
+      const raw = await fs.promises.readFile(path.join(slotDir, dcolFile!));
+      expect(raw[0]).toBe(DCOL_VERSION);
     });
   });
 

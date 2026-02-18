@@ -1,8 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
+import {uncompress} from "snappyjs";
 import {RootHex, Slot, fulu, ssz} from "@lodestar/types";
 import {atomicWrite, padSlot} from "./atomicWrite.js";
-import {DCOL_HEADER_SIZE, encodeDcolFile, getColumnOffset, mergeDcolColumns, parseDcolHeader} from "./dcolFormat.js";
+import {
+  DCOL_HEADER_SIZE,
+  encodeDcolFile,
+  getColumnByteRange,
+  mergeDcolColumns,
+  offsetTableSize,
+  parseDcolHeader,
+  readAllColumns,
+  totalBits,
+} from "./dcolFormat.js";
 import {ExistenceCache} from "./existenceCache.js";
 
 /**
@@ -78,35 +88,52 @@ export class ColumnStore {
     if (!data) return [];
 
     const header = parseDcolHeader(data);
-    const {bitmap, columnSize} = header;
-    const result: fulu.DataColumnSidecar[] = [];
+    const columns = readAllColumns(data, header);
 
-    for (let i = 0; i < 128; i++) {
-      if ((bitmap[Math.floor(i / 8)] & (1 << (i % 8))) !== 0) {
-        const offset = getColumnOffset(bitmap, columnSize, i);
-        const colData = data.slice(offset, offset + columnSize);
-        result.push(ssz.fulu.DataColumnSidecar.deserialize(colData));
-      }
-    }
-
-    return result;
+    return columns.map((col) => ssz.fulu.DataColumnSidecar.deserialize(col.data));
   }
 
   /**
    * Get binary column data for specific indices.
+   * Uses targeted fd.read() to avoid reading the entire file.
    */
   async getColumnsBinary(slot: Slot, rootHex: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[]> {
-    const data = await this.readFile(slot, rootHex);
-    if (!data) return indices.map(() => undefined);
+    let fd: fs.promises.FileHandle;
+    try {
+      fd = await fs.promises.open(this.filePath(slot, rootHex), "r");
+    } catch (_e) {
+      return indices.map(() => undefined);
+    }
 
-    const header = parseDcolHeader(data);
-    const {bitmap, columnSize} = header;
+    try {
+      // Read header (149 bytes)
+      const headerBuf = new Uint8Array(DCOL_HEADER_SIZE);
+      await fd.read(headerBuf, 0, DCOL_HEADER_SIZE, 0);
+      const header = parseDcolHeader(headerBuf);
 
-    return indices.map((idx) => {
-      const offset = getColumnOffset(bitmap, columnSize, idx);
-      if (offset < 0) return undefined;
-      return data.slice(offset, offset + columnSize);
-    });
+      // Read the offset table
+      const N = totalBits(header.bitmap);
+      const tableSize = offsetTableSize(N);
+      const offsetTable = new Uint8Array(tableSize);
+      await fd.read(offsetTable, 0, tableSize, DCOL_HEADER_SIZE);
+
+      // Read each requested column via targeted pread
+      const results: (Uint8Array | undefined)[] = [];
+      for (const idx of indices) {
+        const range = getColumnByteRange(header, offsetTable, idx);
+        if (!range) {
+          results.push(undefined);
+          continue;
+        }
+        const buf = new Uint8Array(range.length);
+        await fd.read(buf, 0, range.length, range.offset);
+        results.push(uncompress(buf));
+      }
+
+      return results;
+    } finally {
+      await fd.close();
+    }
   }
 
   /**

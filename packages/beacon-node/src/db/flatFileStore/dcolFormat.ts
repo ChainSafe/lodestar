@@ -1,17 +1,32 @@
 /**
  * `.dcol` binary format for multi-column data column files.
  *
- * Header layout (149 bytes):
- *   [version:     1B]
- *   [columnSize:  4B BE]  — size of each serialized column sidecar (fixed per block)
- *   [bitmap:     16B]     — 128-bit bitmap of which columns are present
- *   [blockRoot:  32B]
- *   [slot:        8B BE]
- *   [reserved:   88B]     — zero-filled, for future use
+ * Layout:
+ *   HEADER (149 bytes):
+ *     [version:     1B = 0x01]
+ *     [_reserved:   4B]       — zero-filled
+ *     [bitmap:     16B]       — 128-bit bitmap of which columns are present
+ *     [blockRoot:  32B]
+ *     [slot:        8B BE]
+ *     [reserved:   88B]       — zero-filled, for future use
  *
- * Body: columns packed sequentially in bitmap order (no gaps).
- * To read column `i`: check bit `i` in bitmap, then offset = HEADER_SIZE + popcount(bitmap, 0..i-1) * columnSize
+ *   OFFSET TABLE ((N+1) * 4 bytes, where N = popcount(bitmap)):
+ *     [offset_0:4B BE]   start of column 0's compressed data, relative to data region start
+ *     [offset_1:4B BE]   ...
+ *     [offset_N:4B BE]   end of last column = total data region size (sentinel)
+ *
+ *   DATA REGION:
+ *     [snappy(column_0)][snappy(column_1)]...[snappy(column_N-1)]
+ *
+ * Each column is independently Snappy block-compressed. To read column at bitmap position `p`:
+ *   dataStart = HEADER_SIZE + (N+1)*4
+ *   colStart  = dataStart + offsets[p]
+ *   colEnd    = dataStart + offsets[p+1]
+ *   column    = snappy.uncompress(file[colStart:colEnd])
  */
+
+import {compressSync} from "snappy";
+import {uncompress} from "snappyjs";
 
 export const DCOL_VERSION = 0x01;
 export const DCOL_HEADER_SIZE = 149;
@@ -62,7 +77,6 @@ export function totalBits(bitmap: Uint8Array): number {
 
 export interface DcolHeader {
   version: number;
-  columnSize: number;
   bitmap: Uint8Array;
   blockRoot: Uint8Array;
   slot: number;
@@ -73,7 +87,7 @@ export function encodeDcolHeader(header: DcolHeader): Uint8Array {
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
 
   buf[0] = header.version;
-  view.setUint32(1, header.columnSize, false); // BE
+  // bytes 1-4 reserved (zero)
   buf.set(header.bitmap, BITMAP_OFFSET);
   buf.set(header.blockRoot, BLOCK_ROOT_OFFSET);
 
@@ -98,30 +112,108 @@ export function parseDcolHeader(data: Uint8Array): DcolHeader {
     throw new Error(`Unsupported dcol version: ${version}`);
   }
 
-  const columnSize = view.getUint32(1, false); // BE
-  const bitmap = data.slice(BITMAP_OFFSET, BITMAP_OFFSET + BITMAP_BYTES);
-  const blockRoot = data.slice(BLOCK_ROOT_OFFSET, BLOCK_ROOT_OFFSET + 32);
+  const bitmap = Uint8Array.prototype.slice.call(data, BITMAP_OFFSET, BITMAP_OFFSET + BITMAP_BYTES) as Uint8Array;
+  const blockRoot = Uint8Array.prototype.slice.call(data, BLOCK_ROOT_OFFSET, BLOCK_ROOT_OFFSET + 32) as Uint8Array;
 
   const hi = view.getUint32(SLOT_OFFSET, false);
   const lo = view.getUint32(SLOT_OFFSET + 4, false);
   const slot = hi * 0x100000000 + lo;
 
-  return {version, columnSize, bitmap, blockRoot, slot};
+  return {version, bitmap, blockRoot, slot};
 }
 
-// --- Column offset ---
+// --- Column read helpers ---
 
-/** Get the byte offset for column `index` in a dcol file, or -1 if not present. */
-export function getColumnOffset(bitmap: Uint8Array, columnSize: number, index: number): number {
-  if (!getBit(bitmap, index)) return -1;
-  return DCOL_HEADER_SIZE + popcount(bitmap, index) * columnSize;
+/**
+ * Read a single column by its column index from a dcol file buffer.
+ * Returns the uncompressed column data, or null if column is not present.
+ */
+export function readColumn(fileData: Uint8Array, header: DcolHeader, index: number): Uint8Array | null {
+  if (!getBit(header.bitmap, index)) return null;
+
+  const p = popcount(header.bitmap, index);
+  const N = totalBits(header.bitmap);
+  const tableStart = DCOL_HEADER_SIZE;
+  const dataStart = tableStart + (N + 1) * 4;
+  const tableView = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
+
+  const colStart = dataStart + tableView.getUint32(tableStart + p * 4, false);
+  const colEnd = dataStart + tableView.getUint32(tableStart + (p + 1) * 4, false);
+  const compressed = fileData.subarray(colStart, colEnd);
+
+  return uncompress(compressed);
+}
+
+/**
+ * Read all columns from a dcol file buffer.
+ * Returns an array of {index, data} for each present column.
+ */
+export function readAllColumns(fileData: Uint8Array, header: DcolHeader): {index: number; data: Uint8Array}[] {
+  const result: {index: number; data: Uint8Array}[] = [];
+  const N = totalBits(header.bitmap);
+
+  const tableStart = DCOL_HEADER_SIZE;
+  const dataStart = tableStart + (N + 1) * 4;
+  const tableView = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
+
+  let pos = 0;
+  for (let i = 0; i < 128; i++) {
+    if (getBit(header.bitmap, i)) {
+      const colStart = dataStart + tableView.getUint32(tableStart + pos * 4, false);
+      const colEnd = dataStart + tableView.getUint32(tableStart + (pos + 1) * 4, false);
+      const compressed = fileData.subarray(colStart, colEnd);
+      result.push({index: i, data: uncompress(compressed)});
+      pos++;
+    }
+  }
+
+  return result;
+}
+
+// --- Targeted read helpers (for fd.read()-based access) ---
+
+export interface ColumnByteRange {
+  /** Absolute file offset to start reading */
+  offset: number;
+  /** Number of compressed bytes to read */
+  length: number;
+}
+
+/**
+ * Compute the file byte range for a specific column, using the header
+ * and offset table bytes. Returns null if column is absent.
+ */
+export function getColumnByteRange(
+  header: DcolHeader,
+  offsetTable: Uint8Array,
+  index: number
+): ColumnByteRange | null {
+  if (!getBit(header.bitmap, index)) return null;
+
+  const p = popcount(header.bitmap, index);
+  const N = totalBits(header.bitmap);
+  const dataStart = DCOL_HEADER_SIZE + (N + 1) * 4;
+  const view = new DataView(offsetTable.buffer, offsetTable.byteOffset, offsetTable.byteLength);
+
+  const colStart = view.getUint32(p * 4, false);
+  const colEnd = view.getUint32((p + 1) * 4, false);
+
+  return {
+    offset: dataStart + colStart,
+    length: colEnd - colStart,
+  };
+}
+
+/** Size of the offset table in bytes for N present columns. */
+export function offsetTableSize(N: number): number {
+  return (N + 1) * 4;
 }
 
 // --- Full file encode/decode ---
 
 /**
  * Encode a complete dcol file from columns.
- * All columns must have the same serialized size.
+ * Each column is independently Snappy block-compressed.
  */
 export function encodeDcolFile(
   blockRoot: Uint8Array,
@@ -132,59 +224,68 @@ export function encodeDcolFile(
     throw new Error("Cannot encode dcol file with zero columns");
   }
 
-  const columnSize = columns[0].data.length;
   const bitmap = new Uint8Array(BITMAP_BYTES);
 
   // Sort by index for deterministic ordering
   const sorted = [...columns].sort((a, b) => a.index - b.index);
 
   for (const col of sorted) {
-    if (col.data.length !== columnSize) {
-      throw new Error(`Column size mismatch: ${col.data.length} !== ${columnSize}`);
-    }
     setBit(bitmap, col.index);
   }
 
-  const header = encodeDcolHeader({version: DCOL_VERSION, columnSize, bitmap, blockRoot, slot});
-  const body = new Uint8Array(DCOL_HEADER_SIZE + sorted.length * columnSize);
-  body.set(header, 0);
-
-  let offset = DCOL_HEADER_SIZE;
+  // Compress each column
+  const compressed: Uint8Array[] = [];
   for (const col of sorted) {
-    body.set(col.data, offset);
-    offset += columnSize;
+    compressed.push(compressSync(Buffer.from(col.data.buffer, col.data.byteOffset, col.data.byteLength)));
   }
 
-  return body;
+  // Build offset table
+  const N = sorted.length;
+  const oTableSize = (N + 1) * 4;
+  const offsets = new Uint8Array(oTableSize);
+  const offsetView = new DataView(offsets.buffer, offsets.byteOffset, offsets.byteLength);
+
+  let cumulative = 0;
+  for (let i = 0; i < N; i++) {
+    offsetView.setUint32(i * 4, cumulative, false); // BE
+    cumulative += compressed[i].length;
+  }
+  offsetView.setUint32(N * 4, cumulative, false); // sentinel: end of last column
+
+  // Assemble: header + offset table + compressed data
+  const header = encodeDcolHeader({version: DCOL_VERSION, bitmap, blockRoot, slot});
+  const totalSize = DCOL_HEADER_SIZE + oTableSize + cumulative;
+  const result = new Uint8Array(totalSize);
+
+  result.set(header, 0);
+  result.set(offsets, DCOL_HEADER_SIZE);
+
+  let dataOffset = DCOL_HEADER_SIZE + oTableSize;
+  for (const chunk of compressed) {
+    result.set(chunk, dataOffset);
+    dataOffset += chunk.length;
+  }
+
+  return result;
 }
 
 /**
  * Merge new columns into an existing dcol file buffer.
- * Returns a new buffer with the merged columns.
  */
 export function mergeDcolColumns(existing: Uint8Array, newColumns: {index: number; data: Uint8Array}[]): Uint8Array {
   const header = parseDcolHeader(existing);
-  const {bitmap, columnSize} = header;
 
-  // Collect existing columns
+  const existingCols = readAllColumns(existing, header);
+
   const allColumns: Map<number, Uint8Array> = new Map();
-
-  for (let i = 0; i < 128; i++) {
-    if (getBit(bitmap, i)) {
-      const offset = getColumnOffset(bitmap, columnSize, i);
-      allColumns.set(i, existing.slice(offset, offset + columnSize));
-    }
-  }
-
-  // Add/overwrite with new columns
-  for (const col of newColumns) {
-    if (col.data.length !== columnSize && allColumns.size > 0) {
-      throw new Error(`Column size mismatch: ${col.data.length} !== ${columnSize}`);
-    }
+  for (const col of existingCols) {
     allColumns.set(col.index, col.data);
   }
 
-  // Re-encode
+  for (const col of newColumns) {
+    allColumns.set(col.index, col.data);
+  }
+
   const cols = Array.from(allColumns.entries())
     .sort(([a], [b]) => a - b)
     .map(([index, data]) => ({index, data}));

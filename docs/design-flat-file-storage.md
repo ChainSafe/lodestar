@@ -99,30 +99,40 @@ Data columns use a custom binary format with a fixed-size header for O(1) random
 #### Format Layout
 
 ```
-+------------------+--------------------------------------------------+
-| Header (149 B)   | Column Data (variable)                           |
-+------------------+--------------------------------------------------+
++------------------+-------------------+--------------------------------------------------+
+| Header (149 B)   | Offset Table      | Compressed Column Data                           |
++------------------+-------------------+--------------------------------------------------+
 
-Header:
-  [version:     1 byte ]  Currently 0x01
-  [column_size: 4 bytes]  Big-endian uint32, SSZ byte length of one DataColumnSidecar
+Header (149 bytes):
+  [version:     1 byte ]  0x01
+  [_reserved:   4 bytes]  Zero-filled
   [bitmap:     16 bytes]  128-bit bitmap, bit i = 1 if column i is present
   [block_root: 32 bytes]  Block root for integrity verification
   [slot:        8 bytes]  Big-endian uint64, slot number
-  [reserved:   88 bytes]  Zero-filled, reserved for future use
+  [reserved:   88 bytes]  Zero-filled, for future use
 
 Total header: 1 + 4 + 16 + 32 + 8 + 88 = 149 bytes
 
-Column data:
-  [column_0_ssz: column_size bytes]  (if bitmap bit 0 is set)
-  [column_1_ssz: column_size bytes]  (if bitmap bit 1 is set)
+Offset table ((N+1) * 4 bytes, where N = popcount(bitmap)):
+  [offset_0: 4 bytes BE]   Start of column 0's compressed data (relative to data region start)
+  [offset_1: 4 bytes BE]   Start of column 1's compressed data
   ...
-  [column_N_ssz: column_size bytes]  (if bitmap bit N is set)
+  [offset_N: 4 bytes BE]   End of last column = total data region size (sentinel)
+
+Data region:
+  [snappy(column_0_ssz)]  (if bitmap bit 0 is set)
+  [snappy(column_1_ssz)]  (if bitmap bit 1 is set)
+  ...
+  [snappy(column_N_ssz)]  (if bitmap bit N is set)
 ```
+
+Each column is independently Snappy block-compressed (not framed). This preserves O(1) random access while reducing disk usage significantly.
 
 #### Key Design Decisions
 
-**Fixed-size columns (column_size field):** All DataColumnSidecar values for a given block have the same SSZ serialized length because they share the same number of blob commitments, proofs, and cells (determined by the block's blob count). The `column_size` field records this once, enabling O(1) seek to any column.
+**Per-column Snappy compression:** Each column is compressed independently, so reading a single column only requires decompressing that column's ~5-8 KB of compressed data rather than the entire file. Snappy block format (not framing) is used since column boundaries are explicit in the offset table.
+
+**Offset table for random access:** Variable-size compressed columns cannot use fixed-stride seeking. The `(N+1)`-entry offset table (one uint32 per column plus a sentinel) enables O(1) seek: read `offsets[p]` and `offsets[p+1]` to get the byte range for bitmap position `p`.
 
 **128-bit bitmap:** With `NUMBER_OF_COLUMNS = 128`, a 16-byte bitmap (128 bits) is sufficient. Bit `i` being set indicates column `i` is present in the file. This supports:
 - Partial column storage (supernode with subset of columns)
@@ -131,7 +141,9 @@ Column data:
 
 **Block root and slot in header:** Enables integrity checks and allows recovery/validation without external index.
 
-**Reserved bytes:** The 88-byte reserved region allows future header extensions (e.g., compression flags, checksum) without a format version bump.
+**Reserved bytes:** The 88-byte reserved region allows future header extensions (e.g., checksum) without a format version bump.
+
+**Snappy decompress returns fresh allocations:** This naturally avoids the `Buffer.slice()` RSS memory bloat issue where slicing views into a large file buffer would retain the entire backing ArrayBuffer.
 
 #### Random Access Algorithm
 
@@ -140,14 +152,17 @@ To read column `i` from a `.dcol` file:
 ```
 1. Read header (149 bytes)
 2. Check bitmap bit i → if 0, column not present
-3. Count set bits in bitmap[0..i-1] → position = popcount(bitmap & ((1 << i) - 1))
-4. Seek to offset = 149 + position * column_size
-5. Read column_size bytes → DataColumnSidecar SSZ
+3. p = popcount(bitmap, 0..i-1)    — position in the offset table
+4. N = popcount(bitmap)             — total columns
+5. dataStart = 149 + (N+1) * 4     — start of compressed data region
+6. Read offsets[p] and offsets[p+1] from offset table at 149 + p*4
+7. Compressed bytes = file[dataStart + offsets[p] : dataStart + offsets[p+1]]
+8. Decompress with Snappy → DataColumnSidecar SSZ
 ```
 
 #### Size Analysis
 
-Per data column sidecar with 6 blobs:
+Per data column sidecar with 6 blobs (uncompressed):
 - Column data: 6 cells x 2,048 bytes = 12,288 bytes
 - KZG commitments: 6 x 48 = 288 bytes
 - KZG proofs: 6 x 48 = 288 bytes
@@ -156,24 +171,23 @@ Per data column sidecar with 6 blobs:
 - SSZ container overhead: ~50 bytes
 - **Total per column: ~13.2 KB**
 
-Per block with 128 columns: 128 x 13.2 KB + 149 bytes header = **~1.69 MB**
+Per block with 128 columns (uncompressed): 128 x 13.2 KB + 149B header = **~1.69 MB**
+
+Per block with 128 columns (Snappy compressed): offset table (516B) + compressed data ≈ **~0.85-1.1 MB** (estimated ~40-50% compression on SSZ column data with Snappy)
 
 Per block with 6 blobs (pre-fulu, blob sidecars only): **~786 KB**
 
 Daily data volume (at 7,200 slots/day, assuming all slots have 6 blobs):
-- Data columns: 7,200 x 1.69 MB = **~11.9 GB/day**
+- Data columns: 7,200 x ~1.0 MB ≈ **~7 GB/day** (down from ~11.9 GB/day uncompressed)
 - Blob sidecars: 7,200 x 786 KB = **~5.5 GB/day**
 
 With 18-day retention (`MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS` = 4096 epochs ≈ 18.2 days):
-- Data columns: ~216 GB retained
+- Data columns: **~125 GB retained** (down from ~216 GB uncompressed)
 - Blob sidecars: ~100 GB retained
 
 ### 2.3 Format Versioning
 
-The version byte (currently `0x01`) in the `.dcol` header supports future format evolution:
-- `0x01`: Current format (fixed-size columns, 128-bit bitmap)
-- `0x02`: (future) Variable-size columns with per-column offset table
-- `0x03`: (future) Compressed columns (zstd/snappy)
+The version byte in the `.dcol` header supports future format evolution. The current (and only) version is `0x01`.
 
 Blob sidecars use standard SSZ and don't need a custom version header.
 
@@ -251,33 +265,12 @@ Data columns may arrive incrementally (subset of 128 columns at a time). The `.d
 1. **First write:** Create file with header + available columns, set bitmap bits.
 2. **Subsequent writes:** Read existing file, merge new columns into the sorted position, update bitmap, atomic rewrite.
 
-Since column data is fixed-size per block, merging is straightforward:
-- Allocate new buffer: `149 + (existing_count + new_count) * column_size`
-- Copy existing columns in order, insert new columns at correct positions
-- Update bitmap
-- Atomic write
+Merging decompresses existing columns, adds new ones, then re-encodes the full file:
+- Read all existing columns via `readAllColumns()`
+- Merge with new columns (add or overwrite by index)
+- Re-encode: compress each column, build offset table, atomic write
 
-**Concurrency:** A per-root `Mutex` (from an in-memory Map) ensures that concurrent column arrivals for the same block are serialized. The Map is keyed by `${slot}:${rootHex}` and entries are evicted after finalization.
-
-```typescript
-class ColumnWriteLock {
-  private locks = new Map<string, Mutex>();
-
-  async withLock<T>(slot: Slot, root: Root, fn: () => Promise<T>): Promise<T> {
-    const key = `${slot}:${toRootHex(root)}`;
-    let mutex = this.locks.get(key);
-    if (!mutex) {
-      mutex = new Mutex();
-      this.locks.set(key, mutex);
-    }
-    return mutex.runExclusive(fn);
-  }
-
-  evict(slot: Slot, root: Root): void {
-    this.locks.delete(`${slot}:${toRootHex(root)}`);
-  }
-}
-```
+**Concurrency:** Each store (`BlobStore`, `ColumnStore`) has an embedded per-root write lock using promise chaining. The lock is keyed by `${slot}:${rootHex}` and ensures that concurrent writes to the same file are serialized. The chain entry is cleaned up when the last writer releases, so there is no unbounded growth.
 
 ### 3.4 Wire Format Passthrough
 
@@ -321,77 +314,17 @@ async function getBlobSidecars(slot: Slot, blockRoot: Root): Promise<BlobSidecar
 
 ### 4.2 Data Column Random Access
 
-```typescript
-async function getDataColumn(
-  slot: Slot, blockRoot: Root, columnIndex: ColumnIndex
-): Promise<DataColumnSidecar | null> {
-  // Check existence cache
-  if (!this.existenceCache.hasColumnPresent(slot, blockRoot, columnIndex)) {
-    return null;
-  }
+`getColumnsBinary` uses targeted `fd.read()` with position offsets to read only the bytes it needs — never the entire file. The read sequence:
 
-  const filePath = path.join(this.columnsDir, padSlot(slot), `0x${toRootHex(blockRoot)}.dcol`);
-  const fd = await fs.open(filePath, "r");
-  try {
-    // Read header
-    const headerBuf = Buffer.alloc(DCOL_HEADER_SIZE);  // 149 bytes
-    await fd.read(headerBuf, 0, DCOL_HEADER_SIZE, 0);
-    const {columnSize, bitmap} = parseDcolHeader(headerBuf);
+1. `pread` 149 bytes — header (bitmap, version)
+2. `pread` up to 516 bytes — offset table
+3. Per requested column: `pread` ~5-8 KB — compressed column data, then Snappy decompress
 
-    // Check bitmap
-    if (!getBit(bitmap, columnIndex)) return null;
+For a typical reqresp custody request (4 columns), total I/O is **~25-35 KB** vs ~1 MB for a full file read. `pread()` doesn't mutate file descriptor state, so concurrent reads on the same file are safe without locking.
 
-    // Calculate offset using popcount
-    const position = popcount(bitmap, columnIndex);
-    const offset = DCOL_HEADER_SIZE + position * columnSize;
+### 4.3 Bulk Reads (All Columns for Same Block)
 
-    // Read just the one column
-    const columnBuf = Buffer.alloc(columnSize);
-    await fd.read(columnBuf, 0, columnSize, offset);
-    return ssz.fulu.DataColumnSidecar.deserialize(columnBuf);
-  } finally {
-    await fd.close();
-  }
-}
-```
-
-**Performance:** Reading a single column from a 1.69 MB file requires:
-1. One 149-byte header read (likely cached by OS page cache)
-2. One ~13 KB column read at a computed offset
-3. No scanning, no iteration, no deserialization of other columns
-
-### 4.3 Batch Reads (Multiple Columns for Same Block)
-
-For data availability sampling, a node may need multiple columns from the same block:
-
-```typescript
-async function getDataColumns(
-  slot: Slot, blockRoot: Root, columnIndices: ColumnIndex[]
-): Promise<Map<ColumnIndex, DataColumnSidecar>> {
-  const filePath = path.join(this.columnsDir, padSlot(slot), `0x${toRootHex(blockRoot)}.dcol`);
-  const fd = await fs.open(filePath, "r");
-  try {
-    const headerBuf = Buffer.alloc(DCOL_HEADER_SIZE);
-    await fd.read(headerBuf, 0, DCOL_HEADER_SIZE, 0);
-    const {columnSize, bitmap} = parseDcolHeader(headerBuf);
-
-    const result = new Map<ColumnIndex, DataColumnSidecar>();
-    for (const idx of columnIndices) {
-      if (!getBit(bitmap, idx)) continue;
-      const position = popcount(bitmap, idx);
-      const offset = DCOL_HEADER_SIZE + position * columnSize;
-      const columnBuf = Buffer.alloc(columnSize);
-      await fd.read(columnBuf, 0, columnSize, offset);
-      result.set(idx, ssz.fulu.DataColumnSidecar.deserialize(columnBuf));
-    }
-    return result;
-  } finally {
-    await fd.close();
-  }
-}
-```
-
-For bulk reads (all 128 columns), reading the entire file at once and slicing is more efficient than 128 separate seeks.
+When all columns are needed (merge, full deserialization), a single `readFile` + `readAllColumns` is used instead — one sequential read is more efficient than 128 individual seeks.
 
 ---
 
@@ -406,18 +339,15 @@ Avoid filesystem `stat()` or `open()` calls for non-existent data. With 128 colu
 ```typescript
 class ExistenceCache {
   // Blob existence: slot → Set<rootHex>
-  private blobs = new Map<Slot, Set<RootHex>>();
+  private blobPresence = new Map<Slot, Set<RootHex>>();
 
-  // Column existence: slot → Map<rootHex, Uint16Array(1)>
-  // The Uint16Array stores a 128-bit bitmap packed into 8 uint16 values
-  // Actually, use a simple bigint or Buffer for the bitmap
-  private columns = new Map<Slot, Map<RootHex, bigint>>();
-
-  // Slot range tracked
-  private minSlot: Slot = 0;
-  private maxSlot: Slot = 0;
+  // Column existence: slot → Map<rootHex, bigint>
+  // bigint stores a 128-bit bitmap (1n << index for each present column)
+  private columnBitmaps = new Map<Slot, Map<RootHex, bigint>>();
 }
 ```
+
+The cache also provides `getAnyRootForSlot(slot)` which resolves slot → root from data it already tracks. For finalized slots there is exactly one canonical root per slot, so this replaces a separate slot-root index for by-slot lookups in reqresp handlers.
 
 ### Memory Usage
 
@@ -432,22 +362,13 @@ For 18-day retention window (~130,000 slots):
 
 ### Cache Lifecycle
 
-1. **Startup:** Walk the filesystem to rebuild cache (or load from a checkpoint file).
+1. **Startup:** `rebuildFromDisk()` walks the blob and column directories, reading only `.dcol` headers (149 bytes each) to extract bitmaps. `.part` files are ignored.
 2. **Runtime:** Updated on every write and delete.
-3. **Pruning:** Entries for pruned slots are batch-evicted.
+3. **Pruning:** `evictBelow(minSlot)` batch-evicts entries for pruned slots.
 
-### Warm-up Optimization
+### Warm-up Optimization (Future)
 
-On startup, walking 130,000 slot directories could take 10-30 seconds. To avoid this:
-
-1. **Persist cache to disk** periodically as a compact binary file:
-   ```
-   existence_cache.bin:
-   [min_slot: 8B][max_slot: 8B][entries...]
-   Each entry: [slot: 8B][root: 32B][blob_present: 1B][column_bitmap: 16B]
-   ```
-2. On startup, load the cache file and only scan slots newer than `max_slot` in the cache.
-3. The cache file is written during graceful shutdown and periodically (every 5 minutes).
+Currently the cache is rebuilt from disk on every startup by walking all slot directories. For large retention windows (~130,000 slots), this could take 10-30 seconds. A future optimization would persist the cache to a compact binary file on graceful shutdown and load it on startup, only scanning slots newer than the persisted max slot.
 
 ---
 
@@ -524,14 +445,14 @@ Step 1 replaces the current "delete non-canonical blocks from hot" LevelDB opera
 
 ### Phase 1a: New Data to Filesystem (Feature Flag)
 
-Add a `--flatFileStorage` CLI flag (default: `false`).
+Add a `--chain.flatFileStorage` CLI flag (default: `true`).
 
 When enabled:
-- New blob sidecars and data columns are written to both LevelDB and filesystem
-- Reads prefer filesystem, fall back to LevelDB
-- Pruning operates on both stores
+- Blob sidecars and data columns are written to the filesystem
+- Reads go to filesystem (with LevelDB fallback for data written before the flag was enabled)
+- Pruning operates on the filesystem
 
-This allows safe testing with easy rollback (just disable the flag).
+This allows easy rollback by disabling the flag.
 
 ### Phase 1b: Background Migration of Existing Data
 
@@ -591,30 +512,42 @@ This is a lower priority since blocks are smaller and benefit more from KV store
 
 ```typescript
 interface IFlatFileStore {
-  // Blob sidecars
-  getBlobSidecars(slot: Slot, blockRoot: Root): Promise<BlobSidecarsWrapper | null>;
-  getBlobSidecarsBinary(slot: Slot, blockRoot: Root): Promise<Uint8Array | null>;
-  putBlobSidecars(slot: Slot, blockRoot: Root, data: Uint8Array): Promise<void>;
-  deleteBlobSidecars(slot: Slot, blockRoot: Root): Promise<void>;
-  hasBlobSidecars(slot: Slot, blockRoot: Root): boolean;  // sync, from cache
-
-  // Data columns
-  getDataColumn(slot: Slot, blockRoot: Root, index: ColumnIndex): Promise<DataColumnSidecar | null>;
-  getDataColumnBinary(slot: Slot, blockRoot: Root, index: ColumnIndex): Promise<Uint8Array | null>;
-  getDataColumns(slot: Slot, blockRoot: Root, indices: ColumnIndex[]): Promise<Map<ColumnIndex, Uint8Array>>;
-  putDataColumns(slot: Slot, blockRoot: Root, columns: {index: ColumnIndex; data: Uint8Array}[]): Promise<void>;
-  deleteDataColumns(slot: Slot, blockRoot: Root): Promise<void>;
-  hasDataColumn(slot: Slot, blockRoot: Root, index: ColumnIndex): boolean;  // sync, from cache
-  getColumnBitmap(slot: Slot, blockRoot: Root): bigint | null;  // sync, from cache
-
-  // Pruning
-  pruneBeforeSlot(slot: Slot): Promise<void>;
-
-  // Lifecycle
   init(): Promise<void>;
   close(): Promise<void>;
+
+  // Blob sidecars
+  getBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<BlobSidecarsWrapper | null>;
+  getBlobSidecarsBinary(slot: Slot, blockRoot: RootHex): Promise<Uint8Array | null>;
+  getBlobSidecarsBinaryBySlot(slot: Slot): Promise<Uint8Array | null>;
+  putBlobSidecars(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void>;
+  deleteBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<void>;
+  hasBlobSidecars(slot: Slot, blockRoot: RootHex): boolean;  // sync, from cache
+  blobSidecarsBinaryEntriesStream(opts: {gte: Slot; lt: Slot}): AsyncIterable<{slot: Slot; data: Uint8Array}>;
+
+  // Data columns
+  getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]>;
+  getDataColumnsBinary(slot: Slot, blockRoot: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[]>;
+  getDataColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]>;
+  putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
+  putDataColumns(slot: Slot, blockRoot: RootHex, columns: DataColumnSidecar[]): Promise<void>;
+  deleteDataColumns(slot: Slot, blockRoot: RootHex): Promise<void>;
+  hasDataColumn(slot: Slot, blockRoot: RootHex, index: number): boolean;  // sync, from cache
+  getColumnBitmap(slot: Slot, blockRoot: RootHex): bigint | null;  // sync, from cache
+
+  // Pruning
+  deleteNonCanonical(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;
+  pruneBlobsBeforeSlot(slot: Slot): Promise<void>;
+  pruneColumnsBeforeSlot(slot: Slot): Promise<void>;
+  pruneHotBlobs(): Promise<void>;  // no-op for flat files (no hot/cold distinction)
 }
 ```
+
+Key differences from the original proposal:
+- All methods take `RootHex` (hex string) instead of `Root` (Uint8Array), matching Lodestar's fork choice conventions
+- By-slot lookups (`getBlobSidecarsBinaryBySlot`, `getDataColumnsBinaryBySlot`) for finalized reqresp handlers that only know the slot
+- Separate `pruneBlobsBeforeSlot`/`pruneColumnsBeforeSlot` (blobs and columns may have different retention windows)
+- `deleteNonCanonical` for batch cleanup of orphaned blocks on finalization
+- `blobSidecarsBinaryEntriesStream` for the `blobSidecarsByRange` reqresp handler
 
 ### Changes to IBeaconDb
 
@@ -622,16 +555,19 @@ interface IFlatFileStore {
 export interface IBeaconDb {
   // ... existing fields ...
 
-  // NEW: flat file store for blobs and columns
-  flatFileStore: IFlatFileStore;
+  // Flat file store for blobs and columns (null when --chain.flatFileStorage is disabled)
+  flatFileStore: IFlatFileStore | null;
+  initFlatFileStore?(dataDir: string, logger: Logger): Promise<void>;
 
-  // DEPRECATED (Phase 1a: still present, Phase 1c: removed)
+  // Coexists with flat file store during transition (Phase 1c: removed)
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
   dataColumnSidecar: DataColumnSidecarRepository;
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 }
 ```
+
+Callers check `if (db.flatFileStore)` before using flat file APIs, falling back to the LevelDB repositories otherwise.
 
 ### Changes to Archive Pipeline
 
@@ -667,7 +603,7 @@ No migration step needed - data is already in its final location.
 
 | | LevelDB | Flat File |
 |--|---------|-----------|
-| Storage overhead | ~1.1-1.5x (SSZ + LevelDB metadata + LSM levels) | ~1.0x (raw SSZ + 149B header for .dcol) |
+| Storage overhead | ~1.1-1.5x (SSZ + LevelDB metadata + LSM levels) | ~0.5-0.65x (Snappy-compressed SSZ + offset table + 149B header) |
 | Post-delete bloat | Significant until compaction | None (unlink reclaims immediately) |
 | Fragmentation | Internal (LSM levels) | Filesystem-level (minimal with modern ext4/xfs) |
 
@@ -676,9 +612,10 @@ No migration step needed - data is already in its final location.
 | Operation | LevelDB | Flat File |
 |-----------|---------|-----------|
 | Single blob lookup | ~0.5-2ms (key lookup + decompress) | ~0.1-0.5ms (open + read, cached by OS) |
-| Single column lookup | ~0.5-2ms (key lookup + decompress) | ~0.1-0.3ms (open + header read + seek + read) |
+| Single column lookup | ~0.5-2ms (key lookup + decompress) | ~0.1-0.3ms (open + header pread + column pread + snappy decompress) |
 | Existence check | ~0.3-1ms (key lookup) | **~0ns** (in-memory cache) |
-| Range scan (all columns for block) | ~5-15ms (128 key lookups) | ~1-3ms (single file read) |
+| Batch column lookup (4 cols) | ~2-8ms (4 key lookups) | ~0.2-0.5ms (open + header pread + table pread + 4 column preads, ~30 KB total) |
+| All columns for block | ~5-15ms (128 key lookups) | ~1-3ms (single file read + 128 snappy decompress) |
 
 ### Throughput (Sustained Writes)
 
@@ -704,13 +641,13 @@ No migration step needed - data is already in its final location.
 packages/beacon-node/src/db/
   flatFileStore/
     index.ts                    # Exports
+    interface.ts                # IFlatFileStore interface definition
     flatFileStore.ts            # Main FlatFileStore class implementing IFlatFileStore
     blobStore.ts                # Blob sidecar file operations
     columnStore.ts              # Data column file operations
     dcolFormat.ts               # .dcol binary format encode/decode
     existenceCache.ts           # In-memory existence bitmap cache
     atomicWrite.ts              # Atomic write utility
-    metrics.ts                  # Prometheus metrics
 ```
 
 ### Implementation Order
@@ -801,7 +738,7 @@ packages/beacon-node/src/db/
 
 2. **Should we use `O_DIRECT` for writes?** Bypassing the OS page cache could reduce memory pressure for write-once data. However, `O_DIRECT` requires aligned buffers and is not portable. Recommendation: start without it, benchmark, add if needed.
 
-3. **Should we support compression?** Data columns are somewhat compressible (KZG commitments and proofs have structure). However, compression adds CPU overhead and prevents O(1) random access. Recommendation: no compression in v1, add optional per-file compression in v2 using the version byte.
+3. **~~Should we support compression?~~** Resolved: the `.dcol` format uses per-column Snappy block compression with an offset table, preserving O(1) random access. Snappy was chosen for its low CPU overhead and compatibility with the existing reqresp stack. Compression reduces column file sizes by ~40-50%.
 
 4. **Should the existence cache be shared or per-store?** A single cache for both blobs and columns simplifies management. Recommendation: single `ExistenceCache` instance in `FlatFileStore`.
 
