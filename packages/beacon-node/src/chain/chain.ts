@@ -114,6 +114,7 @@ import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
+import {IZkvmExecutionProofVerifier, defaultZkvmExecutionProofVerifier} from "./validation/executionProofVerifier.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -165,6 +166,8 @@ export class BeaconChain implements IBeaconChain {
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly executionProofPool: ExecutionProofPool;
+  /** EIP-8025: Verifier for execution proofs (structural checks, will be replaced with real zkVM verifier) */
+  readonly executionProofVerifier: IZkvmExecutionProofVerifier;
   /** EIP-8025: When true, skip EL newPayload calls and use execution proofs for validation */
   readonly activateZkvm: boolean;
   /** EIP-8025: Minimum distinct proof types required per block in zkvm mode */
@@ -297,6 +300,7 @@ export class BeaconChain implements IBeaconChain {
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.executionProofPool = new ExecutionProofPool();
+    this.executionProofVerifier = defaultZkvmExecutionProofVerifier;
     this.activateZkvm = opts.activateZkvm ?? false;
     this.minProofsRequired = opts.minProofsRequired ?? 1;
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
@@ -1481,6 +1485,31 @@ export class BeaconChain implements IBeaconChain {
       }
 
       const execBlockHash = block.executionPayloadBlockHash;
+
+      // Re-verify proofs at promotion time, not just at ingestion.
+      // Proofs are verified individually when they arrive via gossip/API, but we must
+      // verify the full set together before transitioning to Valid — checking distinct
+      // proof types, blockRoot/blockHash consistency against fork choice, and minimum count.
+      const proofs = this.executionProofPool.getProofsByBlockRoot(blockRootHex);
+      const verification = this.executionProofVerifier.verifyProofs({
+        proofs,
+        expectedBlockRootHex: blockRootHex,
+        expectedExecBlockHashHex: execBlockHash,
+        minProofsRequired: this.minProofsRequired,
+      });
+
+      if (!verification.ok) {
+        this.logger.warn("Execution proofs failed re-verification at promotion time", {
+          slot: proof.slot,
+          blockRoot: blockRootHex,
+          execBlockHash,
+          reason: verification.error,
+          proofsAvailable: proofs.length,
+          minRequired: this.minProofsRequired,
+        });
+        return;
+      }
+
       this.forkChoice.validateLatestHash({
         executionStatus: ExecutionStatus.Valid,
         latestValidExecHash: execBlockHash,
@@ -1492,7 +1521,8 @@ export class BeaconChain implements IBeaconChain {
         slot: proof.slot,
         blockRoot: blockRootHex,
         execBlockHash,
-        proofsAvailable: this.executionProofPool.getProofsByBlockRoot(blockRootHex).length,
+        proofsAvailable: proofs.length,
+        distinctProofTypes: verification.distinctProofTypes,
         minRequired: this.minProofsRequired,
       });
     }
