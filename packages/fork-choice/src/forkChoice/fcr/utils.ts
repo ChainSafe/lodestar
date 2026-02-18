@@ -4,8 +4,6 @@ import {
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
-  getActiveValidatorIndices,
-  getCurrentEpoch,
   isStartSlotOfEpoch,
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
@@ -220,7 +218,11 @@ export function estimateCommitteeWeightBetweenSlots(
 }
 
 export function adjustCommitteeWeightEstimateToEnsureSafety(estimate: number): number {
-  return Math.floor(estimate / 1000) * (1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR);
+  const estimateInThousands = Math.floor(estimate / 1000);
+  if (estimateInThousands === 0) {
+    return estimate;
+  }
+  return estimateInThousands * (1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR);
 }
 
 export function isFullValidatorSetCovered(startSlot: Slot, endSlot: Slot): boolean {
@@ -238,17 +240,16 @@ export function computeProposerScore(ctx: FCRContext, balanceSource: FCRBalanceS
 export function getAttestationScore(ctx: FCRContext, balanceSource: FCRBalanceSource, blockRoot: RootHex): number {
   const balances = balanceSource.balances;
   const state = balanceSource.state;
-  const activeIndices = state ? Array.from(getActiveValidatorIndices(state, getCurrentEpoch(state))) : null;
+  const activeIndices = state?.epochCtx.currentShuffling.activeIndices ?? null;
   let score = 0;
-  if (!state) return score;
   const equivocating = ctx.getEquivocatingIndices();
 
-  if (activeIndices !== null) {
+  if (activeIndices !== null && state) {
     for (const i of activeIndices) {
       if (state.validators.get(i)?.slashed) continue;
       if (equivocating.has(i)) continue;
       const latestMessage = ctx.getLatestMessage(i);
-      if (latestMessage?.root === blockRoot) {
+      if (latestMessage && ctx.isDescendant(blockRoot, latestMessage.root)) {
         score += balances[i] ?? 0;
       }
     }
@@ -259,7 +260,7 @@ export function getAttestationScore(ctx: FCRContext, balanceSource: FCRBalanceSo
     if (balances[i] === 0) continue;
     if (equivocating.has(i)) continue;
     const latestMessage = ctx.getLatestMessage(i);
-    if (latestMessage?.root === blockRoot) {
+    if (latestMessage && ctx.isDescendant(blockRoot, latestMessage.root)) {
       score += balances[i] ?? 0;
     }
   }
@@ -294,7 +295,7 @@ export function getBlockSupportBetweenSlots(
     if (balanceSource.state?.validators.get(i)?.slashed) continue;
     if (equivocating.has(i)) continue;
     const latestMessage = ctx.getLatestMessage(i);
-    if (latestMessage?.root === blockRoot) {
+    if (latestMessage && ctx.isDescendant(blockRoot, latestMessage.root)) {
       score += balances[i] ?? 0;
     }
   }
@@ -340,7 +341,7 @@ export function computeAdversarialWeight(
   endSlot: Slot
 ): number {
   const maximumWeight = estimateCommitteeWeightBetweenSlots(balanceSource, startSlot, endSlot);
-  const maxAdversarialWeight = Math.floor(maximumWeight / 100) * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD;
+  const maxAdversarialWeight = Math.floor((maximumWeight * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD) / 100);
   const equivocationScore = getEquivocationScore(ctx, store, cache, balanceSource, startSlot, endSlot);
   return maxAdversarialWeight > equivocationScore ? maxAdversarialWeight - equivocationScore : 0;
 }
@@ -437,18 +438,12 @@ export function isOneConfirmed(
     (currentSlot - 1) as Slot
   );
   const supportDiscount = getSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
-
-  const committeeWeightFromBlock = estimateCommitteeWeightBetweenSlots(
-    balanceSource,
-    block.slot,
-    (currentSlot - 1) as Slot
-  );
-
   const adversarialWeightBase = getAdversarialWeight(ctx, store, cache, balanceSource, blockRoot);
-  const adversarialWeightScaled =
-    maximumSupport > 0 ? (adversarialWeightBase * committeeWeightFromBlock) / maximumSupport : 0;
 
-  return 2 * support + supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeightScaled;
+  const adversarialWeightScaled =
+    2 * support + supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeightBase;
+
+  return adversarialWeightScaled;
 }
 
 export function getCurrentTarget(ctx: FCRContext, cache: FCRCache): CheckpointWithHex | null {
@@ -472,7 +467,7 @@ export function getCurrentTargetScore(ctx: FCRContext, store: IFCRStore, cache: 
   const targetState = getCurrentTargetState(ctx, store, cache);
   if (!target || !targetState) return 0;
   const balances = targetState.epochCtx.effectiveBalanceIncrements;
-  const activeIndices = getActiveValidatorIndices(targetState, getCurrentEpoch(targetState));
+  const activeIndices = targetState.epochCtx.currentShuffling.activeIndices;
   const equivocating = ctx.getEquivocatingIndices();
   let score = 0;
   for (const i of activeIndices) {
@@ -554,7 +549,7 @@ export function willCheckpointBeJustified(
 
   const totalActiveBalance = checkpointState.epochCtx.totalActiveBalanceIncrements;
   const balances = checkpointState.epochCtx.effectiveBalanceIncrements;
-  const activeIndices = getActiveValidatorIndices(checkpointState, getCurrentEpoch(checkpointState));
+  const activeIndices = checkpointState.epochCtx.currentShuffling.activeIndices;
   const equivocating = ctx.getEquivocatingIndices();
 
   let ffgSupport = 0;
@@ -630,7 +625,7 @@ export function findLatestConfirmedDescendant(
   const currentBalanceSource = getCurrentBalanceSource(store, cache);
 
   const confirmedEpoch = getBlockEpoch(ctx, cache, confirmedRoot);
-  if (
+  const loop1Condition =
     confirmedEpoch !== null &&
     confirmedEpoch + 1 === currentEpoch &&
     previousSlotVotingSource !== null &&
@@ -638,8 +633,9 @@ export function findLatestConfirmedDescendant(
     (isStartSlotOfEpoch(snapshot.currentSlot) ||
       (willNoConflictingCheckpointBeJustified(ctx, store, cache) &&
         ((prevSlotJustification !== null && prevSlotJustification.epoch + 1 >= currentEpoch) ||
-          (headJustification !== null && headJustification.epoch + 1 >= currentEpoch))))
-  ) {
+          (headJustification !== null && headJustification.epoch + 1 >= currentEpoch))));
+
+  if (loop1Condition) {
     const canonicalRoots = getAncestorRoots(ctx, cache, snapshot.headRoot, confirmedRoot);
     for (const blockRoot of canonicalRoots) {
       const blockEpoch = getBlockEpoch(ctx, cache, blockRoot);
@@ -649,17 +645,19 @@ export function findLatestConfirmedDescendant(
       if (!isAncestor(ctx, cache, store.previousSlotHead, blockRoot)) {
         break;
       }
-      if (!isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot)) {
+      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot);
+      if (!isConfirmed) {
         break;
       }
       confirmedRoot = blockRoot;
     }
   }
 
-  if (
+  const loop2Condition =
     isStartSlotOfEpoch(snapshot.currentSlot) ||
-    (headJustification !== null && headJustification.epoch + 1 >= currentEpoch)
-  ) {
+    (headJustification !== null && headJustification.epoch + 1 >= currentEpoch);
+
+  if (loop2Condition) {
     const canonicalRoots = getAncestorRoots(ctx, cache, snapshot.headRoot, confirmedRoot);
     let tentativeConfirmedRoot = confirmedRoot;
 
@@ -675,7 +673,8 @@ export function findLatestConfirmedDescendant(
         }
       }
 
-      if (!isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot)) {
+      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot);
+      if (!isConfirmed) {
         break;
       }
       tentativeConfirmedRoot = blockRoot;

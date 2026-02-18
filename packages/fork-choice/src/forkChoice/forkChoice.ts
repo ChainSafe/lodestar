@@ -59,7 +59,6 @@ export type ForkChoiceOpts = {
   proposerBoostReorg?: boolean;
   computeUnrealized?: boolean;
   enableFastConfirmation?: boolean;
-  fastConfirmation?: IFastConfirmationRule;
 };
 
 export enum UpdateHeadOpt {
@@ -162,7 +161,7 @@ export class ForkChoice implements IForkChoice {
     this.balances = this.fcStore.justified.balances;
 
     if (this.opts?.enableFastConfirmation) {
-      this.fcr = this.opts.fastConfirmation ?? new FastConfirmationRule(this.fcStore, metrics);
+      this.fcr = new FastConfirmationRule(this.fcStore, metrics);
       this.fcrContext = this.createFCRContext();
     }
 

@@ -48,9 +48,10 @@ const advanceIfObservedJustified: FCRRule = (snapshot, ctx, store, cache, decisi
 const advanceToLatestConfirmedDescendant: FCRRule = (snapshot, ctx, store, cache, decision) => {
   const confirmedEpoch = getBlockEpoch(ctx, cache, decision.confirmedRoot);
   if (confirmedEpoch !== null && confirmedEpoch + 1 >= snapshot.currentEpoch) {
+    const newConfirmed = findLatestConfirmedDescendant(snapshot, ctx, store, cache, decision.confirmedRoot);
     return {
       ...decision,
-      confirmedRoot: findLatestConfirmedDescendant(snapshot, ctx, store, cache, decision.confirmedRoot),
+      confirmedRoot: newConfirmed,
       reason: "confirmed_descendant",
     };
   }

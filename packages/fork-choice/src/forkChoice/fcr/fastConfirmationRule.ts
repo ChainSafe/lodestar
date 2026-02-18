@@ -24,7 +24,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     const cache = createFCRCache();
     const snapshot = buildFCRSnapshot(ctx, this.store, cache);
 
-    const {confirmedRoot, didReset} = runFCRRules(snapshot, ctx, this.store, cache);
+    const {confirmedRoot, didReset, reason: _} = runFCRRules(snapshot, ctx, this.store, cache);
 
     this.store.confirmedRoot = confirmedRoot;
     this.updateFCRMetrics(ctx, {confirmedRoot, didReset});
