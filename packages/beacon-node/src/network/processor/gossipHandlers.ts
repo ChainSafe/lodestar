@@ -885,7 +885,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           insertOutcome,
         });
 
-        // EIP-8025: In zkevm mode, check if we now have enough proofs to validate this block
+        // EIP-8025: In zkvm mode, check if we now have enough proofs to validate this block
         if (insertOutcome === InsertOutcome.NewData) {
           chain.maybeTransitionToValidOnProofArrival(executionProof);
         }

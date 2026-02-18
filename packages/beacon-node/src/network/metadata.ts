@@ -16,8 +16,8 @@ export enum ENRKey {
   syncnets = "syncnets",
   cgc = "cgc",
   nfd = "nfd",
-  /** EIP-8025: zkEVM enabled flag */
-  zkevm = "zkevm",
+  /** EIP-8025: zkvm enabled flag */
+  zkvm = "zkvm",
 }
 export enum SubnetType {
   attnets = "attnets",
@@ -26,8 +26,8 @@ export enum SubnetType {
 
 export type MetadataOpts = {
   metadata?: fulu.Metadata;
-  /** EIP-8025: Enable zkEVM ENR key signaling */
-  activateZkevm?: boolean;
+  /** EIP-8025: Enable zkvm ENR key signaling */
+  activateZkvm?: boolean;
 };
 
 export type MetadataModules = {
@@ -46,13 +46,13 @@ export class MetadataController {
   private networkConfig: NetworkConfig;
   private logger: Logger;
   private _metadata: fulu.Metadata;
-  private readonly activateZkevm: boolean;
+  private readonly activateZkvm: boolean;
 
   constructor(opts: MetadataOpts, modules: MetadataModules) {
     this.networkConfig = modules.networkConfig;
     this.logger = modules.logger;
     this.onSetValue = modules.onSetValue;
-    this.activateZkevm = opts.activateZkevm ?? false;
+    this.activateZkvm = opts.activateZkvm ?? false;
     this._metadata = opts.metadata ?? {
       ...ssz.fulu.Metadata.defaultValue(),
       custodyGroupCount: modules.networkConfig.custodyConfig.targetCustodyGroupCount,
@@ -76,9 +76,9 @@ export class MetadataController {
     // Set CGC regardless of fork. It may be useful to clients before Fulu, and will be ignored otherwise.
     this.onSetValue(ENRKey.cgc, serializeCgc(this._metadata.custodyGroupCount));
 
-    // EIP-8025: Set zkEVM ENR key when activated
-    if (this.activateZkevm) {
-      this.onSetValue(ENRKey.zkevm, new Uint8Array([1]));
+    // EIP-8025: Set zkvm ENR key when activated
+    if (this.activateZkvm) {
+      this.onSetValue(ENRKey.zkvm, new Uint8Array([1]));
     }
   }
 

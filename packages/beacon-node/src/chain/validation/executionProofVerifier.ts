@@ -10,7 +10,7 @@ export type VerifyExecutionProofsInput = {
 
 export type VerifyExecutionProofsResult = {ok: true; distinctProofTypes: number} | {ok: false; error: string};
 
-export interface IZkevmExecutionProofVerifier {
+export interface IZkvmExecutionProofVerifier {
   verifyProofs(input: VerifyExecutionProofsInput): VerifyExecutionProofsResult;
 }
 
@@ -23,7 +23,7 @@ export interface IZkevmExecutionProofVerifier {
  * - proof blockRoot matches expected beacon block root
  * - proof blockHash matches expected execution payload block hash
  */
-export class DummyZkevmExecutionProofVerifier implements IZkevmExecutionProofVerifier {
+export class DummyZkvmExecutionProofVerifier implements IZkvmExecutionProofVerifier {
   verifyProofs(input: VerifyExecutionProofsInput): VerifyExecutionProofsResult {
     const {proofs, expectedBlockRootHex, expectedExecBlockHashHex, minProofsRequired} = input;
 
@@ -65,4 +65,4 @@ export class DummyZkevmExecutionProofVerifier implements IZkevmExecutionProofVer
   }
 }
 
-export const defaultZkevmExecutionProofVerifier: IZkevmExecutionProofVerifier = new DummyZkevmExecutionProofVerifier();
+export const defaultZkvmExecutionProofVerifier: IZkvmExecutionProofVerifier = new DummyZkvmExecutionProofVerifier();

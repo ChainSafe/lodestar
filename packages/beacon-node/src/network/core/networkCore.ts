@@ -168,7 +168,7 @@ export class NetworkCore implements INetworkCore {
       custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
     };
     const metadata = new MetadataController(
-      {activateZkevm: opts.activateZkevm},
+      {activateZkvm: opts.activateZkvm},
       {networkConfig, logger, onSetValue: onMetadataSetValue}
     );
 
@@ -593,12 +593,12 @@ export class NetworkCore implements INetworkCore {
   private subscribeCoreTopicsAtBoundary(networkConfig: NetworkConfig, boundary: ForkBoundary): void {
     if (this.forkBoundariesByEpoch.has(boundary.epoch)) return;
     this.forkBoundariesByEpoch.set(boundary.epoch, boundary);
-    const {subscribeAllSubnets, disableLightClientServer, activateZkevm} = this.opts;
+    const {subscribeAllSubnets, disableLightClientServer, activateZkvm} = this.opts;
 
     for (const topic of getCoreTopicsAtFork(networkConfig, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
-      activateZkevm,
+      activateZkvm,
     })) {
       this.gossip.subscribeTopic({...topic, boundary});
     }
@@ -607,12 +607,12 @@ export class NetworkCore implements INetworkCore {
   private unsubscribeCoreTopicsAtBoundary(networkConfig: NetworkConfig, boundary: ForkBoundary): void {
     if (!this.forkBoundariesByEpoch.has(boundary.epoch)) return;
     this.forkBoundariesByEpoch.delete(boundary.epoch);
-    const {subscribeAllSubnets, disableLightClientServer, activateZkevm} = this.opts;
+    const {subscribeAllSubnets, disableLightClientServer, activateZkvm} = this.opts;
 
     for (const topic of getCoreTopicsAtFork(networkConfig, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
-      activateZkevm,
+      activateZkvm,
     })) {
       this.gossip.unsubscribeTopic({...topic, boundary});
     }

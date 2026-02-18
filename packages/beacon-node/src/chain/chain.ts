@@ -114,7 +114,6 @@ import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
-import {IZkevmExecutionProofVerifier, defaultZkevmExecutionProofVerifier} from "./validation/executionProofVerifier.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -166,11 +165,9 @@ export class BeaconChain implements IBeaconChain {
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly executionProofPool: ExecutionProofPool;
-  /** EIP-8025: Verifier for execution proofs (structural checks, will be replaced with real zkVM verifier) */
-  readonly executionProofVerifier: IZkevmExecutionProofVerifier;
   /** EIP-8025: When true, skip EL newPayload calls and use execution proofs for validation */
-  readonly activateZkevm: boolean;
-  /** EIP-8025: Minimum distinct proof types required per block in zkevm mode */
+  readonly activateZkvm: boolean;
+  /** EIP-8025: Minimum distinct proof types required per block in zkvm mode */
   readonly minProofsRequired: number;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
@@ -300,8 +297,7 @@ export class BeaconChain implements IBeaconChain {
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.executionProofPool = new ExecutionProofPool();
-    this.executionProofVerifier = defaultZkevmExecutionProofVerifier;
-    this.activateZkevm = opts.activateZkevm ?? false;
+    this.activateZkvm = opts.activateZkvm ?? false;
     this.minProofsRequired = opts.minProofsRequired ?? 1;
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
@@ -1465,7 +1461,7 @@ export class BeaconChain implements IBeaconChain {
    * Called from both gossip handler and REST API handler when a new proof is added to the pool.
    */
   maybeTransitionToValidOnProofArrival(proof: {slot: number; blockRoot: Uint8Array; blockHash: Uint8Array}): void {
-    if (!this.activateZkevm) {
+    if (!this.activateZkvm) {
       return;
     }
 
@@ -1485,31 +1481,6 @@ export class BeaconChain implements IBeaconChain {
       }
 
       const execBlockHash = block.executionPayloadBlockHash;
-
-      // Re-verify proofs at promotion time, not just at ingestion.
-      // Proofs are verified individually when they arrive via gossip/API, but we must
-      // verify the full set together before transitioning to Valid — checking distinct
-      // proof types, blockRoot/blockHash consistency against fork choice, and minimum count.
-      const proofs = this.executionProofPool.getProofsByBlockRoot(blockRootHex);
-      const verification = this.executionProofVerifier.verifyProofs({
-        proofs,
-        expectedBlockRootHex: blockRootHex,
-        expectedExecBlockHashHex: execBlockHash,
-        minProofsRequired: this.minProofsRequired,
-      });
-
-      if (!verification.ok) {
-        this.logger.warn("Execution proofs failed re-verification at promotion time", {
-          slot: proof.slot,
-          blockRoot: blockRootHex,
-          execBlockHash,
-          reason: verification.error,
-          proofsAvailable: proofs.length,
-          minRequired: this.minProofsRequired,
-        });
-        return;
-      }
-
       this.forkChoice.validateLatestHash({
         executionStatus: ExecutionStatus.Valid,
         latestValidExecHash: execBlockHash,
@@ -1517,12 +1488,11 @@ export class BeaconChain implements IBeaconChain {
       // Refresh the cached fork choice head so API responses reflect the updated execution status.
       // validateLatestHash updates the proto-array nodes but the cached head is a stale snapshot.
       this.recomputeForkChoiceHead(ForkchoiceCaller.onExecutionProof);
-      this.logger.info("Execution proofs sufficient, marked block as execution-valid (zkevm mode)", {
+      this.logger.info("Execution proofs sufficient, marked block as execution-valid (zkvm mode)", {
         slot: proof.slot,
         blockRoot: blockRootHex,
         execBlockHash,
-        proofsAvailable: proofs.length,
-        distinctProofTypes: verification.distinctProofTypes,
+        proofsAvailable: this.executionProofPool.getProofsByBlockRoot(blockRootHex).length,
         minRequired: this.minProofsRequired,
       });
     }

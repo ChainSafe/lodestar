@@ -245,7 +245,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
 export function getCoreTopicsAtFork(
   networkConfig: NetworkConfig,
   fork: ForkName,
-  opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean; activateZkevm?: boolean}
+  opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean; activateZkvm?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   // Common topics for all forks
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
@@ -267,8 +267,8 @@ export function getCoreTopicsAtFork(
     topics.push(...getDataColumnSidecarTopics(networkConfig));
   }
 
-  // EIP-8025: Subscribe to execution_proof gossip when zkevm mode is active on Fulu+
-  if (opts.activateZkevm && ForkSeq[fork] >= ForkSeq.fulu) {
+  // EIP-8025: Subscribe to execution_proof gossip when zkvm mode is active on Fulu+
+  if (opts.activateZkvm && ForkSeq[fork] >= ForkSeq.fulu) {
     topics.push({type: GossipType.execution_proof});
   }
 
