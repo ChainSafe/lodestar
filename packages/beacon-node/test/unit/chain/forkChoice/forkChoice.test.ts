@@ -71,6 +71,7 @@ describe("LodestarForkChoice", () => {
       true,
       {},
       (_: CheckpointWithHex) => justifiedBalances,
+      () => null,
       null
     );
   });

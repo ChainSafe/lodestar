@@ -131,6 +131,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         currentEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
         previousSlotHead: toHexString(finalizedCheckpoint.root),
         currentSlotHead: toHexString(finalizedCheckpoint.root),
+        stateGetter: () => null,
       };
       forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, originalState.validators.length, null);
     },
