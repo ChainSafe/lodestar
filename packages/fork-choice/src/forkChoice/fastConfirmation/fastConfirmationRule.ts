@@ -49,15 +49,15 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     if (!this.metrics) return;
     const confirmedBlock = ctx.getBlock(result.confirmedRoot);
     if (confirmedBlock) {
-      this.metrics.fcr.confirmedSlot.set(confirmedBlock.slot);
-      this.metrics.fcr.confirmedEpoch.set(computeEpochAtSlot(confirmedBlock.slot));
+      this.metrics.fastConfirmation.confirmedSlot.set(confirmedBlock.slot);
+      this.metrics.fastConfirmation.confirmedEpoch.set(computeEpochAtSlot(confirmedBlock.slot));
     } else {
-      this.metrics.fcr.confirmedSlot.set(0);
-      this.metrics.fcr.confirmedEpoch.set(0);
+      this.metrics.fastConfirmation.confirmedSlot.set(0);
+      this.metrics.fastConfirmation.confirmedEpoch.set(0);
     }
     if (result.didReset) {
-      this.metrics.fcr.resets.inc();
+      this.metrics.fastConfirmation.resets.inc();
     }
-    this.metrics.fcr.votesTracked.set(ctx.getTrackedVotesCount());
+    this.metrics.fastConfirmation.votesTracked.set(ctx.getTrackedVotesCount());
   }
 }

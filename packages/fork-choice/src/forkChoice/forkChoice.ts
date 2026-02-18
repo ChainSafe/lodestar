@@ -1633,7 +1633,7 @@ export class ForkChoice implements IForkChoice {
 
   private runFastConfirmation(): void {
     if (!this.fcr || !this.fcrContext) return;
-    const timer = this.metrics?.fcr.duration.startTimer();
+    const timer = this.metrics?.fastConfirmation.duration.startTimer();
     try {
       this.updateHead();
       const result = this.fcr.onSlotStartAfterPastAttestationsApplied(this.fcrContext);
