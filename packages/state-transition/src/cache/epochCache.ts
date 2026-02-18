@@ -1081,11 +1081,11 @@ export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 
 export function createEmptyEpochCacheImmutableData(
   chainConfig: ChainConfig,
-  state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
+  state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">,
+  pubkeyCache?: PubkeyCache
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: pubkeyCache ?? createPubkeyCache(),
   };
 }

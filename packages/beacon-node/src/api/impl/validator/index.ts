@@ -24,9 +24,9 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
   getBlockRootAtSlot,
   getCurrentSlot,
+  getPubkeyCache,
   loadState,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
@@ -1049,7 +1049,7 @@ export function getValidatorApi(
             {
               config: chain.config,
               // Not required to compute proposers
-              pubkeyCache: createPubkeyCache(),
+              pubkeyCache: getPubkeyCache(),
             },
             {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
           );
