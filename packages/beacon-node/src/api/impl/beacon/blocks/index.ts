@@ -640,18 +640,20 @@ export function getBeaconBlockApi({
     async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
-      const slot = envelope.slot;
-      const fork = config.getForkName(slot);
+      const fork = config.getForkName(envelope.slot);
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
 
       if (!isForkPostGloas(fork)) {
         throw new ApiError(400, `publishExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
       }
 
-      // Validate that we're not too far in the future
-      const currentSlot = chain.clock.currentSlot;
-      if (slot > currentSlot + 1) {
-        throw new ApiError(400, `Envelope slot ${slot} is too far in the future (current: ${currentSlot})`);
+      // TODO GLOAS: review checks, do we want to implement `broadcast_validation`?
+      const block = chain.forkChoice.getBlockHex(blockRootHex);
+      if (block === null) {
+        throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
+      }
+      if (block.slot !== envelope.slot) {
+        throw new ApiError(400, `Envelope slot ${envelope.slot} does not match block slot ${block.slot}`);
       }
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
@@ -679,7 +681,7 @@ export function getBeaconBlockApi({
             ),
           }));
 
-          dataColumnSidecars = getDataColumnSidecarsForGloas(slot, envelope.beaconBlockRoot, cellsAndProofs);
+          dataColumnSidecars = getDataColumnSidecarsForGloas(envelope.slot, envelope.beaconBlockRoot, cellsAndProofs);
         }
       } else {
         // TODO GLOAS: will this api be used by builders or only for self-building?
@@ -741,7 +743,7 @@ export function getBeaconBlockApi({
         }
         if (columnsPublishedWithZeroPeers > 0) {
           chain.logger.warn("Published data columns to 0 peers, increased risk of reorg", {
-            slot,
+            slot: envelope.slot,
             blockRoot: blockRootHex,
             columns: columnsPublishedWithZeroPeers,
           });
@@ -756,7 +758,7 @@ export function getBeaconBlockApi({
           for (const dataColumnSidecar of dataColumnSidecars) {
             chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
               blockRoot: blockRootHex,
-              slot,
+              slot: envelope.slot,
               index: dataColumnSidecar.index,
               kzgCommitments,
             });
