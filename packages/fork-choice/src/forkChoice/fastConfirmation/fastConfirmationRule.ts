@@ -64,8 +64,9 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       confirmedSlot,
       confirmedEpoch,
     };
-    if (changed || didReset) {
-      this.logger?.info("Updated fast confirmation", logContext);
+
+    if (changed) {
+      this.logger?.info(didReset ? "Reset fast confirmation": "Updated fast confirmation", logContext);
     } else {
       this.logger?.debug("Unchanged fast confirmation", logContext);
     }
