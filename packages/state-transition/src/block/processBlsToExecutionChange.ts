@@ -1,10 +1,9 @@
 import {digest} from "@chainsafe/as-sha256";
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {capella} from "@lodestar/types";
 import {Validator} from "@lodestar/types/phase0";
-import {toHex} from "@lodestar/utils";
+import {byteArrayEquals, toHex} from "@lodestar/utils";
 import {verifyBlsToExecutionChangeSignature} from "../signatureSets/index.js";
 import {CachedBeaconStateCapella} from "../types.js";
 

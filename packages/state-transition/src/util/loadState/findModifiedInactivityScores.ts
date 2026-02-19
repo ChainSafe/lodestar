@@ -1,9 +1,11 @@
+import {byteArrayEquals} from "@lodestar/utils";
+
 // UintNum64 = 8 bytes
 export const INACTIVITY_SCORE_SIZE = 8;
 
 /**
  * As monitored on mainnet, inactivityScores are not changed much and they are mostly 0
- * Using Buffer.compare is the fastest way as noted in `./findModifiedValidators.ts`
+ * Using byteArrayEquals is the optimal way as noted in `./findModifiedValidators.ts`
  * @returns output parameter modifiedValidators: validator indices that are modified
  */
 export function findModifiedInactivityScores(
@@ -21,7 +23,7 @@ export function findModifiedInactivityScores(
     );
   }
 
-  if (Buffer.compare(inactivityScoresBytes, inactivityScoresBytes2) === 0) {
+  if (byteArrayEquals(inactivityScoresBytes, inactivityScoresBytes2)) {
     return;
   }
 

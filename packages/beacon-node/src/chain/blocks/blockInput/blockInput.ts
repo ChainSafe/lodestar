@@ -1,6 +1,6 @@
 import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
+import {byteArrayEquals, fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {BlockInputError, BlockInputErrorCode} from "./errors.js";
@@ -529,7 +529,7 @@ function blockAndBlobArePaired(block: SignedBeaconBlock<ForkBlobsDA>, blobSideca
   if (!blockCommitment || !blobSidecar.kzgCommitment) {
     return false;
   }
-  return Buffer.compare(blockCommitment, blobSidecar.kzgCommitment) === 0;
+  return byteArrayEquals(blockCommitment, blobSidecar.kzgCommitment);
 }
 
 function assertBlockAndBlobArePaired(

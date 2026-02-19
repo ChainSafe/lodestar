@@ -1,8 +1,7 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconBlock, gloas, ssz} from "@lodestar/types";
-import {toHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.ts";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
 import {CachedBeaconStateGloas} from "../types.ts";
@@ -62,6 +61,14 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
   const stateRandao = getRandaoMix(state, getCurrentEpoch(state));
   if (!byteArrayEquals(bid.prevRandao, stateRandao)) {
     throw Error(`Prev randao ${toHex(bid.prevRandao)} of bid does not match state's randao mix ${toHex(stateRandao)}`);
+  }
+
+  // Verify commitments are under limit
+  const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
+  if (bid.blobKzgCommitments.length > maxBlobsPerBlock) {
+    throw Error(
+      `Kzg commitments exceed limit commitments.length=${bid.blobKzgCommitments.length} limit=${maxBlobsPerBlock}`
+    );
   }
 
   if (amount > 0) {

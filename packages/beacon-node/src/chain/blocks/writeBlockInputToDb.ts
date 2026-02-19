@@ -125,6 +125,9 @@ export async function persistBlockInputs(this: BeaconChain, blockInputs: IBlockI
       for (const blockInput of blockInputs) {
         this.seenBlockInputCache.prune(blockInput.blockRootHex);
       }
+      // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable.
+      // Clear here (after the DB write) so that writeBlockInputToDb can still use the cached serialized bytes.
+      this.serializedCache.clear();
       if (blockInputs.length === 1) {
         this.logger.debug("Pruned block input", {
           slot: blockInputs[0].slot,

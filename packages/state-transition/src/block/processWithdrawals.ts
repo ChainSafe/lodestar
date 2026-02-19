@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   FAR_FUTURE_EPOCH,
   ForkSeq,
@@ -10,7 +9,7 @@ import {
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 import {BuilderIndex, ValidatorIndex, capella, ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {
   convertBuilderIndexToValidatorIndex,
@@ -250,6 +249,10 @@ function getPendingPartialWithdrawals(
     numPriorWithdrawal + MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
     MAX_WITHDRAWALS_PER_PAYLOAD - 1
   );
+  // There must be at least one space reserved for validator sweep withdrawals
+  if (numPriorWithdrawal > partialWithdrawalBound) {
+    throw Error(`Prior withdrawals exceed limit: ${numPriorWithdrawal} > ${partialWithdrawalBound}`);
+  }
 
   // MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP = 8, PENDING_PARTIAL_WITHDRAWALS_LIMIT: 134217728 so we should only call getAllReadonly() if it makes sense
   // pendingPartialWithdrawals comes from EIP-7002 smart contract where it takes fee so it's more likely than not validator is in correct condition to withdraw
@@ -310,6 +313,11 @@ function getValidatorsSweepWithdrawals(
   numPriorWithdrawal: number,
   validatorBalanceAfterWithdrawals: Map<ValidatorIndex, number>
 ): {sweepWithdrawals: capella.Withdrawal[]; processedCount: number} {
+  // There must be at least one space reserved for validator sweep withdrawals
+  if (numPriorWithdrawal >= MAX_WITHDRAWALS_PER_PAYLOAD) {
+    throw Error(`Prior withdrawals exceed limit: ${numPriorWithdrawal} >= ${MAX_WITHDRAWALS_PER_PAYLOAD}`);
+  }
+
   const sweepWithdrawals: capella.Withdrawal[] = [];
   const epoch = state.epochCtx.epoch;
   const {validators, balances, nextWithdrawalValidatorIndex} = state;
@@ -320,7 +328,7 @@ function getValidatorsSweepWithdrawals(
   // Just run a bounded loop max iterating over all withdrawals
   // however breaks out once we have MAX_WITHDRAWALS_PER_PAYLOAD
   for (let n = 0; n < validatorsLimit; n++) {
-    if (sweepWithdrawals.length + numPriorWithdrawal === MAX_WITHDRAWALS_PER_PAYLOAD) {
+    if (sweepWithdrawals.length + numPriorWithdrawal >= MAX_WITHDRAWALS_PER_PAYLOAD) {
       break;
     }
 
