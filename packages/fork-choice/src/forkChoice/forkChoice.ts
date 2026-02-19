@@ -139,7 +139,7 @@ export class ForkChoice implements IForkChoice {
   private balances: EffectiveBalanceIncrements;
   /** Optional fast confirmation rule implementation */
   private readonly fastConfirmationRule?: IFastConfirmationRule;
-  private readonly fatConfirmationContext?: FastConfirmationContext;
+  private readonly fastConfirmationContext?: FastConfirmationContext;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -166,7 +166,7 @@ export class ForkChoice implements IForkChoice {
 
     if (this.opts?.fastConfirmation) {
       this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
-      this.fatConfirmationContext = this.createFastConfirmationContext();
+      this.fastConfirmationContext = this.createFastConfirmationContext();
     }
 
     metrics?.forkChoice.votes.addCollect(() => {
@@ -1632,11 +1632,11 @@ export class ForkChoice implements IForkChoice {
   }
 
   private runFastConfirmation(): void {
-    if (!this.fastConfirmationRule || !this.fatConfirmationContext) return;
+    if (!this.fastConfirmationRule || !this.fastConfirmationContext) return;
     const timer = this.metrics?.fastConfirmation.duration.startTimer();
     try {
       this.updateHead();
-      const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fatConfirmationContext);
+      const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fastConfirmationContext);
       this.fcStore.confirmedRoot = result.confirmedRoot;
     } catch (err) {
       this.logger?.warn("Fast confirmation failed", {}, err as Error);
@@ -1646,7 +1646,11 @@ export class ForkChoice implements IForkChoice {
   }
 
   private createFastConfirmationContext(): FastConfirmationContext {
-    const confirmationByzantineThreshold = this.config.CONFIRMATION_BYZANTINE_THRESHOLD ?? 0;
+    const confirmationByzantineThreshold = this.config.CONFIRMATION_BYZANTINE_THRESHOLD;
+    if(!confirmationByzantineThreshold) {
+      throw new Error("CONFIRMATION_BYZANTINE_THRESHOLD must be set to use fast confirmation");
+    }
+
     return {
       config: {
         CONFIRMATION_BYZANTINE_THRESHOLD: confirmationByzantineThreshold,

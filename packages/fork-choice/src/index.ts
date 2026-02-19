@@ -11,7 +11,7 @@ export {
   type FastConfirmationContext as FCRContext,
   type FastConfirmationMetrics as FCRMetrics,
   FastConfirmationRule,
-  type FatsConfirmationResult as FCRResult,
+  type FastConfirmationResult as FCRResult,
   type ForkChoiceStateGetter,
   type IFastConfirmationRule,
   type IFastConfirmationStore as IFCRStore,

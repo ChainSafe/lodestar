@@ -6,7 +6,7 @@ import {FastConfirmationMetrics} from "./metrics.ts";
 import {runFastConfirmationRules} from "./rules.ts";
 import {
   FastConfirmationContext,
-  FatsConfirmationResult,
+  FastConfirmationResult,
   IFastConfirmationRule,
   IFastConfirmationStore,
 } from "./types.ts";
@@ -25,7 +25,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     return this.store.confirmedRoot;
   }
 
-  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext): FatsConfirmationResult {
+  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext): FastConfirmationResult {
     const currentSlot = ctx.getCurrentSlot();
     const previousConfirmedRoot = this.store.confirmedRoot;
 
@@ -108,7 +108,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     }
   }
 
-  private updateFastConfirmationMetrics(ctx: FastConfirmationContext, result: FatsConfirmationResult): void {
+  private updateFastConfirmationMetrics(ctx: FastConfirmationContext, result: FastConfirmationResult): void {
     if (!this.metrics) return;
     const confirmedBlock = ctx.getBlock(result.confirmedRoot);
     if (confirmedBlock) {

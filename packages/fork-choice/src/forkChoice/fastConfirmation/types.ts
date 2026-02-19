@@ -24,7 +24,7 @@ export type IFastConfirmationStore = {
   stateGetter: ForkChoiceStateGetter;
 };
 
-export type FatsConfirmationResult = {
+export type FastConfirmationResult = {
   confirmedRoot: RootHex;
   didReset?: boolean;
 };
@@ -86,5 +86,5 @@ export type FastConfirmationContext = {
 
 export interface IFastConfirmationRule {
   getConfirmedRoot(): RootHex;
-  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext): FatsConfirmationResult;
+  onSlotStartAfterPastAttestationsApplied(ctx: FastConfirmationContext): FastConfirmationResult;
 }
