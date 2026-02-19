@@ -313,6 +313,7 @@ export function getBeaconBlockApi({
     ];
     const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
 
+    // After gloas, data columns are not published with the block but when publishing the execution payload envelope
     if (isForkPostFulu(fork) && !isForkPostGloas(fork)) {
       let columnsPublishedWithZeroPeers = 0;
       // sent peers per topic are logged in network.publishGossip(), here we only track metrics for it
