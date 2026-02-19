@@ -1,28 +1,4 @@
 {
-  "__inputs": [
-    {
-      "description": "",
-      "label": "Prometheus",
-      "name": "DS_PROMETHEUS",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus",
-      "type": "datasource"
-    },
-    {
-      "description": "",
-      "label": "Beacon node job name",
-      "name": "VAR_BEACON_JOB",
-      "type": "constant",
-      "value": "beacon"
-    },
-    {
-      "description": "",
-      "label": "Validator client job name",
-      "name": "VAR_VALIDATOR_JOB",
-      "type": "constant",
-      "value": "validator"
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -48,16 +24,14 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
+  "id": 2,
   "links": [
     {
       "asDropdown": true,
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "lodestar"
-      ],
+      "tags": ["lodestar"],
       "targetBlank": false,
       "title": "Lodestar dashboards",
       "tooltip": "",
@@ -137,6 +111,19 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "locale"
         },
         "overrides": [
@@ -329,65 +316,27 @@
       },
       "fieldConfig": {
         "defaults": {
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "gridPos": {
         "h": 3,
-        "w": 2,
+        "w": 3,
         "x": 12,
-        "y": 1
-      },
-      "id": 18,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "text": {},
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "sum(lodestar_peers_by_direction_count)",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Peer Count",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 2,
-        "x": 14,
         "y": 1
       },
       "id": 4,
@@ -397,9 +346,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -431,14 +378,161 @@
       },
       "fieldConfig": {
         "defaults": {
-          "mappings": []
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "gridPos": {
         "h": 3,
-        "w": 2,
-        "x": 16,
+        "w": 3,
+        "x": 15,
+        "y": 1
+      },
+      "id": 544,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "lodestar_fast_confirmation_confirmed_slot",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "Confirmed Slot",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 18,
+        "y": 1
+      },
+      "id": 545,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "text": {},
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_fast_confirmation_confirmed_epoch",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Confirmed Epoch",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 21,
         "y": 1
       },
       "id": 20,
@@ -448,9 +542,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -482,15 +574,90 @@
       },
       "fieldConfig": {
         "defaults": {
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 18,
-        "y": 1
+        "x": 12,
+        "y": 4
+      },
+      "id": 18,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["last"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "text": {},
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(lodestar_peers_by_direction_count)",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Peer Count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 14,
+        "y": 4
       },
       "id": 22,
       "options": {
@@ -499,9 +666,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -538,6 +703,19 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "short"
         },
         "overrides": []
@@ -545,8 +723,8 @@
       "gridPos": {
         "h": 3,
         "w": 2,
-        "x": 20,
-        "y": 1
+        "x": 16,
+        "y": 4
       },
       "id": 543,
       "options": {
@@ -555,9 +733,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -594,15 +770,28 @@
           "mappings": [],
           "max": 1,
           "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "percentunit"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 3,
-        "w": 1,
-        "x": 22,
-        "y": 1
+        "w": 3,
+        "x": 18,
+        "y": 4
       },
       "id": 72,
       "options": {
@@ -611,9 +800,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -647,15 +834,28 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "decbytes"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 3,
-        "w": 1,
-        "x": 23,
-        "y": 1
+        "w": 3,
+        "x": 21,
+        "y": 4
       },
       "id": 73,
       "options": {
@@ -664,9 +864,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -700,6 +898,19 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "dateTimeFromNow"
         },
         "overrides": []
@@ -708,7 +919,7 @@
         "h": 2,
         "w": 2,
         "x": 12,
-        "y": 4
+        "y": 7
       },
       "id": 52,
       "options": {
@@ -717,9 +928,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -772,6 +981,19 @@
               "type": "value"
             }
           ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -780,7 +1002,7 @@
         "h": 2,
         "w": 2,
         "x": 14,
-        "y": 4
+        "y": 7
       },
       "id": 101,
       "options": {
@@ -789,9 +1011,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -826,7 +1046,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -834,7 +1067,7 @@
         "h": 2,
         "w": 2,
         "x": 16,
-        "y": 4
+        "y": 7
       },
       "id": 71,
       "options": {
@@ -843,9 +1076,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -884,7 +1115,20 @@
             "fixedColor": "green",
             "mode": "fixed"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -892,7 +1136,7 @@
         "h": 2,
         "w": 4,
         "x": 18,
-        "y": 4
+        "y": 7
       },
       "id": 54,
       "options": {
@@ -901,9 +1145,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -941,7 +1183,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -949,7 +1204,7 @@
         "h": 2,
         "w": 2,
         "x": 22,
-        "y": 4
+        "y": 7
       },
       "id": 56,
       "options": {
@@ -958,9 +1213,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -986,101 +1239,6 @@
       ],
       "title": "NodeJS",
       "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "id": 21,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.4.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "lodestar_peers_by_direction_count",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "{{direction}}",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_gossip_peer_score_by_threshold_count{threshold=\"mesh\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "with_gossip_mesh_score",
-          "refId": "A"
-        }
-      ],
-      "title": "Peer count",
-      "type": "timeseries"
     },
     {
       "datasource": {
@@ -1126,6 +1284,19 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -1234,6 +1405,127 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "lodestar_peers_by_direction_count",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{direction}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "lodestar_gossip_peer_score_by_threshold_count{threshold=\"mesh\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "with_gossip_mesh_score",
+          "refId": "A"
+        }
+      ],
+      "title": "Peer count",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "short"
         },
         "overrides": []
@@ -1242,7 +1534,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 13
+        "y": 16
       },
       "id": 528,
       "options": {
@@ -1330,6 +1622,19 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -1379,62 +1684,6 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 12,
-        "x": 12,
-        "y": 19
-      },
-      "id": 527,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "orientation": "vertical",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "value_and_name",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "lodestar_peers_by_client_count",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "{{client}}",
-          "refId": "B"
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
             "mode": "palette-classic"
           },
           "custom": {
@@ -1471,6 +1720,19 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -1590,6 +1852,73 @@
       "fieldConfig": {
         "defaults": {
           "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "id": 527,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "lodestar_peers_by_client_count",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{client}}",
+          "refId": "B"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
             "mode": "palette-classic"
           },
           "custom": {
@@ -1625,6 +1954,19 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -1633,7 +1975,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 25
       },
       "id": 536,
       "options": {
@@ -1706,7 +2048,20 @@
               "mode": "off"
             }
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -1788,6 +2143,19 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "s"
         },
         "overrides": []
@@ -1796,7 +2164,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 30
+        "y": 33
       },
       "id": 532,
       "options": {
@@ -1875,7 +2243,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 41
       },
       "id": 487,
       "panels": [],
@@ -1901,7 +2269,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -1909,7 +2290,7 @@
         "h": 3,
         "w": 6,
         "x": 0,
-        "y": 39
+        "y": 42
       },
       "id": 493,
       "options": {
@@ -1918,9 +2299,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1955,7 +2334,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -1963,7 +2355,7 @@
         "h": 3,
         "w": 6,
         "x": 6,
-        "y": 39
+        "y": 42
       },
       "id": 492,
       "options": {
@@ -1972,9 +2364,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2009,7 +2399,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -2017,7 +2420,7 @@
         "h": 3,
         "w": 6,
         "x": 12,
-        "y": 39
+        "y": 42
       },
       "id": 484,
       "options": {
@@ -2026,9 +2429,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2063,7 +2464,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -2071,7 +2485,7 @@
         "h": 3,
         "w": 6,
         "x": 18,
-        "y": 39
+        "y": 42
       },
       "id": 483,
       "options": {
@@ -2080,9 +2494,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2117,7 +2529,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -2125,7 +2550,7 @@
         "h": 3,
         "w": 4,
         "x": 0,
-        "y": 42
+        "y": 45
       },
       "id": 485,
       "options": {
@@ -2134,9 +2559,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2191,7 +2614,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -2199,7 +2635,7 @@
         "h": 3,
         "w": 4,
         "x": 4,
-        "y": 42
+        "y": 45
       },
       "id": 539,
       "options": {
@@ -2208,9 +2644,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2249,7 +2683,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -2257,7 +2704,7 @@
         "h": 3,
         "w": 4,
         "x": 8,
-        "y": 42
+        "y": 45
       },
       "id": 540,
       "options": {
@@ -2266,9 +2713,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2306,7 +2751,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -2314,7 +2772,7 @@
         "h": 3,
         "w": 4,
         "x": 12,
-        "y": 42
+        "y": 45
       },
       "id": 488,
       "options": {
@@ -2323,9 +2781,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2364,7 +2820,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -2372,7 +2841,7 @@
         "h": 3,
         "w": 4,
         "x": 16,
-        "y": 42
+        "y": 45
       },
       "id": 542,
       "options": {
@@ -2381,9 +2850,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2422,7 +2889,20 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -2430,7 +2910,7 @@
         "h": 3,
         "w": 4,
         "x": 20,
-        "y": 42
+        "y": 45
       },
       "id": 541,
       "options": {
@@ -2439,9 +2919,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2511,7 +2989,20 @@
               "mode": "off"
             }
           },
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -2519,7 +3010,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 48
       },
       "id": 490,
       "options": {
@@ -2540,10 +3031,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(beacon_fork_choice_reorg_total[$rate_interval])",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -2583,7 +3076,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 48
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -2696,7 +3189,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 53
+        "y": 56
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -2781,25 +3274,193 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 53
+        "y": 56
       },
-      "id": 497,
+      "id": 546,
       "options": {
-        "code": {
-          "language": "plaintext",
-          "showLineNumbers": false,
-          "showMiniMap": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "content": "",
-        "mode": "markdown"
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(lodestar_fast_confirmation_resets_total[$rate_interval])",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Fast Confirmation Resets",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 64
+      },
+      "id": 547,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "pluginVersion": "10.4.1",
-      "title": "-",
-      "type": "text"
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(lodestar_fast_confirmation_duration_seconds_sum[$rate_interval])/rate(lodestar_fast_confirmation_duration_seconds_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Fast Confirmation Duration",
+      "type": "timeseries"
     },
     {
       "collapsed": false,
@@ -2811,7 +3472,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 72
       },
       "id": 104,
       "panels": [],
@@ -2871,6 +3532,19 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "short"
         },
         "overrides": []
@@ -2879,7 +3553,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 62
+        "y": 73
       },
       "id": 102,
       "options": {
@@ -2982,6 +3656,19 @@
           ],
           "max": 3,
           "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -2990,7 +3677,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 62
+        "y": 73
       },
       "id": 172,
       "options": {
@@ -3069,6 +3756,19 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "short"
         },
         "overrides": []
@@ -3077,7 +3777,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 68
+        "y": 79
       },
       "id": 171,
       "options": {
@@ -3120,7 +3820,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 68
+        "y": 79
       },
       "id": 99,
       "options": {
@@ -3155,9 +3855,7 @@
   "refresh": "10s",
   "revision": 1,
   "schemaVersion": 39,
-  "tags": [
-    "lodestar"
-  ],
+  "tags": ["lodestar"],
   "templating": {
     "list": [
       {
@@ -3261,10 +3959,9 @@
         },
         "filters": [
           {
-            "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "unstable-super"
+            "value": "feat2-super"
           }
         ],
         "hide": 0,
@@ -3273,11 +3970,6 @@
         "type": "adhoc"
       },
       {
-        "current": {
-          "selected": false,
-          "text": "${VAR_BEACON_JOB}",
-          "value": "${VAR_BEACON_JOB}"
-        },
         "description": "Job name used in Prometheus config to scrape Beacon node",
         "hide": 2,
         "label": "Beacon node job name",
@@ -3287,11 +3979,6 @@
         "type": "constant"
       },
       {
-        "current": {
-          "selected": false,
-          "text": "${VAR_VALIDATOR_JOB}",
-          "value": "${VAR_VALIDATOR_JOB}"
-        },
         "description": "Job name used in Prometheus config to scrape Validator client",
         "hide": 2,
         "label": "Validator client job name",
@@ -3303,26 +3990,15 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ]
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
   },
   "timezone": "utc",
   "title": "Lodestar",
   "uid": "lodestar_summary",
-  "version": 29,
+  "version": 77,
   "weekStart": "monday"
 }
