@@ -1,4 +1,3 @@
-import {MAX_UINT64_STR} from "@lodestar/params";
 import {fromHex, toHex} from "@lodestar/utils";
 import {validateBlobSchedule} from "../utils/validateBlobSchedule.js";
 import {
@@ -11,6 +10,8 @@ import {
   chainConfigTypes,
   isBlobSchedule,
 } from "./types.js";
+
+const MAX_UINT64_JSON = "18446744073709551615";
 
 export function chainConfigToJson(config: ChainConfig): SpecJson {
   const json: SpecJson = {};
@@ -68,7 +69,7 @@ export function serializeSpecValue(
         throw Error(`Invalid value ${value.toString()} expected number`);
       }
       if (value === Infinity) {
-        return MAX_UINT64_STR;
+        return MAX_UINT64_JSON;
       }
       return value.toString(10);
 
@@ -96,8 +97,8 @@ export function serializeSpecValue(
       }
 
       return value.map(({EPOCH, MAX_BLOBS_PER_BLOCK}) => ({
-        EPOCH: EPOCH === Infinity ? MAX_UINT64_STR : EPOCH.toString(10),
-        MAX_BLOBS_PER_BLOCK: MAX_BLOBS_PER_BLOCK === Infinity ? MAX_UINT64_STR : MAX_BLOBS_PER_BLOCK.toString(10),
+        EPOCH: EPOCH === Infinity ? MAX_UINT64_JSON : EPOCH.toString(10),
+        MAX_BLOBS_PER_BLOCK: MAX_BLOBS_PER_BLOCK === Infinity ? MAX_UINT64_JSON : MAX_BLOBS_PER_BLOCK.toString(10),
       }));
   }
 }
@@ -113,7 +114,7 @@ export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeN
 
   switch (typeName) {
     case "number":
-      if (valueStr === MAX_UINT64_STR) {
+      if (valueStr === MAX_UINT64_JSON) {
         return Infinity;
       }
       return parseInt(valueStr, 10);
@@ -152,7 +153,7 @@ export function deserializeBlobSchedule(input: unknown): BlobSchedule {
         throw Error(`Invalid BLOB_SCHEDULE[${i}].${key} value ${value} expected string`);
       }
 
-      if (value === MAX_UINT64_STR) {
+      if (value === MAX_UINT64_JSON) {
         out[key] = Infinity;
       } else {
         const parsed = parseInt(value, 10);
