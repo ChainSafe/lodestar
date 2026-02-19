@@ -1644,7 +1644,6 @@ export function getValidatorApi(
       logger.info("Produced execution payload envelope", {
         slot,
         blockRoot: blockRootHex,
-        builderIndex: envelope.builderIndex,
         transactions: executionPayload.transactions.length,
         blockHash: toRootHex(executionPayload.blockHash),
       });
