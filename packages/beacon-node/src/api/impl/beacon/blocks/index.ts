@@ -640,7 +640,8 @@ export function getBeaconBlockApi({
     async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
-      const fork = config.getForkName(envelope.slot);
+      const slot = envelope.slot;
+      const fork = config.getForkName(slot);
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
 
       if (!isForkPostGloas(fork)) {
@@ -652,8 +653,8 @@ export function getBeaconBlockApi({
       if (block === null) {
         throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
       }
-      if (block.slot !== envelope.slot) {
-        throw new ApiError(400, `Envelope slot ${envelope.slot} does not match block slot ${block.slot}`);
+      if (block.slot !== slot) {
+        throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
       }
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
@@ -681,7 +682,7 @@ export function getBeaconBlockApi({
             ),
           }));
 
-          dataColumnSidecars = getDataColumnSidecarsForGloas(envelope.slot, envelope.beaconBlockRoot, cellsAndProofs);
+          dataColumnSidecars = getDataColumnSidecarsForGloas(slot, envelope.beaconBlockRoot, cellsAndProofs);
         }
       } else {
         // TODO GLOAS: will this api be used by builders or only for self-building?
@@ -743,7 +744,7 @@ export function getBeaconBlockApi({
         }
         if (columnsPublishedWithZeroPeers > 0) {
           chain.logger.warn("Published data columns to 0 peers, increased risk of reorg", {
-            slot: envelope.slot,
+            slot,
             blockRoot: blockRootHex,
             columns: columnsPublishedWithZeroPeers,
           });
@@ -758,7 +759,7 @@ export function getBeaconBlockApi({
           for (const dataColumnSidecar of dataColumnSidecars) {
             chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
               blockRoot: blockRootHex,
-              slot: envelope.slot,
+              slot,
               index: dataColumnSidecar.index,
               kzgCommitments,
             });

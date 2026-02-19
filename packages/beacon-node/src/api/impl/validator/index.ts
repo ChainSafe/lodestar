@@ -1607,7 +1607,7 @@ export function getValidatorApi(
       });
     },
 
-    async getExecutionPayloadEnvelope({slot, beaconBlockRoot, builderIndex}) {
+    async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {
       const fork = config.getForkName(slot);
 
       if (!isForkPostGloas(fork)) {
@@ -1616,11 +1616,6 @@ export function getValidatorApi(
 
       notWhileSyncing();
       await waitForSlot(slot);
-
-      // TODO GLOAS: add support for acting as builder
-      if (builderIndex !== BUILDER_INDEX_SELF_BUILD) {
-        throw new ApiError(400, `Builder index must be BUILDER_INDEX_SELF_BUILD but got ${builderIndex}`);
-      }
 
       const blockRootHex = toRootHex(beaconBlockRoot);
       const produceResult = chain.blockProductionCache.get(blockRootHex);
@@ -1649,7 +1644,7 @@ export function getValidatorApi(
       logger.info("Produced execution payload envelope", {
         slot,
         blockRoot: blockRootHex,
-        builderIndex,
+        builderIndex: envelope.builderIndex,
         transactions: executionPayload.transactions.length,
         blockHash: toRootHex(executionPayload.blockHash),
       });

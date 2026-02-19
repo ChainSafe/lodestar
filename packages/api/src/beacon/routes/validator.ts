@@ -1,11 +1,9 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  BUILDER_INDEX_SELF_BUILD,
   ForkPostDeneb,
   ForkPostGloas,
   ForkPreDeneb,
-  MAX_UINT64_STR,
   VALIDATOR_REGISTRY_LIMIT,
   isForkPostDeneb,
   isForkPostElectra,
@@ -17,7 +15,6 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlockContents,
-  BuilderIndex,
   CommitteeIndex,
   Epoch,
   ProducedBlockSource,
@@ -410,7 +407,7 @@ export type Endpoints = {
 
   /**
    * Get execution payload envelope.
-   * Retrieves execution payload envelope for a given slot and builder.
+   * Retrieves execution payload envelope for a given slot and beacon block root.
    * The envelope contains the full execution payload along with associated metadata.
    */
   getExecutionPayloadEnvelope: Endpoint<
@@ -420,10 +417,8 @@ export type Endpoints = {
       slot: Slot;
       /** Root of the beacon block that this envelope is for */
       beaconBlockRoot: Root;
-      /** Index of the builder from which the execution payload envelope is requested */
-      builderIndex: BuilderIndex;
     },
-    {params: {slot: Slot; beacon_block_root: string; builder_index: string}},
+    {params: {slot: Slot; beacon_block_root: string}},
     gloas.ExecutionPayloadEnvelope,
     VersionMeta
   >;
@@ -899,26 +894,23 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     getExecutionPayloadEnvelope: {
-      url: "/eth/v1/validator/execution_payload_envelope/{slot}/{beacon_block_root}/{builder_index}",
+      url: "/eth/v1/validator/execution_payload_envelope/{slot}/{beacon_block_root}",
       method: "GET",
       req: {
-        writeReq: ({slot, beaconBlockRoot, builderIndex}) => ({
+        writeReq: ({slot, beaconBlockRoot}) => ({
           params: {
             slot,
             beacon_block_root: toRootHex(beaconBlockRoot),
-            builder_index: serializeBuilderIndex(builderIndex),
           },
         }),
         parseReq: ({params}) => ({
           slot: params.slot,
           beaconBlockRoot: fromHex(params.beacon_block_root),
-          builderIndex: deserializeBuilderIndex(params.builder_index),
         }),
         schema: {
           params: {
             slot: Schema.UintRequired,
             beacon_block_root: Schema.StringRequired,
-            builder_index: Schema.StringRequired,
           },
         },
       },
@@ -1216,20 +1208,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
 
 function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
   return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
-}
-
-function serializeBuilderIndex(builderIndex: BuilderIndex): string {
-  if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
-    return MAX_UINT64_STR;
-  }
-  return builderIndex.toString(10);
-}
-
-function deserializeBuilderIndex(builderIndexInput: string | number): BuilderIndex {
-  if (String(builderIndexInput) === MAX_UINT64_STR) {
-    return BUILDER_INDEX_SELF_BUILD;
-  }
-  return Number(builderIndexInput);
 }
 
 function writeSkipRandaoVerification(skipRandaoVerification?: boolean): string | undefined {

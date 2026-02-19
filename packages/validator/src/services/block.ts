@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {BUILDER_INDEX_SELF_BUILD, isForkPostGloas} from "@lodestar/params";
+import {isForkPostGloas} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -239,7 +239,6 @@ export class BlockProposingService {
     const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
       slot,
       beaconBlockRoot,
-      builderIndex: BUILDER_INDEX_SELF_BUILD,
     });
     const envelope = envelopeRes.value();
     const stateRootHex = toRootHex(envelope.stateRoot);
