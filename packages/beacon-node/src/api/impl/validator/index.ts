@@ -632,6 +632,10 @@ export function getValidatorApi(
     // Defer common block body production to make sure we sent async builder and engine requests before
     const deferredCommonBlockBody = defer<CommonBlockBody>();
     const commonBlockBodyPromise = deferredCommonBlockBody.promise;
+    // Prevent unhandled rejection if common block body production fails after the
+    // block production race settles (e.g. regen queue aborted during chain shutdown).
+    // The rejection still propagates to any consumer that awaits commonBlockBodyPromise.
+    commonBlockBodyPromise.catch(() => {});
 
     // use abort controller to stop waiting for both block sources
     const controller = new AbortController();
