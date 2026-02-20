@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {BeaconState, DataColumnSidecar, deneb, fulu, sszTypesFor} from "@lodestar/types";
+import {BeaconState, DataColumnSidecar, deneb, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
@@ -115,9 +115,7 @@ export function getDebugApi({
       }
 
       return {
-        data: (indices
-          ? dataColumnSidecars.filter(({index}) => indices.includes(index))
-          : dataColumnSidecars) as fulu.DataColumnSidecars,
+        data: indices ? dataColumnSidecars.filter(({index}) => indices.includes(index)) : dataColumnSidecars,
         meta: {
           executionOptimistic,
           finalized,
