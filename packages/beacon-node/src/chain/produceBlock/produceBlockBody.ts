@@ -717,7 +717,7 @@ export function getPayloadAttributesForSSE(
   let parentBlockNumber: number;
   if (isForkPostGloas(fork)) {
     // TODO GLOAS: revisit this after fork choice changes are merged
-    const parentBlock = chain.forkChoice.getBlock(parentBlockRoot);
+    const parentBlock = chain.forkChoice.getBlockDefaultStatus(parentBlockRoot);
     if (parentBlock?.executionPayloadBlockHash == null) {
       throw Error(`Parent block not found in fork choice root=${toRootHex(parentBlockRoot)}`);
     }

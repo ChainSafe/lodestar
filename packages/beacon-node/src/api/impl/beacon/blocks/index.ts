@@ -650,7 +650,7 @@ export function getBeaconBlockApi({
       }
 
       // TODO GLOAS: review checks, do we want to implement `broadcast_validation`?
-      const block = chain.forkChoice.getBlockHex(blockRootHex);
+      const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
       if (block === null) {
         throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
       }
