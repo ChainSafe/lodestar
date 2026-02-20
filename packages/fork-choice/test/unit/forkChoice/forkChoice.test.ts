@@ -197,6 +197,21 @@ describe("Forkchoice", () => {
     expect(forkCombined.nonAncestors).toEqual(forkNonAncestorBlocks);
   });
 
+  it("addLatestMessage updates vote for newer slot within same epoch", () => {
+    populateProtoArray(genesisSlot + 2);
+
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
+    forkchoice["addLatestMessage"](0, genesisSlot + 1, getBlockRoot(genesisSlot + 1), PayloadStatus.FULL);
+    const firstVoteIndex = forkchoice["voteNextIndices"][0];
+
+    // Same epoch as slot 1 (epoch 0), but newer slot.
+    // Must update to the newer slot vote.
+    forkchoice["addLatestMessage"](0, genesisSlot + 2, getBlockRoot(genesisSlot + 2), PayloadStatus.FULL);
+
+    expect(forkchoice["voteNextSlots"][0]).toBe(genesisSlot + 2);
+    expect(forkchoice["voteNextIndices"][0]).not.toBe(firstVoteIndex);
+  });
+
   beforeAll(() => {
     expect(SLOTS_PER_EPOCH).toBe(32);
   });

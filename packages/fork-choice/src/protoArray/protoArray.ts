@@ -1150,7 +1150,7 @@ export class ProtoArray {
    */
 
   /**
-   * Check if we're comparing EMPTY vs FULL variants of the same block from slot n or n-1.
+   * Check if we're comparing EMPTY vs FULL variants of the same block from slot n-1.
    *
    * This is a special case where the spec requires using `get_payload_status_tiebreaker()`
    * directly without weight comparison.
@@ -1164,7 +1164,7 @@ export class ProtoArray {
     // Check if both nodes are:
     // 1. The same block root (different payload status variants)
     // 2. Both EMPTY or FULL (not PENDING)
-    // 3. From slot n-1 or slot n (current slot or previous slot)
+    // 3. From slot n-1 (previous slot)
     if (childNode.blockRoot !== bestChildNode.blockRoot) {
       return false; // Different blocks
     }
@@ -1176,11 +1176,10 @@ export class ProtoArray {
       return false; // At least one is PENDING
     }
 
-    // Check if from slot n-1 or slot n
+    // Check if from slot n-1
     const isFromPreviousSlot = childNode.slot + 1 === currentSlot;
-    const isFromCurrentSlot = childNode.slot === currentSlot;
 
-    return isFromPreviousSlot || isFromCurrentSlot;
+    return isFromPreviousSlot;
   }
 
   maybeUpdateBestChildAndDescendant(parentIndex: number, childIndex: number, currentSlot: Slot): void {
@@ -1249,11 +1248,11 @@ export class ProtoArray {
 
           // Pre-fulu we pick whichever has higher weight, tie-breaker by root
           // Post-fulu we pick whichever has higher weight, then tie-breaker by root, then tie-breaker by `getPayloadStatusTiebreaker`
-          // Edge case: when comparing EMPTY vs FULL variants of the same block from slot n-1 or n, weights are hardcoded to 0
+          // Edge case: when comparing EMPTY vs FULL variants of the same block from slot n-1, weights are hardcoded to 0
           // https://github.com/ethereum/consensus-specs/blob/69a2582d5d62c914b24894bdb65f4bd5d4e49ae4/specs/gloas/fork-choice.md?plain=1#L442
           // in this case we use `get_payload_status_tiebreaker()` directly because weights(0) and roots are equal
 
-          // Gloas: Check if this is the EMPTY vs FULL edge case for slot n or n-1
+          // Gloas: Check if this is the EMPTY vs FULL edge case for slot n-1
           // If true, skip weight and root comparison (weights are 0, roots are equal)
           const isEdgeCase = this.isEmptyVsFullEdgeCase(childNode, bestChildNode, currentSlot);
 

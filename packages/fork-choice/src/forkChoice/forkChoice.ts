@@ -1635,15 +1635,28 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    // For Gloas blocks, attestation index must be 0 or 1
-    if (isGloasBlock(block) && attestationData.index !== 0 && attestationData.index !== 1) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.INVALID_DATA_INDEX,
-          index: attestationData.index,
-        },
-      });
+    // For Gloas blocks, attestation index must be 0 or 1.
+    // If attestation slot equals block slot, index must be 0.
+    if (isGloasBlock(block)) {
+      if (attestationData.index !== 0 && attestationData.index !== 1) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+          err: {
+            code: InvalidAttestationCode.INVALID_DATA_INDEX,
+            index: attestationData.index,
+          },
+        });
+      }
+
+      if (block.slot === slot && attestationData.index !== 0) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+          err: {
+            code: InvalidAttestationCode.INVALID_DATA_INDEX,
+            index: attestationData.index,
+          },
+        });
+      }
     }
 
     this.validatedAttestationDatas.add(attDataRoot);
@@ -1682,7 +1695,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     const existingNextSlot = this.voteNextSlots[validatorIndex];
-    if (existingNextSlot === INIT_VOTE_SLOT || computeEpochAtSlot(nextSlot) > computeEpochAtSlot(existingNextSlot)) {
+    if (existingNextSlot === INIT_VOTE_SLOT || nextSlot > existingNextSlot) {
       // nextIndex is transfered to currentIndex in computeDeltas()
       this.voteNextIndices[validatorIndex] = nextIndex;
       this.voteNextSlots[validatorIndex] = nextSlot;
