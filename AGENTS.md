@@ -470,6 +470,9 @@ When implementing spec changes, reference the exact spec version.
 
 - **Forgetting `pnpm lint` before pushing**: Biome enforces formatting. Always
   run it before committing. CI will catch it, but it wastes a round-trip.
+- **Forgetting `pnpm docs:lint` after editing docs**: Markdown files are
+  formatted by Prettier. Run `pnpm docs:lint` (or `pnpm docs:lint:fix` to
+  auto-fix) before pushing changes to `.md` files.
 - **Editing `lib/` instead of `src/`**: Files in `packages/*/lib/` are build
   outputs. Always edit in `packages/*/src/`.
 - **Stale fork choice head**: After modifying proto-array execution status,
