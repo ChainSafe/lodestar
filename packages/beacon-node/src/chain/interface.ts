@@ -11,6 +11,7 @@ import {
 import {
   BeaconBlock,
   BlindedBeaconBlock,
+  DataColumnSidecars,
   Epoch,
   Root,
   RootHex,
@@ -23,7 +24,6 @@ import {
   altair,
   capella,
   deneb,
-  fulu,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -224,7 +224,7 @@ export interface IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
-  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<fulu.DataColumnSidecars>;
+  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars>;
   getSerializedDataColumnSidecars(
     blockSlot: Slot,
     blockRootHex: string,

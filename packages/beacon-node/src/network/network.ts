@@ -11,6 +11,7 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   DataColumnSidecar,
+  DataColumnSidecars,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -26,6 +27,7 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
@@ -35,7 +37,7 @@ import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnS
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {CustodyConfig, isGloasDataColumnSidecar} from "../util/dataColumns.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
@@ -781,7 +783,7 @@ export class Network implements INetwork {
     this.core.setTargetGroupCount(count);
   };
 
-  private onPublishDataColumns = (sidecars: DataColumnSidecar[]): Promise<number[]> => {
+  private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 

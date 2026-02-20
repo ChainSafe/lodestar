@@ -8,6 +8,7 @@ import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
   EFFECTIVE_BALANCE_INCREMENT,
+  ForkPostFulu,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   isForkPostElectra,
@@ -36,6 +37,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
+  DataColumnSidecars,
   Epoch,
   Root,
   RootHex,
@@ -46,7 +48,6 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
-  fulu,
   gloas,
   isBlindedBeaconBlock,
   phase0,
@@ -817,7 +818,7 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<fulu.DataColumnSidecars> {
+  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars> {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputColumns(blockInput)) {
@@ -827,10 +828,10 @@ export class BeaconChain implements IBeaconChain {
     }
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {
-      return sidecarsUnfinalized;
+      return sidecarsUnfinalized as DataColumnSidecars;
     }
     const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
-    return sidecarsFinalized;
+    return sidecarsFinalized as DataColumnSidecars;
   }
 
   async getSerializedDataColumnSidecars(
@@ -852,7 +853,7 @@ export class BeaconChain implements IBeaconChain {
         if (serialized) {
           return serialized;
         }
-        return ssz.fulu.DataColumnSidecar.serialize(sidecar);
+        return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
       });
     }
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
