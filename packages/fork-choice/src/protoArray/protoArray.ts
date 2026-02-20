@@ -381,7 +381,7 @@ export class ProtoArray {
       // If the node has a parent, try to update its best-child and best-descendant.
       const parentIndex = node.parent;
       if (parentIndex !== undefined) {
-        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, proposerBoost?.root ?? null);
+        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot);
       }
     }
     // Update the previous proposer boost
@@ -1182,12 +1182,7 @@ export class ProtoArray {
     return isFromPreviousSlot;
   }
 
-  maybeUpdateBestChildAndDescendant(
-    parentIndex: number,
-    childIndex: number,
-    currentSlot: Slot,
-    proposerBoostRoot: RootHex | null = null
-  ): void {
+  maybeUpdateBestChildAndDescendant(parentIndex: number, childIndex: number, currentSlot: Slot): void {
     const childNode = this.nodes[childIndex];
     if (childNode === undefined) {
       throw new ProtoArrayError({
@@ -1282,9 +1277,13 @@ export class ProtoArray {
           }
 
           // Same weight and same root (or edge case), tie-breaker by payload status
-          const childTiebreaker = this.getPayloadStatusTiebreaker(childNode, currentSlot, proposerBoostRoot);
+          const childTiebreaker = this.getPayloadStatusTiebreaker(
+            childNode,
+            currentSlot,
+            null // proposerBoostRoot
+          );
 
-          const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, proposerBoostRoot);
+          const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, null);
 
           if (childTiebreaker > bestChildTiebreaker) {
             newChildAndDescendant = changeToChild;

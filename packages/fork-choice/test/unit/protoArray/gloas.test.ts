@@ -667,38 +667,5 @@ describe("Gloas Fork Choice", () => {
       expect(pendingNode.bestChild).toBe(emptyIndex);
     });
 
-    it("payload tiebreaker uses proposerBoostRoot for slot n-1", () => {
-      const blockSlot = gloasForkSlot + 10;
-
-      // Root block with EMPTY+FULL variants
-      const blockA = createTestBlock(blockSlot, "0x02Root", genesisRoot, genesisRoot);
-      protoArray.onBlock(blockA, blockSlot);
-      protoArray.onExecutionPayload("0x02Root", blockSlot, "0x02Hash", blockSlot, stateRoot);
-
-      // Child block extends EMPTY parent of blockA.
-      // In this test helper, EMPTY executionPayloadBlockHash starts as blockRoot.
-      const blockB = createTestBlock(blockSlot + 1, "0x03Root", "0x02Root", "0x02Root");
-      protoArray.onBlock(blockB, blockSlot + 1);
-
-      const pendingA = getNodeByPayloadStatus(protoArray, "0x02Root", PayloadStatus.PENDING);
-      if (!pendingA) throw new Error("Expected pendingA to exist");
-      const emptyAIndex = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.EMPTY);
-      if (emptyAIndex === undefined) throw new Error("Expected emptyAIndex to exist");
-
-      // Equal deltas so tiebreaker decides between EMPTY/FULL for slot n-1.
-      // With proposerBoostRoot=blockB (which extends EMPTY), shouldExtendPayload(blockA) is false => EMPTY wins.
-      const deltas = new Array(protoArray.nodes.length).fill(0);
-      protoArray.applyScoreChanges({
-        deltas,
-        proposerBoost: {root: "0x03Root", score: 0},
-        justifiedEpoch: genesisEpoch,
-        justifiedRoot: genesisRoot,
-        finalizedEpoch: genesisEpoch,
-        finalizedRoot: genesisRoot,
-        currentSlot: blockSlot + 1,
-      });
-
-      expect(pendingA.bestChild).toBe(emptyAIndex);
-    });
   });
 });
