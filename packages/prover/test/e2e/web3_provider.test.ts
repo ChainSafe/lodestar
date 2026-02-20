@@ -5,7 +5,7 @@ import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {beaconUrl, config, minFinalizedTimeMs, rpcUrl, waitForFinalized} from "../utils/e2e_env.js";
 
-// TODO: Re-enable once shared E2E env timing is stabilized
+// TODO: Re-enable once shared E2E env timing is stabilized (#8937)
 // Disabled due to flaky hook timeout on slow CI runners
 describe.skip("web3_provider", () => {
   vi.setConfig({hookTimeout: minFinalizedTimeMs});

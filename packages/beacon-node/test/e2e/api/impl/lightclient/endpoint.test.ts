@@ -12,7 +12,7 @@ import {LogLevel, TestLoggerOpts, testLogger} from "../../../../utils/logger.js"
 import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
-// TODO: Re-enable once lightclient E2E timing is stabilized
+// TODO: Re-enable once lightclient E2E timing is stabilized (#8937)
 // Disabled due to flaky event timeout on slow CI runners
 describe.skip("lightclient api", () => {
   vi.setConfig({testTimeout: 10_000});

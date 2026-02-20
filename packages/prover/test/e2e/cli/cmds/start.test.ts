@@ -20,7 +20,7 @@ import {
 
 const cli = getLodestarProverCli();
 
-// TODO: Re-enable once shared E2E env timing is stabilized
+// TODO: Re-enable once shared E2E env timing is stabilized (#8937)
 // Disabled due to flaky hook timeout on slow CI runners
 describe.skip("prover/proxy", () => {
   it("should show help", async () => {
