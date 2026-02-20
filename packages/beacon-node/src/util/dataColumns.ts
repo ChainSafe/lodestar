@@ -4,6 +4,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkAll,
   ForkName,
+  ForkPostDeneb,
   ForkPostFulu,
   ForkPreGloas,
   KZG_COMMITMENTS_GINDEX,
@@ -271,7 +272,7 @@ export async function getCellsAndProofs(
  */
 export function getBlobKzgCommitments(
   fork: ForkName,
-  signedBlock: SignedBeaconBlock<ForkPostFulu>
+  signedBlock: SignedBeaconBlock<ForkPostDeneb>
 ): deneb.KZGCommitment[] {
   if (isForkPostGloas(fork)) {
     return (signedBlock as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments;

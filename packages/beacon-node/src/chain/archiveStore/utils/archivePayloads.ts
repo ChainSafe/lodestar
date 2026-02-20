@@ -8,7 +8,6 @@ export async function archiveExecutionPayloadEnvelopes(
   chain: IBeaconChain,
   _finalized: CheckpointWithHex
 ): Promise<void> {
-  // Get finalized block
   const finalizedBlock = chain.forkChoice.getFinalizedBlock();
   if (!finalizedBlock) return;
 

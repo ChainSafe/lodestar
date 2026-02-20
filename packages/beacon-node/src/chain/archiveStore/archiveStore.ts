@@ -193,7 +193,7 @@ export class ArchiveStore {
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
-      const finalizedFork = this.chain.config.getForkSeq(computeStartSlotAtEpoch(finalizedEpoch));
+      const finalizedFork = this.chain.config.getForkSeqAtEpoch(finalizedEpoch);
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
 
       let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();

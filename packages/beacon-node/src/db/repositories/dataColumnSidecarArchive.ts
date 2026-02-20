@@ -29,9 +29,9 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
 
   encodeValue(value: DataColumnSidecar): Uint8Array {
     if (isGloasDataColumnSidecar(value)) {
-      return ssz.gloas.DataColumnSidecar.serialize(value as gloas.DataColumnSidecar);
+      return ssz.gloas.DataColumnSidecar.serialize(value);
     }
-    return ssz.fulu.DataColumnSidecar.serialize(value as fulu.DataColumnSidecar);
+    return ssz.fulu.DataColumnSidecar.serialize(value);
   }
 
   decodeValue(data: Uint8Array): DataColumnSidecar {

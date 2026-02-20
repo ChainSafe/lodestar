@@ -6,8 +6,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
 type BlockRoot = Root;
 
 /**
- * ExecutionPayloadEnvelopeRepository
- * Used to store unfinalized SignedExecutionPayloadEnvelope
+ * Used to store unfinalized `SignedExecutionPayloadEnvelope`
  *
  * Indexed by beacon block root (root of the beacon block that contains the bid)
  */

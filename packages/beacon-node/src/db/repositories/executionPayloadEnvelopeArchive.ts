@@ -5,8 +5,7 @@ import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
- * ExecutionPayloadEnvelopeArchiveRepository
- * Used to store finalized SignedExecutionPayloadEnvelope
+ * Used to store finalized `SignedExecutionPayloadEnvelope`
  *
  * Indexed by slot for chronological archival
  */

@@ -1,9 +1,17 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {BeaconState, DataColumnSidecars, deneb, sszTypesFor} from "@lodestar/types";
+import {
+  ForkPostDeneb,
+  type ForkPostFulu,
+  ZERO_HASH_HEX,
+  isForkPostDeneb,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
+import {BeaconState, DataColumnSidecars, type SignedBeaconBlock, deneb, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
@@ -99,7 +107,7 @@ export function getDebugApi({
       let dataColumnSidecars: DataColumnSidecars;
 
       const blobCount = isForkPostDeneb(fork)
-        ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length
+        ? getBlobKzgCommitments(fork, block as SignedBeaconBlock<ForkPostDeneb>).length
         : 0;
 
       if (isForkPostFulu(fork) && blobCount > 0) {
