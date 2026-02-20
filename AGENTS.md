@@ -189,8 +189,8 @@ Types use `@chainsafe/ssz` and come in two forms:
 // Type definition
 const MyContainer = new ContainerType(
   {
-    field1: UintNumberType,
-    field2: RootType,
+    field1: UintNum64,
+    field2: Root,
   },
   {typeName: "MyContainer"}
 );
