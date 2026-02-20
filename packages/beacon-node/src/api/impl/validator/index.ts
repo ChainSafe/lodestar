@@ -86,6 +86,7 @@ import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
+import {isQueueErrorAborted} from "../../../util/queue/index.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
@@ -717,8 +718,9 @@ export function getValidatorApi(
         })
         .catch((e) => {
           // Silently ignore queue abort errors during shutdown to prevent
-          // unhandled rejections when the deferred has no awaiter
-          if (controller.signal.aborted) {
+          // unhandled rejections when the deferred has no awaiter.
+          // Only suppress the specific abort error — propagate unexpected ones.
+          if (isQueueErrorAborted(e)) {
             logger.debug("Common block body production aborted during shutdown", loggerContext);
             return;
           }
