@@ -40,7 +40,11 @@ describe("dataColumnSidecar repository", () => {
     const commitments = Array.from({length: blobKzgCommitmentsLen}, () => commitment);
     signedBlock.message.body.blobKzgCommitments = commitments;
     const cellsAndProofs = blobs.map((b) => kzg.computeCellsAndKzgProofs(b));
-    allDataColumnSidecars = getDataColumnSidecarsFromBlock(config, signedBlock, cellsAndProofs);
+    allDataColumnSidecars = getDataColumnSidecarsFromBlock(
+      config,
+      signedBlock,
+      cellsAndProofs
+    ) as fulu.DataColumnSidecars;
     for (let j = 0; j < allDataColumnSidecars.length; j++) {
       allDataColumnSidecars[j].index = j;
     }
@@ -145,7 +149,11 @@ describe("dataColumnSidecarArchive repository", () => {
     const commitments = Array.from({length: blobKzgCommitmentsLen}, () => commitment);
     signedBlock.message.body.blobKzgCommitments = commitments;
     const cellsAndProofs = blobs.map((b) => kzg.computeCellsAndKzgProofs(b));
-    allDataColumnSidecars = getDataColumnSidecarsFromBlock(config, signedBlock, cellsAndProofs);
+    allDataColumnSidecars = getDataColumnSidecarsFromBlock(
+      config,
+      signedBlock,
+      cellsAndProofs
+    ) as fulu.DataColumnSidecars;
     for (let j = 0; j < allDataColumnSidecars.length; j++) {
       allDataColumnSidecars[j].index = j;
     }

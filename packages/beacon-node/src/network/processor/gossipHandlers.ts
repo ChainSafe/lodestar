@@ -3,6 +3,7 @@ import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {
   ForkName,
   ForkPostElectra,
+  ForkPostFulu,
   ForkPreElectra,
   ForkSeq,
   NUMBER_OF_COLUMNS,
@@ -10,6 +11,7 @@ import {
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
+  DataColumnSidecar,
   Root,
   SignedBeaconBlock,
   SingleAttestation,
@@ -17,7 +19,7 @@ import {
   SubnetID,
   UintNum64,
   deneb,
-  fulu,
+  isGloasDataColumnSidecar,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -70,6 +72,7 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {getDataColumnSidecarBlockRoot, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -288,16 +291,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   }
 
   async function validateBeaconDataColumn(
-    dataColumnSidecar: fulu.DataColumnSidecar,
+    dataColumnSidecar: DataColumnSidecar,
     _dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
   ): Promise<BlockInputColumns> {
     metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
-    const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
-    const slot = dataColumnBlockHeader.slot;
-    const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
+    const slot = getDataColumnSidecarSlot(dataColumnSidecar);
+    const blockRootHex = toRootHex(getDataColumnSidecarBlockRoot(dataColumnSidecar));
 
     // check to see if block has already been processed and BlockInput has been deleted (column received via reqresp or other means)
     if (chain.forkChoice.hasBlockHex(blockRootHex)) {
@@ -358,7 +360,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           blockRoot: blockRootHex,
           slot,
           index: dataColumnSidecar.index,
-          kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+          kzgCommitments: isGloasDataColumnSidecar(dataColumnSidecar)
+            ? []
+            : dataColumnSidecar.kzgCommitments.map(toHex),
         });
       }
 
@@ -377,8 +381,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       return blockInput;
     } catch (e) {
       if (e instanceof DataColumnSidecarGossipError && e.action === GossipAction.REJECT) {
+        const dataColumnFork = config.getForkName(slot);
         chain.persistInvalidSszValue(
-          ssz.fulu.DataColumnSidecar,
+          sszTypesFor(dataColumnFork as ForkPostFulu).DataColumnSidecar,
           dataColumnSidecar,
           `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
         );
@@ -548,9 +553,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
       const {serializedData} = gossipData;
-      // TODO GLOAS: handle gloas.DataColumnSidecar
-      const dataColumnSidecar = sszDeserialize(topic, serializedData) as fulu.DataColumnSidecar;
-      const dataColumnSlot = dataColumnSidecar.signedBlockHeader.message.slot;
+      const dataColumnSidecar = sszDeserialize(topic, serializedData) as DataColumnSidecar;
+      const dataColumnSlot = getDataColumnSidecarSlot(dataColumnSidecar);
       const index = dataColumnSidecar.index;
 
       if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {

@@ -2,6 +2,7 @@ import {ForkName} from "@lodestar/params";
 import {SlotOptionalRoot, SlotRootHex} from "@lodestar/types";
 import {
   getBlockRootFromBeaconAttestationSerialized,
+  getBlockRootFromDataColumnSidecarSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromBeaconAttestationSerialized,
   getSlotFromBlobSidecarSerialized,
@@ -54,11 +55,12 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
     },
     [GossipType.data_column_sidecar]: (data: Uint8Array): SlotOptionalRoot | null => {
       const slot = getSlotFromDataColumnSidecarSerialized(data);
+      const root = getBlockRootFromDataColumnSidecarSerialized(data);
 
       if (slot === null) {
         return null;
       }
-      return {slot};
+      return {slot, root: root ?? undefined};
     },
   };
 }

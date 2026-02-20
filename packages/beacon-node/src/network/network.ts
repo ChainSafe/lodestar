@@ -11,7 +11,6 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   DataColumnSidecar,
-  DataColumnSidecars,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -615,7 +614,7 @@ export class Network implements INetwork {
   async sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
-  ): Promise<fulu.DataColumnSidecar[]> {
+  ): Promise<DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       request.count * request.columns.length,
@@ -626,7 +625,7 @@ export class Network implements INetwork {
   async sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
     request: DataColumnSidecarsByRootRequest
-  ): Promise<fulu.DataColumnSidecar[]> {
+  ): Promise<DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
       request.reduce((total, {columns}) => total + columns.length, 0),
@@ -783,7 +782,7 @@ export class Network implements INetwork {
     this.core.setTargetGroupCount(count);
   };
 
-  private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
+  private onPublishDataColumns = (sidecars: DataColumnSidecar[]): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 

@@ -824,7 +824,7 @@ export class BeaconChain implements IBeaconChain {
       if (!isBlockInputColumns(blockInput)) {
         throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
       }
-      return blockInput.getAllColumns();
+      return blockInput.getAllColumns() as DataColumnSidecars;
     }
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {

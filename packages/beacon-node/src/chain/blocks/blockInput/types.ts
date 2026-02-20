@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecar, RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
@@ -8,7 +8,7 @@ export enum DAType {
   Columns = "columns",
 }
 
-export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars;
+export type DAData = null | deneb.BlobSidecars | DataColumnSidecar[];
 
 /**
  * Represents were input originated. Blocks and Data can come from different
@@ -55,7 +55,7 @@ export type BlockWithSource = SourceMeta & {block: SignedBeaconBlock; blockRootH
 
 export type BlobWithSource = SourceMeta & {blobSidecar: deneb.BlobSidecar};
 
-export type ColumnWithSource = SourceMeta & {columnSidecar: fulu.DataColumnSidecar};
+export type ColumnWithSource = SourceMeta & {columnSidecar: DataColumnSidecar};
 
 export type BlockHeaderMeta = {
   forkName: ForkName;

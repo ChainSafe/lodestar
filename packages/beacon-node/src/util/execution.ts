@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {deneb, fulu} from "@lodestar/types";
+import {DataColumnSidecar, SignedBeaconBlock, deneb, isGloasDataColumnSidecar} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -172,12 +172,12 @@ export async function getDataColumnSidecarsFromExecution(
     return DataColumnEngineResult.SuccessLate;
   }
 
-  let dataColumnSidecars: fulu.DataColumnSidecars;
+  let dataColumnSidecars: DataColumnSidecar[];
   const cellsAndProofs = await getCellsAndProofs(blobs);
   if (blockInput.hasBlock()) {
     dataColumnSidecars = getDataColumnSidecarsFromBlock(
       config,
-      blockInput.getBlock() as fulu.SignedBeaconBlock,
+      blockInput.getBlock() as SignedBeaconBlock<ForkPostFulu>,
       cellsAndProofs
     );
   } else {
@@ -213,7 +213,7 @@ export async function getDataColumnSidecarsFromExecution(
         blockRoot: blockInput.blockRootHex,
         slot: blockInput.slot,
         index: columnSidecar.index,
-        kzgCommitments: columnSidecar.kzgCommitments.map(toHex),
+        kzgCommitments: isGloasDataColumnSidecar(columnSidecar) ? [] : columnSidecar.kzgCommitments.map(toHex),
       });
     }
   }

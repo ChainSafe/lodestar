@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
-import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
+import {DataColumnSidecar, SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
@@ -13,7 +13,7 @@ import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/index.js";
-import {getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
 
@@ -26,7 +26,7 @@ export type DownloadByRangeRequests = {
 export type DownloadByRangeResponses = {
   blocks?: SignedBeaconBlock[];
   blobSidecars?: deneb.BlobSidecars;
-  columnSidecars?: fulu.DataColumnSidecars;
+  columnSidecars?: DataColumnSidecar[];
 };
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
@@ -56,7 +56,7 @@ export type ValidatedBlobSidecars = {
 
 export type ValidatedColumnSidecars = {
   blockRoot: Uint8Array;
-  columnSidecars: fulu.DataColumnSidecars;
+  columnSidecars: DataColumnSidecar[];
 };
 
 export type ValidatedResponses = {
@@ -148,7 +148,7 @@ export function cacheByRangeResponses({
   }
 
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
-    const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
+    const dataSlot = columnSidecars.at(0) ? getDataColumnSidecarSlot(columnSidecars[0]) : undefined;
     if (dataSlot === undefined) {
       throw new Error(
         `Coding Error: empty columnSidecars returned for blockRoot=${toRootHex(blockRoot)} from validation functions`
@@ -241,7 +241,7 @@ export async function requestByRange({
 }): Promise<DownloadByRangeResponses> {
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
-  let columnSidecars: undefined | fulu.DataColumnSidecars;
+  let columnSidecars: undefined | DataColumnSidecar[];
 
   const requests: Promise<unknown>[] = [];
 
@@ -608,16 +608,16 @@ export async function validateColumnsByRangeResponse(
   config: ChainForkConfig,
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedBlock[],
-  columnSidecars: fulu.DataColumnSidecars
+  columnSidecars: DataColumnSidecar[]
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
 
-  const seenColumns = new Map<Slot, Map<number, fulu.DataColumnSidecar>>();
+  const seenColumns = new Map<Slot, Map<number, DataColumnSidecar>>();
   let currentSlot = -1;
   let currentIndex = -1;
   // Check for duplicates and order
   for (const columnSidecar of columnSidecars) {
-    const slot = columnSidecar.signedBlockHeader.message.slot;
+    const slot = getDataColumnSidecarSlot(columnSidecar);
     let seenSlotColumns = seenColumns.get(slot);
     if (!seenSlotColumns) {
       seenSlotColumns = new Map();
@@ -625,38 +625,30 @@ export async function validateColumnsByRangeResponse(
     }
 
     if (seenSlotColumns.has(columnSidecar.index)) {
-      warnings.push(
-        new DownloadByRangeError({
-          code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
-          slot,
-          index: columnSidecar.index,
-        })
-      );
-
-      continue;
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
+        slot,
+        index: columnSidecar.index,
+      });
     }
 
     if (currentSlot > slot) {
-      warnings.push(
-        new DownloadByRangeError(
-          {
-            code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
-            slot,
-          },
-          "ColumnSidecars received out of slot order"
-        )
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+          slot,
+        },
+        "ColumnSidecars received out of slot order"
       );
     }
 
     if (currentSlot === slot && currentIndex > columnSidecar.index) {
-      warnings.push(
-        new DownloadByRangeError(
-          {
-            code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
-            slot,
-          },
-          "Column indices out of order within a slot"
-        )
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+          slot,
+        },
+        "Column indices out of order within a slot"
       );
     }
 
@@ -676,12 +668,12 @@ export async function validateColumnsByRangeResponse(
     const slot = block.message.slot;
     const rootHex = toRootHex(blockRoot);
     const forkName = config.getForkName(slot);
-    const columnSidecarsMap: Map<number, fulu.DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
+    const columnSidecarsMap: Map<number, DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
     const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index);
 
     let blobCount: number;
     if (!isForkPostFulu(forkName)) {
-      const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
+      const dataSlot = columnSidecars.at(0) ? getDataColumnSidecarSlot(columnSidecars[0]) : undefined;
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISMATCH_BLOCK_FORK,
         slot,
@@ -764,7 +756,8 @@ export async function validateColumnsByRangeResponse(
         slot,
         blockRoot,
         blobCount,
-        columnSidecars
+        columnSidecars,
+        getBlobKzgCommitments(forkName, block as SignedBeaconBlock<ForkPostFulu>)
       ).then(() => ({
         blockRoot,
         columnSidecars,

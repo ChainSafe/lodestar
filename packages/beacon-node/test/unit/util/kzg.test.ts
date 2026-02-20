@@ -93,7 +93,11 @@ describe("KZG", () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(commitment);
     }
 
-    const sidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
+    const sidecars = getDataColumnSidecarsFromBlock(
+      config,
+      signedBeaconBlock,
+      cellsAndProofs
+    ) as fulu.DataColumnSidecars;
     const signedBlockHeader = signedBlockToSignedHeader(config, signedBeaconBlock);
 
     sidecars.forEach((sidecar, column) => {
@@ -144,6 +148,6 @@ describe("KZG", () => {
       throw new Error("Recovered sidecars should not be null");
     }
     expect(recoveredSidecars.length).toBe(NUMBER_OF_COLUMNS);
-    expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars, sidecars)).toBeTruthy();
+    expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars as fulu.DataColumnSidecars, sidecars)).toBeTruthy();
   });
 });

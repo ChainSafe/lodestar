@@ -2,7 +2,7 @@ import type {ChainForkConfig} from "@lodestar/config";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateAllForks, DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
-import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
+import type {DataColumnSidecar, IndexedAttestation, Slot} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
 
 export enum GossipedInputType {
@@ -12,7 +12,7 @@ export enum GossipedInputType {
 }
 
 type DataColumnData = {
-  dataColumn: fulu.DataColumnSidecar;
+  dataColumn: DataColumnSidecar;
   dataColumnBytes: Uint8Array | null;
 };
 export type DataColumnsCacheMap = Map<number, DataColumnData>;

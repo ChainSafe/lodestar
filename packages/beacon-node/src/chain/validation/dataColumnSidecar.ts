@@ -3,6 +3,7 @@ import {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   KZG_COMMITMENTS_SUBTREE_INDEX,
   NUMBER_OF_COLUMNS,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -10,9 +11,10 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {DataColumnSidecar, Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
+import {DataColumnSidecar, Root, Slot, SubnetID, fulu, gloas, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {getDataColumnSidecarBlockRoot, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {kzg} from "../../util/kzg.js";
 import {
   DataColumnSidecarErrorCode,
@@ -27,6 +29,40 @@ import {RegenCaller} from "../regen/interface.js";
 // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipDataColumnSidecar(
   chain: IBeaconChain,
+  dataColumnSidecar: DataColumnSidecar,
+  gossipSubnet: SubnetID,
+  metrics: Metrics | null
+): Promise<void> {
+  const slot = getDataColumnSidecarSlot(dataColumnSidecar);
+  const fork = chain.config.getForkName(slot);
+
+  if (isForkPostGloas(fork)) {
+    if (!isGloasDataColumnSidecar(dataColumnSidecar)) {
+      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+        code: DataColumnSidecarErrorCode.MISMATCHED_LENGTHS,
+        columnLength: dataColumnSidecar.column.length,
+        commitmentsLength: 0,
+        proofsLength: dataColumnSidecar.kzgProofs.length,
+      });
+    }
+    await validateGossipDataColumnSidecarGloas(chain, dataColumnSidecar, gossipSubnet, metrics);
+    return;
+  }
+
+  if (isGloasDataColumnSidecar(dataColumnSidecar)) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.MISMATCHED_LENGTHS,
+      columnLength: dataColumnSidecar.column.length,
+      commitmentsLength: 0,
+      proofsLength: dataColumnSidecar.kzgProofs.length,
+    });
+  }
+
+  await validateGossipDataColumnSidecarFulu(chain, dataColumnSidecar, gossipSubnet, metrics);
+}
+
+async function validateGossipDataColumnSidecarFulu(
+  chain: IBeaconChain,
   dataColumnSidecar: fulu.DataColumnSidecar,
   gossipSubnet: SubnetID,
   metrics: Metrics | null
@@ -35,7 +71,7 @@ export async function validateGossipDataColumnSidecar(
   const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
-  verifyDataColumnSidecar(chain.config, dataColumnSidecar);
+  verifyDataColumnSidecarFulu(chain.config, dataColumnSidecar);
 
   // 2) [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_data_column_sidecar(sidecar.index) == subnet_id
   if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
@@ -201,11 +237,75 @@ export async function validateGossipDataColumnSidecar(
   //              -- Handled in seenGossipBlockInput
 }
 
+async function validateGossipDataColumnSidecarGloas(
+  chain: IBeaconChain,
+  dataColumnSidecar: gloas.DataColumnSidecar,
+  gossipSubnet: SubnetID,
+  metrics: Metrics | null
+): Promise<void> {
+  const blockRoot = getDataColumnSidecarBlockRoot(dataColumnSidecar);
+  const blockRootHex = toRootHex(blockRoot);
+  const slot = getDataColumnSidecarSlot(dataColumnSidecar);
+
+  const cachedBlockInput = chain.seenBlockInputCache.get(blockRootHex);
+  const blockData = cachedBlockInput?.hasBlock()
+    ? cachedBlockInput.getBlock()
+    : (await chain.getBlockByRoot(blockRootHex))?.block;
+
+  if (!blockData) {
+    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+      code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
+      parentRoot: blockRootHex,
+      slot,
+    });
+  }
+
+  if (blockData.message.slot !== slot) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
+      slot,
+      columnIndex: dataColumnSidecar.index,
+      expected: `${blockData.message.slot}`,
+      actual: `${slot}`,
+    });
+  }
+
+  const kzgCommitments = (blockData as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message
+    .blobKzgCommitments;
+  verifyDataColumnSidecarGloas(dataColumnSidecar, kzgCommitments);
+
+  if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INVALID_SUBNET,
+      columnIndex: dataColumnSidecar.index,
+      gossipSubnet,
+    });
+  }
+
+  const kzgProofTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
+  try {
+    await verifyDataColumnSidecarKzgProofs(
+      kzgCommitments,
+      Array.from({length: dataColumnSidecar.column.length}, () => dataColumnSidecar.index),
+      dataColumnSidecar.column,
+      dataColumnSidecar.kzgProofs
+    );
+  } catch {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF,
+      slot,
+      columnIndex: dataColumnSidecar.index,
+    });
+  } finally {
+    kzgProofTimer?.();
+  }
+}
+
 /**
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
-function verifyDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: fulu.DataColumnSidecar): void {
+function verifyDataColumnSidecarFulu(config: ChainForkConfig, dataColumnSidecar: fulu.DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_INDEX,
@@ -243,6 +343,37 @@ function verifyDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: ful
       code: DataColumnSidecarErrorCode.MISMATCHED_LENGTHS,
       columnLength: dataColumnSidecar.column.length,
       commitmentsLength: dataColumnSidecar.kzgCommitments.length,
+      proofsLength: dataColumnSidecar.kzgProofs.length,
+    });
+  }
+}
+
+function verifyDataColumnSidecarGloas(dataColumnSidecar: gloas.DataColumnSidecar, kzgCommitments: Uint8Array[]): void {
+  const slot = getDataColumnSidecarSlot(dataColumnSidecar);
+  if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INVALID_INDEX,
+      slot,
+      columnIndex: dataColumnSidecar.index,
+    });
+  }
+
+  if (dataColumnSidecar.column.length === 0) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.NO_COMMITMENTS,
+      slot,
+      columnIndex: dataColumnSidecar.index,
+    });
+  }
+
+  if (
+    dataColumnSidecar.column.length !== kzgCommitments.length ||
+    dataColumnSidecar.column.length !== dataColumnSidecar.kzgProofs.length
+  ) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.MISMATCHED_LENGTHS,
+      columnLength: dataColumnSidecar.column.length,
+      commitmentsLength: kzgCommitments.length,
       proofsLength: dataColumnSidecar.kzgProofs.length,
     });
   }
@@ -297,7 +428,8 @@ export async function validateBlockDataColumnSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
-  dataColumnSidecars: fulu.DataColumnSidecars
+  dataColumnSidecars: DataColumnSidecar[],
+  blockKzgCommitments?: Uint8Array[]
 ): Promise<void> {
   if (dataColumnSidecars.length === 0) {
     return;
@@ -314,10 +446,9 @@ export async function validateBlockDataColumnSidecars(
       "Block has no blob commitments but data column sidecars were provided"
     );
   }
-  // Hash the first sidecar block header and compare the rest via (cheaper) equality
-  const firstSidecarSignedBlockHeader = dataColumnSidecars[0].signedBlockHeader;
-  const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
-  const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
+
+  const firstSidecar = dataColumnSidecars[0];
+  const firstBlockRoot = getDataColumnSidecarBlockRoot(firstSidecar);
   if (!byteArrayEquals(blockRoot, firstBlockRoot)) {
     throw new DataColumnSidecarValidationError(
       {
@@ -331,12 +462,31 @@ export async function validateBlockDataColumnSidecars(
     );
   }
 
-  if (chain !== null) {
+  const firstSidecarSlot = getDataColumnSidecarSlot(firstSidecar);
+  if (firstSidecarSlot !== blockSlot) {
+    throw new DataColumnSidecarValidationError(
+      {
+        code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
+        slot: blockSlot,
+        columnIndex: firstSidecar.index,
+        expected: `${blockSlot}`,
+        actual: `${firstSidecarSlot}`,
+      },
+      "DataColumnSidecar slot doesn't match corresponding block"
+    );
+  }
+
+  const isGloasSidecar = isGloasDataColumnSidecar(firstSidecar);
+  const firstFuluSidecar = isGloasSidecar ? undefined : (firstSidecar as fulu.DataColumnSidecar);
+  if (chain !== null && firstFuluSidecar !== undefined) {
     const rootHex = toRootHex(blockRoot);
-    const slot = firstSidecarSignedBlockHeader.message.slot;
-    const signature = firstSidecarSignedBlockHeader.signature;
+    const slot = firstFuluSidecar.signedBlockHeader.message.slot;
+    const signature = firstFuluSidecar.signedBlockHeader.signature;
     if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, rootHex, signature)) {
-      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(chain.config, firstSidecarSignedBlockHeader);
+      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
+        chain.config,
+        firstFuluSidecar.signedBlockHeader
+      );
 
       if (
         !(await chain.bls.verifySignatureSets([signatureSet], {
@@ -355,22 +505,66 @@ export async function validateBlockDataColumnSidecars(
     }
   }
 
+  if (blockKzgCommitments && blockKzgCommitments.length !== blockBlobCount) {
+    throw new DataColumnSidecarValidationError({
+      code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
+      slot: blockSlot,
+      columnIndex: firstSidecar.index,
+      expected: blockBlobCount,
+      actual: blockKzgCommitments.length,
+    });
+  }
+
   const commitments: Uint8Array[] = [];
   const cellIndices: number[] = [];
   const cells: Uint8Array[] = [];
   const proofs: Uint8Array[] = [];
   for (let i = 0; i < dataColumnSidecars.length; i++) {
     const columnSidecar = dataColumnSidecars[i];
+    const sidecarSlot = getDataColumnSidecarSlot(columnSidecar);
+    if (sidecarSlot !== blockSlot) {
+      throw new DataColumnSidecarValidationError({
+        code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
+        slot: blockSlot,
+        expected: `${blockSlot}`,
+        actual: `${sidecarSlot}`,
+      });
+    }
+
+    const sidecarBlockRoot = getDataColumnSidecarBlockRoot(columnSidecar);
+    if (!byteArrayEquals(sidecarBlockRoot, blockRoot)) {
+      throw new DataColumnSidecarValidationError({
+        code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
+        slot: blockSlot,
+        expected: toRootHex(blockRoot),
+        actual: toRootHex(sidecarBlockRoot),
+      });
+    }
+
+    if (isGloasDataColumnSidecar(columnSidecar) !== isGloasSidecar) {
+      throw new DataColumnSidecarValidationError({
+        code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
+        slot: blockSlot,
+        expected: isGloasSidecar ? "gloas" : "fulu",
+        actual: isGloasDataColumnSidecar(columnSidecar) ? "gloas" : "fulu",
+      });
+    }
 
     if (
+      firstFuluSidecar !== undefined &&
       i !== 0 &&
-      !ssz.phase0.SignedBeaconBlockHeader.equals(firstSidecarSignedBlockHeader, columnSidecar.signedBlockHeader)
+      !ssz.phase0.SignedBeaconBlockHeader.equals(
+        firstFuluSidecar.signedBlockHeader,
+        (columnSidecar as fulu.DataColumnSidecar).signedBlockHeader
+      )
     ) {
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
         slot: blockSlot,
         expected: toRootHex(blockRoot),
-        actual: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(columnSidecar.signedBlockHeader.message)),
+        actual: toRootHex(
+          ssz.phase0.BeaconBlockHeader.hashTreeRoot((columnSidecar as fulu.DataColumnSidecar).signedBlockHeader.message)
+        ),
       });
     }
 
@@ -395,16 +589,6 @@ export async function validateBlockDataColumnSidecars(
       });
     }
 
-    if (columnSidecar.column.length !== columnSidecar.kzgCommitments.length) {
-      throw new DataColumnSidecarValidationError({
-        code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
-        slot: blockSlot,
-        columnIndex: columnSidecar.index,
-        expected: columnSidecar.column.length,
-        actual: columnSidecar.kzgCommitments.length,
-      });
-    }
-
     if (columnSidecar.column.length !== columnSidecar.kzgProofs.length) {
       throw new DataColumnSidecarValidationError({
         code: DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT,
@@ -415,18 +599,67 @@ export async function validateBlockDataColumnSidecars(
       });
     }
 
-    if (!verifyDataColumnSidecarInclusionProof(columnSidecar)) {
-      throw new DataColumnSidecarValidationError(
-        {
-          code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
+    let columnCommitments: Uint8Array[] | undefined;
+    if (isGloasSidecar) {
+      columnCommitments = blockKzgCommitments;
+      if (!columnCommitments) {
+        throw new DataColumnSidecarValidationError({
+          code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
           slot: blockSlot,
           columnIndex: columnSidecar.index,
-        },
-        "DataColumnSidecar has invalid inclusion proof"
-      );
+          expected: columnSidecar.column.length,
+          actual: 0,
+        });
+      }
+      if (columnSidecar.column.length !== columnCommitments.length) {
+        throw new DataColumnSidecarValidationError({
+          code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
+          slot: blockSlot,
+          columnIndex: columnSidecar.index,
+          expected: columnSidecar.column.length,
+          actual: columnCommitments.length,
+        });
+      }
+    } else {
+      const fuluSidecar = columnSidecar as fulu.DataColumnSidecar;
+      if (columnSidecar.column.length !== fuluSidecar.kzgCommitments.length) {
+        throw new DataColumnSidecarValidationError({
+          code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
+          slot: blockSlot,
+          columnIndex: columnSidecar.index,
+          expected: columnSidecar.column.length,
+          actual: fuluSidecar.kzgCommitments.length,
+        });
+      }
+
+      if (blockKzgCommitments && fuluSidecar.kzgCommitments.length === blockKzgCommitments.length) {
+        for (let j = 0; j < blockKzgCommitments.length; j++) {
+          if (!byteArrayEquals(fuluSidecar.kzgCommitments[j], blockKzgCommitments[j])) {
+            throw new DataColumnSidecarValidationError({
+              code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
+              slot: blockSlot,
+              columnIndex: columnSidecar.index,
+              expected: blockKzgCommitments.length,
+              actual: fuluSidecar.kzgCommitments.length,
+            });
+          }
+        }
+      }
+
+      if (!verifyDataColumnSidecarInclusionProof(fuluSidecar)) {
+        throw new DataColumnSidecarValidationError(
+          {
+            code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
+            slot: blockSlot,
+            columnIndex: columnSidecar.index,
+          },
+          "DataColumnSidecar has invalid inclusion proof"
+        );
+      }
+      columnCommitments = fuluSidecar.kzgCommitments;
     }
 
-    commitments.push(...columnSidecar.kzgCommitments);
+    commitments.push(...columnCommitments);
     cellIndices.push(...Array.from({length: columnSidecar.column.length}, () => columnSidecar.index));
     cells.push(...columnSidecar.column);
     proofs.push(...columnSidecar.kzgProofs);

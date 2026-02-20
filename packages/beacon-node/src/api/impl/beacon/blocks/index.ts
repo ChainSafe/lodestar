@@ -21,15 +21,16 @@ import {
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {
+  DataColumnSidecars,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
   WithOptionalBytes,
   deneb,
-  fulu,
   gloas,
   isDenebBlockContents,
+  isGloasDataColumnSidecar,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
@@ -103,7 +104,7 @@ export function getBeaconBlockApi({
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
-    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
+    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: DataColumnSidecars;
 
     if (isDenebBlockContents(signedBlockContents)) {
       if (isForkPostFulu(fork)) {
@@ -350,7 +351,9 @@ export function getBeaconBlockApi({
             blockRoot,
             slot,
             index: dataColumnSidecar.index,
-            kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
+            kzgCommitments: isGloasDataColumnSidecar(dataColumnSidecar)
+              ? []
+              : dataColumnSidecar.kzgCommitments.map(toHex),
           });
         }
       }

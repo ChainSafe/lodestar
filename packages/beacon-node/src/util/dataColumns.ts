@@ -16,6 +16,8 @@ import {
   BeaconBlockBody,
   ColumnIndex,
   CustodyIndex,
+  DataColumnSidecar,
+  DataColumnSidecars,
   Root,
   SSZTypesFor,
   SignedBeaconBlock,
@@ -24,6 +26,7 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasDataColumnSidecar,
   ssz,
 } from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
@@ -328,7 +331,7 @@ export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock<ForkPostFulu>,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): fulu.DataColumnSidecars {
+): DataColumnSidecars {
   const fork = config.getForkName(signedBlock.message.slot);
   const blobKzgCommitments = getBlobKzgCommitments(fork, signedBlock);
 
@@ -336,6 +339,12 @@ export function getDataColumnSidecarsFromBlock(
   if (blobKzgCommitments.length === 0) {
     return [];
   }
+
+  if (isForkPostGloas(fork)) {
+    const beaconBlockRoot = config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message);
+    return getDataColumnSidecarsForGloas(signedBlock.message.slot, beaconBlockRoot, cellsAndKzgProofs);
+  }
+
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
 
   const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
@@ -351,15 +360,35 @@ export function getDataColumnSidecarsFromBlock(
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_column_sidecar
  */
 export function getDataColumnSidecarsFromColumnSidecar(
-  sidecar: fulu.DataColumnSidecar,
+  sidecar: DataColumnSidecar,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): fulu.DataColumnSidecars {
+): DataColumnSidecars {
+  if (isGloasDataColumnSidecar(sidecar)) {
+    return getDataColumnSidecarsForGloas(sidecar.slot, sidecar.beaconBlockRoot, cellsAndKzgProofs);
+  }
+
   return getDataColumnSidecars(
     sidecar.signedBlockHeader,
     sidecar.kzgCommitments,
     sidecar.kzgCommitmentsInclusionProof,
     cellsAndKzgProofs
   );
+}
+
+export function getDataColumnSidecarSlot(sidecar: DataColumnSidecar): Slot {
+  if (isGloasDataColumnSidecar(sidecar)) {
+    return sidecar.slot;
+  }
+
+  return sidecar.signedBlockHeader.message.slot;
+}
+
+export function getDataColumnSidecarBlockRoot(sidecar: DataColumnSidecar): Root {
+  if (isGloasDataColumnSidecar(sidecar)) {
+    return sidecar.beaconBlockRoot;
+  }
+
+  return ssz.phase0.BeaconBlockHeader.hashTreeRoot(sidecar.signedBlockHeader.message);
 }
 
 /**
@@ -416,7 +445,7 @@ export async function recoverDataColumnSidecars(
   }
 
   metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(columnCount);
-  const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
+  const partialSidecars = new Map<number, DataColumnSidecar>();
   for (const columnSidecar of existingColumns) {
     // the more columns we put, the slower the recover
     if (partialSidecars.size >= NUMBER_OF_COLUMNS / 2) {

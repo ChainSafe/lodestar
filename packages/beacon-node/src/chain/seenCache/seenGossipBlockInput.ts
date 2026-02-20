@@ -1,21 +1,13 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {
-  ForkName,
-  ForkPostFulu,
-  ForkPreGloas,
-  SLOTS_PER_EPOCH,
-  isForkPostDeneb,
-  isForkPostFulu,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ForkName, ForkPostFulu, SLOTS_PER_EPOCH, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {BLSSignature, DataColumnSidecar, RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {IClock} from "../../util/clock.js";
-import {CustodyConfig} from "../../util/dataColumns.js";
+import {CustodyConfig, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {
   BlockInput,
   BlockInputBlobs,
@@ -179,10 +171,6 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // TODO GLOAS: Implement
-      if (isForkPostGloas(forkName)) {
-        throw Error("Not implemented");
-      }
       // Pre-deneb
       if (!isForkPostDeneb(forkName)) {
         blockInput = BlockInputPreData.createFromBlock({
@@ -197,7 +185,7 @@ export class SeenBlockInput {
         // Fulu Only
       } else if (isForkPostFulu(forkName)) {
         blockInput = BlockInputColumns.createFromBlock({
-          block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
+          block: block as SignedBeaconBlock<ForkPostFulu>,
           blockRootHex,
           daOutOfRange,
           forkName,
@@ -299,14 +287,14 @@ export class SeenBlockInput {
       seenTimestampSec,
       source,
       peerIdStr,
-    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: fulu.DataColumnSidecar},
+    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: DataColumnSidecar},
     opts: GetByBlobOptions = {}
   ): BlockInputColumns {
     let blockInput = this.blockInputs.get(blockRootHex);
     let created = false;
     if (!blockInput) {
       created = true;
-      const {forkName, daOutOfRange} = this.buildCommonProps(columnSidecar.signedBlockHeader.message.slot);
+      const {forkName, daOutOfRange} = this.buildCommonProps(getDataColumnSidecarSlot(columnSidecar));
       blockInput = BlockInputColumns.createFromColumn({
         columnSidecar,
         blockRootHex,

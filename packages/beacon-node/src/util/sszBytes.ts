@@ -8,6 +8,7 @@ import {
   ForkSeq,
   MAX_COMMITTEES_PER_SLOT,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 
@@ -408,13 +409,54 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
   }
  */
 
-const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR = 20;
+const DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION = 8;
+const GLOAS_DATA_COLUMN_SIDECAR_FIRST_OFFSET = 56;
+const SLOT_BYTES_POSITION_IN_FULU_DATA_COLUMN_SIDECAR = 20;
+const SLOT_BYTES_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR = 16;
+const BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR = 24;
+
+function isGloasDataColumnSidecarSerialized(data: Uint8Array): boolean {
+  if (data.length < DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION + 4) {
+    return false;
+  }
+
+  const firstOffset =
+    data[DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION] |
+    (data[DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION + 1] << 8) |
+    (data[DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION + 2] << 16) |
+    (data[DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION + 3] << 24);
+
+  return firstOffset === GLOAS_DATA_COLUMN_SIDECAR_FIRST_OFFSET;
+}
+
 export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR + SLOT_SIZE) {
+  const slotOffset = isGloasDataColumnSidecarSerialized(data)
+    ? SLOT_BYTES_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR
+    : SLOT_BYTES_POSITION_IN_FULU_DATA_COLUMN_SIDECAR;
+
+  if (data.length < slotOffset + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
+  return getSlotFromOffset(data, slotOffset);
+}
+
+export function getBlockRootFromDataColumnSidecarSerialized(data: Uint8Array): BlockRootHex | null {
+  if (!isGloasDataColumnSidecarSerialized(data)) {
+    return null;
+  }
+
+  if (data.length < BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE) {
+    return null;
+  }
+
+  blockRootBuf.set(
+    data.subarray(
+      BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR,
+      BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE
+    )
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
 }
 
 /**
@@ -482,9 +524,14 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
   if (slot === null) throw new Error("Can not parse the slot from block bytes");
 
   if (config.getForkSeq(slot) < ForkSeq.deneb) return 0;
+  const forkName = config.getForkName(slot);
 
-  const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody, KZGCommitment} =
-    ssz[config.getForkName(slot) as ForkPostDeneb];
+  if (isForkPostGloas(forkName)) {
+    const signedBlock = ssz[forkName].SignedBeaconBlock.deserialize(blockBytes);
+    return signedBlock.message.body.signedExecutionPayloadBid.message.blobKzgCommitments.length;
+  }
+
+  const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody, KZGCommitment} = ssz[forkName as ForkPostDeneb];
 
   const view = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
   const singedBlockFieldRanges = SignedBeaconBlock.getFieldRanges(view, 0, blockBytes.length);

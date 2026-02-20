@@ -1,8 +1,9 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkPostAltair, isForkPostAltair} from "@lodestar/params";
+import {ForkName, ForkPostAltair, isForkPostAltair, isForkPostFulu} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
+  DataColumnSidecar,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -76,8 +77,8 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
   [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
-  [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecar;
-  [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRange]: DataColumnSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecar;
 
   [ReqRespMethod.LightClientBootstrap]: LightClientBootstrap;
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
@@ -135,8 +136,10 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
-  [ReqRespMethod.DataColumnSidecarsByRange]: () => ssz.fulu.DataColumnSidecar,
-  [ReqRespMethod.DataColumnSidecarsByRoot]: () => ssz.fulu.DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRange]: (fork) =>
+    isForkPostFulu(fork) ? sszTypesFor(fork).DataColumnSidecar : ssz.fulu.DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: (fork) =>
+    isForkPostFulu(fork) ? sszTypesFor(fork).DataColumnSidecar : ssz.fulu.DataColumnSidecar,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
 };
