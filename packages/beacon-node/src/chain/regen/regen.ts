@@ -11,7 +11,7 @@ import {
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
-import {BeaconBlock, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -58,7 +58,13 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     opts: StateRegenerationOpts,
     regenCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
-    const parentBlock = this.modules.forkChoice.getBlock(block.parentRoot);
+    const parentRoot = toRootHex(block.parentRoot);
+    const parentBlock = isGloasBeaconBlock(block)
+      ? this.modules.forkChoice.getBlockHexAndBlockHash(
+          parentRoot,
+          toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
+        )
+      : this.modules.forkChoice.getBlockHexDefaultStatus(parentRoot);
     if (!parentBlock) {
       throw new RegenError({
         code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,

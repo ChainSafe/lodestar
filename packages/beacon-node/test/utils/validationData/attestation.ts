@@ -76,8 +76,14 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
     timeliness: false,
 
-    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+    executionPayloadBlockHash: null,
+    executionStatus: ExecutionStatus.PreMerge,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: 2, // PayloadStatus.FULL
+    builderIndex: null,
+    blockHashFromBid: null,
   };
 
   const shufflingCache = new ShufflingCache(null, null, {}, [
@@ -101,6 +107,18 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       return headBlock;
     },
     getBlockHex: (rootHex) => {
+      if (rootHex !== toHexString(beaconBlockRoot)) return null;
+      return headBlock;
+    },
+    getBlockDefaultStatus: (root) => {
+      if (!ssz.Root.equals(root, beaconBlockRoot)) return null;
+      return headBlock;
+    },
+    getBlockHexDefaultStatus: (rootHex) => {
+      if (rootHex !== toHexString(beaconBlockRoot)) return null;
+      return headBlock;
+    },
+    getBlockHexAndBlockHash: (rootHex) => {
       if (rootHex !== toHexString(beaconBlockRoot)) return null;
       return headBlock;
     },
