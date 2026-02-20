@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, Repository} from "@lodestar/db";
+import {BUCKET_LENGTH, Db, Repository, encodeKey as encodeDbKey} from "@lodestar/db";
 import {Slot, gloas, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
@@ -23,7 +23,11 @@ export class ExecutionPayloadEnvelopeArchiveRepository extends Repository<Slot, 
     return value.message.slot;
   }
 
+  encodeKey(id: Slot): Uint8Array {
+    return encodeDbKey(this.bucket, id);
+  }
+
   decodeKey(data: Uint8Array): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+    return bytesToInt(data.subarray(BUCKET_LENGTH), "be");
   }
 }
