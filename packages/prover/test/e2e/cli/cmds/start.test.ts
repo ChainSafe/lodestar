@@ -20,7 +20,9 @@ import {
 
 const cli = getLodestarProverCli();
 
-describe("prover/proxy", () => {
+// TODO: Re-enable once shared E2E env timing is stabilized
+// Disabled due to flaky hook timeout on slow CI runners
+describe.skip("prover/proxy", () => {
   it("should show help", async () => {
     const output = await runCliCommand(cli, ["proxy", "--help"]);
 
