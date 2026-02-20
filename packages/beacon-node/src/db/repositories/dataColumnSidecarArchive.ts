@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, PrefixedRepository, decodeNumberForDbKey, encodeNumberForDbKey} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ColumnIndex, DataColumnSidecar, Slot, fulu, gloas, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecar, Slot, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
 import {isGloasDataColumnSidecarBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 

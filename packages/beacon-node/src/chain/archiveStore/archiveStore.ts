@@ -1,7 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq} from "@lodestar/params";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
