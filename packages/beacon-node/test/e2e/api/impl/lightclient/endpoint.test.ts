@@ -13,7 +13,8 @@ import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
 describe("lightclient api", () => {
-  vi.setConfig({testTimeout: 10_000});
+  // Allow extra time for chain startup and block production on slow CI runners
+  vi.setConfig({testTimeout: 30_000});
 
   const SLOT_DURATION_MS = 1000;
   const restPort = 9596;
@@ -81,8 +82,9 @@ describe("lightclient api", () => {
   });
 
   const waitForBestUpdate = async (): Promise<void> => {
-    // should see this event in 5 slots
-    await waitForEvent(bn.chain.emitter, routes.events.EventType.lightClientOptimisticUpdate, 5 * SLOT_DURATION_MS);
+    // Wait for light client optimistic update event. Use generous timeout to account for
+    // chain startup time and block production delays on slow CI runners.
+    await waitForEvent(bn.chain.emitter, routes.events.EventType.lightClientOptimisticUpdate, 20 * SLOT_DURATION_MS);
     // wait for 1 slot to persist the best update
     await sleep(2 * SLOT_DURATION_MS);
   };

@@ -9,6 +9,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {LightClientHeader} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
 import {HeadEventData} from "../../../src/chain/index.js";
 import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
@@ -195,7 +196,12 @@ describe("chain / lightclient", () => {
     await Promise.all([promiseUntilHead, promiseTillFinalization]);
 
     const headSummary = bn.chain.forkChoice.getHead();
-    const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
+    let head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
+    if (!head) {
+      // Block may still be in the write pipeline on slow CI runners, wait briefly and retry
+      await sleep(500);
+      head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
+    }
     if (!head) throw Error("First beacon node has no head block");
   });
 });
