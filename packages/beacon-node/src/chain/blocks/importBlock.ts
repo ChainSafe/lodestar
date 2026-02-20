@@ -30,7 +30,7 @@ import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
-import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
+import {toCheckpointHexPayload} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
@@ -116,6 +116,11 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
+  // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true (execution payload embedded in block)
+  // Post-Gloas: blockSummary.payloadStatus is always PENDING (EMPTY variant also created), payloadPresent = false (block state only, no payload processing yet)
+  const isGloasBlock = blockSummary.blockHashFromBid !== null;
+  const payloadPresent = !isGloasBlock;
+  // processState manages both block state and payload state variants together for memory/disk management
   this.regen.processState(blockRootHex, postState);
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
@@ -430,12 +435,14 @@ export async function importBlock(
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    this.regen.addCheckpointState(cp, checkpointState);
+    // Pre-Gloas: payloadPresent = true (FULL variant, execution payload embedded in block)
+    // Post-Gloas: payloadPresent = false (PENDING variant with EMPTY also created, block state only)
+    this.regen.addCheckpointState(cp, checkpointState, payloadPresent);
     // consumers should not mutate state ever
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
-    this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
+    this.logger.verbose("Checkpoint processed", toCheckpointHexPayload(cp, payloadPresent));
 
     const activeValidatorsCount = checkpointState.epochCtx.currentShuffling.activeIndices.length;
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
@@ -453,7 +460,7 @@ export async function importBlock(
       const justifiedEpoch = justifiedCheckpoint.epoch;
       const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
       if (justifiedEpoch > preJustifiedEpoch) {
-        this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
+        this.logger.verbose("Checkpoint justified", toCheckpointHexPayload(justifiedCheckpoint, payloadPresent));
         this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
         this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
       }
@@ -467,7 +474,7 @@ export async function importBlock(
           state: toRootHex(checkpointState.hashTreeRoot()),
           executionOptimistic: false,
         });
-        this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
+        this.logger.verbose("Checkpoint finalized", toCheckpointHexPayload(finalizedCheckpoint, payloadPresent));
         this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
       }
     }

@@ -1,6 +1,6 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithPayload, IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
@@ -11,7 +11,7 @@ import {ApiError, ValidationError} from "../../errors.js";
 export function resolveStateId(
   forkChoice: IForkChoice,
   stateId: routes.beacon.StateId
-): RootHex | Slot | CheckpointWithHex {
+): RootHex | Slot | CheckpointWithPayload {
   if (stateId === "head") {
     return forkChoice.getHead().stateRoot;
   }

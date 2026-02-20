@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
-import {CheckpointHex} from "../stateCache/types.js";
+import {CheckpointHexPayload} from "../stateCache/types.js";
 
 export enum RegenCaller {
   getDuties = "getDuties",
@@ -38,15 +38,36 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null;
   getPreStateSync(block: BeaconBlock): CachedBeaconStateAllForks | null;
-  getCheckpointStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
-  getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null;
+  getCheckpointStateOrBytes(cp: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
+  getCheckpointStateSync(cp: CheckpointHexPayload): CachedBeaconStateAllForks | null;
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   pruneOnFinalized(finalizedEpoch: Epoch): void;
+  /**
+   * Process block state for caching and memory management (after stateTransition).
+   * Manages both block state and payload state variants together based on root canonicality.
+   * Should be called once per block import, not separately for block state and payload state.
+   * @param blockRootHex - Block root hex
+   * @param postState - Cached beacon state after block processing
+   */
   processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void;
-  addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void;
+  /**
+   * Process payload state for caching (after processExecutionPayloadEnvelope).
+   * Only called for Gloas blocks that have payloads revealed.
+   * @param blockRootHex - Block root hex
+   * @param payloadState - Cached beacon state after payload processing
+   */
+  processPayloadState(payloadState: CachedBeaconStateAllForks): void;
+  /**
+   * Add checkpoint state to cache.
+   * @param cp - Checkpoint (epoch + root)
+   * @param item - Cached beacon state
+   * @param payloadPresent - For Gloas: true if this is payload state, false if block state.
+   *                         Always true for pre-Gloas.
+   */
+  addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks, payloadPresent: boolean): void;
   updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void;
-  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
+  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch, payloadPresent: boolean): number | null;
 }
 
 /**
