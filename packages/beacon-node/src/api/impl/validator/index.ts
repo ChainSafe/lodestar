@@ -688,6 +688,16 @@ export function getValidatorApi(
     // by deferring the call to next event loop iteration, allowing pending I/O operations like
     // HTTP requests to be processed first and sent out early in slot.
     callInNextEventLoop(() => {
+      // Guard against producing blocks after the chain has started shutting down.
+      // During teardown the regen queue's abort signal fires, and any call to
+      // queue.push() would throw QUEUE_ERROR_QUEUE_ABORTED. Without this check
+      // the rejection leaks as an unhandled promise rejection, causing Vitest
+      // (and other test runners) to exit with a non-zero code even when all
+      // tests pass.
+      if (controller.signal.aborted) {
+        return;
+      }
+
       logger.verbose("Producing common block body", loggerContext);
       const commonBlockBodyStartedAt = Date.now();
 
@@ -705,7 +715,15 @@ export function getValidatorApi(
             durationMs: Date.now() - commonBlockBodyStartedAt,
           });
         })
-        .catch(deferredCommonBlockBody.reject);
+        .catch((e) => {
+          // Silently ignore queue abort errors during shutdown to prevent
+          // unhandled rejections when the deferred has no awaiter
+          if (controller.signal.aborted) {
+            logger.debug("Common block body production aborted during shutdown", loggerContext);
+            return;
+          }
+          deferredCommonBlockBody.reject(e);
+        });
     });
 
     const [builder, engine] = await blockProductionRacePromise;
