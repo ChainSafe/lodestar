@@ -1,7 +1,7 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostFulu} from "@lodestar/params";
-import {ArrayOf, BeaconState, DataColumnSidecar, StringType, ssz, sszTypesFor} from "@lodestar/types";
+import {ArrayOf, BeaconState, DataColumnSidecars, StringType, ssz, sszTypesFor} from "@lodestar/types";
 import {
   EmptyArgs,
   EmptyMeta,
@@ -150,7 +150,7 @@ export type Endpoints = {
       indices?: number[];
     },
     {params: {block_id: string}; query: {indices?: number[]}},
-    DataColumnSidecar[],
+    DataColumnSidecars,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
 };

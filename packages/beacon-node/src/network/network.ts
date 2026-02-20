@@ -12,6 +12,7 @@ import {
   AttesterSlashing,
   DataColumnSidecar,
   LightClientBootstrap,
+  isGloasDataColumnSidecar,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   LightClientUpdate,
@@ -35,7 +36,7 @@ import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnS
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {CustodyConfig, isGloasDataColumnSidecar} from "../util/dataColumns.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";

@@ -15,7 +15,6 @@ import {
   BeaconBlockBody,
   ColumnIndex,
   CustodyIndex,
-  DataColumnSidecar,
   Root,
   SSZTypesFor,
   SignedBeaconBlock,
@@ -280,10 +279,6 @@ export function getBlobKzgCommitments(
   return (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
 }
 
-/** Type guard for `gloas.DataColumnSidecar` */
-export function isGloasDataColumnSidecar(sidecar: DataColumnSidecar): sidecar is gloas.DataColumnSidecar {
-  return (sidecar as gloas.DataColumnSidecar).beaconBlockRoot !== undefined;
-}
 
 /**
  * Given a signed block header and the commitments, inclusion proof, cells/proofs associated with

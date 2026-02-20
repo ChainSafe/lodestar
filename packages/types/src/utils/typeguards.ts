@@ -108,8 +108,6 @@ export function isGloasBeaconBlock(block: BeaconBlock): block is BeaconBlock<For
   return (block.body as BeaconBlockBody<ForkPostGloas>).signedExecutionPayloadBid !== undefined;
 }
 
-export function isGloasDataColumnSidecar(
-  dataColumnSidecar: DataColumnSidecar
-): dataColumnSidecar is DataColumnSidecar<ForkPostGloas> {
-  return (dataColumnSidecar as DataColumnSidecar<ForkPostGloas>).beaconBlockRoot !== undefined;
+export function isGloasDataColumnSidecar(sidecar: DataColumnSidecar): sidecar is DataColumnSidecar<ForkPostGloas> {
+  return (sidecar as DataColumnSidecar<ForkPostGloas>).beaconBlockRoot !== undefined;
 }
