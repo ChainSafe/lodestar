@@ -81,9 +81,9 @@ export function getLightClientHeaderTypeFromBytes(
  *   column: List [variable - 4-byte offset]
  *   kzgCommitments: List [variable - 4-byte offset]
  *   kzgProofs: List [variable - 4-byte offset]
- *   signedBlockHeader: Container [variable - 4-byte offset]
- *   kzgCommitmentsInclusionProof: Vector[Bytes32, 17] [fixed - 544 bytes]
- *   => First offset value = 8 + 4 + 4 + 4 + 4 + 544 = 568
+ *   signedBlockHeader: Container [fixed - 208 bytes]
+ *   kzgCommitmentsInclusionProof: Vector[Bytes32, 4] [fixed - 128 bytes]
+ *   => First offset value = 8 + 4 + 4 + 4 + 208 + 128 = 356
  *
  * Gloas DataColumnSidecar (5 fields):
  *   index: uint64 [fixed - 8 bytes]
@@ -101,7 +101,7 @@ const GLOAS_DATA_COLUMN_SIDECAR_FIRST_OFFSET = 56;
  *
  * The first offset (bytes 8-12) indicates where variable-size data begins:
  * - Gloas: 56 (small fixed section)
- * - Fulu: 568 (large fixed section due to kzgCommitmentsInclusionProof)
+ * - Fulu: 356
  */
 export function isGloasDataColumnSidecarBytes(bytes: Uint8Array): boolean {
   const firstOffset = bytesToInt(
