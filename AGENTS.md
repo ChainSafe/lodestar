@@ -163,9 +163,9 @@ The fork progression is: `phase0` → `altair` → `bellatrix` → `capella` →
 
 ```typescript
 // Access config values
-config.SLOTS_PER_EPOCH       // from params
-config.getForkName(slot)      // computed fork for a slot
-config.getForkTypes(fork)     // SSZ types for a fork
+config.SLOTS_PER_EPOCH; // from params
+config.getForkName(slot); // computed fork for a slot
+config.getForkTypes(fork); // SSZ types for a fork
 ```
 
 `@lodestar/params` holds constants (`SLOTS_PER_EPOCH`, etc.).
@@ -187,10 +187,13 @@ Types use `@chainsafe/ssz` and come in two forms:
 
 ```typescript
 // Type definition
-const MyContainer = new ContainerType({
-  field1: UintNumberType,
-  field2: RootType,
-}, {typeName: "MyContainer"});
+const MyContainer = new ContainerType(
+  {
+    field1: UintNumberType,
+    field2: RootType,
+  },
+  {typeName: "MyContainer"}
+);
 
 // Value usage
 const value = MyContainer.defaultValue();
