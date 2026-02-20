@@ -1,6 +1,6 @@
 import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, withObservedDuration} from "@lodestar/utils";
 import {buildFastConfirmationSnapshot, createFastConfirmationCache} from "./data.ts";
 import {FastConfirmationMetrics, FastConfirmationSteps} from "./metrics.ts";
 import {runFastConfirmationRules} from "./rules.ts";
@@ -35,13 +35,19 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     });
     this.updateFastConfirmationVariables(ctx);
 
-    const cacheTimer = this.metrics?.fastConfirmation.stepsDuration.startTimer({ step: FastConfirmationSteps.buildCache });
-    const cache = createFastConfirmationCache();
-    cacheTimer?.()
+    const cache = withObservedDuration(
+      this.metrics?.fastConfirmation.stepsDuration.startTimer({
+        step: FastConfirmationSteps.buildCache,
+      }),
+      createFastConfirmationCache
+    );
 
-    const snapshotTimer = this.metrics?.fastConfirmation.stepsDuration.startTimer({ step: FastConfirmationSteps.buildSnapshot });
-    const snapshot = buildFastConfirmationSnapshot(ctx, this.store, cache);
-    snapshotTimer?.()
+    const snapshot = withObservedDuration(
+      this.metrics?.fastConfirmation.stepsDuration.startTimer({
+        step: FastConfirmationSteps.buildSnapshot,
+      }),
+      () => buildFastConfirmationSnapshot(ctx, this.store, cache)
+    );
 
     this.logger?.verbose("Built fast confirmation snapshot", {
       confirmedSlot: snapshot.confirmedSlot,
@@ -55,9 +61,10 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       observedJustifiedEpoch: snapshot.observedJustified.epoch,
     });
 
-    const rulesTimer = this.metrics?.fastConfirmation.stepsDuration.startTimer({ step: FastConfirmationSteps.runRules });
-    const { confirmedRoot, didReset, reason } = runFastConfirmationRules(snapshot, ctx, this.store, cache);
-    rulesTimer?.();
+    const {confirmedRoot, didReset, reason} = withObservedDuration(
+      this.metrics?.fastConfirmation.stepsDuration.startTimer({step: FastConfirmationSteps.runRules}),
+      () => runFastConfirmationRules(snapshot, ctx, this.store, cache)
+    );
 
     const changed = confirmedRoot !== previousConfirmedRoot;
     const confirmedSlot = cache.slotByRoot.get(confirmedRoot) ?? null;
@@ -73,7 +80,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     };
 
     if (changed) {
-      this.logger?.info(didReset ? "Reset fast confirmation": "Updated fast confirmation", logContext);
+      this.logger?.info(didReset ? "Reset fast confirmation" : "Updated fast confirmation", logContext);
     } else {
       this.logger?.debug("Unchanged fast confirmation", logContext);
     }

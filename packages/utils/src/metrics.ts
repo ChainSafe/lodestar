@@ -73,3 +73,21 @@ export interface MetricsRegisterCustom extends MetricsRegisterExtra {
   avgMinMax<Labels extends LabelsGeneric = NoLabels>(config: AvgMinMaxConfig<Labels>): AvgMinMax<Labels>;
   static<Labels extends LabelsGeneric = NoLabels>(config: StaticConfig<Labels>): void;
 }
+
+export type EndTimer = (() => number) | undefined;
+
+export function withObservedDuration<T>(endTimer: EndTimer, fn: () => T): T {
+  try {
+    return fn();
+  } finally {
+    endTimer?.();
+  }
+}
+
+export async function withObservedDurationAsync<T>(endTimer: EndTimer, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } finally {
+    endTimer?.();
+  }
+}

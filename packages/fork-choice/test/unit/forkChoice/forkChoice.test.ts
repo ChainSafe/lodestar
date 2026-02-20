@@ -62,8 +62,16 @@ describe("Forkchoice", () => {
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
     confirmedRoot: finalizedRoot,
-    previousEpochObservedJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-    currentEpochObservedJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    previousEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
+    currentEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
     previousEpochObservedJustifiedBalances: new Uint16Array([32]),
     currentEpochObservedJustifiedBalances: new Uint16Array([32]),
     previousSlotHead: finalizedRoot,

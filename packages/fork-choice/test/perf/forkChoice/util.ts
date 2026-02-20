@@ -53,8 +53,16 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
     confirmedRoot: genesisRoot,
-    previousEpochObservedJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
-    currentEpochObservedJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
+    previousEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisRoot),
+      rootHex: genesisRoot,
+    },
+    currentEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisRoot),
+      rootHex: genesisRoot,
+    },
     previousEpochObservedJustifiedBalances: balances,
     currentEpochObservedJustifiedBalances: balances,
     previousSlotHead: genesisRoot,

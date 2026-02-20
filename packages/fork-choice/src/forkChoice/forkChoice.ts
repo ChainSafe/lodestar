@@ -27,7 +27,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, fromHex, toRootHex, withObservedDuration} from "@lodestar/utils";
 import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -1633,29 +1633,28 @@ export class ForkChoice implements IForkChoice {
   }
 
   private runFastConfirmation(): void {
-    if (!this.fastConfirmationRule || !this.fastConfirmationContext) return;
-    const totalDurationTimer = this.metrics?.fastConfirmation.totalDuration.startTimer();
-    try {
-      const updateHeadTimer = this.metrics?.fastConfirmation.stepsDuration.startTimer({ step: FastConfirmationSteps.updateHead });
+    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
+      if (!this.fastConfirmationRule || !this.fastConfirmationContext) return;
 
       try {
-        this.updateHead();
-      } finally {
-        updateHeadTimer?.();
-      }
+        withObservedDuration(
+          this.metrics?.fastConfirmation.stepsDuration.startTimer({
+            step: FastConfirmationSteps.updateHead,
+          }),
+          () => this.updateHead()
+        );
 
-      const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fastConfirmationContext);
-      this.fcStore.confirmedRoot = result.confirmedRoot;
-    } catch (err) {
-      this.logger?.warn("Fast confirmation failed", {}, err as Error);
-    } finally {
-      totalDurationTimer?.();
-    }
+        const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fastConfirmationContext);
+        this.fcStore.confirmedRoot = result.confirmedRoot;
+      } catch (err) {
+        this.logger?.warn("Fast confirmation failed", {}, err as Error);
+      }
+    });
   }
 
   private createFastConfirmationContext(): FastConfirmationContext {
     const confirmationByzantineThreshold = this.config.CONFIRMATION_BYZANTINE_THRESHOLD;
-    if(!confirmationByzantineThreshold) {
+    if (!confirmationByzantineThreshold) {
       throw new Error("CONFIRMATION_BYZANTINE_THRESHOLD must be set to use fast confirmation");
     }
 
