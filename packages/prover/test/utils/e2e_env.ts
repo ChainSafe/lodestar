@@ -17,8 +17,9 @@ const genesisDelaySeconds = 30 * secondsPerSlot;
 
 // Wait for genesis delay + at least 3 epochs to ensure light client can sync from a finalized checkpoint.
 // The e2e test env has a genesis delay of ~24-30 slots (96-120s) before the chain starts producing blocks,
-// then needs 3 epochs (96s) to reach finalization. Add 2 extra epochs as buffer for slow CI runners.
-export const minFinalizedTimeMs = (genesisDelaySeconds + 5 * 8 * secondsPerSlot) * 1000;
+// then needs 3 epochs (96s) to reach finalization. Docker container startup on CI runners adds variable
+// overhead (30-90s), so we use a generous 8 epoch buffer beyond genesis delay to avoid flakiness.
+export const minFinalizedTimeMs = (genesisDelaySeconds + 8 * 8 * secondsPerSlot) * 1000;
 
 export const config = {
   ALTAIR_FORK_EPOCH: altairForkEpoch,
