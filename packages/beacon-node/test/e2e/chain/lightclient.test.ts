@@ -24,6 +24,8 @@ describe("chain / lightclient", () => {
    * 4 = 4 sec should be good enough.
    */
   const maxLcHeadTrackingDiffSlots = 4;
+  /** Delay before retrying head block DB lookup if the block is still in the write pipeline */
+  const BLOCK_DB_RETRY_DELAY_MS = 500;
   const validatorCount = 8;
   const validatorClientCount = 4;
   // Reduced from 3 to 1, so test can complete in 10 epoch vs 27 epoch
@@ -199,7 +201,7 @@ describe("chain / lightclient", () => {
     let head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) {
       // Block may still be in the write pipeline on slow CI runners, wait briefly and retry
-      await sleep(500);
+      await sleep(BLOCK_DB_RETRY_DELAY_MS);
       head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     }
     if (!head) throw Error("First beacon node has no head block");
