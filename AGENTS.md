@@ -211,28 +211,6 @@ The fork choice store uses proto-array for efficient head computation:
   `recomputeForkChoiceHead()` to refresh the cache
 - This applies to any code that modifies proto-array outside normal block import
 
-### Error handling
-
-Use typed errors with error codes throughout:
-
-```typescript
-// Define
-enum MyErrorCode {
-  SOMETHING_WRONG = "MY_ERROR_SOMETHING_WRONG",
-}
-type MyErrorType = {code: MyErrorCode.SOMETHING_WRONG; detail: string};
-
-// Throw
-throw new MyError({code: MyErrorCode.SOMETHING_WRONG, detail: "..."});
-
-// Catch and check
-if (e instanceof MyError && e.type.code === MyErrorCode.SOMETHING_WRONG) {
-  // handle
-}
-```
-
-Avoid generic `throw new Error("message")` when a typed error exists.
-
 ### Logging
 
 Use structured logging with metadata objects:
@@ -242,7 +220,7 @@ this.logger.debug("Processing block", {slot, root: toRootHex(root)});
 this.logger.warn("Peer disconnected", {peerId: peer.toString(), reason});
 ```
 
-- Never concatenate strings for log messages
+- Prefer structured fields over string concatenation
 - Use appropriate levels: `error` > `warn` > `info` > `verbose` > `debug` > `trace`
 - Include relevant context (slot, root, peer) as structured fields
 
@@ -319,11 +297,11 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `chore:` maintenance tasks
 - `docs:` documentation changes
 
-Scope to a package when the change is localized:
+Examples:
 
 ```
-feat(validator): add proposer preference support
-fix(fork-choice): refresh cached head after execution status update
+feat: add lodestar prover for execution api
+fix: ignore known block in publish blinded block flow
 refactor(reqresp)!: support byte based handlers
 ```
 
@@ -399,6 +377,18 @@ function shouldReject(error: Error): boolean {
 
 When adding comments to containers or functions modified across forks,
 follow the existing style in that file. Don't add unnecessary markers.
+
+### Error handling patterns
+
+Use specific error codes when available:
+
+```typescript
+// Preferred
+throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN});
+
+// Avoid generic errors when specific ones exist
+throw new Error("Parent not found");
+```
 
 ### Config value coercion
 
