@@ -399,21 +399,6 @@ const peers = config.directPeers ?? [];
 const trimmed = value?.trim() ?? "";
 ```
 
-## Common pitfalls
-
-- **Forgetting `pnpm lint` before pushing**: Biome enforces formatting. Always
-  run it before committing. CI will catch it, but it wastes a round-trip.
-- **Editing `lib/` instead of `src/`**: Files in `packages/*/lib/` are build
-  outputs. Always edit in `packages/*/src/`.
-- **Stale fork choice head**: After modifying proto-array execution status,
-  the cached head from `getHead()` is stale. Call `recomputeForkChoiceHead()`.
-- **Holding state references**: Beacon state objects are large. Don't store
-  references beyond their immediate use — let them be garbage collected.
-- **Missing `.js` extension**: Relative imports must use `.js` even though
-  source files are `.ts`. This is required for Node.js ESM resolution.
-- **Force pushing after review**: Never force push once a reviewer has started.
-  Use incremental commits — reviewers track changes between reviews.
-
 ## Implementing consensus specs
 
 The primary reference for implementing consensus specs is the
@@ -477,3 +462,18 @@ Edit source files in `packages/*/src/` instead.
 
 The `specrefs/` directory contains pinned consensus spec versions.
 When implementing spec changes, reference the exact spec version.
+
+## Common pitfalls
+
+- **Forgetting `pnpm lint` before pushing**: Biome enforces formatting. Always
+  run it before committing. CI will catch it, but it wastes a round-trip.
+- **Editing `lib/` instead of `src/`**: Files in `packages/*/lib/` are build
+  outputs. Always edit in `packages/*/src/`.
+- **Stale fork choice head**: After modifying proto-array execution status,
+  the cached head from `getHead()` is stale. Call `recomputeForkChoiceHead()`.
+- **Holding state references**: Beacon state objects are large. Don't store
+  references beyond their immediate use — let them be garbage collected.
+- **Missing `.js` extension**: Relative imports must use `.js` even though
+  source files are `.ts`. This is required for Node.js ESM resolution.
+- **Force pushing after review**: Never force push once a reviewer has started.
+  Use incremental commits — reviewers track changes between reviews.
