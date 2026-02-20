@@ -11,7 +11,6 @@ import {
   beaconUrl,
   chainId,
   config,
-  minFinalizedTimeMs,
   proxyPort,
   proxyUrl,
   rpcUrl,
@@ -64,7 +63,7 @@ describe.skip("prover/proxy", () => {
       );
       // Give sometime to the prover to start proxy server
       await sleep(3000);
-    }, minFinalizedTimeMs);
+    }, 50000);
 
     afterAll(async () => {
       if (proc) {
