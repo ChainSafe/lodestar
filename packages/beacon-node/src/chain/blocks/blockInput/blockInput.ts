@@ -1,5 +1,5 @@
-import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ForkName, ForkPostFulu, ForkPostGloas, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
 import {byteArrayEquals, fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -24,7 +24,7 @@ import {
   SourceMeta,
 } from "./types.js";
 
-export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns;
+export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns | BlockInputEpbs;
 
 export function isBlockInputPreDeneb(blockInput: IBlockInput): blockInput is BlockInputPreData {
   return blockInput.type === DAType.PreData;
@@ -35,6 +35,10 @@ export function isBlockInputBlobs(blockInput: IBlockInput): blockInput is BlockI
 
 export function isBlockInputColumns(blockInput: IBlockInput): blockInput is BlockInputColumns {
   return blockInput.type === DAType.Columns;
+}
+
+export function isBlockInputEpbs(blockInput: IBlockInput): blockInput is BlockInputEpbs {
+  return blockInput.type === DAType.Epbs;
 }
 
 function createPromise<T>(): PromiseParts<T> {
@@ -901,5 +905,82 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       return withTimeout(() => this.computedDataPromise.promise, timeout, signal);
     }
     return Promise.resolve(this.getSampledColumns());
+  }
+}
+
+// ePBS - Beacon blocks have no DA requirement (execution payload is separate)
+
+type BlockInputEpbsState = {
+  hasBlock: true;
+  hasAllData: true;
+  block: SignedBeaconBlock<ForkPostGloas>;
+  source: SourceMeta;
+  timeCompleteSec: number;
+};
+
+/**
+ * In ePBS (Gloas fork), beacon blocks are valid immediately upon receipt.
+ * They have no data availability requirement - the execution payload
+ * is a separate entity that arrives later from the builder.
+ *
+ * This is conceptually similar to BlockInputPreData: the block simply exists
+ * and is immediately complete. The execution payload will be processed
+ * separately via the ExecutionPayloadInput pipeline (PR 2).
+ */
+export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, null> {
+  type = DAType.Epbs as const;
+
+  state: BlockInputEpbsState;
+
+  private constructor(init: BlockInputInit, state: BlockInputEpbsState) {
+    super(init);
+    this.state = state;
+    // Both promises resolve immediately - block is complete with no DA requirement
+    this.dataPromise.resolve(null);
+    this.blockPromise.resolve(state.block);
+  }
+
+  static createFromBlock(props: AddBlock<ForkPostGloas> & CreateBlockInputMeta): BlockInputEpbs {
+    const init: BlockInputInit = {
+      daOutOfRange: props.daOutOfRange,
+      timeCreated: props.seenTimestampSec,
+      forkName: props.forkName,
+      slot: props.block.message.slot,
+      blockRootHex: props.blockRootHex,
+      parentRootHex: toRootHex(props.block.message.parentRoot),
+    };
+    const state: BlockInputEpbsState = {
+      hasBlock: true,
+      hasAllData: true, // Immediately complete - no DA for beacon blocks in ePBS
+      block: props.block,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: props.seenTimestampSec,
+    };
+    return new BlockInputEpbs(init, state);
+  }
+
+  addBlock(_: AddBlock<ForkPostGloas>, opts = {throwOnDuplicateAdd: true}): void {
+    if (opts.throwOnDuplicateAdd) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlock to BlockInputEpbs - block already exists"
+      );
+    }
+  }
+
+  /**
+   * Get the blob KZG commitments from the block's execution payload bid.
+   * Used for validating data column sidecars in Gloas.
+   */
+  getBlobKzgCommitments(): deneb.BlobKzgCommitments {
+    return (this.state.block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
+      .blobKzgCommitments;
   }
 }

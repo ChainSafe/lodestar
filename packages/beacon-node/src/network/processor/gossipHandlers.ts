@@ -7,6 +7,7 @@ import {
   ForkSeq,
   NUMBER_OF_COLUMNS,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -18,6 +19,7 @@ import {
   UintNum64,
   deneb,
   fulu,
+  gloas,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -417,9 +419,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.getBlobsTracker.triggerGetBlobs(blockInput);
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
-      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
-        (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
-      );
+      // Gloas: kzg commitments are in signedExecutionPayloadBid, not directly on body
+      const blobCount = isForkPostGloas(blockInput.forkName)
+        ? (signedBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments.length
+        : (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length;
+      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blobCount);
     }
 
     chain

@@ -29,8 +29,13 @@ export async function verifyBlocksDataAvailability(
 
   const availableTime = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete())));
   const dataAvailabilityStatuses: DataAvailabilityStatus[] = blocks.map((blockInput) => {
+    // PreData (pre-Deneb) blocks have no DA requirement
     if (blockInput.type === DAType.PreData) {
       return DataAvailabilityStatus.PreData;
+    }
+    // ePBS (Gloas) beacon blocks have no DA requirement - execution payload is separate
+    if (blockInput.type === DAType.Epbs) {
+      return DataAvailabilityStatus.Epbs;
     }
     if (blockInput.daOutOfRange) {
       return DataAvailabilityStatus.OutOfRange;

@@ -6,6 +6,7 @@ export enum DAType {
   PreData = "pre-data",
   Blobs = "blobs",
   Columns = "columns",
+  Epbs = "epbs", // Blocks have no DA requirement in ePBS/Gloas - execution payload is separate
 }
 
 export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars;

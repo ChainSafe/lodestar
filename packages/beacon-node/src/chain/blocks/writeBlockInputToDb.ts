@@ -1,7 +1,8 @@
+import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {fulu} from "@lodestar/types";
 import {prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
-import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {IBlockInput, isBlockInputBlobs, isBlockInputColumns, isBlockInputEpbs} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
 /**
@@ -123,12 +124,24 @@ export async function persistBlockInputs(this: BeaconChain, blockInputs: IBlockI
     })
     .finally(() => {
       for (const blockInput of blockInputs) {
-        this.seenBlockInputCache.prune(blockInput.blockRootHex);
+        if (isBlockInputEpbs(blockInput)) {
+          // Gloas: delay pruning until next slot
+          // Data columns arrive after builder sees block, need KZG commitments from cached block for validation
+          // TODO GLOAS: determine optimal delay - using msToNextSlot for now
+          const msToNextSlot =
+            computeTimeAtSlot(this.config, blockInput.slot + 1, this.genesisTime) * 1000 - Date.now();
+          setTimeout(() => {
+            this.seenBlockInputCache.prune(blockInput.blockRootHex);
+            this.logger.debug("Pruned ePBS block input after delay", {
+              slot: blockInput.slot,
+              root: blockInput.blockRootHex,
+            });
+          }, Math.max(0, msToNextSlot));
+        } else {
+          this.seenBlockInputCache.prune(blockInput.blockRootHex);
+        }
       }
-      // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable.
-      // Clear here (after the DB write) so that writeBlockInputToDb can still use the cached serialized bytes.
-      this.serializedCache.clear();
-      if (blockInputs.length === 1) {
+      if (blockInputs.length === 1 && !isBlockInputEpbs(blockInputs[0])) {
         this.logger.debug("Pruned block input", {
           slot: blockInputs[0].slot,
           root: blockInputs[0].blockRootHex,

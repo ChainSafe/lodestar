@@ -158,6 +158,10 @@ export async function verifyBlockExecutionPayload(
 
   if (!executionPayloadEnabled) {
     // Pre-merge block, no execution payload to verify
+    // TODO GLOAS: Gloas blocks also reach here since isExecutionBlockBodyType returns false
+    // (no executionPayload field in body). Consider returning ExecutionStatus.Valid instead,
+    // as the beacon block is valid regardless of execution payload. This requires fork choice
+    // changes to handle Gloas blocks in a third branch (not pre-merge, not post-merge).
     return {executionStatus: ExecutionStatus.PreMerge, lvhResponse: undefined, execError: null};
   }
 

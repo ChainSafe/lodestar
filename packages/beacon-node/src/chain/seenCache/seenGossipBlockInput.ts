@@ -3,6 +3,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreGloas,
   SLOTS_PER_EPOCH,
   isForkPostDeneb,
@@ -20,6 +21,7 @@ import {
   BlockInput,
   BlockInputBlobs,
   BlockInputColumns,
+  BlockInputEpbs,
   BlockInputPreData,
   BlockWithSource,
   DAType,
@@ -179,12 +181,19 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // TODO GLOAS: Implement
+      // ePBS (Gloas): Beacon blocks are valid immediately with no DA requirement
       if (isForkPostGloas(forkName)) {
-        throw Error("Not implemented");
-      }
-      // Pre-deneb
-      if (!isForkPostDeneb(forkName)) {
+        blockInput = BlockInputEpbs.createFromBlock({
+          block: block as SignedBeaconBlock<ForkPostGloas>,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          source,
+          seenTimestampSec,
+          peerIdStr,
+        });
+        // Pre-deneb
+      } else if (!isForkPostDeneb(forkName)) {
         blockInput = BlockInputPreData.createFromBlock({
           block,
           blockRootHex,
