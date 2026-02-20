@@ -73,7 +73,9 @@ export function computeEnvelopeStateRoot(
     signature: G2_POINT_AT_INFINITY,
   };
 
+  const processEnvelopeTimer = metrics?.blockPayload.executionPayloadEnvelopeProcessingTime.startTimer();
   processExecutionPayloadEnvelope(postBlockState, signedEnvelope, false);
+  processEnvelopeTimer?.();
 
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
     source: StateHashTreeRootSource.computeEnvelopeStateRoot,

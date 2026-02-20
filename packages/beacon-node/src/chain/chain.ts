@@ -966,7 +966,12 @@ export class BeaconChain implements IBeaconChain {
         : this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
     const blockRootHex = toRootHex(blockRoot);
 
-    if (isForkPostGloas(fork) && produceResult.type === BlockType.Full) {
+    if (isForkPostGloas(fork)) {
+      // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
+      if (produceResult.type !== BlockType.Full) {
+        throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
+      }
+
       const gloasResult = produceResult as ProduceFullGloas;
       const envelope: gloas.ExecutionPayloadEnvelope = {
         payload: gloasResult.executionPayload,

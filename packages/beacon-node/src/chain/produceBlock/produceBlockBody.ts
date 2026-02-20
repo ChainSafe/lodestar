@@ -200,6 +200,9 @@ export async function produceBlockBody<T extends BlockType>(
   this.logger.verbose("Producing beacon block body", logMeta);
 
   if (isForkPostGloas(fork)) {
+    // TODO GLOAS: support non self-building here, the block type differentiation between
+    // full and blinded no longer makes sense in gloas, it might be a good idea to move
+    // this into a completely separate function and have pre/post gloas more separated
     const gloasState = currentState as CachedBeaconStateGloas;
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;

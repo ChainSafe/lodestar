@@ -429,7 +429,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                     signedBlockContents as SignedBlockContents<ForkPostDeneb>
                   )
                 : sszTypesFor(fork).SignedBeaconBlock.toJson(
-                    signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb & ForkPostGloas>
+                    signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb | ForkPostGloas>
                   ),
             headers: {
               [MetaHeader.Version]: fork,
@@ -458,7 +458,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                     signedBlockContents as SignedBlockContents<ForkPostDeneb>
                   )
                 : sszTypesFor(fork).SignedBeaconBlock.serialize(
-                    signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb & ForkPostGloas>
+                    signedBlockContents.signedBlock as SignedBeaconBlock<ForkPreDeneb | ForkPostGloas>
                   ),
             headers: {
               [MetaHeader.Version]: fork,

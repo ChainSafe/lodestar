@@ -971,7 +971,7 @@ export function getValidatorApi(
           },
         };
       } finally {
-        if (timer) timer({source});
+        timer?.({source});
       }
     },
 

@@ -313,8 +313,9 @@ export function getBeaconBlockApi({
     ];
     const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
 
-    // After gloas, data columns are not published with the block but when publishing the execution payload envelope
-    if (isForkPostFulu(fork) && !isForkPostGloas(fork)) {
+    if (isForkPostGloas(fork)) {
+      // After gloas, data columns are not published with the block but when publishing the execution payload envelope
+    } else if (isForkPostFulu(fork)) {
       let columnsPublishedWithZeroPeers = 0;
       // sent peers per topic are logged in network.publishGossip(), here we only track metrics for it
       // starting from fulu, we have to push to 128 subnets so need to make sure we have enough sent peers per topic
@@ -710,7 +711,7 @@ export function getBeaconBlockApi({
         dataColumns: dataColumnSidecars.length,
       };
 
-      // Simple implementation of a pending envelope queue. If envelope is a bit early, hold it.
+      // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
         await sleep(msToBlockSlot);
