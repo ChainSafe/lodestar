@@ -11,8 +11,8 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   DataColumnSidecar,
+  DataColumnSidecars,
   LightClientBootstrap,
-  isGloasDataColumnSidecar,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   LightClientUpdate,
@@ -27,6 +27,7 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
@@ -782,7 +783,7 @@ export class Network implements INetwork {
     this.core.setTargetGroupCount(count);
   };
 
-  private onPublishDataColumns = (sidecars: DataColumnSidecar[]): Promise<number[]> => {
+  private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 

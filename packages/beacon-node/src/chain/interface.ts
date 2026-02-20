@@ -11,7 +11,7 @@ import {
 import {
   BeaconBlock,
   BlindedBeaconBlock,
-  DataColumnSidecar,
+  DataColumnSidecars,
   Epoch,
   Root,
   RootHex,
@@ -224,7 +224,7 @@ export interface IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
-  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]>;
+  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars>;
   getSerializedDataColumnSidecars(
     blockSlot: Slot,
     blockRootHex: string,

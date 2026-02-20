@@ -279,7 +279,6 @@ export function getBlobKzgCommitments(
   return (signedBlock.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments;
 }
 
-
 /**
  * Given a signed block header and the commitments, inclusion proof, cells/proofs associated with
  * each blob in the block, assemble the sidecars which can be distributed to peers.

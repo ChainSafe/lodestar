@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {BeaconState, DataColumnSidecar, DataColumnSidecars, deneb, sszTypesFor} from "@lodestar/types";
+import {BeaconState, DataColumnSidecars, deneb, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
@@ -96,7 +96,7 @@ export function getDebugApi({
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
 
-      let dataColumnSidecars: DataColumnSidecar[];
+      let dataColumnSidecars: DataColumnSidecars;
 
       const blobCount = isForkPostDeneb(fork)
         ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length
@@ -115,9 +115,9 @@ export function getDebugApi({
       }
 
       return {
-        data: indices
-          ? (dataColumnSidecars.filter(({index}) => indices.includes(index)) as DataColumnSidecars)
-          : dataColumnSidecars,
+        data: (indices
+          ? dataColumnSidecars.filter(({index}) => indices.includes(index))
+          : dataColumnSidecars) as DataColumnSidecars,
         meta: {
           executionOptimistic,
           finalized,
