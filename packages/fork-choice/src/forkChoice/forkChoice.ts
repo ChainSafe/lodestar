@@ -46,6 +46,7 @@ import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlo
 import {
   type FastConfirmationContext,
   FastConfirmationRule,
+  FastConfirmationSteps,
   type IFastConfirmationRule,
 } from "./fastConfirmation/fastConfirmationRule.ts";
 import {
@@ -1633,15 +1634,22 @@ export class ForkChoice implements IForkChoice {
 
   private runFastConfirmation(): void {
     if (!this.fastConfirmationRule || !this.fastConfirmationContext) return;
-    const timer = this.metrics?.fastConfirmation.duration.startTimer();
+    const totalDurationTimer = this.metrics?.fastConfirmation.totalDuration.startTimer();
     try {
-      this.updateHead();
+      const updateHeadTimer = this.metrics?.fastConfirmation.stepsDuration.startTimer({ step: FastConfirmationSteps.updateHead });
+
+      try {
+        this.updateHead();
+      } finally {
+        updateHeadTimer?.();
+      }
+
       const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fastConfirmationContext);
       this.fcStore.confirmedRoot = result.confirmedRoot;
     } catch (err) {
       this.logger?.warn("Fast confirmation failed", {}, err as Error);
     } finally {
-      timer?.();
+      totalDurationTimer?.();
     }
   }
 
