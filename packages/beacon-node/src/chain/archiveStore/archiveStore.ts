@@ -211,7 +211,6 @@ export class ArchiveStore {
       );
       timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
-      // Archive execution payload envelopes (Gloas+ only)
       if (finalizedFork >= ForkSeq.gloas) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
         await archiveExecutionPayloadEnvelopes(this.chain, finalized);

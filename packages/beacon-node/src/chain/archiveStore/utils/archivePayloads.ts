@@ -3,9 +3,6 @@ import {IBeaconChain} from "../../interface.js";
 
 /**
  * Archives execution payload envelopes from hot DB to archive DB after finalization.
- *
- * @param chain - IBeaconChain instance with access to fork choice and DB
- * @param finalized - The finalized checkpoint
  */
 export async function archiveExecutionPayloadEnvelopes(
   chain: IBeaconChain,
