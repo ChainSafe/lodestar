@@ -1276,7 +1276,7 @@
   },
   "timezone": "utc",
   "title": "Lodestar - fork choice",
-  "uid": "dfdspdm1mjp4wa",
+  "uid": "lodestar_fork_choice",
   "version": 2,
   "weekStart": "monday"
 }
