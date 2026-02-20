@@ -7,15 +7,7 @@ import {ChainConfig, chainConfigToJson} from "@lodestar/config";
 import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {sleep} from "@lodestar/utils";
 import {getLodestarProverCli} from "../../../../src/cli/cli.js";
-import {
-  beaconUrl,
-  chainId,
-  config,
-  proxyPort,
-  proxyUrl,
-  rpcUrl,
-  waitForFinalized,
-} from "../../../utils/e2e_env.js";
+import {beaconUrl, chainId, config, proxyPort, proxyUrl, rpcUrl, waitForFinalized} from "../../../utils/e2e_env.js";
 
 const cli = getLodestarProverCli();
 
