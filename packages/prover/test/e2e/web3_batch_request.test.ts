@@ -5,9 +5,9 @@ import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {beaconUrl, config, minFinalizedTimeMs, rpcUrl, waitForFinalized} from "../utils/e2e_env.js";
 
-// TODO: Re-enable once shared E2E env timing is stabilized (#8937)
-// Disabled due to flaky hook timeout on slow CI runners
-describe.skip("web3_batch_requests", () => {
+// TODO: Re-enable once shared E2E env timing is stabilized
+// https://github.com/ChainSafe/lodestar/issues/8937
+describe.skipIf(process.env.CI)("web3_batch_requests", () => {
   vi.setConfig({hookTimeout: minFinalizedTimeMs});
 
   let web3: Web3;
