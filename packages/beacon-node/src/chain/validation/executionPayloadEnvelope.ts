@@ -128,22 +128,17 @@ async function validateExecutionPayloadEnvelope(
 
   // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
   // Spec: verify_execution_payload_envelope_signature
-  // For BUILDER_INDEX_SELF_BUILD: verify against state.validators[state.latest_block_header.proposer_index].pubkey
-  // For regular builders: verify against state.builders[builder_index].pubkey
-  {
+  // For BUILDER_INDEX_SELF_BUILD: spec requires verifying against the block's proposer pubkey,
+  // which needs the per-block state (state.latest_block_header.proposer_index). At gossip time
+  // we only have the head state, which may not match the envelope's block during reorgs or late
+  // delivery. Full signature verification for self-build is deferred to processExecutionPayloadEnvelope
+  // where the correct per-block state is available.
+  // For regular builders: verify against state.builders[builder_index].pubkey (head state is valid
+  // since builder pubkeys don't change per-block).
+  if (envelope.builderIndex !== BUILDER_INDEX_SELF_BUILD) {
     const state = chain.getHeadState() as CachedBeaconStateGloas;
-    let pubkey: Uint8Array;
-
-    if (envelope.builderIndex === BUILDER_INDEX_SELF_BUILD) {
-      // Self-build: proposer signs the envelope
-      const proposerIndex = state.latestBlockHeader.proposerIndex;
-      pubkey = state.validators.getReadonly(proposerIndex).pubkey;
-    } else {
-      pubkey = state.builders.getReadonly(envelope.builderIndex).pubkey;
-    }
-
     const signatureSet = createSingleSignatureSetFromComponents(
-      PublicKey.fromBytes(pubkey),
+      PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey),
       getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
       executionPayloadEnvelope.signature
     );
