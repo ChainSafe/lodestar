@@ -832,7 +832,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
 
-      // TODO GLOAS: Handle valid envelope. Need an import flow that calls `processExecutionPayloadEnvelope` and fork choice
+      await chain.importExecutionPayloadEnvelope(executionPayloadEnvelope);
     },
     [GossipType.payload_attestation_message]: async ({
       gossipData,
@@ -865,6 +865,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid.message);
         metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
+
+        if (chain.emitter.listenerCount(routes.events.EventType.executionPayloadBid)) {
+          chain.emitter.emit(routes.events.EventType.executionPayloadBid, executionPayloadBid.message);
+        }
       } catch (e) {
         logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
       }

@@ -2,8 +2,9 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithPayload, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithPayload, IForkChoice, PayloadStatus, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -33,6 +34,7 @@ import {
   getEffectiveBalancesFromStateBytes,
   processSlots,
 } from "@lodestar/state-transition";
+import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -61,6 +63,7 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.ts";
 import {BuilderStatus} from "../execution/builder/http.js";
+import {ExecutionPayloadStatus} from "../execution/engine/interface.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
@@ -1005,6 +1008,81 @@ export class BeaconChain implements IBeaconChain {
 
   async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob(blocks, opts);
+  }
+
+  async importExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void> {
+    const envelope = signedEnvelope.message;
+    const blockRootHex = toRootHex(envelope.beaconBlockRoot);
+    const block = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+
+    if (block === null) {
+      throw Error(`Cannot import execution payload envelope for unknown block root=${blockRootHex}`);
+    }
+
+    // Idempotent handling for duplicate envelopes
+    if (block.payloadStatus === PayloadStatus.FULL) {
+      this.logger.debug("Execution payload envelope already imported", {
+        slot: envelope.slot,
+        blockRoot: blockRootHex,
+      });
+      return;
+    }
+
+    const preEnvelopeState = (await this.regen.getState(
+      block.stateRoot,
+      RegenCaller.restApi
+    )) as CachedBeaconStateGloas;
+    const postEnvelopeState = preEnvelopeState.clone(true) as CachedBeaconStateGloas;
+
+    processExecutionPayloadEnvelope(postEnvelopeState, signedEnvelope, true);
+
+    const executionPayload = envelope.payload;
+    const fork = this.config.getForkName(envelope.slot);
+    const versionedHashes: Uint8Array[] = [];
+
+    const execResult = await this.executionEngine.notifyNewPayload(
+      fork,
+      executionPayload,
+      versionedHashes,
+      fromHex(block.parentRoot),
+      envelope.executionRequests
+    );
+
+    this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
+
+    if (
+      execResult.status !== ExecutionPayloadStatus.VALID &&
+      execResult.status !== ExecutionPayloadStatus.ACCEPTED &&
+      execResult.status !== ExecutionPayloadStatus.SYNCING
+    ) {
+      throw Error(`Execution payload rejected status=${execResult.status} blockRoot=${blockRootHex}`);
+    }
+
+    this.forkChoice.onExecutionPayload(
+      blockRootHex,
+      toRootHex(executionPayload.blockHash),
+      executionPayload.blockNumber,
+      toRootHex(envelope.stateRoot)
+    );
+
+    this.regen.processPayloadState(postEnvelopeState);
+    await this.db.executionPayloadEnvelope.put(envelope.beaconBlockRoot, signedEnvelope);
+
+    this.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot);
+
+    this.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
+      slot: envelope.slot,
+      blockRoot: blockRootHex,
+    });
+
+    this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+
+    this.logger.debug("Imported execution payload envelope", {
+      slot: envelope.slot,
+      blockRoot: blockRootHex,
+      executionPayloadStatus: execResult.status,
+      executionBlockHash: toRootHex(executionPayload.blockHash),
+    });
   }
 
   getStatus(): Status {

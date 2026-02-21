@@ -227,6 +227,18 @@ export type Endpoints = {
   >;
 
   /**
+   * Get execution payload envelope by block_id
+   * Returns the signed execution payload envelope for the given block.
+   */
+  getExecutionPayloadEnvelope: Endpoint<
+    "GET",
+    BlockArgs,
+    {params: {block_id: string}},
+    gloas.SignedExecutionPayloadEnvelope,
+    ExecutionOptimisticFinalizedAndVersionMeta
+  >;
+
+  /**
    * Get block BlobSidecar
    * Retrieves BlobSidecar included in requested block.
    */
@@ -632,6 +644,19 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: EmptyResponseCodec,
       init: {
         requestWireFormat: WireFormat.ssz,
+      },
+    },
+    getExecutionPayloadEnvelope: {
+      url: "/eth/v1/beacon/execution_payload_envelope/{block_id}",
+      method: "GET",
+      req: {
+        writeReq: ({blockId}) => ({params: {block_id: blockId.toString()}}),
+        parseReq: ({params}) => ({blockId: params.block_id}),
+        schema: {params: {block_id: Schema.StringRequired}},
+      },
+      resp: {
+        data: ssz.gloas.SignedExecutionPayloadEnvelope,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
     getBlobSidecars: {

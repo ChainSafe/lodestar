@@ -9,6 +9,7 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
+  MAX_PAYLOAD_ATTESTATIONS,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -278,8 +279,15 @@ export async function produceBlockBody<T extends BlockType>(
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = signedBid;
-    // TODO GLOAS: Get payload attestations from pool for previous slot
-    gloasBody.payloadAttestations = [];
+    // Get payload attestations from pool for previous slot's block root
+    {
+      const prevSlotBlockRoot = toRootHex(parentBlockRoot);
+      gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+        prevSlotBlockRoot,
+        blockSlot - 1,
+        MAX_PAYLOAD_ATTESTATIONS
+      );
+    }
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later

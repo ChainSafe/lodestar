@@ -1,0 +1,50 @@
+participants:
+  # Baseline Lighthouse participant set from Nico
+  - el_type: geth
+    el_image: ethpandaops/geth:epbs-devnet-0
+    cl_type: lighthouse
+    cl_image: ethpandaops/lighthouse:epbs-devnet-0
+    count: 3
+    validator_count: 32
+    supernode: true
+
+  # Lodestar validator participant (interop target)
+  - el_type: geth
+    el_image: ethpandaops/geth:epbs-devnet-0
+    cl_type: lodestar
+    cl_image: lodestar:epbs-devnet-0-local
+    count: 1
+    validator_count: 32
+    supernode: true
+    cl_extra_params:
+      - --targetPeers=12
+
+  # Lodestar observer node (no validators) for extra network coverage + logs
+  - el_type: geth
+    el_image: ethpandaops/geth:epbs-devnet-0
+    cl_type: lodestar
+    cl_image: lodestar:epbs-devnet-0-local
+    count: 1
+    validator_count: 0
+    cl_extra_params:
+      - --targetPeers=12
+
+network_params:
+  gloas_fork_epoch: 1
+  seconds_per_slot: 6
+
+additional_services:
+  - dora
+  - assertoor
+
+assertoor_params:
+  run_stability_check: true
+  run_block_proposal_check: true
+
+port_publisher:
+  cl:
+    enabled: true
+    public_port_start: 33000
+  el:
+    enabled: true
+    public_port_start: 32000

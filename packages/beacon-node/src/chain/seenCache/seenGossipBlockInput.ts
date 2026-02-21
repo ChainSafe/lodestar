@@ -179,9 +179,19 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // TODO GLOAS: Implement
+      // Post-Gloas: beacon blocks are imported immediately without waiting for the execution payload
+      // envelope. The envelope arrives and is processed separately via importExecutionPayloadEnvelope.
+      // Use BlockInputPreData since there's no data dependency for the beacon block itself.
       if (isForkPostGloas(forkName)) {
-        throw Error("Not implemented");
+        blockInput = BlockInputPreData.createFromBlock({
+          block,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          source,
+          seenTimestampSec,
+          peerIdStr,
+        });
       }
       // Pre-deneb
       if (!isForkPostDeneb(forkName)) {
