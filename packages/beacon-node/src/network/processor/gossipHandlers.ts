@@ -7,6 +7,7 @@ import {
   ForkSeq,
   NUMBER_OF_COLUMNS,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -22,7 +23,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {LogLevel, Logger, prettyBytes, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlockInput,
   BlockInputColumns,
@@ -30,6 +31,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import type {BidInfo} from "../../chain/blocks/payloadEnvelopeInput.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -42,8 +44,6 @@ import {
   BlockGossipError,
   DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
-  ExecutionPayloadEnvelopeError,
-  ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
@@ -105,8 +105,8 @@ export type ValidatorFnsModules = {
   core: INetworkCore;
 };
 
-const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
+const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 
 /**
  * Gossip handlers perform validation + handling in a single function.
@@ -132,59 +132,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
-  const pendingExecutionPayloadEnvelopesByBlockRoot = new Map<string, gloas.SignedExecutionPayloadEnvelope>();
-  const processingDeferredEnvelopeRoots = new Set<string>();
-
-  function scheduleDeferredEnvelopeImport(blockRootHex: string): void {
-    if (processingDeferredEnvelopeRoots.has(blockRootHex)) {
-      return;
-    }
-    processingDeferredEnvelopeRoots.add(blockRootHex);
-
-    void (async () => {
-      try {
-        for (let attempt = 0; attempt < 20; attempt++) {
-          const pendingEnvelope = pendingExecutionPayloadEnvelopesByBlockRoot.get(blockRootHex);
-          if (!pendingEnvelope) {
-            return;
-          }
-
-          try {
-            await validateGossipExecutionPayloadEnvelope(chain, pendingEnvelope);
-            await chain.importExecutionPayloadEnvelope(pendingEnvelope);
-            pendingExecutionPayloadEnvelopesByBlockRoot.delete(blockRootHex);
-            logger.info("Imported deferred execution payload envelope", {
-              slot: pendingEnvelope.message.slot,
-              blockRoot: blockRootHex,
-              attempt,
-            });
-            return;
-          } catch (e) {
-            if (
-              e instanceof ExecutionPayloadEnvelopeError &&
-              e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN
-            ) {
-              chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: blockRootHex, source: BlockInputSource.gossip});
-              await sleep(500);
-              continue;
-            }
-
-            logger.warn(
-              "Failed importing deferred execution payload envelope",
-              {slot: pendingEnvelope.message.slot, blockRoot: blockRootHex},
-              e as Error
-            );
-            pendingExecutionPayloadEnvelopesByBlockRoot.delete(blockRootHex);
-            return;
-          }
-        }
-        // Retry budget exhausted — clean up to prevent unbounded map growth
-        pendingExecutionPayloadEnvelopesByBlockRoot.delete(blockRootHex);
-      } finally {
-        processingDeferredEnvelopeRoots.delete(blockRootHex);
-      }
-    })();
-  }
+  // Bounded cache for envelopes that arrive before their beacon block.
+  const MAX_EARLY_ENVELOPES = 64;
+  const earlyEnvelopes = new Map<string, {envelope: gloas.SignedExecutionPayloadEnvelope; seenTimestampSec: number}>();
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
@@ -233,6 +183,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       logger.debug("Validated gossip block", {...blockInputMeta, ...logCtx, recvToValidation, validationTime});
 
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
+      if (isForkPostGloas(fork)) {
+        const bid = (signedBlock.message as gloas.BeaconBlock).body.signedExecutionPayloadBid.message;
+        const bidInfo: BidInfo = {
+          blockRootHex,
+          slot,
+          builderIndex: bid.builderIndex,
+          blockHashFromBid: toRootHex(bid.blockHash),
+        };
+        chain.seenPayloadEnvelopeCache.createFromBid(bidInfo);
+      }
 
       return blockInput;
     } catch (e) {
@@ -508,15 +468,30 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // to track block process steps
         seenTimestampSec,
       })
-      .then(() => {
+      .then(async () => {
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
 
-        // If we previously received an envelope for this block before the block itself,
-        // process it now that the block is available in fork choice.
-        if (pendingExecutionPayloadEnvelopesByBlockRoot.has(blockInput.blockRootHex)) {
-          scheduleDeferredEnvelopeImport(blockInput.blockRootHex);
+        // If an envelope arrived before this block, process it now that the block is in fork-choice.
+        const early = earlyEnvelopes.get(blockInput.blockRootHex);
+        if (early) {
+          earlyEnvelopes.delete(blockInput.blockRootHex);
+          try {
+            chain.seenPayloadEnvelopeCache.get(blockInput.blockRootHex)?.setEnvelope(early.envelope);
+            await validateGossipExecutionPayloadEnvelope(chain, early.envelope);
+            await chain.importExecutionPayloadEnvelope(early.envelope);
+            logger.info("Imported early execution payload envelope", {
+              slot: early.envelope.message.slot,
+              blockRoot: blockInput.blockRootHex,
+            });
+          } catch (e) {
+            logger.warn(
+              "Failed importing early execution payload envelope",
+              {blockRoot: blockInput.blockRootHex},
+              e as Error
+            );
+          }
         }
       })
       .catch((e) => {
@@ -902,22 +877,23 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
       const blockRootHex = toRootHex(executionPayloadEnvelope.message.beaconBlockRoot);
 
-      try {
-        await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
-      } catch (e) {
-        // Envelope may arrive before the corresponding beacon block.
-        // Queue it and trigger unknown-block sync, then process once the block imports.
-        if (
-          e instanceof ExecutionPayloadEnvelopeError &&
-          e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN
-        ) {
-          pendingExecutionPayloadEnvelopesByBlockRoot.set(blockRootHex, executionPayloadEnvelope);
-          chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: blockRootHex, source: BlockInputSource.gossip});
-          scheduleDeferredEnvelopeImport(blockRootHex);
-          return;
+      // Envelope arrived before the block was gossip-validated: store and return.
+      const envelopeInput = chain.seenPayloadEnvelopeCache.get(blockRootHex);
+      if (!envelopeInput) {
+        // Only evict if we're adding a genuinely new entry
+        if (!earlyEnvelopes.has(blockRootHex) && earlyEnvelopes.size >= MAX_EARLY_ENVELOPES) {
+          const firstKey = earlyEnvelopes.keys().next().value;
+          if (firstKey !== undefined) {
+            earlyEnvelopes.delete(firstKey);
+          }
         }
-        throw e;
+        earlyEnvelopes.set(blockRootHex, {envelope: executionPayloadEnvelope, seenTimestampSec});
+        chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: blockRootHex, source: BlockInputSource.gossip});
+        return;
       }
+
+      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+      envelopeInput.setEnvelope(executionPayloadEnvelope);
 
       const slot = executionPayloadEnvelope.message.slot;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);

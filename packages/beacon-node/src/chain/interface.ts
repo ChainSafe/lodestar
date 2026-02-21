@@ -67,6 +67,7 @@ import {
   SeenExecutionPayloadBids,
   SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
+  SeenPayloadEnvelopeCache,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -143,6 +144,7 @@ export interface IBeaconChain {
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeCache: SeenPayloadEnvelopeCache;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 

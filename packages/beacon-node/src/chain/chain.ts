@@ -120,6 +120,7 @@ import {
   SeenExecutionPayloadBids,
   SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
+  SeenPayloadEnvelopeCache,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -198,6 +199,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeCache: SeenPayloadEnvelopeCache;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -337,6 +339,7 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
+    this.seenPayloadEnvelopeCache = new SeenPayloadEnvelopeCache(metrics);
 
     this._earliestAvailableSlot = anchorState.slot;
 
@@ -1495,6 +1498,7 @@ export class BeaconChain implements IBeaconChain {
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
     this.seenExecutionPayloadEnvelopes.prune(finalizedSlot);
+    this.seenPayloadEnvelopeCache.onFinalized(cp);
 
     // Update validator custody to account for effective balance changes
     await this.updateValidatorsCustodyRequirement(cp);

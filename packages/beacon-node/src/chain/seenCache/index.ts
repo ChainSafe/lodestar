@@ -5,3 +5,4 @@ export {SeenContributionAndProof} from "./seenCommitteeContribution.js";
 export {SeenExecutionPayloadBids} from "./seenExecutionPayloadBids.js";
 export {SeenExecutionPayloadEnvelopes} from "./seenExecutionPayloadEnvelope.js";
 export {SeenBlockInput} from "./seenGossipBlockInput.js";
+export {SeenPayloadEnvelopeCache} from "./seenPayloadEnvelopeCache.js";
