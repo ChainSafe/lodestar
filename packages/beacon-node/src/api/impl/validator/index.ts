@@ -394,10 +394,18 @@ export function getValidatorApi(
       throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
 
-    if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
+    if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing) {
+      // For Gloas blocks, the PENDING variant is always Syncing (no embedded payload).
+      // Check if a FULL variant exists with a validated execution status.
+      const fullBlock = chain.forkChoice.getBlock(beaconBlockRoot, PayloadStatus.FULL);
+      if (fullBlock && fullBlock.executionStatus !== ExecutionStatus.Syncing) {
+        return;
+      }
+
       throw new NodeIsSyncing(
         `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash} number=${protoBeaconBlock.executionPayloadNumber}`
       );
+    }
   }
 
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
