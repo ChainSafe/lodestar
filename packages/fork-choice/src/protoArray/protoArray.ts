@@ -320,6 +320,7 @@ export class ProtoArray {
       // If Epbs, that means the node is either PENDING or EMPTY, there could be
       // some ancestor still has syncing status.
       if (node.executionStatus === ExecutionStatus.Epbs) {
+        nodeIndex = node.parent;
         continue;
       }
       this.validateNodeByIndex(nodeIndex);
