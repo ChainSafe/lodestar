@@ -46,11 +46,24 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     throw Error(`Bid slot ${bid.slot} does not match block slot ${block.slot}`);
   }
 
-  // Spec: assert bid.parent_block_hash == state.latest_block_hash
-  if (!byteArrayEquals(bid.parentBlockHash, state.latestBlockHash)) {
-    throw Error(
-      `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)}`
-    );
+  // Spec: assert bid.parent_block_hash == state.latest_block_hash.
+  // In separated payload flow, if parent envelope is still pending, latestBlockHash
+  // can lag while latestExecutionPayloadBid.blockHash tracks the expected parent hash.
+  const parentBidBlockHash = state.latestExecutionPayloadBid.blockHash;
+  const parentIsFull = byteArrayEquals(parentBidBlockHash, state.latestBlockHash);
+
+  if (parentIsFull) {
+    if (!byteArrayEquals(bid.parentBlockHash, state.latestBlockHash)) {
+      throw Error(
+        `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)}`
+      );
+    }
+  } else {
+    if (!byteArrayEquals(bid.parentBlockHash, parentBidBlockHash)) {
+      throw Error(
+        `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match pending parent bid block hash ${toRootHex(parentBidBlockHash)} (latestBlockHash=${toRootHex(state.latestBlockHash)})`
+      );
+    }
   }
 
   if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
