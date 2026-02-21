@@ -50,6 +50,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV2: [ExecutionPayloadRpc];
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
+  engine_newPayloadV5: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -75,6 +76,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV3: [QUANTITY];
   engine_getPayloadV4: [QUANTITY];
   engine_getPayloadV5: [QUANTITY];
+  engine_getPayloadV6: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -111,6 +113,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV2: PayloadStatus;
   engine_newPayloadV3: PayloadStatus;
   engine_newPayloadV4: PayloadStatus;
+  engine_newPayloadV5: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -131,6 +134,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV3: ExecutionPayloadResponse;
   engine_getPayloadV4: ExecutionPayloadResponse;
   engine_getPayloadV5: ExecutionPayloadResponse;
+  engine_getPayloadV6: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -180,6 +184,7 @@ export type ExecutionPayloadRpc = {
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
+  slotNumber?: QUANTITY; // GLOAS:EIP-7843
 };
 
 export type WithdrawalRpc = {
@@ -280,6 +285,13 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
 
   // No changes in Electra
 
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {slotNumber} = data as ExecutionPayload & {slotNumber?: number};
+    if (slotNumber !== undefined) {
+      payload.slotNumber = numToQuantity(slotNumber);
+    }
+  }
+
   return payload;
 }
 
@@ -374,6 +386,10 @@ export function parseExecutionPayload(
   }
 
   // No changes in Electra
+
+  if (ForkSeq[fork] >= ForkSeq.gloas && data.slotNumber !== undefined) {
+    (executionPayload as ExecutionPayload & {slotNumber: number}).slotNumber = quantityToNum(data.slotNumber);
+  }
 
   return {executionPayload, executionPayloadValue, blobsBundle, executionRequests, shouldOverrideBuilder};
 }

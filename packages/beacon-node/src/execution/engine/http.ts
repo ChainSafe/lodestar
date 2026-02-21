@@ -214,13 +214,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.electra
-        ? "engine_newPayloadV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_newPayloadV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_newPayloadV2"
-            : "engine_newPayloadV1";
+      ForkSeq[fork] >= ForkSeq.gloas
+        ? "engine_newPayloadV5"
+        : ForkSeq[fork] >= ForkSeq.electra
+          ? "engine_newPayloadV4"
+          : ForkSeq[fork] >= ForkSeq.deneb
+            ? "engine_newPayloadV3"
+            : ForkSeq[fork] >= ForkSeq.capella
+              ? "engine_newPayloadV2"
+              : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -242,7 +244,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
         const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
         engineRequest = {
-          method: "engine_newPayloadV4",
+          method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
           params: [
             serializedExecutionPayload,
             serializedVersionedHashes,
@@ -419,37 +421,64 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests;
     shouldOverrideBuilder?: boolean;
   }> {
-    let method: keyof EngineApiRpcReturnTypes;
+    type EngineGetPayloadMethod =
+      | "engine_getPayloadV1"
+      | "engine_getPayloadV2"
+      | "engine_getPayloadV3"
+      | "engine_getPayloadV4"
+      | "engine_getPayloadV5"
+      | "engine_getPayloadV6";
+    let methods: EngineGetPayloadMethod[];
     switch (fork) {
       case ForkName.phase0:
       case ForkName.altair:
       case ForkName.bellatrix:
-        method = "engine_getPayloadV1";
+        methods = ["engine_getPayloadV1"];
         break;
       case ForkName.capella:
-        method = "engine_getPayloadV2";
+        methods = ["engine_getPayloadV2"];
         break;
       case ForkName.deneb:
-        method = "engine_getPayloadV3";
+        methods = ["engine_getPayloadV3"];
         break;
       case ForkName.electra:
-        method = "engine_getPayloadV4";
+        methods = ["engine_getPayloadV4"];
         break;
-      default:
-        method = "engine_getPayloadV5";
+      case ForkName.fulu:
+      case ForkName.gloas:
+        // Lighthouse uses V5 for GLOAS. Fallback to V6 for ELs that only expose Amsterdam V6.
+        methods = fork === ForkName.gloas ? ["engine_getPayloadV5", "engine_getPayloadV6"] : ["engine_getPayloadV5"];
         break;
     }
-    const payloadResponse = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >(
-      {
-        method,
-        params: [payloadId],
-      },
-      getPayloadOpts
-    );
-    return parseExecutionPayload(fork, payloadResponse);
+
+    for (const [index, method] of methods.entries()) {
+      try {
+        const payloadResponse = await this.rpc.fetchWithRetries<
+          EngineApiRpcReturnTypes[typeof method],
+          EngineApiRpcParamTypes[typeof method]
+        >(
+          {
+            method,
+            params: [payloadId],
+          },
+          getPayloadOpts
+        );
+        return parseExecutionPayload(fork, payloadResponse);
+      } catch (e) {
+        const canFallbackToNextMethod =
+          e instanceof ErrorJsonRpcResponse &&
+          method === "engine_getPayloadV5" &&
+          index < methods.length - 1 &&
+          (e.response.error.code === -32601 ||
+            e.response.error.code === -38005 ||
+            e.response.error.message.toLowerCase().includes("unsupported fork"));
+        if (!canFallbackToNextMethod) {
+          throw e;
+        }
+      }
+    }
+
+    throw Error(`Unable to get payload for fork=${fork}`);
   }
 
   async prunePayloadIdCache(): Promise<void> {

@@ -132,6 +132,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
       engine_newPayloadV4: this.notifyNewPayload.bind(this),
+      engine_newPayloadV5: this.notifyNewPayload.bind(this),
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
@@ -140,6 +141,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV3: this.getPayloadV5.bind(this),
       engine_getPayloadV4: this.getPayloadV5.bind(this),
       engine_getPayloadV5: this.getPayloadV5.bind(this),
+      engine_getPayloadV6: this.getPayloadV5.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
@@ -336,6 +338,9 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       executionPayload.timestamp = payloadAttributes.timestamp;
       executionPayload.blockHash = crypto.randomBytes(32);
       executionPayload.transactions = [];
+      if (ForkSeq[fork] >= ForkSeq.gloas) {
+        (executionPayload as deneb.ExecutionPayload & {slotNumber: number}).slotNumber = 0;
+      }
 
       // Between 0 and 4 transactions for all forks
       const eip1559TxCount = Math.round(4 * Math.random());
