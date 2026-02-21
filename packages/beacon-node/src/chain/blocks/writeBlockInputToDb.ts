@@ -130,17 +130,23 @@ export async function persistBlockInputs(this: BeaconChain, blockInputs: IBlockI
           // TODO GLOAS: determine optimal delay - using msToNextSlot for now
           const msToNextSlot =
             computeTimeAtSlot(this.config, blockInput.slot + 1, this.genesisTime) * 1000 - Date.now();
-          setTimeout(() => {
-            this.seenBlockInputCache.prune(blockInput.blockRootHex);
-            this.logger.debug("Pruned ePBS block input after delay", {
-              slot: blockInput.slot,
-              root: blockInput.blockRootHex,
-            });
-          }, Math.max(0, msToNextSlot));
+          setTimeout(
+            () => {
+              this.seenBlockInputCache.prune(blockInput.blockRootHex);
+              this.logger.debug("Pruned ePBS block input after delay", {
+                slot: blockInput.slot,
+                root: blockInput.blockRootHex,
+              });
+            },
+            Math.max(0, msToNextSlot)
+          );
         } else {
           this.seenBlockInputCache.prune(blockInput.blockRootHex);
         }
       }
+      // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable.
+      // Clear here (after the DB write) so that writeBlockInputToDb can still use the cached serialized bytes.
+      this.serializedCache.clear();
       if (blockInputs.length === 1 && !isBlockInputEpbs(blockInputs[0])) {
         this.logger.debug("Pruned block input", {
           slot: blockInputs[0].slot,

@@ -908,8 +908,6 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   }
 }
 
-// ePBS - Beacon blocks have no DA requirement (execution payload is separate)
-
 type BlockInputEpbsState = {
   hasBlock: true;
   hasAllData: true;
@@ -918,15 +916,6 @@ type BlockInputEpbsState = {
   timeCompleteSec: number;
 };
 
-/**
- * In ePBS (Gloas fork), beacon blocks are valid immediately upon receipt.
- * They have no data availability requirement - the execution payload
- * is a separate entity that arrives later from the builder.
- *
- * This is conceptually similar to BlockInputPreData: the block simply exists
- * and is immediately complete. The execution payload will be processed
- * separately via the ExecutionPayloadInput pipeline (PR 2).
- */
 export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, null> {
   type = DAType.Epbs as const;
 
@@ -935,7 +924,6 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, null> {
   private constructor(init: BlockInputInit, state: BlockInputEpbsState) {
     super(init);
     this.state = state;
-    // Both promises resolve immediately - block is complete with no DA requirement
     this.dataPromise.resolve(null);
     this.blockPromise.resolve(state.block);
   }
@@ -975,10 +963,6 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, null> {
     }
   }
 
-  /**
-   * Get the blob KZG commitments from the block's execution payload bid.
-   * Used for validating data column sidecars in Gloas.
-   */
   getBlobKzgCommitments(): deneb.BlobKzgCommitments {
     return (this.state.block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
       .blobKzgCommitments;

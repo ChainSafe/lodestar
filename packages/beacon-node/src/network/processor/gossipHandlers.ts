@@ -2,12 +2,12 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {
   ForkName,
+  ForkPostDeneb,
   ForkPostElectra,
   ForkPreElectra,
   ForkSeq,
   NUMBER_OF_COLUMNS,
   isForkPostElectra,
-  isForkPostGloas,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -19,7 +19,6 @@ import {
   UintNum64,
   deneb,
   fulu,
-  gloas,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -72,6 +71,7 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.ts";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -419,10 +419,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.getBlobsTracker.triggerGetBlobs(blockInput);
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
-      // Gloas: kzg commitments are in signedExecutionPayloadBid, not directly on body
-      const blobCount = isForkPostGloas(blockInput.forkName)
-        ? (signedBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments.length
-        : (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length;
+      const blobCount = getBlobKzgCommitments(
+        blockInput.forkName,
+        signedBlock as SignedBeaconBlock<ForkPostDeneb>
+      ).length;
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blobCount);
     }
 

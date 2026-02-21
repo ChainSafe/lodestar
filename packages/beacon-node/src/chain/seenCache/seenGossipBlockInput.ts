@@ -181,7 +181,7 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // ePBS (Gloas): Beacon blocks are valid immediately with no DA requirement
+      // Post-gloas
       if (isForkPostGloas(forkName)) {
         blockInput = BlockInputEpbs.createFromBlock({
           block: block as SignedBeaconBlock<ForkPostGloas>,

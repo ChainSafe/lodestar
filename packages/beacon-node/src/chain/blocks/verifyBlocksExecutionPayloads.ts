@@ -150,8 +150,7 @@ export async function verifyBlockExecutionPayload(
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
 
-  // Gloas ePBS: beacon block has no embedded execution payload
-  // Execution payload verification happens separately when the envelope arrives
+  // Gloas block doesn't have execution payload. Return right away
   if (isBlockInputEpbs(blockInput)) {
     return {executionStatus: ExecutionStatus.Epbs, lvhResponse: undefined, execError: null};
   }
@@ -166,10 +165,6 @@ export async function verifyBlockExecutionPayload(
 
   if (!executionPayloadEnabled) {
     // Pre-merge block, no execution payload to verify
-    // TODO GLOAS: Gloas blocks also reach here since isExecutionBlockBodyType returns false
-    // (no executionPayload field in body). Consider returning ExecutionStatus.Valid instead,
-    // as the beacon block is valid regardless of execution payload. This requires fork choice
-    // changes to handle Gloas blocks in a third branch (not pre-merge, not post-merge).
     return {executionStatus: ExecutionStatus.PreMerge, lvhResponse: undefined, execError: null};
   }
 

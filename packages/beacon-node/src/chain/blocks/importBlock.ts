@@ -102,12 +102,6 @@ export async function importBlock(
   });
 
   // 2. Import block to fork choice
-  //
-  // TODO GLOAS: For ePBS (Gloas fork), beacon blocks should be added with PENDING payload status.
-  // The execution payload arrives separately and will update the status to FULL.
-  // This requires fork choice API changes from PR #8739:
-  // - forkChoice.onBlock() should accept PayloadStatus.PENDING for Gloas blocks
-  // - forkChoice.onExecutionPayload() will update status from PENDING to FULL
 
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
