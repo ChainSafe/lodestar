@@ -1619,9 +1619,15 @@ export class ProtoArray {
    */
   private getParentNodeIndex(node: ProtoNode): number | undefined {
     if (isGloasBlock(node)) {
-      // Use getParentPayloadStatus for Gloas blocks to get correct EMPTY/FULL variant
-      const parentPayloadStatus = this.getParentPayloadStatus(node);
-      return this.getNodeIndexByRootAndStatus(node.parentRoot, parentPayloadStatus);
+      // Use getParentPayloadStatus for Gloas blocks to get correct EMPTY/FULL variant.
+      // Parent may have been pruned during finalization — handle gracefully.
+      try {
+        const parentPayloadStatus = this.getParentPayloadStatus(node);
+        return this.getNodeIndexByRootAndStatus(node.parentRoot, parentPayloadStatus);
+      } catch (_e) {
+        // Parent was pruned from proto-array (e.g., during archival after finalization)
+        return undefined;
+      }
     }
     // Simple parent traversal for pre-Gloas blocks (includes fork transition)
     return node.parent;
