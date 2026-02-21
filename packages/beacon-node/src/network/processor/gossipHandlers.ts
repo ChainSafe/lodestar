@@ -478,8 +478,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         if (early) {
           earlyEnvelopes.delete(blockInput.blockRootHex);
           try {
-            chain.seenPayloadEnvelopeCache.get(blockInput.blockRootHex)?.setEnvelope(early.envelope);
-            await validateGossipExecutionPayloadEnvelope(chain, early.envelope);
+            const cachedInput = chain.seenPayloadEnvelopeCache.get(blockInput.blockRootHex);
+            cachedInput?.setEnvelope(early.envelope);
+            // Pass envelopeInput for bid-based validation (block is in FC here too, but stay consistent)
+            await validateGossipExecutionPayloadEnvelope(chain, early.envelope, cachedInput);
             await chain.importExecutionPayloadEnvelope(early.envelope);
             logger.info("Imported early execution payload envelope", {
               slot: early.envelope.message.slot,
@@ -892,7 +894,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         return;
       }
 
-      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+      // Pass envelopeInput so validation uses bid info from the cache instead of
+      // fork-choice lookup — the block may be gossip-validated but not yet imported.
+      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope, envelopeInput);
       envelopeInput.setEnvelope(executionPayloadEnvelope);
 
       const slot = executionPayloadEnvelope.message.slot;

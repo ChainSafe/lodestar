@@ -8,6 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import type {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 
@@ -18,32 +19,63 @@ export async function validateApiExecutionPayloadEnvelope(
   return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 }
 
+/**
+ * Validate an execution payload envelope received via gossip.
+ *
+ * When `envelopeInput` is provided, bid info (slot, builderIndex, blockHashFromBid)
+ * is taken from it instead of looking up the block in fork-choice.  This is critical
+ * because the block may have been gossip-validated (creating the cache entry) but not
+ * yet fully imported into fork-choice when the envelope arrives.
+ */
 export async function validateGossipExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  envelopeInput?: PayloadEnvelopeInput
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope, envelopeInput);
 }
 
 async function validateExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  envelopeInput?: PayloadEnvelopeInput
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
   const {payload} = envelope;
   const blockRootHex = toRootHex(envelope.beaconBlockRoot);
 
-  // [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
-  // gossip or non-gossip sources) (a client MAY queue payload for processing once
-  // the block is retrieved).
-  // TODO GLOAS: Need to review this, we should queue the envelope for later
-  // processing if the block is not yet known, otherwise we would ignore it here
-  const block = chain.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
-  if (block === null) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,
-      blockRoot: blockRootHex,
-    });
+  // Use bid info from the envelope input cache if available (gossip path),
+  // otherwise fall back to fork-choice lookup (API path / early-envelope replay).
+  let bidSlot: number;
+  let bidBuilderIndex: number;
+  let bidBlockHash: string;
+
+  if (envelopeInput) {
+    // Gossip path: bid info from SeenPayloadEnvelopeCache, populated during
+    // block gossip validation before the block is imported into fork-choice.
+    bidSlot = envelopeInput.slot;
+    bidBuilderIndex = envelopeInput.builderIndex;
+    bidBlockHash = envelopeInput.blockHashFromBid;
+  } else {
+    // API / early-envelope path: look up block in fork-choice.
+    const block = chain.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
+    if (block === null) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+        code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,
+        blockRoot: blockRootHex,
+      });
+    }
+
+    if (block.builderIndex == null || block.blockHashFromBid == null) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+        code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
+        blockRoot: blockRootHex,
+      });
+    }
+
+    bidSlot = block.slot;
+    bidBuilderIndex = block.builderIndex;
+    bidBlockHash = block.blockHashFromBid;
   }
 
   // [IGNORE] The node has not seen another valid
@@ -56,7 +88,7 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `envelope.slot >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
+  // [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot
   const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   if (envelope.slot < finalizedSlot) {
@@ -67,42 +99,30 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // [REJECT] `block` passes validation.
-  // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
-  // it is possible that the block didn't pass the validation
-
   // [REJECT] `block.slot` equals `envelope.slot`.
-  if (block.slot !== envelope.slot) {
+  if (bidSlot !== envelope.slot) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
       envelopeSlot: envelope.slot,
-      blockSlot: block.slot,
-    });
-  }
-
-  if (block.builderIndex === undefined || block.blockHashFromBid === undefined) {
-    // This indicates this block is a pre-gloas block which is wrong
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
-      blockRoot: blockRootHex,
+      blockSlot: bidSlot,
     });
   }
 
   // [REJECT] `envelope.builder_index == bid.builder_index`
-  if (envelope.builderIndex !== block.builderIndex) {
+  if (envelope.builderIndex !== bidBuilderIndex) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
       envelopeBuilderIndex: envelope.builderIndex,
-      bidBuilderIndex: block.builderIndex,
+      bidBuilderIndex,
     });
   }
 
   // [REJECT] `payload.block_hash == bid.block_hash`
-  if (toRootHex(payload.blockHash) !== block.blockHashFromBid) {
+  if (toRootHex(payload.blockHash) !== bidBlockHash) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
       envelopeBlockHash: toRootHex(payload.blockHash),
-      bidBlockHash: block.blockHashFromBid,
+      bidBlockHash,
     });
   }
 
