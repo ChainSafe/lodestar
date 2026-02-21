@@ -168,15 +168,21 @@ function getHeadExecutionInfo(
     return [`exec-block: ${executionStatusStr}`];
   }
 
-  // Since the notifier fires at mid-slot, the head for the current slot may still be PENDING.
-  // In that case, show the previous slot's resolved payload state (the parent block) instead.
+  // Since the notifier fires at mid-slot, the head for the current slot may still be pending.
+  // For post-Gloas blocks with PendingEnvelope status (bid imported, envelope not yet),
+  // show the previous slot's resolved payload state instead.
   let payloadBlockForDisplay = headInfo;
   let payloadSlotInfo = "";
-  if (headInfo.payloadStatus === PayloadStatus.PENDING && headInfo.parentRoot) {
+  if (
+    (headInfo.executionStatus === ExecutionStatus.PendingEnvelope ||
+      headInfo.payloadStatus === PayloadStatus.PENDING) &&
+    headInfo.parentRoot
+  ) {
     const parentBlock = forkChoice.getBlockHexDefaultStatus(headInfo.parentRoot);
     if (
       parentBlock &&
       parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
+      parentBlock.executionStatus !== ExecutionStatus.PendingEnvelope &&
       parentBlock.payloadStatus !== PayloadStatus.PENDING
     ) {
       payloadBlockForDisplay = parentBlock;
