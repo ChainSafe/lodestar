@@ -567,7 +567,13 @@ export async function produceBlockBody<T extends BlockType>(
     });
   }
 
-  if (ForkSeq[fork] >= ForkSeq.capella) {
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blsToExecutionChanges, payloadAttestations} = blockBody as gloas.BeaconBlockBody;
+    Object.assign(logMeta, {
+      blsToExecutionChanges: blsToExecutionChanges.length,
+      payloadAttestations: payloadAttestations.length,
+    });
+  } else if (ForkSeq[fork] >= ForkSeq.capella) {
     const {blsToExecutionChanges, executionPayload} = blockBody as capella.BeaconBlockBody;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
