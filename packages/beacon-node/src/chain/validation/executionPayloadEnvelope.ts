@@ -1,4 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
+import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {
   CachedBeaconStateGloas,
   computeStartSlotAtEpoch,
@@ -106,17 +107,22 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
-  const state = chain.getHeadState() as CachedBeaconStateGloas;
-  const signatureSet = createSingleSignatureSetFromComponents(
-    PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey),
-    getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
-    executionPayloadEnvelope.signature
-  );
+  // Self-build envelopes use a virtual builder index and are fully validated during
+  // `processExecutionPayloadEnvelope` against the per-block regenerated state.
+  // Skip gossip-time builder pubkey lookup for self-build to avoid invalid index access.
+  if (envelope.builderIndex !== BUILDER_INDEX_SELF_BUILD) {
+    const state = chain.getHeadState() as CachedBeaconStateGloas;
+    const signatureSet = createSingleSignatureSetFromComponents(
+      PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey),
+      getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
+      executionPayloadEnvelope.signature
+    );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
-    });
+    if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      });
+    }
   }
 
   chain.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot);

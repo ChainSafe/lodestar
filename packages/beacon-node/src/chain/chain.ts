@@ -4,7 +4,14 @@ import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithPayload, IForkChoice, PayloadStatus, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithPayload,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  UpdateHeadOpt,
+  getSafeExecutionBlockHash,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -59,7 +66,7 @@ import {
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
+import {GENESIS_EPOCH, ZERO_HASH, ZERO_HASH_HEX} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.ts";
 import {BuilderStatus} from "../execution/builder/http.js";
@@ -1076,6 +1083,26 @@ export class BeaconChain implements IBeaconChain {
     });
 
     this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+
+    // After importing the payload envelope, send FCU to EL with updated execution head.
+    // The FULL variant now exists with the correct execution block hash.
+    {
+      const headBlockHash = this.forkChoice.getHeadExecutionBlockHash() ?? ZERO_HASH_HEX;
+      const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
+      const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+      if (headBlockHash !== ZERO_HASH_HEX) {
+        this.executionEngine
+          .notifyForkchoiceUpdate(
+            this.config.getForkName(envelope.slot),
+            headBlockHash,
+            safeBlockHash,
+            finalizedBlockHash
+          )
+          .catch((e) => {
+            this.logger.error("Error pushing notifyForkchoiceUpdate after envelope import", {headBlockHash}, e);
+          });
+      }
+    }
 
     this.logger.debug("Imported execution payload envelope", {
       slot: envelope.slot,

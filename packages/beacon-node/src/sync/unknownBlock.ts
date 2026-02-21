@@ -429,6 +429,21 @@ export class BlockInputSync {
     if (res.err) this.metrics?.blockInputSync.processedBlocksError.inc();
     else this.metrics?.blockInputSync.processedBlocksSuccess.inc();
 
+    if (res.err) {
+      const nestedError =
+        res.err instanceof BlockError && "error" in res.err.type && res.err.type.error instanceof Error
+          ? res.err.type.error
+          : null;
+
+      this.logger.warn("UnknownBlockSync processBlock failed", {
+        slot: pendingBlock.blockInput.slot,
+        root: pendingBlock.blockInput.blockRootHex,
+        errCode: res.err instanceof BlockError ? res.err.type.code : "NON_BLOCK_ERROR",
+        errMessage: (res.err as Error).message,
+        nestedErrMessage: nestedError?.message,
+      });
+    }
+
     if (!res.err) {
       // no need to update status to "processed", delete anyway
       this.pendingBlocks.delete(pendingBlock.blockInput.blockRootHex);
