@@ -176,22 +176,19 @@ export class ProtoArray {
    *     message_block_hash = parent.body.signed_execution_payload_bid.message.block_hash
    *     return PAYLOAD_STATUS_FULL if parent_block_hash == message_block_hash else PAYLOAD_STATUS_EMPTY
    *
-   * In lodestar forkchoice, we don't store the full bid, so we compares parent_block_hash in child's bid with executionPayloadBlockHash in parent:
-   * - If it matches EMPTY variant, return EMPTY
-   * - If it matches FULL variant, return FULL
-   * - If no match, throw UNKNOWN_PARENT_BLOCK error
-   *
-   * For pre-Gloas blocks: always returns FULL
+   * For post-Gloas blocks, compare child's parent_block_hash with parent's blockHashFromBid
+   * (message.block_hash), not with parent's executionPayloadBlockHash.
    */
   getParentPayloadStatus(block: ProtoBlock): PayloadStatus {
-    // Pre-Gloas blocks have payloads embedded, so parents are always FULL
     const {parentBlockHash} = block;
+
+    // Pre-Gloas blocks have payloads embedded, so parents are always FULL
     if (parentBlockHash === null) {
       return PayloadStatus.FULL;
     }
 
-    const parentBlock = this.getBlockHexAndBlockHash(block.parentRoot, parentBlockHash);
-    if (parentBlock == null) {
+    const parentVariants = this.indices.get(block.parentRoot);
+    if (parentVariants === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
         parentRoot: block.parentRoot,
@@ -199,32 +196,63 @@ export class ProtoArray {
       });
     }
 
-    return parentBlock.payloadStatus;
+    // Transition case: parent is pre-Gloas
+    if (!Array.isArray(parentVariants)) {
+      return PayloadStatus.FULL;
+    }
+
+    const parentPending = this.nodes[parentVariants[PayloadStatus.PENDING]];
+    if (!parentPending || parentPending.blockHashFromBid === null) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
+        parentRoot: block.parentRoot,
+        parentHash: parentBlockHash,
+      });
+    }
+
+    return parentBlockHash === parentPending.blockHashFromBid ? PayloadStatus.FULL : PayloadStatus.EMPTY;
   }
 
   /**
    * Return the parent `ProtoBlock` given its root and block hash.
    */
   getParent(parentRoot: RootHex, parentBlockHash: RootHex | null): ProtoBlock | null {
-    // pre-gloas
-    if (parentBlockHash === null) {
-      const parentIndex = this.indices.get(parentRoot);
-      if (parentIndex === undefined) {
-        return null;
-      }
-      if (Array.isArray(parentIndex)) {
-        // Gloas block found when pre-gloas expected
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
-          parentRoot,
-          parentHash: parentBlockHash,
-        });
-      }
-      return this.nodes[parentIndex] ?? null;
+    const parentVariants = this.indices.get(parentRoot);
+    if (parentVariants === undefined) {
+      return null;
     }
 
-    // post-gloas
-    return this.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
+    // pre-gloas
+    if (!Array.isArray(parentVariants)) {
+      return this.nodes[parentVariants] ?? null;
+    }
+
+    // post-gloas parent
+    if (parentBlockHash === null) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
+        parentRoot,
+        parentHash: parentBlockHash,
+      });
+    }
+
+    const parentPending = this.nodes[parentVariants[PayloadStatus.PENDING]];
+    if (!parentPending || parentPending.blockHashFromBid === null) {
+      return null;
+    }
+
+    const wantsFull = parentBlockHash === parentPending.blockHashFromBid;
+    const desiredStatus = wantsFull ? PayloadStatus.FULL : PayloadStatus.EMPTY;
+    const desiredIndex = parentVariants[desiredStatus];
+
+    if (desiredIndex !== undefined) {
+      return this.nodes[desiredIndex] ?? null;
+    }
+
+    // FULL may not exist yet if payload envelope hasn't been imported.
+    // Fall back to EMPTY so block import can proceed optimistically.
+    const emptyIndex = parentVariants[PayloadStatus.EMPTY];
+    return emptyIndex !== undefined ? (this.nodes[emptyIndex] ?? null) : null;
   }
 
   /**
@@ -242,7 +270,7 @@ export class ProtoArray {
       return node.executionPayloadBlockHash === blockHash ? node : null;
     }
 
-    // Post-Gloas, check empty and full variants
+    // Post-Gloas, check full variant first (most authoritative)
     const fullNodeIndex = variantIndices[PayloadStatus.FULL];
     if (fullNodeIndex !== undefined) {
       const fullNode = this.nodes[fullNodeIndex];
@@ -251,13 +279,22 @@ export class ProtoArray {
       }
     }
 
+    // For EMPTY/PENDING variants, executionPayloadBlockHash is the parent's hash,
+    // not this block's. The child block's bid references this block's execution hash
+    // via blockHashFromBid, so check that too. This is needed when the envelope
+    // hasn't been received yet (no FULL variant exists).
     const emptyNode = this.nodes[variantIndices[PayloadStatus.EMPTY]];
-    if (emptyNode && emptyNode.executionPayloadBlockHash === blockHash) {
+    if (emptyNode && (emptyNode.executionPayloadBlockHash === blockHash || emptyNode.blockHashFromBid === blockHash)) {
       return emptyNode;
     }
 
-    // PENDING is the same to EMPTY so not likely we can return it
-    // also it's only specific for fork-choice
+    const pendingNodeIndex = variantIndices[PayloadStatus.PENDING];
+    if (pendingNodeIndex !== undefined) {
+      const pendingNode = this.nodes[pendingNodeIndex];
+      if (pendingNode && pendingNode.blockHashFromBid === blockHash) {
+        return pendingNode;
+      }
+    }
 
     return null;
   }
@@ -429,6 +466,12 @@ export class ProtoArray {
           // Both blocks are Gloas: determine which parent payload status to extend
           const parentPayloadStatus = this.getParentPayloadStatus(block);
           parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, parentPayloadStatus);
+
+          // If FULL parent variant is not available yet (payload not imported),
+          // fall back to EMPTY so the block remains connected to the DAG.
+          if (parentIndex === undefined && parentPayloadStatus === PayloadStatus.FULL) {
+            parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, PayloadStatus.EMPTY);
+          }
         }
       }
       // else: parent doesn't exist, parentIndex remains undefined (orphan block)

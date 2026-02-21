@@ -46,9 +46,11 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     throw Error(`Bid slot ${bid.slot} does not match block slot ${block.slot}`);
   }
 
-  if (!byteArrayEquals(bid.parentBlockHash, state.latestBlockHash)) {
+  const matchesLatestBlockHash = byteArrayEquals(bid.parentBlockHash, state.latestBlockHash);
+  const matchesLatestBidBlockHash = byteArrayEquals(bid.parentBlockHash, state.latestExecutionPayloadBid.blockHash);
+  if (!matchesLatestBlockHash && !matchesLatestBidBlockHash) {
     throw Error(
-      `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)}`
+      `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)} or latest bid block hash ${toRootHex(state.latestExecutionPayloadBid.blockHash)}`
     );
   }
 
