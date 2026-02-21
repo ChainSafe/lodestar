@@ -6,6 +6,8 @@ export enum DAType {
   PreData = "pre-data",
   Blobs = "blobs",
   Columns = "columns",
+  /** Post-Gloas: block contains only a bid, no DA data dependency. Payload delivered separately via envelope. */
+  PayloadBid = "payload-bid",
 }
 
 export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars;

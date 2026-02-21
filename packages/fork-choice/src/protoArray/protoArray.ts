@@ -843,7 +843,11 @@ export class ProtoArray {
     // propagate till we keep encountering syncing status
     while (nodeIndex !== undefined) {
       const node = this.getNodeFromIndex(nodeIndex);
-      if (node.executionStatus === ExecutionStatus.PreMerge || node.executionStatus === ExecutionStatus.Valid) {
+      if (
+        node.executionStatus === ExecutionStatus.PreMerge ||
+        node.executionStatus === ExecutionStatus.Valid ||
+        node.executionStatus === ExecutionStatus.PendingEnvelope
+      ) {
         break;
       }
       this.validateNodeByIndex(nodeIndex);

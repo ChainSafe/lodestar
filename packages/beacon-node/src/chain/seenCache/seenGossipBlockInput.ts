@@ -3,6 +3,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreGloas,
   SLOTS_PER_EPOCH,
   isForkPostDeneb,
@@ -20,6 +21,7 @@ import {
   BlockInput,
   BlockInputBlobs,
   BlockInputColumns,
+  BlockInputPayloadBid,
   BlockInputPreData,
   BlockWithSource,
   DAType,
@@ -179,15 +181,14 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // Post-Gloas: beacon blocks are imported immediately without waiting for the execution payload
-      // envelope. The envelope arrives and is processed separately via importExecutionPayloadEnvelope.
-      // Use BlockInputPreData since there's no data dependency for the beacon block itself.
+      // Post-Gloas: beacon blocks contain only a bid. No DA data dependency — the execution
+      // payload and data columns are delivered via their own separate gossip pipelines.
       if (isForkPostGloas(forkName)) {
-        blockInput = BlockInputPreData.createFromBlock({
-          block,
+        blockInput = BlockInputPayloadBid.createFromBlock({
+          block: block as SignedBeaconBlock<ForkPostGloas>,
           blockRootHex,
           daOutOfRange,
-          forkName,
+          forkName: forkName as ForkPostGloas,
           source,
           seenTimestampSec,
           peerIdStr,

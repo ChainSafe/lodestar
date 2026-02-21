@@ -22,10 +22,12 @@ export enum ExecutionStatus {
   Syncing = "Syncing",
   PreMerge = "PreMerge",
   Invalid = "Invalid",
+  /** Post-Gloas blocks with separated payload (bid-only). Pending envelope arrival. */
+  PendingEnvelope = "PendingEnvelope",
 }
 
 /**
- * Payload status for ePBS (Gloas fork)
+ * Payload status for Gloas fork (EIP-7732 separated payloads)
  * Spec: gloas/fork-choice.md#constants
  */
 export enum PayloadStatus {

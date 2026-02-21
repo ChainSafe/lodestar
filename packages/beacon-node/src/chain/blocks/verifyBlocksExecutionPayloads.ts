@@ -51,7 +51,8 @@ type VerifyBlockExecutionResponse =
   | VerifyExecutionErrorResponse
   | {executionStatus: ExecutionStatus.Valid; lvhResponse: LVHValidResponse; execError: null}
   | {executionStatus: ExecutionStatus.Syncing; lvhResponse?: LVHValidResponse; execError: null}
-  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null};
+  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null}
+  | {executionStatus: ExecutionStatus.PendingEnvelope; lvhResponse: undefined; execError: null};
 
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
@@ -159,9 +160,9 @@ export async function verifyBlockExecutionPayload(
 
   if (!executionPayloadEnabled) {
     if (executionEnabled) {
-      // Post-merge blocks without an embedded payload (e.g. Gloas bid-only blocks)
-      // are imported optimistically and finalized after payload envelope processing.
-      return {executionStatus: ExecutionStatus.Syncing, lvhResponse: undefined, execError: null};
+      // Post-Gloas bid-only blocks: execution payload is delivered separately via envelope.
+      // Block is valid but payload status is pending until envelope arrives.
+      return {executionStatus: ExecutionStatus.PendingEnvelope, lvhResponse: undefined, execError: null};
     }
 
     // Pre-merge block, no execution payload to verify

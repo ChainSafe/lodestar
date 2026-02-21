@@ -1,4 +1,4 @@
-import {ForkName, ForkPostFulu, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, ForkPostFulu, ForkPostGloas, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {byteArrayEquals, fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
@@ -24,7 +24,7 @@ import {
   SourceMeta,
 } from "./types.js";
 
-export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns;
+export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns | BlockInputPayloadBid;
 
 export function isBlockInputPreDeneb(blockInput: IBlockInput): blockInput is BlockInputPreData {
   return blockInput.type === DAType.PreData;
@@ -35,6 +35,10 @@ export function isBlockInputBlobs(blockInput: IBlockInput): blockInput is BlockI
 
 export function isBlockInputColumns(blockInput: IBlockInput): blockInput is BlockInputColumns {
   return blockInput.type === DAType.Columns;
+}
+
+export function isBlockInputPayloadBid(blockInput: IBlockInput): blockInput is BlockInputPayloadBid {
+  return blockInput.type === DAType.PayloadBid;
 }
 
 function createPromise<T>(): PromiseParts<T> {
@@ -236,6 +240,69 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
           blockRoot: this.blockRootHex,
         },
         "Cannot addBlock to BlockInputPreData"
+      );
+    }
+  }
+}
+
+// Payload Bid (Post-Gloas)
+
+type BlockInputPayloadBidState = {
+  hasBlock: true;
+  hasAllData: true;
+  block: SignedBeaconBlock<ForkPostGloas>;
+  source: SourceMeta;
+  timeCompleteSec: number;
+};
+
+/**
+ * Post-Gloas: beacon block contains only a bid. No DA data dependency — the execution
+ * payload and data columns are delivered separately via their own gossip pipelines.
+ * The block itself is complete as soon as it's received.
+ */
+export class BlockInputPayloadBid extends AbstractBlockInput<ForkPostGloas, null> {
+  type = DAType.PayloadBid as const;
+
+  state: BlockInputPayloadBidState;
+
+  private constructor(init: BlockInputInit, state: BlockInputPayloadBidState) {
+    super(init);
+    this.state = state;
+    this.dataPromise.resolve(null);
+    this.blockPromise.resolve(state.block);
+  }
+
+  static createFromBlock(props: AddBlock<ForkPostGloas> & CreateBlockInputMeta): BlockInputPayloadBid {
+    const init: BlockInputInit = {
+      daOutOfRange: props.daOutOfRange,
+      timeCreated: props.seenTimestampSec,
+      forkName: props.forkName,
+      slot: props.block.message.slot,
+      blockRootHex: props.blockRootHex,
+      parentRootHex: toRootHex(props.block.message.parentRoot),
+    };
+    const state: BlockInputPayloadBidState = {
+      hasBlock: true,
+      hasAllData: true,
+      block: props.block as SignedBeaconBlock<ForkPostGloas>,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: props.seenTimestampSec,
+    };
+    return new BlockInputPayloadBid(init, state);
+  }
+
+  addBlock(_: AddBlock, opts = {throwOnDuplicateAdd: true}): void {
+    if (opts.throwOnDuplicateAdd) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlock to BlockInputPayloadBid"
       );
     }
   }

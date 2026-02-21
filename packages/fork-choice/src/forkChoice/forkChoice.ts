@@ -843,7 +843,7 @@ export class ForkChoice implements IForkChoice {
 
               return parentBlock.executionPayloadNumber;
             })(),
-            executionStatus: this.getPostMergeExecStatus(executionStatus), // TODO GLOAS: Need a new execution status to denote scenario where we are waiting for payload, or payload is never revealed.
+            executionStatus: this.getPostMergeExecStatus(executionStatus),
             dataAvailabilityStatus,
           }
         : isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
@@ -1451,10 +1451,10 @@ export class ForkChoice implements IForkChoice {
 
   private getPostMergeExecStatus(
     executionStatus: MaybeValidExecutionStatus
-  ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
+  ): ExecutionStatus.Valid | ExecutionStatus.Syncing | ExecutionStatus.PendingEnvelope {
     if (executionStatus === ExecutionStatus.PreMerge)
       throw Error(
-        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`
+        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing}, ${ExecutionStatus.Valid}, or ${ExecutionStatus.PendingEnvelope}, got ${executionStatus}`
       );
     return executionStatus;
   }

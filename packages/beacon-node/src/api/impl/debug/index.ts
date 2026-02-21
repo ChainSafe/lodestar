@@ -47,6 +47,7 @@ export function getDebugApi({
                 case ExecutionStatus.Invalid:
                   return "invalid";
                 case ExecutionStatus.Syncing:
+                case ExecutionStatus.PendingEnvelope:
                 case ExecutionStatus.PreMerge:
                   return "optimistic";
               }

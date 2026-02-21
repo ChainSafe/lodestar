@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, type IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
@@ -77,7 +77,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         skippedSlots > 0 ? (skippedSlots > 1000 ? `${headInfo.slot} ` : `(slot -${skippedSlots}) `) : "";
       const headRow = `head: ${headDiffInfo}${prettyBytes(headInfo.blockRoot)}`;
 
-      const executionInfo = getHeadExecutionInfo(config, clockEpoch, headInfo);
+      const executionInfo = getHeadExecutionInfo(config, clockEpoch, headInfo, chain.forkChoice);
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
 
       let nodeState: string[];
@@ -152,7 +152,12 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
   return msToNextSlot + msPerHalfSlot;
 }
 
-function getHeadExecutionInfo(config: BeaconConfig, clockEpoch: Epoch, headInfo: ProtoBlock): string[] {
+function getHeadExecutionInfo(
+  config: BeaconConfig,
+  clockEpoch: Epoch,
+  headInfo: ProtoBlock,
+  forkChoice: IForkChoice
+): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
     return [];
   }
@@ -163,22 +168,38 @@ function getHeadExecutionInfo(config: BeaconConfig, clockEpoch: Epoch, headInfo:
     return [`exec-block: ${executionStatusStr}`];
   }
 
-  // Post-Gloas: include payload-status and bid hash so notifier logs clearly expose
-  // whether the head is PENDING / EMPTY / FULL and which payload hash was selected.
+  // Since the notifier fires at mid-slot, the head for the current slot may still be PENDING.
+  // In that case, show the previous slot's resolved payload state (the parent block) instead.
+  let payloadBlockForDisplay = headInfo;
+  let payloadSlotInfo = "";
+  if (headInfo.payloadStatus === PayloadStatus.PENDING && headInfo.parentRoot) {
+    const parentBlock = forkChoice.getBlockHexDefaultStatus(headInfo.parentRoot);
+    if (
+      parentBlock &&
+      parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
+      parentBlock.payloadStatus !== PayloadStatus.PENDING
+    ) {
+      payloadBlockForDisplay = parentBlock;
+      payloadSlotInfo = ` prevSlot:${parentBlock.slot}`;
+    }
+  }
+
   const payloadStatusStr =
-    headInfo.payloadStatus === PayloadStatus.PENDING
+    payloadBlockForDisplay.payloadStatus === PayloadStatus.PENDING
       ? "pending"
-      : headInfo.payloadStatus === PayloadStatus.EMPTY
+      : payloadBlockForDisplay.payloadStatus === PayloadStatus.EMPTY
         ? "empty"
         : "full";
 
-  const executionPayloadHashInfo = headInfo.executionPayloadBlockHash;
-  const executionPayloadNumberInfo = headInfo.executionPayloadNumber;
-  const bidHashInfo = headInfo.blockHashFromBid ? ` bid:${prettyBytesShort(headInfo.blockHashFromBid)}` : "";
+  const executionPayloadHashInfo = payloadBlockForDisplay.executionPayloadBlockHash;
+  const executionPayloadNumberInfo = payloadBlockForDisplay.executionPayloadNumber;
+  const bidHashInfo = payloadBlockForDisplay.blockHashFromBid
+    ? ` bid:${prettyBytesShort(payloadBlockForDisplay.blockHashFromBid)}`
+    : "";
 
   return [
     `exec-block: ${executionStatusStr}/${payloadStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
       executionPayloadHashInfo
-    )}${bidHashInfo})`,
+    )}${bidHashInfo}${payloadSlotInfo})`,
   ];
 }
