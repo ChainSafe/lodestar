@@ -3,6 +3,7 @@
 Read `~/.openclaw/workspace/CODING_CONTEXT.md` for Lodestar project conventions.
 
 ## Overview
+
 Replace the hacky `scheduleDeferredEnvelopeImport` retry loop in gossip handlers with a proper separated pipeline using `PayloadEnvelopeInput` and `SeenPayloadEnvelopeCache`.
 
 ## Step 1: Create `PayloadEnvelopeInput`
@@ -149,12 +150,15 @@ export class SeenPayloadEnvelopeCache {
 ## Step 3: Wire `SeenPayloadEnvelopeCache` into the chain
 
 ### `packages/beacon-node/src/chain/interface.ts`
+
 Add to the `IBeaconChain` interface:
+
 ```typescript
 seenPayloadEnvelopeCache: SeenPayloadEnvelopeCache;
 ```
 
 ### `packages/beacon-node/src/chain/chain.ts`
+
 - Import `SeenPayloadEnvelopeCache`
 - Initialize in constructor: `this.seenPayloadEnvelopeCache = new SeenPayloadEnvelopeCache(metrics);`
 - Wire `onFinalized` to chain events (same pattern as `seenBlockInputCache`):
@@ -169,12 +173,14 @@ seenPayloadEnvelopeCache: SeenPayloadEnvelopeCache;
 ### `packages/beacon-node/src/network/processor/gossipHandlers.ts`
 
 **REMOVE entirely:**
+
 - `pendingExecutionPayloadEnvelopesByBlockRoot` Map
 - `processingDeferredEnvelopeRoots` Set
 - `scheduleDeferredEnvelopeImport` function and all its contents
 - Any references to these in the block gossip handler (the `if (pendingExecutionPayloadEnvelopesByBlockRoot.has(...))` check)
 
 **ADD: Early envelope cache** (lightweight, bounded):
+
 ```typescript
 // Bounded cache for envelopes that arrive before their beacon block
 const MAX_EARLY_ENVELOPES = 64;
@@ -183,6 +189,7 @@ const earlyEnvelopes = new Map<string, {envelope: gloas.SignedExecutionPayloadEn
 
 **MODIFY `validateBeaconBlock` function:**
 After `validateGossipBlock()` succeeds AND `blockInput` is created, if the block is post-Gloas:
+
 1. Extract bid from block body:
    ```typescript
    const bid = (signedBlock.message as gloas.BeaconBlock).body.signedExecutionPayloadBid.message;
@@ -275,12 +282,14 @@ Remove any unused imports from `gossipHandlers.ts` that were only needed for the
 ## Verification
 
 After all changes:
+
 1. `pnpm lint` (at minimum the changed files)
 2. `pnpm check-types` (packages/beacon-node)
 3. `pnpm build` (packages/beacon-node)
 4. Run any existing unit tests: `pnpm test:unit packages/beacon-node/test/`
 
 ## Key constraints
+
 - Do NOT modify fork-choice code
 - Do NOT modify block import code
 - Do NOT modify notifier code

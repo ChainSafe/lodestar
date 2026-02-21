@@ -47,21 +47,14 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
   }
 
   // Spec: assert bid.parent_block_hash == state.latest_block_hash.
-  // In separated payload flow, if parent envelope is still pending, latestBlockHash
-  // can lag while latestExecutionPayloadBid.blockHash tracks the expected parent hash.
-  const parentBidBlockHash = state.latestExecutionPayloadBid.blockHash;
-  const parentIsFull = byteArrayEquals(parentBidBlockHash, state.latestBlockHash);
-
-  if (parentIsFull) {
-    if (!byteArrayEquals(bid.parentBlockHash, state.latestBlockHash)) {
-      throw Error(
-        `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)}`
-      );
-    }
-  } else {
+  // Primary check uses the spec path (latestBlockHash is updated when envelope is processed).
+  // Fallback: in separated payload flow, if parent envelope is still pending, latestBlockHash
+  // lags while latestExecutionPayloadBid.blockHash tracks the expected parent hash.
+  if (!byteArrayEquals(bid.parentBlockHash, state.latestBlockHash)) {
+    const parentBidBlockHash = state.latestExecutionPayloadBid.blockHash;
     if (!byteArrayEquals(bid.parentBlockHash, parentBidBlockHash)) {
       throw Error(
-        `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match pending parent bid block hash ${toRootHex(parentBidBlockHash)} (latestBlockHash=${toRootHex(state.latestBlockHash)})`
+        `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)} or pending parent bid block hash ${toRootHex(parentBidBlockHash)}`
       );
     }
   }

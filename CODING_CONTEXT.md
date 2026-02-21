@@ -62,10 +62,13 @@ pnpm vitest run --project unit packages/<pkg>/test/unit/
 
 ```typescript
 // Types defined in packages/types/src/<fork>/
-export const MyType = new ContainerType({
-  field1: UintNumberType,
-  field2: RootType,
-}, {typeName: "MyType"});
+export const MyType = new ContainerType(
+  {
+    field1: UintNumberType,
+    field2: RootType,
+  },
+  {typeName: "MyType"}
+);
 ```
 
 ## Network Protocol Pattern
