@@ -422,43 +422,12 @@ export class ProtoArray {
       }
     }
     // Post-Gloas: reconcile PENDING.bestDescendant with the deepest branch among EMPTY/FULL.
-    // IMPORTANT: only mutate PENDING. EMPTY/FULL are siblings and must keep their own subtree pointers.
-    // Copying bestChild across siblings can produce invalid pointers (non-child indices) and stale heads.
     for (const [, variantOrIndex] of this.indices) {
       if (!Array.isArray(variantOrIndex)) continue;
       const variants = variantOrIndex as GloasVariantIndices;
       const pendingIndex = variants[PayloadStatus.PENDING];
       if (pendingIndex === undefined) continue;
-
-      const pendingNode = this.nodes[pendingIndex];
-      if (!pendingNode) continue;
-
-      let bestChildIndex = pendingNode.bestChild;
-      let bestDescendantIndex = pendingNode.bestDescendant;
-      let bestDescendantSlot =
-        bestDescendantIndex !== undefined
-          ? (this.nodes[bestDescendantIndex]?.slot ?? pendingNode.slot)
-          : pendingNode.slot;
-
-      for (const status of [PayloadStatus.EMPTY, PayloadStatus.FULL]) {
-        const childIndex = variants[status];
-        if (childIndex === undefined) continue;
-
-        const childNode = this.nodes[childIndex];
-        if (!childNode || !this.nodeLeadsToViableHead(childNode, currentSlot)) continue;
-
-        const childDescendantIndex = childNode.bestDescendant ?? childIndex;
-        const childDescendantSlot = this.nodes[childDescendantIndex]?.slot ?? childNode.slot;
-
-        if (childDescendantSlot > bestDescendantSlot) {
-          bestDescendantSlot = childDescendantSlot;
-          bestChildIndex = childIndex;
-          bestDescendantIndex = childDescendantIndex;
-        }
-      }
-
-      pendingNode.bestChild = bestChildIndex;
-      pendingNode.bestDescendant = bestDescendantIndex;
+      this.reconcilePendingDescendant(variants, pendingIndex, currentSlot);
     }
 
     // Update the previous proposer boost
@@ -666,6 +635,12 @@ export class ProtoArray {
 
     // Update bestChild for PENDING node (may now prefer FULL over EMPTY)
     this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot);
+
+    // Reconcile PENDING bestDescendant: maybeUpdateBestChildAndDescendant may have
+    // set PENDING.bestChild = FULL (via payload-status tiebreaker), but FULL has no
+    // descendants yet.  If EMPTY leads to a deeper chain (next block imported through
+    // EMPTY), we must restore that path so findHead() reaches the latest slot.
+    this.reconcilePendingDescendant(variants, pendingIndex, currentSlot);
   }
 
   /**
@@ -1263,6 +1238,72 @@ export class ProtoArray {
     const isFromPreviousSlot = childNode.slot + 1 === currentSlot;
 
     return isFromPreviousSlot;
+  }
+
+  /**
+   * Reconcile a single PENDING node's bestChild/bestDescendant with the deepest
+   * viable branch among its EMPTY / FULL siblings.
+   *
+   * maybeUpdateBestChildAndDescendant may set PENDING.bestChild = FULL when the
+   * payload-status tiebreaker favors FULL, but FULL often has no descendants yet
+   * (it was just created).  If EMPTY already leads to a deeper chain (the next
+   * beacon block was parented to EMPTY), we must restore that path so findHead()
+   * can reach the latest slot.
+   *
+   * IMPORTANT: only mutate PENDING.  EMPTY/FULL keep their own subtree pointers.
+   */
+  private reconcilePendingDescendant(variants: GloasVariantIndices, pendingIndex: number, currentSlot: Slot): void {
+    const pendingNode = this.nodes[pendingIndex];
+    if (!pendingNode) return;
+
+    const prevBestChild = pendingNode.bestChild;
+    const prevBestDescendant = pendingNode.bestDescendant;
+
+    let bestChildIndex = pendingNode.bestChild;
+    let bestDescendantIndex = pendingNode.bestDescendant;
+    let bestDescendantSlot =
+      bestDescendantIndex !== undefined
+        ? (this.nodes[bestDescendantIndex]?.slot ?? pendingNode.slot)
+        : pendingNode.slot;
+
+    for (const status of [PayloadStatus.EMPTY, PayloadStatus.FULL]) {
+      const childIndex = variants[status];
+      if (childIndex === undefined) continue;
+
+      const childNode = this.nodes[childIndex];
+      if (!childNode || !this.nodeLeadsToViableHead(childNode, currentSlot)) continue;
+
+      const childDescendantIndex = childNode.bestDescendant ?? childIndex;
+      const childDescendantSlot = this.nodes[childDescendantIndex]?.slot ?? childNode.slot;
+
+      if (childDescendantSlot > bestDescendantSlot) {
+        bestDescendantSlot = childDescendantSlot;
+        bestChildIndex = childIndex;
+        bestDescendantIndex = childDescendantIndex;
+      }
+    }
+
+    pendingNode.bestChild = bestChildIndex;
+    pendingNode.bestDescendant = bestDescendantIndex;
+
+    if (prevBestChild !== bestChildIndex || prevBestDescendant !== bestDescendantIndex) {
+      this.propagateDescendantUpdateToAncestors(pendingIndex, currentSlot);
+    }
+  }
+
+  /**
+   * When a node's bestDescendant changes outside the normal reverse traversal,
+   * refresh ancestors so their cached bestDescendant pointers stay in sync.
+   */
+  private propagateDescendantUpdateToAncestors(nodeIndex: number, currentSlot: Slot): void {
+    let childIndex = nodeIndex;
+    let parentIndex = this.nodes[childIndex]?.parent;
+
+    while (parentIndex !== undefined) {
+      this.maybeUpdateBestChildAndDescendant(parentIndex, childIndex, currentSlot);
+      childIndex = parentIndex;
+      parentIndex = this.nodes[childIndex]?.parent;
+    }
   }
 
   maybeUpdateBestChildAndDescendant(parentIndex: number, childIndex: number, currentSlot: Slot): void {

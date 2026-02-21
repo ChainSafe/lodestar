@@ -1,4 +1,4 @@
-import {ApiClient} from "@lodestar/api";
+import {ApiClient, ApiError} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostElectra} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -27,6 +27,10 @@ export type AttestationServiceOpts = {
  * because sent peers are better than before). See https://github.com/ChainSafe/lodestar/issues/4600#issuecomment-1321546586
  */
 const DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION = 0;
+const PRODUCE_ATTESTATION_DATA_RETRY_DELAY_MS = 400;
+const PRODUCE_ATTESTATION_DATA_MAX_RETRIES = 5;
+const PUBLISH_ATTESTATIONS_RETRY_DELAY_MS = 200;
+const PUBLISH_ATTESTATIONS_MAX_RETRIES = 2;
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -89,7 +93,7 @@ export class AttestationService {
     // Produce a single attestation for all committees and submit unaggregated attestations in one go.
     try {
       // Produce a single attestation for all committees, and clone mutate before signing
-      const attestationNoCommittee = await this.produceAttestation(0, slot);
+      const attestationNoCommittee = await this.produceAttestationWithRetry(0, slot, signal);
 
       // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
       await this.signAndPublishAttestations(fork, slot, attestationNoCommittee, duties);
@@ -127,6 +131,52 @@ export class AttestationService {
   private async produceAttestation(committeeIndex: number, slot: Slot): Promise<phase0.AttestationData> {
     // Produce one attestation data per slot and committeeIndex
     return (await this.api.validator.produceAttestationData({committeeIndex, slot})).value();
+  }
+
+  private async produceAttestationWithRetry(
+    committeeIndex: number,
+    slot: Slot,
+    signal: AbortSignal
+  ): Promise<phase0.AttestationData> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.produceAttestation(committeeIndex, slot);
+      } catch (e) {
+        const isSyncingError = e instanceof ApiError && e.status === 503;
+        if (!isSyncingError || attempt >= PRODUCE_ATTESTATION_DATA_MAX_RETRIES) {
+          throw e;
+        }
+
+        this.logger.debug("Retrying produceAttestationData after transient syncing response", {
+          slot,
+          attempt: attempt + 1,
+          maxRetries: PRODUCE_ATTESTATION_DATA_MAX_RETRIES,
+        });
+        await sleep(PRODUCE_ATTESTATION_DATA_RETRY_DELAY_MS, signal);
+      }
+    }
+  }
+
+  private async publishAttestationsWithRetry(slot: Slot, signedAttestations: SingleAttestation[]): Promise<void> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
+        return;
+      } catch (e) {
+        const isTransientProcessingError =
+          e instanceof ApiError && e.status === 400 && e.message.includes("Error processing attestations");
+        if (!isTransientProcessingError || attempt >= PUBLISH_ATTESTATIONS_MAX_RETRIES) {
+          throw e;
+        }
+
+        this.logger.debug("Retrying submitPoolAttestationsV2 after transient processing error", {
+          slot,
+          attempt: attempt + 1,
+          maxRetries: PUBLISH_ATTESTATIONS_MAX_RETRIES,
+        });
+        await sleep(PUBLISH_ATTESTATIONS_RETRY_DELAY_MS);
+      }
+    }
   }
 
   /**
@@ -177,7 +227,7 @@ export class AttestationService {
 
     // Step 2. Publish all `Attestations` in one go
     try {
-      (await this.api.beacon.submitPoolAttestationsV2({signedAttestations})).assertOk();
+      await this.publishAttestationsWithRetry(slot, signedAttestations);
       this.logger.info("Published attestations", {
         slot,
         head: prettyBytes(headRootHex),

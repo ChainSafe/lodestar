@@ -1,13 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  isExecutionCachedStateType,
-  isMergeTransitionComplete,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
@@ -83,7 +77,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         skippedSlots > 0 ? (skippedSlots > 1000 ? `${headInfo.slot} ` : `(slot -${skippedSlots}) `) : "";
       const headRow = `head: ${headDiffInfo}${prettyBytes(headInfo.blockRoot)}`;
 
-      const executionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
+      const executionInfo = getHeadExecutionInfo(config, clockEpoch, headInfo);
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
 
       let nodeState: string[];
@@ -158,33 +152,33 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
   return msToNextSlot + msPerHalfSlot;
 }
 
-function getHeadExecutionInfo(
-  config: BeaconConfig,
-  clockEpoch: Epoch,
-  headState: CachedBeaconStateAllForks,
-  headInfo: ProtoBlock
-): string[] {
+function getHeadExecutionInfo(config: BeaconConfig, clockEpoch: Epoch, headInfo: ProtoBlock): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
     return [];
   }
 
   const executionStatusStr = headInfo.executionStatus.toLowerCase();
 
-  // Add execution status to notifier only if head is on/post bellatrix
-  if (isExecutionCachedStateType(headState)) {
-    if (isMergeTransitionComplete(headState)) {
-      const executionPayloadHashInfo =
-        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
-      const executionPayloadNumberInfo =
-        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
-      return [
-        `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
-          executionPayloadHashInfo
-        )})`,
-      ];
-    }
+  if (headInfo.executionStatus === ExecutionStatus.PreMerge) {
     return [`exec-block: ${executionStatusStr}`];
   }
 
-  return [];
+  // Post-Gloas: include payload-status and bid hash so notifier logs clearly expose
+  // whether the head is PENDING / EMPTY / FULL and which payload hash was selected.
+  const payloadStatusStr =
+    headInfo.payloadStatus === PayloadStatus.PENDING
+      ? "pending"
+      : headInfo.payloadStatus === PayloadStatus.EMPTY
+        ? "empty"
+        : "full";
+
+  const executionPayloadHashInfo = headInfo.executionPayloadBlockHash;
+  const executionPayloadNumberInfo = headInfo.executionPayloadNumber;
+  const bidHashInfo = headInfo.blockHashFromBid ? ` bid:${prettyBytesShort(headInfo.blockHashFromBid)}` : "";
+
+  return [
+    `exec-block: ${executionStatusStr}/${payloadStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
+      executionPayloadHashInfo
+    )}${bidHashInfo})`,
+  ];
 }
