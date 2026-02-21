@@ -125,10 +125,15 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // Verify consistency of the parent hash with respect to the previous execution payload
-  if (!byteArrayEquals(payload.parentHash, state.latestBlockHash)) {
+  // Verify consistency of the parent hash.
+  // In Gloas, state.latestBlockHash may point to a stale variant path while the committed bid
+  // carries the correct parent execution hash selected during block production.
+  const matchesLatestBlockHash = byteArrayEquals(payload.parentHash, state.latestBlockHash);
+  const matchesCommittedBidParentHash = byteArrayEquals(payload.parentHash, committedBid.parentBlockHash);
+
+  if (!matchesLatestBlockHash && !matchesCommittedBidParentHash) {
     throw new Error(
-      `Parent hash mismatch between envelope's payload and state envelope=${toRootHex(payload.parentHash)} state=${toRootHex(state.latestBlockHash)}`
+      `Parent hash mismatch between envelope's payload, state, and committed bid envelope=${toRootHex(payload.parentHash)} state=${toRootHex(state.latestBlockHash)} committedBidParent=${toRootHex(committedBid.parentBlockHash)}`
     );
   }
 
