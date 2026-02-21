@@ -1,0 +1,35 @@
+participants:
+  # 50% Lighthouse
+  - el_type: geth
+    el_image: ethpandaops/geth:epbs-devnet-0
+    cl_type: lighthouse
+    cl_image: ethpandaops/lighthouse:epbs-devnet-0
+    count: 2
+    validator_count: 32
+    supernode: true
+
+  # 50% Lodestar
+  - el_type: geth
+    el_image: ethpandaops/geth:epbs-devnet-0
+    cl_type: lodestar
+    cl_image: lodestar:epbs-devnet-0-local
+    count: 2
+    validator_count: 32
+    supernode: true
+    cl_extra_params:
+      - --targetPeers=12
+
+network_params:
+  gloas_fork_epoch: 1
+  seconds_per_slot: 12
+
+global_log_level: "debug"
+
+# Keep final-pass run lean (no dora/assertoor) to avoid startup flake in 6-node topology
+port_publisher:
+  cl:
+    enabled: true
+    public_port_start: 34000
+  el:
+    enabled: true
+    public_port_start: 35000

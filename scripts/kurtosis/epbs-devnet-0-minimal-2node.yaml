@@ -1,0 +1,23 @@
+participants:
+  - el_type: geth
+    el_image: ethpandaops/geth:epbs-devnet-0
+    cl_type: lighthouse
+    cl_image: ethpandaops/lighthouse:epbs-devnet-0
+    count: 1
+    validator_count: 128
+    supernode: true
+  - el_type: geth
+    el_image: ethpandaops/geth:epbs-devnet-0
+    cl_type: lodestar
+    cl_image: lodestar:epbs-devnet-0-local
+    count: 1
+    validator_count: 128
+    supernode: true
+network_params:
+  seconds_per_slot: 12
+  num_validator_keys_per_node: 256
+  gloas_fork_epoch: 1
+  genesis_delay: 20
+  network: kurtosis
+global_log_level: debug
+disable_peer_scoring: true

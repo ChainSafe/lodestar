@@ -1,0 +1,40 @@
+participants:
+  # 50% Lighthouse (3 nodes × 32 validators = 96)
+  - el_type: geth
+    el_image: ethpandaops/geth:epbs-devnet-0
+    cl_type: lighthouse
+    cl_image: ethpandaops/lighthouse:epbs-devnet-0
+    count: 3
+    validator_count: 32
+    supernode: true
+
+  # 50% Lodestar (3 nodes × 32 validators = 96)
+  - el_type: geth
+    el_image: ethpandaops/geth:epbs-devnet-0
+    cl_type: lodestar
+    cl_image: lodestar:epbs-devnet-0-local
+    count: 3
+    validator_count: 32
+    supernode: true
+    cl_extra_params:
+      - --targetPeers=12
+      - --logLevel=debug
+
+network_params:
+  gloas_fork_epoch: 1
+  seconds_per_slot: 12
+
+additional_services:
+  - dora
+  - assertoor
+
+assertoor_params:
+  run_stability_check: true
+  run_block_proposal_check: true
+
+port_publisher:
+  cl:
+    enabled: false
+  el:
+    enabled: true
+    public_port_start: 35000

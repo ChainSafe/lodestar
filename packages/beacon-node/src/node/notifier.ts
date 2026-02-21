@@ -162,34 +162,33 @@ function getHeadExecutionInfo(
     return [];
   }
 
-  const executionStatusStr = headInfo.executionStatus.toLowerCase();
-
   if (headInfo.executionStatus === ExecutionStatus.PreMerge) {
-    return [`exec-block: ${executionStatusStr}`];
+    return ["exec-block: premerge"];
   }
 
-  // Since the notifier fires at mid-slot, the head for the current slot may still be pending.
-  // For post-Gloas blocks with PendingEnvelope status (bid imported, envelope not yet),
-  // show the previous slot's resolved payload state instead.
+  // Post-Gloas: the head returned by fork-choice is the EMPTY variant of the latest block
+  // (envelope not yet imported for current slot). Look up the FULL variant of the same block
+  // or the parent block's FULL variant to show resolved execution payload info.
   let payloadBlockForDisplay = headInfo;
-  let payloadSlotInfo = "";
   if (
-    (headInfo.executionStatus === ExecutionStatus.PendingEnvelope ||
-      headInfo.payloadStatus === PayloadStatus.PENDING) &&
-    headInfo.parentRoot
+    headInfo.executionStatus === ExecutionStatus.PendingEnvelope ||
+    headInfo.payloadStatus === PayloadStatus.PENDING ||
+    headInfo.payloadStatus === PayloadStatus.EMPTY
   ) {
-    const parentBlock = forkChoice.getBlockHexDefaultStatus(headInfo.parentRoot);
-    if (
-      parentBlock &&
-      parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
-      parentBlock.executionStatus !== ExecutionStatus.PendingEnvelope &&
-      parentBlock.payloadStatus !== PayloadStatus.PENDING
-    ) {
-      payloadBlockForDisplay = parentBlock;
-      payloadSlotInfo = ` prevSlot:${parentBlock.slot}`;
+    // First try: FULL variant of the same block (envelope may have arrived by now)
+    const fullVariant = forkChoice.getBlockHex(headInfo.blockRoot, PayloadStatus.FULL);
+    if (fullVariant) {
+      payloadBlockForDisplay = fullVariant as typeof headInfo;
+    } else if (headInfo.parentRoot) {
+      // Fallback: FULL variant of parent block (previous slot should be resolved)
+      const parentFull = forkChoice.getBlockHex(headInfo.parentRoot, PayloadStatus.FULL);
+      if (parentFull) {
+        payloadBlockForDisplay = parentFull as typeof headInfo;
+      }
     }
   }
 
+  const executionStatusStr = payloadBlockForDisplay.executionStatus.toLowerCase();
   const payloadStatusStr =
     payloadBlockForDisplay.payloadStatus === PayloadStatus.PENDING
       ? "pending"
@@ -206,6 +205,6 @@ function getHeadExecutionInfo(
   return [
     `exec-block: ${executionStatusStr}/${payloadStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
       executionPayloadHashInfo
-    )}${bidHashInfo}${payloadSlotInfo})`,
+    )}${bidHashInfo})`,
   ];
 }
