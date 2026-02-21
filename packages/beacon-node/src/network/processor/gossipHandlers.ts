@@ -459,9 +459,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.getBlobsTracker.triggerGetBlobs(blockInput);
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
-      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
-        (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
-      );
+      // blobKzgCommitments is removed from BeaconBlockBody post-Gloas (EIP-7732)
+      if (config.getForkSeq(slot) < ForkSeq.gloas) {
+        metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
+          (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
+        );
+      }
     }
 
     chain
