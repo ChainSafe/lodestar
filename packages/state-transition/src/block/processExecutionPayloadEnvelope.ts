@@ -1,12 +1,8 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {
-  BUILDER_INDEX_SELF_BUILD,
-  DOMAIN_BEACON_BUILDER,
-  SLOTS_PER_EPOCH,
-  SLOTS_PER_HISTORICAL_ROOT,
-} from "@lodestar/params";
+import {Signature, verify} from "@chainsafe/blst";
+import {DOMAIN_BEACON_BUILDER, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {getExecutionPayloadEnvelopeSignerPubkey} from "../signatureSets/executionPayloadEnvelope.js";
 import {CachedBeaconStateGloas} from "../types.ts";
 import {computeSigningRoot, computeTimeAtSlot} from "../util/index.ts";
 import {processConsolidationRequest} from "./processConsolidationRequest.ts";
@@ -146,20 +142,11 @@ function verifyExecutionPayloadEnvelopeSignature(
   state: CachedBeaconStateGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): boolean {
-  const builderIndex = signedEnvelope.message.builderIndex;
-
   const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_BUILDER);
   const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, signedEnvelope.message, domain);
 
   try {
-    let publicKey: PublicKey;
-
-    if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
-      const validatorIndex = state.latestBlockHeader.proposerIndex;
-      publicKey = state.epochCtx.index2pubkey[validatorIndex];
-    } else {
-      publicKey = PublicKey.fromBytes(state.builders.getReadonly(builderIndex).pubkey);
-    }
+    const publicKey = getExecutionPayloadEnvelopeSignerPubkey(state, signedEnvelope.message);
     const signature = Signature.fromBytes(signedEnvelope.signature, true);
 
     return verify(signingRoot, publicKey, signature);

@@ -1,32 +1,39 @@
 import {PublicKey} from "@chainsafe/blst";
+import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {
   CachedBeaconStateGloas,
   computeStartSlotAtEpoch,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadEnvelopeSigningRoot,
 } from "@lodestar/state-transition";
-import {gloas} from "@lodestar/types";
+import {gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope, RegenCaller.restApi);
 }
 
 export async function validateGossipExecutionPayloadEnvelope(
   chain: IBeaconChain,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+  return validateExecutionPayloadEnvelope(
+    chain,
+    executionPayloadEnvelope,
+    RegenCaller.validateGossipExecutionPayloadEnvelope
+  );
 }
 
 async function validateExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  regenCaller: RegenCaller
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
   const {payload} = envelope;
@@ -70,45 +77,68 @@ async function validateExecutionPayloadEnvelope(
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
 
-  // [REJECT] `block.slot` equals `envelope.slot`.
-  if (block.slot !== envelope.slot) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
-      envelopeSlot: envelope.slot,
-      blockSlot: block.slot,
-    });
-  }
-
-  if (block.builderIndex === undefined || block.blockHashHex === undefined) {
-    // This indicates this block is a pre-gloas block which is wrong
+  const blockByRoot = await chain.getBlockByRoot(blockRootHex);
+  if (blockByRoot === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
       blockRoot: blockRootHex,
     });
   }
+  const fullBlock = blockByRoot.block;
+
+  // [REJECT] `block.slot` equals `envelope.slot`.
+  if (fullBlock.message.slot !== envelope.slot) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
+      envelopeSlot: envelope.slot,
+      blockSlot: fullBlock.message.slot,
+    });
+  }
+
+  if (!isGloasBeaconBlock(fullBlock.message)) {
+    // This should never happen
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
+      blockRoot: blockRootHex,
+    });
+  }
+  const bid = fullBlock.message.body.signedExecutionPayloadBid.message;
 
   // [REJECT] `envelope.builder_index == bid.builder_index`
-  if (envelope.builderIndex !== block.builderIndex) {
+  if (envelope.builderIndex !== bid.builderIndex) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
       envelopeBuilderIndex: envelope.builderIndex,
-      bidBuilderIndex: block.builderIndex,
+      bidBuilderIndex: bid.builderIndex,
     });
   }
 
   // [REJECT] `payload.block_hash == bid.block_hash`
-  if (toRootHex(payload.blockHash) !== block.blockHashHex) {
+  const bidBlockHashHex = toRootHex(bid.blockHash);
+  if (toRootHex(payload.blockHash) !== bidBlockHashHex) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
       envelopeBlockHash: toRootHex(payload.blockHash),
-      bidBlockHash: block.blockHashHex,
+      bidBlockHash: bidBlockHashHex,
     });
   }
 
-  // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
-  const state = chain.getHeadState() as CachedBeaconStateGloas;
+  // [REJECT] `signed_execution_payload_envelope.signature` is valid according to
+  // `verify_execution_payload_envelope_signature`.
+  // For self-builds use the block proposer's pubkey, otherwise use the builder's pubkey.
+  let signerPubkey: PublicKey;
+  if (envelope.builderIndex === BUILDER_INDEX_SELF_BUILD) {
+    signerPubkey = chain.index2pubkey[fullBlock.message.proposerIndex];
+  } else {
+    const preState = (await chain.regen.getState(
+      toRootHex(fullBlock.message.stateRoot),
+      regenCaller
+    )) as CachedBeaconStateGloas;
+    signerPubkey = PublicKey.fromBytes(preState.builders.getReadonly(envelope.builderIndex).pubkey);
+  }
+
   const signatureSet = createSingleSignatureSetFromComponents(
-    PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey),
+    signerPubkey,
     getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
     executionPayloadEnvelope.signature
   );
