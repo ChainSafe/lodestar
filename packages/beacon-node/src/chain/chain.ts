@@ -200,6 +200,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeCache: SeenPayloadEnvelopeCache;
+  readonly pendingEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope> = new Map();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -932,6 +933,62 @@ export class BeaconChain implements IBeaconChain {
     shouldOverrideBuilder?: boolean;
   }> {
     const fork = this.config.getForkName(slot);
+
+    // For Gloas blocks: import parent's pending envelope before state retrieval.
+    // Without this, block production uses the EMPTY parent state, producing a block
+    // with a state root that won't match the FULL-parent verification path.
+    if (isForkPostGloas(fork) && parentBlock.payloadStatus !== PayloadStatus.FULL) {
+      const parentRootHex = parentBlock.blockRoot;
+      // Check pendingEnvelopes first (envelope arrived before block was in fork-choice)
+      const pendingEnvelope = this.pendingEnvelopes.get(parentRootHex);
+      if (pendingEnvelope) {
+        try {
+          await this.importExecutionPayloadEnvelope(pendingEnvelope);
+          this.pendingEnvelopes.delete(parentRootHex);
+          this.logger.info("Imported pending parent envelope before block production", {
+            parentRoot: parentRootHex,
+            parentSlot: parentBlock.slot,
+            productionSlot: slot,
+          });
+        } catch (e) {
+          this.logger.debug(
+            "Failed importing pending parent envelope before production",
+            {parentRoot: parentRootHex},
+            e as Error
+          );
+        }
+      } else {
+        // Wait briefly for envelope to arrive via gossip
+        for (let attempt = 0; attempt < 10; attempt++) {
+          const updatedParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
+          if (updatedParent) {
+            // Refresh parentBlock reference so getBlockSlotState uses FULL state
+            parentBlock = updatedParent;
+            break;
+          }
+          const envelope = this.pendingEnvelopes.get(parentRootHex);
+          if (envelope) {
+            try {
+              await this.importExecutionPayloadEnvelope(envelope);
+              this.pendingEnvelopes.delete(parentRootHex);
+              this.logger.info("Imported pending parent envelope before block production (retry)", {
+                parentRoot: parentRootHex,
+                attempt,
+              });
+            } catch (e) {
+              this.logger.debug(
+                "Failed importing pending parent envelope before production (retry)",
+                {parentRoot: parentRootHex},
+                e as Error
+              );
+            }
+            break;
+          }
+          await sleep(200);
+        }
+      }
+    }
+
     const state = await this.regen.getBlockSlotState(
       parentBlock,
       slot,

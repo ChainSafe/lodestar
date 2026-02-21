@@ -3,11 +3,13 @@ import {SlotOptionalRoot, SlotRootHex} from "@lodestar/types";
 import {
   getBlockRootFromBeaconAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
+  getBlockRootFromSignedExecutionPayloadEnvelopeSerialized,
   getSlotFromBeaconAttestationSerialized,
   getSlotFromBlobSidecarSerialized,
   getSlotFromDataColumnSidecarSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
+  getSlotFromSignedExecutionPayloadEnvelopeSerialized,
 } from "../../util/sszBytes.js";
 import {GossipType} from "../gossip/index.js";
 import {ExtractSlotRootFns} from "./types.js";
@@ -59,6 +61,15 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
         return null;
       }
       return {slot};
+    },
+    [GossipType.execution_payload]: (data: Uint8Array): SlotRootHex | null => {
+      const slot = getSlotFromSignedExecutionPayloadEnvelopeSerialized(data);
+      const root = getBlockRootFromSignedExecutionPayloadEnvelopeSerialized(data);
+
+      if (slot === null || root === null) {
+        return null;
+      }
+      return {slot, root};
     },
   };
 }

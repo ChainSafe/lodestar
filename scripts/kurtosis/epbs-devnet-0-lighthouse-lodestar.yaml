@@ -18,7 +18,6 @@ participants:
     supernode: true
     cl_extra_params:
       - --targetPeers=12
-
   # Lodestar observer node (no validators) for extra network coverage + logs
   - el_type: geth
     el_image: ethpandaops/geth:epbs-devnet-0

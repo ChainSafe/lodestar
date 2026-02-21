@@ -73,6 +73,7 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {ClockEvent} from "../../util/clock.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -132,9 +133,22 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
-  // Bounded cache for envelopes that arrive before their beacon block.
-  const MAX_EARLY_ENVELOPES = 64;
-  const earlyEnvelopes = new Map<string, {envelope: gloas.SignedExecutionPayloadEnvelope; seenTimestampSec: number}>();
+
+  // Max pending envelopes to cache (shared with chain for block import access).
+  // Needs to be large enough to hold envelopes during UnknownBlockSync catch-up,
+  // where a chain of 32+ blocks may need their envelopes retained simultaneously.
+  const MAX_PENDING_ENVELOPES = 128;
+
+  // Evict stale pending envelopes on slot boundaries.
+  // Use a generous TTL (16 slots) because during UnknownBlockSync catch-up,
+  // envelopes may arrive via gossip many slots before their blocks are processed.
+  chain.clock.on(ClockEvent.slot, (clockSlot: Slot) => {
+    for (const [rootHex, envelope] of chain.pendingEnvelopes.entries()) {
+      if (envelope.message.slot < clockSlot - 16) {
+        chain.pendingEnvelopes.delete(rootHex);
+      }
+    }
+  });
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
@@ -472,29 +486,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
-
-        // If an envelope arrived before this block, process it now that the block is in fork-choice.
-        const early = earlyEnvelopes.get(blockInput.blockRootHex);
-        if (early) {
-          earlyEnvelopes.delete(blockInput.blockRootHex);
-          try {
-            const cachedInput = chain.seenPayloadEnvelopeCache.get(blockInput.blockRootHex);
-            cachedInput?.setEnvelope(early.envelope);
-            // Pass envelopeInput for bid-based validation (block is in FC here too, but stay consistent)
-            await validateGossipExecutionPayloadEnvelope(chain, early.envelope, cachedInput);
-            await chain.importExecutionPayloadEnvelope(early.envelope);
-            logger.info("Imported early execution payload envelope", {
-              slot: early.envelope.message.slot,
-              blockRoot: blockInput.blockRootHex,
-            });
-          } catch (e) {
-            logger.warn(
-              "Failed importing early execution payload envelope",
-              {blockRoot: blockInput.blockRootHex},
-              e as Error
-            );
-          }
-        }
       })
       .catch((e) => {
         // Adjust verbosity based on error type
@@ -879,25 +870,25 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
       const blockRootHex = toRootHex(executionPayloadEnvelope.message.beaconBlockRoot);
 
-      // Envelope arrived before the block was gossip-validated: store and return.
-      const envelopeInput = chain.seenPayloadEnvelopeCache.get(blockRootHex);
-      if (!envelopeInput) {
-        // Only evict if we're adding a genuinely new entry
-        if (!earlyEnvelopes.has(blockRootHex) && earlyEnvelopes.size >= MAX_EARLY_ENVELOPES) {
-          const firstKey = earlyEnvelopes.keys().next().value;
-          if (firstKey !== undefined) {
-            earlyEnvelopes.delete(firstKey);
-          }
+      // Cache envelope in chain.pendingEnvelopes so the block import path can consume it
+      // before running state transition on child blocks (avoids INVALID_STATE_ROOT when
+      // envelope arrives before or around the same time as its block).
+      if (!chain.forkChoice.hasBlockHexUnsafe(blockRootHex)) {
+        if (chain.pendingEnvelopes.size >= MAX_PENDING_ENVELOPES) {
+          const firstKey = chain.pendingEnvelopes.keys().next().value;
+          if (firstKey !== undefined) chain.pendingEnvelopes.delete(firstKey);
         }
-        earlyEnvelopes.set(blockRootHex, {envelope: executionPayloadEnvelope, seenTimestampSec});
-        chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: blockRootHex, source: BlockInputSource.gossip});
+        chain.pendingEnvelopes.set(blockRootHex, executionPayloadEnvelope);
         return;
       }
 
-      // Pass envelopeInput so validation uses bid info from the cache instead of
-      // fork-choice lookup — the block may be gossip-validated but not yet imported.
+      const envelopeInput = chain.seenPayloadEnvelopeCache.get(blockRootHex);
+
+      // Pass envelopeInput so validation uses bid info from cache when available.
+      // Blocks imported via unknown-block sync may not have a cache entry — validation
+      // falls back to fork-choice metadata in that case.
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope, envelopeInput);
-      envelopeInput.setEnvelope(executionPayloadEnvelope);
+      envelopeInput?.setEnvelope(executionPayloadEnvelope);
 
       const slot = executionPayloadEnvelope.message.slot;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);

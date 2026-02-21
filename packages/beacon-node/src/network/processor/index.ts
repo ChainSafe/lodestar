@@ -274,6 +274,14 @@ export class NetworkProcessor {
         if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
           this.searchUnknownSlotRoot({slot, root}, BlockInputSource.gossip, message.propagationSource.toString());
 
+          // Execution payload envelopes need to reach the handler immediately so it can cache
+          // them for unknown-block sync paths. Parking them in the slot-pruned awaiting queue
+          // can drop them before the block import resolves.
+          if (topicType === GossipType.execution_payload) {
+            this.pushPendingGossipsubMessageToQueue(message);
+            return;
+          }
+
           if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
             this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});

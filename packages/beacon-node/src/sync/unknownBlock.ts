@@ -1,9 +1,11 @@
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {PayloadStatus} from "@lodestar/fork-choice";
+import {ForkSeq, isForkPostGloas} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
-import {Logger, prettyPrintIndices, pruneSetToMax, sleep} from "@lodestar/utils";
+import {RootHex, gloas} from "@lodestar/types";
+import {Logger, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
@@ -116,6 +118,7 @@ export class BlockInputSync {
       this.chain.emitter.on(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
       this.chain.emitter.on(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
       this.chain.emitter.on(ChainEvent.unknownParent, this.onUnknownParent);
+      this.chain.emitter.on(routes.events.EventType.executionPayloadAvailable, this.onExecutionPayloadAvailable);
       this.network.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
       this.network.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
       this.subscribedToNetworkEvents = true;
@@ -127,6 +130,7 @@ export class BlockInputSync {
     this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
     this.chain.emitter.off(ChainEvent.unknownParent, this.onUnknownParent);
+    this.chain.emitter.off(routes.events.EventType.executionPayloadAvailable, this.onExecutionPayloadAvailable);
     this.network.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.network.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
     this.subscribedToNetworkEvents = false;
@@ -180,6 +184,20 @@ export class BlockInputSync {
       this.metrics?.blockInputSync.source.inc({source: data.source});
     } catch (e) {
       this.logger.debug("Error handling unknownParent event", {}, e as Error);
+    }
+  };
+
+  private onExecutionPayloadAvailable = (
+    data: routes.events.EventData[routes.events.EventType.executionPayloadAvailable]
+  ): void => {
+    try {
+      this.logger.debug("UnknownBlockSync retry triggered by execution payload availability", {
+        slot: data.slot,
+        blockRoot: data.blockRoot,
+      });
+      this.triggerUnknownBlockSearch();
+    } catch (e) {
+      this.logger.debug("Error handling executionPayloadAvailable event", {}, e as Error);
     }
   };
 
@@ -446,10 +464,35 @@ export class BlockInputSync {
 
     if (!res.err) {
       // no need to update status to "processed", delete anyway
-      this.pendingBlocks.delete(pendingBlock.blockInput.blockRootHex);
+      const blockRootHex = pendingBlock.blockInput.blockRootHex;
+      this.pendingBlocks.delete(blockRootHex);
+
+      // After importing a Gloas block, try to import its pending envelope immediately
+      // BEFORE processing descendants. This ensures child blocks find their parent in FULL
+      // state, avoiding INVALID_STATE_ROOT errors during batch catch-up processing.
+      const forkName = this.config.getForkName(blockSlot);
+      if (isForkPostGloas(forkName)) {
+        const pendingEnvelope = this.chain.pendingEnvelopes.get(blockRootHex);
+        if (pendingEnvelope) {
+          try {
+            await this.chain.importExecutionPayloadEnvelope(pendingEnvelope);
+            this.chain.pendingEnvelopes.delete(blockRootHex);
+            this.logger.debug("Imported pending envelope after block import in UnknownBlockSync", {
+              slot: blockSlot,
+              blockRoot: blockRootHex,
+            });
+          } catch (e) {
+            this.logger.debug(
+              "Failed to import pending envelope after block import",
+              {blockRoot: blockRootHex},
+              e as Error
+            );
+          }
+        }
+      }
 
       // Send child blocks to the processor
-      for (const descendantBlock of getDescendantBlocks(pendingBlock.blockInput.blockRootHex, this.pendingBlocks)) {
+      for (const descendantBlock of getDescendantBlocks(blockRootHex, this.pendingBlocks)) {
         if (isPendingBlockInput(descendantBlock)) {
           this.processBlock(descendantBlock).catch((e) => {
             this.logger.debug("Unexpected error - process descendant block", {}, e);
@@ -477,6 +520,23 @@ export class BlockInputSync {
             this.removeAllDescendants(pendingBlock);
             break;
 
+          case BlockErrorCode.INVALID_STATE_ROOT: {
+            const retryCtx = this.getGloasInvalidStateRootRetryContext(pendingBlock);
+            if (retryCtx.shouldRetry) {
+              this.logger.debug("Deferring INVALID_STATE_ROOT for Gloas child until parent FULL is available", {
+                ...errorData,
+                ...retryCtx,
+              });
+              pendingBlock.status = PendingBlockInputStatus.downloaded;
+              break;
+            }
+
+            // Block is not correct with respect to our chain. Log error loudly
+            this.logger.debug("Error processing block from unknown parent sync", {...errorData, ...retryCtx}, res.err);
+            this.removeAndDownScoreAllDescendants(pendingBlock);
+            break;
+          }
+
           default:
             // Block is not correct with respect to our chain. Log error loudly
             this.logger.debug("Error processing block from unknown parent sync", errorData, res.err);
@@ -490,6 +550,52 @@ export class BlockInputSync {
         pendingBlock.status = PendingBlockInputStatus.downloaded;
       }
     }
+  }
+
+  private getGloasInvalidStateRootRetryContext(pendingBlock: PendingBlockInput): {
+    shouldRetry: boolean;
+    forkName?: string;
+    childParentBlockHash?: RootHex;
+    parentRoot?: RootHex;
+    parentPayloadStatus?: PayloadStatus;
+    parentBlockHashFromBid?: RootHex;
+    wantsFullParent?: boolean;
+  } {
+    const block = pendingBlock.blockInput.getBlock();
+    const forkName = this.config.getForkName(block.message.slot);
+
+    if (!isForkPostGloas(forkName)) {
+      return {shouldRetry: false, forkName};
+    }
+
+    const childParentBlockHash = toRootHex(
+      (block.message as gloas.BeaconBlock).body.signedExecutionPayloadBid.message.parentBlockHash
+    );
+    const parentRoot = pendingBlock.blockInput.parentRootHex;
+    const parentBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+
+    if (!parentBlock || parentBlock.blockHashFromBid == null) {
+      return {
+        shouldRetry: false,
+        forkName,
+        childParentBlockHash,
+        parentRoot,
+      };
+    }
+
+    const parentBlockHashFromBid = parentBlock.blockHashFromBid;
+    const parentPayloadStatus = parentBlock.payloadStatus;
+    const wantsFullParent = childParentBlockHash === parentBlockHashFromBid;
+
+    return {
+      shouldRetry: wantsFullParent && parentPayloadStatus !== PayloadStatus.FULL,
+      forkName,
+      childParentBlockHash,
+      parentRoot,
+      parentPayloadStatus,
+      parentBlockHashFromBid,
+      wantsFullParent,
+    };
   }
 
   /**

@@ -145,6 +145,9 @@ export interface IBeaconChain {
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeCache: SeenPayloadEnvelopeCache;
+  /** Deserialized envelopes cached from gossip, keyed by beacon block root hex.
+   *  Block import path consumes these to import parent envelopes before state transition. */
+  readonly pendingEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope>;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
