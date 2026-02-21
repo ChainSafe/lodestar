@@ -959,7 +959,7 @@ export class BeaconChain implements IBeaconChain {
         }
       } else {
         // Wait briefly for envelope to arrive via gossip
-        for (let attempt = 0; attempt < 10; attempt++) {
+        for (let attempt = 0; attempt < 20; attempt++) {
           const updatedParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
           if (updatedParent) {
             // Refresh parentBlock reference so getBlockSlotState uses FULL state
@@ -984,7 +984,7 @@ export class BeaconChain implements IBeaconChain {
             }
             break;
           }
-          await sleep(200);
+          await sleep(100);
         }
       }
     }

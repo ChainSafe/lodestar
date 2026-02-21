@@ -72,12 +72,27 @@ export async function validateGossipBlock(
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   const parentRoot = toRootHex(block.parentRoot);
-  const parentBlock = isGloasBeaconBlock(block)
+  let parentBlock = isGloasBeaconBlock(block)
     ? chain.forkChoice.getBlockHexAndBlockHash(
         parentRoot,
         toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
       )
     : chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+
+  // Post-Gloas: parent may still be in the verify pipeline (bid processing + envelope import).
+  // Wait briefly before falling back to unknown block sync, which adds significant latency
+  // and causes cascading missed blocks. With 12s slots, a 2s wait is acceptable.
+  if (parentBlock === null && isGloasBeaconBlock(block)) {
+    for (let i = 0; i < 20; i++) {
+      await sleep(100);
+      parentBlock = chain.forkChoice.getBlockHexAndBlockHash(
+        parentRoot,
+        toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
+      );
+      if (parentBlock !== null) break;
+    }
+  }
+
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:

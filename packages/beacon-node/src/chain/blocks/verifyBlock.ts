@@ -73,10 +73,10 @@ export async function verifyBlocksInEpoch(
   if (parentBlock.parentBlockHash !== null && parentBlock.payloadStatus !== PayloadStatus.FULL) {
     const parentRootHex = toRootHex(block0.message.parentRoot);
 
-    // Try up to 15 times with 300ms delay (total max wait: ~4.5s)
+    // Try up to 20 times with 100ms delay (total max wait: ~2s)
     // Needs to be long enough for envelopes to arrive via gossip, especially during
     // UnknownBlockSync catch-up where multiple blocks are processed in sequence.
-    for (let attempt = 0; attempt < 15; attempt++) {
+    for (let attempt = 0; attempt < 20; attempt++) {
       // Re-check fork-choice — envelope may have been imported by another path (gossip handler)
       const updatedParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
       if (updatedParent) break;
@@ -101,8 +101,8 @@ export async function verifyBlocksInEpoch(
       }
 
       // Envelope not available yet — yield to event loop so gossip can deliver it
-      if (attempt < 14) {
-        await sleep(300);
+      if (attempt < 19) {
+        await sleep(100);
       }
     }
   }
