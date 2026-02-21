@@ -411,6 +411,13 @@ export class LightClientServer {
   ): Promise<void> {
     const blockSlot = block.slot;
     const fork = this.config.getForkName(blockSlot);
+
+    // TODO GLOAS: Light-client updates for Gloas are pending spec work.
+    // Skip persisting light-client checkpoint data for post-Gloas blocks for now.
+    if (ForkSeq[fork] >= ForkSeq.gloas) {
+      return;
+    }
+
     const header = blockToLightClientHeader(fork, block);
 
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.beacon);

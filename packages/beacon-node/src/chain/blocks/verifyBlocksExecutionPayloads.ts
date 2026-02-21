@@ -148,21 +148,25 @@ export async function verifyBlockExecutionPayload(
   preState0: CachedBeaconStateAllForks
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
-  /** Not null if execution is enabled */
+  // TODO: Handle better notifyNewPayload() returning error is syncing
+  const fork = blockInput.forkName;
+  const executionEnabled =
+    ForkSeq[fork] >= ForkSeq.gloas || (isExecutionStateType(preState0) && isExecutionEnabled(preState0, block.message));
+
+  /** Not null if execution payload is embedded in the block body (pre-Gloas post-merge blocks) */
   const executionPayloadEnabled =
-    isExecutionStateType(preState0) &&
-    isExecutionBlockBodyType(block.message.body) &&
-    isExecutionEnabled(preState0, block.message)
-      ? block.message.body.executionPayload
-      : null;
+    executionEnabled && isExecutionBlockBodyType(block.message.body) ? block.message.body.executionPayload : null;
 
   if (!executionPayloadEnabled) {
+    if (executionEnabled) {
+      // Post-merge blocks without an embedded payload (e.g. Gloas bid-only blocks)
+      // are imported optimistically and finalized after payload envelope processing.
+      return {executionStatus: ExecutionStatus.Syncing, lvhResponse: undefined, execError: null};
+    }
+
     // Pre-merge block, no execution payload to verify
     return {executionStatus: ExecutionStatus.PreMerge, lvhResponse: undefined, execError: null};
   }
-
-  // TODO: Handle better notifyNewPayload() returning error is syncing
-  const fork = blockInput.forkName;
   const versionedHashes =
     isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput) ? blockInput.getVersionedHashes() : undefined;
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
