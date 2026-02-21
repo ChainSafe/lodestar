@@ -178,6 +178,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             return;
           }
         }
+        // Retry budget exhausted — clean up to prevent unbounded map growth
+        pendingExecutionPayloadEnvelopesByBlockRoot.delete(blockRootHex);
       } finally {
         processingDeferredEnvelopeRoots.delete(blockRootHex);
       }
