@@ -666,6 +666,5 @@ describe("Gloas Fork Choice", () => {
 
       expect(pendingNode.bestChild).toBe(emptyIndex);
     });
-
   });
 });
