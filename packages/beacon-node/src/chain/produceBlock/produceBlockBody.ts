@@ -4,6 +4,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
+  ForkPostCapella,
   ForkPostDeneb,
   ForkPostFulu,
   ForkPostGloas,
@@ -568,13 +569,13 @@ export async function produceBlockBody<T extends BlockType>(
   }
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
-    const {blsToExecutionChanges, payloadAttestations} = blockBody as gloas.BeaconBlockBody;
+    const {blsToExecutionChanges, payloadAttestations} = blockBody as BeaconBlockBody<ForkPostGloas>;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
       payloadAttestations: payloadAttestations.length,
     });
   } else if (ForkSeq[fork] >= ForkSeq.capella) {
-    const {blsToExecutionChanges, executionPayload} = blockBody as capella.BeaconBlockBody;
+    const {blsToExecutionChanges, executionPayload} = blockBody as BeaconBlockBody<ForkPostCapella & ForkPreGloas>;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
     });
