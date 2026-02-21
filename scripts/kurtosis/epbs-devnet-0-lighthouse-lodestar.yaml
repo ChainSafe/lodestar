@@ -43,8 +43,7 @@ assertoor_params:
 
 port_publisher:
   cl:
-    enabled: true
-    public_port_start: 33000
+    enabled: false
   el:
     enabled: true
-    public_port_start: 32000
+    public_port_start: 35000

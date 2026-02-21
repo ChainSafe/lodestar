@@ -192,9 +192,8 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-      }
+      } else if (!isForkPostDeneb(forkName)) {
       // Pre-deneb
-      if (!isForkPostDeneb(forkName)) {
         blockInput = BlockInputPreData.createFromBlock({
           block,
           blockRootHex,
