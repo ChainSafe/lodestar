@@ -421,48 +421,44 @@ export class ProtoArray {
         this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot);
       }
     }
-    // Post-Gloas: synchronize bestChild/bestDescendant across sibling variants of the same block.
-    // Different variants (PENDING, EMPTY, FULL) may have different children attached to them
-    // (e.g., child blocks parent to EMPTY when FULL isn't available yet). Without sync,
-    // the head traversal can get stuck on a variant with high weight but no children.
-    // Pick the variant with the deepest/best descendant and propagate to all siblings.
+    // Post-Gloas: reconcile PENDING.bestDescendant with the deepest branch among EMPTY/FULL.
+    // IMPORTANT: only mutate PENDING. EMPTY/FULL are siblings and must keep their own subtree pointers.
+    // Copying bestChild across siblings can produce invalid pointers (non-child indices) and stale heads.
     for (const [, variantOrIndex] of this.indices) {
       if (!Array.isArray(variantOrIndex)) continue;
       const variants = variantOrIndex as GloasVariantIndices;
+      const pendingIndex = variants[PayloadStatus.PENDING];
+      if (pendingIndex === undefined) continue;
 
-      // Find the variant with the best (deepest) descendant
-      let bestVariantDescendant: number | undefined;
-      let bestVariantChild: number | undefined;
-      let bestVariantDescendantSlot = -1;
+      const pendingNode = this.nodes[pendingIndex];
+      if (!pendingNode) continue;
 
-      for (const status of [PayloadStatus.PENDING, PayloadStatus.EMPTY, PayloadStatus.FULL]) {
-        const idx = variants[status];
-        if (idx === undefined) continue;
-        const node = this.nodes[idx];
-        if (!node || node.bestDescendant === undefined) continue;
-        const desc = this.nodes[node.bestDescendant];
-        if (desc && desc.slot > bestVariantDescendantSlot) {
-          bestVariantDescendantSlot = desc.slot;
-          bestVariantDescendant = node.bestDescendant;
-          bestVariantChild = node.bestChild;
+      let bestChildIndex = pendingNode.bestChild;
+      let bestDescendantIndex = pendingNode.bestDescendant;
+      let bestDescendantSlot =
+        bestDescendantIndex !== undefined
+          ? (this.nodes[bestDescendantIndex]?.slot ?? pendingNode.slot)
+          : pendingNode.slot;
+
+      for (const status of [PayloadStatus.EMPTY, PayloadStatus.FULL]) {
+        const childIndex = variants[status];
+        if (childIndex === undefined) continue;
+
+        const childNode = this.nodes[childIndex];
+        if (!childNode || !this.nodeLeadsToViableHead(childNode, currentSlot)) continue;
+
+        const childDescendantIndex = childNode.bestDescendant ?? childIndex;
+        const childDescendantSlot = this.nodes[childDescendantIndex]?.slot ?? childNode.slot;
+
+        if (childDescendantSlot > bestDescendantSlot) {
+          bestDescendantSlot = childDescendantSlot;
+          bestChildIndex = childIndex;
+          bestDescendantIndex = childDescendantIndex;
         }
       }
 
-      // Propagate to all variants that have no bestDescendant or a shallower one
-      if (bestVariantDescendant !== undefined && bestVariantChild !== undefined) {
-        for (const status of [PayloadStatus.PENDING, PayloadStatus.EMPTY, PayloadStatus.FULL]) {
-          const idx = variants[status];
-          if (idx === undefined) continue;
-          const node = this.nodes[idx];
-          if (!node) continue;
-          const currentDesc = node.bestDescendant !== undefined ? this.nodes[node.bestDescendant] : undefined;
-          const currentSlotVal = currentDesc?.slot ?? -1;
-          if (currentSlotVal < bestVariantDescendantSlot) {
-            node.bestChild = bestVariantChild;
-            node.bestDescendant = bestVariantDescendant;
-          }
-        }
-      }
+      pendingNode.bestChild = bestChildIndex;
+      pendingNode.bestDescendant = bestDescendantIndex;
     }
 
     // Update the previous proposer boost

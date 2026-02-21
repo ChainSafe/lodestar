@@ -45,7 +45,8 @@ describe("Gloas Fork Choice", () => {
     slot: number,
     blockRoot: RootHex,
     parentRoot: RootHex,
-    parentBlockHash?: RootHex
+    parentBlockHash?: RootHex,
+    blockHashFromBid: RootHex | null = null
   ): ProtoBlock {
     return {
       slot,
@@ -69,7 +70,7 @@ describe("Gloas Fork Choice", () => {
       parentBlockHash: parentBlockHash === undefined ? null : parentBlockHash,
       payloadStatus: PayloadStatus.FULL,
       builderIndex: null,
-      blockHashFromBid: null,
+      blockHashFromBid,
     };
   }
 
@@ -496,7 +497,7 @@ describe("Gloas Fork Choice", () => {
 
     it("inter-block: new PENDING extends parent's EMPTY or FULL", () => {
       // Block A
-      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot, "0x02Hash");
       protoArray.onBlock(blockA, gloasForkSlot);
       protoArray.onExecutionPayload("0x02Root", gloasForkSlot, "0x02Hash", gloasForkSlot, stateRoot);
 
