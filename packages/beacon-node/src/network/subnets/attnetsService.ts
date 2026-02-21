@@ -133,11 +133,18 @@ export class AttnetsService implements IAttnetsService {
    * Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
    **/
   subscribeSubnetsNextBoundary(boundary: ForkBoundary): void {
-    this.logger.info("Subscribing to long lived attnets for next fork boundary", {
+    const subnets = this.opts.subscribeAllSubnets
+      ? Array.from({length: ATTESTATION_SUBNET_COUNT}, (_, subnet) => subnet)
+      : Array.from(this.longLivedSubscriptions);
+
+    this.logger.info("Subscribing to attnets for next fork boundary", {
       ...boundary,
-      subnets: Array.from(this.longLivedSubscriptions).join(","),
+      subscribeAllSubnets: this.opts.subscribeAllSubnets,
+      subnetCount: subnets.length,
+      subnets: subnets.join(","),
     });
-    for (const subnet of this.longLivedSubscriptions) {
+
+    for (const subnet of subnets) {
       this.gossip.subscribeTopic({type: gossipType, subnet, boundary});
     }
   }
