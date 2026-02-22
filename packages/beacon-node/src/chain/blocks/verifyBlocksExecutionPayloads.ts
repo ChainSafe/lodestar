@@ -51,7 +51,8 @@ type VerifyBlockExecutionResponse =
   | VerifyExecutionErrorResponse
   | {executionStatus: ExecutionStatus.Valid; lvhResponse: LVHValidResponse; execError: null}
   | {executionStatus: ExecutionStatus.Syncing; lvhResponse?: LVHValidResponse; execError: null}
-  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null};
+  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null}
+  | {executionStatus: ExecutionStatus.PendingEnvelope; lvhResponse: undefined; execError: null};
 
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
@@ -148,21 +149,25 @@ export async function verifyBlockExecutionPayload(
   preState0: CachedBeaconStateAllForks
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
-  /** Not null if execution is enabled */
+  // TODO: Handle better notifyNewPayload() returning error is syncing
+  const fork = blockInput.forkName;
+  const executionEnabled =
+    ForkSeq[fork] >= ForkSeq.gloas || (isExecutionStateType(preState0) && isExecutionEnabled(preState0, block.message));
+
+  /** Not null if execution payload is embedded in the block body (pre-Gloas post-merge blocks) */
   const executionPayloadEnabled =
-    isExecutionStateType(preState0) &&
-    isExecutionBlockBodyType(block.message.body) &&
-    isExecutionEnabled(preState0, block.message)
-      ? block.message.body.executionPayload
-      : null;
+    executionEnabled && isExecutionBlockBodyType(block.message.body) ? block.message.body.executionPayload : null;
 
   if (!executionPayloadEnabled) {
+    if (executionEnabled) {
+      // Post-Gloas bid-only blocks: execution payload is delivered separately via envelope.
+      // Block is valid but payload status is pending until envelope arrives.
+      return {executionStatus: ExecutionStatus.PendingEnvelope, lvhResponse: undefined, execError: null};
+    }
+
     // Pre-merge block, no execution payload to verify
     return {executionStatus: ExecutionStatus.PreMerge, lvhResponse: undefined, execError: null};
   }
-
-  // TODO: Handle better notifyNewPayload() returning error is syncing
-  const fork = blockInput.forkName;
   const versionedHashes =
     isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput) ? blockInput.getVersionedHashes() : undefined;
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;

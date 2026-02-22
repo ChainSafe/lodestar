@@ -638,6 +638,27 @@ export function getBeaconBlockApi({
       await publishBlock(args, context, opts);
     },
 
+    async getExecutionPayloadEnvelope({blockId}) {
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const fork = config.getForkName(block.message.slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `Execution payload envelopes not available for pre-gloas fork=${fork}`);
+      }
+
+      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      const envelope = await db.executionPayloadEnvelope.get(blockRoot);
+
+      if (envelope === null) {
+        throw new ApiError(404, `Execution payload envelope not found for block ${blockId}`);
+      }
+
+      return {
+        data: envelope,
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
     async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
@@ -689,19 +710,9 @@ export function getBeaconBlockApi({
         // TODO GLOAS: will this api be used by builders or only for self-building?
       }
 
-      // TODO GLOAS: Verify execution payload envelope signature
-      // For self-builds, the proposer signs with their own validator key
-      // For external builders, verify using the builder's registered pubkey
-      // Use verify_execution_payload_envelope_signature(state, signed_envelope)
-
-      // TODO GLOAS: Process execution payload via state transition
-      // Call process_execution_payload(state, signed_envelope, execution_engine)
-
-      // TODO GLOAS: Update fork choice with the execution payload
-      // Call on_execution_payload(store, signed_envelope) to update fork choice state
-
-      // TODO GLOAS: Add envelope and data columns to block input via seenBlockInputCache
-      // and trigger block import (Gloas block import requires both beacon block and envelope)
+      // Import envelope locally: verifies signature via state transition, notifies EL,
+      // updates fork choice payload status (PENDING -> FULL), persists envelope, and emits SSE event.
+      await chain.importExecutionPayloadEnvelope(signedExecutionPayloadEnvelope);
 
       const valLogMeta = {
         slot,

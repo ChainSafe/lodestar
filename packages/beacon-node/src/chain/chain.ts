@@ -2,8 +2,16 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithPayload, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithPayload,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  UpdateHeadOpt,
+  getSafeExecutionBlockHash,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -33,6 +41,7 @@ import {
   getEffectiveBalancesFromStateBytes,
   processSlots,
 } from "@lodestar/state-transition";
+import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -57,10 +66,11 @@ import {
 } from "@lodestar/types";
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
+import {GENESIS_EPOCH, ZERO_HASH, ZERO_HASH_HEX} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.ts";
 import {BuilderStatus} from "../execution/builder/http.js";
+import {ExecutionPayloadStatus} from "../execution/engine/interface.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
@@ -110,6 +120,7 @@ import {
   SeenExecutionPayloadBids,
   SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
+  SeenPayloadEnvelopeCache,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -188,6 +199,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeCache: SeenPayloadEnvelopeCache;
+  readonly pendingEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope> = new Map();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -327,6 +340,7 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
+    this.seenPayloadEnvelopeCache = new SeenPayloadEnvelopeCache(metrics);
 
     this._earliestAvailableSlot = anchorState.slot;
 
@@ -919,6 +933,75 @@ export class BeaconChain implements IBeaconChain {
     shouldOverrideBuilder?: boolean;
   }> {
     const fork = this.config.getForkName(slot);
+
+    // For Gloas blocks: import parent's pending envelope before state retrieval.
+    // Without this, block production uses the EMPTY parent state, producing a block
+    // with a state root that won't match the FULL-parent verification path.
+    if (isForkPostGloas(fork) && parentBlock.payloadStatus !== PayloadStatus.FULL) {
+      const parentRootHex = parentBlock.blockRoot;
+      // Check pendingEnvelopes first (envelope arrived before block was in fork-choice)
+      const pendingEnvelope = this.pendingEnvelopes.get(parentRootHex);
+      if (pendingEnvelope) {
+        try {
+          await this.importExecutionPayloadEnvelope(pendingEnvelope);
+          this.pendingEnvelopes.delete(parentRootHex);
+          // Refresh parentBlock to FULL variant so getBlockSlotState uses post-envelope state.
+          // Without this, parentBlock retains the PENDING stateRoot and production computes
+          // against pre-envelope state, while verification uses the FULL variant's post-envelope
+          // state — causing BLOCK_ERROR_INVALID_STATE_ROOT on publish.
+          const updatedParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
+          if (updatedParent) {
+            parentBlock = updatedParent;
+          }
+          this.logger.info("Imported pending parent envelope before block production", {
+            parentRoot: parentRootHex,
+            parentSlot: parentBlock.slot,
+            productionSlot: slot,
+          });
+        } catch (e) {
+          this.logger.debug(
+            "Failed importing pending parent envelope before production",
+            {parentRoot: parentRootHex},
+            e as Error
+          );
+        }
+      } else {
+        // Wait briefly for envelope to arrive via gossip
+        for (let attempt = 0; attempt < 20; attempt++) {
+          const updatedParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
+          if (updatedParent) {
+            // Refresh parentBlock reference so getBlockSlotState uses FULL state
+            parentBlock = updatedParent;
+            break;
+          }
+          const envelope = this.pendingEnvelopes.get(parentRootHex);
+          if (envelope) {
+            try {
+              await this.importExecutionPayloadEnvelope(envelope);
+              this.pendingEnvelopes.delete(parentRootHex);
+              // Refresh parentBlock to FULL variant after envelope import
+              const freshParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
+              if (freshParent) {
+                parentBlock = freshParent;
+              }
+              this.logger.info("Imported pending parent envelope before block production (retry)", {
+                parentRoot: parentRootHex,
+                attempt,
+              });
+            } catch (e) {
+              this.logger.debug(
+                "Failed importing pending parent envelope before production (retry)",
+                {parentRoot: parentRootHex},
+                e as Error
+              );
+            }
+            break;
+          }
+          await sleep(100);
+        }
+      }
+    }
+
     const state = await this.regen.getBlockSlotState(
       parentBlock,
       slot,
@@ -1005,6 +1088,101 @@ export class BeaconChain implements IBeaconChain {
 
   async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob(blocks, opts);
+  }
+
+  async importExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void> {
+    const envelope = signedEnvelope.message;
+    const blockRootHex = toRootHex(envelope.beaconBlockRoot);
+    const block = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+
+    if (block === null) {
+      throw Error(`Cannot import execution payload envelope for unknown block root=${blockRootHex}`);
+    }
+
+    // Idempotent handling for duplicate envelopes
+    if (block.payloadStatus === PayloadStatus.FULL) {
+      this.logger.debug("Execution payload envelope already imported", {
+        slot: envelope.slot,
+        blockRoot: blockRootHex,
+      });
+      return;
+    }
+
+    const preEnvelopeState = (await this.regen.getState(
+      block.stateRoot,
+      RegenCaller.restApi
+    )) as CachedBeaconStateGloas;
+    const postEnvelopeState = preEnvelopeState.clone(true) as CachedBeaconStateGloas;
+
+    processExecutionPayloadEnvelope(postEnvelopeState, signedEnvelope, true);
+
+    const executionPayload = envelope.payload;
+    const fork = this.config.getForkName(envelope.slot);
+    const versionedHashes: Uint8Array[] = [];
+
+    const execResult = await this.executionEngine.notifyNewPayload(
+      fork,
+      executionPayload,
+      versionedHashes,
+      fromHex(block.parentRoot),
+      envelope.executionRequests
+    );
+
+    this.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
+
+    if (
+      execResult.status !== ExecutionPayloadStatus.VALID &&
+      execResult.status !== ExecutionPayloadStatus.ACCEPTED &&
+      execResult.status !== ExecutionPayloadStatus.SYNCING
+    ) {
+      throw Error(`Execution payload rejected status=${execResult.status} blockRoot=${blockRootHex}`);
+    }
+
+    this.forkChoice.onExecutionPayload(
+      blockRootHex,
+      toRootHex(executionPayload.blockHash),
+      executionPayload.blockNumber,
+      toRootHex(envelope.stateRoot)
+    );
+
+    this.regen.processPayloadState(postEnvelopeState);
+    await this.db.executionPayloadEnvelope.put(envelope.beaconBlockRoot, signedEnvelope);
+
+    this.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot);
+
+    this.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
+      slot: envelope.slot,
+      blockRoot: blockRootHex,
+    });
+
+    this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
+
+    // After importing the payload envelope, send FCU to EL with updated execution head.
+    // The FULL variant now exists with the correct execution block hash.
+    {
+      const headBlockHash = this.forkChoice.getHeadExecutionBlockHash() ?? ZERO_HASH_HEX;
+      const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
+      const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+      if (headBlockHash !== ZERO_HASH_HEX) {
+        this.executionEngine
+          .notifyForkchoiceUpdate(
+            this.config.getForkName(envelope.slot),
+            headBlockHash,
+            safeBlockHash,
+            finalizedBlockHash
+          )
+          .catch((e) => {
+            this.logger.error("Error pushing notifyForkchoiceUpdate after envelope import", {headBlockHash}, e);
+          });
+      }
+    }
+
+    this.logger.debug("Imported execution payload envelope", {
+      slot: envelope.slot,
+      blockRoot: blockRootHex,
+      executionPayloadStatus: execResult.status,
+      executionBlockHash: toRootHex(executionPayload.blockHash),
+    });
   }
 
   getStatus(): Status {
@@ -1390,6 +1568,7 @@ export class BeaconChain implements IBeaconChain {
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
     this.seenExecutionPayloadEnvelopes.prune(finalizedSlot);
+    this.seenPayloadEnvelopeCache.onFinalized(cp);
 
     // Update validator custody to account for effective balance changes
     await this.updateValidatorsCustodyRequirement(cp);

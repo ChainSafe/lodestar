@@ -285,6 +285,14 @@ export interface IForkChoice {
   validateLatestHash(execResponse: LVHExecResponse): void;
 
   /**
+   * Get the execution block hash to use as the head in forkchoiceUpdated calls.
+   * For pre-Gloas, this is simply getHead().executionPayloadBlockHash.
+   * For Gloas, PENDING/EMPTY variants carry a stale parent hash. If a FULL variant
+   * exists for the head block root, use its executionPayloadBlockHash instead.
+   */
+  getHeadExecutionBlockHash(): RootHex | null;
+
+  /**
    * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
    */
   getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;

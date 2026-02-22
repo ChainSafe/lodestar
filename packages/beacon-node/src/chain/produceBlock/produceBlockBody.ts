@@ -9,6 +9,7 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
+  MAX_PAYLOAD_ATTESTATIONS,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -216,6 +217,10 @@ export async function produceBlockBody<T extends BlockType>(
       feeRecipient,
     });
 
+    // Post-Gloas: use the FULL variant's execution block hash if available, since the
+    // state's latestBlockHash may be stale (from the PENDING variant which inherits parent's hash)
+    const headExecHash = this.forkChoice.getHeadExecutionBlockHash() ?? undefined;
+
     // Get execution payload from EL
     const prepareRes = await prepareExecutionPayload(
       this,
@@ -225,7 +230,8 @@ export async function produceBlockBody<T extends BlockType>(
       safeBlockHash,
       finalizedBlockHash ?? ZERO_HASH_HEX,
       gloasState,
-      feeRecipient
+      feeRecipient,
+      headExecHash
     );
 
     const {prepType, payloadId} = prepareRes;
@@ -256,9 +262,11 @@ export async function produceBlockBody<T extends BlockType>(
       await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
     }
 
+    const executionPayloadParentHash = executionPayload.parentHash;
+
     // Create self-build execution payload bid
     const bid: gloas.ExecutionPayloadBid = {
-      parentBlockHash: gloasState.latestBlockHash,
+      parentBlockHash: executionPayloadParentHash,
       parentBlockRoot: parentBlockRoot,
       blockHash: executionPayload.blockHash,
       prevRandao: getRandaoMix(gloasState, gloasState.epochCtx.epoch),
@@ -278,8 +286,15 @@ export async function produceBlockBody<T extends BlockType>(
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = signedBid;
-    // TODO GLOAS: Get payload attestations from pool for previous slot
-    gloasBody.payloadAttestations = [];
+    // Get payload attestations from pool for previous slot's block root
+    {
+      const prevSlotBlockRoot = toRootHex(parentBlockRoot);
+      gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+        prevSlotBlockRoot,
+        blockSlot - 1,
+        MAX_PAYLOAD_ATTESTATIONS
+      );
+    }
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
@@ -567,7 +582,7 @@ export async function produceBlockBody<T extends BlockType>(
     });
   }
 
-  if (ForkSeq[fork] >= ForkSeq.capella) {
+  if (ForkSeq[fork] >= ForkSeq.capella && ForkSeq[fork] < ForkSeq.gloas) {
     const {blsToExecutionChanges, executionPayload} = blockBody as capella.BeaconBlockBody;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
@@ -579,6 +594,12 @@ export async function produceBlockBody<T extends BlockType>(
         withdrawals: executionPayload.withdrawals.length,
       });
     }
+  } else if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blsToExecutionChanges, payloadAttestations} = blockBody as gloas.BeaconBlockBody;
+    Object.assign(logMeta, {
+      blsToExecutionChanges: blsToExecutionChanges.length,
+      payloadAttestations: payloadAttestations.length,
+    });
   }
 
   Object.assign(logMeta, {executionPayloadValue});
@@ -601,11 +622,16 @@ export async function prepareExecutionPayload(
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateExecutions | CachedBeaconStateGloas,
-  suggestedFeeRecipient: string
+  suggestedFeeRecipient: string,
+  /** Override the execution parent hash for FCU. Used post-Gloas when the FULL variant's
+   *  execution block hash should be used instead of the state's (potentially stale) latestBlockHash */
+  headExecutionBlockHashOverride?: RootHex
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  const parentHash = isForkPostGloas(fork)
-    ? (state as CachedBeaconStateGloas).latestBlockHash
-    : (state as CachedBeaconStateExecutions).latestExecutionPayloadHeader.blockHash;
+  const parentHash = headExecutionBlockHashOverride
+    ? fromHex(headExecutionBlockHashOverride)
+    : isForkPostGloas(fork)
+      ? (state as CachedBeaconStateGloas).latestBlockHash
+      : (state as CachedBeaconStateExecutions).latestExecutionPayloadHeader.blockHash;
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = getRandaoMix(state, state.epochCtx.epoch);
 

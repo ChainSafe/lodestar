@@ -45,7 +45,8 @@ describe("Gloas Fork Choice", () => {
     slot: number,
     blockRoot: RootHex,
     parentRoot: RootHex,
-    parentBlockHash?: RootHex
+    parentBlockHash?: RootHex,
+    blockHashFromBid: RootHex | null = null
   ): ProtoBlock {
     return {
       slot,
@@ -69,7 +70,7 @@ describe("Gloas Fork Choice", () => {
       parentBlockHash: parentBlockHash === undefined ? null : parentBlockHash,
       payloadStatus: PayloadStatus.FULL,
       builderIndex: null,
-      blockHashFromBid: null,
+      blockHashFromBid,
     };
   }
 
@@ -496,7 +497,7 @@ describe("Gloas Fork Choice", () => {
 
     it("inter-block: new PENDING extends parent's EMPTY or FULL", () => {
       // Block A
-      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot, "0x02Hash");
       protoArray.onBlock(blockA, gloasForkSlot);
       protoArray.onExecutionPayload("0x02Root", gloasForkSlot, "0x02Hash", gloasForkSlot, stateRoot);
 
@@ -665,6 +666,52 @@ describe("Gloas Fork Choice", () => {
       });
 
       expect(pendingNode.bestChild).toBe(emptyIndex);
+    });
+
+    it("reconciled PENDING descendant propagates to ancestors", () => {
+      const slotA = gloasForkSlot + 10;
+      const slotB = slotA + 1;
+
+      // A has PENDING+EMPTY initially.
+      const blockA = createTestBlock(slotA, "0x02", genesisRoot, genesisRoot, "0x02-bid");
+      protoArray.onBlock(blockA, slotA);
+
+      // B extends A.EMPTY (parentBlockHash !== A.blockHashFromBid, FULL(A) not available yet).
+      const blockB = createTestBlock(slotB, "0x03", "0x02", genesisRoot);
+      protoArray.onBlock(blockB, slotB);
+
+      // Later A payload arrives; FULL(A) is created.
+      protoArray.onExecutionPayload("0x02", slotB, "0x02-full", slotA, stateRoot);
+
+      // Trigger score recomputation at slot n-1 so EMPTY vs FULL tiebreaker is exercised.
+      const deltas = new Array(protoArray.nodes.length).fill(0);
+      protoArray.applyScoreChanges({
+        deltas,
+        proposerBoost: null,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+        currentSlot: slotA + 1,
+      });
+
+      const pendingAIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
+      if (pendingAIndex === undefined) throw new Error("Expected pendingAIndex to exist");
+      const pendingANode = protoArray.nodes[pendingAIndex];
+      if (!pendingANode || pendingANode.bestDescendant === undefined)
+        throw new Error("Expected pending A bestDescendant to exist");
+
+      const pendingADescendant = protoArray.nodes[pendingANode.bestDescendant];
+      expect(pendingADescendant.slot).toBe(slotB);
+
+      const genesisIndex = protoArray.getNodeIndexByRootAndStatus(genesisRoot, PayloadStatus.FULL);
+      if (genesisIndex === undefined) throw new Error("Expected genesisIndex to exist");
+      const genesisNode = protoArray.nodes[genesisIndex];
+      if (!genesisNode || genesisNode.bestDescendant === undefined)
+        throw new Error("Expected genesis bestDescendant to exist");
+
+      const genesisDescendant = protoArray.nodes[genesisNode.bestDescendant];
+      expect(genesisDescendant.slot).toBe(slotB);
     });
   });
 });

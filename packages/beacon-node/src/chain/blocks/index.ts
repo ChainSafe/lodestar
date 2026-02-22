@@ -13,6 +13,7 @@ import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 
+export {type BidInfo, PayloadEnvelopeInput} from "./payloadEnvelopeInput.js";
 export {AttestationImportOpt, type ImportBlockOpts} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;

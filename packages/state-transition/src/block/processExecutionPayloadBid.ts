@@ -46,10 +46,17 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     throw Error(`Bid slot ${bid.slot} does not match block slot ${block.slot}`);
   }
 
+  // Spec: assert bid.parent_block_hash == state.latest_block_hash.
+  // Primary check uses the spec path (latestBlockHash is updated when envelope is processed).
+  // Fallback: in separated payload flow, if parent envelope is still pending, latestBlockHash
+  // lags while latestExecutionPayloadBid.blockHash tracks the expected parent hash.
   if (!byteArrayEquals(bid.parentBlockHash, state.latestBlockHash)) {
-    throw Error(
-      `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)}`
-    );
+    const parentBidBlockHash = state.latestExecutionPayloadBid.blockHash;
+    if (!byteArrayEquals(bid.parentBlockHash, parentBidBlockHash)) {
+      throw Error(
+        `Parent block hash ${toRootHex(bid.parentBlockHash)} of bid does not match state's latest block hash ${toRootHex(state.latestBlockHash)} or pending parent bid block hash ${toRootHex(parentBidBlockHash)}`
+      );
+    }
   }
 
   if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {

@@ -7,6 +7,7 @@ import {
   ForkSeq,
   NUMBER_OF_COLUMNS,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -18,6 +19,7 @@ import {
   UintNum64,
   deneb,
   fulu,
+  gloas,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -29,6 +31,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import type {BidInfo} from "../../chain/blocks/payloadEnvelopeInput.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -70,6 +73,7 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {ClockEvent} from "../../util/clock.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -102,8 +106,8 @@ export type ValidatorFnsModules = {
   core: INetworkCore;
 };
 
-const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
+const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 
 /**
  * Gossip handlers perform validation + handling in a single function.
@@ -129,6 +133,22 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
+
+  // Max pending envelopes to cache (shared with chain for block import access).
+  // Needs to be large enough to hold envelopes during UnknownBlockSync catch-up,
+  // where a chain of 32+ blocks may need their envelopes retained simultaneously.
+  const MAX_PENDING_ENVELOPES = 128;
+
+  // Evict stale pending envelopes on slot boundaries.
+  // Use a generous TTL (16 slots) because during UnknownBlockSync catch-up,
+  // envelopes may arrive via gossip many slots before their blocks are processed.
+  chain.clock.on(ClockEvent.slot, (clockSlot: Slot) => {
+    for (const [rootHex, envelope] of chain.pendingEnvelopes.entries()) {
+      if (envelope.message.slot < clockSlot - 16) {
+        chain.pendingEnvelopes.delete(rootHex);
+      }
+    }
+  });
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
@@ -177,11 +197,33 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       logger.debug("Validated gossip block", {...blockInputMeta, ...logCtx, recvToValidation, validationTime});
 
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
+      if (isForkPostGloas(fork)) {
+        const bid = (signedBlock.message as gloas.BeaconBlock).body.signedExecutionPayloadBid.message;
+        const bidInfo: BidInfo = {
+          blockRootHex,
+          slot,
+          builderIndex: bid.builderIndex,
+          blockHashFromBid: toRootHex(bid.blockHash),
+        };
+        chain.seenPayloadEnvelopeCache.createFromBid(bidInfo);
+      }
 
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
-        if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput) {
+        if (e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+          // Ensure we have a BlockInput so unknown-block sync can fetch missing parents.
+          // validateGossipBlock() may throw before blockInput is initialized above.
+          if (!blockInput) {
+            blockInput = chain.seenBlockInputCache.getByBlock({
+              block: signedBlock,
+              blockRootHex,
+              source: BlockInputSource.gossip,
+              seenTimestampSec,
+              peerIdStr,
+            });
+          }
+
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
           chain.emitter.emit(ChainEvent.unknownParent, {
             blockInput,
@@ -417,9 +459,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.getBlobsTracker.triggerGetBlobs(blockInput);
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
-      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
-        (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
-      );
+      // blobKzgCommitments is removed from BeaconBlockBody post-Gloas (EIP-7732)
+      if (config.getForkSeq(slot) < ForkSeq.gloas) {
+        metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
+          (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
+        );
+      }
     }
 
     chain
@@ -440,7 +485,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // to track block process steps
         seenTimestampSec,
       })
-      .then(() => {
+      .then(async () => {
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
@@ -826,13 +871,33 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
-      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+      const blockRootHex = toRootHex(executionPayloadEnvelope.message.beaconBlockRoot);
+
+      // Cache envelope in chain.pendingEnvelopes so the block import path can consume it
+      // before running state transition on child blocks (avoids INVALID_STATE_ROOT when
+      // envelope arrives before or around the same time as its block).
+      if (!chain.forkChoice.hasBlockHexUnsafe(blockRootHex)) {
+        if (chain.pendingEnvelopes.size >= MAX_PENDING_ENVELOPES) {
+          const firstKey = chain.pendingEnvelopes.keys().next().value;
+          if (firstKey !== undefined) chain.pendingEnvelopes.delete(firstKey);
+        }
+        chain.pendingEnvelopes.set(blockRootHex, executionPayloadEnvelope);
+        return;
+      }
+
+      const envelopeInput = chain.seenPayloadEnvelopeCache.get(blockRootHex);
+
+      // Pass envelopeInput so validation uses bid info from cache when available.
+      // Blocks imported via unknown-block sync may not have a cache entry — validation
+      // falls back to fork-choice metadata in that case.
+      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope, envelopeInput);
+      envelopeInput?.setEnvelope(executionPayloadEnvelope);
 
       const slot = executionPayloadEnvelope.message.slot;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
 
-      // TODO GLOAS: Handle valid envelope. Need an import flow that calls `processExecutionPayloadEnvelope` and fork choice
+      await chain.importExecutionPayloadEnvelope(executionPayloadEnvelope);
     },
     [GossipType.payload_attestation_message]: async ({
       gossipData,
@@ -865,6 +930,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid.message);
         metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
+
+        if (chain.emitter.listenerCount(routes.events.EventType.executionPayloadBid)) {
+          chain.emitter.emit(routes.events.EventType.executionPayloadBid, executionPayloadBid.message);
+        }
       } catch (e) {
         logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
       }

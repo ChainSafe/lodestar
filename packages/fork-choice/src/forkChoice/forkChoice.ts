@@ -210,6 +210,30 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Get the execution block hash to use as the head in forkchoiceUpdated calls.
+   * For pre-Gloas, this is simply getHead().executionPayloadBlockHash.
+   * For Gloas, PENDING and EMPTY variants carry the parent execution hash (stale).
+   * If a FULL variant exists for the same beacon block root, use FULL's hash.
+   */
+  getHeadExecutionBlockHash(): RootHex | null {
+    const head = this.head;
+
+    // FULL already has the concrete payload hash for this block
+    if (head.payloadStatus === PayloadStatus.FULL) {
+      return head.executionPayloadBlockHash;
+    }
+
+    // PENDING / EMPTY: prefer FULL sibling variant when available
+    const fullBlock = this.getBlockHex(head.blockRoot, PayloadStatus.FULL);
+    if (fullBlock !== null && fullBlock.executionPayloadBlockHash !== null) {
+      return fullBlock.executionPayloadBlockHash;
+    }
+
+    // No FULL variant yet: fall back to current head variant hash (parent execution hash)
+    return head.executionPayloadBlockHash;
+  }
+
+  /**
    *
    * A multiplexer to wrap around the traditional `updateHead()` according to the scenario
    * Scenarios as follow:
@@ -806,15 +830,20 @@ export class ForkChoice implements IForkChoice {
                 return parentBlock.executionPayloadNumber;
               }
 
-              // Parent is Gloas: get the variant that matches the parentBlockHash from bid
-              const parentVariant = this.getBlockHexAndBlockHash(parentRootHex, parentBlockHashFromBid);
-              if (parentVariant && parentVariant.executionPayloadBlockHash !== null) {
-                return parentVariant.executionPayloadNumber;
+              // Parent is Gloas.
+              // If child extends FULL parent (by bid hash), parent execution number advances by 1
+              // relative to EMPTY/PENDING path. FULL variant may not exist locally yet.
+              if (parentBlock.blockHashFromBid !== null && parentBlockHashFromBid === parentBlock.blockHashFromBid) {
+                const parentFullVariant = this.getBlockHex(parentRootHex, PayloadStatus.FULL);
+                if (parentFullVariant && parentFullVariant.executionPayloadBlockHash !== null) {
+                  return parentFullVariant.executionPayloadNumber;
+                }
+                return parentBlock.executionPayloadNumber + 1;
               }
-              // Fallback to parent block's number (we know it's post-merge from check above)
+
               return parentBlock.executionPayloadNumber;
             })(),
-            executionStatus: this.getPostMergeExecStatus(executionStatus), // TODO GLOAS: Need a new execution status to denote scenario where we are waiting for payload, or payload is never revealed.
+            executionStatus: this.getPostMergeExecStatus(executionStatus),
             dataAvailabilityStatus,
           }
         : isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
@@ -1422,10 +1451,10 @@ export class ForkChoice implements IForkChoice {
 
   private getPostMergeExecStatus(
     executionStatus: MaybeValidExecutionStatus
-  ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
+  ): ExecutionStatus.Valid | ExecutionStatus.Syncing | ExecutionStatus.PendingEnvelope {
     if (executionStatus === ExecutionStatus.PreMerge)
       throw Error(
-        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`
+        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing}, ${ExecutionStatus.Valid}, or ${ExecutionStatus.PendingEnvelope}, got ${executionStatus}`
       );
     return executionStatus;
   }

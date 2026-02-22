@@ -1,4 +1,4 @@
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -7,6 +7,7 @@ import {
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, deneb} from "@lodestar/types";
+import {sleep, toRootHex} from "@lodestar/utils";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -64,6 +65,47 @@ export async function verifyBlocksInEpoch(
 
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
+
+  // For Gloas blocks: if the parent's envelope hasn't been imported yet (EMPTY/PENDING status),
+  // check chain.pendingEnvelopes for a cached envelope and import it first.
+  // If not immediately available, wait briefly for the envelope to arrive via gossip.
+  // This ensures getPreState returns the post-envelope (FULL) state.
+  if (parentBlock.parentBlockHash !== null && parentBlock.payloadStatus !== PayloadStatus.FULL) {
+    const parentRootHex = toRootHex(block0.message.parentRoot);
+
+    // Try up to 20 times with 100ms delay (total max wait: ~2s)
+    // Needs to be long enough for envelopes to arrive via gossip, especially during
+    // UnknownBlockSync catch-up where multiple blocks are processed in sequence.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      // Re-check fork-choice — envelope may have been imported by another path (gossip handler)
+      const updatedParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
+      if (updatedParent) break;
+
+      const pendingEnvelope = this.pendingEnvelopes.get(parentRootHex);
+      if (pendingEnvelope) {
+        try {
+          await this.importExecutionPayloadEnvelope(pendingEnvelope);
+          this.pendingEnvelopes.delete(parentRootHex);
+          this.logger.info("Imported pending parent envelope before block import", {
+            parentRoot: parentRootHex,
+            parentSlot: parentBlock.slot,
+            childSlot: block0.message.slot,
+            attempt,
+          });
+          break;
+        } catch (e) {
+          this.logger.debug("Failed importing pending parent envelope", {parentRoot: parentRootHex}, e as Error);
+          // Don't break — envelope stays in cache, retry on next iteration
+          // Import may succeed after EL catches up or state becomes available
+        }
+      }
+
+      // Envelope not available yet — yield to event loop so gossip can deliver it
+      if (attempt < 19) {
+        await sleep(100);
+      }
+    }
+  }
 
   // TODO: Skip in process chain segment
   // Retrieve preState from cache (regen)

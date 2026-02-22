@@ -126,6 +126,25 @@ export async function importBlock(
   this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
+  // Post-Gloas: immediately import pending envelope for this block if available.
+  // This makes the block FULL right away, so child blocks won't need to wait
+  // for the envelope in their verifyBlock parent-envelope polling loop.
+  if (isGloasBlock) {
+    const pendingEnvelope = this.pendingEnvelopes.get(blockRootHex);
+    if (pendingEnvelope) {
+      try {
+        await this.importExecutionPayloadEnvelope(pendingEnvelope);
+        this.pendingEnvelopes.delete(blockRootHex);
+        this.logger.debug("Imported pending envelope immediately after block import", {
+          slot: blockSlot,
+          root: blockRootHex,
+        });
+      } catch (e) {
+        this.logger.debug("Failed importing pending envelope after block import", {root: blockRootHex}, e as Error);
+      }
+    }
+  }
+
   // 3. Import attestations to fork choice
   //
   // - For each attestation
@@ -396,7 +415,7 @@ export async function importBlock(
      * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
      * - `headBlockHash !== ZERO_HASH` -> Pre TTD
      */
-    const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const headBlockHash = this.forkChoice.getHeadExecutionBlockHash() ?? ZERO_HASH_HEX;
     /**
      * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a

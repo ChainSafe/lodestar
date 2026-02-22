@@ -114,6 +114,27 @@ describe("AttnetsService", () => {
     expect(gossipStub.unsubscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT);
   });
 
+  it("should subscribe all attestation subnets for next fork boundary in supernode mode", () => {
+    const supernodeService = new AttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId, {
+      slotsToSubscribeBeforeAggregatorDuty: 2,
+      subscribeAllSubnets: true,
+    });
+
+    gossipStub.subscribeTopic.mockClear();
+
+    supernodeService.subscribeSubnetsNextBoundary({fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH});
+
+    expect(gossipStub.subscribeTopic).toBeCalledTimes(ATTESTATION_SUBNET_COUNT);
+    expect(gossipStub.subscribeTopic).toHaveBeenCalledWith(
+      expect.objectContaining({boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}, subnet: 0})
+    );
+    expect(gossipStub.subscribeTopic).toHaveBeenCalledWith(
+      expect.objectContaining({boundary: {fork: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH}, subnet: 63})
+    );
+
+    supernodeService.close();
+  });
+
   it("should not subscribe to new short lived subnet if not aggregator", () => {
     expect(gossipStub.subscribeTopic).toBeCalledTimes(config.SUBNETS_PER_NODE);
     const firstSubnet = (gossipStub.subscribeTopic.mock.calls[0][0] as unknown as {subnet: SubnetID}).subnet;

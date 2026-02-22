@@ -1,13 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, type IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  isExecutionCachedStateType,
-  isMergeTransitionComplete,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
@@ -83,7 +77,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         skippedSlots > 0 ? (skippedSlots > 1000 ? `${headInfo.slot} ` : `(slot -${skippedSlots}) `) : "";
       const headRow = `head: ${headDiffInfo}${prettyBytes(headInfo.blockRoot)}`;
 
-      const executionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
+      const executionInfo = getHeadExecutionInfo(config, clockEpoch, headInfo, chain.forkChoice);
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
 
       let nodeState: string[];
@@ -161,30 +155,56 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
 function getHeadExecutionInfo(
   config: BeaconConfig,
   clockEpoch: Epoch,
-  headState: CachedBeaconStateAllForks,
-  headInfo: ProtoBlock
+  headInfo: ProtoBlock,
+  forkChoice: IForkChoice
 ): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
     return [];
   }
 
-  const executionStatusStr = headInfo.executionStatus.toLowerCase();
-
-  // Add execution status to notifier only if head is on/post bellatrix
-  if (isExecutionCachedStateType(headState)) {
-    if (isMergeTransitionComplete(headState)) {
-      const executionPayloadHashInfo =
-        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
-      const executionPayloadNumberInfo =
-        headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
-      return [
-        `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
-          executionPayloadHashInfo
-        )})`,
-      ];
-    }
-    return [`exec-block: ${executionStatusStr}`];
+  if (headInfo.executionStatus === ExecutionStatus.PreMerge) {
+    return ["exec-block: premerge"];
   }
 
-  return [];
+  // Post-Gloas: the head returned by fork-choice is the EMPTY variant of the latest block
+  // (envelope not yet imported for current slot). Look up the FULL variant of the same block
+  // or the parent block's FULL variant to show resolved execution payload info.
+  let payloadBlockForDisplay = headInfo;
+  if (
+    headInfo.executionStatus === ExecutionStatus.PendingEnvelope ||
+    headInfo.payloadStatus === PayloadStatus.PENDING ||
+    headInfo.payloadStatus === PayloadStatus.EMPTY
+  ) {
+    // First try: FULL variant of the same block (envelope may have arrived by now)
+    const fullVariant = forkChoice.getBlockHex(headInfo.blockRoot, PayloadStatus.FULL);
+    if (fullVariant) {
+      payloadBlockForDisplay = fullVariant as typeof headInfo;
+    } else if (headInfo.parentRoot) {
+      // Fallback: FULL variant of parent block (previous slot should be resolved)
+      const parentFull = forkChoice.getBlockHex(headInfo.parentRoot, PayloadStatus.FULL);
+      if (parentFull) {
+        payloadBlockForDisplay = parentFull as typeof headInfo;
+      }
+    }
+  }
+
+  const executionStatusStr = payloadBlockForDisplay.executionStatus.toLowerCase();
+  const payloadStatusStr =
+    payloadBlockForDisplay.payloadStatus === PayloadStatus.PENDING
+      ? "pending"
+      : payloadBlockForDisplay.payloadStatus === PayloadStatus.EMPTY
+        ? "empty"
+        : "full";
+
+  const executionPayloadHashInfo = payloadBlockForDisplay.executionPayloadBlockHash;
+  const executionPayloadNumberInfo = payloadBlockForDisplay.executionPayloadNumber;
+  const bidHashInfo = payloadBlockForDisplay.blockHashFromBid
+    ? ` bid:${prettyBytesShort(payloadBlockForDisplay.blockHashFromBid)}`
+    : "";
+
+  return [
+    `exec-block: ${executionStatusStr}/${payloadStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
+      executionPayloadHashInfo
+    )}${bidHashInfo})`,
+  ];
 }

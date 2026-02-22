@@ -15,6 +15,7 @@ import {
   altair,
   capella,
   electra,
+  gloas,
   phase0,
   ssz,
   sszTypesFor,
@@ -88,6 +89,10 @@ export enum EventType {
   blobSidecar = "blob_sidecar",
   /** The node has received a valid DataColumnSidecar (from P2P or API) */
   dataColumnSidecar = "data_column_sidecar",
+  /** The node has received a valid execution payload envelope and it has been imported (ePBS) */
+  executionPayloadAvailable = "execution_payload_available",
+  /** The node has received a valid execution payload bid (ePBS) */
+  executionPayloadBid = "execution_payload_bid",
 }
 
 export const eventTypes: {[K in EventType]: K} = {
@@ -108,6 +113,8 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.payloadAttributes]: EventType.payloadAttributes,
   [EventType.blobSidecar]: EventType.blobSidecar,
   [EventType.dataColumnSidecar]: EventType.dataColumnSidecar,
+  [EventType.executionPayloadAvailable]: EventType.executionPayloadAvailable,
+  [EventType.executionPayloadBid]: EventType.executionPayloadBid,
 };
 
 export type EventData = {
@@ -157,6 +164,11 @@ export type EventData = {
   [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
   [EventType.dataColumnSidecar]: DataColumnSidecarSSE;
+  [EventType.executionPayloadAvailable]: {
+    slot: Slot;
+    blockRoot: RootHex;
+  };
+  [EventType.executionPayloadBid]: gloas.ExecutionPayloadBid;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -311,6 +323,14 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.payloadAttributes]: WithVersion((fork) => getPostBellatrixForkTypes(fork).SSEPayloadAttributes),
     [EventType.blobSidecar]: blobSidecarSSE,
     [EventType.dataColumnSidecar]: dataColumnSidecarSSE,
+    [EventType.executionPayloadAvailable]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        blockRoot: stringType,
+      },
+      {typeName: "ExecutionPayloadAvailableSSE", jsonCase: "eth2"}
+    ),
+    [EventType.executionPayloadBid]: ssz.gloas.ExecutionPayloadBid,
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
       (fork) => getPostAltairForkTypes(fork).LightClientOptimisticUpdate

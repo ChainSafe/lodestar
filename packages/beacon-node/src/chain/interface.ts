@@ -24,6 +24,7 @@ import {
   altair,
   capella,
   deneb,
+  gloas,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -66,6 +67,7 @@ import {
   SeenExecutionPayloadBids,
   SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
+  SeenPayloadEnvelopeCache,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -142,6 +144,10 @@ export interface IBeaconChain {
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeCache: SeenPayloadEnvelopeCache;
+  /** Deserialized envelopes cached from gossip, keyed by beacon block root hex.
+   *  Block import path consumes these to import parent envelopes before state transition. */
+  readonly pendingEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope>;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
@@ -248,6 +254,9 @@ export interface IBeaconChain {
   processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
+
+  /** Process a signed execution payload envelope (post-gloas) */
+  importExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void>;
 
   getStatus(): Status;
 

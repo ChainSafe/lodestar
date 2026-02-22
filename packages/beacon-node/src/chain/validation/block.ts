@@ -9,7 +9,7 @@ import {
   isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {SignedBeaconBlock, deneb, gloas} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -72,13 +72,28 @@ export async function validateGossipBlock(
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   const parentRoot = toRootHex(block.parentRoot);
-  const parentBlock = isGloasBeaconBlock(block)
-    ? chain.forkChoice.getBlockHexAndBlockHash(
-        parentRoot,
-        toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
-      )
-    : chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+  // For gossip validation, we only need to verify the parent root exists in fork-choice.
+  // Post-Gloas blocks use getBlockHexDefaultStatus (root-only) because getBlockHexAndBlockHash
+  // can return null for bid-only parents whose executionPayloadBlockHash hasn't been set yet
+  // (envelope not imported). The full block hash verification happens during state transition.
+  let parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+
   if (parentBlock === null) {
+    // If we have already seen the parent block, it may be in-flight (validated/imported but not
+    // inserted into fork-choice yet). Give fork-choice a brief chance to catch up before treating
+    // this as a true PARENT_UNKNOWN case, to avoid unnecessary unknown-block sync churn.
+    if (chain.seenBlock(parentRoot)) {
+      const IN_FLIGHT_PARENT_RETRIES = 20;
+      const IN_FLIGHT_PARENT_RETRY_MS = 50;
+      for (let i = 0; i < IN_FLIGHT_PARENT_RETRIES; i++) {
+        await sleep(IN_FLIGHT_PARENT_RETRY_MS);
+        parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+        if (parentBlock !== null) {
+          break;
+        }
+      }
+    }
+
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
     //
@@ -89,7 +104,9 @@ export async function validateGossipBlock(
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+    if (parentBlock === null) {
+      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+    }
   }
 
   // [IGNORE] The attestation head block is too far behind the attestation slot, causing many skip slots.

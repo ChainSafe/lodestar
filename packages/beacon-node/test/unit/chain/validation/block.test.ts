@@ -57,8 +57,10 @@ describe("gossip block validation", () => {
     (
       chain as {
         seenBlockProposers: SeenBlockProposers;
+        seenBlock: (blockRoot: string) => boolean;
       }
     ).seenBlockProposers = new SeenBlockProposers();
+    (chain as {seenBlock: (blockRoot: string) => boolean}).seenBlock = () => false;
 
     job = {signature, message: block};
   });

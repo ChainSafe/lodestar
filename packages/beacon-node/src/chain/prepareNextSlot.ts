@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostGloas} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
@@ -165,6 +165,13 @@ export class PrepareNextSlotScheduler {
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+
+          // Post-Gloas: the PENDING variant's state has a stale latestBlockHash (parent's execution hash).
+          // If the FULL variant exists (payload envelope was imported), use its execution block hash instead.
+          const headExecutionBlockHashOverride = isForkPostGloas(fork)
+            ? (this.chain.forkChoice.getHeadExecutionBlockHash() ?? undefined)
+            : undefined;
+
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
           // try/catch wrapper here.
@@ -176,7 +183,8 @@ export class PrepareNextSlotScheduler {
             safeBlockHash,
             finalizedBlockHash,
             updatedPrepareState,
-            feeRecipient
+            feeRecipient,
+            headExecutionBlockHashOverride
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,

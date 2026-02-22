@@ -448,6 +448,43 @@ export function getSlotFromBeaconStateSerialized(data: Uint8Array): Slot | null 
 }
 
 /**
+ * SignedExecutionPayloadEnvelope: {message: ExecutionPayloadEnvelope (variable), signature: BLSSignature (96 bytes)}
+ *   Fixed part: 4-byte offset + 96-byte signature = 100 bytes
+ *   message data starts at byte 100
+ *
+ * ExecutionPayloadEnvelope: {
+ *   payload: ExecutionPayload (variable) → 4-byte offset
+ *   executionRequests: ExecutionRequests (variable) → 4-byte offset
+ *   builderIndex: ValidatorIndex (8 bytes)
+ *   beaconBlockRoot: Root (32 bytes)
+ *   slot: Slot (8 bytes)
+ *   stateRoot: Root (32 bytes)
+ * }
+ *   Fixed part within message: 4 + 4 + 8 + 32 + 8 + 32 = 88 bytes
+ *   beaconBlockRoot at message + 16, slot at message + 48
+ */
+const SIGNED_ENVELOPE_MESSAGE_OFFSET = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // 100
+const SIGNED_ENVELOPE_BEACON_BLOCK_ROOT_OFFSET = SIGNED_ENVELOPE_MESSAGE_OFFSET + 4 + 4 + 8; // 116
+const SIGNED_ENVELOPE_SLOT_OFFSET = SIGNED_ENVELOPE_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE; // 148
+
+export function getSlotFromSignedExecutionPayloadEnvelopeSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SIGNED_ENVELOPE_SLOT_OFFSET + SLOT_SIZE) {
+    return null;
+  }
+  return getSlotFromOffset(data, SIGNED_ENVELOPE_SLOT_OFFSET);
+}
+
+export function getBlockRootFromSignedExecutionPayloadEnvelopeSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < SIGNED_ENVELOPE_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE) {
+    return null;
+  }
+  blockRootBuf.set(
+    data.subarray(SIGNED_ENVELOPE_BEACON_BLOCK_ROOT_OFFSET, SIGNED_ENVELOPE_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE)
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
+}
+
+/**
  * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
  *
  * If the high bytes are not zero, return null

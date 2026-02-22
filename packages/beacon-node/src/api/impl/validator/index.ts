@@ -394,10 +394,18 @@ export function getValidatorApi(
       throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
 
-    if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
+    if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing) {
+      // For Gloas blocks, the PENDING variant is always Syncing (no embedded payload).
+      // Check if a FULL variant exists with a validated execution status.
+      const fullBlock = chain.forkChoice.getBlock(beaconBlockRoot, PayloadStatus.FULL);
+      if (fullBlock && fullBlock.executionStatus !== ExecutionStatus.Syncing) {
+        return;
+      }
+
       throw new NodeIsSyncing(
         `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash} number=${protoBeaconBlock.executionPayloadNumber}`
       );
+    }
   }
 
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
@@ -1016,7 +1024,15 @@ export function getValidatorApi(
 
       // Check the execution status as validator shouldn't vote on an optimistic head
       // Check on target is sufficient as a valid target would imply a valid source
-      notOnOptimisticBlockRoot(targetRoot);
+      //
+      // Post-Gloas (ePBS): blocks are naturally optimistic until the execution payload
+      // envelope arrives and is validated. This is by design — the bid is included in the
+      // beacon block but the full payload comes separately. Skip the optimistic check for
+      // post-Gloas to avoid rejecting attestation requests during the normal envelope
+      // validation window.
+      if (!isForkPostGloas(fork)) {
+        notOnOptimisticBlockRoot(targetRoot);
+      }
       notOnOutOfRangeData(targetRoot);
 
       // To get the correct source we must get a state in the same epoch as the attestation's epoch.
