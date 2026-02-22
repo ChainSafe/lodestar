@@ -945,6 +945,14 @@ export class BeaconChain implements IBeaconChain {
         try {
           await this.importExecutionPayloadEnvelope(pendingEnvelope);
           this.pendingEnvelopes.delete(parentRootHex);
+          // Refresh parentBlock to FULL variant so getBlockSlotState uses post-envelope state.
+          // Without this, parentBlock retains the PENDING stateRoot and production computes
+          // against pre-envelope state, while verification uses the FULL variant's post-envelope
+          // state — causing BLOCK_ERROR_INVALID_STATE_ROOT on publish.
+          const updatedParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
+          if (updatedParent) {
+            parentBlock = updatedParent;
+          }
           this.logger.info("Imported pending parent envelope before block production", {
             parentRoot: parentRootHex,
             parentSlot: parentBlock.slot,
@@ -971,6 +979,11 @@ export class BeaconChain implements IBeaconChain {
             try {
               await this.importExecutionPayloadEnvelope(envelope);
               this.pendingEnvelopes.delete(parentRootHex);
+              // Refresh parentBlock to FULL variant after envelope import
+              const freshParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
+              if (freshParent) {
+                parentBlock = freshParent;
+              }
               this.logger.info("Imported pending parent envelope before block production (retry)", {
                 parentRoot: parentRootHex,
                 attempt,
