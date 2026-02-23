@@ -114,7 +114,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       blockHashFromBid: null,
     };
 
-    protoArr.onBlock(block, block.slot);
+    protoArr.onBlock(block, block.slot, null);
     parentBlockRoot = blockRoot;
   }
 

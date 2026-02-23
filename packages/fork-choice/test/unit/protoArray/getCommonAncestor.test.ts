@@ -82,7 +82,8 @@ describe("getCommonAncestor", () => {
         builderIndex: null,
         blockHashFromBid: null,
       },
-      block.slot
+      block.slot,
+      null
     );
   }
 
