@@ -57,20 +57,12 @@ export function getSignatureSetPubkey(signatureSet: ISignatureSet, pubkeyCache: 
       return signatureSet.pubkey;
 
     case SignatureSetType.indexed: {
-      const pubkey = pubkeyCache.get(signatureSet.index);
-      if (!pubkey) {
-        throw Error(`Missing pubkey for validator index ${signatureSet.index}`);
-      }
-      return pubkey;
+      return pubkeyCache.getOrThrow(signatureSet.index);
     }
 
     case SignatureSetType.aggregate: {
       const pubkeys = signatureSet.indices.map((i) => {
-        const pubkey = pubkeyCache.get(i);
-        if (!pubkey) {
-          throw Error(`Missing pubkey for validator index ${i}`);
-        }
-        return pubkey;
+        return pubkeyCache.getOrThrow(i);
       });
       return aggregatePublicKeys(pubkeys);
     }
@@ -96,10 +88,7 @@ export function verifySignatureSet(signatureSet: ISignatureSet, pubkeyCache?: Pu
       if (!pubkeyCache) {
         throw Error("pubkeyCache required for indexed signature set");
       }
-      const pubkey = pubkeyCache.get(signatureSet.index);
-      if (!pubkey) {
-        throw Error(`Missing pubkey for validator index ${signatureSet.index}`);
-      }
+      const pubkey = pubkeyCache.getOrThrow(signatureSet.index);
       return verify(signatureSet.signingRoot, pubkey, signature);
     }
 
@@ -108,11 +97,7 @@ export function verifySignatureSet(signatureSet: ISignatureSet, pubkeyCache?: Pu
         throw Error("pubkeyCache required for aggregate signature set");
       }
       const pubkeys = signatureSet.indices.map((i) => {
-        const pk = pubkeyCache.get(i);
-        if (!pk) {
-          throw Error(`Missing pubkey for validator index ${i}`);
-        }
-        return pk;
+        return pubkeyCache.getOrThrow(i);
       });
       return fastAggregateVerify(signatureSet.signingRoot, pubkeys, signature);
     }

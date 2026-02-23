@@ -67,10 +67,7 @@ describe("produceBlockBody", () => {
     beforeEach: async () => {
       const head = chain.forkChoice.getHead();
       const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
-      const proposerPubKey = state.epochCtx.pubkeyCache.get(proposerIndex)?.toBytes();
-      if (!proposerPubKey) {
-        throw Error(`Missing proposer pubkey for validator index ${proposerIndex}`);
-      }
+      const proposerPubKey = state.epochCtx.pubkeyCache.getOrThrow(proposerIndex).toBytes();
 
       return {chain, state, head, proposerIndex, proposerPubKey};
     },
