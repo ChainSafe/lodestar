@@ -31,7 +31,7 @@ import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processV
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
-import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.ts";
+import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
