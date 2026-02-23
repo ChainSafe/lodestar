@@ -103,7 +103,8 @@ export class ProtoArray {
         // We are using the blockROot as the targetRoot, since it always lies on an epoch boundary
         targetRoot: block.blockRoot,
       } as ProtoBlock,
-      currentSlot
+      currentSlot,
+      null
     );
     return protoArray;
   }
@@ -381,7 +382,7 @@ export class ProtoArray {
       // If the node has a parent, try to update its best-child and best-descendant.
       const parentIndex = node.parent;
       if (parentIndex !== undefined) {
-        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot);
+        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, proposerBoost?.root ?? null);
       }
     }
     // Update the previous proposer boost
@@ -393,7 +394,7 @@ export class ProtoArray {
    *
    * It is only sane to supply an undefined parent for the genesis block
    */
-  onBlock(block: ProtoBlock, currentSlot: Slot): void {
+  onBlock(block: ProtoBlock, currentSlot: Slot, proposerBoostRoot: RootHex | null): void {
     // If the block is already known, simply ignore it
     if (this.hasBlock(block.blockRoot)) {
       return;
@@ -465,7 +466,7 @@ export class ProtoArray {
 
       // Update bestChild pointers
       if (parentIndex !== undefined) {
-        this.maybeUpdateBestChildAndDescendant(parentIndex, pendingIndex, currentSlot);
+        this.maybeUpdateBestChildAndDescendant(parentIndex, pendingIndex, currentSlot, proposerBoostRoot);
 
         if (pendingNode.executionStatus === ExecutionStatus.Valid) {
           this.propagateValidExecutionStatusByIndex(parentIndex);
@@ -473,7 +474,7 @@ export class ProtoArray {
       }
 
       // Update bestChild for PENDING → EMPTY edge
-      this.maybeUpdateBestChildAndDescendant(pendingIndex, emptyIndex, currentSlot);
+      this.maybeUpdateBestChildAndDescendant(pendingIndex, emptyIndex, currentSlot, proposerBoostRoot);
 
       // Initialize PTC votes for this block (all false initially)
       // Spec: gloas/fork-choice.md#modified-on_block (line 645)
@@ -498,7 +499,7 @@ export class ProtoArray {
       // If this node is valid, lets propagate the valid status up the chain
       // and throw error if we counter invalid, as this breaks consensus
       if (node.parent !== undefined) {
-        this.maybeUpdateBestChildAndDescendant(node.parent, nodeIndex, currentSlot);
+        this.maybeUpdateBestChildAndDescendant(node.parent, nodeIndex, currentSlot, proposerBoostRoot);
 
         if (node.executionStatus === ExecutionStatus.Valid) {
           this.propagateValidExecutionStatusByIndex(node.parent);
@@ -519,7 +520,8 @@ export class ProtoArray {
     currentSlot: Slot,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex
+    executionPayloadStateRoot: RootHex,
+    proposerBoostRoot: RootHex | null
   ): void {
     // First check if block exists
     const variants = this.indices.get(blockRoot);
@@ -582,7 +584,7 @@ export class ProtoArray {
     variants[PayloadStatus.FULL] = fullIndex;
 
     // Update bestChild for PENDING node (may now prefer FULL over EMPTY)
-    this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot);
+    this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot, proposerBoostRoot);
   }
 
   /**
@@ -1183,7 +1185,7 @@ export class ProtoArray {
     return isFromPreviousSlot || isFromCurrentSlot;
   }
 
-  maybeUpdateBestChildAndDescendant(parentIndex: number, childIndex: number, currentSlot: Slot): void {
+  maybeUpdateBestChildAndDescendant(parentIndex: number, childIndex: number, currentSlot: Slot, proposerBoostRoot: RootHex | null): void {
     const childNode = this.nodes[childIndex];
     if (childNode === undefined) {
       throw new ProtoArrayError({
@@ -1278,13 +1280,9 @@ export class ProtoArray {
           }
 
           // Same weight and same root (or edge case), tie-breaker by payload status
-          const childTiebreaker = this.getPayloadStatusTiebreaker(
-            childNode,
-            currentSlot,
-            null // proposerBoostRoot
-          );
+          const childTiebreaker = this.getPayloadStatusTiebreaker(childNode, currentSlot, proposerBoostRoot);
 
-          const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, null);
+          const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, proposerBoostRoot);
 
           if (childTiebreaker > bestChildTiebreaker) {
             newChildAndDescendant = changeToChild;
