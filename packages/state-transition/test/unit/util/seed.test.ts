@@ -4,11 +4,13 @@ import {toHexString} from "@chainsafe/ssz";
 import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {bytesToInt} from "@lodestar/utils";
 import {
+  computePayloadTimelinessCommitteeIndices,
   computeProposerIndex,
   computeShuffledIndex,
   getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   getRandaoMix,
+  naiveComputePayloadTimelinessCommitteeIndices,
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
 } from "../../../src/util/index.js";
@@ -90,6 +92,22 @@ describe("electra getNextSyncCommitteeIndices", () => {
       expect(result).toEqual(new Uint32Array(expected));
     });
   }
+});
+
+describe("computePayloadTimelinessCommitteeIndices", () => {
+  const seed = crypto.randomBytes(32);
+  const vc = 1000;
+  const indices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
+  const effectiveBalanceIncrements = new Uint16Array(vc);
+  for (let i = 0; i < vc; i++) {
+    effectiveBalanceIncrements[i] = 32 + 32 * (i % 64);
+  }
+
+  it("should be the same to the naive version", () => {
+    const expected = naiveComputePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
+    const result = computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
+    expect(result).toEqual(new Uint32Array(expected));
+  });
 });
 
 describe("number from 2 bytes bytesToInt", () => {

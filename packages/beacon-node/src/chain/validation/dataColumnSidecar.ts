@@ -10,8 +10,8 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
-import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {DataColumnSidecar, Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
+import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
 import {
@@ -318,7 +318,7 @@ export async function validateBlockDataColumnSidecars(
   const firstSidecarSignedBlockHeader = dataColumnSidecars[0].signedBlockHeader;
   const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
-  if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
+  if (!byteArrayEquals(blockRoot, firstBlockRoot)) {
     throw new DataColumnSidecarValidationError(
       {
         code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
@@ -457,9 +457,6 @@ export async function validateBlockDataColumnSidecars(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
  */
-export function computeSubnetForDataColumnSidecar(
-  config: ChainConfig,
-  columnSidecar: fulu.DataColumnSidecar
-): SubnetID {
+export function computeSubnetForDataColumnSidecar(config: ChainConfig, columnSidecar: DataColumnSidecar): SubnetID {
   return columnSidecar.index % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
 }

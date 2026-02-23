@@ -122,18 +122,7 @@ function charCodeToByte(charCode: number): number {
   throw new Error(`Invalid hex character code: ${charCode}`);
 }
 
-import {
-  getImplementation as getBigIntBufferImplementation,
-  initNative as initBigIntBufferNative,
-  toBigIntBE,
-  toBigIntLE,
-  toBufferBE,
-  toBufferBEInto,
-  toBufferLE,
-  toBufferLEInto,
-} from "@vekexasia/bigint-buffer2";
-
-export {getBigIntBufferImplementation, initBigIntBufferNative};
+import {toBigIntBE, toBigIntLE, toBufferBE, toBufferLE} from "@vekexasia/bigint-buffer2";
 
 type Endianness = "le" | "be";
 
@@ -176,22 +165,6 @@ export function bigIntToBytes(value: bigint, length: number, endianness: Endiann
   throw new Error("endianness must be either 'le' or 'be'");
 }
 
-/**
- * Write bigint into existing buffer. ~30% faster than allocating new buffer.
- * Buffer must be pre-allocated with correct length.
- */
-export function bigIntToBytesInto(value: bigint, buffer: Uint8Array, endianness: Endianness = "le"): void {
-  if (endianness === "le") {
-    toBufferLEInto(value, buffer as Buffer);
-    return;
-  }
-  if (endianness === "be") {
-    toBufferBEInto(value, buffer as Buffer);
-    return;
-  }
-  throw new Error("endianness must be either 'le' or 'be'");
-}
-
 export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"): bigint {
   if (!(value instanceof Uint8Array)) {
     throw new TypeError("expected a Uint8Array");
@@ -212,4 +185,19 @@ export function xor(a: Uint8Array, b: Uint8Array): Uint8Array {
     a[i] = a[i] ^ b[i];
   }
   return a;
+}
+
+/**
+ * Compare two byte arrays for equality.
+ * Note: In Node.js environment, the implementation in nodejs.ts uses Buffer.compare
+ * which is significantly faster due to native code.
+ */
+export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }

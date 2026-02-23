@@ -1,4 +1,3 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
@@ -15,7 +14,7 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
 import {Attestation, Epoch, phase0} from "@lodestar/types";
-import {intSqrt} from "@lodestar/utils";
+import {byteArrayEquals, intSqrt} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
 import {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";

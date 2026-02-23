@@ -19,11 +19,16 @@ export function createMetrics(opts: MetricsOptions, genesisTime: number, externa
   const lodestar = createLodestarMetrics(register, opts.metadata, genesisTime);
   const stateTransition = getMetrics(register);
 
-  process.on("unhandledRejection", (_error) => {
+  const onUnhandledRejection = (_error: unknown): void => {
     lodestar.unhandledPromiseRejections.inc();
-  });
+  };
+  process.on("unhandledRejection", onUnhandledRejection);
 
-  const close = collectNodeJSMetrics(register);
+  const nodeJsMetricsClose = collectNodeJSMetrics(register);
+  const close = (): void => {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+    nodeJsMetricsClose();
+  };
 
   // Merge external registries
   for (const externalRegister of externalRegistries) {
