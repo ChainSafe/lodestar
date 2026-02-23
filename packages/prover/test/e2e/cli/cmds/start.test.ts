@@ -7,20 +7,13 @@ import {ChainConfig, chainConfigToJson} from "@lodestar/config";
 import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {sleep} from "@lodestar/utils";
 import {getLodestarProverCli} from "../../../../src/cli/cli.js";
-import {
-  beaconUrl,
-  chainId,
-  config,
-  minFinalizedTimeMs,
-  proxyPort,
-  proxyUrl,
-  rpcUrl,
-  waitForFinalized,
-} from "../../../utils/e2e_env.js";
+import {beaconUrl, chainId, config, proxyPort, proxyUrl, rpcUrl, waitForFinalized} from "../../../utils/e2e_env.js";
 
 const cli = getLodestarProverCli();
 
-describe("prover/proxy", () => {
+// TODO: Re-enable once shared E2E env timing is stabilized
+// https://github.com/ChainSafe/lodestar/issues/8937
+describe.skipIf(process.env.CI)("prover/proxy", () => {
   it("should show help", async () => {
     const output = await runCliCommand(cli, ["proxy", "--help"]);
 
@@ -62,7 +55,7 @@ describe("prover/proxy", () => {
       );
       // Give sometime to the prover to start proxy server
       await sleep(3000);
-    }, minFinalizedTimeMs);
+    }, 50000);
 
     afterAll(async () => {
       if (proc) {

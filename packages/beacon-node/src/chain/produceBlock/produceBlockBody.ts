@@ -1,10 +1,12 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
+  BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
   isForkPostAltair,
@@ -16,6 +18,8 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateExecutions,
+  CachedBeaconStateGloas,
+  G2_POINT_AT_INFINITY,
   computeTimeAtSlot,
   getExpectedWithdrawals,
   getRandaoMix,
@@ -42,6 +46,7 @@ import {
   deneb,
   electra,
   fulu,
+  gloas,
 } from "@lodestar/types";
 import {Logger, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
@@ -99,6 +104,20 @@ export type AssembledBodyType<T extends BlockType> = T extends BlockType.Full
   : BlindedBeaconBlockBody;
 export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full ? BeaconBlock : BlindedBeaconBlock;
 
+export type ProduceFullGloas = {
+  type: BlockType.Full;
+  fork: ForkPostGloas;
+  executionPayload: ExecutionPayload<ForkPostGloas>;
+  executionRequests: electra.ExecutionRequests;
+  blobsBundle: BlobsBundle<ForkPostGloas>;
+  cells: fulu.Cell[][];
+  /**
+   * Cached envelope state root computed during block production.
+   * This is the state root after running `processExecutionPayloadEnvelope` on the
+   * post-block state, and later used to construct the `ExecutionPayloadEnvelope`.
+   */
+  envelopeStateRoot: Root;
+};
 export type ProduceFullFulu = {
   type: BlockType.Full;
   fork: ForkPostFulu;
@@ -131,6 +150,7 @@ export type ProduceBlinded = {
 
 /** The result of local block production, everything that's not the block itself */
 export type ProduceResult =
+  | ProduceFullGloas
   | ProduceFullFulu
   | ProduceFullDeneb
   | ProduceFullBellatrix
@@ -180,12 +200,112 @@ export async function produceBlockBody<T extends BlockType>(
   this.logger.verbose("Producing beacon block body", logMeta);
 
   if (isForkPostGloas(fork)) {
-    // TODO GLOAS: Set body.signedExecutionPayloadBid and body.payloadAttestation
-    const commonBlockBody = await commonBlockBodyPromise;
-    blockBody = Object.assign({}, commonBlockBody) as AssembledBodyType<T>;
-    executionPayloadValue = BigInt(0);
+    // TODO GLOAS: support non self-building here, the block type differentiation between
+    // full and blinded no longer makes sense in gloas, it might be a good idea to move
+    // this into a completely separate function and have pre/post gloas more separated
+    const gloasState = currentState as CachedBeaconStateGloas;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
+    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
 
-    // We don't deal with blinded blocks, execution engine, blobs and execution requests post-gloas
+    const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
+
+    this.logger.verbose("Preparing execution payload from engine", {
+      slot: blockSlot,
+      parentBlockRoot: toRootHex(parentBlockRoot),
+      feeRecipient,
+    });
+
+    // Get execution payload from EL
+    const prepareRes = await prepareExecutionPayload(
+      this,
+      this.logger,
+      fork,
+      parentBlockRoot,
+      safeBlockHash,
+      finalizedBlockHash ?? ZERO_HASH_HEX,
+      gloasState,
+      feeRecipient
+    );
+
+    const {prepType, payloadId} = prepareRes;
+    Object.assign(logMeta, {executionPayloadPrepType: prepType});
+
+    if (prepType !== PayloadPreparationType.Cached) {
+      await sleep(PAYLOAD_GENERATION_TIME_MS);
+    }
+
+    this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
+    const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
+
+    endExecutionPayload?.({step: BlockProductionStep.executionPayload});
+
+    const {executionPayload, blobsBundle, executionRequests} = payloadRes;
+    executionPayloadValue = payloadRes.executionPayloadValue;
+    shouldOverrideBuilder = payloadRes.shouldOverrideBuilder;
+
+    if (blobsBundle === undefined) {
+      throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
+    }
+    if (executionRequests === undefined) {
+      throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
+    }
+
+    const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
+    if (this.opts.sanityCheckExecutionEngineBlobs) {
+      await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+    }
+
+    // Create self-build execution payload bid
+    const bid: gloas.ExecutionPayloadBid = {
+      parentBlockHash: gloasState.latestBlockHash,
+      parentBlockRoot: parentBlockRoot,
+      blockHash: executionPayload.blockHash,
+      prevRandao: getRandaoMix(gloasState, gloasState.epochCtx.epoch),
+      feeRecipient: executionPayload.feeRecipient,
+      gasLimit: BigInt(executionPayload.gasLimit),
+      builderIndex: BUILDER_INDEX_SELF_BUILD,
+      slot: blockSlot,
+      value: 0,
+      executionPayment: 0,
+      blobKzgCommitments: blobsBundle.commitments,
+    };
+    const signedBid: gloas.SignedExecutionPayloadBid = {
+      message: bid,
+      signature: G2_POINT_AT_INFINITY,
+    };
+
+    const commonBlockBody = await commonBlockBodyPromise;
+    const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
+    gloasBody.signedExecutionPayloadBid = signedBid;
+    // TODO GLOAS: Get payload attestations from pool for previous slot
+    gloasBody.payloadAttestations = [];
+    blockBody = gloasBody as AssembledBodyType<T>;
+
+    // Store execution payload data required to construct execution payload envelope later
+    const gloasResult = produceResult as ProduceFullGloas;
+    gloasResult.executionPayload = executionPayload as ExecutionPayload<ForkPostGloas>;
+    gloasResult.executionRequests = executionRequests;
+    gloasResult.blobsBundle = blobsBundle;
+    gloasResult.cells = cells;
+
+    const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
+    this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+    this.logger.verbose("Produced block with self-build bid", {
+      slot: blockSlot,
+      executionPayloadValue,
+      prepType,
+      payloadId,
+      fetchedTime,
+      executionBlockHash: toRootHex(executionPayload.blockHash),
+      blobs: blobsBundle.commitments.length,
+    });
+
+    Object.assign(logMeta, {
+      transactions: executionPayload.transactions.length,
+      blobs: blobsBundle.commitments.length,
+      shouldOverrideBuilder,
+    });
   } else if (isForkPostBellatrix(fork)) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
@@ -480,10 +600,12 @@ export async function prepareExecutionPayload(
   parentBlockRoot: Root,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
-  state: CachedBeaconStateExecutions,
+  state: CachedBeaconStateExecutions | CachedBeaconStateGloas,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  const parentHash = state.latestExecutionPayloadHeader.blockHash;
+  const parentHash = isForkPostGloas(fork)
+    ? (state as CachedBeaconStateGloas).latestBlockHash
+    : (state as CachedBeaconStateExecutions).latestExecutionPayloadHeader.blockHash;
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = getRandaoMix(state, state.epochCtx.epoch);
 
@@ -568,25 +690,46 @@ export function getPayloadAttributesForSSE(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
+    forkChoice: IForkChoice;
   },
   {
     prepareState,
     prepareSlot,
     parentBlockRoot,
     feeRecipient,
-  }: {prepareState: CachedBeaconStateExecutions; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
+  }: {
+    prepareState: CachedBeaconStateExecutions | CachedBeaconStateGloas;
+    prepareSlot: Slot;
+    parentBlockRoot: Root;
+    feeRecipient: string;
+  }
 ): SSEPayloadAttributes {
-  const parentHash = prepareState.latestExecutionPayloadHeader.blockHash;
+  const parentHash = isForkPostGloas(fork)
+    ? (prepareState as CachedBeaconStateGloas).latestBlockHash
+    : (prepareState as CachedBeaconStateExecutions).latestExecutionPayloadHeader.blockHash;
   const payloadAttributes = preparePayloadAttributes(fork, chain, {
     prepareState,
     prepareSlot,
     parentBlockRoot,
     feeRecipient,
   });
+
+  let parentBlockNumber: number;
+  if (isForkPostGloas(fork)) {
+    // TODO GLOAS: revisit this after fork choice changes are merged
+    const parentBlock = chain.forkChoice.getBlock(parentBlockRoot);
+    if (parentBlock?.executionPayloadBlockHash == null) {
+      throw Error(`Parent block not found in fork choice root=${toRootHex(parentBlockRoot)}`);
+    }
+    parentBlockNumber = parentBlock.executionPayloadNumber;
+  } else {
+    parentBlockNumber = (prepareState as CachedBeaconStateExecutions).latestExecutionPayloadHeader.blockNumber;
+  }
+
   const ssePayloadAttributes: SSEPayloadAttributes = {
     proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
     proposalSlot: prepareSlot,
-    parentBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber,
+    parentBlockNumber,
     parentBlockRoot,
     parentBlockHash: parentHash,
     payloadAttributes,
@@ -605,7 +748,7 @@ function preparePayloadAttributes(
     parentBlockRoot,
     feeRecipient,
   }: {
-    prepareState: CachedBeaconStateExecutions;
+    prepareState: CachedBeaconStateExecutions | CachedBeaconStateGloas;
     prepareSlot: Slot;
     parentBlockRoot: Root;
     feeRecipient: string;

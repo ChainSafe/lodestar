@@ -69,6 +69,9 @@ export enum Bucket {
 
   fulu_dataColumnSidecars = 57, // FULU BeaconBlockRoot -> DataColumnSidecars
   fulu_dataColumnSidecarsArchive = 58, // FULU BeaconBlockSlot -> DataColumnSidecars
+
+  gloas_executionPayloadEnvelope = 59, // GLOAS BeaconBlockRoot -> SignedExecutionPayloadEnvelope
+  gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> SignedExecutionPayloadEnvelope
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
