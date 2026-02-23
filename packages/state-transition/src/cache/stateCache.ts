@@ -167,7 +167,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
  * Check loadState() api for more details
  * // TODO: rename to loadUnfinalizedCachedBeaconState() due to ELECTRA
  */
-export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
+export function loadCachedBeaconState<T extends CachedBeaconStateAllForks>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
   opts?: EpochCacheOpts,
@@ -184,8 +184,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
   const validators = migratedState.validators;
   for (const validatorIndex of modifiedValidators) {
     const validator = validators.getReadonly(validatorIndex);
-    const pubkey = validator.pubkey;
-    pubkeyCache.set(validatorIndex, pubkey);
+    pubkeyCache.set(validatorIndex, validator.pubkey);
   }
 
   return createCachedBeaconState(

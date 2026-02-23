@@ -144,10 +144,7 @@ export async function validateGossipAttestationsSameAttData(
     // all signature sets should have same signing root since we filtered in network processor
     signatureValids = await chain.bls.verifySignatureSetsSameMessage(
       signatureSets.map((set) => {
-        const publicKey = chain.pubkeyCache.get(set.index);
-        if (!publicKey) {
-          throw Error(`Missing pubkey for validator index ${set.index}`);
-        }
+        const publicKey = chain.pubkeyCache.getOrThrow(set.index);
         return {publicKey, signature: set.signature};
       }),
       signatureSets[0].signingRoot

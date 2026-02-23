@@ -1,7 +1,7 @@
-import bindings from "@chainsafe/lodestar-z";
 import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {phase0} from "@lodestar/types";
+import {ValidatorIndex, phase0} from "@lodestar/types";
 
 /**
  * Unified pubkey cache coupling index→pubkey and pubkey→index lookups.
@@ -9,11 +9,13 @@ import {phase0} from "@lodestar/types";
  */
 export interface PubkeyCache {
   /** Get deserialized PublicKey by validator index */
-  get(index: number): PublicKey | undefined;
+  get(index: ValidatorIndex): PublicKey | undefined;
+  /** Get deserialized PublicKey by validator index or throw if not found */
+  getOrThrow(index: ValidatorIndex): PublicKey;
   /** Get validator index by pubkey bytes */
-  getIndex(pubkey: Uint8Array): number | null;
+  getIndex(pubkey: Uint8Array): ValidatorIndex | null;
   /** Set both directions atomically. Takes raw pubkey bytes — deserialization is handled internally. */
-  set(index: number, pubkey: Uint8Array): void;
+  set(index: ValidatorIndex, pubkey: Uint8Array): void;
   /** Number of entries */
   readonly size: number;
 }
@@ -35,7 +37,7 @@ export interface GlobalPubkeyCache extends PubkeyCache {
  * Standard JS-side pubkey cache for use in tests and non-production contexts.
  * Wraps PubkeyIndexMap + PublicKey[] for bidirectional lookup.
  */
-export class StandardPubkeyCache implements PubkeyCache {
+class StandardPubkeyCache implements PubkeyCache {
   private readonly pubkey2index: PubkeyIndexMap;
   private readonly index2pubkey: (PublicKey | undefined)[];
 
@@ -45,18 +47,24 @@ export class StandardPubkeyCache implements PubkeyCache {
   }
 
   get size(): number {
-    return this.index2pubkey.length;
+    return this.pubkey2index.size;
   }
 
-  get(index: number): PublicKey | undefined {
+  get(index: ValidatorIndex): PublicKey | undefined {
     return this.index2pubkey[index];
   }
 
-  getIndex(pubkey: Uint8Array): number | null {
+  getOrThrow(index: ValidatorIndex): PublicKey {
+    const pubkey = this.get(index);
+    if (!pubkey) throw Error(`Missing pubkey for validator index ${index}`);
+    return pubkey;
+  }
+
+  getIndex(pubkey: Uint8Array): ValidatorIndex | null {
     return this.pubkey2index.get(pubkey);
   }
 
-  set(index: number, pubkey: Uint8Array): void {
+  set(index: ValidatorIndex, pubkey: Uint8Array): void {
     this.pubkey2index.set(pubkey, index);
     // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
     // Afterwards any public key in the state is considered validated.
@@ -77,7 +85,7 @@ export function createPubkeyCache(): PubkeyCache {
  * This is the production pubkey cache — shared across the entire process (including workers).
  */
 export function getPubkeyCache(): GlobalPubkeyCache {
-  return bindings.pubkeys;
+  return pubkeyCache;
 }
 
 /**

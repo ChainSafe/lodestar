@@ -12,21 +12,13 @@ export function getAggregatedPubkey(
       return signatureSet.pubkey;
 
     case SignatureSetType.indexed: {
-      const pubkey = pubkeyCache.get(signatureSet.index);
-      if (!pubkey) {
-        throw Error(`Missing pubkey for validator index ${signatureSet.index}`);
-      }
-      return pubkey;
+      return pubkeyCache.getOrThrow(signatureSet.index);
     }
 
     case SignatureSetType.aggregate: {
       const timer = metrics?.blsThreadPool.pubkeysAggregationMainThreadDuration.startTimer();
       const pubkeys = signatureSet.indices.map((i) => {
-        const pubkey = pubkeyCache.get(i);
-        if (!pubkey) {
-          throw Error(`Missing pubkey for validator index ${i}`);
-        }
-        return pubkey;
+        return pubkeyCache.getOrThrow(i);
       });
       const aggregated = aggregatePublicKeys(pubkeys);
       timer?.();

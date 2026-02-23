@@ -57,7 +57,7 @@ export function processProposerSlashing(
 
 export function assertValidProposerSlashing(
   config: BeaconConfig,
-  index2pubkey: PubkeyCache,
+  pubkeyCache: PubkeyCache,
   stateSlot: Slot,
   proposerSlashing: phase0.ProposerSlashing,
   proposer: Validator,
@@ -94,7 +94,7 @@ export function assertValidProposerSlashing(
   if (verifySignatures) {
     const signatureSets = getProposerSlashingSignatureSets(config, stateSlot, proposerSlashing);
     for (let i = 0; i < signatureSets.length; i++) {
-      if (!verifySignatureSet(signatureSets[i], index2pubkey)) {
+      if (!verifySignatureSet(signatureSets[i], pubkeyCache)) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     }

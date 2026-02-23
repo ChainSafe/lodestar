@@ -6,7 +6,7 @@ import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../cache/state
 
 export async function computeSyncCommitteeRewards(
   config: BeaconConfig,
-  index2pubkey: PubkeyCache,
+  pubkeyCache: PubkeyCache,
   block: BeaconBlock,
   preState: CachedBeaconStateAllForks,
   validatorIds: (ValidatorIndex | string)[] = []
@@ -48,7 +48,7 @@ export async function computeSyncCommitteeRewards(
   if (validatorIds.length) {
     const filtersSet = new Set(validatorIds);
     return rewards.filter((reward) => {
-      const pubkeyHex = index2pubkey.get(reward.validatorIndex)?.toHex();
+      const pubkeyHex = pubkeyCache.get(reward.validatorIndex)?.toHex();
       return filtersSet.has(reward.validatorIndex) || (pubkeyHex !== undefined && filtersSet.has(pubkeyHex));
     });
   }

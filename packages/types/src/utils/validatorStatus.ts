@@ -15,6 +15,8 @@ export type ValidatorStatus =
   | "withdrawal_possible"
   | "withdrawal_done";
 
+export type GeneralValidatorStatus = "active" | "pending" | "exited" | "withdrawal";
+
 /**
  * Get the status of the validator
  * based on conditions outlined in https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
@@ -49,4 +51,24 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
     return validator.effectiveBalance !== 0 ? "withdrawal_possible" : "withdrawal_done";
   }
   throw new Error("ValidatorStatus unknown");
+}
+
+export function mapToGeneralStatus(subStatus: ValidatorStatus): GeneralValidatorStatus {
+  switch (subStatus) {
+    case "active_ongoing":
+    case "active_exiting":
+    case "active_slashed":
+      return "active";
+    case "pending_initialized":
+    case "pending_queued":
+      return "pending";
+    case "exited_slashed":
+    case "exited_unslashed":
+      return "exited";
+    case "withdrawal_possible":
+    case "withdrawal_done":
+      return "withdrawal";
+    default:
+      throw new Error(`Unknown substatus: ${subStatus}`);
+  }
 }

@@ -9,10 +9,7 @@ export function generateBlsToExecutionChanges(
   const result: capella.SignedBLSToExecutionChange[] = [];
 
   for (const validatorIndex of state.epochCtx.proposers) {
-    const pubkey = pubkeyCache.get(validatorIndex);
-    if (!pubkey) {
-      throw Error(`Missing pubkey for validator index ${validatorIndex}`);
-    }
+    const pubkey = pubkeyCache.getOrThrow(validatorIndex);
 
     result.push({
       message: {

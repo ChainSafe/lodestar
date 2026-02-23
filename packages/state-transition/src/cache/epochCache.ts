@@ -1086,6 +1086,7 @@ export function createEmptyEpochCacheImmutableData(
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
+    // This is a test state, there's no need to have a global shared cache of keys
     pubkeyCache: pubkeyCache ?? createPubkeyCache(),
   };
 }

@@ -11,11 +11,11 @@ import {
 
 export function verifyVoluntaryExitSignature(
   config: BeaconConfig,
-  index2pubkey: PubkeyCache,
+  pubkeyCache: PubkeyCache,
   stateSlot: Slot,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, stateSlot, signedVoluntaryExit), index2pubkey);
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, stateSlot, signedVoluntaryExit), pubkeyCache);
 }
 
 /**

@@ -32,10 +32,7 @@ describe("api / impl / validator", () => {
       noThreshold: true,
       fn: () => {
         for (let i = 0; i < reqCount; i++) {
-          const pubkey = state.epochCtx.pubkeyCache.get(i);
-          if (!pubkey) {
-            throw Error(`Missing pubkey for validator index ${i}`);
-          }
+          const pubkey = state.epochCtx.pubkeyCache.getOrThrow(i);
           pubkey.toBytes();
         }
       },

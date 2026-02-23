@@ -48,7 +48,7 @@ export function processAttesterSlashing(
 
 export function assertValidAttesterSlashing(
   config: BeaconConfig,
-  index2pubkey: PubkeyCache,
+  pubkeyCache: PubkeyCache,
   stateSlot: Slot,
   validatorsLen: number,
   attesterSlashing: AttesterSlashing,
@@ -66,7 +66,7 @@ export function assertValidAttesterSlashing(
   // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
   for (const [i, attestation] of [attestation1, attestation2].entries()) {
     if (
-      !isValidIndexedAttestationBigint(config, index2pubkey, stateSlot, validatorsLen, attestation, verifySignatures)
+      !isValidIndexedAttestationBigint(config, pubkeyCache, stateSlot, validatorsLen, attestation, verifySignatures)
     ) {
       throw new Error(`AttesterSlashing attestation${i} is invalid`);
     }

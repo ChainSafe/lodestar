@@ -12,6 +12,7 @@ import {
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
   BlockContents,
+  DataColumnSidecar,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
   ExecutionPayloadHeader,
@@ -105,4 +106,8 @@ export function isELectraLightClientFinalityUpdate(
 
 export function isGloasBeaconBlock(block: BeaconBlock): block is BeaconBlock<ForkPostGloas> {
   return (block.body as BeaconBlockBody<ForkPostGloas>).signedExecutionPayloadBid !== undefined;
+}
+
+export function isGloasDataColumnSidecar(sidecar: DataColumnSidecar): sidecar is DataColumnSidecar<ForkPostGloas> {
+  return (sidecar as DataColumnSidecar<ForkPostGloas>).beaconBlockRoot !== undefined;
 }
