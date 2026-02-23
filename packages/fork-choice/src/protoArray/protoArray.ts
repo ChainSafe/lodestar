@@ -1185,7 +1185,12 @@ export class ProtoArray {
     return isFromPreviousSlot || isFromCurrentSlot;
   }
 
-  maybeUpdateBestChildAndDescendant(parentIndex: number, childIndex: number, currentSlot: Slot, proposerBoostRoot: RootHex | null): void {
+  maybeUpdateBestChildAndDescendant(
+    parentIndex: number,
+    childIndex: number,
+    currentSlot: Slot,
+    proposerBoostRoot: RootHex | null
+  ): void {
     const childNode = this.nodes[childIndex];
     if (childNode === undefined) {
       throw new ProtoArrayError({
