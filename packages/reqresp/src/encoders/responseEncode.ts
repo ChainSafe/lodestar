@@ -48,9 +48,6 @@ export function* responseEncodeError(
   status: RpcResponseStatusError,
   errorMessage: string
 ): Generator<Buffer> {
-  // <result>
-  yield Buffer.from([status]);
-
   // Combine <result> and <error_message> into a single chunk for atomic delivery.
   // Yielding them separately causes a race condition where the stream closes after the
   // status byte but before the error message arrives on the reader side.
