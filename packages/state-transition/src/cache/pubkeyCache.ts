@@ -39,6 +39,10 @@ class StandardPubkeyCache implements PubkeyCache {
   }
 
   set(index: number, pubkey: Uint8Array): void {
+    if (index !== this.index2pubkey.length) {
+      throw Error(`PubkeyCache set() must be called with sequential indices. Expected index ${this.index2pubkey.length} but got ${index}`);
+    }
+
     this.pubkey2index.set(pubkey, index);
     // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
     // Afterwards any public key in the state is considered validated.
