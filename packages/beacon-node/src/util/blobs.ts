@@ -13,7 +13,7 @@ import {
   VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
+import {BeaconBlockBody, DataColumnSidecars, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
 import {kzg} from "./kzg.js";
 
 type VersionHash = Uint8Array;
@@ -149,7 +149,7 @@ export async function dataColumnMatrixRecovery(
  * Reconstruct blobs from a set of data columns, at least 50%+ of all the columns
  * must be provided to allow to reconstruct the full data matrix
  */
-export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars, indices?: number[]): Promise<deneb.Blobs> {
+export async function reconstructBlobs(sidecars: DataColumnSidecars, indices?: number[]): Promise<deneb.Blobs> {
   if (sidecars.length < NUMBER_OF_COLUMNS / 2) {
     throw Error(
       `Expected at least ${NUMBER_OF_COLUMNS / 2} data columns to reconstruct blobs, received ${sidecars.length}`
@@ -188,7 +188,7 @@ export async function reconstructBlobs(sidecars: fulu.DataColumnSidecars, indice
  * Recover cells for specific blob indices from a set of data columns
  */
 async function recoverBlobCells(
-  partialSidecars: fulu.DataColumnSidecar[],
+  partialSidecars: DataColumnSidecars,
   blobIndices: number[]
 ): Promise<Map<number, fulu.Cell[]> | null> {
   const columnCount = partialSidecars.length;

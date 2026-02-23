@@ -76,6 +76,7 @@ export enum StateHashTreeRootSource {
   prepareNextEpoch = "prepare_next_epoch",
   regenState = "regen_state",
   computeNewStateRoot = "compute_new_state_root",
+  computeEnvelopeStateRoot = "compute_envelope_state_root",
 }
 
 /**

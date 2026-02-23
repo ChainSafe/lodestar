@@ -2,6 +2,7 @@ import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkPostDeneb,
+  ForkPostGloas,
   ForkPreDeneb,
   VALIDATOR_REGISTRY_LIMIT,
   isForkPostDeneb,
@@ -22,6 +23,7 @@ import {
   UintBn64,
   ValidatorIndex,
   altair,
+  gloas,
   phase0,
   ssz,
   sszTypesFor,
@@ -36,7 +38,7 @@ import {
   JsonOnlyReq,
   WithVersion,
 } from "../../utils/codecs.js";
-import {getPostBellatrixForkTypes, toForkName} from "../../utils/fork.js";
+import {getPostBellatrixForkTypes, getPostGloasForkTypes, toForkName} from "../../utils/fork.js";
 import {fromHeaders} from "../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
@@ -88,6 +90,17 @@ export type ProduceBlockV3Meta = ValueOf<typeof ProduceBlockV3MetaType> & {
   /** Lodestar-specific (non-standardized) value */
   executionPayloadSource: ProducedBlockSource;
 };
+
+export const ProduceBlockV4MetaType = new ContainerType(
+  {
+    ...VersionType.fields,
+    /** Consensus rewards paid to the proposer for this block, in Wei */
+    consensusBlockValue: ssz.UintBn64,
+  },
+  {jsonCase: "eth2"}
+);
+
+export type ProduceBlockV4Meta = ValueOf<typeof ProduceBlockV4MetaType>;
 
 export const AttesterDutyType = new ContainerType(
   {
@@ -355,6 +368,59 @@ export type Endpoints = {
     },
     BlockContents | BlindedBeaconBlock,
     ProduceBlockV3Meta
+  >;
+
+  /**
+   * Requests a beacon node to produce a valid block, which can then be signed by a validator.
+   *
+   * Post-Gloas, proposers submit execution payload bids rather than full execution payloads,
+   * so there is no longer a concept of blinded or unblinded blocks. Builders release the payload later.
+   * This endpoint is specific to the post-Gloas forks and is not backwards compatible with previous forks.
+   */
+  produceBlockV4: Endpoint<
+    "GET",
+    {
+      /** The slot for which the block should be proposed */
+      slot: Slot;
+      /** The validator's randao reveal value */
+      randaoReveal: BLSSignature;
+      /** Arbitrary data validator wants to include in block */
+      graffiti?: string;
+      skipRandaoVerification?: boolean;
+      builderBoostFactor?: UintBn64;
+    } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
+    {
+      params: {slot: number};
+      query: {
+        randao_reveal: string;
+        graffiti?: string;
+        skip_randao_verification?: string;
+        fee_recipient?: string;
+        builder_selection?: string;
+        builder_boost_factor?: string;
+        strict_fee_recipient_check?: boolean;
+      };
+    },
+    BeaconBlock<ForkPostGloas>,
+    ProduceBlockV4Meta
+  >;
+
+  /**
+   * Get execution payload envelope.
+   * Retrieves execution payload envelope for a given slot and beacon block root.
+   * The envelope contains the full execution payload along with associated metadata.
+   */
+  getExecutionPayloadEnvelope: Endpoint<
+    "GET",
+    {
+      /** Slot for which the execution payload envelope is requested */
+      slot: Slot;
+      /** Root of the beacon block that this envelope is for */
+      beaconBlockRoot: Root;
+    },
+    {params: {slot: Slot; beacon_block_root: string}},
+    gloas.ExecutionPayloadEnvelope,
+    VersionMeta
   >;
 
   /**
@@ -761,6 +827,96 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             };
           },
         },
+      },
+    },
+    produceBlockV4: {
+      url: "/eth/v4/validator/blocks/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({
+          slot,
+          randaoReveal,
+          graffiti,
+          skipRandaoVerification,
+          feeRecipient,
+          builderSelection,
+          builderBoostFactor,
+          strictFeeRecipientCheck,
+        }) => ({
+          params: {slot},
+          query: {
+            randao_reveal: toHex(randaoReveal),
+            graffiti: toGraffitiHex(graffiti),
+            skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
+            fee_recipient: feeRecipient,
+            builder_selection: builderSelection,
+            builder_boost_factor: builderBoostFactor?.toString(),
+            strict_fee_recipient_check: strictFeeRecipientCheck,
+          },
+        }),
+        parseReq: ({params, query}) => ({
+          slot: params.slot,
+          randaoReveal: fromHex(query.randao_reveal),
+          graffiti: fromGraffitiHex(query.graffiti),
+          skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
+          feeRecipient: query.fee_recipient,
+          builderSelection: query.builder_selection as BuilderSelection,
+          builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
+          strictFeeRecipientCheck: query.strict_fee_recipient_check,
+        }),
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+            skip_randao_verification: Schema.String,
+            fee_recipient: Schema.String,
+            builder_selection: Schema.String,
+            builder_boost_factor: Schema.String,
+            strict_fee_recipient_check: Schema.Boolean,
+          },
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => getPostGloasForkTypes(fork).BeaconBlock),
+        meta: {
+          toJson: (meta) => ProduceBlockV4MetaType.toJson(meta),
+          fromJson: (val) => ProduceBlockV4MetaType.fromJson(val),
+          toHeadersObject: (meta) => ({
+            [MetaHeader.Version]: meta.version,
+            [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
+          }),
+          fromHeaders: (headers) => ({
+            version: toForkName(headers.getRequired(MetaHeader.Version)),
+            consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
+          }),
+        },
+      },
+    },
+    getExecutionPayloadEnvelope: {
+      url: "/eth/v1/validator/execution_payload_envelope/{slot}/{beacon_block_root}",
+      method: "GET",
+      req: {
+        writeReq: ({slot, beaconBlockRoot}) => ({
+          params: {
+            slot,
+            beacon_block_root: toRootHex(beaconBlockRoot),
+          },
+        }),
+        parseReq: ({params}) => ({
+          slot: params.slot,
+          beaconBlockRoot: fromHex(params.beacon_block_root),
+        }),
+        schema: {
+          params: {
+            slot: Schema.UintRequired,
+            beacon_block_root: Schema.StringRequired,
+          },
+        },
+      },
+      resp: {
+        data: ssz.gloas.ExecutionPayloadEnvelope,
+        meta: VersionCodec,
       },
     },
     produceAttestationData: {

@@ -168,7 +168,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
  * Check loadState() api for more details
  * // TODO: rename to loadUnfinalizedCachedBeaconState() due to ELECTRA
  */
-export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
+export function loadCachedBeaconState<T extends CachedBeaconStateAllForks>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
   opts?: EpochCacheOpts,

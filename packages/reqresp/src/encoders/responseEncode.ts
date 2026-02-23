@@ -1,7 +1,7 @@
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 import {ContextBytesFactory, ContextBytesType, MixedProtocol, Protocol, ResponseOutgoing} from "../types.js";
-import {encodeErrorMessage} from "../utils/index.js";
+import {encodeErrorMessageToBuffer} from "../utils/index.js";
 
 const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
 
@@ -51,10 +51,11 @@ export function* responseEncodeError(
   // <result>
   yield Buffer.from([status]);
 
-  // <error_message>? is optional
-  if (errorMessage) {
-    yield* encodeErrorMessage(errorMessage, protocol.encoding);
-  }
+  // Combine <result> and <error_message> into a single chunk for atomic delivery.
+  // Yielding them separately causes a race condition where the stream closes after the
+  // status byte but before the error message arrives on the reader side.
+  const errorMessageBuffer = encodeErrorMessageToBuffer(errorMessage, protocol.encoding);
+  yield Buffer.concat([Buffer.from([status]), errorMessageBuffer]);
 }
 
 /**

@@ -47,7 +47,7 @@ export function computeWeakSubjectivityPeriodCachedState(
   state: CachedBeaconStateAllForks
 ): number {
   const activeValidatorCount = state.epochCtx.currentShuffling.activeIndices.length;
-  const fork = state.config.getForkName(state.slot);
+  const fork = config.getForkName(state.slot);
 
   return isForkPostElectra(fork)
     ? computeWeakSubjectivityPeriodFromConstituentsElectra(
