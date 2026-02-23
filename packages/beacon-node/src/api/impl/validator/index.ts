@@ -1,4 +1,3 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
@@ -27,6 +26,7 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   createCachedBeaconState,
+  createPubkeyCache,
   getBlockRootAtSlot,
   getCurrentSlot,
   loadState,
@@ -1123,8 +1123,7 @@ export function getValidatorApi(
             {
               config: chain.config,
               // Not required to compute proposers
-              pubkey2index: new PubkeyIndexMap(),
-              index2pubkey: [],
+              pubkeyCache: createPubkeyCache(),
             },
             {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
           );
@@ -1585,7 +1584,7 @@ export function getValidatorApi(
 
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
-        const validatorIndex = chain.pubkey2index.get(pubkey);
+        const validatorIndex = chain.pubkeyCache.getIndex(pubkey);
         if (validatorIndex === null) return false;
 
         const validator = headState.validators.getReadonly(validatorIndex);

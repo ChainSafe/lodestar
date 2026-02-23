@@ -1,4 +1,3 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config, config as minimalConfig} from "@lodestar/config/default";
 import {
@@ -17,6 +16,7 @@ import {
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   createCachedBeaconState,
+  createPubkeyCache,
 } from "../../src/index.js";
 import {newZeroedArray} from "../../src/util/index.js";
 
@@ -89,8 +89,7 @@ export function generateCachedState(
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a test state, there's no need to have a global shared cache of keys
-    pubkey2index: new PubkeyIndexMap(),
-    index2pubkey: [],
+    pubkeyCache: createPubkeyCache(),
   });
 }
 
@@ -104,8 +103,7 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
     {
       config: createBeaconConfig(configCustom, state.genesisValidatorsRoot),
       // This is a test state, there's no need to have a global shared cache of keys
-      pubkey2index: new PubkeyIndexMap(),
-      index2pubkey: [],
+      pubkeyCache: createPubkeyCache(),
     },
     opts
   );

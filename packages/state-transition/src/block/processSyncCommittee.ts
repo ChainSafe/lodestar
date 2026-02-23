@@ -32,7 +32,7 @@ export function processSyncAggregate(
       participantIndices
     );
     // When there's no participation we consider the signature valid and just ignore it
-    if (signatureSet !== null && !verifySignatureSet(signatureSet, state.epochCtx.index2pubkey)) {
+    if (signatureSet !== null && !verifySignatureSet(signatureSet, state.epochCtx.pubkeyCache)) {
       throw Error("Sync committee signature invalid");
     }
   }

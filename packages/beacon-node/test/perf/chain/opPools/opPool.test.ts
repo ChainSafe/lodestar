@@ -8,7 +8,7 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
 } from "@lodestar/params";
-import {CachedBeaconStateAltair, Index2PubkeyCache} from "@lodestar/state-transition";
+import {CachedBeaconStateAltair, PubkeyCache} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {BlockType} from "../../../../src/chain/interface.js";
@@ -38,8 +38,8 @@ describe("opPool", () => {
       fillAttesterSlashing(pool, originalState, MAX_ATTESTER_SLASHINGS);
       fillProposerSlashing(pool, originalState, MAX_PROPOSER_SLASHINGS);
       fillVoluntaryExits(pool, originalState, MAX_VOLUNTARY_EXITS);
-      // TODO: feed index2pubkey separately instead of getting from originalState
-      fillBlsToExecutionChanges(originalState.epochCtx.index2pubkey, pool, originalState, MAX_BLS_TO_EXECUTION_CHANGES);
+      // TODO: feed pubkeyCache separately instead of getting from originalState
+      fillBlsToExecutionChanges(originalState.epochCtx.pubkeyCache, pool, originalState, MAX_BLS_TO_EXECUTION_CHANGES);
 
       return pool;
     },
@@ -57,8 +57,8 @@ describe("opPool", () => {
       fillAttesterSlashing(pool, originalState, maxItemsInPool);
       fillProposerSlashing(pool, originalState, maxItemsInPool);
       fillVoluntaryExits(pool, originalState, maxItemsInPool);
-      // TODO: feed index2pubkey separately instead of getting from originalState
-      fillBlsToExecutionChanges(originalState.epochCtx.index2pubkey, pool, originalState, maxItemsInPool);
+      // TODO: feed pubkeyCache separately instead of getting from originalState
+      fillBlsToExecutionChanges(originalState.epochCtx.pubkeyCache, pool, originalState, maxItemsInPool);
 
       return pool;
     },
@@ -105,12 +105,12 @@ function fillVoluntaryExits(pool: OpPool, state: CachedBeaconStateAltair, count:
 // This does not set the `withdrawalCredentials` for the validator
 // So it will be in the pool but not returned from `getSlashingsAndExits`
 function fillBlsToExecutionChanges(
-  index2pubkey: Index2PubkeyCache,
+  pubkeyCache: PubkeyCache,
   pool: OpPool,
   state: CachedBeaconStateAltair,
   count: number
 ): OpPool {
-  for (const blsToExecution of generateBlsToExecutionChanges(index2pubkey, state, count)) {
+  for (const blsToExecution of generateBlsToExecutionChanges(pubkeyCache, state, count)) {
     pool.insertBlsToExecutionChange(blsToExecution);
   }
 
