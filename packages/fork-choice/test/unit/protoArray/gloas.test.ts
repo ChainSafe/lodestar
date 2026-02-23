@@ -335,7 +335,9 @@ describe("Gloas Fork Choice", () => {
     });
 
     it("throws for unknown block", () => {
-      expect(() => protoArray.onExecutionPayload("0x99", gloasForkSlot, "0x99", gloasForkSlot, stateRoot, null)).toThrow();
+      expect(() =>
+        protoArray.onExecutionPayload("0x99", gloasForkSlot, "0x99", gloasForkSlot, stateRoot, null)
+      ).toThrow();
     });
   });
 
