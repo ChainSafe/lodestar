@@ -5,8 +5,8 @@ import {
   ForkPostBellatrix,
   ForkPostDeneb,
   ForkPostElectra,
-  ForkPostGloas,
   ForkPostFulu,
+  ForkPostGloas,
 } from "@lodestar/params";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
