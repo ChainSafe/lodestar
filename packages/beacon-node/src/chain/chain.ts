@@ -915,10 +915,7 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = this.pubkeyCache.get(proposerIndex)?.toBytes();
-    if (!proposerPubKey) {
-      throw Error(`Missing proposer pubkey for validator index ${proposerIndex}`);
-    }
+    const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
 
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
