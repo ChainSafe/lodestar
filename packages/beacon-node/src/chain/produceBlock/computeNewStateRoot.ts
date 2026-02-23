@@ -1,11 +1,14 @@
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
+  G2_POINT_AT_INFINITY,
   StateHashTreeRootSource,
   stateTransition,
 } from "@lodestar/state-transition";
-import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
+import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
+import {BeaconBlock, BlindedBeaconBlock, Gwei, Root, gloas} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 
@@ -18,7 +21,7 @@ export function computeNewStateRoot(
   metrics: Metrics | null,
   state: CachedBeaconStateAllForks,
   block: BeaconBlock | BlindedBeaconBlock
-): {newStateRoot: Root; proposerReward: Gwei} {
+): {newStateRoot: Root; proposerReward: Gwei; postState: CachedBeaconStateAllForks} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH};
 
@@ -51,5 +54,34 @@ export function computeNewStateRoot(
   const newStateRoot = postState.hashTreeRoot();
   hashTreeRootTimer?.();
 
-  return {newStateRoot, proposerReward};
+  return {newStateRoot, proposerReward, postState};
+}
+
+/**
+ * Compute the state root after processing an execution payload envelope.
+ * Similar to `computeNewStateRoot` but for payload envelope processing.
+ *
+ * The `postBlockState` is mutated in place, callers must ensure it is not needed afterward.
+ */
+export function computeEnvelopeStateRoot(
+  metrics: Metrics | null,
+  postBlockState: CachedBeaconStateGloas,
+  envelope: gloas.ExecutionPayloadEnvelope
+): Root {
+  const signedEnvelope: gloas.SignedExecutionPayloadEnvelope = {
+    message: envelope,
+    signature: G2_POINT_AT_INFINITY,
+  };
+
+  const processEnvelopeTimer = metrics?.blockPayload.executionPayloadEnvelopeProcessingTime.startTimer();
+  processExecutionPayloadEnvelope(postBlockState, signedEnvelope, false);
+  processEnvelopeTimer?.();
+
+  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+    source: StateHashTreeRootSource.computeEnvelopeStateRoot,
+  });
+  const stateRoot = postBlockState.hashTreeRoot();
+  hashTreeRootTimer?.();
+
+  return stateRoot;
 }

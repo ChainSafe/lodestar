@@ -1,7 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, PrefixedRepository, decodeNumberForDbKey, encodeNumberForDbKey} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ColumnIndex, Slot, fulu, ssz} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecar, Slot, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {isGloasDataColumnSidecarBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 const COLUMN_INDEX_BYTE_SIZE = 2;
@@ -13,7 +14,7 @@ const SLOT_BYTE_SIZE = 8;
  *
  * Indexed data by `slot` + `columnIndex`
  */
-export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot, ColumnIndex, fulu.DataColumnSidecar> {
+export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot, ColumnIndex, DataColumnSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.fulu_dataColumnSidecarsArchive;
     super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));
@@ -22,8 +23,22 @@ export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot,
   /**
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
-  getId(value: fulu.DataColumnSidecar): ColumnIndex {
+  getId(value: DataColumnSidecar): ColumnIndex {
     return value.index;
+  }
+
+  encodeValue(value: DataColumnSidecar): Uint8Array {
+    if (isGloasDataColumnSidecar(value)) {
+      return ssz.gloas.DataColumnSidecar.serialize(value);
+    }
+    return ssz.fulu.DataColumnSidecar.serialize(value);
+  }
+
+  decodeValue(data: Uint8Array): DataColumnSidecar {
+    if (isGloasDataColumnSidecarBytes(data)) {
+      return ssz.gloas.DataColumnSidecar.deserialize(data);
+    }
+    return ssz.fulu.DataColumnSidecar.deserialize(data);
   }
 
   encodeKeyRaw(prefix: Slot, id: ColumnIndex): Uint8Array {

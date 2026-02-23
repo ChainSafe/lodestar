@@ -8,6 +8,8 @@ export {BlockArchiveRepository} from "./blockArchive.js";
 export {BLSToExecutionChangeRepository} from "./blsToExecutionChange.js";
 export {DataColumnSidecarRepository} from "./dataColumnSidecar.js";
 export {DataColumnSidecarArchiveRepository} from "./dataColumnSidecarArchive.js";
+export {ExecutionPayloadEnvelopeRepository} from "./executionPayloadEnvelope.js";
+export {ExecutionPayloadEnvelopeArchiveRepository} from "./executionPayloadEnvelopeArchive.js";
 export {BestLightClientUpdateRepository} from "./lightclientBestUpdate.js";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader.js";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee.js";

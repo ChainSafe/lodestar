@@ -1,4 +1,13 @@
-import {ForkAll, ForkName, ForkPostAltair, ForkPostBellatrix, ForkPostDeneb, ForkPostElectra} from "@lodestar/params";
+import {
+  ForkAll,
+  ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostDeneb,
+  ForkPostElectra,
+  ForkPostFulu,
+  ForkPostGloas,
+} from "@lodestar/params";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
@@ -273,6 +282,8 @@ type TypesByFork = {
     AggregateAndProof: electra.AggregateAndProof;
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
+    DataColumnSidecar: fulu.DataColumnSidecar;
+    DataColumnSidecars: fulu.DataColumnSidecars;
   };
   [ForkName.gloas]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -311,6 +322,9 @@ type TypesByFork = {
     AggregateAndProof: electra.AggregateAndProof;
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
+    ExecutionPayloadBid: gloas.ExecutionPayloadBid;
+    DataColumnSidecar: gloas.DataColumnSidecar;
+    DataColumnSidecars: gloas.DataColumnSidecars;
   };
 };
 
@@ -345,6 +359,9 @@ export type ExecutionPayloadAndBlobsBundle<F extends ForkPostDeneb = ForkPostDen
   TypesByFork[F]["ExecutionPayloadAndBlobsBundle"];
 export type BlobsBundle<F extends ForkPostDeneb = ForkPostDeneb> = TypesByFork[F]["BlobsBundle"];
 
+export type DataColumnSidecar<F extends ForkPostFulu = ForkPostFulu> = TypesByFork[F]["DataColumnSidecar"];
+export type DataColumnSidecars<F extends ForkPostFulu = ForkPostFulu> = TypesByFork[F]["DataColumnSidecars"];
+
 export type LightClientHeader<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientHeader"];
 export type LightClientBootstrap<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientBootstrap"];
 export type LightClientUpdate<F extends ForkPostAltair = ForkPostAltair> = TypesByFork[F]["LightClientUpdate"];
@@ -373,3 +390,4 @@ export type IndexedAttestationBigint<F extends ForkName = ForkAll> = TypesByFork
 export type AttesterSlashing<F extends ForkName = ForkAll> = TypesByFork[F]["AttesterSlashing"];
 export type AggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["AggregateAndProof"];
 export type SignedAggregateAndProof<F extends ForkName = ForkAll> = TypesByFork[F]["SignedAggregateAndProof"];
+export type ExecutionPayloadBid<F extends ForkPostGloas = ForkPostGloas> = TypesByFork[F]["ExecutionPayloadBid"];
