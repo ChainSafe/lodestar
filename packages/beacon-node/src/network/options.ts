@@ -74,5 +74,5 @@ export const defaultNetworkOptions: NetworkOptions = {
   targetGroupPeers: 6,
   // Keep this high enough for normal req/resp bursts on stable connections.
   // libp2p-mplex default (5) is too low and can cause frequent connection resets.
-  disconnectThreshold: 255,
+  disconnectThreshold: 50,
 };

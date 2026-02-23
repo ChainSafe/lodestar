@@ -161,10 +161,6 @@ export class PeerManager {
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
-  /** Avoid opening multiple identify streams for the same peer concurrently */
-  private readonly peersIdentifying = new Set<PeerIdStr>();
-  /** Re-run identify once after in-flight identify completes if a new connection opened in-between */
-  private readonly peersPendingIdentify = new Set<PeerIdStr>();
 
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
@@ -477,11 +473,12 @@ export class PeerManager {
         custodyColumns,
       });
 
-      // Some peers close identify streams right after connection open but respond
-      // fine once status succeeds. Retry identify only after status proves the
-      // connection is usable.
+      // Identify peer after status proves the connection is usable.
+      // This is the only place we trigger identify — avoids wasted streams on
+      // peers that close identify right after connection open or turn out to be
+      // irrelevant.
       if (peerData?.agentVersion === null) {
-        this.triggerIdentify(peer.toString(), prettyPrintPeerId(peer), getConnection(this.libp2p, peer.toString()));
+        void this.identifyPeer(peer.toString(), prettyPrintPeerId(peer), getConnection(this.libp2p, peer.toString()));
       }
     }
   }
@@ -719,7 +716,7 @@ export class PeerManager {
     this.metrics?.peerConnectedEvent.inc({direction, status});
 
     if (evt.detail.status !== "open") {
-      this.logger.debug("Peer disconnected before identify protocol initiated", {
+      this.logger.debug("Peer connection not open, ignoring", {
         peerId: remotePeerPrettyStr,
         status: evt.detail.status,
       });
@@ -771,10 +768,6 @@ export class PeerManager {
       void this.requestPing(remotePeer);
       void this.requestStatus(remotePeer, this.statusCache.get());
     }
-
-    if (peerData.agentVersion === null) {
-      this.triggerIdentify(remotePeerStr, remotePeerPrettyStr, evt.detail);
-    }
   };
 
   /**
@@ -784,7 +777,11 @@ export class PeerManager {
     const {direction, status, remotePeer} = evt.detail;
     const peerIdStr = remotePeer.toString();
 
-    if (this.getOpenPeerConnections(peerIdStr).length > 0) {
+    const openConnections =
+      getConnectionsMap(this.libp2p)
+        .get(peerIdStr)
+        ?.value.filter((connection) => connection.status === "open") ?? [];
+    if (openConnections.length > 0) {
       this.logger.debug("Ignoring peer disconnect event while another connection is still open", {
         peerId: prettyPrintPeerIdStr(peerIdStr),
         direction,
@@ -810,8 +807,6 @@ export class PeerManager {
 
     // remove the ping and status timer for the peer
     this.connectedPeers.delete(peerIdStr);
-    this.peersIdentifying.delete(peerIdStr);
-    this.peersPendingIdentify.delete(peerIdStr);
 
     this.logger.verbose(logMessage, logContext);
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
@@ -829,111 +824,24 @@ export class PeerManager {
     }
   }
 
-  private triggerIdentify(peerIdStr: string, peerIdPretty: string, preferredConnection?: Connection): void {
-    if (this.peersIdentifying.has(peerIdStr)) {
-      this.peersPendingIdentify.add(peerIdStr);
+  private async identifyPeer(peerIdStr: string, peerIdPretty: string, connection?: Connection): Promise<void> {
+    if (!connection || connection.status !== "open") {
+      this.logger.debug("Peer has no open connection for identify", {peerId: peerIdPretty});
       return;
     }
 
-    this.peersIdentifying.add(peerIdStr);
-    void this.identifyPeer(peerIdStr, peerIdPretty, preferredConnection).finally(() => {
-      this.peersIdentifying.delete(peerIdStr);
-
-      if (this.peersPendingIdentify.delete(peerIdStr)) {
-        const peerData = this.connectedPeers.get(peerIdStr);
-        if (peerData?.agentVersion === null) {
-          this.triggerIdentify(peerIdStr, peerIdPretty);
+    try {
+      const result = await this.libp2p.services.identify.identify(connection);
+      const agentVersion = result.agentVersion;
+      if (agentVersion) {
+        const connectedPeerData = this.connectedPeers.get(peerIdStr);
+        if (connectedPeerData) {
+          connectedPeerData.agentVersion = agentVersion;
+          connectedPeerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
         }
       }
-    });
-  }
-
-  private getOpenPeerConnections(peerIdStr: string): Connection[] {
-    return (
-      getConnectionsMap(this.libp2p)
-        .get(peerIdStr)
-        ?.value.filter((connection) => connection.status === "open") ?? []
-    );
-  }
-
-  private getIdentifyConnectionKey(connection: Connection): string {
-    // `Connection.id` always exists on real connections. Fallback keeps tests simple.
-    const connectionId = (connection as unknown as {id?: string}).id;
-    return connectionId ?? `${connection.direction}:${connection.remotePeer.toString()}`;
-  }
-
-  private pickIdentifyConnection(
-    peerIdStr: string,
-    attemptedConnections: Set<string>,
-    preferredConnection?: Connection
-  ): Connection | null {
-    if (preferredConnection?.status === "open") {
-      const preferredConnectionKey = this.getIdentifyConnectionKey(preferredConnection);
-      if (!attemptedConnections.has(preferredConnectionKey)) {
-        return preferredConnection;
-      }
-    }
-
-    const openConnections = this.getOpenPeerConnections(peerIdStr)
-      .filter((connection) => !attemptedConnections.has(this.getIdentifyConnectionKey(connection)))
-      .sort((a, b) => {
-        if (a.direction !== b.direction) {
-          return a.direction === "outbound" ? -1 : 1;
-        }
-
-        const aOpenTs = a.timeline?.open ?? 0;
-        const bOpenTs = b.timeline?.open ?? 0;
-        return bOpenTs - aOpenTs;
-      });
-
-    return openConnections[0] ?? null;
-  }
-
-  private async identifyPeer(peerIdStr: string, peerIdPretty: string, preferredConnection?: Connection): Promise<void> {
-    const attemptedConnections = new Set<string>();
-    let lastError: Error | null = null;
-    let connection = this.pickIdentifyConnection(peerIdStr, attemptedConnections, preferredConnection);
-
-    while (connection !== null) {
-      attemptedConnections.add(this.getIdentifyConnectionKey(connection));
-
-      try {
-        const result = await this.libp2p.services.identify.identify(connection);
-        const agentVersion = result.agentVersion;
-        if (agentVersion) {
-          // A newer connection event may have replaced the object in `connectedPeers`.
-          // Always patch the map entry, not the captured local object.
-          const connectedPeerData = this.connectedPeers.get(peerIdStr);
-          if (connectedPeerData) {
-            connectedPeerData.agentVersion = agentVersion;
-            connectedPeerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
-          }
-        }
-        return;
-      } catch (e) {
-        lastError = e as Error;
-        const openConnectionCount = this.getOpenPeerConnections(peerIdStr).length;
-        if (openConnectionCount === 0) {
-          this.logger.debug("Peer disconnected during identify protocol", {
-            peerId: peerIdPretty,
-            error: lastError.message,
-          });
-          return;
-        }
-
-        connection = this.pickIdentifyConnection(peerIdStr, attemptedConnections);
-        if (connection !== null) {
-          this.logger.debug("Identify failed on one connection, trying another open connection", {
-            peerId: peerIdPretty,
-            error: lastError.message,
-            openConnectionCount,
-          });
-        }
-      }
-    }
-
-    if (lastError !== null) {
-      this.logger.debug("Error setting agentVersion for the peer", {peerId: peerIdPretty}, lastError);
+    } catch (e) {
+      this.logger.debug("Error setting agentVersion for the peer", {peerId: peerIdPretty}, e as Error);
     }
   }
 

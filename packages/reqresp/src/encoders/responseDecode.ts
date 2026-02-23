@@ -12,7 +12,7 @@ import {
   MixedProtocol,
   ResponseIncoming,
 } from "../types.js";
-import {decodeErrorMessage} from "../utils/index.js";
+import {decodeErrorMessage, drainByteStream} from "../utils/index.js";
 
 /**
  * Internal helper type to signal stream ended early
@@ -39,7 +39,7 @@ export async function* responseDecode(
 
   try {
     while (true) {
-      const status = await readResultHeader(bytes, opts);
+      const status = await readResultHeader(bytes, opts.signal);
 
       // Stream is only allowed to end at the start of a <response_chunk> block
       // The happens when source ends before readResultHeader() can fetch 1 byte
@@ -50,11 +50,11 @@ export async function* responseDecode(
       // For multiple chunks, only the last chunk is allowed to have a non-zero error
       // code (i.e. The chunk stream is terminated once an error occurs
       if (status !== RespStatus.SUCCESS) {
-        const errorMessage = await readErrorMessage(bytes, opts);
+        const errorMessage = await readErrorMessage(bytes, opts.signal);
         throw new ResponseError(status, errorMessage);
       }
 
-      const forkName = await readContextBytes(protocol.contextBytes, bytes, opts);
+      const forkName = await readContextBytes(protocol.contextBytes, bytes, opts.signal);
       const typeSizes = protocol.responseSizes(forkName);
       const chunkData = await readEncodedPayload(bytes, protocol.encoding, typeSizes, opts.signal);
 
@@ -75,11 +75,7 @@ export async function* responseDecode(
       if (!responseReadDone) {
         // Do not push partial bytes back into the stream on decode failure/abort.
         // This stream is consumed by req/resp only once.
-        const readBuffer = (bytes as unknown as {readBuffer?: {byteLength: number; consume: (bytes: number) => void}})
-          .readBuffer;
-        if (readBuffer) {
-          readBuffer.consume(readBuffer.byteLength);
-        }
+        drainByteStream(bytes);
       }
       bytes.unwrap();
     } catch {
@@ -97,9 +93,9 @@ export async function* responseDecode(
  */
 export async function readResultHeader(
   bytes: ByteStream<Stream>,
-  opts: {signal?: AbortSignal} = {}
+  signal?: AbortSignal
 ): Promise<RespStatus | StreamStatus> {
-  const chunk = await bytes.read({bytes: 1, signal: opts.signal}).catch((e) => {
+  const chunk = await bytes.read({bytes: 1, signal}).catch((e) => {
     if ((e as Error).name === "UnexpectedEOFError") return null;
     throw e;
   });
@@ -115,12 +111,15 @@ export async function readResultHeader(
  * result          ::= "1" | "2" | ["128" ... "255"]
  * ```
  */
-export async function readErrorMessage(bytes: ByteStream<Stream>, opts: {signal?: AbortSignal} = {}): Promise<string> {
+export async function readErrorMessage(bytes: ByteStream<Stream>, signal?: AbortSignal): Promise<string> {
   const chunks: Uint8Array[] = [];
   let total = 0;
 
   while (total < 256) {
-    const chunk = await bytes.read({signal: opts.signal});
+    const chunk = await bytes.read({signal}).catch((e) => {
+      if ((e as Error).name === "UnexpectedEOFError") return null;
+      throw e;
+    });
     if (chunk === null) break;
     chunks.push(chunk.subarray());
     total += chunk.byteLength;
@@ -137,14 +136,14 @@ export async function readErrorMessage(bytes: ByteStream<Stream>, opts: {signal?
 export async function readContextBytes(
   contextBytes: ContextBytesFactory,
   bytes: ByteStream<Stream>,
-  opts: {signal?: AbortSignal} = {}
+  signal?: AbortSignal
 ): Promise<ForkName> {
   switch (contextBytes.type) {
     case ContextBytesType.Empty:
       return ForkName.phase0;
 
     case ContextBytesType.ForkDigest: {
-      const forkDigest = await readContextBytesForkDigest(bytes, opts);
+      const forkDigest = await readContextBytesForkDigest(bytes, signal);
       return contextBytes.config.forkDigest2ForkBoundary(forkDigest).fork;
     }
   }
@@ -153,9 +152,6 @@ export async function readContextBytes(
 /**
  * Consumes a stream source to read `<context-bytes>`, where it's a fixed-width 4 byte
  */
-export async function readContextBytesForkDigest(
-  bytes: ByteStream<Stream>,
-  opts: {signal?: AbortSignal} = {}
-): Promise<Uint8Array> {
-  return (await bytes.read({bytes: CONTEXT_BYTES_FORK_DIGEST_LENGTH, signal: opts.signal})).subarray();
+export async function readContextBytesForkDigest(bytes: ByteStream<Stream>, signal?: AbortSignal): Promise<Uint8Array> {
+  return (await bytes.read({bytes: CONTEXT_BYTES_FORK_DIGEST_LENGTH, signal})).subarray();
 }

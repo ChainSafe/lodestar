@@ -77,6 +77,9 @@ export type Eth2GossipsubOpts = {
 
 export type ForkBoundaryLabel = string;
 
+// Many of the internal properties we need are not available on the public interface,
+// so we create an extended type here to avoid excessive type assertions throughout the codebase.
+// Mind that any updates to the gossipsub package may require updates to this type.
 type GossipSubInternal = GossipSub & {
   mesh: Map<string, Set<string>>;
   peers: Map<string, PeerId>;
@@ -557,7 +560,7 @@ export function parseDirectPeers(directPeerStrs: routes.lodestar.DirectPeer[], l
       try {
         const ma = multiaddr(peerStr);
 
-        const peerIdComponent = ma.getComponents().find((component) => component.name === "p2p");
+        const peerIdComponent = ma.getComponents().findLast((component) => component.name === "p2p");
         const peerIdStr = peerIdComponent?.value;
         if (!peerIdStr) {
           logger.warn("Direct peer multiaddr must contain /p2p/ component with peer ID", {multiaddr: peerStr});

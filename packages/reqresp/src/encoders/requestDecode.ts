@@ -2,6 +2,7 @@ import type {Stream} from "@libp2p/interface";
 import {byteStream} from "@libp2p/utils";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 import {MixedProtocol} from "../types.js";
+import {drainByteStream} from "../utils/stream.ts";
 
 const EMPTY_DATA = new Uint8Array();
 
@@ -34,11 +35,7 @@ export async function requestDecode(
       if (!requestReadDone) {
         // Do not push partial bytes back into the stream on decode failure/abort.
         // This stream is consumed by req/resp only once.
-        const readBuffer = (bytes as unknown as {readBuffer?: {byteLength: number; consume: (bytes: number) => void}})
-          .readBuffer;
-        if (readBuffer) {
-          readBuffer.consume(readBuffer.byteLength);
-        }
+        drainByteStream(bytes);
       }
       bytes.unwrap();
     } catch {

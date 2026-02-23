@@ -1,4 +1,5 @@
 import type {Stream} from "@libp2p/interface";
+import {ByteStream} from "@libp2p/utils";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ErrorAborted} from "@lodestar/utils";
 
@@ -15,5 +16,13 @@ export async function sendChunks(
     if (!stream.send(chunk)) {
       await stream.onDrain({signal});
     }
+  }
+}
+
+export function drainByteStream(bytes: ByteStream<Stream>): void {
+  const readBuffer = (bytes as unknown as {readBuffer?: {byteLength: number; consume: (bytes: number) => void}})
+    .readBuffer;
+  if (readBuffer) {
+    readBuffer.consume(readBuffer.byteLength);
   }
 }

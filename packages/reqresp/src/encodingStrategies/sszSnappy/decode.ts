@@ -54,7 +54,7 @@ export async function readSszSnappyHeader(
   let sszDataLength: number;
   try {
     sszDataLength = varintDecode(Uint8Array.from(varintBytes));
-  } catch (_e) {
+  } catch {
     throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: Infinity});
   }
 
@@ -108,6 +108,13 @@ export async function readSszSnappyBody(
       throw new SszSnappyError({code: SszSnappyErrorCode.DECOMPRESSOR_ERROR, decompressorError: e as Error});
     }
 
+    if (headerParsed.frameSize > maxBytes - encodedBytesRead) {
+      throw new SszSnappyError({
+        code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
+        readBytes: encodedBytesRead + headerParsed.frameSize,
+        sszDataLength,
+      });
+    }
     const frame = await readExactOrSourceAborted(stream, headerParsed.frameSize, signal);
 
     encodedBytesRead = addEncodedBytesReadOrThrow(encodedBytesRead, frame.length, maxBytes, sszDataLength);
