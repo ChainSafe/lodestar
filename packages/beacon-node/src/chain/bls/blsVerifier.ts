@@ -163,7 +163,7 @@ export class BlsVerifier implements IBlsVerifier {
       sets.map(async (set) => {
         try {
           return await this.trackJob(() =>
-            blsBatch.asyncVerifyIndexed([{index: set.index, message, signature: set.signature}])
+            blsBatch.asyncVerify(blsBatch.indexed, [{index: set.index, message, signature: set.signature}])
           );
         } catch {
           return false;
@@ -235,9 +235,9 @@ export class BlsVerifier implements IBlsVerifier {
     try {
       const {indexed, aggregate, single} = splitByType(sets);
 
-      if (indexed.length > 0 && !blsBatch.verifyIndexed(indexed)) return false;
-      if (aggregate.length > 0 && !blsBatch.verifyAggregate(aggregate)) return false;
-      if (single.length > 0 && !blsBatch.verifySingle(single)) return false;
+      if (indexed.length > 0 && !blsBatch.verify(blsBatch.indexed, indexed)) return false;
+      if (aggregate.length > 0 && !blsBatch.verify(blsBatch.aggregate, aggregate)) return false;
+      if (single.length > 0 && !blsBatch.verify(blsBatch.single, single)) return false;
 
       return true;
     } catch {
@@ -253,9 +253,9 @@ export class BlsVerifier implements IBlsVerifier {
       const {indexed, aggregate, single} = splitByType(sets);
 
       const promises: Promise<boolean>[] = [];
-      if (indexed.length > 0) promises.push(this.trackJob(() => blsBatch.asyncVerifyIndexed(indexed)));
-      if (aggregate.length > 0) promises.push(this.trackJob(() => blsBatch.asyncVerifyAggregate(aggregate)));
-      if (single.length > 0) promises.push(this.trackJob(() => blsBatch.asyncVerifySingle(single)));
+      if (indexed.length > 0) promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.indexed, indexed)));
+      if (aggregate.length > 0) promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.aggregate, aggregate)));
+      if (single.length > 0) promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.single, single)));
 
       const results = await Promise.all(promises);
       return results.every((r) => r);
