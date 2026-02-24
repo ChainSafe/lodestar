@@ -72,6 +72,25 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       });
     }
 
+    // For Gloas blocks that extend the FULL parent path (bid.parentBlockHash == parent.bid.blockHash),
+    // the parent MUST be in FULL status for correct state transition. If the parent is still
+    // PENDING/EMPTY, the checkpoint state has payloadPresent=false which produces a different
+    // state root than what the block was produced against. Throw so the caller can retry
+    // after the parent envelope arrives (via gossip or reqresp).
+    if (
+      isGloasBeaconBlock(block) &&
+      parentBlock.payloadStatus !== PayloadStatus.FULL &&
+      parentBlock.blockHashFromBid !== null
+    ) {
+      const childParentBlockHash = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
+      if (childParentBlockHash === parentBlock.blockHashFromBid) {
+        throw new RegenError({
+          code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
+          blockRoot: block.parentRoot,
+        });
+      }
+    }
+
     const parentEpoch = computeEpochAtSlot(parentBlock.slot);
     const blockEpoch = computeEpochAtSlot(block.slot);
     const allowDiskReload = true;
