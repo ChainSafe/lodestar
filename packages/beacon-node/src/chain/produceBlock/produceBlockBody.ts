@@ -218,9 +218,10 @@ export async function produceBlockBody<T extends BlockType>(
       feeRecipient,
     });
 
-    // Keep parent hash selection aligned with the canonical proposer state. Overriding
-    // with a FULL sibling hash can diverge from peers tracking EMPTY/PENDING for the same
-    // beacon root and produce cross-client ParentBlockHashMismatch rejections.
+    // The CL state is PENDING (payloadPresent=false) for correct bid.parent_block_hash selection.
+    // But FCU needs the FULL variant's execution hash so the EL can build on the right head.
+    // headExecutionBlockHashOverride separates the FCU head hash from the state's latestBlockHash.
+    const headExecutionBlockHashOverride = this.forkChoice.getHeadExecutionBlockHash() ?? undefined;
 
     // Get execution payload from EL
     const prepareRes = await prepareExecutionPayload(
@@ -231,7 +232,8 @@ export async function produceBlockBody<T extends BlockType>(
       safeBlockHash,
       finalizedBlockHash ?? ZERO_HASH_HEX,
       gloasState,
-      feeRecipient
+      feeRecipient,
+      headExecutionBlockHashOverride
     );
 
     const {prepType, payloadId} = prepareRes;

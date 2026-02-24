@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostGloas} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
@@ -166,9 +166,14 @@ export class PrepareNextSlotScheduler {
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
 
-          // NOTE: For Gloas, keep parent hash selection aligned with the canonical prepared state.
-          // Using a FULL sibling override here can diverge from peers that still track EMPTY/PENDING
-          // for the same beacon root, and lead to bid.parent_block_hash mismatches cross-client.
+          // For Gloas, the CL state may be PENDING (payloadPresent=false), whose latestBlockHash
+          // is stale (parent's pre-envelope hash). The EL only knows about execution hashes that
+          // were delivered via newPayloadV5 (from envelope imports). Use the fork-choice FULL
+          // variant's execution hash for FCU so the EL can build a payload on the correct head.
+          // The bid.parent_block_hash is set separately from the state variant and is NOT affected.
+          const headExecutionBlockHashOverride = isForkPostGloas(fork as ForkPostBellatrix)
+            ? this.chain.forkChoice.getHeadExecutionBlockHash() ?? undefined
+            : undefined;
 
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
@@ -181,7 +186,8 @@ export class PrepareNextSlotScheduler {
             safeBlockHash,
             finalizedBlockHash,
             updatedPrepareState,
-            feeRecipient
+            feeRecipient,
+            headExecutionBlockHashOverride
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
