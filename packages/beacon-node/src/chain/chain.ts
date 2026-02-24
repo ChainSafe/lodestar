@@ -934,25 +934,30 @@ export class BeaconChain implements IBeaconChain {
   }> {
     const fork = this.config.getForkName(slot);
 
-    // For Gloas: always produce on the PENDING parent variant.
-    // The spec's on_block uses is_parent_node_full(store, block) to select the validation
-    // path based on bid.parent_block_hash vs parent.bid.block_hash. By producing on the
-    // PENDING variant, bid.parentBlockHash != parent.bid.blockHash, which forces ALL
-    // validators onto the non-FULL path (block_states) — no envelope dependency.
-    // This avoids ParentBlockHashMismatch from clients that haven't imported the parent
-    // envelope yet when they receive our block.
+    // For Gloas: use the FULL parent variant for block production.
+    //
+    // The FCU override sends the FULL variant's execution hash to the EL, so the EL builds
+    // the execution payload on top of the FULL execution block. This means bid.parentBlockHash
+    // will equal the FULL parent's execution hash (bid.blockHash), putting the block on the
+    // FULL path (is_parent_node_full=true) during verification.
+    //
+    // The production state MUST match the verification state. Since verification resolves to
+    // the FULL parent via getBlockHexAndBlockHash(parentRoot, bid.parentBlockHash), production
+    // must also use the FULL parent state. With envelope reqresp implemented, the parent
+    // envelope should be available for FULL state computation.
+    //
+    // Note: findHead() returns PENDING variant by default for Gloas. We must explicitly
+    // switch to FULL so the state transition matches what the import path will compute.
     if (isForkPostGloas(fork)) {
-      try {
-        const pendingParent = this.forkChoice.getBlockHex(parentBlock.blockRoot, PayloadStatus.PENDING);
-        if (pendingParent) {
-          parentBlock = pendingParent;
-        }
-      } catch (e) {
-        this.logger.debug(
-          "Pending parent variant unavailable, using canonical parent for block production",
-          {slot, parentBlockRoot: parentBlock.blockRoot},
-          e as Error
-        );
+      const fullParent = this.forkChoice.getBlockHex(parentBlock.blockRoot, PayloadStatus.FULL);
+      if (fullParent) {
+        parentBlock = fullParent;
+      } else {
+        this.logger.warn("FULL parent variant unavailable for Gloas block production, using default", {
+          slot,
+          parentBlockRoot: parentBlock.blockRoot,
+          parentPayloadStatus: parentBlock.payloadStatus,
+        });
       }
     }
 
