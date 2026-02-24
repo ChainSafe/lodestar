@@ -5,7 +5,7 @@ import {ForkSeq, isForkPostGloas} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, gloas} from "@lodestar/types";
-import {Logger, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
@@ -467,28 +467,13 @@ export class BlockInputSync {
       const blockRootHex = pendingBlock.blockInput.blockRootHex;
       this.pendingBlocks.delete(blockRootHex);
 
-      // After importing a Gloas block, try to import its pending envelope immediately
-      // BEFORE processing descendants. This ensures child blocks find their parent in FULL
-      // state, avoiding INVALID_STATE_ROOT errors during batch catch-up processing.
+      // After importing a Gloas block, import the execution payload envelope to transition
+      // the parent to FULL state. This ensures child blocks find their parent in FULL state,
+      // avoiding INVALID_STATE_ROOT errors during batch catch-up processing.
+      // Try gossip cache first, then fall back to reqresp.
       const forkName = this.config.getForkName(blockSlot);
       if (isForkPostGloas(forkName)) {
-        const pendingEnvelope = this.chain.pendingEnvelopes.get(blockRootHex);
-        if (pendingEnvelope) {
-          try {
-            await this.chain.importExecutionPayloadEnvelope(pendingEnvelope);
-            this.chain.pendingEnvelopes.delete(blockRootHex);
-            this.logger.debug("Imported pending envelope after block import in UnknownBlockSync", {
-              slot: blockSlot,
-              blockRoot: blockRootHex,
-            });
-          } catch (e) {
-            this.logger.debug(
-              "Failed to import pending envelope after block import",
-              {blockRoot: blockRootHex},
-              e as Error
-            );
-          }
-        }
+        await this.resolveEnvelopeForBlock(blockRootHex, blockSlot, pendingBlock);
       }
 
       // Send child blocks to the processor
@@ -596,6 +581,61 @@ export class BlockInputSync {
       parentBlockHashFromBid,
       wantsFullParent,
     };
+  }
+
+  /**
+   * After importing a Gloas block, resolve its execution payload envelope.
+   * Tries gossip cache first, then falls back to reqresp (ExecutionPayloadEnvelopesByRoot).
+   */
+  private async resolveEnvelopeForBlock(
+    blockRootHex: RootHex,
+    blockSlot: number,
+    pendingBlock: PendingBlockInput
+  ): Promise<void> {
+    // 1. Try gossip cache
+    const pendingEnvelope = this.chain.pendingEnvelopes.get(blockRootHex);
+    if (pendingEnvelope) {
+      try {
+        await this.chain.importExecutionPayloadEnvelope(pendingEnvelope);
+        this.chain.pendingEnvelopes.delete(blockRootHex);
+        this.logger.debug("Imported pending envelope from gossip cache", {
+          slot: blockSlot,
+          blockRoot: blockRootHex,
+        });
+        return;
+      } catch (e) {
+        this.logger.debug("Failed to import pending envelope from gossip cache", {blockRoot: blockRootHex}, e as Error);
+      }
+    }
+
+    // 2. Fall back to reqresp — request from peers
+    const blockRoot = fromHex(blockRootHex);
+    const connectedPeers = this.network.getConnectedPeers();
+    for (const peerId of shuffle(connectedPeers)) {
+      try {
+        const envelopes = await this.network.sendExecutionPayloadEnvelopesByRoot(peerId, [blockRoot]);
+        if (envelopes.length > 0) {
+          await this.chain.importExecutionPayloadEnvelope(envelopes[0]);
+          this.logger.debug("Imported envelope via reqresp after block import", {
+            slot: blockSlot,
+            blockRoot: blockRootHex,
+            peer: peerId,
+          });
+          return;
+        }
+      } catch (e) {
+        this.logger.debug(
+          "Failed to fetch envelope via reqresp",
+          {blockRoot: blockRootHex, peer: peerId},
+          e as Error
+        );
+      }
+    }
+
+    this.logger.debug("No envelope available for block (gossip or reqresp)", {
+      slot: blockSlot,
+      blockRoot: blockRootHex,
+    });
   }
 
   /**

@@ -72,6 +72,25 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       });
     }
 
+    // For Gloas blocks that extend the FULL parent path (bid.parentBlockHash == parent.bid.blockHash),
+    // the parent MUST be in FULL status for correct state transition. If the parent is still
+    // PENDING/EMPTY, the checkpoint state has payloadPresent=false which produces a different
+    // state root than what the block was produced against. Throw so the caller can retry
+    // after the parent envelope arrives (via gossip or reqresp).
+    if (
+      isGloasBeaconBlock(block) &&
+      parentBlock.payloadStatus !== PayloadStatus.FULL &&
+      parentBlock.blockHashFromBid !== null
+    ) {
+      const childParentBlockHash = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
+      if (childParentBlockHash === parentBlock.blockHashFromBid) {
+        throw new RegenError({
+          code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
+          blockRoot: block.parentRoot,
+        });
+      }
+    }
+
     const parentEpoch = computeEpochAtSlot(parentBlock.slot);
     const blockEpoch = computeEpochAtSlot(block.slot);
     const allowDiskReload = true;
@@ -112,13 +131,9 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const {checkpointStateCache} = this.modules;
     const epoch = computeEpochAtSlot(slot);
 
-    // Convert PayloadStatus to payloadPresent boolean
-    if (block.payloadStatus === PayloadStatus.PENDING) {
-      throw new RegenError({
-        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
-        blockRoot: fromHex(blockRoot),
-      });
-    }
+    // Convert PayloadStatus to payloadPresent boolean.
+    // PENDING blocks are in fork-choice but lack an envelope — treat as non-FULL (payloadPresent=false).
+    // Their checkpoint states are cached with payloadPresent=false during block import.
     const payloadPresent = block.payloadStatus === PayloadStatus.FULL;
 
     const latestCheckpointStateCtx = allowDiskReload
@@ -128,14 +143,14 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
     if (latestCheckpointStateCtx) {
-      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot, regenCaller, opts);
+      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot, regenCaller, opts, payloadPresent);
     }
 
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
     const blockStateCtx = await this.getState(block.stateRoot, regenCaller, allowDiskReload);
-    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, regenCaller, opts);
+    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, regenCaller, opts, payloadPresent);
   }
 
   /**
@@ -177,12 +192,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       if (!lastBlockToReplay) continue;
       const epoch = computeEpochAtSlot(lastBlockToReplay.slot - 1);
 
-      // Convert PayloadStatus to payloadPresent boolean
-      if (b.payloadStatus === PayloadStatus.PENDING) {
-        // Should not happen. iterateAncestorBlocks should yield EMPTY or FULL
-        blocksToReplay.push(b);
-        continue;
-      }
+      // Convert PayloadStatus to payloadPresent boolean.
+      // PENDING blocks are treated as non-FULL (payloadPresent=false).
       const payloadPresent = b.payloadStatus === PayloadStatus.FULL;
 
       state = allowDiskReload
@@ -336,9 +347,10 @@ async function processSlotsByCheckpoint(
   preState: CachedBeaconStateAllForks,
   slot: Slot,
   regenCaller: RegenCaller,
-  opts: StateRegenerationOpts
+  opts: StateRegenerationOpts,
+  payloadPresent?: boolean
 ): Promise<CachedBeaconStateAllForks> {
-  let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
+  let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts, payloadPresent);
   if (postState.slot < slot) {
     postState = processSlots(postState, slot, opts, modules);
   }
@@ -368,7 +380,8 @@ export async function processSlotsToNearestCheckpoint(
   preState: CachedBeaconStateAllForks,
   slot: Slot,
   regenCaller: RegenCaller,
-  opts: StateRegenerationOpts
+  opts: StateRegenerationOpts,
+  payloadPresent?: boolean
 ): Promise<CachedBeaconStateAllForks> {
   const preSlot = preState.slot;
   const postSlot = slot;
@@ -398,11 +411,14 @@ export async function processSlotsToNearestCheckpoint(
     // This may becomes the "official" checkpoint state if the 1st block of epoch is skipped
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    // processSlots() only does epoch transitions, never processes payloads
-    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
-    // Post-Gloas: result is a block state (payloadPresent=false)
+    // processSlots() only does epoch transitions, never processes payloads.
+    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block).
+    // Post-Gloas: payloadPresent distinguishes block state (false) from payload/envelope state (true).
+    // The caller provides the correct variant via the payloadPresent parameter.
+    // Without it, we default to false (block state) for Gloas to match the common case.
     const isGloas = checkpointState.config.getForkSeq(checkpointState.slot) >= ForkSeq.gloas;
-    checkpointStateCache.add(cp, checkpointState, !isGloas);
+    const cpPayloadPresent = isGloas ? (payloadPresent ?? false) : true;
+    checkpointStateCache.add(cp, checkpointState, cpPayloadPresent);
     // consumers should not mutate state ever
     emitter?.emit(ChainEvent.checkpoint, cp, checkpointState);
 

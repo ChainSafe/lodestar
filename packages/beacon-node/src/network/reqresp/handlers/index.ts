@@ -6,6 +6,7 @@ import {
   BeaconBlocksByRootRequestType,
   BlobSidecarsByRootRequestType,
   DataColumnSidecarsByRootRequestType,
+  ExecutionPayloadEnvelopesByRootRequestType,
 } from "../../../util/types.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
@@ -14,6 +15,7 @@ import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
 import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
 import {onDataColumnSidecarsByRange} from "./dataColumnSidecarsByRange.js";
 import {onDataColumnSidecarsByRoot} from "./dataColumnSidecarsByRoot.js";
+import {onExecutionPayloadEnvelopesByRoot} from "./executionPayloadEnvelopesByRoot.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
@@ -60,6 +62,10 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     [ReqRespMethod.DataColumnSidecarsByRoot]: (req, peerId, peerClient) => {
       const body = DataColumnSidecarsByRootRequestType(chain.config).deserialize(req.data);
       return onDataColumnSidecarsByRoot(body, chain, db, peerId, peerClient);
+    },
+    [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: (req) => {
+      const body = ExecutionPayloadEnvelopesByRootRequestType(chain.config).deserialize(req.data);
+      return onExecutionPayloadEnvelopesByRoot(body, chain, db);
     },
 
     [ReqRespMethod.LightClientBootstrap]: (req) => {

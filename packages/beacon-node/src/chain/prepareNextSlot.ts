@@ -166,10 +166,13 @@ export class PrepareNextSlotScheduler {
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
 
-          // Post-Gloas: the PENDING variant's state has a stale latestBlockHash (parent's execution hash).
-          // If the FULL variant exists (payload envelope was imported), use its execution block hash instead.
-          const headExecutionBlockHashOverride = isForkPostGloas(fork)
-            ? (this.chain.forkChoice.getHeadExecutionBlockHash() ?? undefined)
+          // For Gloas, the CL state may be PENDING (payloadPresent=false), whose latestBlockHash
+          // is stale (parent's pre-envelope hash). The EL only knows about execution hashes that
+          // were delivered via newPayloadV5 (from envelope imports). Use the fork-choice FULL
+          // variant's execution hash for FCU so the EL can build a payload on the correct head.
+          // The bid.parent_block_hash is set separately from the state variant and is NOT affected.
+          const headExecutionBlockHashOverride = isForkPostGloas(fork as ForkPostBellatrix)
+            ? this.chain.forkChoice.getHeadExecutionBlockHash() ?? undefined
             : undefined;
 
           // awaiting here instead of throwing an async call because there is no other task

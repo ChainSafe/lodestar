@@ -94,6 +94,12 @@ export const DataColumnSidecarsByRoot = toProtocol({
   contextBytesType: ContextBytesType.ForkDigest,
 });
 
+export const ExecutionPayloadEnvelopesByRoot = toProtocol({
+  method: ReqRespMethod.ExecutionPayloadEnvelopesByRoot,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
 export const LightClientBootstrap = toProtocol({
   method: ReqRespMethod.LightClientBootstrap,
   version: Version.V1,
