@@ -143,7 +143,10 @@ export async function validateGossipAttestationsSameAttData(
   if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
     signatureValids = await chain.bls.verifySignatureSetsSameMessage(
-      signatureSets.map((set) => ({publicKey: chain.index2pubkey[set.index], signature: set.signature})),
+      signatureSets.map((set) => {
+        const publicKey = chain.pubkeyCache.getOrThrow(set.index);
+        return {publicKey, signature: set.signature};
+      }),
       signatureSets[0].signingRoot
     );
   } else {

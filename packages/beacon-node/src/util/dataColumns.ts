@@ -4,6 +4,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkAll,
   ForkName,
+  ForkPostDeneb,
   ForkPostFulu,
   ForkPreGloas,
   KZG_COMMITMENTS_GINDEX,
@@ -15,9 +16,11 @@ import {
   BeaconBlockBody,
   ColumnIndex,
   CustodyIndex,
+  Root,
   SSZTypesFor,
   SignedBeaconBlock,
   SignedBeaconBlockHeader,
+  Slot,
   deneb,
   fulu,
   gloas,
@@ -269,7 +272,7 @@ export async function getCellsAndProofs(
  */
 export function getBlobKzgCommitments(
   fork: ForkName,
-  signedBlock: SignedBeaconBlock<ForkPostFulu>
+  signedBlock: SignedBeaconBlock<ForkPostDeneb>
 ): deneb.KZGCommitment[] {
   if (isForkPostGloas(fork)) {
     return (signedBlock as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.blobKzgCommitments;
@@ -357,6 +360,39 @@ export function getDataColumnSidecarsFromColumnSidecar(
     sidecar.kzgCommitmentsInclusionProof,
     cellsAndKzgProofs
   );
+}
+
+/**
+ * In Gloas, data column sidecars have a simplified structure with `slot` and `beaconBlockRoot`
+ * instead of `signedBlockHeader`, `kzgCommitments`, and `kzgCommitmentsInclusionProof`.
+ */
+export function getDataColumnSidecarsForGloas(
+  slot: Slot,
+  beaconBlockRoot: Root,
+  cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
+): gloas.DataColumnSidecars {
+  // No need to create data column sidecars if there are no blobs
+  if (cellsAndKzgProofs.length === 0) {
+    return [];
+  }
+
+  const sidecars: gloas.DataColumnSidecars = [];
+  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+    const column: Uint8Array[] = [];
+    const kzgProofs: Uint8Array[] = [];
+    for (const {cells, proofs} of cellsAndKzgProofs) {
+      column.push(cells[columnIndex]);
+      kzgProofs.push(proofs[columnIndex]);
+    }
+    sidecars.push({
+      index: columnIndex,
+      column,
+      kzgProofs,
+      slot,
+      beaconBlockRoot,
+    });
+  }
+  return sidecars;
 }
 
 /**

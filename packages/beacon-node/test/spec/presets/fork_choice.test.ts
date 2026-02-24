@@ -1,7 +1,6 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
@@ -17,8 +16,8 @@ import {
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
-  Index2PubkeyCache,
   createCachedBeaconState,
+  createPubkeyCache,
   isExecutionStateType,
   signedBlockToSignedHeader,
   syncPubkeys,
@@ -97,15 +96,13 @@ const forkChoiceTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkey2index = new PubkeyIndexMap();
-        const index2pubkey: Index2PubkeyCache = [];
-        syncPubkeys(anchorState.validators.getAllReadonlyValues(), pubkey2index, index2pubkey);
+        const pubkeyCache = createPubkeyCache();
+        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {
             config: beaconConfig,
-            pubkey2index,
-            index2pubkey,
+            pubkeyCache,
           },
           {skipSyncPubkeys: true}
         );
@@ -133,8 +130,7 @@ const forkChoiceTest =
           {
             privateKey: await generateKeyPair("secp256k1"),
             config: beaconConfig,
-            pubkey2index,
-            index2pubkey,
+            pubkeyCache,
             db: getMockedBeaconDb(),
             dataDir: ".",
             dbName: ",",

@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {ForkName} from "@lodestar/params";
-import {SignatureSetType} from "@lodestar/state-transition";
+import {SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
@@ -56,22 +56,22 @@ describe("validateGossipAttestationsSameAttData", () => {
     return keypair;
   }
 
-  // Build index2pubkey cache for test
-  const index2pubkey: PublicKey[] = [];
+  // Build pubkeyCache for test
+  const pubkeyCache = createPubkeyCache();
   for (let i = 0; i < 10; i++) {
-    index2pubkey.push(getKeypair(i).publicKey);
+    pubkeyCache.set(i, getKeypair(i).publicKey.toBytes());
   }
   // Add a special keypair for invalid signatures
-  index2pubkey[2023] = getKeypair(2023).publicKey;
+  pubkeyCache.set(2023, getKeypair(2023).publicKey.toBytes());
 
   let chain: IBeaconChain;
   const signingRoot = Buffer.alloc(32, 1);
 
   beforeEach(() => {
     chain = {
-      bls: new BlsSingleThreadVerifier({metrics: null, index2pubkey}),
+      bls: new BlsSingleThreadVerifier({metrics: null, pubkeyCache}),
       seenAttesters: new SeenAttesters(),
-      index2pubkey,
+      pubkeyCache,
       opts: {
         minSameMessageSignatureSetsToBatch: 2,
       } as IBeaconChain["opts"],
