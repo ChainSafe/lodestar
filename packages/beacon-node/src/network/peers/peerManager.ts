@@ -198,8 +198,10 @@ export class PeerManager {
     this.lastStatus = this.statusCache.get();
 
     // A connection may already be open before listeners are attached.
-    // Seed those peers and trigger status/ping on the next macrotask.
+    // Seed those peers so they are tracked in connectedPeers immediately.
     this.bootstrapAlreadyOpenConnections();
+    // Defer status/ping to the next macrotask so the heartbeat interval and
+    // event listeners are fully registered before we begin handshakes.
     this.bootstrapTimeout = setTimeout(() => this.pingAndStatusTimeouts(), 0);
 
     // On start-up will connected to existing peers in libp2p.peerStore, same as autoDial behaviour
@@ -704,11 +706,7 @@ export class PeerManager {
 
     for (const {value: connections} of getConnectionsMap(this.libp2p).values()) {
       for (const connection of connections) {
-        const peerIdStr = connection.remotePeer.toString();
-        if (this.connectedPeers.has(peerIdStr)) {
-          continue;
-        }
-
+        // trackLibp2pConnection handles deduplication via overwriteExisting: false
         if (this.trackLibp2pConnection(connection, {overwriteExisting: false, triggerHandshakeNow: false})) {
           bootstrapped++;
         }
