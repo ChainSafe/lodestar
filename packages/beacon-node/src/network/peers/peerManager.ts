@@ -9,6 +9,7 @@ import {prettyPrintIndices, toHex, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
 import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventData} from "../events.js";
@@ -164,7 +165,6 @@ export class PeerManager {
 
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
-  private bootstrapTimeout: NodeJS.Timeout | null = null;
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
     const {networkConfig} = modules;
@@ -200,9 +200,9 @@ export class PeerManager {
     // A connection may already be open before listeners are attached.
     // Seed those peers so they are tracked in connectedPeers immediately.
     this.bootstrapAlreadyOpenConnections();
-    // Defer status/ping to the next macrotask so the heartbeat interval and
+    // Defer status/ping to the next event loop tick so the heartbeat interval and
     // event listeners are fully registered before we begin handshakes.
-    this.bootstrapTimeout = setTimeout(() => this.pingAndStatusTimeouts(), 0);
+    callInNextEventLoop(() => this.pingAndStatusTimeouts());
 
     // On start-up will connected to existing peers in libp2p.peerStore, same as autoDial behaviour
     this.heartbeat();
@@ -238,7 +238,6 @@ export class PeerManager {
     );
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
     for (const interval of this.intervals) clearInterval(interval);
-    if (this.bootstrapTimeout) clearTimeout(this.bootstrapTimeout);
   }
 
   /**
@@ -714,7 +713,7 @@ export class PeerManager {
     }
 
     if (bootstrapped > 0) {
-      this.logger.info("Bootstrapped already-open libp2p peers", {bootstrapped});
+      this.logger.verbose("Bootstrapped already-open libp2p peers", {bootstrapped});
     }
   }
 
