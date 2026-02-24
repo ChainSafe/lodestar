@@ -649,7 +649,13 @@ export async function prepareExecutionPayload(
   let payloadId: PayloadId | null;
   let prepType: PayloadPreparationType;
 
-  if (payloadIdCached) {
+  // Post-Gloas: never use cached payloadId during block production. The cached payload
+  // was prepared by prepareNextSlot using PENDING parent state, but block production
+  // uses FULL parent state. The FULL state may have different pendingPartialWithdrawals
+  // (from processWithdrawalRequest during envelope processing), causing getExpectedWithdrawals
+  // to return different withdrawals → Withdrawals mismatch in validateExecutionPayloadEnvelope.
+  // Always send a fresh FCU to ensure the EL builds with correct FULL-state withdrawals.
+  if (payloadIdCached && !isForkPostGloas(fork)) {
     payloadId = payloadIdCached;
     prepType = PayloadPreparationType.Cached;
   } else {
