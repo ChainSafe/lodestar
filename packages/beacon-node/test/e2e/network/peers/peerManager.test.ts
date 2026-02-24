@@ -34,7 +34,7 @@ describe("network / peers / PeerManager", () => {
     }
   });
 
-  async function mockModules() {
+  async function mockModules(opts?: {preOpenConnections?: Connection[]}) {
     // Setup fake chain
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const state = generateState({
@@ -66,6 +66,18 @@ describe("network / peers / PeerManager", () => {
     });
 
     const reqResp = new ReqRespFake();
+    reqResp.sendPing.mockResolvedValue(BigInt(0));
+    reqResp.sendStatus.mockResolvedValue(status);
+
+    if (opts?.preOpenConnections) {
+      for (const connection of opts.preOpenConnections) {
+        getConnectionsMap(libp2p).set(connection.remotePeer.toString(), {
+          key: connection.remotePeer,
+          value: [connection],
+        });
+      }
+    }
+
     const peerRpcScores = new PeerRpcScoreStore();
     const networkEventBus = new NetworkEventBus();
     const mockSubnetsService: IAttnetsService = {
@@ -187,6 +199,17 @@ describe("network / peers / PeerManager", () => {
     });
 
     await peerConnectedPromise;
+  });
+
+  it("Bootstraps already-open outbound connections at startup", async () => {
+    const {reqResp, peerManager} = await mockModules({preOpenConnections: [libp2pConnectionOutboud]});
+
+    // Constructor bootstrap is async (requestPing/requestStatus), allow microtasks to flush.
+    await sleep(0);
+
+    expect(peerManager["connectedPeers"].has(peerId1.toString())).toBe(true);
+    expect(reqResp.sendPing).toHaveBeenCalledOnce();
+    expect(reqResp.sendStatus).toHaveBeenCalledOnce();
   });
 
   it("On peerConnect handshake flow", async () => {

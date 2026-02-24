@@ -214,48 +214,54 @@ export class BeaconSync implements IBeaconSync {
   private updateSyncState = (): void => {
     const state = this.state; // Don't run the getter twice
 
-    // We have become synced, subscribe to all the gossip core topics
-    if (state === SyncState.Synced && this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP) {
-      if (!this.network.isSubscribedToGossipCoreTopics()) {
-        this.network
-          .subscribeGossipCoreTopics()
-          .then(() => {
-            this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
-            this.logger.info("Subscribed gossip core topics");
-          })
-          .catch((e) => {
-            this.logger.error("Error subscribing to gossip core topics", {}, e);
-          });
-      }
-
-      // also start searching for unknown blocks
-      if (!this.unknownBlockSync.isSubscribedToNetwork()) {
-        this.unknownBlockSync.subscribeToNetwork();
-        this.metrics?.blockInputSync.switchNetworkSubscriptions.inc({action: "subscribed"});
-      }
-    }
-
-    // If we stopped being synced and fallen significantly behind, stop gossip
-    else if (state !== SyncState.Synced) {
-      const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
-      if (syncDiff > this.slotImportTolerance * 2) {
-        if (this.network.isSubscribedToGossipCoreTopics()) {
-          this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
+    if (this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP) {
+      // Subscribe to gossip core topics when synced, performing head sync, or stalled.
+      // Subscribing during SyncingHead and Stalled prevents a deadlock in small-peer setups
+      // where the node needs gossip blocks to advance but can't become fully synced without them.
+      // This is particularly important for forks where block data propagates only via gossip
+      // (e.g., EPBS execution payload envelopes).
+      // During finalized sync, gossip is withheld to avoid processing blocks far ahead of
+      // the current sync position.
+      if (state !== SyncState.SyncingFinalized) {
+        if (!this.network.isSubscribedToGossipCoreTopics()) {
           this.network
-            .unsubscribeGossipCoreTopics()
+            .subscribeGossipCoreTopics()
             .then(() => {
-              this.metrics?.syncSwitchGossipSubscriptions.inc({action: "unsubscribed"});
-              this.logger.info("Un-subscribed gossip core topics");
+              this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
+              this.logger.info("Subscribed gossip core topics");
             })
             .catch((e) => {
-              this.logger.error("Error unsubscribing to gossip core topics", {}, e);
+              this.logger.error("Error subscribing to gossip core topics", {}, e);
             });
         }
 
-        // also stop searching for unknown blocks
-        if (this.unknownBlockSync.isSubscribedToNetwork()) {
-          this.unknownBlockSync.unsubscribeFromNetwork();
-          this.metrics?.blockInputSync.switchNetworkSubscriptions.inc({action: "unsubscribed"});
+        if (!this.unknownBlockSync.isSubscribedToNetwork()) {
+          this.unknownBlockSync.subscribeToNetwork();
+          this.metrics?.blockInputSync.switchNetworkSubscriptions.inc({action: "subscribed"});
+        }
+      }
+
+      // During finalized sync, unsubscribe gossip if significantly behind to reduce noise
+      if (state === SyncState.SyncingFinalized) {
+        const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
+        if (syncDiff > this.slotImportTolerance * 2) {
+          if (this.network.isSubscribedToGossipCoreTopics()) {
+            this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
+            this.network
+              .unsubscribeGossipCoreTopics()
+              .then(() => {
+                this.metrics?.syncSwitchGossipSubscriptions.inc({action: "unsubscribed"});
+                this.logger.info("Un-subscribed gossip core topics");
+              })
+              .catch((e) => {
+                this.logger.error("Error unsubscribing to gossip core topics", {}, e);
+              });
+          }
+
+          if (this.unknownBlockSync.isSubscribedToNetwork()) {
+            this.unknownBlockSync.unsubscribeFromNetwork();
+            this.metrics?.blockInputSync.switchNetworkSubscriptions.inc({action: "unsubscribed"});
+          }
         }
       }
     }
