@@ -116,13 +116,30 @@ export async function readErrorMessage(bytes: ByteStream<Stream>, signal?: Abort
   let total = 0;
 
   while (total < 256) {
-    const chunk = await bytes.read({signal}).catch((e) => {
+    const remaining = 256 - total;
+    const chunk = await bytes.read({bytes: remaining, signal}).catch((e) => {
       if ((e as Error).name === "UnexpectedEOFError") return null;
       throw e;
     });
-    if (chunk === null) break;
-    chunks.push(chunk.subarray());
-    total += chunk.byteLength;
+    if (chunk !== null) {
+      chunks.push(chunk.subarray());
+      total += chunk.byteLength;
+      continue;
+    }
+
+    // If EOF is reached while satisfying a larger read, libp2p v3 may still have
+    // buffered bytes available. Drain them so error_message matches pre-v3 behavior.
+    while (total < 256) {
+      const oneByte = await bytes.read({bytes: 1, signal}).catch((e) => {
+        if ((e as Error).name === "UnexpectedEOFError") return null;
+        throw e;
+      });
+      if (oneByte === null) break;
+      chunks.push(oneByte.subarray());
+      total += oneByte.byteLength;
+    }
+
+    break;
   }
 
   return decodeErrorMessage(Buffer.concat(chunks).subarray(0, 256));
