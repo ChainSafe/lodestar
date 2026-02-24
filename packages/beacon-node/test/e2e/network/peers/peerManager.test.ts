@@ -1,5 +1,5 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {Connection} from "@libp2p/interface";
+import {Connection, type IdentifyResult} from "@libp2p/interface";
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
@@ -337,6 +337,78 @@ describe("network / peers / PeerManager", () => {
     });
     await sleep(0);
     expect(libp2p.services.identify.identify).toHaveBeenCalledTimes(1);
+
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Nimbus/v25.0.0");
+    expect(peerData?.agentClient).toBe(ClientKind.Nimbus);
+  });
+
+  it("Should retry identify on transient errors", async () => {
+    vi.useFakeTimers();
+    try {
+      const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+      const identifySpy = vi
+        .spyOn(libp2p.services.identify, "identify")
+        .mockRejectedValueOnce(new Error("Cannot write to a stream that is closing"))
+        .mockResolvedValue({agentVersion: "Lighthouse/v6.0.1"} as Awaited<ReturnType<typeof libp2p.services.identify.identify>>);
+
+      const inboundConnection = {
+        id: "connection-1",
+        direction: "inbound",
+        status: "open",
+        remotePeer: peerId1,
+        close: async () => {},
+        abort: () => {},
+      } as unknown as Connection;
+
+      getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
+      await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+
+      const remoteStatus = statusCache.get();
+      networkEventBus.emit(NetworkEvent.reqRespRequest, {
+        request: {method: ReqRespMethod.Status, body: remoteStatus},
+        peer: peerId1,
+        peerClient: "Unknown",
+      });
+
+      // 1st attempt happens immediately, 2nd after 5s retry delay
+      await vi.advanceTimersByTimeAsync(5_000);
+
+      expect(identifySpy).toHaveBeenCalledTimes(2);
+      const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+      expect(peerData?.agentVersion).toBe("Lighthouse/v6.0.1");
+      expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("Should update agentVersion via peer:identify event", async () => {
+    const {libp2p, peerManager} = await mockModules();
+
+    // Simulate connected peer with unknown agentVersion
+    const inboundConnection = {
+      id: "connection-1",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+
+    // Simulate libp2p identify event (e.g. via identify-push)
+    libp2p.services.components.events.dispatchEvent(
+      new CustomEvent("peer:identify", {
+        detail: {
+          peerId: peerId1,
+          agentVersion: "Nimbus/v25.0.0",
+        } satisfies Partial<IdentifyResult>,
+      })
+    );
 
     const peerData = peerManager["connectedPeers"].get(peerId1.toString());
     expect(peerData?.agentVersion).toBe("Nimbus/v25.0.0");
