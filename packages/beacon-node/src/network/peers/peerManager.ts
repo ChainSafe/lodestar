@@ -164,6 +164,7 @@ export class PeerManager {
 
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
+  private bootstrapTimeout: NodeJS.Timeout | null = null;
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
     const {networkConfig} = modules;
@@ -199,7 +200,7 @@ export class PeerManager {
     // A connection may already be open before listeners are attached.
     // Seed those peers and trigger status/ping on the next macrotask.
     this.bootstrapAlreadyOpenConnections();
-    setTimeout(() => this.pingAndStatusTimeouts(), 0);
+    this.bootstrapTimeout = setTimeout(() => this.pingAndStatusTimeouts(), 0);
 
     // On start-up will connected to existing peers in libp2p.peerStore, same as autoDial behaviour
     this.heartbeat();
@@ -235,6 +236,7 @@ export class PeerManager {
     );
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
     for (const interval of this.intervals) clearInterval(interval);
+    if (this.bootstrapTimeout) clearTimeout(this.bootstrapTimeout);
   }
 
   /**
