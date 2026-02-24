@@ -17,22 +17,23 @@ export async function* onExecutionPayloadEnvelopesByRoot(
     const blockRootHex = toRootHex(blockRoot);
     const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
 
-    // Only support non-finalized blocks
+    if (!block) {
+      continue;
+    }
+
     // SPEC: Clients MUST support requesting payload envelopes since the latest finalized epoch.
-    if (!block || block.slot <= finalizedSlot) {
-      // Try archive DB for finalized envelopes
-      const envelope = await db.executionPayloadEnvelopeArchive.get(block?.slot ?? 0);
+    if (block.slot <= finalizedSlot) {
+      const envelope = await db.executionPayloadEnvelopeArchive.get(block.slot);
       if (envelope && toRootHex(envelope.message.beaconBlockRoot) === blockRootHex) {
         const data = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
         yield {
           data,
-          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block!.slot)),
+          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
         };
       }
       continue;
     }
 
-    // Look up from hot DB
     const envelope = await db.executionPayloadEnvelope.get(blockRoot);
     if (envelope) {
       const data = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
