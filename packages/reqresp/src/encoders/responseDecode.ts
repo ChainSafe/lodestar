@@ -120,7 +120,15 @@ export async function readErrorMessage(bytes: ByteStream<Stream>, signal?: Abort
       if ((e as Error).name === "UnexpectedEOFError") return null;
       throw e;
     });
-    if (chunk === null) break;
+    if (chunk === null) {
+      // If EOF is reached while satisfying a larger read, libp2p v3 may still have
+      // buffered bytes available. Drain them so error_message matches pre-v3 behavior.
+      const remaining = drainByteStream(bytes);
+      if (remaining) {
+        chunks.push(remaining);
+      }
+      break;
+    }
     chunks.push(chunk.subarray());
     total += chunk.byteLength;
   }

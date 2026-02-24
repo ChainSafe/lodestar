@@ -19,10 +19,14 @@ export async function sendChunks(
   }
 }
 
-export function drainByteStream(bytes: ByteStream<Stream>): void {
-  const readBuffer = (bytes as unknown as {readBuffer?: {byteLength: number; consume: (bytes: number) => void}})
-    .readBuffer;
-  if (readBuffer) {
+export function drainByteStream(bytes: ByteStream<Stream>): Uint8Array | undefined {
+  const readBuffer = (
+    bytes as unknown as {readBuffer?: {byteLength: number; subarray: () => Uint8Array; consume: (bytes: number) => void}}
+  ).readBuffer;
+  if (readBuffer && readBuffer.byteLength > 0) {
+    const drained = readBuffer.subarray();
     readBuffer.consume(readBuffer.byteLength);
+    return drained;
   }
+  return undefined;
 }
