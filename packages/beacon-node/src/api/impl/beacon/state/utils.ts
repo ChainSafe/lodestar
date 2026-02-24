@@ -1,8 +1,7 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, PubkeyCache} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   Epoch,
@@ -91,7 +90,7 @@ export function toValidatorResponse(
 export function filterStateValidatorsByStatus(
   statuses: string[],
   state: BeaconStateAllForks,
-  pubkey2index: PubkeyIndexMap,
+  pubkeyCache: PubkeyCache,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
@@ -102,7 +101,7 @@ export function filterStateValidatorsByStatus(
     const validatorStatus = getValidatorStatus(validator, currentEpoch);
     const generalStatus = mapToGeneralStatus(validatorStatus);
 
-    const resp = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
+    const resp = getStateValidatorIndex(validator.pubkey, state, pubkeyCache);
     if (resp.valid && (statusSet.has(validatorStatus) || statusSet.has(generalStatus))) {
       responses.push(
         toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
@@ -119,7 +118,7 @@ type StateValidatorIndexResponse =
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
-  pubkey2index: PubkeyIndexMap
+  pubkeyCache: PubkeyCache
 ): StateValidatorIndexResponse {
   if (typeof id === "string") {
     // mutate `id` and fallthrough to below
@@ -147,7 +146,7 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  const validatorIndex = pubkey2index.get(id);
+  const validatorIndex = pubkeyCache.getIndex(id);
   if (validatorIndex === null) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }

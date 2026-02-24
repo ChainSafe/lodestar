@@ -1,7 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
-import {PublicKey} from "@chainsafe/blst";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
-import {Index2PubkeyCache} from "../../../../src/cache/pubkeyCache.js";
+import {PubkeyCache, createPubkeyCache} from "../../../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 import {generatePerfTestCachedStateAltair} from "../../util.js";
@@ -49,21 +47,18 @@ describe("loadState", () => {
         migratedState.hashTreeRoot();
         // Get the validators sub tree once for all the loop
         const validators = migratedState.validators;
-        const pubkey2index = new PubkeyIndexMap();
-        const index2pubkey: Index2PubkeyCache = [];
+        const pubkeyCache: PubkeyCache = createPubkeyCache();
         for (const validatorIndex of modifiedValidators) {
           const validator = validators.getReadonly(validatorIndex);
           const pubkey = validator.pubkey;
-          pubkey2index.set(pubkey, validatorIndex);
-          index2pubkey[validatorIndex] = PublicKey.fromBytes(pubkey);
+          pubkeyCache.set(validatorIndex, pubkey);
         }
         const shufflingGetter = () => seedState.epochCtx.currentShuffling;
         createCachedBeaconState(
           migratedState,
           {
             config: seedState.config,
-            pubkey2index,
-            index2pubkey,
+            pubkeyCache,
           },
           {skipSyncPubkeys: true, skipSyncCommitteeCache: true, shufflingGetter}
         );
