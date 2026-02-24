@@ -38,8 +38,7 @@ describe("produceBlockBody", () => {
       {
         privateKey: await generateKeyPair("secp256k1"),
         config: state.config,
-        pubkey2index: state.epochCtx.pubkey2index,
-        index2pubkey: state.epochCtx.index2pubkey,
+        pubkeyCache: state.epochCtx.pubkeyCache,
         db,
         dataDir: ".",
         dbName: ".",
@@ -68,7 +67,7 @@ describe("produceBlockBody", () => {
     beforeEach: async () => {
       const head = chain.forkChoice.getHead();
       const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
-      const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
+      const proposerPubKey = state.epochCtx.pubkeyCache.getOrThrow(proposerIndex).toBytes();
 
       return {chain, state, head, proposerIndex, proposerPubKey};
     },

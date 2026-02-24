@@ -37,7 +37,7 @@ async function validateProposerSlashing(
   try {
     const proposer = state.validators.getReadonly(proposerSlashing.signedHeader1.message.proposerIndex);
     // verifySignature = false, verified in batch below
-    assertValidProposerSlashing(chain.config, chain.index2pubkey, state.slot, proposerSlashing, proposer, false);
+    assertValidProposerSlashing(chain.config, chain.pubkeyCache, state.slot, proposerSlashing, proposer, false);
   } catch (e) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,

@@ -1,4 +1,3 @@
-import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
@@ -180,22 +179,19 @@ export function loadCachedBeaconState<T extends CachedBeaconStateAllForks>(
     stateBytes,
     seedValidatorsBytes
   );
-  const {pubkey2index, index2pubkey} = cachedSeedState.epochCtx;
+  const {pubkeyCache} = cachedSeedState.epochCtx;
   // Get the validators sub tree once for all the loop
   const validators = migratedState.validators;
   for (const validatorIndex of modifiedValidators) {
     const validator = validators.getReadonly(validatorIndex);
-    const pubkey = validator.pubkey;
-    pubkey2index.set(pubkey, validatorIndex);
-    index2pubkey[validatorIndex] = PublicKey.fromBytes(pubkey);
+    pubkeyCache.set(validatorIndex, validator.pubkey);
   }
 
   return createCachedBeaconState(
     migratedState,
     {
       config: cachedSeedState.config,
-      pubkey2index,
-      index2pubkey,
+      pubkeyCache,
     },
     {...(opts ?? {}), ...{skipSyncPubkeys: true}}
   ) as T;

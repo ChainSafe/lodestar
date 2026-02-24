@@ -1,6 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {
   ISignatureSet,
   SignatureSetType,
@@ -11,11 +11,11 @@ import {
 
 export function verifyVoluntaryExitSignature(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
+  pubkeyCache: PubkeyCache,
   stateSlot: Slot,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, stateSlot, signedVoluntaryExit), index2pubkey);
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, stateSlot, signedVoluntaryExit), pubkeyCache);
 }
 
 /**

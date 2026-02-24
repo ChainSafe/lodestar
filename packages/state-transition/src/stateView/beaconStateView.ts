@@ -1,5 +1,4 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
@@ -32,6 +31,7 @@ import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processV
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
+import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
@@ -543,7 +543,7 @@ export class BeaconStateView implements IBeaconStateView {
   async computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards> {
     return computeAttestationsRewards(
       this.cachedState.config,
-      this.cachedState.epochCtx.pubkey2index,
+      this.cachedState.epochCtx.pubkeyCache,
       this.cachedState,
       validatorIds
     );
@@ -555,7 +555,7 @@ export class BeaconStateView implements IBeaconStateView {
   ): Promise<rewards.SyncCommitteeRewards> {
     return computeSyncCommitteeRewards(
       this.cachedState.config,
-      this.cachedState.epochCtx.index2pubkey,
+      this.cachedState.epochCtx.pubkeyCache,
       block,
       this.cachedState,
       validatorIds
@@ -641,8 +641,7 @@ export class BeaconStateView implements IBeaconStateView {
       {
         config: this.config,
         // as of Feb 2026, it's not necessary to sync pubkey cache as it's shared across states in Lodestar
-        pubkey2index: this.cachedState.epochCtx.pubkey2index,
-        index2pubkey: this.cachedState.epochCtx.index2pubkey,
+        pubkeyCache: this.cachedState.epochCtx.pubkeyCache,
       },
       {
         skipSyncPubkeys: true,
@@ -715,14 +714,13 @@ export function createBeaconStateViewForHistoricalRegen(
 ): IBeaconStateView {
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
 
-  const pubkey2index = new PubkeyIndexMap();
-  syncPubkeyCache(state, pubkey2index);
+  const pubkeyCache = createPubkeyCache();
+  syncPubkeyCache(state, pubkeyCache);
   const cachedState = createCachedBeaconState(
     state,
     {
       config,
-      pubkey2index,
-      index2pubkey: [],
+      pubkeyCache,
     },
     {
       skipSyncPubkeys: true,
@@ -735,12 +733,12 @@ export function createBeaconStateViewForHistoricalRegen(
 /**
  * Populate a PubkeyIndexMap with any new entries based on a BeaconState
  */
-function syncPubkeyCache(state: BeaconStateAllForks, pubkey2index: PubkeyIndexMap): void {
+function syncPubkeyCache(state: BeaconStateAllForks, pubkeyCache: PubkeyCache): void {
   // Get the validators sub tree once for all the loop
 
   const newCount = state.validators.length;
-  for (let i = pubkey2index.size; i < newCount; i++) {
+  for (let i = pubkeyCache.size; i < newCount; i++) {
     const pubkey = state.validators.getReadonly(i).pubkey;
-    pubkey2index.set(pubkey, i);
+    pubkeyCache.set(i, pubkey);
   }
 }
