@@ -172,7 +172,7 @@ export class PrepareNextSlotScheduler {
           // variant's execution hash for FCU so the EL can build a payload on the correct head.
           // The bid.parent_block_hash is set separately from the state variant and is NOT affected.
           const headExecutionBlockHashOverride = isForkPostGloas(fork as ForkPostBellatrix)
-            ? this.chain.forkChoice.getHeadExecutionBlockHash() ?? undefined
+            ? (this.chain.forkChoice.getHeadExecutionBlockHash() ?? undefined)
             : undefined;
 
           // awaiting here instead of throwing an async call because there is no other task

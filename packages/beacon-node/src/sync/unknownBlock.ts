@@ -473,7 +473,7 @@ export class BlockInputSync {
       // Try gossip cache first, then fall back to reqresp.
       const forkName = this.config.getForkName(blockSlot);
       if (isForkPostGloas(forkName)) {
-        await this.resolveEnvelopeForBlock(blockRootHex, blockSlot, pendingBlock);
+        await this.resolveEnvelopeForBlock(blockRootHex, blockSlot);
       }
 
       // Send child blocks to the processor
@@ -587,11 +587,7 @@ export class BlockInputSync {
    * After importing a Gloas block, resolve its execution payload envelope.
    * Tries gossip cache first, then falls back to reqresp (ExecutionPayloadEnvelopesByRoot).
    */
-  private async resolveEnvelopeForBlock(
-    blockRootHex: RootHex,
-    blockSlot: number,
-    pendingBlock: PendingBlockInput
-  ): Promise<void> {
+  private async resolveEnvelopeForBlock(blockRootHex: RootHex, blockSlot: number): Promise<void> {
     // 1. Try gossip cache
     const pendingEnvelope = this.chain.pendingEnvelopes.get(blockRootHex);
     if (pendingEnvelope) {
@@ -624,11 +620,7 @@ export class BlockInputSync {
           return;
         }
       } catch (e) {
-        this.logger.debug(
-          "Failed to fetch envelope via reqresp",
-          {blockRoot: blockRootHex, peer: peerId},
-          e as Error
-        );
+        this.logger.debug("Failed to fetch envelope via reqresp", {blockRoot: blockRootHex, peer: peerId}, e as Error);
       }
     }
 
