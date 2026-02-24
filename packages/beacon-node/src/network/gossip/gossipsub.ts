@@ -182,9 +182,7 @@ export class Eth2Gossipsub {
     })(modules.libp2p.services.components) as GossipSubInternal;
 
     if (metrics) {
-      metrics.gossipMesh.peersByType.addCollect(() =>
-        this.onScrapeLodestarMetrics(metrics as Eth2GossipsubMetrics, networkConfig)
-      );
+      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
     }
     this.gossipsub = gossipsubInstance;
     this.scoreParams = scoreParams;
