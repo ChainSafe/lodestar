@@ -24,6 +24,7 @@ import {
   computeTimeAtSlot,
   getExpectedWithdrawals,
   getRandaoMix,
+  isParentBlockFull,
 } from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -788,11 +789,20 @@ function preparePayloadAttributes(
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    // withdrawals logic is now fork aware as it changes on electra fork post capella
-    (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
-      ForkSeq[fork],
-      prepareState as CachedBeaconStateCapella
-    ).expectedWithdrawals;
+    if (ForkSeq[fork] >= ForkSeq.gloas && !isParentBlockFull(prepareState as CachedBeaconStateGloas)) {
+      // Post-Gloas with non-FULL parent: processWithdrawals will return early (spec: "Return
+      // early if the parent block is empty"), so payloadExpectedWithdrawals won't be updated.
+      // The EL must receive the stale value from state so the envelope matches on validation.
+      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = Array.from(
+        (prepareState as CachedBeaconStateGloas).payloadExpectedWithdrawals.getAllReadonly()
+      );
+    } else {
+      // Pre-Gloas or FULL parent: compute fresh withdrawals
+      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
+        ForkSeq[fork],
+        prepareState as CachedBeaconStateCapella
+      ).expectedWithdrawals;
+    }
   }
 
   if (ForkSeq[fork] >= ForkSeq.deneb) {
