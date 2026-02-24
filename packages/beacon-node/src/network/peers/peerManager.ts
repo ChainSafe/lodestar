@@ -195,7 +195,7 @@ export class PeerManager {
 
     this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionOpen, this.onLibp2pPeerConnect);
     this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionClose, this.onLibp2pPeerDisconnect);
-    this.libp2p.services.components.events.addEventListener("peer:identify", this.onPeerIdentify);
+    this.libp2p.services.components.events.addEventListener(Libp2pEvent.peerIdentify, this.onPeerIdentify);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
 
     this.lastStatus = this.statusCache.get();
@@ -239,7 +239,7 @@ export class PeerManager {
       Libp2pEvent.connectionClose,
       this.onLibp2pPeerDisconnect
     );
-    this.libp2p.services.components.events.removeEventListener("peer:identify", this.onPeerIdentify);
+    this.libp2p.services.components.events.removeEventListener(Libp2pEvent.peerIdentify, this.onPeerIdentify);
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
     for (const interval of this.intervals) clearInterval(interval);
   }
