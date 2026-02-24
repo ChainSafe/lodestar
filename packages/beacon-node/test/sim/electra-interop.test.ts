@@ -364,7 +364,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     if (headState.validators.length !== 33 || headState.balances.length !== 33) {
       throw Error("New validator is not reflected in the beacon state at slot 5");
     }
-    if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
+    if (epochCtx.pubkeyCache.size !== 33) {
       throw Error("Pubkey cache is not updated");
     }
 
@@ -391,7 +391,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     if (headState.validators.length !== 33 || headState.balances.length !== 33) {
       throw Error("New validator is not reflected in the beacon state.");
     }
-    if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
+    if (epochCtx.pubkeyCache.size !== 33) {
       throw Error("New validator is not in pubkey cache");
     }
 

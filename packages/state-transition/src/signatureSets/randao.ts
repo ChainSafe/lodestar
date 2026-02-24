@@ -1,7 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_RANDAO} from "@lodestar/params";
 import {BeaconBlock, ssz} from "@lodestar/types";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {
   ISignatureSet,
   SignatureSetType,
@@ -10,12 +10,8 @@ import {
   verifySignatureSet,
 } from "../util/index.js";
 
-export function verifyRandaoSignature(
-  config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
-  block: BeaconBlock
-): boolean {
-  return verifySignatureSet(getRandaoRevealSignatureSet(config, block), index2pubkey);
+export function verifyRandaoSignature(config: BeaconConfig, pubkeyCache: PubkeyCache, block: BeaconBlock): boolean {
+  return verifySignatureSet(getRandaoRevealSignatureSet(config, block), pubkeyCache);
 }
 
 /**

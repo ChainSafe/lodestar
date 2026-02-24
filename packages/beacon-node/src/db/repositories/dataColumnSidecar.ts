@@ -1,7 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, PrefixedRepository, decodeNumberForDbKey, encodeNumberForDbKey} from "@lodestar/db";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ColumnIndex, Root, fulu, ssz} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecar, Root, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {isGloasDataColumnSidecarBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 const COLUMN_INDEX_BYTE_SIZE = 2;
@@ -15,7 +16,7 @@ type BlockRoot = Root;
  *
  * Indexed data by `blockRoot` + `columnIndex`
  */
-export class DataColumnSidecarRepository extends PrefixedRepository<BlockRoot, ColumnIndex, fulu.DataColumnSidecar> {
+export class DataColumnSidecarRepository extends PrefixedRepository<BlockRoot, ColumnIndex, DataColumnSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.fulu_dataColumnSidecars;
     super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));
@@ -24,8 +25,22 @@ export class DataColumnSidecarRepository extends PrefixedRepository<BlockRoot, C
   /**
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
-  getId(value: fulu.DataColumnSidecar): ColumnIndex {
+  getId(value: DataColumnSidecar): ColumnIndex {
     return value.index;
+  }
+
+  encodeValue(value: DataColumnSidecar): Uint8Array {
+    if (isGloasDataColumnSidecar(value)) {
+      return ssz.gloas.DataColumnSidecar.serialize(value);
+    }
+    return ssz.fulu.DataColumnSidecar.serialize(value);
+  }
+
+  decodeValue(data: Uint8Array): DataColumnSidecar {
+    if (isGloasDataColumnSidecarBytes(data)) {
+      return ssz.gloas.DataColumnSidecar.deserialize(data);
+    }
+    return ssz.fulu.DataColumnSidecar.deserialize(data);
   }
 
   encodeKeyRaw(prefix: BlockRoot, id: ColumnIndex): Uint8Array {

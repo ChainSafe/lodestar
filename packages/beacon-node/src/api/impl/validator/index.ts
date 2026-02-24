@@ -1,8 +1,8 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
+  BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
   ForkPreGloas,
@@ -14,6 +14,7 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -25,6 +26,7 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   createCachedBeaconState,
+  createPubkeyCache,
   getBlockRootAtSlot,
   getCurrentSlot,
   loadState,
@@ -45,6 +47,7 @@ import {
   Wei,
   bellatrix,
   getValidatorStatus,
+  gloas,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -69,7 +72,7 @@ import {
 } from "../../../chain/errors/index.js";
 import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
-import {BlockType, ProduceFullDeneb} from "../../../chain/produceBlock/index.js";
+import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
@@ -901,6 +904,77 @@ export function getValidatorApi(
       return {data, meta};
     },
 
+    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient}) {
+      const fork = config.getForkName(slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
+      }
+
+      notWhileSyncing();
+      await waitForSlot(slot);
+
+      // TODO GLOAS: support producing blocks from builder bids
+      const source = ProducedBlockSource.engine;
+
+      // TODO GLOAS: needs to be updated after fork choice changes are merged
+      const parentBlock = chain.getProposerHead(slot);
+      const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
+      const parentBlockRoot = fromHex(parentBlockRootHex);
+      notOnOutOfRangeData(parentBlockRoot);
+      metrics?.blockProductionSlotDelta.set(slot - parentSlot);
+      metrics?.blockProductionRequests.inc({source});
+
+      const graffitiBytes = toGraffitiBytes(
+        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(), chain.executionEngine.clientVersion, {})
+      );
+      const commonBlockBodyPromise = chain.produceCommonBlockBody({
+        slot,
+        parentBlock,
+        randaoReveal,
+        graffiti: graffitiBytes,
+      });
+
+      let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
+      try {
+        timer = metrics?.blockProductionTime.startTimer();
+        const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlock({
+          slot,
+          parentBlock,
+          randaoReveal,
+          graffiti: graffitiBytes,
+          feeRecipient,
+          commonBlockBodyPromise,
+        });
+
+        metrics?.blockProductionSuccess.inc({source});
+        metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+        metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
+        metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+
+        const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
+        logger.verbose("Produced block", {
+          slot,
+          executionPayloadValue,
+          consensusBlockValue,
+          root: blockRoot,
+        });
+        if (chain.opts.persistProducedBlocks) {
+          void chain.persistBlock(block, "produced_engine_block");
+        }
+
+        return {
+          data: block as gloas.BeaconBlock,
+          meta: {
+            version: fork,
+            consensusBlockValue,
+          },
+        };
+      } finally {
+        timer?.({source});
+      }
+    },
+
     async produceAttestationData({committeeIndex, slot}) {
       notWhileSyncing();
 
@@ -1049,8 +1123,7 @@ export function getValidatorApi(
             {
               config: chain.config,
               // Not required to compute proposers
-              pubkey2index: new PubkeyIndexMap(),
-              index2pubkey: [],
+              pubkeyCache: createPubkeyCache(),
             },
             {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
           );
@@ -1511,7 +1584,7 @@ export function getValidatorApi(
 
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
-        const validatorIndex = chain.pubkey2index.get(pubkey);
+        const validatorIndex = chain.pubkeyCache.getIndex(pubkey);
         if (validatorIndex === null) return false;
 
         const validator = headState.validators.getReadonly(validatorIndex);
@@ -1531,6 +1604,55 @@ export function getValidatorApi(
         epoch: currentEpoch,
         count: filteredRegistrations.length,
       });
+    },
+
+    async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {
+      const fork = config.getForkName(slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `getExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
+      }
+
+      notWhileSyncing();
+      await waitForSlot(slot);
+
+      const blockRootHex = toRootHex(beaconBlockRoot);
+      const produceResult = chain.blockProductionCache.get(blockRootHex);
+
+      if (produceResult === undefined) {
+        throw new ApiError(404, `No cached block production result found for block root ${blockRootHex}`);
+      }
+      if (!isForkPostGloas(produceResult.fork)) {
+        throw Error(`Cached block production result is for pre-gloas fork=${produceResult.fork}`);
+      }
+      if (produceResult.type !== BlockType.Full) {
+        throw Error("Cached block production result is not full block");
+      }
+
+      const {executionPayload, executionRequests, envelopeStateRoot} = produceResult as ProduceFullGloas;
+
+      const envelope: gloas.ExecutionPayloadEnvelope = {
+        payload: executionPayload,
+        executionRequests: executionRequests,
+        builderIndex: BUILDER_INDEX_SELF_BUILD,
+        beaconBlockRoot,
+        slot,
+        stateRoot: envelopeStateRoot,
+      };
+
+      logger.info("Produced execution payload envelope", {
+        slot,
+        blockRoot: blockRootHex,
+        transactions: executionPayload.transactions.length,
+        blockHash: toRootHex(executionPayload.blockHash),
+      });
+
+      return {
+        data: envelope,
+        meta: {
+          version: fork,
+        },
+      };
     },
   };
 }

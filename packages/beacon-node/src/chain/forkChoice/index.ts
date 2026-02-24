@@ -303,9 +303,9 @@ export function initializeForkChoiceFromUnfinalizedState(
   };
 
   const protoArray = ProtoArray.initialize(finalizedBlock, currentSlot);
-  protoArray.onBlock(justifiedBlock, currentSlot);
-  protoArray.onBlock(parentBlock, currentSlot);
-  protoArray.onBlock(headBlock, currentSlot);
+  protoArray.onBlock(justifiedBlock, currentSlot, null);
+  protoArray.onBlock(parentBlock, currentSlot, null);
+  protoArray.onBlock(headBlock, currentSlot, null);
 
   logger?.verbose("Initialized protoArray successfully", {...logCtx, length: protoArray.length()});
 

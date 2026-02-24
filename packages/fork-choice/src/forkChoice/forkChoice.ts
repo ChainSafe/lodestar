@@ -838,7 +838,7 @@ export class ForkChoice implements IForkChoice {
       parentBlockHash: parentHashHex,
     };
 
-    this.protoArray.onBlock(protoBlock, currentSlot);
+    this.protoArray.onBlock(protoBlock, currentSlot, this.proposerBoostRoot);
 
     return protoBlock;
   }
@@ -981,7 +981,8 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.currentSlot,
       executionPayloadBlockHash,
       executionPayloadNumber,
-      executionPayloadStateRoot
+      executionPayloadStateRoot,
+      this.proposerBoostRoot
     );
   }
 

@@ -104,7 +104,8 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
             builderIndex: null,
             blockHashFromBid: null,
           },
-          slot
+          slot,
+          null
         );
       }
 

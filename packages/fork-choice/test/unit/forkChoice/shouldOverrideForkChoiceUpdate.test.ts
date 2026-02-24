@@ -224,8 +224,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     expectedNotReorgedReason,
   } of testCases) {
     it(id, async () => {
-      protoArr.onBlock(parentBlock, parentBlock.slot);
-      protoArr.onBlock(headBlock, headBlock.slot);
+      protoArr.onBlock(parentBlock, parentBlock.slot, null);
+      protoArr.onBlock(headBlock, headBlock.slot, null);
 
       const secFromSlot = 0;
       const currentSlot = blockSeenSlot ?? headBlock.slot;

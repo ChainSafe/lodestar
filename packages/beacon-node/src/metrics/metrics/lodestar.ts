@@ -827,6 +827,15 @@ export function createLodestarMetrics(
         help: "Total number of blobs retrieved from execution engine and published to gossip",
       }),
     },
+    // Gossip execution payload envelope
+    gossipExecutionPayloadEnvelope: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_execution_payload_envelope_elapsed_time_till_received",
+        help: "Time elapsed between slot time and the time execution payload envelope received",
+        labelNames: ["source"],
+        buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+    },
     recoverDataColumnSidecars: {
       recoverTime: register.histogram({
         name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
