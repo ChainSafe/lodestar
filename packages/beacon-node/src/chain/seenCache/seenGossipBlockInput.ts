@@ -181,8 +181,8 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // Post-gloas
       if (isForkPostGloas(forkName)) {
+        // Post-gloas
         blockInput = BlockInputEpbs.createFromBlock({
           block: block as SignedBeaconBlock<ForkPostGloas>,
           blockRootHex,
@@ -192,8 +192,8 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-        // Pre-deneb
       } else if (!isForkPostDeneb(forkName)) {
+        // Pre-deneb
         blockInput = BlockInputPreData.createFromBlock({
           block,
           blockRootHex,
@@ -203,8 +203,8 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-        // Fulu Only
       } else if (isForkPostFulu(forkName)) {
+        // Fulu Only
         blockInput = BlockInputColumns.createFromBlock({
           block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
           blockRootHex,
@@ -216,8 +216,8 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-        // Deneb and Electra
       } else {
+        // Deneb and Electra
         blockInput = BlockInputBlobs.createFromBlock({
           block: block as SignedBeaconBlock<ForkBlobsDA>,
           blockRootHex,

@@ -744,7 +744,7 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
       // TODO GLOAS: Need to update this when we are merging nc/epbs-fc. Need to define `getPostEpbsExecStatus`
-      // to make sure execution status of post-gloas blocks is ExecutionStatus.Epbs
+      // to make sure execution status of post-gloas blocks is ExecutionStatus.PayloadSeparated
       ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
         ? {
             executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
@@ -1245,7 +1245,7 @@ export class ForkChoice implements IForkChoice {
   private getPostMergePreEpbsExecStatus(
     executionStatus: MaybeValidExecutionStatus
   ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
-    if (executionStatus === ExecutionStatus.PreMerge || executionStatus === ExecutionStatus.Epbs)
+    if (executionStatus === ExecutionStatus.PreMerge || executionStatus === ExecutionStatus.PayloadSeparated)
       throw Error(
         `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid}, got ${executionStatus}`
       );

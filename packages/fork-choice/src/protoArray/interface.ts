@@ -24,7 +24,7 @@ export type VoteIndex = number;
  * - Syncing: EL is syncing, payload validity unknown (optimistic sync)
  * - PreMerge: Block is from before The Merge, no execution payload exists
  * - Invalid: Execution payload was invalidated by the EL (post-import status)
- * - Epbs: Gloas ePBS beacon block without embedded execution payload.
+ * - PayloadSeparated: Gloas ePBS beacon block without embedded execution payload.
  *         The execution payload arrives separately via SignedExecutionPayloadEnvelope.
  *         Gloas blocks WITH execution payload (FULL variant) use Valid/Invalid/Syncing.
  */
@@ -33,7 +33,7 @@ export enum ExecutionStatus {
   Syncing = "Syncing",
   PreMerge = "PreMerge",
   Invalid = "Invalid",
-  Epbs = "Epbs",
+  PayloadSeparated = "PayloadSeparated",
 }
 
 export type LVHValidResponse = {

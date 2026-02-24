@@ -33,7 +33,7 @@ export async function verifyBlocksDataAvailability(
       return DataAvailabilityStatus.PreData;
     }
     if (blockInput.type === DAType.Epbs) {
-      return DataAvailabilityStatus.Epbs;
+      return DataAvailabilityStatus.NotRequired;
     }
     if (blockInput.daOutOfRange) {
       return DataAvailabilityStatus.OutOfRange;

@@ -52,7 +52,7 @@ type VerifyBlockExecutionResponse =
   | {executionStatus: ExecutionStatus.Valid; lvhResponse: LVHValidResponse; execError: null}
   | {executionStatus: ExecutionStatus.Syncing; lvhResponse?: LVHValidResponse; execError: null}
   | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null}
-  | {executionStatus: ExecutionStatus.Epbs; lvhResponse: undefined; execError: null};
+  | {executionStatus: ExecutionStatus.PayloadSeparated; lvhResponse: undefined; execError: null};
 
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
@@ -152,7 +152,7 @@ export async function verifyBlockExecutionPayload(
 
   // Gloas block doesn't have execution payload. Return right away
   if (isBlockInputEpbs(blockInput)) {
-    return {executionStatus: ExecutionStatus.Epbs, lvhResponse: undefined, execError: null};
+    return {executionStatus: ExecutionStatus.PayloadSeparated, lvhResponse: undefined, execError: null};
   }
 
   /** Not null if execution is enabled */
