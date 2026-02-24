@@ -38,7 +38,12 @@ import {
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
-import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
+import {
+  BeaconBlocksByRootRequest,
+  BlobSidecarsByRootRequest,
+  DataColumnSidecarsByRootRequest,
+  ExecutionPayloadEnvelopesByRootRequest,
+} from "../util/types.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {INetworkEventBus} from "./events.js";
 import {GossipType} from "./gossip/interface.js";
@@ -82,6 +87,10 @@ export interface INetwork extends INetworkCorePublic {
     peerId: PeerIdStr,
     request: DataColumnSidecarsByRootRequest
   ): Promise<fulu.DataColumnSidecar[]>;
+  sendExecutionPayloadEnvelopesByRoot(
+    peerId: PeerIdStr,
+    request: ExecutionPayloadEnvelopesByRootRequest
+  ): Promise<gloas.SignedExecutionPayloadEnvelope[]>;
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
