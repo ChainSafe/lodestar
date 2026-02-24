@@ -29,11 +29,11 @@ export async function verifyBlocksDataAvailability(
 
   const availableTime = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete())));
   const dataAvailabilityStatuses: DataAvailabilityStatus[] = blocks.map((blockInput) => {
-    if (blockInput.type === DAType.PreData) {
-      return DataAvailabilityStatus.PreData;
-    }
     if (blockInput.type === DAType.Epbs) {
       return DataAvailabilityStatus.NotRequired;
+    }
+    if (blockInput.type === DAType.PreData) {
+      return DataAvailabilityStatus.PreData;
     }
     if (blockInput.daOutOfRange) {
       return DataAvailabilityStatus.OutOfRange;
