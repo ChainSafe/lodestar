@@ -1794,10 +1794,10 @@ export class ProtoArray {
     const ancestors: ProtoNode[] = [];
     const nonAncestors: ProtoNode[] = [];
 
-    // Include starting node if it's not PENDING (i.e., pre-Gloas or EMPTY/FULL variant post-Gloas)
-    if (node.payloadStatus !== PayloadStatus.PENDING) {
-      ancestors.push(node);
-    }
+    // Always include starting node — it's the finalized checkpoint and must be archived.
+    // For Gloas blocks getDefaultVariant() returns PENDING, but the underlying beacon block
+    // is identical across all variants and must be persisted to the cold DB.
+    ancestors.push(node);
 
     let nodeIndex = startIndex;
     while (node.parent !== undefined) {
