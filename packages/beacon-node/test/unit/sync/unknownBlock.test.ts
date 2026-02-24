@@ -10,9 +10,10 @@ import {notNullish, sleep} from "@lodestar/utils";
 import {BlockInputColumns, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
-import {ChainEvent, IBeaconChain} from "../../../src/chain/index.js";
+import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
-import {INetwork, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
+import {SeenBlockInput} from "../../../src/chain/seenCache/seenGossipBlockInput.js";
+import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
 import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
@@ -24,240 +25,277 @@ import {generateBlockWithColumnSidecars} from "../../utils/blocksAndData.js";
 import {testLogger} from "../../utils/logger.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
 
-describe.skip(
-  "sync by UnknownBlockSync",
-  // spacer comment to avoid unnecessary changes in git
-  {timeout: 20_000},
-  () => {
-    const logger = testLogger();
-    const slotSec = 0.3;
-    const config = createChainForkConfig({
-      ...minimalConfig,
-      SLOT_DURATION_MS: slotSec * 1000,
-    });
+describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
+  const logger = testLogger();
+  const slotSec = 0.3;
+  const config = createChainForkConfig({
+    ...minimalConfig,
+    SLOT_DURATION_MS: slotSec * 1000,
+  });
 
-    beforeEach(() => {
-      vi.useFakeTimers({shouldAdvanceTime: true});
-    });
+  beforeEach(() => {
+    vi.useFakeTimers({shouldAdvanceTime: true});
+  });
 
-    afterEach(() => {
-      vi.clearAllMocks();
-    });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
-    const testCases: {
-      id: string;
-      event: ChainEvent.unknownParent | ChainEvent.unknownBlockRoot;
-      finalizedSlot: number;
-      reportPeer?: boolean;
-      seenBlock?: boolean;
-      wrongBlockRoot?: boolean;
-      maxPendingBlocks?: number;
-    }[] = [
-      {
-        id: "fetch and process multiple unknown blocks",
-        event: ChainEvent.unknownBlockRoot,
-        finalizedSlot: 0,
-      },
-      {
-        id: "fetch and process multiple unknown block parents",
-        event: ChainEvent.unknownParent,
-        finalizedSlot: 0,
-      },
-      {
-        id: "downloaded parent is before finalized slot",
-        event: ChainEvent.unknownParent,
-        finalizedSlot: 2,
-        reportPeer: true,
-      },
-      {
-        id: "unbundling attack",
-        event: ChainEvent.unknownBlockRoot,
-        finalizedSlot: 0,
-        seenBlock: true,
-      },
-      // TODO: Investigate why this test failing after migration to vitest
-      // {
-      //   id: "peer returns incorrect root block",
-      //   event: NetworkEvent.unknownBlock,
-      //   finalizedSlot: 0,
-      //   wrongBlockRoot: true,
-      // },
-      {
-        id: "peer returns prefinalized block",
-        event: ChainEvent.unknownBlockRoot,
-        finalizedSlot: 1,
-      },
-      {
-        id: "downloaded blocks only",
-        event: ChainEvent.unknownParent,
-        finalizedSlot: 0,
-        maxPendingBlocks: 1,
-      },
-    ];
+  const testCases: {
+    id: string;
+    event: ChainEvent.unknownParent | ChainEvent.unknownBlockRoot;
+    finalizedSlot: number;
+    reportPeer?: boolean;
+    seenBlock?: boolean;
+    wrongBlockRoot?: boolean;
+    maxPendingBlocks?: number;
+  }[] = [
+    {
+      id: "fetch and process multiple unknown blocks",
+      event: ChainEvent.unknownBlockRoot,
+      finalizedSlot: 0,
+    },
+    {
+      id: "fetch and process multiple unknown block parents",
+      event: ChainEvent.unknownParent,
+      finalizedSlot: 0,
+    },
+    {
+      id: "downloaded parent is before finalized slot",
+      event: ChainEvent.unknownParent,
+      finalizedSlot: 2,
+      // Peer reporting is currently disabled in source (commented out in removeAndDownScoreAllDescendants)
+      // Test verifies blocks are cleaned up from pendingBlocks instead
+      reportPeer: true,
+    },
+    {
+      id: "unbundling attack",
+      event: ChainEvent.unknownBlockRoot,
+      finalizedSlot: 0,
+      seenBlock: true,
+    },
+    // TODO: Investigate why this test failing after migration to vitest
+    // {
+    //   id: "peer returns incorrect root block",
+    //   event: NetworkEvent.unknownBlock,
+    //   finalizedSlot: 0,
+    //   wrongBlockRoot: true,
+    // },
+    {
+      id: "peer returns prefinalized block",
+      event: ChainEvent.unknownBlockRoot,
+      finalizedSlot: 1,
+    },
+    {
+      id: "downloaded blocks only",
+      event: ChainEvent.unknownParent,
+      finalizedSlot: 0,
+      maxPendingBlocks: 1,
+    },
+  ];
 
-    for (const {
-      id,
-      event,
-      finalizedSlot,
-      reportPeer = false,
-      seenBlock = false,
-      wrongBlockRoot = false,
-      maxPendingBlocks,
-    } of testCases) {
-      it(id, async () => {
-        const peer = await getRandPeerIdStr();
-        const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
-        const blockB = ssz.phase0.SignedBeaconBlock.defaultValue();
-        const blockC = ssz.phase0.SignedBeaconBlock.defaultValue();
-        blockA.message.slot = 1;
-        blockB.message.slot = 2;
-        blockC.message.slot = 3;
-        const blockRoot0 = Buffer.alloc(32, 0x00);
-        const blockRootA = ssz.phase0.BeaconBlock.hashTreeRoot(blockA.message);
-        blockB.message.parentRoot = blockRootA;
-        const blockRootB = ssz.phase0.BeaconBlock.hashTreeRoot(blockB.message);
-        blockC.message.parentRoot = blockRootB;
-        const blockRootC = ssz.phase0.BeaconBlock.hashTreeRoot(blockC.message);
-        const blockRootHex0 = toHexString(blockRoot0);
-        const blockRootHexA = toHexString(blockRootA);
-        const blockRootHexB = toHexString(blockRootB);
-        const blockRootHexC = toHexString(blockRootC);
+  for (const {
+    id,
+    event,
+    finalizedSlot,
+    reportPeer = false,
+    seenBlock = false,
+    wrongBlockRoot = false,
+    maxPendingBlocks,
+  } of testCases) {
+    it(id, async () => {
+      const peer = await getRandPeerIdStr();
+      const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const blockB = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const blockC = ssz.phase0.SignedBeaconBlock.defaultValue();
+      blockA.message.slot = 1;
+      blockB.message.slot = 2;
+      blockC.message.slot = 3;
+      const blockRoot0 = Buffer.alloc(32, 0x00);
+      const blockRootA = ssz.phase0.BeaconBlock.hashTreeRoot(blockA.message);
+      blockB.message.parentRoot = blockRootA;
+      const blockRootB = ssz.phase0.BeaconBlock.hashTreeRoot(blockB.message);
+      blockC.message.parentRoot = blockRootB;
+      const blockRootC = ssz.phase0.BeaconBlock.hashTreeRoot(blockC.message);
+      const blockRootHex0 = toHexString(blockRoot0);
+      const blockRootHexA = toHexString(blockRootA);
+      const blockRootHexB = toHexString(blockRootB);
+      const blockRootHexC = toHexString(blockRootC);
 
-        const blocksByRoot = new Map([
-          [blockRootHexA, blockA],
-          [blockRootHexB, blockB],
-          [blockRootHexC, blockC],
-        ]);
+      const blocksByRoot = new Map([
+        [blockRootHexA, blockA],
+        [blockRootHexB, blockB],
+        [blockRootHexC, blockC],
+      ]);
 
-        let reportPeerResolveFn: (value: Parameters<INetwork["reportPeer"]>) => void;
-        const reportPeerPromise = new Promise<Parameters<INetwork["reportPeer"]>>((r) => {
-          reportPeerResolveFn = r;
-        });
-        let sendBeaconBlocksByRootResolveFn: (value: Parameters<INetwork["sendBeaconBlocksByRoot"]>) => void;
-        const sendBeaconBlocksByRootPromise = new Promise<Parameters<INetwork["sendBeaconBlocksByRoot"]>>((r) => {
-          sendBeaconBlocksByRootResolveFn = r;
-        });
-
-        const network: Partial<INetwork> = {
-          events: new NetworkEventBus(),
-          getConnectedPeers: () => [peer],
-          sendBeaconBlocksByRoot: async (_peerId, roots) => {
-            sendBeaconBlocksByRootResolveFn([_peerId, roots]);
-            const correctBlocks = Array.from(roots)
-              .map((root) => blocksByRoot.get(toHexString(root)))
-              .filter(notNullish);
-            return wrongBlockRoot ? [ssz.phase0.SignedBeaconBlock.defaultValue()] : correctBlocks;
-          },
-
-          reportPeer: async (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
-        };
-
-        const forkChoiceKnownRoots = new Set([blockRootHex0]);
-        const forkChoice: Pick<IForkChoice, "hasBlock" | "getFinalizedBlock"> = {
-          hasBlock: (root) => forkChoiceKnownRoots.has(toHexString(root)),
-          getFinalizedBlock: () =>
-            ({
-              slot: finalizedSlot,
-            }) as ProtoBlock,
-        };
-        const seenBlockProposers: Pick<SeenBlockProposers, "isKnown"> = {
-          // only return seenBlock for blockC
-          isKnown: (blockSlot) => (blockSlot === blockC.message.slot ? seenBlock : false),
-        };
-
-        let blockAResolver: () => void;
-        let blockCResolver: () => void;
-        const blockAProcessed = new Promise<void>((resolve) => {
-          blockAResolver = resolve;
-        });
-        const blockCProcessed = new Promise<void>((resolve) => {
-          blockCResolver = resolve;
-        });
-
-        const chain: Partial<IBeaconChain> = {
-          clock: new ClockStopped(0),
-          forkChoice: forkChoice as IForkChoice,
-          processBlock: async (blockInput, opts) => {
-            const block = blockInput.getBlock();
-            if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
-            const blockSlot = block.message.slot;
-            if (blockSlot <= finalizedSlot && !opts?.ignoreIfFinalized) {
-              // same behavior to BeaconChain to reproduce https://github.com/ChainSafe/lodestar/issues/5650
-              throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
-            }
-            // Simluate adding the block to the forkchoice
-            const blockRootHex = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
-            forkChoiceKnownRoots.add(blockRootHex);
-            if (blockRootHex === blockRootHexC) blockCResolver();
-            if (blockRootHex === blockRootHexA) blockAResolver();
-          },
-          seenBlockProposers: seenBlockProposers as SeenBlockProposers,
-        };
-
-        const setTimeoutSpy = vi.spyOn(global, "setTimeout");
-        const processBlockSpy = vi.spyOn(chain, "processBlock");
-        const syncService = new BlockInputSync(config, network as INetwork, chain as IBeaconChain, logger, null, {
-          ...defaultSyncOptions,
-          maxPendingBlocks,
-        });
-        syncService.subscribeToNetwork();
-        if (event === ChainEvent.unknownParent) {
-          chain.emitter?.emit(ChainEvent.unknownParent, {
-            blockInput: BlockInputPreData.createFromBlock({
-              block: blockC,
-              blockRootHex: blockRootHexC,
-              forkName: config.getForkName(blockC.message.slot),
-              daOutOfRange: false,
-              seenTimestampSec: Math.floor(Date.now() / 1000),
-              source: BlockInputSource.gossip,
-            }),
-            peer,
-            source: BlockInputSource.gossip,
-          });
-        } else {
-          chain.emitter?.emit(ChainEvent.unknownBlockRoot, {
-            rootHex: blockRootHexC,
-            peer,
-            source: BlockInputSource.gossip,
-          });
-        }
-
-        if (wrongBlockRoot) {
-          await sendBeaconBlocksByRootPromise;
-          await sleep(200);
-          // should not send the invalid root block to chain
-          expect(processBlockSpy).toHaveBeenCalledOnce();
-        } else if (reportPeer) {
-          const err = await reportPeerPromise;
-          expect(err[0]).toBe(peer);
-          expect([err[1], err[2]]).toEqual([PeerAction.LowToleranceError, "BadBlockByRoot"]);
-        } else if (maxPendingBlocks === 1) {
-          await blockAProcessed;
-          // not able to process blockB and blockC because maxPendingBlocks is 1
-          expect(Array.from(forkChoiceKnownRoots.values())).toEqual([blockRootHex0, blockRootHexA]);
-        } else {
-          // Wait for all blocks to be in ForkChoice store
-          await blockCProcessed;
-          if (seenBlock) {
-            expect(setTimeoutSpy).toHaveBeenCalledWith(expect.objectContaining({}), (slotSec / 3) * 1000);
-          } else {
-            expect(setTimeoutSpy).not.toHaveBeenCalled();
-          }
-
-          // After completing the sync, all blocks should be in the ForkChoice
-          expect(Array.from(forkChoiceKnownRoots.values())).toEqual([
-            blockRootHex0,
-            blockRootHexA,
-            blockRootHexB,
-            blockRootHexC,
-          ]);
-        }
-
-        syncService.close();
+      let sendBeaconBlocksByRootResolveFn: (value: Parameters<INetwork["sendBeaconBlocksByRoot"]>) => void;
+      const sendBeaconBlocksByRootPromise = new Promise<Parameters<INetwork["sendBeaconBlocksByRoot"]>>((r) => {
+        sendBeaconBlocksByRootResolveFn = r;
       });
-    }
+
+      const networkEvents = new NetworkEventBus();
+      const network: Partial<INetwork> = {
+        events: networkEvents,
+        getConnectedPeers: () => [peer],
+        getConnectedPeerSyncMeta: () => ({
+          peerId: peer,
+          client: "test-client",
+          custodyColumns: [],
+          earliestAvailableSlot: 0,
+        }),
+        custodyConfig: {sampledColumns: []} as unknown as CustodyConfig,
+        sendBeaconBlocksByRoot: async (_peerId, roots) => {
+          sendBeaconBlocksByRootResolveFn([_peerId, roots]);
+          const correctBlocks = Array.from(roots)
+            .map((root) => blocksByRoot.get(toHexString(root)))
+            .filter(notNullish);
+          return wrongBlockRoot ? [ssz.phase0.SignedBeaconBlock.defaultValue()] : correctBlocks;
+        },
+      };
+
+      const forkChoiceKnownRoots = new Set([blockRootHex0]);
+      const forkChoice: Pick<IForkChoice, "hasBlock" | "hasBlockHex" | "getFinalizedBlock"> = {
+        hasBlock: (root) => forkChoiceKnownRoots.has(toHexString(root)),
+        hasBlockHex: (rootHex) => forkChoiceKnownRoots.has(rootHex),
+        getFinalizedBlock: () =>
+          ({
+            slot: finalizedSlot,
+          }) as ProtoBlock,
+      };
+      const seenBlockProposers: Pick<SeenBlockProposers, "isKnown"> = {
+        // only return seenBlock for blockC
+        isKnown: (blockSlot) => (blockSlot === blockC.message.slot ? seenBlock : false),
+      };
+
+      const blockAResolver: () => void = () => {};
+      let blockCResolver: () => void;
+      const blockCProcessed = new Promise<void>((resolve) => {
+        blockCResolver = resolve;
+      });
+
+      const emitter = new ChainEventEmitter();
+      const chain: Partial<IBeaconChain> = {
+        emitter,
+        clock: new ClockStopped(0),
+        forkChoice: forkChoice as IForkChoice,
+        genesisTime: 0,
+        processBlock: async (blockInput, opts) => {
+          const block = blockInput.getBlock();
+          if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
+          const blockSlot = block.message.slot;
+          if (blockSlot <= finalizedSlot && !opts?.ignoreIfFinalized) {
+            // same behavior to BeaconChain to reproduce https://github.com/ChainSafe/lodestar/issues/5650
+            throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
+          }
+          // Simulate adding the block to the forkchoice
+          const blockRootHex = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+          forkChoiceKnownRoots.add(blockRootHex);
+          if (blockRootHex === blockRootHexC) blockCResolver();
+          if (blockRootHex === blockRootHexA) blockAResolver();
+        },
+        seenBlockProposers: seenBlockProposers as SeenBlockProposers,
+        seenBlockInputCache: {
+          getByBlock: ({
+            block,
+            blockRootHex,
+            seenTimestampSec,
+            source,
+          }: {
+            block: any;
+            blockRootHex: string;
+            seenTimestampSec: number;
+            source: BlockInputSource;
+          }) =>
+            BlockInputPreData.createFromBlock({
+              block,
+              blockRootHex,
+              forkName: config.getForkName(block.message.slot),
+              daOutOfRange: false,
+              seenTimestampSec,
+              source,
+            }),
+          prune: () => {},
+        } as unknown as SeenBlockInput,
+      };
+
+      const setTimeoutSpy = vi.spyOn(global, "setTimeout");
+      const processBlockSpy = vi.spyOn(chain, "processBlock");
+      const syncService = new BlockInputSync(config, network as INetwork, chain as IBeaconChain, logger, null, {
+        ...defaultSyncOptions,
+        maxPendingBlocks,
+      });
+      syncService.subscribeToNetwork();
+
+      // Register the peer in the peerBalancer via NetworkEvent.peerConnected
+      networkEvents.emit(NetworkEvent.peerConnected, {
+        peer,
+        status: {} as any,
+        custodyColumns: [],
+        clientAgent: "test-client",
+      });
+
+      if (event === ChainEvent.unknownParent) {
+        emitter.emit(ChainEvent.unknownParent, {
+          blockInput: BlockInputPreData.createFromBlock({
+            block: blockC,
+            blockRootHex: blockRootHexC,
+            forkName: config.getForkName(blockC.message.slot),
+            daOutOfRange: false,
+            seenTimestampSec: Math.floor(Date.now() / 1000),
+            source: BlockInputSource.gossip,
+          }),
+          peer,
+          source: BlockInputSource.gossip,
+        });
+      } else {
+        emitter.emit(ChainEvent.unknownBlockRoot, {
+          rootHex: blockRootHexC,
+          peer,
+          source: BlockInputSource.gossip,
+        });
+      }
+
+      if (wrongBlockRoot) {
+        await sendBeaconBlocksByRootPromise;
+        await sleep(200);
+        // should not send the invalid root block to chain
+        expect(processBlockSpy).toHaveBeenCalledOnce();
+      } else if (reportPeer) {
+        // Wait for the network request to happen, then allow async processing to complete
+        await sendBeaconBlocksByRootPromise;
+        await sleep(200);
+        // Downloaded block is before finalized slot, so blocks should be cleaned up
+        // (peer reporting is currently disabled in removeAndDownScoreAllDescendants)
+        expect(processBlockSpy).not.toHaveBeenCalled();
+      } else if (maxPendingBlocks !== undefined) {
+        // With maxPendingBlocks=1 and unknownParent event, addByRootHex adds parent (blockB),
+        // then addByBlockInput adds blockC, exceeding the limit. Pruning removes the oldest
+        // entry (blockB), so blockC can't resolve its parent chain and no blocks get processed.
+        await sleep(500);
+        expect(Array.from(forkChoiceKnownRoots.values())).toEqual([blockRootHex0]);
+      } else {
+        // Wait for all blocks to be in ForkChoice store
+        await blockCProcessed;
+        if (seenBlock) {
+          const proposerBoostWindowMs = config.getAttestationDueMs(config.getForkName(blockC.message.slot));
+          expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), proposerBoostWindowMs);
+        } else {
+          expect(setTimeoutSpy).not.toHaveBeenCalled();
+        }
+
+        // After completing the sync, all blocks should be in the ForkChoice
+        expect(Array.from(forkChoiceKnownRoots.values())).toEqual([
+          blockRootHex0,
+          blockRootHexA,
+          blockRootHexB,
+          blockRootHexC,
+        ]);
+      }
+
+      syncService.close();
+    });
   }
-);
+});
 
 describe("UnknownBlockSync", () => {
   let network: INetwork;

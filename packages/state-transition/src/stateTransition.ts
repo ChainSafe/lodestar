@@ -76,6 +76,7 @@ export enum StateHashTreeRootSource {
   prepareNextEpoch = "prepare_next_epoch",
   regenState = "regen_state",
   computeNewStateRoot = "compute_new_state_root",
+  computeEnvelopeStateRoot = "compute_envelope_state_root",
 }
 
 /**
@@ -111,7 +112,7 @@ export function stateTransition(
   postState = processSlotsWithTransientCache(postState, blockSlot, options, {metrics, validatorMonitor});
 
   // Verify proposer signature only
-  if (verifyProposer && !verifyProposerSignature(postState.config, postState.epochCtx.index2pubkey, signedBlock)) {
+  if (verifyProposer && !verifyProposerSignature(postState.config, postState.epochCtx.pubkeyCache, signedBlock)) {
     throw new Error("Invalid block signature");
   }
 

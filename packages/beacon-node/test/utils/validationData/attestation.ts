@@ -153,13 +153,13 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
     bls: blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics: null, index2pubkey: state.epochCtx.index2pubkey})
+      ? new BlsSingleThreadVerifier({metrics: null, pubkeyCache: state.epochCtx.pubkeyCache})
       : new BlsMultiThreadWorkerPool(
           {},
-          {logger: testLogger(), metrics: null, index2pubkey: state.epochCtx.index2pubkey}
+          {logger: testLogger(), metrics: null, pubkeyCache: state.epochCtx.pubkeyCache}
         ),
     waitForBlock: () => Promise.resolve(false),
-    index2pubkey: state.epochCtx.index2pubkey,
+    pubkeyCache: state.epochCtx.pubkeyCache,
     shufflingCache,
     opts: defaultChainOptions,
   } as Partial<IBeaconChain> as IBeaconChain;

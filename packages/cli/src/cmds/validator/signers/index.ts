@@ -20,8 +20,8 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
  * --interopIndexes
  * --fromMnemonic, then requires --mnemonicIndexes
  * --importKeystores, then requires --importKeystoresPassword
- * --externalSigner.fetch, then requires --externalSigner.url
- * --externalSigner.pubkeys, then requires --externalSigner.url
+ * --externalSigner.fetch, then requires --externalSigner.urls
+ * --externalSigner.pubkeys, then requires --externalSigner.urls
  * else load from persisted
  * - both remote keys and local keystores
  *
@@ -52,7 +52,7 @@ export async function getSignersFromArgs(
     const indexes = args.interopIndexes;
     // Using a remote signer with TESTNETS
     if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-      return getRemoteSigners(args);
+      return getRemoteSigners(args, logger);
     }
     return indexes.map((index) => ({type: SignerType.Local, secretKey: interopSecretKey(index)}));
   }
@@ -105,7 +105,7 @@ export async function getSignersFromArgs(
 
   // Remote keys are declared manually or will be fetched from external signer
   if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-    return getRemoteSigners(args);
+    return getRemoteSigners(args, logger);
   }
 
   // Read keys from local account manager
@@ -153,24 +153,91 @@ export function getSignerPubkeyHex(signer: Signer): string {
   }
 }
 
-async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<Signer[]> {
-  const externalSignerUrl = args["externalSigner.url"];
-  if (!externalSignerUrl) {
+async function getRemoteSigners(
+  args: IValidatorCliArgs & GlobalArgs,
+  logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>
+): Promise<Signer[]> {
+  const externalSignerUrls = args["externalSigner.urls"] ?? [];
+
+  if (externalSignerUrls.length === 0) {
     throw new YargsError(
-      `Must set externalSigner.url with ${
+      `Must set externalSigner.urls with ${
         args["externalSigner.pubkeys"] ? "externalSigner.pubkeys" : "externalSigner.fetch"
       }`
     );
   }
-  if (!isValidHttpUrl(externalSignerUrl)) {
-    throw new YargsError(`Invalid external signer URL: ${externalSignerUrl}`);
+
+  for (const url of externalSignerUrls) {
+    if (!isValidHttpUrl(url)) {
+      throw new YargsError(`Invalid external signer URL: ${url}`);
+    }
   }
+
   if (args["externalSigner.pubkeys"] && args["externalSigner.pubkeys"].length === 0) {
     throw new YargsError("externalSigner.pubkeys is set to an empty list");
   }
 
-  const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl));
-  assertValidPubkeysHex(pubkeys);
+  const signers: Signer[] = [];
 
-  return pubkeys.map((pubkey) => ({type: SignerType.Remote, pubkey, url: externalSignerUrl}));
+  if (args["externalSigner.pubkeys"]) {
+    // If pubkeys are explicitly provided with multiple URLs, warn user about limitation
+    if (externalSignerUrls.length > 1) {
+      throw new YargsError(
+        "Cannot use --externalSigner.pubkeys with multiple --externalSigner.urls. " +
+          "When using --externalSigner.pubkeys, only a single URL is allowed. " +
+          "To use multiple signers, use --externalSigner.fetch instead to fetch pubkeys from each signer."
+      );
+    }
+    // If pubkeys are explicitly provided, assign them to the first (and only) URL
+    // This maintains backward compatibility
+    const pubkeys = args["externalSigner.pubkeys"];
+    assertValidPubkeysHex(pubkeys);
+    for (const pubkey of pubkeys) {
+      signers.push({type: SignerType.Remote, pubkey, url: externalSignerUrls[0]});
+    }
+  } else {
+    // Fetch pubkeys from all external signer URLs, fail startup if any signer is unavailable
+    const results: {url: string; pubkeys: string[]}[] = [];
+    const failures: {url: string; error: string}[] = [];
+    await Promise.all(
+      externalSignerUrls.map(async (url) => {
+        try {
+          const pubkeys = await externalSignerGetKeys(url);
+          results.push({url, pubkeys});
+        } catch (e) {
+          const errorMsg = e instanceof Error ? e.message : String(e);
+          failures.push({url, error: errorMsg});
+        }
+      })
+    );
+    if (failures.length > 0) {
+      const errorMessages = failures.map((f) => `  ${f.url}: ${f.error}`).join("\n");
+      throw new YargsError(
+        `Failed to fetch pubkeys from external signer(s):\n${errorMessages}\n` +
+          "Please verify the signer URLs are correct and reachable."
+      );
+    }
+
+    const seenPubkeys = new Map<string, string>();
+    for (const {url, pubkeys} of results) {
+      if (pubkeys.length > 0) {
+        assertValidPubkeysHex(pubkeys);
+        for (const pubkey of pubkeys) {
+          const firstUrl = seenPubkeys.get(pubkey);
+          if (firstUrl !== undefined) {
+            logger.warn("Duplicate pubkey found on multiple signers, using first occurrence only", {
+              pubkey,
+              firstUrl,
+              duplicateUrl: url,
+            });
+            continue;
+          }
+          seenPubkeys.set(pubkey, url);
+          signers.push({type: SignerType.Remote, pubkey, url});
+        }
+      }
+    }
+  }
+
+  return signers;
 }
