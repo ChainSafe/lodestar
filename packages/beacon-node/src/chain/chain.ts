@@ -942,9 +942,17 @@ export class BeaconChain implements IBeaconChain {
     // This avoids ParentBlockHashMismatch from clients that haven't imported the parent
     // envelope yet when they receive our block.
     if (isForkPostGloas(fork)) {
-      const pendingParent = this.forkChoice.getBlockHex(parentBlock.blockRoot, PayloadStatus.PENDING);
-      if (pendingParent) {
-        parentBlock = pendingParent;
+      try {
+        const pendingParent = this.forkChoice.getBlockHex(parentBlock.blockRoot, PayloadStatus.PENDING);
+        if (pendingParent) {
+          parentBlock = pendingParent;
+        }
+      } catch (e) {
+        this.logger.debug(
+          "Pending parent variant unavailable, using canonical parent for block production",
+          {slot, parentBlockRoot: parentBlock.blockRoot},
+          e as Error
+        );
       }
     }
 
