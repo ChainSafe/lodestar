@@ -640,8 +640,8 @@ describe("Gloas Fork Choice", () => {
     it("EMPTY vs FULL from current slot uses weight comparison", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
-      protoArray.onBlock(block, blockSlot);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot);
+      protoArray.onBlock(block, blockSlot, null);
+      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, null);
 
       const pendingNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
       if (!pendingNode) throw new Error("Expected pendingNode to exist");
