@@ -217,9 +217,9 @@ export async function produceBlockBody<T extends BlockType>(
       feeRecipient,
     });
 
-    // Post-Gloas: use the FULL variant's execution block hash if available, since the
-    // state's latestBlockHash may be stale (from the PENDING variant which inherits parent's hash)
-    const headExecHash = this.forkChoice.getHeadExecutionBlockHash() ?? undefined;
+    // Keep parent hash selection aligned with the canonical proposer state. Overriding
+    // with a FULL sibling hash can diverge from peers tracking EMPTY/PENDING for the same
+    // beacon root and produce cross-client ParentBlockHashMismatch rejections.
 
     // Get execution payload from EL
     const prepareRes = await prepareExecutionPayload(
@@ -230,8 +230,7 @@ export async function produceBlockBody<T extends BlockType>(
       safeBlockHash,
       finalizedBlockHash ?? ZERO_HASH_HEX,
       gloasState,
-      feeRecipient,
-      headExecHash
+      feeRecipient
     );
 
     const {prepType, payloadId} = prepareRes;

@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostGloas} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
@@ -166,11 +166,9 @@ export class PrepareNextSlotScheduler {
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
 
-          // Post-Gloas: the PENDING variant's state has a stale latestBlockHash (parent's execution hash).
-          // If the FULL variant exists (payload envelope was imported), use its execution block hash instead.
-          const headExecutionBlockHashOverride = isForkPostGloas(fork)
-            ? (this.chain.forkChoice.getHeadExecutionBlockHash() ?? undefined)
-            : undefined;
+          // NOTE: For Gloas, keep parent hash selection aligned with the canonical prepared state.
+          // Using a FULL sibling override here can diverge from peers that still track EMPTY/PENDING
+          // for the same beacon root, and lead to bid.parent_block_hash mismatches cross-client.
 
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
@@ -183,8 +181,7 @@ export class PrepareNextSlotScheduler {
             safeBlockHash,
             finalizedBlockHash,
             updatedPrepareState,
-            feeRecipient,
-            headExecutionBlockHashOverride
+            feeRecipient
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,

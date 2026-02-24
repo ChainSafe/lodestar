@@ -128,14 +128,14 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
     if (latestCheckpointStateCtx) {
-      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot, regenCaller, opts);
+      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot, regenCaller, opts, payloadPresent);
     }
 
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
     const blockStateCtx = await this.getState(block.stateRoot, regenCaller, allowDiskReload);
-    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, regenCaller, opts);
+    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, regenCaller, opts, payloadPresent);
   }
 
   /**
@@ -336,9 +336,10 @@ async function processSlotsByCheckpoint(
   preState: CachedBeaconStateAllForks,
   slot: Slot,
   regenCaller: RegenCaller,
-  opts: StateRegenerationOpts
+  opts: StateRegenerationOpts,
+  payloadPresent?: boolean
 ): Promise<CachedBeaconStateAllForks> {
-  let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
+  let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts, payloadPresent);
   if (postState.slot < slot) {
     postState = processSlots(postState, slot, opts, modules);
   }
@@ -368,7 +369,8 @@ export async function processSlotsToNearestCheckpoint(
   preState: CachedBeaconStateAllForks,
   slot: Slot,
   regenCaller: RegenCaller,
-  opts: StateRegenerationOpts
+  opts: StateRegenerationOpts,
+  payloadPresent?: boolean
 ): Promise<CachedBeaconStateAllForks> {
   const preSlot = preState.slot;
   const postSlot = slot;
@@ -398,11 +400,14 @@ export async function processSlotsToNearestCheckpoint(
     // This may becomes the "official" checkpoint state if the 1st block of epoch is skipped
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    // processSlots() only does epoch transitions, never processes payloads
-    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
-    // Post-Gloas: result is a block state (payloadPresent=false)
+    // processSlots() only does epoch transitions, never processes payloads.
+    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block).
+    // Post-Gloas: payloadPresent distinguishes block state (false) from payload/envelope state (true).
+    // The caller provides the correct variant via the payloadPresent parameter.
+    // Without it, we default to false (block state) for Gloas to match the common case.
     const isGloas = checkpointState.config.getForkSeq(checkpointState.slot) >= ForkSeq.gloas;
-    checkpointStateCache.add(cp, checkpointState, !isGloas);
+    const cpPayloadPresent = isGloas ? (payloadPresent ?? false) : true;
+    checkpointStateCache.add(cp, checkpointState, cpPayloadPresent);
     // consumers should not mutate state ever
     emitter?.emit(ChainEvent.checkpoint, cp, checkpointState);
 
