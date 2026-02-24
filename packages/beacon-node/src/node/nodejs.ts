@@ -356,9 +356,9 @@ export class BeaconNode {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
       this.sync.close();
+      this.backfillSync?.close();
       if (this.restApi) await this.restApi.close();
       await this.network.close();
-      await this.backfillSync?.close();
       if (this.metricsServer) await this.metricsServer.close();
       if (this.monitoring) await this.monitoring.close();
       await this.chain.persistToDisk();
