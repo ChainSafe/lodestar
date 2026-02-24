@@ -919,7 +919,7 @@ export class ProtoArray {
    * For EMPTY/FULL variants from slot n-1: implements tiebreaker logic based on should_extend_payload
    * For older blocks: returns node.payloadStatus
    *
-   * Note: pre-gloas logic won't reach here. Since it is impossible to have two nodes with same weight and root
+   * Note: pre-gloas logic won't reach here. Pre-Gloas blocks have different roots, so they are always resolved by the root tiebreaker before reaching here.
    */
   private getPayloadStatusTiebreaker(node: ProtoNode, currentSlot: Slot, proposerBoostRoot: RootHex | null): number {
     // PENDING nodes always return PENDING (no tiebreaker needed)
@@ -1222,9 +1222,28 @@ export class ProtoArray {
 
           // Pre-fulu we pick whichever has higher weight, tie-breaker by root
           // Post-fulu we pick whichever has higher weight, then tie-breaker by root, then tie-breaker by `getPayloadStatusTiebreaker`
-          if (childNode.weight !== bestChildNode.weight) {
-            // Different weights, choose the winner by weight
-            newChildAndDescendant = childNode.weight >= bestChildNode.weight ? changeToChild : noChange;
+          //
+          // Per spec modified-get_weight (gloas/fork-choice.md#L442): a Gloas EMPTY/FULL block from the
+          // previous slot (n-1) has effective weight = 0 regardless of accumulated attestations.
+          // The isGloasBlock() guard prevents incorrectly zeroing pre-Gloas FULL blocks, which also have
+          // payloadStatus=FULL but must use their actual accumulated weight.
+          // https://github.com/ethereum/consensus-specs/blob/69a2582d5d62c914b24894bdb65f4bd5d4e49ae4/specs/gloas/fork-choice.md?plain=1#L442
+          const childEffectiveWeight =
+            !isGloasBlock(childNode) ||
+            childNode.payloadStatus === PayloadStatus.PENDING ||
+            childNode.slot + 1 !== currentSlot
+              ? childNode.weight
+              : 0;
+          const bestChildEffectiveWeight =
+            !isGloasBlock(bestChildNode) ||
+            bestChildNode.payloadStatus === PayloadStatus.PENDING ||
+            bestChildNode.slot + 1 !== currentSlot
+              ? bestChildNode.weight
+              : 0;
+
+          if (childEffectiveWeight !== bestChildEffectiveWeight) {
+            // Different effective weights, choose the winner by weight
+            newChildAndDescendant = childEffectiveWeight >= bestChildEffectiveWeight ? changeToChild : noChange;
             break outer;
           }
 
@@ -1234,11 +1253,7 @@ export class ProtoArray {
             break outer;
           }
 
-          // Edge case: when comparing EMPTY vs FULL variants of the same block from slot n-1 or n, weights are hardcoded to 0
-          // https://github.com/ethereum/consensus-specs/blob/69a2582d5d62c914b24894bdb65f4bd5d4e49ae4/specs/gloas/fork-choice.md?plain=1#L442
-          // in this case we use `get_payload_status_tiebreaker()` directly because weights(0) and roots are equal
-
-          // This should always be the EMPTY vs FULL edge case for gloas
+          // Same effective weight and same root — must be Gloas EMPTY vs FULL from n-1
           if (!isGloasBlock(childNode)) {
             throw new ProtoArrayError({
               code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK,
@@ -1253,9 +1268,7 @@ export class ProtoArray {
             });
           }
 
-          // childNode and bestChildNode should not be PENDING at this point, however we handled it in getPayloadStatusTiebreaker(), same to the spec
-
-          // Same weight and same root (or edge case), tie-breaker by payload status
+          // Tie-breaker by payload status (EMPTY vs FULL)
           const childTiebreaker = this.getPayloadStatusTiebreaker(childNode, currentSlot, proposerBoostRoot);
           const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, proposerBoostRoot);
 
