@@ -71,7 +71,8 @@ describe("ProtoArray", () => {
         builderIndex: null,
         blockHashFromBid: null,
       },
-      genesisSlot + 1
+      genesisSlot + 1,
+      null
     );
 
     // Add block that is *not* a finalized descendant.
@@ -102,7 +103,8 @@ describe("ProtoArray", () => {
         builderIndex: null,
         blockHashFromBid: null,
       },
-      genesisSlot + 1
+      genesisSlot + 1,
+      null
     );
 
     // ancestorRoot, descendantRoot, isDescendant

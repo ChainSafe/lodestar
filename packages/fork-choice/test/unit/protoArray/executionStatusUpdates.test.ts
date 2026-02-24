@@ -127,7 +127,8 @@ function setupForkChoice(): ProtoArray {
         builderIndex: null,
         blockHashFromBid: null,
       },
-      block.slot
+      block.slot,
+      null
     );
   }
 

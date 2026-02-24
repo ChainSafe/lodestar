@@ -142,7 +142,7 @@ describe("Forkchoice", () => {
     for (let slot = genesisSlot + 1; slot <= tillSlot; slot++) {
       if (!skippedSlots.includes(slot)) {
         const block = getBlock(slot, skippedSlots);
-        protoArr.onBlock(block, block.slot);
+        protoArr.onBlock(block, block.slot, null);
       }
     }
   };
@@ -150,7 +150,7 @@ describe("Forkchoice", () => {
   it("getAllAncestorBlocks", () => {
     // Add block that is a finalized descendant.
     const block = getBlock(genesisSlot + 1);
-    protoArr.onBlock(block, block.slot);
+    protoArr.onBlock(block, block.slot, null);
     const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
     const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1));
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
@@ -174,7 +174,7 @@ describe("Forkchoice", () => {
       ...getBlock(genesisSlot + 10),
       parentRoot: finalizedRoot, // Connect directly to genesis
     };
-    protoArr.onBlock(forkBlock, forkBlock.slot);
+    protoArr.onBlock(forkBlock, forkBlock.slot, null);
 
     const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
