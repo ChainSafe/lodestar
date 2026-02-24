@@ -47,10 +47,10 @@ const STATUS_INBOUND_GRACE_PERIOD = 15 * 1000;
 const CHECK_PING_STATUS_INTERVAL = 10 * 1000;
 /** A peer is considered long connection if it's >= 1 day */
 const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
-/** Maximum number of identify attempts per peer */
-const IDENTIFY_MAX_ATTEMPTS = 3;
-/** Retry delays for identify attempts (ms). First attempt is immediate. */
-const IDENTIFY_RETRY_DELAYS_MS = [0, 5_000, 15_000];
+/** Retry delays for identify attempts (ms). The length determines the number of retries after the initial attempt. */
+const IDENTIFY_RETRY_DELAYS_MS = [5_000, 15_000];
+/** Maximum number of identify attempts per peer (1 initial + retries). */
+const IDENTIFY_MAX_ATTEMPTS = 1 + IDENTIFY_RETRY_DELAYS_MS.length;
 /** Ref https://github.com/ChainSafe/lodestar/issues/3423 */
 const DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS = 1000;
 /**
@@ -873,7 +873,9 @@ export class PeerManager {
 
     // remove the ping and status timer for the peer
     this.connectedPeers.delete(peerIdStr);
-    this.identifyInProgress.delete(peerIdStr);
+    // Note: identifyInProgress is NOT cleaned up here — the identify coroutine
+    // will detect the peer is gone (connectedPeers miss) and exit naturally.
+    // Cleaning it here would allow a reconnect race with a still-sleeping retry loop.
 
     this.logger.verbose(logMessage, logContext);
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
@@ -934,10 +936,8 @@ export class PeerManager {
         const peerData = this.connectedPeers.get(peerIdStr);
         if (!peerData || peerData.agentVersion !== null) return;
 
-        const delay = IDENTIFY_RETRY_DELAYS_MS[attempt];
-        if (delay > 0) {
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
+        const delay = IDENTIFY_RETRY_DELAYS_MS[attempt - 1];
+        await new Promise((resolve) => setTimeout(resolve, delay));
 
         // Re-check after delay — peer may have disconnected, identified, or superseded
         if (this.shutdownController.signal.aborted) return;
@@ -979,7 +979,7 @@ export class PeerManager {
           this.logger.debug("Identify failed, scheduling retry", {
             peerId: peerIdPretty,
             attempt,
-            nextRetryMs: IDENTIFY_RETRY_DELAYS_MS[attempt + 1],
+            nextRetryMs: IDENTIFY_RETRY_DELAYS_MS[attempt],
             error: errorMsg,
           });
         } else {
