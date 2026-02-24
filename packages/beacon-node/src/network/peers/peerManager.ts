@@ -166,8 +166,12 @@ export class PeerManager {
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
-  /** Prevents spawning concurrent identify loops for the same peer */
-  private readonly identifyInProgress = new Set<PeerIdStr>();
+  /** Maps peer to identify generation counter — prevents stale retry loops from interfering with newer ones */
+  private readonly identifyInProgress = new Map<PeerIdStr, number>();
+  /** Monotonic counter for identify generation tracking */
+  private identifyGenCounter = 0;
+  /** Aborted on close() to cancel in-flight identify retries */
+  private readonly shutdownController = new AbortController();
 
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
@@ -246,6 +250,7 @@ export class PeerManager {
     this.libp2p.services.components.events.removeEventListener("peer:identify", this.onPeerIdentify);
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
     for (const interval of this.intervals) clearInterval(interval);
+    this.shutdownController.abort();
   }
 
   /**
@@ -496,12 +501,19 @@ export class PeerManager {
       if (peerData?.agentVersion === null) {
         const peerIdStr = peer.toString();
         if (!this.identifyInProgress.has(peerIdStr)) {
-          this.identifyInProgress.add(peerIdStr);
-          void this.identifyPeer(peerIdStr, prettyPrintPeerId(peer), getConnection(this.libp2p, peerIdStr)).finally(
-            () => {
+          const generation = ++this.identifyGenCounter;
+          this.identifyInProgress.set(peerIdStr, generation);
+          void this.identifyPeer(
+            peerIdStr,
+            prettyPrintPeerId(peer),
+            getConnection(this.libp2p, peerIdStr),
+            generation
+          ).finally(() => {
+            // Only clear if this is still the current generation (no reconnect race)
+            if (this.identifyInProgress.get(peerIdStr) === generation) {
               this.identifyInProgress.delete(peerIdStr);
             }
-          );
+          });
         }
       }
     }
@@ -906,8 +918,17 @@ export class PeerManager {
    * Identify a peer with retry logic. Retries on transient errors (EOF, stream closing)
    * but gives up immediately on non-retryable errors (public key missing, peer mismatch).
    */
-  private async identifyPeer(peerIdStr: string, peerIdPretty: string, connection?: Connection): Promise<void> {
+  private async identifyPeer(
+    peerIdStr: string,
+    peerIdPretty: string,
+    connection: Connection | undefined,
+    generation: number
+  ): Promise<void> {
     for (let attempt = 0; attempt < IDENTIFY_MAX_ATTEMPTS; attempt++) {
+      // Bail out if shutdown or a newer identify loop superseded this one
+      if (this.shutdownController.signal.aborted) return;
+      if (this.identifyInProgress.get(peerIdStr) !== generation) return;
+
       if (attempt > 0) {
         // Check if peer still needs identification
         const peerData = this.connectedPeers.get(peerIdStr);
@@ -918,7 +939,9 @@ export class PeerManager {
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
 
-        // Re-check after delay — peer may have disconnected or been identified via peer:identify event
+        // Re-check after delay — peer may have disconnected, identified, or superseded
+        if (this.shutdownController.signal.aborted) return;
+        if (this.identifyInProgress.get(peerIdStr) !== generation) return;
         const updatedPeerData = this.connectedPeers.get(peerIdStr);
         if (!updatedPeerData || updatedPeerData.agentVersion !== null) return;
 

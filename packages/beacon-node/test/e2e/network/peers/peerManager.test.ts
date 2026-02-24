@@ -351,7 +351,9 @@ describe("network / peers / PeerManager", () => {
       const identifySpy = vi
         .spyOn(libp2p.services.identify, "identify")
         .mockRejectedValueOnce(new Error("Cannot write to a stream that is closing"))
-        .mockResolvedValue({agentVersion: "Lighthouse/v6.0.1"} as Awaited<ReturnType<typeof libp2p.services.identify.identify>>);
+        .mockResolvedValue({agentVersion: "Lighthouse/v6.0.1"} as Awaited<
+          ReturnType<typeof libp2p.services.identify.identify>
+        >);
 
       const inboundConnection = {
         id: "connection-1",
@@ -379,6 +381,173 @@ describe("network / peers / PeerManager", () => {
       const peerData = peerManager["connectedPeers"].get(peerId1.toString());
       expect(peerData?.agentVersion).toBe("Lighthouse/v6.0.1");
       expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("Should deduplicate concurrent identify calls from rapid status events", async () => {
+    const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+    let resolveIdentify: (v: {agentVersion: string}) => void;
+    const identifySpy = vi.spyOn(libp2p.services.identify, "identify").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveIdentify = resolve as typeof resolveIdentify;
+        })
+    );
+
+    const inboundConnection = {
+      id: "connection-1",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+
+    const remoteStatus = statusCache.get();
+
+    // Fire two status events rapidly — only one identify loop should start
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    await sleep(0);
+
+    expect(identifySpy).toHaveBeenCalledTimes(1);
+
+    // Resolve the pending identify
+    // biome-ignore lint/style/noNonNullAssertion: Variable is assigned inside mockImplementation callback
+    resolveIdentify!({agentVersion: "Teku/v24.0.0"});
+    await sleep(0);
+
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Teku/v24.0.0");
+  });
+
+  it("Should not retry identify on non-retryable errors", async () => {
+    vi.useFakeTimers();
+    try {
+      const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+      const identifySpy = vi
+        .spyOn(libp2p.services.identify, "identify")
+        .mockRejectedValueOnce(new Error("Public key was missing from the Noise handshake"));
+
+      const inboundConnection = {
+        id: "connection-1",
+        direction: "inbound",
+        status: "open",
+        remotePeer: peerId1,
+        close: async () => {},
+        abort: () => {},
+      } as unknown as Connection;
+
+      getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
+      await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+
+      const remoteStatus = statusCache.get();
+      networkEventBus.emit(NetworkEvent.reqRespRequest, {
+        request: {method: ReqRespMethod.Status, body: remoteStatus},
+        peer: peerId1,
+        peerClient: "Unknown",
+      });
+
+      // Advance past all retry delays — should still only have 1 attempt
+      await vi.advanceTimersByTimeAsync(20_000);
+
+      expect(identifySpy).toHaveBeenCalledTimes(1);
+      const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+      expect(peerData?.agentVersion).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("Should handle disconnect/reconnect race without breaking dedupe", async () => {
+    vi.useFakeTimers();
+    try {
+      const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+      // First identify will hang (simulating slow attempt), second will succeed
+      let rejectFirstIdentify: (e: Error) => void;
+      const identifySpy = vi
+        .spyOn(libp2p.services.identify, "identify")
+        .mockImplementationOnce(
+          () =>
+            new Promise((_resolve, reject) => {
+              rejectFirstIdentify = reject;
+            })
+        )
+        .mockResolvedValue({agentVersion: "Prysm/v6.0.0"} as Awaited<
+          ReturnType<typeof libp2p.services.identify.identify>
+        >);
+
+      const inboundConnection = {
+        id: "connection-1",
+        direction: "inbound",
+        status: "open",
+        remotePeer: peerId1,
+        close: async () => {},
+        abort: () => {},
+      } as unknown as Connection;
+
+      // 1. Connect + status → starts identify loop (generation 1)
+      getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
+      await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+      const remoteStatus = statusCache.get();
+      networkEventBus.emit(NetworkEvent.reqRespRequest, {
+        request: {method: ReqRespMethod.Status, body: remoteStatus},
+        peer: peerId1,
+        peerClient: "Unknown",
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(identifySpy).toHaveBeenCalledTimes(1);
+
+      // 2. Disconnect — clears identifyInProgress entry
+      // Remove from connections map so disconnect handler doesn't see remaining open connections
+      getConnectionsMap(libp2p).delete(peerId1.toString());
+      peerManager["onLibp2pPeerDisconnect"](new CustomEvent("evt", {detail: inboundConnection}));
+      expect(peerManager["identifyInProgress"].has(peerId1.toString())).toBe(false);
+
+      // 3. Reconnect + status → starts new identify loop (generation 2)
+      const newConnection = {
+        id: "connection-2",
+        direction: "inbound",
+        status: "open",
+        remotePeer: peerId1,
+        close: async () => {},
+        abort: () => {},
+      } as unknown as Connection;
+      getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [newConnection]});
+      await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: newConnection}));
+      networkEventBus.emit(NetworkEvent.reqRespRequest, {
+        request: {method: ReqRespMethod.Status, body: remoteStatus},
+        peer: peerId1,
+        peerClient: "Unknown",
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(identifySpy).toHaveBeenCalledTimes(2);
+
+      // 4. Reject first identify (simulating EOF) — its .finally() should NOT clear the new generation
+      // biome-ignore lint/style/noNonNullAssertion: Variable is assigned inside mockImplementation callback
+      rejectFirstIdentify!(new Error("stream EOF"));
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The new generation should still be tracked (not cleared by stale .finally())
+      // It should be cleared by the successful identify, not the stale one
+      const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+      expect(peerData?.agentVersion).toBe("Prysm/v6.0.0");
     } finally {
       vi.useRealTimers();
     }
