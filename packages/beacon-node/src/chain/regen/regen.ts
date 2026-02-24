@@ -112,13 +112,9 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const {checkpointStateCache} = this.modules;
     const epoch = computeEpochAtSlot(slot);
 
-    // Convert PayloadStatus to payloadPresent boolean
-    if (block.payloadStatus === PayloadStatus.PENDING) {
-      throw new RegenError({
-        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
-        blockRoot: fromHex(blockRoot),
-      });
-    }
+    // Convert PayloadStatus to payloadPresent boolean.
+    // PENDING blocks are in fork-choice but lack an envelope — treat as non-FULL (payloadPresent=false).
+    // Their checkpoint states are cached with payloadPresent=false during block import.
     const payloadPresent = block.payloadStatus === PayloadStatus.FULL;
 
     const latestCheckpointStateCtx = allowDiskReload
@@ -177,12 +173,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       if (!lastBlockToReplay) continue;
       const epoch = computeEpochAtSlot(lastBlockToReplay.slot - 1);
 
-      // Convert PayloadStatus to payloadPresent boolean
-      if (b.payloadStatus === PayloadStatus.PENDING) {
-        // Should not happen. iterateAncestorBlocks should yield EMPTY or FULL
-        blocksToReplay.push(b);
-        continue;
-      }
+      // Convert PayloadStatus to payloadPresent boolean.
+      // PENDING blocks are treated as non-FULL (payloadPresent=false).
       const payloadPresent = b.payloadStatus === PayloadStatus.FULL;
 
       state = allowDiskReload

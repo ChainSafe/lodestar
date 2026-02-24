@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, isGloasBeaconBlock, phase0} from "@lodestar/types";
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {BlockStateCache, CheckpointHexPayload, CheckpointStateCache} from "../stateCache/types.js";
@@ -104,13 +104,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     const parentEpoch = computeEpochAtSlot(parentBlock.slot);
     const blockEpoch = computeEpochAtSlot(block.slot);
 
-    // Convert PayloadStatus to payloadPresent boolean
-    if (parentBlock.payloadStatus === PayloadStatus.PENDING) {
-      throw new RegenError({
-        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
-        blockRoot: block.parentRoot,
-      });
-    }
+    // Convert PayloadStatus to payloadPresent boolean.
+    // PENDING blocks are in fork-choice but lack an envelope — treat as non-FULL.
     const payloadPresent = parentBlock.payloadStatus === PayloadStatus.FULL;
 
     // Check the checkpoint cache (if the pre-state is a checkpoint state)
@@ -149,13 +144,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * Get state closest to head
    */
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null {
-    // Convert PayloadStatus to payloadPresent boolean
-    if (head.payloadStatus === PayloadStatus.PENDING) {
-      throw new RegenError({
-        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
-        blockRoot: fromHex(head.blockRoot),
-      });
-    }
+    // Convert PayloadStatus to payloadPresent boolean.
+    // PENDING blocks are in fork-choice but lack an envelope — treat as non-FULL.
     const payloadPresent = head.payloadStatus === PayloadStatus.FULL;
     return (
       this.checkpointStateCache.getLatest(head.blockRoot, Infinity, payloadPresent) ||
