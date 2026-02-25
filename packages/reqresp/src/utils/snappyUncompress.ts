@@ -2,96 +2,94 @@ import {uncompress} from "snappyjs";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ChunkType, IDENTIFIER, UNCOMPRESSED_CHUNK_SIZE, crc} from "./snappyCommon.js";
 
-export class SnappyFramesUncompress {
-  private buffer = new Uint8ArrayList();
-
-  private state: UncompressState = {
-    foundIdentifier: false,
-  };
-
-  /**
-   * Accepts chunk of data containing some part of snappy frames stream
-   * @param chunk
-   * @return Buffer if there is one or more whole frames, null if it's partial
-   */
-  uncompress(chunk: Uint8ArrayList): Uint8ArrayList | null {
-    this.buffer.append(chunk);
-    const result = new Uint8ArrayList();
-    while (this.buffer.length > 0) {
-      if (this.buffer.length < 4) break;
-
-      const type = getChunkType(this.buffer.get(0));
-
-      if (!this.state.foundIdentifier && type !== ChunkType.IDENTIFIER) {
-        throw "malformed input: must begin with an identifier";
-      }
-
-      const frameSize = getFrameSize(this.buffer, 1);
-
-      if (this.buffer.length - 4 < frameSize) {
-        break;
-      }
-
-      const frame = this.buffer.subarray(4, 4 + frameSize);
-      this.buffer.consume(4 + frameSize);
-
-      switch (type) {
-        case ChunkType.IDENTIFIER: {
-          if (!Buffer.prototype.equals.call(frame, IDENTIFIER)) {
-            throw "malformed input: bad identifier";
-          }
-          this.state.foundIdentifier = true;
-          continue;
-        }
-        case ChunkType.PADDING:
-        case ChunkType.SKIPPABLE:
-          continue;
-        case ChunkType.COMPRESSED: {
-          const checksum = frame.subarray(0, 4);
-          const data = frame.subarray(4);
-
-          const uncompressed = uncompress(data, UNCOMPRESSED_CHUNK_SIZE);
-          if (crc(uncompressed).compare(checksum) !== 0) {
-            throw "malformed input: bad checksum";
-          }
-          result.append(uncompressed);
-          break;
-        }
-        case ChunkType.UNCOMPRESSED: {
-          const checksum = frame.subarray(0, 4);
-          const uncompressed = frame.subarray(4);
-
-          if (uncompressed.length > UNCOMPRESSED_CHUNK_SIZE) {
-            throw "malformed input: too large";
-          }
-          if (crc(uncompressed).compare(checksum) !== 0) {
-            throw "malformed input: bad checksum";
-          }
-          result.append(uncompressed);
-          break;
-        }
-      }
-    }
-    if (result.length === 0) {
-      return null;
-    }
-    return result;
+export function parseSnappyFrameHeader(header: Uint8Array): {type: ChunkType; frameSize: number} {
+  if (header.length !== 4) {
+    throw new Error("malformed input: incomplete frame header");
   }
 
-  reset(): void {
-    this.buffer = new Uint8ArrayList();
-    this.state = {
-      foundIdentifier: false,
-    };
+  const type = getChunkType(header[0]);
+  const frameSize = header[1] + (header[2] << 8) + (header[3] << 16);
+  return {type, frameSize};
+}
+
+export function decodeSnappyFrameData(type: ChunkType, frame: Uint8Array): Uint8Array | null {
+  switch (type) {
+    case ChunkType.IDENTIFIER: {
+      if (!Buffer.prototype.equals.call(frame, IDENTIFIER)) {
+        throw new Error("malformed input: bad identifier");
+      }
+      return null;
+    }
+    case ChunkType.PADDING:
+    case ChunkType.SKIPPABLE:
+      return null;
+    case ChunkType.COMPRESSED: {
+      if (frame.length < 4) {
+        throw new Error("malformed input: too short");
+      }
+
+      const checksum = frame.subarray(0, 4);
+      const data = frame.subarray(4);
+      const uncompressed = uncompress(data, UNCOMPRESSED_CHUNK_SIZE);
+      if (crc(uncompressed).compare(checksum) !== 0) {
+        throw new Error("malformed input: bad checksum");
+      }
+      return uncompressed;
+    }
+    case ChunkType.UNCOMPRESSED: {
+      if (frame.length < 4) {
+        throw new Error("malformed input: too short");
+      }
+
+      const checksum = frame.subarray(0, 4);
+      const uncompressed = frame.subarray(4);
+      if (uncompressed.length > UNCOMPRESSED_CHUNK_SIZE) {
+        throw new Error("malformed input: too large");
+      }
+      if (crc(uncompressed).compare(checksum) !== 0) {
+        throw new Error("malformed input: bad checksum");
+      }
+      return uncompressed;
+    }
   }
 }
 
-type UncompressState = {
-  foundIdentifier: boolean;
-};
+export function decodeSnappyFrames(data: Uint8Array): Uint8ArrayList {
+  const out = new Uint8ArrayList();
+  let foundIdentifier = false;
+  let offset = 0;
 
-function getFrameSize(buffer: Uint8ArrayList, offset: number): number {
-  return buffer.get(offset) + (buffer.get(offset + 1) << 8) + (buffer.get(offset + 2) << 16);
+  while (offset < data.length) {
+    const remaining = data.length - offset;
+    if (remaining < 4) {
+      throw new Error("malformed input: incomplete frame header");
+    }
+
+    const {type, frameSize} = parseSnappyFrameHeader(data.subarray(offset, offset + 4));
+    if (!foundIdentifier && type !== ChunkType.IDENTIFIER) {
+      throw new Error("malformed input: must begin with an identifier");
+    }
+
+    offset += 4;
+
+    if (data.length - offset < frameSize) {
+      throw new Error("malformed input: incomplete frame");
+    }
+
+    const frame = data.subarray(offset, offset + frameSize);
+    offset += frameSize;
+
+    if (type === ChunkType.IDENTIFIER) {
+      foundIdentifier = true;
+    }
+
+    const uncompressed = decodeSnappyFrameData(type, frame);
+    if (uncompressed !== null) {
+      out.append(uncompressed);
+    }
+  }
+
+  return out;
 }
 
 function getChunkType(value: number): ChunkType {

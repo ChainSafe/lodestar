@@ -1,5 +1,4 @@
-import {Uint8ArrayList} from "uint8arraylist";
-import {SnappyFramesUncompress, encodeSnappy} from "@lodestar/reqresp/utils";
+import {decodeSnappyFrames, encodeSnappy} from "@lodestar/reqresp/utils";
 
 /** Read 48-bit signed integer (little-endian) at offset. */
 export function readInt48(bytes: Uint8Array, offset: number): number {
@@ -38,16 +37,7 @@ export function writeUint32(target: Uint8Array, offset: number, v: number): void
 
 /** Decompress snappy-framed data  */
 export function snappyUncompress(compressedData: Uint8Array): Uint8Array {
-  const decompressor = new SnappyFramesUncompress();
-
-  const input = new Uint8ArrayList(compressedData);
-  const result = decompressor.uncompress(input);
-
-  if (result === null) {
-    throw new Error("Snappy decompression failed - no data returned");
-  }
-
-  return result.subarray();
+  return decodeSnappyFrames(compressedData).subarray();
 }
 
 /** Compress data using snappy framing */

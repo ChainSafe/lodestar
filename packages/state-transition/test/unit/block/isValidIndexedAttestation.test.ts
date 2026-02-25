@@ -48,7 +48,7 @@ describe("validate indexed attestation", () => {
     expect(
       isValidIndexedAttestation(
         state.config,
-        state.epochCtx.index2pubkey,
+        state.epochCtx.pubkeyCache,
         state.slot,
         state.validators.length,
         indexedAttestation,

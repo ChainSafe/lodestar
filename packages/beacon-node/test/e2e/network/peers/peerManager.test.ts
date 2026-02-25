@@ -8,6 +8,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus, getConnectionsMap} from "../../../../src/network/index.js";
 import {NetworkConfig} from "../../../../src/network/networkConfig.js";
+import {ClientKind} from "../../../../src/network/peers/client.js";
 import {IReqRespBeaconNodePeerManager, PeerManager, PeerRpcScoreStore} from "../../../../src/network/peers/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
@@ -34,7 +35,7 @@ describe("network / peers / PeerManager", () => {
     }
   });
 
-  async function mockModules() {
+  async function mockModules(opts?: {preOpenConnections?: Connection[]}) {
     // Setup fake chain
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const state = generateState({
@@ -66,6 +67,18 @@ describe("network / peers / PeerManager", () => {
     });
 
     const reqResp = new ReqRespFake();
+    reqResp.sendPing.mockResolvedValue(BigInt(0));
+    reqResp.sendStatus.mockResolvedValue(status);
+
+    if (opts?.preOpenConnections) {
+      for (const connection of opts.preOpenConnections) {
+        getConnectionsMap(libp2p).set(connection.remotePeer.toString(), {
+          key: connection.remotePeer,
+          value: [connection],
+        });
+      }
+    }
+
     const peerRpcScores = new PeerRpcScoreStore();
     const networkEventBus = new NetworkEventBus();
     const mockSubnetsService: IAttnetsService = {
@@ -167,7 +180,9 @@ describe("network / peers / PeerManager", () => {
     direction: "outbound",
     status: "open",
     remotePeer: peerId1,
-  } as Connection;
+    close: async () => {},
+    abort: () => {},
+  } as unknown as Connection;
 
   it("Should emit peer connected event on relevant peer status", async () => {
     const {statusCache, libp2p, networkEventBus} = await mockModules();
@@ -187,6 +202,17 @@ describe("network / peers / PeerManager", () => {
     });
 
     await peerConnectedPromise;
+  });
+
+  it("Bootstraps already-open outbound connections at startup", async () => {
+    const {reqResp, peerManager} = await mockModules({preOpenConnections: [libp2pConnectionOutboud]});
+
+    // Constructor bootstrap is async (requestPing/requestStatus), allow microtasks to flush.
+    await sleep(0);
+
+    expect(peerManager["connectedPeers"].has(peerId1.toString())).toBe(true);
+    expect(reqResp.sendPing).toHaveBeenCalledOnce();
+    expect(reqResp.sendStatus).toHaveBeenCalledOnce();
   });
 
   it("On peerConnect handshake flow", async () => {
@@ -235,5 +261,239 @@ describe("network / peers / PeerManager", () => {
     expect(reqResp.sendMetadata).toHaveBeenCalledOnce();
 
     expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).toEqual(remoteMetadata);
+  });
+
+  it("Should identify peer after successful status", async () => {
+    const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+    vi.spyOn(libp2p.services.identify, "identify").mockImplementation(
+      () => Promise.resolve({agentVersion: "Lighthouse/v6.0.1"}) as ReturnType<typeof libp2p.services.identify.identify>
+    );
+
+    const inboundConnection = {
+      id: "connection-1",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+
+    // Connection open does NOT trigger identify
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+    await sleep(0);
+    expect(libp2p.services.identify.identify).not.toHaveBeenCalled();
+
+    // Status proves the connection is usable — triggers identify
+    const remoteStatus = statusCache.get();
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    await sleep(0);
+
+    expect(libp2p.services.identify.identify).toHaveBeenCalledTimes(1);
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Lighthouse/v6.0.1");
+    expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);
+  });
+
+  it("Should not re-identify after second status if agentVersion is already known", async () => {
+    const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+    vi.spyOn(libp2p.services.identify, "identify").mockImplementation(
+      () => Promise.resolve({agentVersion: "Nimbus/v25.0.0"}) as ReturnType<typeof libp2p.services.identify.identify>
+    );
+
+    const inboundConnection = {
+      id: "connection-1",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [inboundConnection]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: inboundConnection}));
+
+    // First status triggers identify
+    const remoteStatus = statusCache.get();
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    await sleep(0);
+    expect(libp2p.services.identify.identify).toHaveBeenCalledTimes(1);
+
+    // Second status should NOT trigger identify again since agentVersion is already known
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    await sleep(0);
+    expect(libp2p.services.identify.identify).toHaveBeenCalledTimes(1);
+
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Nimbus/v25.0.0");
+    expect(peerData?.agentClient).toBe(ClientKind.Nimbus);
+  });
+
+  it("Should deduplicate in-flight identify requests for the same connection", async () => {
+    const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+    let resolveIdentify!: (value: {agentVersion: string}) => void;
+    const identifyPromise = new Promise<{agentVersion: string}>((resolve) => {
+      resolveIdentify = resolve;
+    });
+
+    vi.spyOn(libp2p.services.identify, "identify").mockImplementation(
+      () => identifyPromise as ReturnType<typeof libp2p.services.identify.identify>
+    );
+
+    const connection = {
+      id: "connection-1",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [connection]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: connection}));
+
+    const remoteStatus = statusCache.get();
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+
+    await sleep(0);
+    expect(libp2p.services.identify.identify).toHaveBeenCalledTimes(1);
+
+    resolveIdentify({agentVersion: "Prysm/v6.0.0"});
+    await sleep(0);
+
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Prysm/v6.0.0");
+    expect(peerData?.agentClient).toBe(ClientKind.Prysm);
+  });
+
+  it("Should allow a new identify attempt after reconnect and ignore stale previous result", async () => {
+    const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+    let resolveFirstIdentify!: (value: {agentVersion: string}) => void;
+    const firstIdentifyPromise = new Promise<{agentVersion: string}>((resolve) => {
+      resolveFirstIdentify = resolve;
+    });
+
+    vi.spyOn(libp2p.services.identify, "identify")
+      .mockImplementationOnce(() => firstIdentifyPromise as ReturnType<typeof libp2p.services.identify.identify>)
+      .mockImplementationOnce(
+        () => Promise.resolve({agentVersion: "Teku/v24.9.0"}) as ReturnType<typeof libp2p.services.identify.identify>
+      );
+
+    const connection1 = {
+      id: "connection-1",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [connection1]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: connection1}));
+
+    const remoteStatus = statusCache.get();
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    await sleep(0);
+
+    const closedConnection1 = {...connection1, status: "closed"} as Connection;
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [closedConnection1]});
+    await peerManager["onLibp2pPeerDisconnect"](new CustomEvent("evt", {detail: closedConnection1}));
+
+    const connection2 = {
+      id: "connection-2",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [connection2]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: connection2}));
+
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    await sleep(0);
+
+    expect(libp2p.services.identify.identify).toHaveBeenCalledTimes(2);
+
+    // Resolve old identify last; it must not overwrite new connection's identify result.
+    resolveFirstIdentify({agentVersion: "Lighthouse/v6.0.1"});
+    await sleep(0);
+
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Teku/v24.9.0");
+    expect(peerData?.agentClient).toBe(ClientKind.Teku);
+  });
+
+  it("Should update agentVersion via peer:identify event even if explicit identify fails", async () => {
+    const {libp2p, peerManager, statusCache, networkEventBus} = await mockModules();
+
+    vi.spyOn(libp2p.services.identify, "identify").mockRejectedValue(new Error("Unexpected EOF"));
+
+    const connection = {
+      id: "connection-1",
+      direction: "inbound",
+      status: "open",
+      remotePeer: peerId1,
+      close: async () => {},
+      abort: () => {},
+    } as unknown as Connection;
+
+    getConnectionsMap(libp2p).set(peerId1.toString(), {key: peerId1, value: [connection]});
+    await peerManager["onLibp2pPeerConnect"](new CustomEvent("evt", {detail: connection}));
+
+    const remoteStatus = statusCache.get();
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+      peerClient: "Unknown",
+    });
+    await sleep(0);
+
+    libp2p.services.components.events.dispatchEvent(
+      new CustomEvent("peer:identify", {
+        detail: {
+          peerId: peerId1,
+          agentVersion: "Lighthouse/v6.0.1",
+        },
+      })
+    );
+    await sleep(0);
+
+    const peerData = peerManager["connectedPeers"].get(peerId1.toString());
+    expect(peerData?.agentVersion).toBe("Lighthouse/v6.0.1");
+    expect(peerData?.agentClient).toBe(ClientKind.Lighthouse);
   });
 });

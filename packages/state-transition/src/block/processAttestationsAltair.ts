@@ -64,7 +64,7 @@ export function processAttestationsAltair(
     // we can verify only that and nothing else.
     if (verifySignature) {
       const sigSet = getAttestationWithIndicesSignatureSet(state.config, state.slot, attestation, attestingIndices);
-      if (!verifySignatureSet(sigSet, state.epochCtx.index2pubkey)) {
+      if (!verifySignatureSet(sigSet, state.epochCtx.pubkeyCache)) {
         throw new Error("Attestation signature is not valid");
       }
     }

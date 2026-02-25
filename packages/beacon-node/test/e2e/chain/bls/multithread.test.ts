@@ -1,6 +1,6 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/blst";
-import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {ISignatureSet, SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {testLogger} from "../../../utils/logger.js";
@@ -13,7 +13,7 @@ describe("chain / bls / multithread queue", () => {
   const sets: ISignatureSet[] = [];
   const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
   const sameMessage = Buffer.alloc(32, 100);
-  const index2pubkey: PublicKey[] = [];
+  const pubkeyCache = createPubkeyCache();
 
   beforeAll(() => {
     for (let i = 0; i < 3; i++) {
@@ -31,7 +31,7 @@ describe("chain / bls / multithread queue", () => {
         publicKey: pk,
         signature: sk.sign(sameMessage).toBytes(),
       });
-      index2pubkey.push(pk);
+      pubkeyCache.set(pubkeyCache.size, pk.toBytes());
     }
   });
 
@@ -49,7 +49,7 @@ describe("chain / bls / multithread queue", () => {
   });
 
   async function initializePool(): Promise<BlsMultiThreadWorkerPool> {
-    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null, index2pubkey});
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null, pubkeyCache});
     // await terminating all workers
     afterEachCallbacks.push(() => pool.close());
     // Wait until initialized

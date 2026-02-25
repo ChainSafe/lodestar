@@ -1,4 +1,3 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -16,6 +15,7 @@ import {
 import {ValidatorIndex, rewards} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {EpochTransitionCache, beforeProcessEpoch} from "../cache/epochTransitionCache.js";
+import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {
   FLAG_ELIGIBLE_ATTESTER,
@@ -34,7 +34,7 @@ const defaultAttestationsPenalty = {target: 0, source: 0};
 
 export async function computeAttestationsRewards(
   config: BeaconConfig,
-  pubkey2index: PubkeyIndexMap,
+  pubkeyCache: PubkeyCache,
   state: CachedBeaconStateAllForks,
   validatorIds?: (ValidatorIndex | string)[]
 ): Promise<rewards.AttestationsRewards> {
@@ -53,7 +53,7 @@ export async function computeAttestationsRewards(
   );
   const totalRewards = computeTotalAttestationsRewardsAltair(
     config,
-    pubkey2index,
+    pubkeyCache,
     stateAltair,
     transitionCache,
     idealRewards,
@@ -142,7 +142,7 @@ function computeIdealAttestationsRewardsAndPenaltiesAltair(
 // Same calculation as `getRewardsAndPenaltiesAltair` but returns the breakdown of rewards instead of aggregated
 function computeTotalAttestationsRewardsAltair(
   config: BeaconConfig,
-  pubkey2index: PubkeyIndexMap,
+  pubkeyCache: PubkeyCache,
   state: CachedBeaconStateAltair,
   transitionCache: EpochTransitionCache,
   idealRewards: rewards.IdealAttestationsReward[],
@@ -153,7 +153,7 @@ function computeTotalAttestationsRewardsAltair(
   const {flags} = transitionCache;
   const {epochCtx} = state;
   const validatorIndices = validatorIds
-    .map((id) => (typeof id === "number" ? id : pubkey2index.get(fromHex(id))))
+    .map((id) => (typeof id === "number" ? id : pubkeyCache.getIndex(fromHex(id))))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
   const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;

@@ -928,6 +928,11 @@ export function createLodestarMetrics(
       help: "The total result of calling notifyNewPayload execution engine api",
       labelNames: ["result"],
     }),
+    engineNotifyForkchoiceUpdateResult: register.gauge<{result: ExecutionPayloadStatus}>({
+      name: "lodestar_execution_engine_notify_forkchoice_update_result_total",
+      help: "The total result of calling notifyForkchoiceUpdate execution engine api",
+      labelNames: ["result"],
+    }),
     backfillSync: {
       backfilledTillSlot: register.gauge({
         name: "lodestar_backfill_till_slot",

@@ -1,7 +1,7 @@
-import {PeerId, PrivateKey} from "@libp2p/interface";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PublishOpts} from "@libp2p/gossipsub/types";
+import type {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
