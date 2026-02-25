@@ -6,7 +6,7 @@ export enum DAType {
   PreData = "pre-data",
   Blobs = "blobs",
   Columns = "columns",
-  Epbs = "epbs",
+  NoData = "no-data",
 }
 
 export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars;

@@ -21,7 +21,7 @@ import {
   BlockInput,
   BlockInputBlobs,
   BlockInputColumns,
-  BlockInputEpbs,
+  BlockInputNoData,
   BlockInputPreData,
   BlockWithSource,
   DAType,
@@ -183,7 +183,7 @@ export class SeenBlockInput {
 
       if (isForkPostGloas(forkName)) {
         // Post-gloas
-        blockInput = BlockInputEpbs.createFromBlock({
+        blockInput = BlockInputNoData.createFromBlock({
           block: block as SignedBeaconBlock<ForkPostGloas>,
           blockRootHex,
           daOutOfRange,

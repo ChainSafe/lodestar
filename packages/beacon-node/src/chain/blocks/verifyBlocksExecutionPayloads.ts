@@ -21,7 +21,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {isBlockInputBlobs, isBlockInputColumns, isBlockInputEpbs} from "./blockInput/blockInput.js";
+import {isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
@@ -151,7 +151,7 @@ export async function verifyBlockExecutionPayload(
   const block = blockInput.getBlock();
 
   // Gloas block doesn't have execution payload. Return right away
-  if (isBlockInputEpbs(blockInput)) {
+  if (isBlockInputNoData(blockInput)) {
     return {executionStatus: ExecutionStatus.PayloadSeparated, lvhResponse: undefined, execError: null};
   }
 

@@ -24,7 +24,7 @@ import {
   SourceMeta,
 } from "./types.js";
 
-export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns | BlockInputEpbs;
+export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns | BlockInputNoData;
 
 export function isBlockInputPreDeneb(blockInput: IBlockInput): blockInput is BlockInputPreData {
   return blockInput.type === DAType.PreData;
@@ -37,8 +37,8 @@ export function isBlockInputColumns(blockInput: IBlockInput): blockInput is Bloc
   return blockInput.type === DAType.Columns;
 }
 
-export function isBlockInputEpbs(blockInput: IBlockInput): blockInput is BlockInputEpbs {
-  return blockInput.type === DAType.Epbs;
+export function isBlockInputNoData(blockInput: IBlockInput): blockInput is BlockInputNoData {
+  return blockInput.type === DAType.NoData;
 }
 
 function createPromise<T>(): PromiseParts<T> {
@@ -908,7 +908,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   }
 }
 
-type BlockInputEpbsState = {
+type BlockInputNoDataState = {
   hasBlock: true;
   hasAllData: true;
   block: SignedBeaconBlock<ForkPostGloas>;
@@ -916,19 +916,19 @@ type BlockInputEpbsState = {
   timeCompleteSec: number;
 };
 
-export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, null> {
-  type = DAType.Epbs as const;
+export class BlockInputNoData extends AbstractBlockInput<ForkPostGloas, null> {
+  type = DAType.NoData as const;
 
-  state: BlockInputEpbsState;
+  state: BlockInputNoDataState;
 
-  private constructor(init: BlockInputInit, state: BlockInputEpbsState) {
+  private constructor(init: BlockInputInit, state: BlockInputNoDataState) {
     super(init);
     this.state = state;
     this.dataPromise.resolve(null);
     this.blockPromise.resolve(state.block);
   }
 
-  static createFromBlock(props: AddBlock<ForkPostGloas> & CreateBlockInputMeta): BlockInputEpbs {
+  static createFromBlock(props: AddBlock<ForkPostGloas> & CreateBlockInputMeta): BlockInputNoData {
     const init: BlockInputInit = {
       daOutOfRange: props.daOutOfRange,
       timeCreated: props.seenTimestampSec,
@@ -937,7 +937,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, null> {
       blockRootHex: props.blockRootHex,
       parentRootHex: toRootHex(props.block.message.parentRoot),
     };
-    const state: BlockInputEpbsState = {
+    const state: BlockInputNoDataState = {
       hasBlock: true,
       hasAllData: true, // Immediately complete - no DA for beacon blocks in ePBS
       block: props.block,
@@ -948,7 +948,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, null> {
       },
       timeCompleteSec: props.seenTimestampSec,
     };
-    return new BlockInputEpbs(init, state);
+    return new BlockInputNoData(init, state);
   }
 
   addBlock(_: AddBlock<ForkPostGloas>, opts = {throwOnDuplicateAdd: true}): void {
@@ -958,7 +958,7 @@ export class BlockInputEpbs extends AbstractBlockInput<ForkPostGloas, null> {
           code: BlockInputErrorCode.INVALID_CONSTRUCTION,
           blockRoot: this.blockRootHex,
         },
-        "Cannot addBlock to BlockInputEpbs - block already exists"
+        "Cannot addBlock to BlockInputNoData - block already exists"
       );
     }
   }
