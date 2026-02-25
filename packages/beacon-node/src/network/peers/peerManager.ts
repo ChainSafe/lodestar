@@ -1,4 +1,4 @@
-import {Connection, type IdentifyResult, PeerId, PrivateKey} from "@libp2p/interface";
+import {Connection, PeerId, PrivateKey} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
@@ -162,9 +162,6 @@ export class PeerManager {
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
-  /** Track one in-flight identify call per peer/connection id */
-  private readonly identifyInProgress = new Map<PeerIdStr, string>();
-
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
@@ -195,7 +192,6 @@ export class PeerManager {
 
     this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionOpen, this.onLibp2pPeerConnect);
     this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionClose, this.onLibp2pPeerDisconnect);
-    this.libp2p.services.components.events.addEventListener(Libp2pEvent.peerIdentify, this.onPeerIdentify);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
 
     this.lastStatus = this.statusCache.get();
@@ -239,7 +235,6 @@ export class PeerManager {
       Libp2pEvent.connectionClose,
       this.onLibp2pPeerDisconnect
     );
-    this.libp2p.services.components.events.removeEventListener(Libp2pEvent.peerIdentify, this.onPeerIdentify);
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
     for (const interval of this.intervals) clearInterval(interval);
   }
@@ -490,25 +485,7 @@ export class PeerManager {
       // peers that close identify right after connection open or turn out to be
       // irrelevant.
       if (peerData?.agentVersion === null) {
-        const peerIdStr = peer.toString();
-        const connection = getConnection(this.libp2p, peerIdStr);
-        if (!connection || connection.status !== "open") {
-          this.logger.debug("Peer has no open connection for identify", {peerId: prettyPrintPeerId(peer)});
-          return;
-        }
-
-        const identifyKey = connection.id;
-        if (this.identifyInProgress.get(peerIdStr) === identifyKey) {
-          return;
-        }
-
-        this.identifyInProgress.set(peerIdStr, identifyKey);
-        void this.identifyPeer(peerIdStr, prettyPrintPeerId(peer), connection, identifyKey).finally(() => {
-          // Clear only if this identify attempt is still the active one for this peer
-          if (this.identifyInProgress.get(peerIdStr) === identifyKey) {
-            this.identifyInProgress.delete(peerIdStr);
-          }
-        });
+        void this.identifyPeer(peer.toString(), prettyPrintPeerId(peer), getConnection(this.libp2p, peer.toString()));
       }
     }
   }
@@ -867,7 +844,6 @@ export class PeerManager {
 
     // remove the ping and status timer for the peer
     this.connectedPeers.delete(peerIdStr);
-    this.identifyInProgress.delete(peerIdStr);
 
     this.logger.verbose(logMessage, logContext);
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peerIdStr});
@@ -885,47 +861,14 @@ export class PeerManager {
     }
   }
 
-  /**
-   * Consume successful identify results from libp2p events.
-   * This captures agentVersion from identify-push or successful inbound/outbound identify,
-   * even if our explicit identify request failed earlier.
-   */
-  private onPeerIdentify = (evt: CustomEvent<IdentifyResult>): void => {
-    const {peerId, agentVersion} = evt.detail;
-    if (!agentVersion) return;
-
-    const peerIdStr = peerId.toString();
-    const peerData = this.connectedPeers.get(peerIdStr);
-    if (!peerData) return;
-
-    peerData.agentVersion = agentVersion;
-    peerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
-    this.identifyInProgress.delete(peerIdStr);
-  };
-
-  private async identifyPeer(
-    peerIdStr: string,
-    peerIdPretty: string,
-    connection: Connection,
-    identifyKey: string
-  ): Promise<void> {
-    if (this.identifyInProgress.get(peerIdStr) !== identifyKey) {
-      return;
-    }
-
-    if (connection.status !== "open") {
+  private async identifyPeer(peerIdStr: string, peerIdPretty: string, connection?: Connection): Promise<void> {
+    if (!connection || connection.status !== "open") {
       this.logger.debug("Peer has no open connection for identify", {peerId: peerIdPretty});
       return;
     }
 
     try {
       const result = await this.libp2p.services.identify.identify(connection);
-
-      // A newer identify attempt may have superseded this one (e.g. reconnect).
-      if (this.identifyInProgress.get(peerIdStr) !== identifyKey) {
-        return;
-      }
-
       const agentVersion = result.agentVersion;
       if (agentVersion) {
         const connectedPeerData = this.connectedPeers.get(peerIdStr);
