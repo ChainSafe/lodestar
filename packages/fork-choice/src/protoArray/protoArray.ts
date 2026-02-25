@@ -919,7 +919,7 @@ export class ProtoArray {
    * For EMPTY/FULL variants from slot n-1: implements tiebreaker logic based on should_extend_payload
    * For older blocks: returns node.payloadStatus
    *
-   * Note: pre-gloas logic won't reach here. Since it is impossible to have two nodes with same weight and root
+   * Note: pre-gloas logic won't reach here. Pre-Gloas blocks have different roots, so they are always resolved by the weight and root tiebreaker before reaching here.
    */
   private getPayloadStatusTiebreaker(node: ProtoNode, currentSlot: Slot, proposerBoostRoot: RootHex | null): number {
     // PENDING nodes always return PENDING (no tiebreaker needed)
@@ -1151,40 +1151,6 @@ export class ProtoArray {
    * - The child is not the best child and does not become the best child.
    */
 
-  /**
-   * Check if we're comparing EMPTY vs FULL variants of the same block from slot n or n-1.
-   *
-   * This is a special case where the spec requires using `get_payload_status_tiebreaker()`
-   * directly without weight comparison.
-   *
-   * Spec: gloas/fork-choice.md#modified-get_weight (lines 413-446) and
-   *       gloas/fork-choice.md#get_payload_status_tiebreaker (lines 331-343)
-   *
-   * @returns true if this is the EMPTY vs FULL edge case, false otherwise
-   */
-  private isEmptyVsFullEdgeCase(childNode: ProtoNode, bestChildNode: ProtoNode, currentSlot: Slot): boolean {
-    // Check if both nodes are:
-    // 1. The same block root (different payload status variants)
-    // 2. Both EMPTY or FULL (not PENDING)
-    // 3. From slot n-1 or slot n (current slot or previous slot)
-    if (childNode.blockRoot !== bestChildNode.blockRoot) {
-      return false; // Different blocks
-    }
-
-    const childIsEmptyOrFull = childNode.payloadStatus !== PayloadStatus.PENDING;
-    const bestChildIsEmptyOrFull = bestChildNode.payloadStatus !== PayloadStatus.PENDING;
-
-    if (!childIsEmptyOrFull || !bestChildIsEmptyOrFull) {
-      return false; // At least one is PENDING
-    }
-
-    // Check if from slot n-1 or slot n
-    const isFromPreviousSlot = childNode.slot + 1 === currentSlot;
-    const isFromCurrentSlot = childNode.slot === currentSlot;
-
-    return isFromPreviousSlot || isFromCurrentSlot;
-  }
-
   maybeUpdateBestChildAndDescendant(
     parentIndex: number,
     childIndex: number,
@@ -1256,37 +1222,36 @@ export class ProtoArray {
 
           // Pre-fulu we pick whichever has higher weight, tie-breaker by root
           // Post-fulu we pick whichever has higher weight, then tie-breaker by root, then tie-breaker by `getPayloadStatusTiebreaker`
-          // Edge case: when comparing EMPTY vs FULL variants of the same block from slot n-1 or n, weights are hardcoded to 0
+          // Gloas: nodes from previous slot (n-1) with EMPTY/FULL variant have weight hardcoded to 0.
           // https://github.com/ethereum/consensus-specs/blob/69a2582d5d62c914b24894bdb65f4bd5d4e49ae4/specs/gloas/fork-choice.md?plain=1#L442
-          // in this case we use `get_payload_status_tiebreaker()` directly because weights(0) and roots are equal
+          const childEffectiveWeight =
+            !isGloasBlock(childNode) ||
+            childNode.payloadStatus === PayloadStatus.PENDING ||
+            childNode.slot + 1 !== currentSlot
+              ? childNode.weight
+              : 0;
+          const bestChildEffectiveWeight =
+            !isGloasBlock(bestChildNode) ||
+            bestChildNode.payloadStatus === PayloadStatus.PENDING ||
+            bestChildNode.slot + 1 !== currentSlot
+              ? bestChildNode.weight
+              : 0;
 
-          // Gloas: Check if this is the EMPTY vs FULL edge case for slot n or n-1
-          // If true, skip weight and root comparison (weights are 0, roots are equal)
-          const isEdgeCase = this.isEmptyVsFullEdgeCase(childNode, bestChildNode, currentSlot);
-
-          if (!isEdgeCase && childNode.weight !== bestChildNode.weight) {
-            // Different weights, choose the winner by weight
-            if (childNode.weight >= bestChildNode.weight) {
-              newChildAndDescendant = changeToChild;
-            } else {
-              newChildAndDescendant = noChange;
-            }
+          if (childEffectiveWeight !== bestChildEffectiveWeight) {
+            // Different effective weights, choose the winner by weight
+            newChildAndDescendant = childEffectiveWeight >= bestChildEffectiveWeight ? changeToChild : noChange;
             break outer;
           }
 
-          if (!isEdgeCase && childNode.blockRoot !== bestChildNode.blockRoot) {
+          if (childNode.blockRoot !== bestChildNode.blockRoot) {
             // Different blocks, tie-breaker by root
-            if (childNode.blockRoot >= bestChildNode.blockRoot) {
-              newChildAndDescendant = changeToChild;
-            } else {
-              newChildAndDescendant = noChange;
-            }
+            newChildAndDescendant = childNode.blockRoot >= bestChildNode.blockRoot ? changeToChild : noChange;
             break outer;
           }
 
-          // Same weight and same root (or edge case), tie-breaker by payload status
+          // Same effective weight and same root — Gloas EMPTY vs FULL from n-1, tie-breaker by payload status
+          // Note: pre-Gloas, each child node of a block has a unique root, so this point should not be reached
           const childTiebreaker = this.getPayloadStatusTiebreaker(childNode, currentSlot, proposerBoostRoot);
-
           const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, proposerBoostRoot);
 
           if (childTiebreaker > bestChildTiebreaker) {
