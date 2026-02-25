@@ -74,7 +74,7 @@ export async function createNodeJsLibp2p(
   }
 
   const libp2pMetrics = nodeJsLibp2pOpts.metrics
-    ? ((components: LodestarComponents) => {
+    ? (components: LodestarComponents) => {
         const metrics = prometheusMetrics({
           collectDefaultMetrics: false,
           preserveExistingMetrics: true,
@@ -94,7 +94,7 @@ export async function createNodeJsLibp2p(
         }) as typeof metrics.trackProtocolStream;
 
         return metrics;
-      })
+      }
     : undefined;
 
   return createLibp2p({

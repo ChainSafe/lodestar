@@ -342,5 +342,4 @@ describe("network / peers / PeerManager", () => {
     expect(peerData?.agentVersion).toBe("Nimbus/v25.0.0");
     expect(peerData?.agentClient).toBe(ClientKind.Nimbus);
   });
-
 });
