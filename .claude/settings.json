@@ -42,5 +42,17 @@
       "Bash(rm -rf /)*",
       "Bash(sudo *)"
     ]
+  },
+  "enabledPlugins": {
+    "ethereum-rnd@lodestar-claude-plugins": true,
+    "consensus-clients@lodestar-claude-plugins": true
+  },
+  "extraKnownMarketplaces": {
+    "lodestar-claude-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "ChainSafe/lodestar-claude-plugins"
+      }
+    }
   }
 }
