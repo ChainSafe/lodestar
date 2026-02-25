@@ -1267,12 +1267,23 @@
           },
           "editorMode": "builder",
           "expr": "rate(lodestar_execution_engine_notify_new_payload_result_total[1h])",
-          "legendFormat": "{{result}}",
+          "legendFormat": "newPayload_{{result}}",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "builder",
+          "expr": "rate(lodestar_execution_engine_notify_forkchoice_update_result_total[1h])",
+          "legendFormat": "fcu_{{result}}",
+          "range": true,
+          "refId": "B"
         }
       ],
-      "title": "notifyNewPayload result",
+      "title": "notifyNewPayload / notifyForkchoiceUpdate result",
       "type": "timeseries"
     },
     {

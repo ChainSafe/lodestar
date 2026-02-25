@@ -2,12 +2,11 @@ import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {CachedBeaconStateAllForks, Index2PubkeyCache, isExecutionCachedStateType} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, PubkeyCache, isExecutionCachedStateType} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -47,8 +46,7 @@ export type BeaconNodeModules = {
 export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
   config: BeaconConfig;
-  pubkey2index: PubkeyIndexMap;
-  index2pubkey: Index2PubkeyCache;
+  pubkeyCache: PubkeyCache;
   db: IBeaconDb;
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
@@ -150,8 +148,7 @@ export class BeaconNode {
   static async init<T extends BeaconNode = BeaconNode>({
     opts,
     config,
-    pubkey2index,
-    index2pubkey,
+    pubkeyCache,
     db,
     logger,
     processShutdownCallback,
@@ -245,8 +242,7 @@ export class BeaconNode {
       privateKey,
       config,
       clock,
-      pubkey2index,
-      index2pubkey,
+      pubkeyCache,
       dataDir,
       db,
       dbName: opts.db.name,
@@ -369,9 +365,12 @@ export class BeaconNode {
       if (this.restApi) await this.restApi.close();
       await this.network.close();
       if (this.metricsServer) await this.metricsServer.close();
-      if (this.monitoring) this.monitoring.close();
+      if (this.monitoring) await this.monitoring.close();
       await this.chain.persistToDisk();
       await this.chain.close();
+      // Abort signal last: close() calls above clear intervals/timeouts so no new
+      // operations get scheduled. If we aborted first, a still-pending interval could
+      // fire and schedule a new operation after abort, leaving it stuck and delaying shutdown.
       if (this.controller) this.controller.abort();
       await sleep(DELAY_BEFORE_CLOSING_DB_MS);
       await this.db.close();

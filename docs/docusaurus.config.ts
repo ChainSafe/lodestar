@@ -1,9 +1,22 @@
 // There are various equivalent ways to declare your Docusaurus config.
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
+import {readFileSync} from "node:fs";
 import type {Config} from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 import {themes as prismThemes} from "prism-react-renderer";
+
+// Read the latest version from versions.json (created by `docusaurus docs:version`)
+// Gracefully handles missing file, empty file, or invalid JSON
+const versions: string[] = (() => {
+  try {
+    return JSON.parse(readFileSync("./versions.json", "utf-8"));
+  } catch {
+    return [];
+  }
+})();
+// Default to the latest stable version (skip RC pre-releases)
+const lastVersion = versions.find((v) => !v.includes("-"));
 
 const config: Config = {
   title: "Lodestar",
@@ -65,6 +78,18 @@ const config: Config = {
           sidebarPath: "./sidebars.ts",
           editUrl: "https://github.com/ChainSafe/lodestar/tree/unstable/docs/",
           routeBasePath: "/",
+          includeCurrentVersion: true,
+          ...(lastVersion
+            ? {
+                lastVersion,
+                versions: {
+                  current: {
+                    label: "Next 🚧",
+                    path: "next",
+                  },
+                },
+              }
+            : {}),
         },
         theme: {
           customCss: "./src/css/custom.css",
@@ -86,6 +111,11 @@ const config: Config = {
         src: "images/logo.png",
       },
       items: [
+        {
+          type: "docsVersionDropdown",
+          position: "right",
+          dropdownActiveClassDisabled: true,
+        },
         {
           href: "https://github.com/ChainSafe/lodestar",
           label: "GitHub",

@@ -96,13 +96,6 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  const envelopeKzgRoot = ssz.deneb.BlobKzgCommitments.hashTreeRoot(envelope.blobKzgCommitments);
-  if (!byteArrayEquals(committedBid.blobKzgCommitmentsRoot, envelopeKzgRoot)) {
-    throw new Error(
-      `Kzg commitment root mismatch between envelope and committed bid envelope=${toRootHex(envelopeKzgRoot)} committedBid=${toRootHex(committedBid.blobKzgCommitmentsRoot)}`
-    );
-  }
-
   if (!byteArrayEquals(committedBid.prevRandao, payload.prevRandao)) {
     throw new Error(
       `Prev randao mismatch between committed bid and payload committedBid=${toHex(committedBid.prevRandao)} payload=${toHex(payload.prevRandao)}`
@@ -146,14 +139,6 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // Verify commitments are under limit
-  const maxBlobsPerBlock = state.config.getMaxBlobsPerBlock(state.epochCtx.epoch);
-  if (envelope.blobKzgCommitments.length > maxBlobsPerBlock) {
-    throw new Error(
-      `Kzg commitments exceed limit commitment.length=${envelope.blobKzgCommitments.length} limit=${maxBlobsPerBlock}`
-    );
-  }
-
   // Skipped: Verify the execution payload is valid
 }
 
@@ -171,7 +156,11 @@ function verifyExecutionPayloadEnvelopeSignature(
 
     if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
       const validatorIndex = state.latestBlockHeader.proposerIndex;
-      publicKey = state.epochCtx.index2pubkey[validatorIndex];
+      const proposerPubkey = state.epochCtx.pubkeyCache.get(validatorIndex);
+      if (!proposerPubkey) {
+        return false;
+      }
+      publicKey = proposerPubkey;
     } else {
       publicKey = PublicKey.fromBytes(state.builders.getReadonly(builderIndex).pubkey);
     }

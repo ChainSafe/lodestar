@@ -45,7 +45,7 @@ export async function validateAttesterSlashing(
     // verifySignature = false, verified in batch below
     assertValidAttesterSlashing(
       chain.config,
-      chain.index2pubkey,
+      chain.pubkeyCache,
       state.slot,
       state.validators.length,
       attesterSlashing,

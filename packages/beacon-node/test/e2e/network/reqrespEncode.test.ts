@@ -1,11 +1,12 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {PrivateKey} from "@libp2p/interface";
+import type {PrivateKey} from "@libp2p/interface";
 import {mplex} from "@libp2p/mplex";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {tcp} from "@libp2p/tcp";
-import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import all from "it-all";
-import {Libp2p, createLibp2p} from "libp2p";
+import {byteStream} from "@libp2p/utils";
+import type {Multiaddr} from "@multiformats/multiaddr";
+import type {Libp2p} from "libp2p";
+import {createLibp2p} from "libp2p";
 import {afterEach, describe, expect, it} from "vitest";
 import {noise} from "@chainsafe/libp2p-noise";
 import {createBeaconConfig} from "@lodestar/config";
@@ -30,8 +31,6 @@ import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {testLogger} from "../../utils/logger.js";
 
 describe("reqresp encoder", () => {
-  let port = 60000;
-
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -41,18 +40,20 @@ describe("reqresp encoder", () => {
   });
 
   async function getLibp2p(privateKey?: PrivateKey) {
-    const listen = `/ip4/127.0.0.1/tcp/${port++}`;
     const libp2p = await createLibp2p({
       privateKey,
       transports: [tcp()],
-      streamMuxers: [mplex()],
+      // Increase disconnectThreshold to prevent mplex from closing the connection
+      // when it receives messages for already-closed streams
+      streamMuxers: [mplex({disconnectThreshold: Infinity})],
       connectionEncrypters: [noise()],
       addresses: {
-        listen: [listen],
+        listen: ["/ip4/127.0.0.1/tcp/0"],
       },
     });
     afterEachCallbacks.push(() => libp2p.stop());
-    return {libp2p, multiaddr: multiaddr(`${listen}/p2p/${libp2p.peerId.toString()}`)};
+    const listenMultiaddr = libp2p.getMultiaddrs()[0];
+    return {libp2p, multiaddr: listenMultiaddr};
   }
 
   async function getReqResp(getHandler?: GetReqRespHandlerFn) {
@@ -107,17 +108,33 @@ describe("reqresp encoder", () => {
     expectedChunks: string[];
   }) {
     const stream = await dialer.dialProtocol(toMultiaddr, protocol);
+    // Use byteStream to read response - it attaches event listeners immediately,
+    // avoiding race conditions with the async iterator where remoteCloseWrite
+    // events can be lost if the server responds in the same macrotask
+    const bytes = byteStream(stream);
+
     if (requestChunks) {
-      await stream.sink(requestChunks.map(fromHex));
+      for (const chunk of requestChunks) {
+        await bytes.write(fromHex(chunk));
+      }
     }
 
-    const chunks = await all(stream.source);
+    const chunks: Uint8Array[] = [];
+    while (true) {
+      const chunk = await bytes.read({signal: AbortSignal.timeout(2000)});
+      if (chunk === null) break;
+      chunks.push(chunk.subarray());
+    }
+
+    // Abort for fast cleanup instead of graceful close which can be slow
+    stream.abort(new Error("test done"));
+
     const join = (c: string[]): string => c.join("").replace(/0x/g, "");
-    const chunksHex = chunks.map((chunk) => toHex(chunk.slice(0, chunk.byteLength)));
+    const chunksHex = chunks.map((chunk) => toHex(chunk));
     expect(join(chunksHex)).toEqual(join(expectedChunks));
   }
 
-  it("assert correct handler switch between metadata v2 and v1", async () => {
+  it("assert correct handler for metadata v3", async () => {
     const {multiaddr: serverMultiaddr, reqresp} = await getReqResp();
     reqresp.registerProtocolsAtBoundary({fork: ForkName.phase0, epoch: GENESIS_EPOCH});
     await sleep(0); // Sleep to resolve register handler promises
@@ -126,20 +143,34 @@ describe("reqresp encoder", () => {
     reqresp["metadataController"].attnets.set(8, true);
     reqresp["metadataController"].syncnets.set(1, true);
 
-    const privateKey = await generateKeyPair("secp256k1");
-    const {libp2p: dialer} = await getLibp2p(privateKey);
+    const {libp2p: dialer} = await getLibp2p();
+    await dialProtocol({
+      dialer,
+      toMultiaddr: serverMultiaddr,
+      protocol: "/eth2/beacon_chain/req/metadata/3/ssz_snappy",
+      expectedChunks: [
+        "0x00",
+        "0x19",
+        "0xff060000734e61507059001b000082e4dd0e1900000d01400101000000000000020400000000000000",
+      ],
+    });
+  });
+
+  it("assert correct handler for metadata v1", async () => {
+    const {multiaddr: serverMultiaddr, reqresp} = await getReqResp();
+    reqresp.registerProtocolsAtBoundary({fork: ForkName.phase0, epoch: GENESIS_EPOCH});
+    await sleep(0); // Sleep to resolve register handler promises
+
+    reqresp["metadataController"].attnets.set(0, true);
+    reqresp["metadataController"].attnets.set(8, true);
+    reqresp["metadataController"].syncnets.set(1, true);
+
+    const {libp2p: dialer} = await getLibp2p();
     await dialProtocol({
       dialer,
       toMultiaddr: serverMultiaddr,
       protocol: "/eth2/beacon_chain/req/metadata/1/ssz_snappy",
       expectedChunks: ["0x00", "0x10", "0xff060000734e615070590114000077b18d3800000000000000000101000000000000"],
-    });
-
-    await dialProtocol({
-      dialer,
-      toMultiaddr: serverMultiaddr,
-      protocol: "/eth2/beacon_chain/req/metadata/2/ssz_snappy",
-      expectedChunks: ["0x00", "0x11", "0xff060000734e615070590013000080f865931100000d0120010100000000000002"],
     });
   });
 

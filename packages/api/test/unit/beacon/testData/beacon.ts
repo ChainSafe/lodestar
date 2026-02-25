@@ -75,7 +75,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishBlockV2: {
     args: {
-      signedBlockContents: ssz.electra.SignedBlockContents.defaultValue(),
+      signedBlockContents: {signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue()},
       broadcastValidation: BroadcastValidation.consensus,
     },
     res: undefined,
@@ -89,6 +89,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
       signedBlindedBlock: ssz.electra.SignedBlindedBeaconBlock.defaultValue(),
       broadcastValidation: BroadcastValidation.consensus,
     },
+    res: undefined,
+  },
+  publishExecutionPayloadEnvelope: {
+    args: {signedExecutionPayloadEnvelope: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()},
     res: undefined,
   },
   getBlobSidecars: {

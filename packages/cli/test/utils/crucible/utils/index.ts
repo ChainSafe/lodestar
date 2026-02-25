@@ -49,6 +49,8 @@ export function defineSimTestConfig(
     runTillEpoch: number;
     // Used to calculate genesis delay
     initialNodes?: number;
+    // Grace period for timeout calculation (default: 0.3)
+    graceExtraTimeFraction?: number;
   }
 ): {
   estimatedTimeoutMs: number;
@@ -62,7 +64,7 @@ export function defineSimTestConfig(
       secondsPerSlot: SIM_TESTS_SLOT_DURATION_MS / 1000,
       runTill: opts.runTillEpoch,
       // After adding Nethermind its took longer to complete
-      graceExtraTimeFraction: 0.3,
+      graceExtraTimeFraction: opts.graceExtraTimeFraction ?? 0.3,
     }) * 1000;
 
   const ttd = getEstimatedTTD({

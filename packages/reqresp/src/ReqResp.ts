@@ -37,8 +37,8 @@ export interface ReqRespOpts extends SendRequestOpts, ReqRespRateLimiterOpts {
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
- * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp {
   // protected to be usable by extending class
@@ -221,7 +221,7 @@ export class ReqResp {
   }
 
   private getRequestHandler(protocol: MixedProtocol, protocolID: string) {
-    return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
+    return async (stream: Stream, connection: Connection) => {
       if (this.dialOnlyProtocols.get(protocolID)) {
         throw new Error(`Received request on dial only protocol '${protocolID}'`);
       }
@@ -281,7 +281,7 @@ export class ReqResp {
    * ```
    * /ProtocolPrefix/MessageName/SchemaVersion/Encoding
    * ```
-   * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
+   * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#protocol-identification
    */
   protected formatProtocolID(protocol: Pick<MixedProtocol, "method" | "version" | "encoding">): string {
     return formatProtocolID(this.protocolPrefix, protocol.method, protocol.version, protocol.encoding);

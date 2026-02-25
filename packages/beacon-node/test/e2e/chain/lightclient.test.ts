@@ -14,7 +14,9 @@ import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
-describe("chain / lightclient", () => {
+// TODO: Re-enable once lightclient E2E timing is stabilized
+// https://github.com/ChainSafe/lodestar/issues/8937
+describe.skipIf(process.env.CI)("chain / lightclient", () => {
   vi.setConfig({testTimeout: 600_000});
 
   /**

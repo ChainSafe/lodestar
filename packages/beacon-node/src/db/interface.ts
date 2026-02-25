@@ -14,6 +14,8 @@ import {
   CheckpointHeaderRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
+  ExecutionPayloadEnvelopeArchiveRepository,
+  ExecutionPayloadEnvelopeRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -36,6 +38,9 @@ export interface IBeaconDb {
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
   dataColumnSidecar: DataColumnSidecarRepository;
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
+
+  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
+  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
 
   // finalized states
   stateArchive: StateArchiveRepository;

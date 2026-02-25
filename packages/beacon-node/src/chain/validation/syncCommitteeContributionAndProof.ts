@@ -106,7 +106,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 /**
  * Retrieve pubkeys in contribution aggregate using epochCtx:
  * - currSyncCommitteeIndexes cache
- * - index2pubkey cache
+ * - pubkeyCache
  */
 function getContributionIndices(
   state: CachedBeaconStateAltair,

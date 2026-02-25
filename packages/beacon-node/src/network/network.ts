@@ -1,7 +1,7 @@
-import {PeerId, PrivateKey} from "@libp2p/interface";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PublishOpts} from "@libp2p/gossipsub/types";
+import type {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
@@ -10,6 +10,8 @@ import {ResponseIncoming} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
+  DataColumnSidecar,
+  DataColumnSidecars,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -24,6 +26,8 @@ import {
   capella,
   deneb,
   fulu,
+  gloas,
+  isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
@@ -354,8 +358,11 @@ export class Network implements INetwork {
     });
   }
 
-  async publishDataColumnSidecar(dataColumnSidecar: fulu.DataColumnSidecar): Promise<number> {
-    const epoch = computeEpochAtSlot(dataColumnSidecar.signedBlockHeader.message.slot);
+  async publishDataColumnSidecar(dataColumnSidecar: DataColumnSidecar): Promise<number> {
+    const slot = isGloasDataColumnSidecar(dataColumnSidecar)
+      ? dataColumnSidecar.slot
+      : dataColumnSidecar.signedBlockHeader.message.slot;
+    const epoch = computeEpochAtSlot(slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
@@ -486,6 +493,17 @@ export class Network implements INetwork {
     return this.publishGossip<GossipType.light_client_optimistic_update>(
       {type: GossipType.light_client_optimistic_update, boundary},
       update
+    );
+  }
+
+  async publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number> {
+    const epoch = computeEpochAtSlot(signedEnvelope.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.execution_payload>(
+      {type: GossipType.execution_payload, boundary},
+      signedEnvelope,
+      {ignoreDuplicatePublishError: true}
     );
   }
 
@@ -765,7 +783,7 @@ export class Network implements INetwork {
     this.core.setTargetGroupCount(count);
   };
 
-  private onPublishDataColumns = (sidecars: fulu.DataColumnSidecar[]): Promise<number[]> => {
+  private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 

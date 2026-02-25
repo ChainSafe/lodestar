@@ -827,6 +827,15 @@ export function createLodestarMetrics(
         help: "Total number of blobs retrieved from execution engine and published to gossip",
       }),
     },
+    // Gossip execution payload envelope
+    gossipExecutionPayloadEnvelope: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_execution_payload_envelope_elapsed_time_till_received",
+        help: "Time elapsed between slot time and the time execution payload envelope received",
+        labelNames: ["source"],
+        buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+    },
     recoverDataColumnSidecars: {
       recoverTime: register.histogram({
         name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
@@ -917,6 +926,11 @@ export function createLodestarMetrics(
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({
       name: "lodestar_execution_engine_notify_new_payload_result_total",
       help: "The total result of calling notifyNewPayload execution engine api",
+      labelNames: ["result"],
+    }),
+    engineNotifyForkchoiceUpdateResult: register.gauge<{result: ExecutionPayloadStatus}>({
+      name: "lodestar_execution_engine_notify_forkchoice_update_result_total",
+      help: "The total result of calling notifyForkchoiceUpdate execution engine api",
       labelNames: ["result"],
     }),
     backfillSync: {

@@ -128,6 +128,7 @@ const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
+  private metrics: Metrics | null;
 
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
@@ -167,6 +168,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       metrics?.engineHttpProcessorQueue
     );
     this.logger = logger;
+    this.metrics = metrics ?? null;
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
       this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}));
@@ -369,6 +371,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     } = await request;
 
     this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
+    this.metrics?.engineNotifyForkchoiceUpdateResult.inc({result: status});
 
     switch (status) {
       case ExecutionPayloadStatus.VALID:

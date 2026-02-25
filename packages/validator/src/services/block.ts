@@ -1,5 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
+import {isForkPostGloas} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -12,7 +13,7 @@ import {
   Slot,
   isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
-import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex} from "@lodestar/utils";
+import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -95,6 +96,13 @@ export class BlockProposingService {
 
     // Wrap with try catch here to re-use `logCtx`
     try {
+      const fork = this.config.getForkName(slot);
+
+      // Gloas uses different block production flow
+      if (isForkPostGloas(fork)) {
+        return this.createAndPublishBlockGloas(pubkey, slot);
+      }
+
       const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
       const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
 
@@ -161,6 +169,104 @@ export class BlockProposingService {
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
     }
+  }
+
+  /**
+   * Gloas stateful block production flow:
+   * 1. Produce beacon block with execution payload bid
+   * 2. Sign and publish the beacon block
+   * 3. Get the execution payload envelope
+   * 4. Sign and publish the envelope
+   */
+  private async createAndPublishBlockGloas(pubkey: BLSPubkey, slot: Slot): Promise<void> {
+    const pubkeyHex = toPubkeyHex(pubkey);
+    const logCtx = {slot, validator: prettyBytes(pubkeyHex)};
+    const debugLogCtx = {slot, validator: pubkeyHex};
+
+    const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
+    const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
+    const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+
+    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient});
+    this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
+
+    // Step 1: Produce beacon block with execution payload bid
+    const blockRes = await this.api.validator
+      .produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+      })
+      .catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "produce"});
+        throw extendError(e, "Failed to produce block");
+      });
+    const block = blockRes.value();
+    const blockMeta = blockRes.meta();
+    const beaconBlockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
+    const blockRootHex = toRootHex(beaconBlockRoot);
+
+    this.logger.debug("Produced block", {
+      ...debugLogCtx,
+      consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+      blockRoot: blockRootHex,
+    });
+    this.metrics?.blocksProduced.inc();
+
+    // Step 2: Sign and publish the beacon block
+    const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
+
+    const {broadcastValidation} = this.opts;
+    // TODO GLOAS: we should be able to publish block and execution payload in parallel
+    // however for devnet-0 it's unclear if all clients have implemented queuing of the
+    // execution payload on gossip and might ignore it if the receive it before the block
+    (
+      await this.api.beacon
+        .publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation,
+        })
+        .catch((e: Error) => {
+          this.metrics?.blockProposingErrors.inc({error: "publish"});
+          throw extendError(e, "Failed to publish block");
+        })
+    ).assertOk();
+
+    this.logger.debug("Published beacon block", {...debugLogCtx, broadcastValidation});
+
+    // Step 3: Get the execution payload envelope
+    const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
+      slot,
+      beaconBlockRoot,
+    });
+    const envelope = envelopeRes.value();
+    const stateRootHex = toRootHex(envelope.stateRoot);
+
+    this.logger.debug("Retrieved execution payload envelope", {...debugLogCtx, stateRoot: stateRootHex});
+
+    // Step 4: Sign and publish the envelope
+    const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(pubkey, envelope, slot, this.logger);
+
+    (
+      await this.api.beacon
+        .publishExecutionPayloadEnvelope({
+          signedExecutionPayloadEnvelope: signedEnvelope,
+        })
+        .catch((e: Error) => {
+          this.metrics?.blockProposingErrors.inc({error: "publish"});
+          throw extendError(e, "Failed to publish execution payload envelope");
+        })
+    ).assertOk();
+
+    this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
+    this.metrics?.blocksPublished.inc();
+    this.logger.info("Published block and execution payload envelope", {
+      ...logCtx,
+      graffiti,
+      consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+      blockRoot: blockRootHex,
+    });
   }
 
   private publishBlockWrapper = async (

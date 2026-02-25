@@ -1,18 +1,26 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
-import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_SLOT, SLOTS_PER_EPOCH, isForkPostElectra} from "@lodestar/params";
+import {
+  BUILDER_INDEX_SELF_BUILD,
+  EFFECTIVE_BALANCE_INCREMENT,
+  ForkPostFulu,
+  GENESIS_SLOT,
+  SLOTS_PER_EPOCH,
+  isForkPostElectra,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateElectra,
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   EffectiveBalanceIncrements,
   EpochShuffling,
-  Index2PubkeyCache,
+  PubkeyCache,
   computeAnchorCheckpoint,
   computeAttestationsRewards,
   computeBlockRewards,
@@ -28,6 +36,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
+  DataColumnSidecars,
   Epoch,
   Root,
   RootHex,
@@ -38,7 +47,7 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
-  fulu,
+  gloas,
   isBlindedBeaconBlock,
   phase0,
   rewards,
@@ -87,8 +96,8 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
-import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
+import {computeEnvelopeStateRoot, computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {AssembledBlockType, BlockType, ProduceFullGloas, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
@@ -182,8 +191,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   // Global state caches
-  readonly pubkey2index: PubkeyIndexMap;
-  readonly index2pubkey: Index2PubkeyCache;
+  readonly pubkeyCache: PubkeyCache;
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
@@ -229,8 +237,7 @@ export class BeaconChain implements IBeaconChain {
     {
       privateKey,
       config,
-      pubkey2index,
-      index2pubkey,
+      pubkeyCache,
       db,
       dbName,
       dataDir,
@@ -246,8 +253,7 @@ export class BeaconChain implements IBeaconChain {
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
-      pubkey2index: PubkeyIndexMap;
-      index2pubkey: Index2PubkeyCache;
+      pubkeyCache: PubkeyCache;
       db: IBeaconDb;
       dbName: string;
       dataDir: string;
@@ -279,8 +285,8 @@ export class BeaconChain implements IBeaconChain {
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics, index2pubkey})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, index2pubkey});
+      ? new BlsSingleThreadVerifier({metrics, pubkeyCache})
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, pubkeyCache});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
@@ -336,8 +342,7 @@ export class BeaconChain implements IBeaconChain {
     ]);
 
     // Global cache of validators pubkey/index mapping
-    this.pubkey2index = pubkey2index;
-    this.index2pubkey = index2pubkey;
+    this.pubkeyCache = pubkeyCache;
 
     const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
     const blockStateCache = new FIFOBlockStateCache(this.opts, {metrics});
@@ -819,7 +824,7 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<fulu.DataColumnSidecars> {
+  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars> {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {
       if (!isBlockInputColumns(blockInput)) {
@@ -832,10 +837,10 @@ export class BeaconChain implements IBeaconChain {
     }
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {
-      return sidecarsUnfinalized;
+      return sidecarsUnfinalized as DataColumnSidecars;
     }
     const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
-    return sidecarsFinalized;
+    return sidecarsFinalized as DataColumnSidecars;
   }
 
   async getSerializedDataColumnSidecars(
@@ -857,7 +862,7 @@ export class BeaconChain implements IBeaconChain {
         if (serialized) {
           return serialized;
         }
-        return ssz.fulu.DataColumnSidecar.serialize(sidecar);
+        return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
       });
     }
     if (this.db.flatFileStore) {
@@ -919,6 +924,7 @@ export class BeaconChain implements IBeaconChain {
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }> {
+    const fork = this.config.getForkName(slot);
     const state = await this.regen.getBlockSlotState(
       parentBlock,
       slot,
@@ -926,7 +932,7 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = this.index2pubkey[proposerIndex].toBytes();
+    const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
 
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
@@ -947,7 +953,7 @@ export class BeaconChain implements IBeaconChain {
     // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
     const bodyRoot =
       produceResult.type === BlockType.Full
-        ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
+        ? sszTypesFor(fork).BeaconBlockBody.hashTreeRoot(body)
         : this.config
             .getPostBellatrixForkTypes(slot)
             .BlindedBeaconBlockBody.hashTreeRoot(body as BlindedBeaconBlockBody);
@@ -965,13 +971,32 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
+    const {newStateRoot, proposerReward, postState} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full
-        ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
+        ? sszTypesFor(fork).BeaconBlock.hashTreeRoot(block)
         : this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.hashTreeRoot(block as BlindedBeaconBlock);
     const blockRootHex = toRootHex(blockRoot);
+
+    if (isForkPostGloas(fork)) {
+      // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
+      if (produceResult.type !== BlockType.Full) {
+        throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
+      }
+
+      const gloasResult = produceResult as ProduceFullGloas;
+      const envelope: gloas.ExecutionPayloadEnvelope = {
+        payload: gloasResult.executionPayload,
+        executionRequests: gloasResult.executionRequests,
+        builderIndex: BUILDER_INDEX_SELF_BUILD,
+        beaconBlockRoot: blockRoot,
+        slot,
+        stateRoot: ZERO_HASH,
+      };
+      const envelopeStateRoot = computeEnvelopeStateRoot(this.metrics, postState as CachedBeaconStateGloas, envelope);
+      gloasResult.envelopeStateRoot = envelopeStateRoot;
+    }
 
     // Track the produced block for consensus broadcast validations, later validation, etc.
     this.blockProductionCache.set(blockRootHex, produceResult);
@@ -1523,7 +1548,7 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`State is not in cache for slot ${slot}`);
     }
 
-    const rewards = await computeAttestationsRewards(this.config, this.pubkey2index, cachedState, validatorIds);
+    const rewards = await computeAttestationsRewards(this.config, this.pubkeyCache, cachedState, validatorIds);
 
     return {rewards, executionOptimistic, finalized};
   }
@@ -1540,6 +1565,6 @@ export class BeaconChain implements IBeaconChain {
 
     preState = processSlots(preState, block.slot); // Dial preState's slot to block.slot
 
-    return computeSyncCommitteeRewards(this.config, this.index2pubkey, block, preState, validatorIds);
+    return computeSyncCommitteeRewards(this.config, this.pubkeyCache, block, preState, validatorIds);
   }
 }

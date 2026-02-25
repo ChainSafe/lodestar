@@ -1,5 +1,5 @@
+import type {TopicScoreParams} from "@libp2p/gossipsub/score";
 import {describe, expect, it} from "vitest";
-import {TopicScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {createBeaconConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/configs";
 import {ATTESTATION_SUBNET_COUNT, ForkName, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";

@@ -1,6 +1,5 @@
 import {execSync} from "node:child_process";
 import os from "node:os";
-import all from "it-all";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {LevelDbController} from "../../../src/index.js";
@@ -168,7 +167,7 @@ describe("LevelDB controller", () => {
       gte: k1,
       lte: k2,
     });
-    const result = await all(resultStream);
+    const result = await Array.fromAsync(resultStream);
     expect(result.length).toBe(2);
   });
 
@@ -180,7 +179,7 @@ describe("LevelDB controller", () => {
     const result = await db.entries({limit: 3});
     expect(result.length).toBe(3);
     const resultStream = db.entriesStream({limit: 3});
-    expect((await all(resultStream)).length).toBe(3);
+    expect((await Array.fromAsync(resultStream)).length).toBe(3);
   });
 
   it("test reverse", async () => {

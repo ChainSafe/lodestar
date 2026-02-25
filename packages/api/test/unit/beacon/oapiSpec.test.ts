@@ -20,14 +20,14 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v4.0.0-alpha.1";
+const version = "v5.0.0-alpha.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
   version: RegExp(version),
 };
 
-const config = createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0});
+const config = createChainForkConfig({...defaultChainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
 
 const definitions = {
   ...routes.beacon.getDefinitions(config),
@@ -55,6 +55,14 @@ const ignoredOperations = [
   /* missing route */
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
+  // TODO GLOAS: required by v5.0.0-alpha.0
+  "publishExecutionPayloadBid",
+  "getSignedExecutionPayloadEnvelope",
+  "getPoolPayloadAttestations",
+  "submitPayloadAttestationMessages",
+  "getPtcDuties",
+  "producePayloadAttestationData",
+  "getExecutionPayloadBid",
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
@@ -68,7 +76,12 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
-const ignoredTopics: string[] = [];
+const ignoredTopics: string[] = [
+  // TODO GLOAS: required by v5.0.0-alpha.0
+  "execution_payload_available",
+  "execution_payload_bid",
+  "payload_attestation_message",
+];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:

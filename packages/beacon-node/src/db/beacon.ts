@@ -18,6 +18,8 @@ import {
   CheckpointHeaderRepository,
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
+  ExecutionPayloadEnvelopeArchiveRepository,
+  ExecutionPayloadEnvelopeRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   SyncCommitteeRepository,
@@ -38,6 +40,9 @@ export class BeaconDb implements IBeaconDb {
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
   dataColumnSidecar: DataColumnSidecarRepository;
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
+
+  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
+  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
 
   stateArchive: StateArchiveRepository;
   checkpointState: CheckpointStateRepository;
@@ -69,6 +74,9 @@ export class BeaconDb implements IBeaconDb {
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
     this.dataColumnSidecar = new DataColumnSidecarRepository(config, db);
     this.dataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, db);
+
+    this.executionPayloadEnvelope = new ExecutionPayloadEnvelopeRepository(config, db);
+    this.executionPayloadEnvelopeArchive = new ExecutionPayloadEnvelopeArchiveRepository(config, db);
 
     this.stateArchive = new StateArchiveRepository(config, db);
     this.checkpointState = new CheckpointStateRepository(config, db);

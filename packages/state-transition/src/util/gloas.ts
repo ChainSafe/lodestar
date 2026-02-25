@@ -28,12 +28,18 @@ export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas):
   return Math.floor(quorum / BUILDER_PAYMENT_THRESHOLD_DENOMINATOR);
 }
 
+function hasBuilderIndexFlag(index: number): boolean {
+  // Equivalent to `(index & BUILDER_INDEX_FLAG) != 0`
+  return Math.floor(index / BUILDER_INDEX_FLAG) % 2 === 1;
+}
+
 /**
  * Check if a validator index represents a builder (has the builder flag set).
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-is_builder_index
  */
 export function isBuilderIndex(validatorIndex: number): boolean {
-  return (validatorIndex & BUILDER_INDEX_FLAG) !== 0;
+  // Note: Can't use bitwise AND (&) because BUILDER_INDEX_FLAG exceeds 32 bits in JS bitwise operations.
+  return hasBuilderIndexFlag(validatorIndex);
 }
 
 /**
@@ -41,7 +47,8 @@ export function isBuilderIndex(validatorIndex: number): boolean {
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_builder_index_to_validator_index
  */
 export function convertBuilderIndexToValidatorIndex(builderIndex: BuilderIndex): ValidatorIndex {
-  return builderIndex | BUILDER_INDEX_FLAG;
+  // Note: Can't use bitwise OR (|) because BUILDER_INDEX_FLAG exceeds 32 bits in JS bitwise operations.
+  return hasBuilderIndexFlag(builderIndex) ? builderIndex : builderIndex + BUILDER_INDEX_FLAG;
 }
 
 /**
@@ -49,7 +56,8 @@ export function convertBuilderIndexToValidatorIndex(builderIndex: BuilderIndex):
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-convert_validator_index_to_builder_index
  */
 export function convertValidatorIndexToBuilderIndex(validatorIndex: ValidatorIndex): BuilderIndex {
-  return validatorIndex & ~BUILDER_INDEX_FLAG;
+  // Note: Can't use bitwise AND (&) because BUILDER_INDEX_FLAG exceeds 32 bits in JS bitwise operations.
+  return hasBuilderIndexFlag(validatorIndex) ? validatorIndex - BUILDER_INDEX_FLAG : validatorIndex;
 }
 
 /**
