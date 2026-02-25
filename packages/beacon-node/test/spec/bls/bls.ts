@@ -78,7 +78,6 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
       ),
       Signature.fromHex(signature, true)
     );
-    )
   } catch (_e) {
     return false;
   }

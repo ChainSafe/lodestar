@@ -8,9 +8,9 @@ import {
   aggregateSerializedPublicKeys,
   aggregateSignatures,
 } from "@chainsafe/lodestar-z/blst";
-import { fromHexString } from "@chainsafe/ssz";
-import { InputType } from "@lodestar/spec-test-util";
-import { TestRunnerFn } from "../utils/types.js";
+import {fromHexString} from "@chainsafe/ssz";
+import {InputType} from "@lodestar/spec-test-util";
+import {TestRunnerFn} from "../utils/types.js";
 
 const testFnByType: Record<string, (data: any) => any> = {
   aggregate,
@@ -29,7 +29,7 @@ const G1_POINT_AT_INFINITY =
 
 export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (_fork, testName) => {
   return {
-    testFunction: ({ data }) => {
+    testFunction: ({data}) => {
       const testFn = testFnByType[testName];
       if (testFn === undefined) {
         throw Error(`Unknown bls test ${testName}`);
@@ -38,7 +38,7 @@ export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (_fork, testNam
       try {
         return testFn(data.input) as unknown;
       } catch (e) {
-        const { message } = e as Error;
+        const {message} = e as Error;
         if (message.includes("BLST_ERROR") || message === "EMPTY_AGGREGATE_ARRAY" || message === "ZERO_SECRET_KEY") {
           return null;
         }
@@ -46,7 +46,7 @@ export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (_fork, testNam
       }
     },
     options: {
-      inputTypes: { data: InputType.YAML },
+      inputTypes: {data: InputType.YAML},
       getExpected: (testCase) => testCase.data.output,
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/general/index.test.ts
     },
@@ -86,8 +86,8 @@ function aggregate(input: string[]): string | null {
  * output: bool  --  true (VALID) or false (INVALID)
  * ```
  */
-function aggregateVerify(input: { pubkeys: string[]; messages: string[]; signature: string }): boolean {
-  const { pubkeys, messages, signature } = input;
+function aggregateVerify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
+  const {pubkeys, messages, signature} = input;
   try {
     return BLSAggregateVerify(
       messages.map(fromHexString),
@@ -127,8 +127,8 @@ function ethAggregatePubkeys(input: string[]): string | null {
  * output: bool  --  true (VALID) or false (INVALID)
  * ```
  */
-function ethFastAggregateVerify(input: { pubkeys: string[]; message: string; signature: string }): boolean {
-  const { pubkeys, message, signature } = input;
+function ethFastAggregateVerify(input: {pubkeys: string[]; message: string; signature: string}): boolean {
+  const {pubkeys, message, signature} = input;
 
   if (pubkeys.length === 0 && signature === G2_POINT_AT_INFINITY) {
     return true;
@@ -159,8 +159,8 @@ function ethFastAggregateVerify(input: { pubkeys: string[]; message: string; sig
  * output: bool  --  true (VALID) or false (INVALID)
  * ```
  */
-function fastAggregateVerify(input: { pubkeys: string[]; message: string; signature: string }): boolean | null {
-  const { pubkeys, message, signature } = input;
+function fastAggregateVerify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
+  const {pubkeys, message, signature} = input;
   try {
     return BLSFastAggregateVerify(
       fromHexString(message),
@@ -178,8 +178,8 @@ function fastAggregateVerify(input: { pubkeys: string[]; message: string; signat
  *   message: bytes32 -- input message to sign (a hash)
  * output: BLS Signature -- expected output, single BLS signature or empty.
  */
-function sign(input: { privkey: string; message: string }): string | null {
-  const { privkey, message } = input;
+function sign(input: {privkey: string; message: string}): string | null {
+  const {privkey, message} = input;
   try {
     return SecretKey.fromHex(privkey).sign(fromHexString(message)).toHex();
   } catch (_e) {
@@ -194,8 +194,8 @@ function sign(input: { privkey: string; message: string }): string | null {
  *   signature: bytes96 -- the signature to verify against pubkey and message
  * output: bool  -- VALID or INVALID
  */
-function verify(input: { pubkey: string; message: string; signature: string }): boolean {
-  const { pubkey, message, signature } = input;
+function verify(input: {pubkey: string; message: string; signature: string}): boolean {
+  const {pubkey, message, signature} = input;
   try {
     return _verify(fromHexString(message), PublicKey.fromHex(pubkey), Signature.fromHex(signature));
   } catch (_e) {
