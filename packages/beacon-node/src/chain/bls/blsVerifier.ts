@@ -1,5 +1,6 @@
 import {blsBatch} from "@chainsafe/lodestar-z/bls-batch";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
 import {IBlsVerifier, VerifySignatureOpts} from "./interface.js";
@@ -79,6 +80,7 @@ export class BlsVerifier implements IBlsVerifier {
   private jobWaiters = new LinkedList<() => void>();
   private closed = false;
   private readonly metrics: Metrics | null;
+  private readonly logger: Logger;
 
   // Batch accumulator for batchable jobs
   private buffer: {
@@ -88,8 +90,9 @@ export class BlsVerifier implements IBlsVerifier {
     timeout: NodeJS.Timeout;
   } | null = null;
 
-  constructor(metrics: Metrics | null) {
+  constructor(metrics: Metrics | null, logger: Logger) {
     this.metrics = metrics;
+    this.logger = logger;
     blsBatch.init(this.maxInflightJobs);
 
     metrics?.blsVerifier.inflightJobs.addCollect(() => {
@@ -240,8 +243,8 @@ export class BlsVerifier implements IBlsVerifier {
       if (single.length > 0 && !blsBatch.verify(blsBatch.single, single)) return false;
 
       return true;
-    } catch {
-      // A signature could be malformed, causing a deserialization error
+    } catch (e) {
+      this.logger.debug("verifySync caught error", {sets: sets.length}, e as Error);
       return false;
     }
   }
@@ -259,8 +262,8 @@ export class BlsVerifier implements IBlsVerifier {
 
       const results = await Promise.all(promises);
       return results.every((r) => r);
-    } catch {
-      // A signature could be malformed, causing a deserialization error
+    } catch (e) {
+      this.logger.debug("verifyAsync caught error", {sets: sets.length}, e as Error);
       return false;
     } finally {
       const elapsed = timer?.();

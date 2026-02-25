@@ -1,5 +1,6 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {SecretKey, Signature} from "@chainsafe/lodestar-z/blst";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {ISignatureSet, SignatureSetType, getPubkeyCache} from "@lodestar/state-transition";
 import {BlsVerifier} from "../../../../src/chain/bls/blsVerifier.js";
 
@@ -12,7 +13,7 @@ describe("BlsVerifier ", () => {
     pubkeyCache.set(i, sk.toPublicKey().toBytes());
   }
 
-  const verifier = new BlsVerifier(null);
+  const verifier = new BlsVerifier(null, getEmptyLogger());
 
   describe("verifySignatureSets", () => {
     let sets: ISignatureSet[];

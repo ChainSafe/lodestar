@@ -3,6 +3,7 @@ import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType, getPubkeyCache} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {BlsVerifier} from "../../../../../src/chain/bls/blsVerifier.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
@@ -69,7 +70,7 @@ describe("validateGossipAttestationsSameAttData", () => {
 
   beforeEach(() => {
     chain = {
-      bls: new BlsVerifier(null),
+      bls: new BlsVerifier(null, getEmptyLogger()),
       seenAttesters: new SeenAttesters(),
       pubkeyCache,
       opts: {

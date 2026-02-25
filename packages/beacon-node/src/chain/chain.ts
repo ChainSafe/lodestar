@@ -283,7 +283,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionBuilder = executionBuilder;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
-    const bls = new BlsVerifier(metrics);
+    const bls = new BlsVerifier(metrics, logger);
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 

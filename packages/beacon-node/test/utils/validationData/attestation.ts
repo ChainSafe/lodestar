@@ -12,6 +12,7 @@ import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
 } from "../../../../state-transition/test/perf/util.js";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {BlsVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -167,7 +168,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     seenAttesters: new SeenAttesters(),
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
-    bls: new BlsVerifier(null),
+    bls: new BlsVerifier(null, getEmptyLogger()),
     waitForBlock: () => Promise.resolve(false),
     pubkeyCache: state.epochCtx.pubkeyCache,
     shufflingCache,
