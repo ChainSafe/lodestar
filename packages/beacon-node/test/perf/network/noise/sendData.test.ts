@@ -1,11 +1,8 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {Upgrader} from "@libp2p/interface";
+import type {Upgrader} from "@libp2p/interface";
 import {defaultLogger} from "@libp2p/logger";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import drain from "it-drain";
-import {duplexPair} from "it-pair/duplex";
-import {pipe} from "it-pipe";
-import {Uint8ArrayList} from "uint8arraylist";
+import {streamPair} from "@libp2p/utils";
 import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
 
@@ -34,24 +31,29 @@ describe("network / noise / sendData", () => {
         const noiseA = noise()({logger: defaultLogger(), privateKey: privateKeyA, peerId: peerA, upgrader});
         const noiseB = noise()({logger: defaultLogger(), privateKey: privateKeyB, peerId: peerB, upgrader});
 
-        const [inboundConnection, outboundConnection] = duplexPair<Uint8Array | Uint8ArrayList>();
+        const [outboundConnection, inboundConnection] = await streamPair();
         const [outbound, inbound] = await Promise.all([
           noiseA.secureOutbound(outboundConnection, {remotePeer: peerB}),
           noiseB.secureInbound(inboundConnection, {remotePeer: peerA}),
         ]);
 
-        return {connA: outbound.conn, connB: inbound.conn, data: new Uint8Array(messageLength)};
+        return {connA: outbound.connection, connB: inbound.connection, data: new Uint8Array(messageLength)};
       },
       fn: async ({connA, connB, data}) => {
         await Promise.all([
-          //
-          pipe(connB.source, connB.sink),
-          pipe(function* () {
+          (async () => {
             for (let i = 0; i < numberOfMessages; i++) {
-              yield data;
+              if (!connA.send(data)) {
+                await connA.onDrain();
+              }
             }
-          }, connA.sink),
-          pipe(connB.source, drain),
+            await connA.close();
+          })(),
+          (async () => {
+            for await (const _chunk of connB) {
+              // Drain inbound messages
+            }
+          })(),
         ]);
       },
     });

@@ -9,7 +9,8 @@ import {handleRequest} from "../../../src/response/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
 import {pingProtocol} from "../../fixtures/protocols.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
-import {MockLibP2pStream, expectEqualByteChunks} from "../../utils/index.js";
+import {expectEqualByteChunks} from "../../utils/index.js";
+import {createMockStream} from "../../utils/mockStream.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
 const testCases: {
@@ -59,7 +60,13 @@ describe("response / handleRequest", () => {
   afterEach(() => controller.abort());
 
   it.each(testCases)("$id", async ({requestChunks, protocol, expectedResponseChunks, expectedError}) => {
-    const stream = new MockLibP2pStream(requestChunks as any);
+    const {stream, sentChunks} = await createMockStream({
+      source: (async function* (): AsyncIterable<Uint8Array> {
+        for (const chunk of requestChunks) {
+          yield chunk;
+        }
+      })(),
+    });
     const rateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
 
     const resultPromise = handleRequest({
@@ -80,6 +87,9 @@ describe("response / handleRequest", () => {
       await expect(resultPromise).resolves.toBeUndefined();
     }
 
-    expectEqualByteChunks(stream.resultChunks, expectedResponseChunks, "Wrong response chunks");
+    // Allow stream message events to be delivered before asserting on captured chunks
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expectEqualByteChunks(sentChunks, expectedResponseChunks, "Wrong response chunks");
   });
 });

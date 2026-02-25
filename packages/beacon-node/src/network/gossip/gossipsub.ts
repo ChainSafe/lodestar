@@ -1,10 +1,18 @@
+import {
+  type GossipSub,
+  type GossipSubEvents,
+  type PublishResult,
+  StrictNoSign,
+  type TopicValidatorResult,
+  gossipsub,
+} from "@libp2p/gossipsub";
+import type {MetricsRegister, TopicLabel, TopicStrToLabel} from "@libp2p/gossipsub/metrics";
+import type {PeerScoreParams, PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {AddrInfo, PublishOpts, TopicStr} from "@libp2p/gossipsub/types";
+import type {PeerId} from "@libp2p/interface";
 import {peerIdFromString} from "@libp2p/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
-import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
-import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
-import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
-import {AddrInfo, SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -69,6 +77,24 @@ export type Eth2GossipsubOpts = {
 
 export type ForkBoundaryLabel = string;
 
+// Many of the internal properties we need are not available on the public interface,
+// so we create an extended type here to avoid excessive type assertions throughout the codebase.
+// Mind that any updates to the gossipsub package may require updates to this type.
+type GossipSubInternal = GossipSub & {
+  mesh: Map<string, Set<string>>;
+  peers: Map<string, PeerId>;
+  score: {score: (peerIdStr: string) => number};
+  direct: Set<string>;
+  topics: Map<string, Set<string>>;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  publish: (topic: TopicStr, data: Uint8Array, opts?: PublishOpts) => Promise<PublishResult>;
+  getMeshPeers: (topic: TopicStr) => string[];
+  dumpPeerScoreStats: () => PeerScoreStatsDump;
+  getScore: (peerIdStr: string) => number;
+  reportMessageValidationResult: (msgId: string, propagationSource: string, acceptance: TopicValidatorResult) => void;
+};
+
 /**
  * Wrapper around js-libp2p-gossipsub with the following extensions:
  * - Eth2 message id
@@ -82,13 +108,14 @@ export type ForkBoundaryLabel = string;
  *
  * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
-export class Eth2Gossipsub extends GossipSub {
+export class Eth2Gossipsub {
   readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: BeaconConfig;
   private readonly logger: Logger;
   private readonly peersData: PeersData;
   private readonly events: NetworkEventBus;
   private readonly libp2p: Libp2p;
+  private readonly gossipsub: GossipSubInternal;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
@@ -103,9 +130,6 @@ export class Eth2Gossipsub extends GossipSub {
     let metrics: Eth2GossipsubMetrics | null = null;
     if (metricsRegister) {
       metrics = createEth2GossipsubMetrics(metricsRegister);
-      metrics.gossipMesh.peersByType.addCollect(() =>
-        this.onScrapeLodestarMetrics(metrics as Eth2GossipsubMetrics, networkConfig)
-      );
     }
 
     // Parse direct peers from multiaddr strings to AddrInfo objects
@@ -113,8 +137,8 @@ export class Eth2Gossipsub extends GossipSub {
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super(modules.libp2p.services.components, {
-      globalSignaturePolicy: SignaturePolicy.StrictNoSign,
+    const gossipsubInstance = gossipsub({
+      globalSignaturePolicy: StrictNoSign,
       allowPublishToZeroTopicPeers: allowPublishToZeroPeers,
       D: gossipsubD ?? GOSSIP_D,
       Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
@@ -155,7 +179,12 @@ export class Eth2Gossipsub extends GossipSub {
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: 16829,
-    });
+    })(modules.libp2p.services.components) as GossipSubInternal;
+
+    if (metrics) {
+      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
+    }
+    this.gossipsub = gossipsubInstance;
     this.scoreParams = scoreParams;
     this.config = config;
     this.logger = logger;
@@ -164,7 +193,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.libp2p = modules.libp2p;
     this.gossipTopicCache = gossipTopicCache;
 
-    this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
+    this.gossipsub.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
@@ -172,6 +201,38 @@ export class Eth2Gossipsub extends GossipSub {
     if (!opts.skipParamsLog) {
       this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
     }
+  }
+
+  async start(): Promise<void> {
+    await this.gossipsub.start();
+  }
+
+  async stop(): Promise<void> {
+    await this.gossipsub.stop();
+  }
+
+  get mesh(): Map<string, Set<string>> {
+    return this.gossipsub.mesh;
+  }
+
+  getTopics(): TopicStr[] {
+    return this.gossipsub.getTopics();
+  }
+
+  getMeshPeers(topic: TopicStr): string[] {
+    return this.gossipsub.getMeshPeers(topic);
+  }
+
+  publish(topic: TopicStr, data: Uint8Array, opts?: PublishOpts): Promise<PublishResult> {
+    return this.gossipsub.publish(topic, data, opts);
+  }
+
+  dumpPeerScoreStats(): PeerScoreStatsDump {
+    return this.gossipsub.dumpPeerScoreStats();
+  }
+
+  getScore(peerIdStr: string): number {
+    return this.gossipsub.getScore(peerIdStr);
   }
 
   /**
@@ -183,7 +244,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.gossipTopicCache.setTopic(topicStr, topic);
 
     this.logger.verbose("Subscribe to gossipsub topic", {topic: topicStr});
-    this.subscribe(topicStr);
+    this.gossipsub.subscribe(topicStr);
   }
 
   /**
@@ -192,15 +253,14 @@ export class Eth2Gossipsub extends GossipSub {
   unsubscribeTopic(topic: GossipTopic): void {
     const topicStr = stringifyGossipTopic(this.config, topic);
     this.logger.verbose("Unsubscribe to gossipsub topic", {topic: topicStr});
-    this.unsubscribe(topicStr);
+    this.gossipsub.unsubscribe(topicStr);
   }
 
   private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics, networkConfig: NetworkConfig): void {
-    const mesh = this.mesh;
-    // biome-ignore lint/complexity/useLiteralKeys: `topics` is a private attribute
-    const topics = this["topics"] as Map<string, Set<string>>;
-    const peers = this.peers;
-    const score = this.score;
+    const mesh = this.gossipsub.mesh;
+    const topics = this.gossipsub.topics;
+    const peers = this.gossipsub.peers;
+    const score = this.gossipsub.score;
     const meshPeersByClient = new Map<string, number>();
     const meshPeerIdStrs = new Set<string>();
 
@@ -305,7 +365,7 @@ export class Eth2Gossipsub extends GossipSub {
     metrics.gossipPeer.score.set(gossipScores);
   }
 
-  private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
+  private onGossipsubMessage(event: GossipSubEvents["gossipsub:message"]): void {
     const {propagationSource, msgId, msg} = event.detail;
 
     // Also validates that the topicStr is known
@@ -341,7 +401,7 @@ export class Eth2Gossipsub extends GossipSub {
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
     callInNextEventLoop(() => {
-      this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
+      this.gossipsub.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
     });
   }
 
@@ -379,7 +439,7 @@ export class Eth2Gossipsub extends GossipSub {
     }
 
     // Add to direct peers set only after addresses are stored
-    this.direct.add(peerIdStr);
+    this.gossipsub.direct.add(peerIdStr);
 
     this.logger.info("Added direct peer via API", {peerId: peerIdStr});
     return peerIdStr;
@@ -389,7 +449,7 @@ export class Eth2Gossipsub extends GossipSub {
    * Remove a peer from direct peers.
    */
   removeDirectPeer(peerIdStr: string): boolean {
-    const removed = this.direct.delete(peerIdStr);
+    const removed = this.gossipsub.direct.delete(peerIdStr);
     if (removed) {
       this.logger.info("Removed direct peer via API", {peerId: peerIdStr});
     }
@@ -400,7 +460,7 @@ export class Eth2Gossipsub extends GossipSub {
    * Get list of current direct peer IDs.
    */
   getDirectPeers(): string[] {
-    return Array.from(this.direct);
+    return Array.from(this.gossipsub.direct);
   }
 }
 
@@ -498,7 +558,8 @@ export function parseDirectPeers(directPeerStrs: routes.lodestar.DirectPeer[], l
       try {
         const ma = multiaddr(peerStr);
 
-        const peerIdStr = ma.getPeerId();
+        const peerIdComponent = ma.getComponents().findLast((component) => component.name === "p2p");
+        const peerIdStr = peerIdComponent?.value;
         if (!peerIdStr) {
           logger.warn("Direct peer multiaddr must contain /p2p/ component with peer ID", {multiaddr: peerStr});
           continue;
