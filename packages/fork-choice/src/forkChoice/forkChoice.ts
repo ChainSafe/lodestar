@@ -743,13 +743,13 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-      // TODO GLOAS: Need to update this when we are merging nc/epbs-fc. Need to define `getPostEpbsExecStatus`
+      // TODO GLOAS: Need to update this when we are merging nc/epbs-fc. Need to define `getPostGloasExecStatus`
       // to make sure execution status of post-gloas blocks is ExecutionStatus.PayloadSeparated
       ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
         ? {
             executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
             executionPayloadNumber: block.body.executionPayload.blockNumber,
-            executionStatus: this.getPostMergePreEpbsExecStatus(executionStatus),
+            executionStatus: this.getPreGloasExecStatus(executionStatus),
             dataAvailabilityStatus,
           }
         : {
@@ -1242,7 +1242,7 @@ export class ForkChoice implements IForkChoice {
     return dataAvailabilityStatus;
   }
 
-  private getPostMergePreEpbsExecStatus(
+  private getPreGloasExecStatus(
     executionStatus: MaybeValidExecutionStatus
   ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
     if (executionStatus === ExecutionStatus.PreMerge || executionStatus === ExecutionStatus.PayloadSeparated)

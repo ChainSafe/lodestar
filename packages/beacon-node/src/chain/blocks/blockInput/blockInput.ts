@@ -939,7 +939,7 @@ export class BlockInputNoData extends AbstractBlockInput<ForkPostGloas, null> {
     };
     const state: BlockInputNoDataState = {
       hasBlock: true,
-      hasAllData: true, // Immediately complete - no DA for beacon blocks in ePBS
+      hasAllData: true,
       block: props.block,
       source: {
         source: props.source,
