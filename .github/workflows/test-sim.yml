@@ -22,9 +22,6 @@ on:
         type: number
         default: 40
 
-env:
-  ZIG_VERSION: "0.14.1"
-
 jobs:
   build:
     name: Build

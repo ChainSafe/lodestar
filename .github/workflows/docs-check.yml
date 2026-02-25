@@ -6,9 +6,6 @@ on:
     branches: [unstable, stable]
   pull_request:
 
-env:
-  ZIG_VERSION: "0.14.1"
-
 jobs:
   build:
     name: Docs spellcheck

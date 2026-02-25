@@ -12,9 +12,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  ZIG_VERSION: "0.14.1"
-
 jobs:
   build:
     name: Build
