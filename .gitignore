@@ -30,7 +30,9 @@ validators
 !.vscode/settings.json
 .vscode/tasks.json
 # Claude Code — ignore local/personal config, keep shared project config
-.claude/
+.claude/settings.local.json
+.claude/plans/
+.claude/CLAUDE.local.md
 
 # Tests artifacts
 packages/*/spec-tests*
