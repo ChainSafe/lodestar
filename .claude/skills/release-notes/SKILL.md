@@ -6,6 +6,7 @@ description: >
   the GitHub release body. Covers header text, Discord announcement,
   and changelog formatting. Requires access to the Lodestar repo and
   GitHub CLI for changelog generation.
+disable-model-invocation: true
 ---
 
 # Release Notes
