@@ -183,11 +183,7 @@ export interface ColumnByteRange {
  * Compute the file byte range for a specific column, using the header
  * and offset table bytes. Returns null if column is absent.
  */
-export function getColumnByteRange(
-  header: DcolHeader,
-  offsetTable: Uint8Array,
-  index: number
-): ColumnByteRange | null {
+export function getColumnByteRange(header: DcolHeader, offsetTable: Uint8Array, index: number): ColumnByteRange | null {
   if (!getBit(header.bitmap, index)) return null;
 
   const p = popcount(header.bitmap, index);
