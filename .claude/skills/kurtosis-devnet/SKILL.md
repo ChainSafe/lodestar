@@ -166,7 +166,7 @@ vc_extra_params:
 kurtosis service logs <enclave> cl-1-lodestar-reth --follow
 
 # Save all CL logs for analysis
-for svc in $(kurtosis enclave inspect <enclave> 2>/dev/null | grep -oP 'cl-\d+-\S+'); do
+for svc in $(kurtosis enclave inspect <enclave> 2>/dev/null | grep -oE 'cl-[0-9]+-[^[:space:]]+'); do
   kurtosis service logs <enclave> $svc > "/tmp/${svc}.log" 2>&1
 done
 

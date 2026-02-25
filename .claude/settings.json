@@ -39,7 +39,7 @@
       "Bash(curl -s http://localhost:*)"
     ],
     "deny": [
-      "Bash(rm -rf /)*",
+      "Bash(rm -rf / *)",
       "Bash(sudo *)"
     ]
   },

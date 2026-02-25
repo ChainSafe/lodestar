@@ -89,11 +89,11 @@ The most powerful technique — test a hypothesis by comparing control vs modifi
 # Control: capture baseline (2 min)
 timeout 120 ./lodestar beacon [flags] 2>&1 | tee /tmp/control.log &
 # Sample metrics during run
-for i in $(seq 1 4); do sleep 30; curl -s http://localhost:8008/metrics > /tmp/control-$i.metrics; done
+for i in 1 2 3 4; do sleep 30; curl -s http://localhost:8008/metrics > /tmp/control-$i.metrics; done
 
 # Test: apply change, repeat
 timeout 120 ./lodestar beacon [flags] 2>&1 | tee /tmp/test.log &
-for i in $(seq 1 4); do sleep 30; curl -s http://localhost:8008/metrics > /tmp/test-$i.metrics; done
+for i in 1 2 3 4; do sleep 30; curl -s http://localhost:8008/metrics > /tmp/test-$i.metrics; done
 
 # Compare
 diff <(grep pattern /tmp/control-4.metrics) <(grep pattern /tmp/test-4.metrics)
@@ -192,7 +192,8 @@ lsof -i :8008
 
 ```bash
 # Remove data directory after testing
-rm -rf ~/.local/share/lodestar/mainnet
+# Remove data directory after testing. Use with caution.
+rm -r ~/.local/share/lodestar/mainnet
 
 # Or use a custom datadir for isolation
 --dataDir /tmp/lodestar-debug
