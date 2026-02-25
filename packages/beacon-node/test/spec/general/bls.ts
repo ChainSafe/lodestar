@@ -143,7 +143,7 @@ function ethFastAggregateVerify(input: {pubkeys: string[]; message: string; sign
     return BLSFastAggregateVerify(
       fromHexString(message),
       pubkeys.map((hex) => PublicKey.fromHex(hex)),
-      Signature.fromHexString(signature)
+      Signature.fromHex(signature)
     );
   } catch (_e) {
     return false;
@@ -164,8 +164,8 @@ function fastAggregateVerify(input: {pubkeys: string[]; message: string; signatu
   try {
     return BLSFastAggregateVerify(
       fromHexString(message),
-      pubkeys.map((hex) => PublicKey.fromHexString(hex, true)),
-      Signature.fromHexString(signature, true)
+      pubkeys.map((hex) => PublicKey.fromHex(hex, true)),
+      Signature.fromHex(signature, true)
     );
   } catch (_e) {
     return false;
