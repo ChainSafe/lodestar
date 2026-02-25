@@ -226,3 +226,10 @@ done
 - **`kurtosis clean -a`** between runs — never use `docker system prune` (it can remove Kurtosis engine images)
 - **Debug logs:** Set `global_log_level: "debug"` for verbose output from all nodes
 - **Per-participant log levels:** Use `cl_log_level` / `el_log_level` on individual entries for targeted debugging
+
+---
+
+## Self-Maintenance
+
+If any commands, file paths, URLs, or configurations in this skill are outdated or no longer work, update this SKILL.md with the correct information after completing your current task. Skills should stay accurate and self-healing — fix what you find broken.
+

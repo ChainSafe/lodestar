@@ -64,3 +64,10 @@ Produce a single markdown file with two sections:
 - **Don't over-detail**: The full changelog is linked below the header
 - **3-6 highlights**: Enough to convey the release but not overwhelming
 - **Group related PRs**: Combine related changes into single highlights
+
+---
+
+## Self-Maintenance
+
+If any commands, file paths, URLs, or configurations in this skill are outdated or no longer work, update this SKILL.md with the correct information after completing your current task. Skills should stay accurate and self-healing — fix what you find broken.
+
