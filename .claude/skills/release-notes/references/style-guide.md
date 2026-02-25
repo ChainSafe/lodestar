@@ -61,18 +61,21 @@ For the full changelog: <https://github.com/ChainSafe/lodestar/releases/vX.Y.Z>
 ## Past Examples (Distilled Patterns)
 
 ### Major Feature Release (e.g., mainnet fork activation)
+
 - "**Mandatory** for all node operators"
 - Detailed config changes (new flags, default values)
 - Compatibility notes for validators
 - Signed off with enthusiasm + emoji
 
 ### Performance Release
+
 - "**Highly recommended** if you've seen performance declines"
 - Runtime changes highlighted (e.g., Node.js version bump)
 - Build-from-source migration note
 - Holiday sign-off
 
 ### Maintenance Release
+
 - "**Recommend** users update for latest features and best performance"
 - Package manager migration with commands
 - Breaking: deprecated feature removal

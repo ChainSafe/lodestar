@@ -19,11 +19,11 @@ This directory contains shared [Claude Code](https://code.claude.com/) configura
 
 Skills are automatically loaded by Claude Code based on task context. You can also invoke them manually:
 
-| Skill | When to use |
-|-------|-------------|
-| **kurtosis-devnet** | Spinning up local testnets, cross-client interop testing, fork transitions |
-| **release-notes** | Drafting release notes for GitHub and Discord |
-| **local-mainnet-debug** | Debugging networking/peer issues against real mainnet peers |
+| Skill                   | When to use                                                                |
+| ----------------------- | -------------------------------------------------------------------------- |
+| **kurtosis-devnet**     | Spinning up local testnets, cross-client interop testing, fork transitions |
+| **release-notes**       | Drafting release notes for GitHub and Discord                              |
+| **local-mainnet-debug** | Debugging networking/peer issues against real mainnet peers                |
 
 ## Shared Plugins
 
@@ -38,6 +38,7 @@ claude plugin install consensus-clients
 ## Personal Configuration
 
 Add personal settings to `.claude/settings.local.json` (gitignored). This is useful for:
+
 - Personal API keys or tool preferences
 - Local MCP server configurations
 - Additional permission rules for your workflow

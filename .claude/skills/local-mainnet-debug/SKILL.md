@@ -39,16 +39,16 @@ timeout 120 ./lodestar beacon \
 
 ## Key Parameters
 
-| Parameter | Purpose | Notes |
-|-----------|---------|-------|
-| `--network mainnet` | Connect to real mainnet peers | Use `holesky` for testnet |
-| `--execution.engineMock` | Skip EL requirement | Node won't validate execution payloads |
-| `--rest false` | Disable REST API | Reduces noise, avoids port conflicts |
-| `--metrics` | Enable Prometheus metrics | Scrape at `http://localhost:8008/metrics` |
-| `--port 19771` | Custom P2P port | Avoid conflicts with other instances |
-| `--logLevel debug` | Verbose logging | Use `trace` for maximum detail |
-| `--checkpointSyncUrl` | Checkpoint sync endpoint | `https://beaconstate-mainnet.chainsafe.io` for mainnet |
-| `--forceCheckpointSync` | Force checkpoint sync even if DB exists | Clean start each run |
+| Parameter                | Purpose                                 | Notes                                                  |
+| ------------------------ | --------------------------------------- | ------------------------------------------------------ |
+| `--network mainnet`      | Connect to real mainnet peers           | Use `holesky` for testnet                              |
+| `--execution.engineMock` | Skip EL requirement                     | Node won't validate execution payloads                 |
+| `--rest false`           | Disable REST API                        | Reduces noise, avoids port conflicts                   |
+| `--metrics`              | Enable Prometheus metrics               | Scrape at `http://localhost:8008/metrics`              |
+| `--port 19771`           | Custom P2P port                         | Avoid conflicts with other instances                   |
+| `--logLevel debug`       | Verbose logging                         | Use `trace` for maximum detail                         |
+| `--checkpointSyncUrl`    | Checkpoint sync endpoint                | `https://beaconstate-mainnet.chainsafe.io` for mainnet |
+| `--forceCheckpointSync`  | Force checkpoint sync even if DB exists | Clean start each run                                   |
 
 ## Checkpoint Sync Endpoints
 
@@ -143,6 +143,7 @@ Trace stream lifecycle:
 ```
 
 Key locations for instrumentation:
+
 - `@libp2p/identify`: identify.js → `_identify()` method
 - Stream open/close: yamux or mplex stream.js
 - Protocol negotiation: `@libp2p/multistream-select`
@@ -154,6 +155,7 @@ Key locations for instrumentation:
 **Symptoms:** High ratio of "Unknown" in `lodestar_peers_by_client` metric.
 
 **Diagnostic approach:**
+
 1. Check `lodestar_peers_by_client` for Unknown ratio
 2. Enable debug logs, grep for "Error setting agentVersion"
 3. Instrument identify stream to check stream state before `pb.read()`
@@ -164,6 +166,7 @@ Key locations for instrumentation:
 **Symptoms:** Low peer count after startup.
 
 **Diagnostic approach:**
+
 1. Check `libp2p_dialer_pending_dial_count` and `libp2p_connections`
 2. Verify port is accessible: `lsof -i :<port>`
 3. Check discv5 logs for bootstrap ENR issues
@@ -174,6 +177,7 @@ Key locations for instrumentation:
 **Symptoms:** Peers connecting and quickly disconnecting.
 
 **Diagnostic approach:**
+
 1. Check `libp2p_connections` vs `libp2p_protocol_streams`
 2. Grep logs for disconnect reasons
 3. Check if peers are being pruned by score: `lodestar_gossip_peer_score_*`
@@ -214,4 +218,3 @@ rm -r /tmp/lodestar-debug
 ## Self-Maintenance
 
 If any commands, file paths, URLs, or configurations in this skill are outdated or no longer work, update this SKILL.md with the correct information after completing your current task. Skills should stay accurate and self-healing — fix what you find broken.
-

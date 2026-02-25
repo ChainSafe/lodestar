@@ -43,6 +43,7 @@ kurtosis clean -a
 See `references/config-reference.md` for the full config structure.
 
 Key sections:
+
 - `participants`: list of CL+EL client pairs with images, flags, validator counts
 - `network_params`: fork epochs, slot time, network-level settings
 - `additional_services`: dora (explorer), assertoor (testing), prometheus, grafana
@@ -71,6 +72,7 @@ cd ~/lodestar && docker build -t lodestar:custom .
 Kurtosis names services as: `{role}-{index}-{cl_type}-{el_type}`
 
 Examples:
+
 - `cl-1-lodestar-reth` — first CL node (Lodestar with Reth EL)
 - `el-1-reth-lodestar` — corresponding EL node
 - `vc-1-lodestar-reth` — validator client
@@ -98,13 +100,14 @@ Port publisher assigns sequential ports (step of 5 per service).
 ## Assertoor (Automated Testing)
 
 Add to config:
+
 ```yaml
 additional_services:
   - assertoor
 
 assertoor_params:
-  run_stability_check: true        # chain stability, finality, no reorgs
-  run_block_proposal_check: true   # every client pair proposes a block
+  run_stability_check: true # chain stability, finality, no reorgs
+  run_block_proposal_check: true # every client pair proposes a block
 ```
 
 Check results via the assertoor web UI (port shown in `kurtosis enclave inspect`).
@@ -112,14 +115,16 @@ Check results via the assertoor web UI (port shown in `kurtosis enclave inspect`
 ## Common Devnet Patterns
 
 ### Fork Transition Testing
+
 ```yaml
 network_params:
   electra_fork_epoch: 0
-  fulu_fork_epoch: 1      # fork at epoch 1 (slot 32)
-  seconds_per_slot: 6      # faster for testing
+  fulu_fork_epoch: 1 # fork at epoch 1 (slot 32)
+  seconds_per_slot: 6 # faster for testing
 ```
 
 ### Mixed-Client Topology (Cross-Client Interop)
+
 ```yaml
 participants:
   - cl_type: lodestar
@@ -133,16 +138,19 @@ participants:
 ```
 
 ### Observer Nodes (No Validators)
+
 ```yaml
 - cl_type: lodestar
   cl_image: lodestar:custom
   el_type: reth
   count: 1
-  validator_count: 0       # observer-only
+  validator_count: 0 # observer-only
 ```
 
 ### Supernode Mode
+
 Set `supernode: true` to run beacon+validator in a single process (faster startup, simpler topology):
+
 ```yaml
 - cl_type: lodestar
   el_type: reth
@@ -151,6 +159,7 @@ Set `supernode: true` to run beacon+validator in a single process (faster startu
 ```
 
 ### Extra CL/VC Params
+
 ```yaml
 cl_extra_params:
   - --targetPeers=8
@@ -185,10 +194,12 @@ curl -s http://127.0.0.1:<port>/eth/v1/node/syncing | jq
 ### Wait for Finality
 
 Finality typically takes 2-3 epochs after genesis. With `seconds_per_slot: 6` and 32 slots/epoch:
+
 - 1 epoch ≈ 192s (3.2 min)
 - First finalization ≈ epoch 3-4 boundary (≈10-13 min)
 
 Monitor:
+
 ```bash
 curl -s http://<port>/eth/v1/beacon/states/head/finality_checkpoints | jq '.data.finalized.epoch'
 ```
@@ -207,16 +218,16 @@ done
 
 ## Troubleshooting
 
-| Issue | Fix |
-|-------|-----|
-| Peers not connecting | Increase `--targetPeers`, check `directPeers` config |
-| No finality | Need ≥2/3 validators attesting; check VC logs |
-| "discv5 has no boot enr" | Harmless startup warning, ignore |
-| Port conflicts | Change `public_port_start` or stop conflicting enclaves |
-| Image not found | Ensure Docker image is built locally or available in registry |
-| Slow startup | Use `Dockerfile.dev` for local builds; reduce validator count |
-| Docker bind error | Use non-default port ranges; `kurtosis clean -a` between runs |
-| Stale enclave state | Always `kurtosis clean -a` before relaunching (not `docker system prune`) |
+| Issue                    | Fix                                                                       |
+| ------------------------ | ------------------------------------------------------------------------- |
+| Peers not connecting     | Increase `--targetPeers`, check `directPeers` config                      |
+| No finality              | Need ≥2/3 validators attesting; check VC logs                             |
+| "discv5 has no boot enr" | Harmless startup warning, ignore                                          |
+| Port conflicts           | Change `public_port_start` or stop conflicting enclaves                   |
+| Image not found          | Ensure Docker image is built locally or available in registry             |
+| Slow startup             | Use `Dockerfile.dev` for local builds; reduce validator count             |
+| Docker bind error        | Use non-default port ranges; `kurtosis clean -a` between runs             |
+| Stale enclave state      | Always `kurtosis clean -a` before relaunching (not `docker system prune`) |
 
 ## Tips
 
@@ -232,4 +243,3 @@ done
 ## Self-Maintenance
 
 If any commands, file paths, URLs, or configurations in this skill are outdated or no longer work, update this SKILL.md with the correct information after completing your current task. Skills should stay accurate and self-healing — fix what you find broken.
-

@@ -52,6 +52,7 @@ See `references/style-guide.md` for Discord-specific formatting rules.
 ### 5. Output
 
 Produce a single markdown file with two sections:
+
 - `## GitHub Release Header` — full header text
 - `## Discord Announcement` — shorter announcement
 
@@ -70,4 +71,3 @@ Produce a single markdown file with two sections:
 ## Self-Maintenance
 
 If any commands, file paths, URLs, or configurations in this skill are outdated or no longer work, update this SKILL.md with the correct information after completing your current task. Skills should stay accurate and self-healing — fix what you find broken.
-
