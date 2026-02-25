@@ -15,6 +15,7 @@ cd ~/lodestar  # or worktree directory
 # Basic run — connects to mainnet peers, no EL needed
 ./lodestar beacon \
   --network mainnet \
+  --dataDir /tmp/lodestar-debug \
   --rest false \
   --metrics \
   --execution.engineMock \
@@ -26,6 +27,7 @@ cd ~/lodestar  # or worktree directory
 # Time-boxed run (e.g., 2 minutes)
 timeout 120 ./lodestar beacon \
   --network mainnet \
+  --dataDir /tmp/lodestar-debug \
   --rest false \
   --metrics \
   --execution.engineMock \
@@ -190,13 +192,11 @@ lsof -i :8008
 
 ## Cleanup
 
-```bash
-# Remove data directory after testing
-# Remove data directory after testing. Use with caution.
-rm -r ~/.local/share/lodestar/mainnet
+Always use `--dataDir /tmp/lodestar-debug` when running debug sessions to avoid touching the default mainnet database. This isolates debug data from any production node on the same machine.
 
-# Or use a custom datadir for isolation
---dataDir /tmp/lodestar-debug
+```bash
+# Remove isolated debug data directory after testing
+rm -r /tmp/lodestar-debug
 ```
 
 ## Tips
