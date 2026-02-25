@@ -45,6 +45,7 @@
   "enabledPlugins": {
     "ethereum-rnd@lodestar-claude-plugins": true,
     "consensus-clients@lodestar-claude-plugins": true,
+    "eth-rnd-archive@lodestar-claude-plugins": true,
     "claude-md-management@claude-plugins-official": true,
     "code-review@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
