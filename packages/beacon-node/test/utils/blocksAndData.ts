@@ -24,7 +24,7 @@ import {CustodyConfig, computePostFuluKzgCommitmentsInclusionProof} from "../../
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
 
-const SIGNATURE_LENGTH_UNCOMPRESSED = 96;
+const SIGNATURE_LENGTH_COMPRESSED = 96;
 
 export const CAPELLA_FORK_EPOCH = 0;
 export const DENEB_FORK_EPOCH = 10;
@@ -106,7 +106,7 @@ function generateBeaconBlock<F extends ForkPostCapella>({
   block.message.stateRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
   block.message.proposerIndex = generateProposerIndex();
   // signature is obviously not valid so can generate it now instead of after commitments are attached
-  block.signature = Uint8Array.from(randomBytes(SIGNATURE_LENGTH_UNCOMPRESSED));
+  block.signature = Uint8Array.from(randomBytes(SIGNATURE_LENGTH_COMPRESSED));
   return block;
 }
 
