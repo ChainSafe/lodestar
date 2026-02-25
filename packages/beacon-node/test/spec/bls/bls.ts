@@ -71,11 +71,9 @@ function aggregate(input: string[]): string {
 function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
   const {pubkeys, message, signature} = input;
   try {
-    return (
-      fastAggregateVerify(
-        fromHexString(message),
-        pubkeys.map((hex) => PublicKey.fromHex(hex), true)
-      ),
+    return fastAggregateVerify(
+      fromHexString(message),
+      pubkeys.map((hex) => PublicKey.fromHex(hex, true)),
       Signature.fromHex(signature, true)
     );
   } catch (_e) {
