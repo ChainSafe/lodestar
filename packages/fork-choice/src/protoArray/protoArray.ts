@@ -919,7 +919,7 @@ export class ProtoArray {
    * For EMPTY/FULL variants from slot n-1: implements tiebreaker logic based on should_extend_payload
    * For older blocks: returns node.payloadStatus
    *
-   * Note: pre-gloas logic won't reach here. Pre-Gloas blocks have different roots, so they are always resolved by the root tiebreaker before reaching here.
+   * Note: pre-gloas logic won't reach here. Pre-Gloas blocks have different roots, so they are always resolved by the weight and root tiebreaker before reaching here.
    */
   private getPayloadStatusTiebreaker(node: ProtoNode, currentSlot: Slot, proposerBoostRoot: RootHex | null): number {
     // PENDING nodes always return PENDING (no tiebreaker needed)
@@ -1222,11 +1222,7 @@ export class ProtoArray {
 
           // Pre-fulu we pick whichever has higher weight, tie-breaker by root
           // Post-fulu we pick whichever has higher weight, then tie-breaker by root, then tie-breaker by `getPayloadStatusTiebreaker`
-          //
-          // Per spec modified-get_weight (gloas/fork-choice.md#L442): a Gloas EMPTY/FULL block from the
-          // previous slot (n-1) has effective weight = 0 regardless of accumulated attestations.
-          // The isGloasBlock() guard prevents incorrectly zeroing pre-Gloas FULL blocks, which also have
-          // payloadStatus=FULL but must use their actual accumulated weight.
+          // Gloas: nodes from previous slot (n-1) with EMPTY/FULL variant have weight hardcoded to 0.
           // https://github.com/ethereum/consensus-specs/blob/69a2582d5d62c914b24894bdb65f4bd5d4e49ae4/specs/gloas/fork-choice.md?plain=1#L442
           const childEffectiveWeight =
             !isGloasBlock(childNode) ||
@@ -1253,22 +1249,8 @@ export class ProtoArray {
             break outer;
           }
 
-          // Same effective weight and same root — must be Gloas EMPTY vs FULL from n-1
-          if (!isGloasBlock(childNode)) {
-            throw new ProtoArrayError({
-              code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK,
-              root: childNode.blockRoot,
-            });
-          }
-
-          if (!isGloasBlock(bestChildNode)) {
-            throw new ProtoArrayError({
-              code: ProtoArrayErrorCode.PRE_GLOAS_BLOCK,
-              root: bestChildNode.blockRoot,
-            });
-          }
-
-          // Tie-breaker by payload status (EMPTY vs FULL)
+          // Same effective weight and same root — Gloas EMPTY vs FULL from n-1, tie-breaker by payload status
+          // Note: pre-Gloas, each child node of a block has a unique root, so this point should not be reached
           const childTiebreaker = this.getPayloadStatusTiebreaker(childNode, currentSlot, proposerBoostRoot);
           const bestChildTiebreaker = this.getPayloadStatusTiebreaker(bestChildNode, currentSlot, proposerBoostRoot);
 
