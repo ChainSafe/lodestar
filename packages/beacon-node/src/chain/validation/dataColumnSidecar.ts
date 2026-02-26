@@ -243,10 +243,13 @@ async function validateGossipDataColumnSidecarGloas(
   gossipSubnet: SubnetID,
   metrics: Metrics | null
 ): Promise<void> {
+  // validate_data_column_sidecar
+  // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/gloas/p2p-interface.md
   const blockRoot = getDataColumnSidecarBlockRoot(dataColumnSidecar);
   const blockRootHex = toRootHex(blockRoot);
   const slot = getDataColumnSidecarSlot(dataColumnSidecar);
 
+  // [IGNORE] The sidecar's block must be known
   const cachedBlockInput = chain.seenBlockInputCache.get(blockRootHex);
   const blockData = cachedBlockInput?.hasBlock()
     ? cachedBlockInput.getBlock()
@@ -270,10 +273,12 @@ async function validateGossipDataColumnSidecarGloas(
     });
   }
 
+  // [REJECT] The sidecar must pass verify_data_column_sidecar against the block commitments
   const kzgCommitments = (blockData as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message
     .blobKzgCommitments;
   verifyDataColumnSidecarGloas(dataColumnSidecar, kzgCommitments);
 
+  // [REJECT] The sidecar must be on the correct subnet
   if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_SUBNET,
@@ -282,6 +287,7 @@ async function validateGossipDataColumnSidecarGloas(
     });
   }
 
+  // [REJECT] The sidecar kzg proofs must verify
   const kzgProofTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
   try {
     await verifyDataColumnSidecarKzgProofs(

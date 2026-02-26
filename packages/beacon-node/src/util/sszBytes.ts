@@ -410,6 +410,9 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
  */
 
 const DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION = 8;
+// Gloas DataColumnSidecar SSZ layout:
+//   index (8 bytes) | column offset (4 bytes) | kzgProofs offset (4 bytes) | slot (8 bytes) | beaconBlockRoot (32 bytes)
+// Fixed portion total: 8 + 4 + 4 + 8 + 32 = 56
 const GLOAS_DATA_COLUMN_SIDECAR_FIRST_OFFSET = 56;
 const SLOT_BYTES_POSITION_IN_FULU_DATA_COLUMN_SIDECAR = 20;
 const SLOT_BYTES_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR = 16;
@@ -527,8 +530,43 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
   const forkName = config.getForkName(slot);
 
   if (isForkPostGloas(forkName)) {
-    const signedBlock = ssz[forkName].SignedBeaconBlock.deserialize(blockBytes);
-    return signedBlock.message.body.signedExecutionPayloadBid.message.blobKzgCommitments.length;
+    // Gloas stores commitments under signedExecutionPayloadBid.message.blobKzgCommitments.
+    // Navigate the offset chain: SignedBeaconBlock → message → body → signedExecutionPayloadBid → message → blobKzgCommitments
+    const {SignedBeaconBlock: GloasSignedBlock, BeaconBlock: GloasBlock, BeaconBlockBody: GloasBody} = ssz[forkName];
+    const {SignedExecutionPayloadBid, ExecutionPayloadBid} = ssz[forkName];
+    const commitmentSize = ssz.deneb.KZGCommitment.fixedSize;
+
+    const view = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
+
+    const signedBlockRanges = GloasSignedBlock.getFieldRanges(view, 0, blockBytes.length);
+    const messageIdx = Object.keys(GloasSignedBlock.fields).indexOf("message");
+    const messageRange = signedBlockRanges[messageIdx];
+
+    const blockRanges = GloasBlock.getFieldRanges(view, messageRange.start, messageRange.end);
+    const bodyIdx = Object.keys(GloasBlock.fields).indexOf("body");
+    const bodyRange = blockRanges[bodyIdx];
+    const bodyStart = messageRange.start + bodyRange.start;
+    const bodyEnd = messageRange.start + bodyRange.end;
+
+    const bodyRanges = GloasBody.getFieldRanges(view, bodyStart, bodyEnd);
+    const bidIdx = Object.keys(GloasBody.fields).indexOf("signedExecutionPayloadBid");
+    const bidRange = bodyRanges[bidIdx];
+    const bidStart = bodyStart + bidRange.start;
+    const bidEnd = bodyStart + bidRange.end;
+
+    const bidRanges = SignedExecutionPayloadBid.getFieldRanges(view, bidStart, bidEnd);
+    const bidMsgIdx = Object.keys(SignedExecutionPayloadBid.fields).indexOf("message");
+    const bidMsgRange = bidRanges[bidMsgIdx];
+    const bidMsgStart = bidStart + bidMsgRange.start;
+    const bidMsgEnd = bidStart + bidMsgRange.end;
+
+    const execBidRanges = ExecutionPayloadBid.getFieldRanges(view, bidMsgStart, bidMsgEnd);
+    const commitmentsIdx = Object.keys(ExecutionPayloadBid.fields).indexOf("blobKzgCommitments");
+    const commitmentsRange = execBidRanges[commitmentsIdx];
+
+    const start = bidMsgStart + commitmentsRange.start;
+    const end = bidMsgStart + commitmentsRange.end;
+    return Math.round(((end > blockBytes.byteLength ? blockBytes.byteLength : end) - start) / commitmentSize);
   }
 
   const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody, KZGCommitment} = ssz[forkName as ForkPostDeneb];
