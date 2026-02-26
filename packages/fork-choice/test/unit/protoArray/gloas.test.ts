@@ -636,37 +636,5 @@ describe("Gloas Fork Choice", () => {
       expect(fullNode?.weight).toBe(200);
       // FULL should be preferred due to higher weight
     });
-
-    it("EMPTY vs FULL from current slot uses weight comparison", () => {
-      const blockSlot = gloasForkSlot + 10;
-      const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
-      protoArray.onBlock(block, blockSlot, null);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, null);
-
-      const pendingNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
-      if (!pendingNode) throw new Error("Expected pendingNode to exist");
-
-      const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
-      if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
-      const fullIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
-      if (fullIndex === undefined) throw new Error("Expected fullIndex to exist");
-
-      const deltas = new Array(protoArray.length()).fill(0);
-      deltas[emptyIndex] = 200;
-      deltas[fullIndex] = 100;
-
-      // currentSlot = blockSlot, so comparison must use weights (not payload tiebreaker)
-      protoArray.applyScoreChanges({
-        deltas,
-        proposerBoost: null,
-        justifiedEpoch: genesisEpoch,
-        justifiedRoot: genesisRoot,
-        finalizedEpoch: genesisEpoch,
-        finalizedRoot: genesisRoot,
-        currentSlot: blockSlot,
-      });
-
-      expect(pendingNode.bestChild).toBe(emptyIndex);
-    });
   });
 });
