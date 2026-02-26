@@ -8,13 +8,14 @@ import {
   SignedBeaconBlock,
   Slot,
   deneb,
+  fulu,
   isGloasDataColumnSidecar,
 } from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
-import {IBeaconChain} from "../../chain/interface.ts";
+import {IBeaconChain} from "../../chain/interface.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
@@ -171,8 +172,9 @@ export async function downloadByRoot({
         continue;
       }
 
+      // BlockInputColumns is fulu-only, safe to narrow
       blockInput.addColumn({
-        columnSidecar,
+        columnSidecar: columnSidecar as fulu.DataColumnSidecar,
         blockRootHex: rootHex,
         seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.byRoot,

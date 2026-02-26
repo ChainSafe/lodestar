@@ -20,6 +20,7 @@ import {
   SubnetID,
   UintNum64,
   deneb,
+  fulu,
   isGloasDataColumnSidecar,
   ssz,
   sszTypesFor,
@@ -73,7 +74,11 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {getBlobKzgCommitments, getDataColumnSidecarBlockRoot, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
+import {
+  getBlobKzgCommitments,
+  getDataColumnSidecarBlockRoot,
+  getDataColumnSidecarSlot,
+} from "../../util/dataColumns.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -341,9 +346,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     try {
       await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
+      // TODO(gloas): handle gloas data columns separately via BlockInputNoData path
       const blockInput = chain.seenBlockInputCache.getByColumn({
         blockRootHex,
-        columnSidecar: dataColumnSidecar,
+        columnSidecar: dataColumnSidecar as fulu.DataColumnSidecar,
         source: BlockInputSource.gossip,
         seenTimestampSec,
         peerIdStr,

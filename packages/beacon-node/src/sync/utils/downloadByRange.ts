@@ -172,9 +172,10 @@ export function cacheByRangeResponses({
     }
     for (const columnSidecar of columnSidecars) {
       // will throw if root hex does not match (meaning we are following the wrong chain)
+      // BlockInputColumns is fulu-only, safe to narrow
       existing.addColumn(
         {
-          columnSidecar,
+          columnSidecar: columnSidecar as fulu.DataColumnSidecar,
           blockRootHex,
           seenTimestampSec,
           peerIdStr,

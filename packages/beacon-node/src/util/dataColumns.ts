@@ -478,9 +478,10 @@ export async function recoverDataColumnSidecars(
   const sidecarsToPublish = [];
   for (const columnSidecar of fullSidecars) {
     if (!blockInput.hasColumn(columnSidecar.index)) {
+      // BlockInputColumns is fulu-only, safe to narrow
       blockInput.addColumn({
         blockRootHex: blockInput.blockRootHex,
-        columnSidecar,
+        columnSidecar: columnSidecar as fulu.DataColumnSidecar,
         seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.recovery,
       });

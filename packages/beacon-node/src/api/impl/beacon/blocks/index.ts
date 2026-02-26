@@ -28,6 +28,7 @@ import {
   SignedBlockContents,
   WithOptionalBytes,
   deneb,
+  fulu,
   gloas,
   isDenebBlockContents,
   isGloasDataColumnSidecar,
@@ -141,7 +142,8 @@ export function getBeaconBlockApi({
         blockForImport.addColumn(
           {
             blockRootHex: blockRoot,
-            columnSidecar: dataColumnSidecar,
+            // BlockInputColumns is fulu-only, safe to narrow
+            columnSidecar: dataColumnSidecar as fulu.DataColumnSidecar,
             source: BlockInputSource.api,
             seenTimestampSec,
           },

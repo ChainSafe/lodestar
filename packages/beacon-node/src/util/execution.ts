@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {DataColumnSidecar, SignedBeaconBlock, deneb, isGloasDataColumnSidecar} from "@lodestar/types";
+import {DataColumnSidecar, SignedBeaconBlock, deneb, fulu, isGloasDataColumnSidecar} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -201,8 +201,9 @@ export async function getDataColumnSidecarsFromExecution(
       continue;
     }
 
+    // BlockInputColumns is fulu-only, safe to narrow
     blockInput.addColumn({
-      columnSidecar,
+      columnSidecar: columnSidecar as fulu.DataColumnSidecar,
       blockRootHex: blockInput.blockRootHex,
       source: BlockInputSource.engine,
       seenTimestampSec,

@@ -11,7 +11,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {BLSSignature, DataColumnSidecar, RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
+import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
@@ -308,7 +308,7 @@ export class SeenBlockInput {
       seenTimestampSec,
       source,
       peerIdStr,
-    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: DataColumnSidecar},
+    }: SourceMeta & {blockRootHex: RootHex; columnSidecar: fulu.DataColumnSidecar},
     opts: GetByBlobOptions = {}
   ): BlockInputColumns {
     let blockInput = this.blockInputs.get(blockRootHex);
