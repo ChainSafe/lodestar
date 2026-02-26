@@ -34,6 +34,7 @@ import {
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.ts";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
@@ -675,6 +676,7 @@ export function getBeaconBlockApi({
         }
 
         if (cachedResult.cells && cachedResult.blobsBundle.commitments.length > 0) {
+          const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
           const cellsAndProofs = cachedResult.cells.map((rowCells, rowIndex) => ({
             cells: rowCells,
             proofs: cachedResult.blobsBundle.proofs.slice(
@@ -684,24 +686,48 @@ export function getBeaconBlockApi({
           }));
 
           dataColumnSidecars = getDataColumnSidecarsForGloas(slot, envelope.beaconBlockRoot, cellsAndProofs);
+          timer?.();
         }
       } else {
         // TODO GLOAS: will this api be used by builders or only for self-building?
       }
 
-      // TODO GLOAS: Verify execution payload envelope signature
-      // For self-builds, the proposer signs with their own validator key
-      // For external builders, verify using the builder's registered pubkey
-      // Use verify_execution_payload_envelope_signature(state, signed_envelope)
+      const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
+      if (!payloadInput) {
+        throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
+      }
 
-      // TODO GLOAS: Process execution payload via state transition
-      // Call process_execution_payload(state, signed_envelope, execution_engine)
+      if (payloadInput.hasPayloadEnvelope()) {
+        throw new ApiError(409, `Payload envelope already received for block root ${blockRootHex}`);
+      }
 
-      // TODO GLOAS: Update fork choice with the execution payload
-      // Call on_execution_payload(store, signed_envelope) to update fork choice state
+      payloadInput.addPayloadEnvelope({
+        envelope: signedExecutionPayloadEnvelope,
+        source: PayloadEnvelopeInputSource.api,
+        seenTimestampSec,
+        peerIdStr: undefined,
+      });
 
-      // TODO GLOAS: Add envelope and data columns to block input via seenBlockInputCache
-      // and trigger block import (Gloas block import requires both beacon block and envelope)
+      // For self-builds, add data columns from cached block production result
+      if (isSelfBuild && dataColumnSidecars.length > 0) {
+        for (const columnSidecar of dataColumnSidecars) {
+          payloadInput.addColumn({
+            columnSidecar,
+            source: PayloadEnvelopeInputSource.api,
+            seenTimestampSec,
+            peerIdStr: undefined,
+          });
+        }
+      }
+
+      if (payloadInput.isComplete()) {
+        await chain.importExecutionPayload(payloadInput);
+        chain.persistPayloadEnvelope(payloadInput);
+        chain.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
+          slot,
+          blockRoot: blockRootHex,
+        });
+      }
 
       const valLogMeta = {
         slot,
@@ -719,6 +745,7 @@ export function getBeaconBlockApi({
 
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
+      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.api, delaySec, signedExecutionPayloadEnvelope);
 
       chain.logger.info("Publishing execution payload envelope", valLogMeta);
 

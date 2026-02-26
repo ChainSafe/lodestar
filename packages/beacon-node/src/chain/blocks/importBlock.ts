@@ -8,7 +8,15 @@ import {
   NotReorgedReason,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkPostGloas,
+  ForkSeq,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   EpochCache,
@@ -20,7 +28,7 @@ import {
   isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
+import {Attestation, BeaconBlock, SignedBeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -117,6 +125,19 @@ export async function importBlock(
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
+
+  // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
+  const forkName = this.config.getForkName(blockSlot);
+  if (isForkPostGloas(forkName)) {
+    this.seenPayloadEnvelopeInput.add({
+      blockRootHex,
+      block: block as SignedBeaconBlock<ForkPostGloas>,
+      sampledColumns: this.custodyConfig.sampledColumns,
+      custodyColumns: this.custodyConfig.custodyColumns,
+      timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
+    });
+    this.logger.debug("Created PayloadEnvelopeInput for Gloas block", {slot: blockSlot, root: blockRootHex});
+  }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});

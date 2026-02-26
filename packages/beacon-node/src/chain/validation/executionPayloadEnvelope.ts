@@ -47,7 +47,18 @@ async function validateExecutionPayloadEnvelope(
 
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  if (chain.seenExecutionPayloadEnvelopes.isKnown(blockRootHex)) {
+  const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
+  if (!payloadInput) {
+    // PayloadEnvelopeInput should have been created during block import
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
+      blockRoot: blockRootHex,
+    });
+  }
+
+  // [IGNORE] The node has not seen another valid
+  // `SignedExecutionPayloadEnvelope` for this block root from this builder.
+  if (payloadInput.hasPayloadEnvelope()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,
@@ -79,29 +90,21 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  if (block.builderIndex === undefined || block.blockHashHex === undefined) {
-    // This indicates this block is a pre-gloas block which is wrong
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
-      blockRoot: blockRootHex,
-    });
-  }
-
   // [REJECT] `envelope.builder_index == bid.builder_index`
-  if (envelope.builderIndex !== block.builderIndex) {
+  if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
       envelopeBuilderIndex: envelope.builderIndex,
-      bidBuilderIndex: block.builderIndex,
+      bidBuilderIndex: payloadInput.getBuilderIndex(),
     });
   }
 
   // [REJECT] `payload.block_hash == bid.block_hash`
-  if (toRootHex(payload.blockHash) !== block.blockHashHex) {
+  if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
       envelopeBlockHash: toRootHex(payload.blockHash),
-      bidBlockHash: block.blockHashHex,
+      bidBlockHash: payloadInput.getBlockHashHex(),
     });
   }
 
@@ -118,6 +121,4 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
     });
   }
-
-  chain.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot);
 }
