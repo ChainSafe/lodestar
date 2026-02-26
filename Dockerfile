@@ -8,7 +8,7 @@ WORKDIR /usr/app
 RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # corepack was removed in Node 25, install pnpm directly
-RUN npm install -g pnpm@9
+RUN npm install -g pnpm@10.24.0
 
 COPY . .
 
@@ -27,7 +27,7 @@ RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
 FROM platformatic/node-caged:25-slim
-RUN npm install -g pnpm@9
+RUN npm install -g pnpm@10.24.0
 WORKDIR /usr/app
 COPY --from=build_src /usr/app .
 

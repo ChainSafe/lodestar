@@ -147,7 +147,7 @@ $ cd ../beacon-node
 $ heaptrack \
 $   --output ./lodestar.heapdump \
 $   node_debug \
-$   --max-old-space-size=8192 \
+$   --max-old-space-size=4096 \
 $   ../lodestar/packages/cli/bin/lodestar.js \
 $   beacon \
 $   --rcConfig ./rc-config.yml \
@@ -174,7 +174,7 @@ $ cd ../beacon-node
 
 # Start lodestar
 $ node_debug \
-$   --max-old-space-size=8192 \
+$   --max-old-space-size=4096 \
 $   ../lodestar/packages/cli/bin/lodestar.js \
 $   beacon \
 $   --rcConfig ./rc-config.yml \
