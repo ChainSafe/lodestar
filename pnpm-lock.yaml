@@ -274,8 +274,8 @@ importers:
         specifier: ^5.1.13
         version: 5.1.13
       '@libp2p/gossipsub':
-        specifier: ^15.0.15
-        version: 15.0.15
+        specifier: link:../../local-deps/gossipsub
+        version: link:../../local-deps/gossipsub
       '@libp2p/identify':
         specifier: ^4.0.13
         version: 4.0.13
