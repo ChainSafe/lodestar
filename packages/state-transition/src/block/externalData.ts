@@ -18,6 +18,8 @@ export enum DataAvailabilityStatus {
   /* validator activities can't be performed on out of range data */
   OutOfRange = "OutOfRange",
   Available = "Available",
+  /* Gloas: beacon blocks have no DA requirement, execution payload is separate */
+  NotRequired = "NotRequired",
 }
 
 export interface BlockExternalData {

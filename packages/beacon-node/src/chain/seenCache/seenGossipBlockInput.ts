@@ -1,6 +1,15 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {ForkName, ForkPostFulu, SLOTS_PER_EPOCH, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPostGloas,
+  ForkPreGloas,
+  SLOTS_PER_EPOCH,
+  isForkPostDeneb,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSSignature, DataColumnSidecar, RootHex, SignedBeaconBlock, Slot, deneb} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
@@ -12,6 +21,7 @@ import {
   BlockInput,
   BlockInputBlobs,
   BlockInputColumns,
+  BlockInputNoData,
   BlockInputPreData,
   BlockWithSource,
   DAType,
@@ -171,8 +181,19 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // Pre-deneb
-      if (!isForkPostDeneb(forkName)) {
+      if (isForkPostGloas(forkName)) {
+        // Post-gloas
+        blockInput = BlockInputNoData.createFromBlock({
+          block: block as SignedBeaconBlock<ForkPostGloas>,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          source,
+          seenTimestampSec,
+          peerIdStr,
+        });
+      } else if (!isForkPostDeneb(forkName)) {
+        // Pre-deneb
         blockInput = BlockInputPreData.createFromBlock({
           block,
           blockRootHex,
@@ -182,10 +203,10 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-        // Fulu Only
       } else if (isForkPostFulu(forkName)) {
+        // Fulu Only
         blockInput = BlockInputColumns.createFromBlock({
-          block: block as SignedBeaconBlock<ForkPostFulu>,
+          block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
           blockRootHex,
           daOutOfRange,
           forkName,
@@ -195,8 +216,8 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-        // Deneb and Electra
       } else {
+        // Deneb and Electra
         blockInput = BlockInputBlobs.createFromBlock({
           block: block as SignedBeaconBlock<ForkBlobsDA>,
           blockRootHex,

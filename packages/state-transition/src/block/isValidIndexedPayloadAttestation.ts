@@ -18,7 +18,7 @@ export function isValidIndexedPayloadAttestation(
   if (verifySignature) {
     return verifySignatureSet(
       getIndexedPayloadAttestationSignatureSet(state.config, indexedPayloadAttestation),
-      state.epochCtx.index2pubkey
+      state.epochCtx.pubkeyCache
     );
   }
 

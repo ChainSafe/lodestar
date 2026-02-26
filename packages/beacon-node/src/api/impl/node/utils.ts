@@ -1,4 +1,4 @@
-import {Connection, StreamStatus} from "@libp2p/interface";
+import type {Connection, ConnectionStatus} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 
 /**
@@ -24,7 +24,7 @@ export function formatNodePeer(peerIdStr: string, connections: Connection[]): ro
  * - Otherwise, the first closed connection
  */
 export function getRelevantConnection(connections: Connection[]): Connection | null {
-  const byStatus = new Map<StreamStatus, Connection>();
+  const byStatus = new Map<ConnectionStatus, Connection>();
   for (const conn of connections) {
     if (conn.status === "open") return conn;
     if (!byStatus.has(conn.status)) byStatus.set(conn.status, conn);
@@ -37,7 +37,7 @@ export function getRelevantConnection(connections: Connection[]): Connection | n
  * Map libp2p connection status to the API's peer state notation
  * @param status
  */
-function getPeerState(status: StreamStatus): routes.node.PeerState {
+function getPeerState(status: ConnectionStatus): routes.node.PeerState {
   switch (status) {
     case "open":
       return "connected";

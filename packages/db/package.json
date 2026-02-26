@@ -46,8 +46,7 @@
     "@chainsafe/ssz": "^1.2.2",
     "@lodestar/config": "workspace:^",
     "@lodestar/utils": "workspace:^",
-    "classic-level": "^1.4.1",
-    "it-all": "^3.0.4"
+    "classic-level": "^1.4.1"
   },
   "devDependencies": {
     "@lodestar/logger": "workspace:^"

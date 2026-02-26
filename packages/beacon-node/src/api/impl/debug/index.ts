@@ -43,6 +43,7 @@ export function getDebugApi({
             validity: (() => {
               switch (node.executionStatus) {
                 case ExecutionStatus.Valid:
+                case ExecutionStatus.PayloadSeparated:
                   return "valid";
                 case ExecutionStatus.Invalid:
                   return "invalid";

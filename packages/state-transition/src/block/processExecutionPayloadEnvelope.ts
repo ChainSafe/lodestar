@@ -156,7 +156,11 @@ function verifyExecutionPayloadEnvelopeSignature(
 
     if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
       const validatorIndex = state.latestBlockHeader.proposerIndex;
-      publicKey = state.epochCtx.index2pubkey[validatorIndex];
+      const proposerPubkey = state.epochCtx.pubkeyCache.get(validatorIndex);
+      if (!proposerPubkey) {
+        return false;
+      }
+      publicKey = proposerPubkey;
     } else {
       publicKey = PublicKey.fromBytes(state.builders.getReadonly(builderIndex).pubkey);
     }

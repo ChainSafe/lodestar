@@ -1,6 +1,6 @@
 import {bootstrap} from "@libp2p/bootstrap";
 import {identify} from "@libp2p/identify";
-import {PrivateKey} from "@libp2p/interface";
+import type {PrivateKey} from "@libp2p/interface";
 import {mdns} from "@libp2p/mdns";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
@@ -39,6 +39,7 @@ export async function createNodeJsLibp2p(
   nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
 ): Promise<Libp2p> {
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
+  const disconnectThreshold = networkOpts.disconnectThreshold ?? defaultNetworkOptions.disconnectThreshold;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
   let datastore: undefined | Eth2PeerDataStore = undefined;
@@ -72,8 +73,37 @@ export async function createNodeJsLibp2p(
     noiseCrypto.chaCha20Poly1305Encrypt = asCrypto.chaCha20Poly1305Encrypt;
   }
 
+  const libp2pMetrics = nodeJsLibp2pOpts.metrics
+    ? (components: LodestarComponents) => {
+        const metrics = prometheusMetrics({
+          collectDefaultMetrics: false,
+          preserveExistingMetrics: true,
+          registry: nodeJsLibp2pOpts.metricsRegistry,
+        })(components);
+
+        // Work around identify EOF race:
+        // `trackProtocolStream` attaches a `message` listener immediately after protocol
+        // negotiation. For `/ipfs/id/1.0.0`, identify() adds its own reader later and can
+        // miss the first response frame when metrics listener drains events first.
+        const originalTrackProtocolStream = metrics.trackProtocolStream.bind(metrics);
+        metrics.trackProtocolStream = ((stream) => {
+          if (stream.protocol === "/ipfs/id/1.0.0") {
+            return;
+          }
+          originalTrackProtocolStream(stream);
+        }) as typeof metrics.trackProtocolStream;
+
+        return metrics;
+      }
+    : undefined;
+
   return createLibp2p({
     privateKey,
+    nodeInfo: {
+      name: "lodestar",
+      version: networkOpts.version ?? "unknown",
+      userAgent: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
+    },
     addresses: {
       listen: localMultiaddrs,
       announce: [],
@@ -93,15 +123,9 @@ export async function createNodeJsLibp2p(
         },
       }),
     ],
-    streamMuxers: [mplex({maxInboundStreams: 256, disconnectThreshold: networkOpts.disconnectThreshold})],
+    streamMuxers: [mplex({disconnectThreshold})],
     peerDiscovery,
-    metrics: nodeJsLibp2pOpts.metrics
-      ? prometheusMetrics({
-          collectDefaultMetrics: false,
-          preserveExistingMetrics: true,
-          registry: nodeJsLibp2pOpts.metricsRegistry,
-        })
-      : undefined,
+    metrics: libp2pMetrics,
     connectionManager: {
       // dialer config
       maxParallelDials: 100,
@@ -124,7 +148,6 @@ export async function createNodeJsLibp2p(
     datastore,
     services: {
       identify: identify({
-        agentVersion: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
         runOnConnectionOpen: false,
       }),
       // individual components are specified because the components object is a Proxy

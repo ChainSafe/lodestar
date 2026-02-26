@@ -1,4 +1,3 @@
-import all from "it-all";
 import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ContainerType} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
@@ -145,7 +144,7 @@ describe("database repository", () => {
     }
 
     controller.valuesStream.mockReturnValue(sample());
-    const result = await all(repository.valuesStream());
+    const result = await Array.fromAsync(repository.valuesStream());
     expect(result.length).toBe(2);
   });
 });

@@ -17,7 +17,7 @@ export function processRandao(state: CachedBeaconStateAllForks, block: BeaconBlo
   const randaoReveal = block.body.randaoReveal;
 
   // verify RANDAO reveal
-  if (verifySignature && !verifyRandaoSignature(config, epochCtx.index2pubkey, block)) {
+  if (verifySignature && !verifyRandaoSignature(config, epochCtx.pubkeyCache, block)) {
     throw new Error("RANDAO reveal is an invalid signature");
   }
 
