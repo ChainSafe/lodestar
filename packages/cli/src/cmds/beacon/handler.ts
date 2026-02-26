@@ -30,6 +30,7 @@ import {getBeaconPaths} from "./paths.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
+const FOUR_GB = 4 * 1024 * 1024 * 1024;
 const EIGHT_GB = 8 * 1024 * 1024 * 1024;
 
 /**
@@ -43,7 +44,13 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   }
 
   const heapSizeLimit = getHeapStatistics().heap_size_limit;
-  if (heapSizeLimit < EIGHT_GB) {
+  const pointerCompression = heapSizeLimit <= FOUR_GB;
+
+  if (pointerCompression) {
+    logger.info(
+      `V8 pointer compression is active, heap size limit: ${formatBytes(heapSizeLimit)}. Memory usage will be significantly reduced compared to standard mode.`
+    );
+  } else if (heapSizeLimit < EIGHT_GB) {
     logger.warn(
       `Node.js heap size limit is too low at ${formatBytes(heapSizeLimit)}, consider increasing it to at least ${formatBytes(EIGHT_GB)}. See https://chainsafe.github.io/lodestar/faqs/#running-a-beacon-node for more details.`
     );
