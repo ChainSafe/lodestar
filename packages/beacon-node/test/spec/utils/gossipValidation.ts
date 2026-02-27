@@ -2,7 +2,6 @@ import {EventEmitter} from "node:events";
 import fs from "node:fs";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {load as loadYaml} from "js-yaml";
 import snappy from "snappy";
 import {expect} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
@@ -17,7 +16,7 @@ import {
   syncPubkeys,
 } from "@lodestar/state-transition";
 import {RootHex, sszTypesFor} from "@lodestar/types";
-import {fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
@@ -126,7 +125,7 @@ class GossipTestClock extends EventEmitter implements IClock {
 }
 
 interface MetaYaml {
-  topic: string;
+  topic: GossipTopic;
   blocks?: {block: string; failed?: boolean}[];
   finalized_checkpoint?: {epoch: number; root?: string; block?: string};
   current_time_ms?: number;
@@ -139,9 +138,37 @@ interface MetaYaml {
   }[];
 }
 
+type GossipTopic =
+  | "beacon_block"
+  | "beacon_aggregate_and_proof"
+  | "beacon_attestation"
+  | "proposer_slashing"
+  | "attester_slashing"
+  | "voluntary_exit";
+
+const gossipTopicByHandler = {
+  gossip_beacon_block: "beacon_block",
+  gossip_beacon_aggregate_and_proof: "beacon_aggregate_and_proof",
+  gossip_beacon_attestation: "beacon_attestation",
+  gossip_proposer_slashing: "proposer_slashing",
+  gossip_attester_slashing: "attester_slashing",
+  gossip_voluntary_exit: "voluntary_exit",
+} as const satisfies Record<string, GossipTopic>;
+
+export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
+  return topicHandler in gossipTopicByHandler;
+}
+
+function getGossipTopic(topicHandler: string): GossipTopic {
+  if (!isGossipValidationHandler(topicHandler)) {
+    throw Error(`Unsupported gossip test handler ${topicHandler}`);
+  }
+  return gossipTopicByHandler[topicHandler];
+}
+
 function loadMeta(testCaseDir: string): MetaYaml {
   const raw = fs.readFileSync(path.join(testCaseDir, "meta.yaml"), "utf8");
-  return loadYaml(raw) as MetaYaml;
+  return loadYaml<MetaYaml>(raw);
 }
 
 function loadSszSnappy(testCaseDir: string, name: string): Uint8Array {
@@ -152,7 +179,7 @@ function loadSszSnappy(testCaseDir: string, name: string): Uint8Array {
 
 function loadState(testCaseDir: string, fork: ForkName): BeaconStateAllForks {
   const bytes = loadSszSnappy(testCaseDir, "state");
-  return sszTypesFor(fork).BeaconState.deserializeToViewDU(bytes) as BeaconStateAllForks;
+  return sszTypesFor(fork).BeaconState.deserializeToViewDU(bytes);
 }
 
 type FinalizedCheckpoint = {epoch: number; rootHex: RootHex};
@@ -236,8 +263,7 @@ function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
   }
   // Some validation paths throw raw errors instead of GossipActionError
   // (e.g., validator index out of range → TypeError on undefined access).
-  // The spec expects these to be REJECT.
-  if (e instanceof TypeError || e instanceof RangeError || e instanceof Error) {
+  if (e instanceof TypeError || e instanceof RangeError) {
     return "reject";
   }
   throw e;
@@ -245,10 +271,15 @@ function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
 
 export async function runGossipValidationTest(
   fork: ForkName,
-  _topicHandler: string,
+  topicHandler: string,
   testCaseDir: string
 ): Promise<void> {
   const meta = loadMeta(testCaseDir);
+  const topic = getGossipTopic(topicHandler);
+  if (meta.topic !== topic) {
+    throw Error(`Gossip test topic mismatch for ${topicHandler}: expected ${topic}, got ${meta.topic}`);
+  }
+
   const anchorState = loadState(testCaseDir, fork);
   const config = getConfig(fork);
   const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
@@ -375,21 +406,16 @@ export async function runGossipValidationTest(
 
       let result: "valid" | "ignore" | "reject";
       try {
-        await validateMessageForTopic(
-          chain,
-          fork,
-          meta.topic,
-          testCaseDir,
-          message,
-          failedBlockRoots,
-          finalizedCheckpoint
-        );
+        await validateMessageForTopic(chain, fork, topic, testCaseDir, message, failedBlockRoots, finalizedCheckpoint);
         result = "valid";
       } catch (e) {
         result = mapErrorToResult(e);
       }
 
-      expect(result).toBe(message.expected);
+      expect(result).toEqualWithMessage(
+        message.expected,
+        `Unexpected gossip result for ${topicHandler}/${path.basename(testCaseDir)}/${message.message}`
+      );
     }
   } finally {
     controller.abort();
@@ -400,7 +426,7 @@ export async function runGossipValidationTest(
 async function validateMessageForTopic(
   chain: BeaconChain,
   fork: ForkName,
-  topic: string,
+  topic: GossipTopic,
   testCaseDir: string,
   message: MetaYaml["messages"][number],
   failedBlockRoots: Set<RootHex>,
@@ -414,14 +440,14 @@ async function validateMessageForTopic(
       const parentRootHex = toRootHex(signedBlock.message.parentRoot);
 
       if (failedBlockRoots.has(parentRootHex)) {
-        throw new Error("Block parent failed validation");
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_PARENT_BLOCK_FAILED"});
       }
 
       if (
         finalizedCheckpoint !== null &&
         !isDescendantAtFinalizedCheckpoint(chain, parentRootHex, finalizedCheckpoint)
       ) {
-        throw new Error("Block is not a descendant of finalized checkpoint");
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
       await validateGossipBlock(chain.config, chain, signedBlock, fork);
@@ -434,7 +460,7 @@ async function validateMessageForTopic(
       const beaconBlockRootHex = toRootHex(aggregate.message.aggregate.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
-        throw new Error("Aggregate votes for block that failed validation");
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_BLOCK_FAILED_VALIDATION"});
       }
 
       if (
@@ -453,7 +479,7 @@ async function validateMessageForTopic(
       const beaconBlockRootHex = toRootHex(attestation.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
-        throw new Error("Attestation votes for block that failed validation");
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_BLOCK_FAILED_VALIDATION"});
       }
 
       if (
@@ -466,7 +492,7 @@ async function validateMessageForTopic(
       const attDataBase64 = getBeaconAttestationGossipIndex(fork, bytes);
       const attSlot = getSlotFromBeaconAttestationSerialized(fork, bytes);
       if (attDataBase64 == null || attSlot == null) {
-        throw new Error("Could not extract attestation gossip index/slot from bytes");
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_INVALID_ATTESTATION_SERIALIZATION"});
       }
 
       const gossipAttestation: GossipAttestation = {

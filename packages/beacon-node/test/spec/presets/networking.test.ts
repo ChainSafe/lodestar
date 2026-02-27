@@ -1,12 +1,12 @@
+import fs from "node:fs";
 import path from "node:path";
-import {it} from "vitest";
+import {expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ACTIVE_PRESET} from "@lodestar/params";
-import {InputType, describeDirectorySpecTest} from "@lodestar/spec-test-util";
-import {bigIntToBytes} from "@lodestar/utils";
+import {bigIntToBytes, loadYaml} from "@lodestar/utils";
 import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../../src/util/dataColumns.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
-import {runGossipValidationTest} from "../utils/gossipValidation.js";
+import {isGossipValidationHandler, runGossipValidationTest} from "../utils/gossipValidation.js";
 import {readdirSyncSpec, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerCustom} from "../utils/types.js";
 
@@ -36,39 +36,41 @@ type NetworkingTestCase = {
   };
 };
 
-const GOSSIP_HANDLERS = new Set([
-  "gossip_beacon_block",
-  "gossip_beacon_aggregate_and_proof",
-  "gossip_beacon_attestation",
-  "gossip_proposer_slashing",
-  "gossip_attester_slashing",
-  "gossip_voluntary_exit",
-]);
+function loadNetworkingTestMeta(testCaseDir: string): NetworkingTestCase["meta"] {
+  return loadYaml<NetworkingTestCase["meta"]>(fs.readFileSync(path.join(testCaseDir, "meta.yaml"), "utf8"));
+}
+
+function runNetworkingFnTests(testHandler: string, testSuite: string, testSuiteDirpath: string): void {
+  const networkingFn = networkingFns[testHandler];
+  if (networkingFn === undefined) {
+    throw Error(`No networkingFn for ${testHandler}`);
+  }
+
+  for (const testCaseName of readdirSyncSpec(testSuiteDirpath)) {
+    const testCaseDir = path.join(testSuiteDirpath, testCaseName);
+    it(testCaseName, () => {
+      const meta = loadNetworkingTestMeta(testCaseDir);
+      const actual = networkingFn(meta);
+      expect(actual).toEqualWithMessage(
+        meta.result.map(Number),
+        `Unexpected networking result for ${testHandler}/${testSuite}/${testCaseName}`
+      );
+    });
+  }
+}
 
 const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDirpath) => {
-  if (GOSSIP_HANDLERS.has(testHandler)) {
+  if (isGossipValidationHandler(testHandler)) {
     for (const testCaseName of readdirSyncSpec(testSuiteDirpath)) {
       const testCaseDir = path.join(testSuiteDirpath, testCaseName);
       it(testCaseName, async () => {
         await runGossipValidationTest(fork, testHandler, testCaseDir);
       }, 30_000);
     }
+  } else if (networkingFns[testHandler] !== undefined) {
+    runNetworkingFnTests(testHandler, testSuite, testSuiteDirpath);
   } else {
-    const networkingFn = networkingFns[testHandler];
-    if (networkingFn === undefined) {
-      throw Error(`No networkingFn for ${testHandler}`);
-    }
-
-    describeDirectorySpecTest<NetworkingTestCase, unknown>(
-      `${fork}/${testHandler}/${testSuite}`,
-      testSuiteDirpath,
-      (testcase) => networkingFn(testcase.meta),
-      {
-        inputTypes: {meta: InputType.YAML},
-        getExpected: (testCase) => testCase.meta.result.map(Number),
-        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      }
-    );
+    throw new Error(`No runner for networking handler ${testHandler}`);
   }
 };
 
