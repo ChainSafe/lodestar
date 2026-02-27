@@ -2,6 +2,7 @@ import {
   assertValidAttesterSlashing,
   getAttesterSlashableIndices,
   getAttesterSlashingSignatureSets,
+  isSlashableValidator,
 } from "@lodestar/state-transition";
 import {AttesterSlashing} from "@lodestar/types";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
@@ -55,6 +56,18 @@ export async function validateAttesterSlashing(
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
       error: e as Error,
+    });
+  }
+
+  // Additional gossip-side check: assertValidAttesterSlashing() validates slashable data/signatures,
+  // but it does not enforce that any intersecting validator is currently slashable.
+  // Spec reference: process_attester_slashing() requires slashed_any == True after iterating intersecting indices.
+  const currentEpoch = state.epochCtx.epoch;
+  const validators = state.validators;
+  if (!intersectingIndices.some((index) => isSlashableValidator(validators.getReadonly(index), currentEpoch))) {
+    throw new AttesterSlashingError(GossipAction.REJECT, {
+      code: AttesterSlashingErrorCode.INVALID,
+      error: Error("AttesterSlashing has no slashable validators"),
     });
   }
 
