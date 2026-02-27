@@ -79,7 +79,7 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  if (block.builderIndex === undefined || block.blockHashFromBid === undefined) {
+  if (block.builderIndex == null || block.blockHashFromBid == null) {
     // This indicates this block is a pre-gloas block which is wrong
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,

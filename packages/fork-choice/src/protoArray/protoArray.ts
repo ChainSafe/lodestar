@@ -936,11 +936,11 @@ export class ProtoArray {
     // For previous slot blocks in Gloas, decide between FULL and EMPTY
     // based on should_extend_payload
     if (node.payloadStatus === PayloadStatus.EMPTY) {
-      return 1; // EMPTY
+      return PayloadStatus.EMPTY;
     }
     // FULL - check should_extend_payload
     const shouldExtend = this.shouldExtendPayload(node.blockRoot, proposerBoostRoot);
-    return shouldExtend ? 2 : 0; // Return 2 if extending, else 0
+    return shouldExtend ? PayloadStatus.FULL : PayloadStatus.PENDING;
   }
 
   /**

@@ -641,13 +641,16 @@ export class ForkChoice implements IForkChoice {
 
     // Check block is a descendant of the finalized block at the checkpoint finalized slot.
     const blockAncestorNode = this.getAncestor(parentRootHex, finalizedSlot);
-    const finalizedRoot = this.fcStore.finalizedCheckpoint.rootHex;
-    if (blockAncestorNode.blockRoot !== finalizedRoot) {
+    const fcStoreFinalized = this.fcStore.finalizedCheckpoint;
+    if (
+      blockAncestorNode.blockRoot !== fcStoreFinalized.rootHex ||
+      blockAncestorNode.payloadStatus !== fcStoreFinalized.payloadStatus
+    ) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT,
-          finalizedRoot,
+          finalizedRoot: fcStoreFinalized.rootHex,
           blockAncestor: blockAncestorNode.blockRoot,
         },
       });
@@ -1833,7 +1836,9 @@ export function getCommitteeFraction(
  * @param checkpointEpoch - The epoch of the checkpoint
  */
 export function getCheckpointPayloadStatus(state: CachedBeaconStateAllForks, checkpointEpoch: number): PayloadStatus {
-  const fork = state.config.getForkSeq(state.slot);
+  // Compute checkpoint slot first to determine the correct fork
+  const checkpointSlot = computeStartSlotAtEpoch(checkpointEpoch);
+  const fork = state.config.getForkSeq(checkpointSlot);
 
   // Pre-Gloas: always FULL
   if (fork < ForkSeq.gloas) {
@@ -1843,7 +1848,6 @@ export function getCheckpointPayloadStatus(state: CachedBeaconStateAllForks, che
   // For Gloas, check state.execution_payload_availability
   // - For non-skipped slots at checkpoint: returns false (EMPTY) since payload hasn't arrived yet
   // - For skipped slots at checkpoint: returns the actual availability status from state
-  const checkpointSlot = computeStartSlotAtEpoch(checkpointEpoch);
   const gloasState = state as CachedBeaconStateGloas;
   const payloadAvailable = gloasState.executionPayloadAvailability.get(checkpointSlot % SLOTS_PER_HISTORICAL_ROOT);
 
