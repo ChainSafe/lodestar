@@ -8,7 +8,7 @@ participants:
     count: 2
     supernode: true
     cl_extra_params:
-      - "--params.EIP7782_FORK_EPOCH=5"
+      - "--params.EIP7782_FORK_EPOCH=1"
       - "--params.SLOT_DURATION_MS_EIP7782=6000"
       - "--params.EIP7782_FORK_VERSION=0x0b000001"
       - "--params.ATTESTATION_DUE_BPS_EIP7782=5000"
@@ -26,7 +26,7 @@ participants:
     # NOTE: ethereum-package currently runs separate VC services for Lodestar in this topology.
     # Mirror EIP-7782 params into VC config so signing domains at slot 160 match BN fork schedule.
     vc_extra_params:
-      - "--params.EIP7782_FORK_EPOCH=5"
+      - "--params.EIP7782_FORK_EPOCH=1"
       - "--params.SLOT_DURATION_MS_EIP7782=6000"
       - "--params.EIP7782_FORK_VERSION=0x0b000001"
       - "--params.ATTESTATION_DUE_BPS_EIP7782=5000"
