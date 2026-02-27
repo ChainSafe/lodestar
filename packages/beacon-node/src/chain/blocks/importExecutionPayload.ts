@@ -1,7 +1,7 @@
 import {ForkName} from "@lodestar/params";
 import {CachedBeaconStateGloas} from "@lodestar/state-transition";
 import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
-import {fromHex} from "@lodestar/utils";
+import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
@@ -88,7 +88,7 @@ export async function importExecutionPayload(
   // 3. Run verification steps in parallel (like verifyBlocksInEpoch)
   // Note: No data availability check needed here - importExecutionPayload is only
   // called when payloadInput.isComplete() is true, so all data is already available.
-  const [execResult, _postPayloadState] = await Promise.all([
+  const [execResult, postPayloadResult] = await Promise.all([
     // EL verification - notifyNewPayload
     this.executionEngine.notifyNewPayload(
       ForkName.gloas,
@@ -99,12 +99,13 @@ export async function importExecutionPayload(
     ),
 
     // Process execution payload envelope (state transition)
-    // Note: signature verification is done as part of processExecutionPayloadEnvelope when verify=true
+    // Signature already verified during gossip/API validation, so pass verify=false.
+    // State root check is done manually below (matching block pipeline pattern).
     (async () => {
       try {
         // Clone state to avoid mutating the cached state
         const mutableState = blockState.clone();
-        processExecutionPayloadEnvelope(mutableState, envelope, true);
+        processExecutionPayloadEnvelope(mutableState, envelope, false);
         return {postPayloadState: mutableState};
       } catch (e) {
         throw new PayloadError(
@@ -141,16 +142,29 @@ export async function importExecutionPayload(
 
   // VALID, ACCEPTED, or SYNCING - proceed with import
 
+  // 4b. Verify envelope state root matches post-state (done separately from state transition, like block pipeline)
+  const postPayloadState = postPayloadResult.postPayloadState;
+  const stateRoot = postPayloadState.hashTreeRoot();
+  if (!byteArrayEquals(envelope.message.stateRoot, stateRoot)) {
+    throw new PayloadError(
+      {
+        code: PayloadErrorCode.STATE_TRANSITION_ERROR,
+        message: `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(stateRoot)}`,
+      },
+      `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(stateRoot)}`
+    );
+  }
+
   // 5. Update fork choice: PENDING → FULL
   // TODO GLOAS: Update API when nc/epbs-fc merged
   // this.forkChoice.onExecutionPayload(
   //   envelope.message.beaconBlockRoot,
-  //   _executionPayloadState.hashTreeRoot()
+  //   postPayloadState.hashTreeRoot()
   // );
 
   // 6. Cache payload state
   // TODO GLOAS: Enable when PR #8868 merged (adds processPayloadState)
-  // this.regen.processPayloadState(_postPayloadState);
+  // this.regen.processPayloadState(postPayloadState);
 
   // 7. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});

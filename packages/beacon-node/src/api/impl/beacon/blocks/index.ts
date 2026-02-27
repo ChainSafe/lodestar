@@ -720,6 +720,9 @@ export function getBeaconBlockApi({
         }
       }
 
+      // TODO GLOAS: Unlike publishBlock which gossips and imports in parallel, we import before gossip here.
+      // The publishExecutionPayloadEnvelope spec says success = "gossip validation + broadcast", so we may
+      // want to gossip first. Need spec clarification on whether import failure should prevent broadcast.
       if (payloadInput.isComplete()) {
         await chain.importExecutionPayload(payloadInput);
         chain.persistPayloadEnvelope(payloadInput);
@@ -736,12 +739,6 @@ export function getBeaconBlockApi({
         isSelfBuild,
         dataColumns: dataColumnSidecars.length,
       };
-
-      // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
-      const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
-      if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
-        await sleep(msToBlockSlot);
-      }
 
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);

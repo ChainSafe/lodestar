@@ -260,6 +260,8 @@ export class PayloadEnvelopeInput {
     slot: number;
     blockRoot: string;
     hasPayload: boolean;
+    hasAllColumns: boolean;
+    isComplete: boolean;
     columnsCount: number;
     sampledColumnsCount: number;
   } {
@@ -267,6 +269,8 @@ export class PayloadEnvelopeInput {
       slot: this.slot,
       blockRoot: this.blockRootHex,
       hasPayload: this.state.hasPayload,
+      hasAllColumns: this.state.hasAllColumns,
+      isComplete: this.isComplete(),
       columnsCount: this.columnsCache.size,
       sampledColumnsCount: this.sampledColumns.length,
     };
