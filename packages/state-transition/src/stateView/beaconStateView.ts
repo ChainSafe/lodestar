@@ -79,7 +79,7 @@ export class BeaconStateView implements IBeaconStateView {
   private _currentEpochParticipation: number[] | null = null;
   // bellatrix
   private _latestExecutionPayloadHeader: ExecutionPayloadHeader | null = null;
-  // this map to latestBlockHash of Gloas too
+  // Caches the cross-fork latestBlockHash value
   private _latestBlockHash: Bytes32 | null = null;
   // capella
   private _historicalSummaries: capella.HistoricalSummaries | null = null;
@@ -213,12 +213,13 @@ export class BeaconStateView implements IBeaconStateView {
    * Gloas+: reads the dedicated latestBlockHash field (EIP-7732).
    */
   get latestBlockHash(): Bytes32 {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.bellatrix) {
+    const forkSeq = this.config.getForkSeq(this.cachedState.slot);
+    if (forkSeq < ForkSeq.bellatrix) {
       throw new Error("latestBlockHash is not available before Bellatrix");
     }
 
     if (this._latestBlockHash === null) {
-      if (this.config.getForkSeq(this.cachedState.slot) >= ForkSeq.gloas) {
+      if (forkSeq >= ForkSeq.gloas) {
         this._latestBlockHash = (this.cachedState as CachedBeaconStateGloas).latestBlockHash;
       } else {
         this._latestBlockHash = (
