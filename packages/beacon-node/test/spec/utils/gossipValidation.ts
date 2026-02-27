@@ -15,7 +15,7 @@ import {
   isExecutionStateType,
   syncPubkeys,
 } from "@lodestar/state-transition";
-import {RootHex, sszTypesFor} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
@@ -176,6 +176,7 @@ function loadState(testCaseDir: string, fork: ForkName): BeaconStateAllForks {
 }
 
 type FinalizedCheckpoint = {epoch: number; rootHex: RootHex};
+type MessageValidationContext = {beaconBlockRootHex?: RootHex};
 
 function loadBlockRootHex(testCaseDir: string, fork: ForkName, name: string): RootHex {
   const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(loadSszSnappy(testCaseDir, name));
@@ -397,12 +398,26 @@ export async function runGossipValidationTest(
       const messageTimeMs = baseCurrentTimeMs + (message.offset_ms ?? 0);
       clock.setCurrentTimeMs(messageTimeMs);
 
+      const messageContext: MessageValidationContext = {};
       let result: "valid" | "ignore" | "reject";
       try {
-        await validateMessageForTopic(chain, fork, topic, testCaseDir, message, failedBlockRoots, finalizedCheckpoint);
+        await validateMessageForTopic(
+          chain,
+          fork,
+          topic,
+          testCaseDir,
+          message,
+          failedBlockRoots,
+          finalizedCheckpoint,
+          messageContext
+        );
         result = "valid";
       } catch (e) {
         result = mapErrorToResult(e);
+      }
+
+      if (topic === GossipType.beacon_block && result === "reject" && messageContext.beaconBlockRootHex !== undefined) {
+        failedBlockRoots.add(messageContext.beaconBlockRootHex);
       }
 
       expect(result).toEqualWithMessage(
@@ -423,13 +438,18 @@ async function validateMessageForTopic(
   testCaseDir: string,
   message: MetaYaml["messages"][number],
   failedBlockRoots: Set<RootHex>,
-  finalizedCheckpoint: FinalizedCheckpoint | null
+  finalizedCheckpoint: FinalizedCheckpoint | null,
+  messageContext: MessageValidationContext
 ): Promise<void> {
   const bytes = rejectOnInvalidSerializedBytes(() => loadSszSnappy(testCaseDir, message.message));
 
   switch (topic) {
     case GossipType.beacon_block: {
       const signedBlock = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).SignedBeaconBlock.deserialize(bytes));
+      const blockRootHex = toHex(
+        chain.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      messageContext.beaconBlockRootHex = blockRootHex;
       const parentRootHex = toRootHex(signedBlock.message.parentRoot);
 
       if (failedBlockRoots.has(parentRootHex)) {
@@ -444,7 +464,7 @@ async function validateMessageForTopic(
       }
 
       await validateGossipBlock(chain.config, chain, signedBlock, fork);
-      chain.seenBlockProposers.add(signedBlock.message.slot, signedBlock.message.proposerIndex);
+      await importAcceptedGossipBlock(chain, fork, signedBlock, blockRootHex);
       break;
     }
 
@@ -542,5 +562,33 @@ function rejectOnInvalidSerializedBytes<T>(fn: () => T): T {
       throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_INVALID_SERIALIZED_BYTES"});
     }
     throw e;
+  }
+}
+
+async function importAcceptedGossipBlock(
+  chain: BeaconChain,
+  fork: ForkName,
+  signedBlock: SignedBeaconBlock,
+  blockRootHex: RootHex
+): Promise<void> {
+  const blockImport = BlockInputPreData.createFromBlock({
+    forkName: fork,
+    block: signedBlock,
+    blockRootHex,
+    source: BlockInputSource.gossip,
+    seenTimestampSec: 0,
+    daOutOfRange: false,
+  });
+
+  try {
+    await chain.processBlock(blockImport, {
+      ignoreIfKnown: true,
+      validProposerSignature: true,
+      validBlobSidecars: BlobSidecarValidation.Full,
+      blsVerifyOnMainThread: true,
+      seenTimestampSec: 0,
+    });
+  } catch {
+    // Gossip validation already accepted this block; processing is async in production and may fail independently.
   }
 }
