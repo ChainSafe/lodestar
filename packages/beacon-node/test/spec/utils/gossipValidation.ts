@@ -31,6 +31,7 @@ import {validateGossipVoluntaryExit} from "../../../src/chain/validation/volunta
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
+import {GossipType} from "../../../src/network/gossip/interface.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
@@ -125,7 +126,7 @@ class GossipTestClock extends EventEmitter implements IClock {
 }
 
 interface MetaYaml {
-  topic: GossipTopic;
+  topic: GossipType;
   blocks?: {block: string; failed?: boolean}[];
   finalized_checkpoint?: {epoch: number; root?: string; block?: string};
   current_time_ms?: number;
@@ -138,28 +139,20 @@ interface MetaYaml {
   }[];
 }
 
-type GossipTopic =
-  | "beacon_block"
-  | "beacon_aggregate_and_proof"
-  | "beacon_attestation"
-  | "proposer_slashing"
-  | "attester_slashing"
-  | "voluntary_exit";
-
 const gossipTopicByHandler = {
-  gossip_beacon_block: "beacon_block",
-  gossip_beacon_aggregate_and_proof: "beacon_aggregate_and_proof",
-  gossip_beacon_attestation: "beacon_attestation",
-  gossip_proposer_slashing: "proposer_slashing",
-  gossip_attester_slashing: "attester_slashing",
-  gossip_voluntary_exit: "voluntary_exit",
-} as const satisfies Record<string, GossipTopic>;
+  gossip_beacon_block: GossipType.beacon_block,
+  gossip_beacon_aggregate_and_proof: GossipType.beacon_aggregate_and_proof,
+  gossip_beacon_attestation: GossipType.beacon_attestation,
+  gossip_proposer_slashing: GossipType.proposer_slashing,
+  gossip_attester_slashing: GossipType.attester_slashing,
+  gossip_voluntary_exit: GossipType.voluntary_exit,
+} as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
   return topicHandler in gossipTopicByHandler;
 }
 
-function getGossipTopic(topicHandler: string): GossipTopic {
+function getGossipTopic(topicHandler: string): GossipType {
   if (!isGossipValidationHandler(topicHandler)) {
     throw Error(`Unsupported gossip test handler ${topicHandler}`);
   }
@@ -426,17 +419,17 @@ export async function runGossipValidationTest(
 async function validateMessageForTopic(
   chain: BeaconChain,
   fork: ForkName,
-  topic: GossipTopic,
+  topic: GossipType,
   testCaseDir: string,
   message: MetaYaml["messages"][number],
   failedBlockRoots: Set<RootHex>,
   finalizedCheckpoint: FinalizedCheckpoint | null
 ): Promise<void> {
-  const bytes = loadSszSnappy(testCaseDir, message.message);
+  const bytes = rejectOnInvalidSerializedBytes(() => loadSszSnappy(testCaseDir, message.message));
 
   switch (topic) {
-    case "beacon_block": {
-      const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(bytes);
+    case GossipType.beacon_block: {
+      const signedBlock = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).SignedBeaconBlock.deserialize(bytes));
       const parentRootHex = toRootHex(signedBlock.message.parentRoot);
 
       if (failedBlockRoots.has(parentRootHex)) {
@@ -455,8 +448,10 @@ async function validateMessageForTopic(
       break;
     }
 
-    case "beacon_aggregate_and_proof": {
-      const aggregate = sszTypesFor(fork).SignedAggregateAndProof.deserialize(bytes);
+    case GossipType.beacon_aggregate_and_proof: {
+      const aggregate = rejectOnInvalidSerializedBytes(() =>
+        sszTypesFor(fork).SignedAggregateAndProof.deserialize(bytes)
+      );
       const beaconBlockRootHex = toRootHex(aggregate.message.aggregate.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
@@ -474,8 +469,8 @@ async function validateMessageForTopic(
       break;
     }
 
-    case "beacon_attestation": {
-      const attestation = sszTypesFor(fork).Attestation.deserialize(bytes);
+    case GossipType.beacon_attestation: {
+      const attestation = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).Attestation.deserialize(bytes));
       const beaconBlockRootHex = toRootHex(attestation.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
@@ -509,16 +504,16 @@ async function validateMessageForTopic(
       break;
     }
 
-    case "proposer_slashing": {
-      const slashing = sszTypesFor(fork).ProposerSlashing.deserialize(bytes);
+    case GossipType.proposer_slashing: {
+      const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).ProposerSlashing.deserialize(bytes));
       await validateGossipProposerSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertProposerSlashing(slashing);
       break;
     }
 
-    case "attester_slashing": {
-      const slashing = sszTypesFor(fork).AttesterSlashing.deserialize(bytes);
+    case GossipType.attester_slashing: {
+      const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes));
       await validateGossipAttesterSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool + fork choice
       chain.opPool.insertAttesterSlashing(fork, slashing);
@@ -526,8 +521,8 @@ async function validateMessageForTopic(
       break;
     }
 
-    case "voluntary_exit": {
-      const exit = sszTypesFor(fork).SignedVoluntaryExit.deserialize(bytes);
+    case GossipType.voluntary_exit: {
+      const exit = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).SignedVoluntaryExit.deserialize(bytes));
       await validateGossipVoluntaryExit(chain, exit);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertVoluntaryExit(exit);
@@ -536,5 +531,16 @@ async function validateMessageForTopic(
 
     default:
       throw new Error(`Unknown gossip topic: ${topic}`);
+  }
+}
+
+function rejectOnInvalidSerializedBytes<T>(fn: () => T): T {
+  try {
+    return fn();
+  } catch (e) {
+    if (e instanceof Error) {
+      throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_INVALID_SERIALIZED_BYTES"});
+    }
+    throw e;
   }
 }
