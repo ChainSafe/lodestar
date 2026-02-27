@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, computeTimeAtSlot, getSlotDurationMs, getCurrentSlot} from "@lodestar/state-transition";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot, getSlotDurationMs} from "@lodestar/state-transition";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 

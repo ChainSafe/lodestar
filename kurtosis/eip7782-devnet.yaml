@@ -49,6 +49,7 @@ network_params:
   genesis_delay: 30
   num_validator_keys_per_node: 32
 
-additional_services: []
+additional_services:
+  - dora
 
 global_log_level: "info"

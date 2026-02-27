@@ -80,7 +80,11 @@ export function getBalanceChurnLimitFromCache(epochCtx: EpochCache): number {
       ? epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_EIP7782
       : epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA;
 
-  return getBalanceChurnLimit(epochCtx.totalActiveBalanceIncrements, epochCtx.config.CHURN_LIMIT_QUOTIENT, minChurnLimit);
+  return getBalanceChurnLimit(
+    epochCtx.totalActiveBalanceIncrements,
+    epochCtx.config.CHURN_LIMIT_QUOTIENT,
+    minChurnLimit
+  );
 }
 
 export function getActivationExitChurnLimit(epochCtx: EpochCache): number {

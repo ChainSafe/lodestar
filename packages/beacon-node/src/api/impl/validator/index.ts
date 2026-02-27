@@ -123,7 +123,7 @@ const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
  * Uses slot duration (12s pre-EIP7782, 6s post-EIP7782).
  * Defined as a constant for pre-fork default; fork-aware value computed at call site.
  */
-const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
+// const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: BlockContents;
