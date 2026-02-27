@@ -102,6 +102,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
+  const eip7782ForkRelevant = localConfig.EIP7782_FORK_EPOCH < Infinity;
   const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
 
   return {
@@ -141,6 +142,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // fulu
     FULU_FORK_VERSION: fuluForkRelevant,
     FULU_FORK_EPOCH: fuluForkRelevant,
+    // eip7782
+    EIP7782_FORK_VERSION: eip7782ForkRelevant,
+    EIP7782_FORK_EPOCH: eip7782ForkRelevant,
     // gloas
     GLOAS_FORK_VERSION: gloasForkRelevant,
     GLOAS_FORK_EPOCH: gloasForkRelevant,
@@ -314,6 +318,21 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
+
+    // EIP-7782
+    SLOT_DURATION_MS_EIP7782: eip7782ForkRelevant,
+    ATTESTATION_DUE_BPS_EIP7782: eip7782ForkRelevant,
+    AGGREGRATE_DUE_BPS_EIP7782: eip7782ForkRelevant,
+    SYNC_MESSAGE_DUE_BPS_EIP7782: eip7782ForkRelevant,
+    CONTRIBUTION_DUE_BPS_EIP7782: eip7782ForkRelevant,
+    PROPOSER_REORG_CUTOFF_BPS_EIP7782: eip7782ForkRelevant,
+    PAYLOAD_ATTESTATION_DUE_BPS_EIP7782: eip7782ForkRelevant,
+    VIEW_FREEZE_CUTOFF_BPS_EIP7782: eip7782ForkRelevant,
+    INCLUSION_LIST_SUBMISSION_DUE_BPS_EIP7782: eip7782ForkRelevant,
+    PROPOSER_INCLUSION_LIST_CUTOFF_BPS_EIP7782: eip7782ForkRelevant,
+    EPOCHS_PER_SYNC_COMMITTEE_PERIOD_EIP7782: eip7782ForkRelevant,
+    MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT_EIP7782: eip7782ForkRelevant,
+    MIN_PER_EPOCH_CHURN_LIMIT_EIP7782: eip7782ForkRelevant,
 
     // GLOAS
     ATTESTATION_DUE_BPS_GLOAS: gloasForkRelevant,

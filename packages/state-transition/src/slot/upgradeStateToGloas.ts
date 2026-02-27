@@ -8,14 +8,17 @@ import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 
-/**
- * Upgrade a state from Fulu to Gloas.
- */
-export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBeaconStateGloas {
-  const {config} = stateFulu;
+type CachedBeaconStateEip7782 = CachedBeaconStateFulu;
 
-  ssz.fulu.BeaconState.commitViewDU(stateFulu);
-  const stateGloasCloned = stateFulu;
+/**
+ * Upgrade a state from Eip7782 to Gloas.
+ */
+export function upgradeStateToGloas(stateEip7782: CachedBeaconStateEip7782): CachedBeaconStateGloas {
+  const {config} = stateEip7782;
+  const eip7782Ssz = (ssz as typeof ssz & {eip7782?: typeof ssz.fulu}).eip7782 ?? ssz.fulu;
+
+  eip7782Ssz.BeaconState.commitViewDU(stateEip7782);
+  const stateGloasCloned = stateEip7782;
 
   const stateGloasView = ssz.gloas.BeaconState.defaultViewDU();
 
@@ -23,9 +26,9 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.genesisValidatorsRoot = stateGloasCloned.genesisValidatorsRoot;
   stateGloasView.slot = stateGloasCloned.slot;
   stateGloasView.fork = ssz.phase0.Fork.toViewDU({
-    previousVersion: stateFulu.fork.currentVersion,
+    previousVersion: stateEip7782.fork.currentVersion,
     currentVersion: config.GLOAS_FORK_VERSION,
-    epoch: stateFulu.epochCtx.epoch,
+    epoch: stateEip7782.epochCtx.epoch,
   });
   stateGloasView.latestBlockHeader = stateGloasCloned.latestBlockHeader;
   stateGloasView.blockRoots = stateGloasCloned.blockRoots;
@@ -47,7 +50,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.inactivityScores = stateGloasCloned.inactivityScores;
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
-  stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
+  stateGloasView.latestExecutionPayloadBid.blockHash = stateEip7782.latestExecutionPayloadHeader.blockHash;
   stateGloasView.nextWithdrawalIndex = stateGloasCloned.nextWithdrawalIndex;
   stateGloasView.nextWithdrawalValidatorIndex = stateGloasCloned.nextWithdrawalValidatorIndex;
   stateGloasView.historicalSummaries = stateGloasCloned.historicalSummaries;
@@ -65,15 +68,15 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
     stateGloasView.executionPayloadAvailability.set(i, true);
   }
-  stateGloasView.latestBlockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
+  stateGloasView.latestBlockHash = stateEip7782.latestExecutionPayloadHeader.blockHash;
 
-  const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
+  const stateGloas = getCachedBeaconState(stateGloasView, stateEip7782);
 
   // Process pending builder deposits at the fork boundary
   onboardBuildersFromPendingDeposits(stateGloas);
 
   stateGloas.commit();
-  // Clear cache to ensure the cache of fulu fields is not used by new gloas fields
+  // Clear cache to ensure the cache of eip7782 fields is not used by new gloas fields
   // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateGloas["clearCache"]();
 

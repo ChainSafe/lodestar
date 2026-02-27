@@ -39,6 +39,7 @@ export type ExecutionBuilderHttpOpts = {
 export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   enabled: false,
   url: "http://localhost:8661",
+  // TODO EIP-7782: Consider making this fork-aware (6s post-EIP7782)
   timeout: 12000,
 };
 

@@ -73,15 +73,25 @@ export function getBalanceChurnLimit(
 }
 
 export function getBalanceChurnLimitFromCache(epochCtx: EpochCache): number {
-  return getBalanceChurnLimit(
-    epochCtx.totalActiveBalanceIncrements,
-    epochCtx.config.CHURN_LIMIT_QUOTIENT,
-    epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
-  );
+  // EIP-7782: Use halved churn limits post-fork
+  const forkSeq = epochCtx.config.getForkSeq(epochCtx.epoch);
+  const minChurnLimit =
+    forkSeq >= ForkSeq.eip7782
+      ? epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_EIP7782
+      : epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA;
+
+  return getBalanceChurnLimit(epochCtx.totalActiveBalanceIncrements, epochCtx.config.CHURN_LIMIT_QUOTIENT, minChurnLimit);
 }
 
 export function getActivationExitChurnLimit(epochCtx: EpochCache): number {
-  return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimitFromCache(epochCtx));
+  // EIP-7782: Use halved max churn limit post-fork
+  const forkSeq = epochCtx.config.getForkSeq(epochCtx.epoch);
+  const maxChurnLimit =
+    forkSeq >= ForkSeq.eip7782
+      ? epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT_EIP7782
+      : epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT;
+
+  return Math.min(maxChurnLimit, getBalanceChurnLimitFromCache(epochCtx));
 }
 
 export function getConsolidationChurnLimit(epochCtx: EpochCache): number {

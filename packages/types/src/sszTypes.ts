@@ -5,6 +5,7 @@ import {ssz as bellatrixSsz} from "./bellatrix/index.js";
 import {ssz as capellaSsz} from "./capella/index.js";
 import {ssz as denebSsz} from "./deneb/index.js";
 import {ssz as electraSsz} from "./electra/index.js";
+import {ssz as eip7782Ssz} from "./eip7782/index.js";
 import {ssz as fuluSsz} from "./fulu/index.js";
 import {ssz as gloasSsz} from "./gloas/index.js";
 import {ssz as phase0Ssz} from "./phase0/index.js";
@@ -23,6 +24,7 @@ const typesByFork = {
   [ForkName.deneb]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz},
   [ForkName.electra]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz},
   [ForkName.fulu]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz, ...fuluSsz},
+  [ForkName.eip7782]: {...phase0Ssz, ...altairSsz, ...bellatrixSsz, ...capellaSsz, ...denebSsz, ...electraSsz, ...fuluSsz, ...eip7782Ssz},
   [ForkName.gloas]: {
     ...phase0Ssz,
     ...altairSsz,
@@ -31,6 +33,7 @@ const typesByFork = {
     ...denebSsz,
     ...electraSsz,
     ...fuluSsz,
+    ...eip7782Ssz,
     ...gloasSsz,
   },
 };
@@ -45,6 +48,7 @@ export const capella = typesByFork[ForkName.capella];
 export const deneb = typesByFork[ForkName.deneb];
 export const electra = typesByFork[ForkName.electra];
 export const fulu = typesByFork[ForkName.fulu];
+export const eip7782 = typesByFork[ForkName.eip7782];
 export const gloas = typesByFork[ForkName.gloas];
 
 /**

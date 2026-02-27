@@ -118,7 +118,11 @@ export const SYNC_TOLERANCE_EPOCHS = 1;
  * TODO GLOAS: re-evaluate cutoff timing
  */
 const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
-/** Overall timeout for execution and block production apis */
+/**
+ * Overall timeout for execution and block production apis.
+ * Uses slot duration (12s pre-EIP7782, 6s post-EIP7782).
+ * Defined as a constant for pre-fork default; fork-aware value computed at call site.
+ */
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
@@ -186,6 +190,8 @@ export function getValidatorApi(
    * This value is the same to MAXIMUM_GOSSIP_CLOCK_DISPARITY.
    * For very fast networks, reduce clock disparity to half a slot.
    */
+  // TODO EIP-7782: This should use fork-aware slot duration for post-fork accuracy.
+  // Pre-fork: min(500ms, 6000ms) = 500ms. Post-fork: min(500ms, 3000ms) = 500ms. Safe for now.
   const MAX_API_CLOCK_DISPARITY_SEC = Math.min(
     config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000,
     config.SLOT_DURATION_MS / 2000
@@ -671,16 +677,18 @@ export function getValidatorApi(
 
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
+    // Use fork-aware slot duration for race timeout (6s post-EIP7782)
+    const blockProductionTimeoutMs = config.getSlotDurationMsForFork(config.getForkName(slot));
 
     logger.verbose("Block production race (builder vs execution) starting", {
       ...loggerContext,
       cutoffMs,
-      timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      timeoutMs: blockProductionTimeoutMs,
     });
 
     const blockProductionRacePromise = resolveOrRacePromises([builderPromise, enginePromise], {
       resolveTimeoutMs: cutoffMs,
-      raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      raceTimeoutMs: blockProductionTimeoutMs,
       signal: controller.signal,
     });
 

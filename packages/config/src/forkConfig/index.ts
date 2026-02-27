@@ -11,6 +11,7 @@ import {
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostDeneb,
+  isForkPostEip7782,
   isForkPostGloas,
 } from "@lodestar/params";
 import {Epoch, SSZTypesFor, Slot, Version, sszTypesFor} from "@lodestar/types";
@@ -77,18 +78,26 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.ELECTRA_FORK_VERSION,
     prevForkName: ForkName.electra,
   };
+  const eip7782: ForkInfo = {
+    name: ForkName.eip7782,
+    seq: ForkSeq.eip7782,
+    epoch: config.EIP7782_FORK_EPOCH,
+    version: config.EIP7782_FORK_VERSION,
+    prevVersion: config.FULU_FORK_VERSION,
+    prevForkName: ForkName.fulu,
+  };
   const gloas: ForkInfo = {
     name: ForkName.gloas,
     seq: ForkSeq.gloas,
     epoch: config.GLOAS_FORK_EPOCH,
     version: config.GLOAS_FORK_VERSION,
-    prevVersion: config.FULU_FORK_VERSION,
-    prevForkName: ForkName.fulu,
+    prevVersion: config.EIP7782_FORK_VERSION,
+    prevForkName: ForkName.eip7782,
   };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, gloas};
+  const forks = {phase0, altair, bellatrix, capella, deneb, electra, fulu, eip7782, gloas};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
@@ -202,35 +211,61 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return {epoch: config.ELECTRA_FORK_EPOCH, maxBlobsPerBlock: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
     },
     getAttestationDueMs(fork: ForkName): number {
+      if (isForkPostEip7782(fork)) {
+        return this.getSlotComponentDurationMsForFork(config.ATTESTATION_DUE_BPS_EIP7782, fork);
+      }
       if (isForkPostGloas(fork)) {
         return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS_GLOAS);
       }
       return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS);
     },
     getAggregateDueMs(fork: ForkName): number {
+      if (isForkPostEip7782(fork)) {
+        return this.getSlotComponentDurationMsForFork(config.AGGREGRATE_DUE_BPS_EIP7782, fork);
+      }
       if (isForkPostGloas(fork)) {
         return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS_GLOAS);
       }
       return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS);
     },
     getSyncMessageDueMs(fork: ForkName): number {
+      if (isForkPostEip7782(fork)) {
+        return this.getSlotComponentDurationMsForFork(config.SYNC_MESSAGE_DUE_BPS_EIP7782, fork);
+      }
       if (isForkPostGloas(fork)) {
         return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS_GLOAS);
       }
       return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS);
     },
     getSyncContributionDueMs(fork: ForkName): number {
+      if (isForkPostEip7782(fork)) {
+        return this.getSlotComponentDurationMsForFork(config.CONTRIBUTION_DUE_BPS_EIP7782, fork);
+      }
       if (isForkPostGloas(fork)) {
         return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS_GLOAS);
       }
       return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS);
     },
-    getProposerReorgCutoffMs(_fork: ForkName): number {
+    getProposerReorgCutoffMs(fork: ForkName): number {
+      if (isForkPostEip7782(fork)) {
+        return this.getSlotComponentDurationMsForFork(config.PROPOSER_REORG_CUTOFF_BPS_EIP7782, fork);
+      }
       return this.getSlotComponentDurationMs(config.PROPOSER_REORG_CUTOFF_BPS);
+    },
+
+    /** Get slot duration in ms for a given fork */
+    getSlotDurationMsForFork(fork: ForkName): number {
+      return isForkPostEip7782(fork) ? config.SLOT_DURATION_MS_EIP7782 : config.SLOT_DURATION_MS;
     },
 
     getSlotComponentDurationMs(basisPoints: number): number {
       return Math.round((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
+    },
+
+    /** Fork-aware version: uses the slot duration for the given fork */
+    getSlotComponentDurationMsForFork(basisPoints: number, fork: ForkName): number {
+      const slotDurationMs = isForkPostEip7782(fork) ? config.SLOT_DURATION_MS_EIP7782 : config.SLOT_DURATION_MS;
+      return Math.round((basisPoints * slotDurationMs) / BASIS_POINTS);
     },
   };
 }

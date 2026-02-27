@@ -13,7 +13,13 @@ import {getNextSyncCommitteeIndices} from "../util/seed.js";
 export function processSyncCommitteeUpdates(fork: ForkSeq, state: CachedBeaconStateAltair): void {
   const nextEpoch = state.epochCtx.epoch + 1;
 
-  if (nextEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
+  // EIP-7782: Use doubled sync committee period post-fork to maintain ~27 hours
+  const syncPeriod =
+    fork >= ForkSeq.eip7782
+      ? state.epochCtx.config.EPOCHS_PER_SYNC_COMMITTEE_PERIOD_EIP7782
+      : EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+
+  if (nextEpoch % syncPeriod === 0) {
     const activeValidatorIndices = state.epochCtx.nextActiveIndices;
     const {effectiveBalanceIncrements} = state.epochCtx;
 

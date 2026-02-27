@@ -78,9 +78,9 @@ export class Clock extends EventEmitter implements IClock {
 
     this.config = config;
     this.genesisTime = genesisTime;
-    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
     this.signal = signal;
     this._currentSlot = getCurrentSlot(this.config, this.genesisTime);
+    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
     this.signal.addEventListener("abort", () => clearTimeout(this.timeoutId), {once: true});
   }
 
@@ -204,8 +204,8 @@ export class Clock extends EventEmitter implements IClock {
   };
 
   private msUntilNextSlot(): number {
-    const milliSecondsPerSlot = this.config.SLOT_DURATION_MS;
-    const diffInMilliSeconds = Date.now() - this.genesisTime * 1000;
-    return milliSecondsPerSlot - (diffInMilliSeconds % milliSecondsPerSlot);
+    // Use computeTimeAtSlot for fork-aware timing (handles EIP-7782 slot duration change)
+    const nextSlotTimeSec = computeTimeAtSlot(this.config, this._currentSlot + 1, this.genesisTime);
+    return Math.max(0, nextSlotTimeSec * 1000 - Date.now());
   }
 }

@@ -124,7 +124,11 @@ export function computeSyncPeriodAtSlot(slot: Slot): SyncPeriod {
 }
 
 /**
- * Return the sync committee period at epoch
+ * Return the sync committee period at epoch.
+ *
+ * NOTE: Post-EIP7782, the sync committee period doubles to maintain ~27 hours.
+ * This base function uses the pre-EIP7782 period for backward compatibility.
+ * Use computeSyncPeriodAtEpochForFork when fork-awareness is needed.
  */
 export function computeSyncPeriodAtEpoch(epoch: Epoch): SyncPeriod {
   return Math.floor(epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);

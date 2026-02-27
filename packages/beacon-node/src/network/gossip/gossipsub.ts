@@ -150,6 +150,7 @@ export class Eth2Gossipsub {
       mcacheLength: 6,
       mcacheGossip: 3,
       // this should be in ms
+      // TODO EIP-7782: Should use fork-aware slot duration after fork boundary
       seenTTL: config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,

@@ -14,6 +14,7 @@ import {
   upgradeStateToBellatrix,
   upgradeStateToCapella,
   upgradeStateToDeneb,
+  upgradeStateToEip7782,
   upgradeStateToElectra,
   upgradeStateToGloas,
 } from "./slot/index.js";
@@ -276,7 +277,11 @@ function processSlotsWithTransientCache(
       if (stateEpoch === config.FULU_FORK_EPOCH) {
         postState = upgradeStateToFulu(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
       }
+      if (stateEpoch === config.EIP7782_FORK_EPOCH) {
+        postState = upgradeStateToEip7782(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
+      }
       if (stateEpoch === config.GLOAS_FORK_EPOCH) {
+        // EIP-7782 state is identical to Fulu state (no new fields), so CachedBeaconStateFulu works
         postState = upgradeStateToGloas(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
       }
 

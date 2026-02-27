@@ -1,8 +1,10 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {DAData, DAType, IBlockInput} from "./blockInput/index.js";
 
-// we can now wait for full 12 seconds because unavailable block sync will try pulling
-// the blobs from the network anyway after 500ms of seeing the block
+// We can now wait for full slot duration because unavailable block sync will try pulling
+// the blobs from the network anyway after 500ms of seeing the block.
+// TODO EIP-7782: This should use fork-aware slot duration (6s post-EIP7782).
+// For now, 12s is safe as upper bound for both pre and post-fork.
 export const BLOB_AVAILABILITY_TIMEOUT = 12_000;
 
 /**

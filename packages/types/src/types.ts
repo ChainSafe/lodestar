@@ -5,6 +5,7 @@ import {
   ForkPostBellatrix,
   ForkPostDeneb,
   ForkPostElectra,
+  ForkPostEip7782,
   ForkPostFulu,
   ForkPostGloas,
 } from "@lodestar/params";
@@ -13,6 +14,7 @@ import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
 import {ts as electra} from "./electra/index.js";
+import {ts as eip7782} from "./eip7782/index.js";
 import {ts as fulu} from "./fulu/index.js";
 import {ts as gloas} from "./gloas/index.js";
 import {ts as phase0} from "./phase0/index.js";
@@ -23,6 +25,7 @@ export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
 export {ts as electra} from "./electra/index.js";
+export {ts as eip7782} from "./eip7782/index.js";
 export {ts as fulu} from "./fulu/index.js";
 export {ts as gloas} from "./gloas/index.js";
 export {ts as phase0} from "./phase0/index.js";
@@ -246,6 +249,46 @@ type TypesByFork = {
     ExecutionRequests: electra.ExecutionRequests;
   };
   [ForkName.fulu]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
+    BeaconBlock: electra.BeaconBlock;
+    BeaconBlockBody: electra.BeaconBlockBody;
+    BeaconState: fulu.BeaconState;
+    SignedBeaconBlock: electra.SignedBeaconBlock;
+    Metadata: fulu.Metadata;
+    Status: fulu.Status;
+    LightClientHeader: deneb.LightClientHeader;
+    LightClientBootstrap: electra.LightClientBootstrap;
+    LightClientUpdate: electra.LightClientUpdate;
+    LightClientFinalityUpdate: electra.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate;
+    LightClientStore: electra.LightClientStore;
+    BlindedBeaconBlock: electra.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
+    ExecutionPayload: deneb.ExecutionPayload;
+    ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
+    BuilderBid: electra.BuilderBid;
+    SignedBuilderBid: electra.SignedBuilderBid;
+    SSEPayloadAttributes: electra.SSEPayloadAttributes;
+    BlockContents: fulu.BlockContents;
+    SignedBlockContents: fulu.SignedBlockContents;
+    ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: fulu.BlobsBundle;
+    SyncCommittee: altair.SyncCommittee;
+    SyncAggregate: altair.SyncAggregate;
+    SingleAttestation: electra.SingleAttestation;
+    Attestation: electra.Attestation;
+    IndexedAttestation: electra.IndexedAttestation;
+    IndexedAttestationBigint: electra.IndexedAttestationBigint;
+    AttesterSlashing: electra.AttesterSlashing;
+    AggregateAndProof: electra.AggregateAndProof;
+    SignedAggregateAndProof: electra.SignedAggregateAndProof;
+    ExecutionRequests: electra.ExecutionRequests;
+    DataColumnSidecar: fulu.DataColumnSidecar;
+    DataColumnSidecars: fulu.DataColumnSidecars;
+  };
+  [ForkName.eip7782]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: electra.BeaconBlock;

@@ -1,0 +1,54 @@
+# EIP-7782 (6-second slots) Devnet — Lodestar only
+# Tests fork transition from Fulu (12s) to EIP-7782 (6s) at epoch 5
+
+participants:
+  - el_type: geth
+    cl_type: lodestar
+    cl_image: lodestar-eip7782:dev
+    count: 2
+    supernode: true
+    cl_extra_params:
+      - "--params.EIP7782_FORK_EPOCH=5"
+      - "--params.SLOT_DURATION_MS_EIP7782=6000"
+      - "--params.EIP7782_FORK_VERSION=0x0b000001"
+      - "--params.ATTESTATION_DUE_BPS_EIP7782=5000"
+      - "--params.AGGREGRATE_DUE_BPS_EIP7782=7500"
+      - "--params.SYNC_MESSAGE_DUE_BPS_EIP7782=3333"
+      - "--params.CONTRIBUTION_DUE_BPS_EIP7782=6667"
+      - "--params.PROPOSER_REORG_CUTOFF_BPS_EIP7782=1667"
+      - "--params.PAYLOAD_ATTESTATION_DUE_BPS_EIP7782=7500"
+      - "--params.VIEW_FREEZE_CUTOFF_BPS_EIP7782=7500"
+      - "--params.INCLUSION_LIST_SUBMISSION_DUE_BPS_EIP7782=6667"
+      - "--params.PROPOSER_INCLUSION_LIST_CUTOFF_BPS_EIP7782=9167"
+      - "--params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD_EIP7782=512"
+      - "--params.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT_EIP7782=128000000000"
+      - "--params.MIN_PER_EPOCH_CHURN_LIMIT_EIP7782=64000000000"
+    # NOTE: ethereum-package currently runs separate VC services for Lodestar in this topology.
+    # Mirror EIP-7782 params into VC config so signing domains at slot 160 match BN fork schedule.
+    vc_extra_params:
+      - "--params.EIP7782_FORK_EPOCH=5"
+      - "--params.SLOT_DURATION_MS_EIP7782=6000"
+      - "--params.EIP7782_FORK_VERSION=0x0b000001"
+      - "--params.ATTESTATION_DUE_BPS_EIP7782=5000"
+      - "--params.AGGREGRATE_DUE_BPS_EIP7782=7500"
+      - "--params.SYNC_MESSAGE_DUE_BPS_EIP7782=3333"
+      - "--params.CONTRIBUTION_DUE_BPS_EIP7782=6667"
+      - "--params.PROPOSER_REORG_CUTOFF_BPS_EIP7782=1667"
+      - "--params.PAYLOAD_ATTESTATION_DUE_BPS_EIP7782=7500"
+      - "--params.VIEW_FREEZE_CUTOFF_BPS_EIP7782=7500"
+      - "--params.INCLUSION_LIST_SUBMISSION_DUE_BPS_EIP7782=6667"
+      - "--params.PROPOSER_INCLUSION_LIST_CUTOFF_BPS_EIP7782=9167"
+      - "--params.EPOCHS_PER_SYNC_COMMITTEE_PERIOD_EIP7782=512"
+      - "--params.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT_EIP7782=128000000000"
+      - "--params.MIN_PER_EPOCH_CHURN_LIMIT_EIP7782=64000000000"
+
+network_params:
+  electra_fork_epoch: 0
+  fulu_fork_epoch: 0
+  seconds_per_slot: 12
+  genesis_delay: 30
+  num_validator_keys_per_node: 32
+
+additional_services: []
+
+global_log_level: "info"
