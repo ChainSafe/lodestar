@@ -1,5 +1,5 @@
-import {BitArray} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
+import type {BitArray} from "@chainsafe/ssz";
+import type {ChainForkConfig} from "@lodestar/config";
 import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
@@ -12,20 +12,20 @@ import {
   isForkPostElectra,
 } from "@lodestar/params";
 import {
-  BeaconBlockHeader,
-  LightClientFinalityUpdate,
-  LightClientHeader,
-  LightClientOptimisticUpdate,
-  LightClientUpdate,
-  Slot,
-  SyncCommittee,
+  type BeaconBlockHeader,
+  type LightClientFinalityUpdate,
+  type LightClientHeader,
+  type LightClientOptimisticUpdate,
+  type LightClientUpdate,
+  type Slot,
+  type SyncCommittee,
   isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
 import {computeEpochAtSlot, computeSyncPeriodAtSlot, isValidMerkleBranch} from "../utils/index.js";
 import {normalizeMerkleBranch} from "../utils/normalizeMerkleBranch.js";
-import {LightClientStore} from "./store.js";
+import type {LightClientStore} from "./store.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -146,6 +146,13 @@ export function upgradeLightClientHeader(
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.fulu) break;
+
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
+    case ForkName.eip7782:
+      // No changes to LightClientHeader in EIP-7782
+
+      // Break if no further upgrades is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.eip7782) break;
 
     case ForkName.gloas:
       // No changes to LightClientHeader in Gloas

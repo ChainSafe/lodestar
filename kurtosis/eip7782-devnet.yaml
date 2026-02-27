@@ -1,11 +1,15 @@
 # EIP-7782 (6-second slots) Devnet — Lodestar only
-# Tests fork transition from Fulu (12s) to EIP-7782 (6s) at epoch 5
+# Tests fork transition from Fulu (12s) to EIP-7782 (6s) at epoch 1
+#
+# Requires lodekeeper/ethereum-package fork for eip7782 network_params support:
+#   kurtosis run github.com/lodekeeper/ethereum-package@feat/eip7782-support \
+#     --args-file kurtosis/eip7782-devnet.yaml
 
 participants:
   - el_type: geth
     cl_type: lodestar
     cl_image: lodestar-eip7782:dev
-    count: 2
+    count: 4
     supernode: true
     cl_extra_params:
       - "--params.EIP7782_FORK_EPOCH=1"
@@ -45,6 +49,18 @@ participants:
 network_params:
   electra_fork_epoch: 0
   fulu_fork_epoch: 0
+  eip7782_fork_epoch: 1
+  slot_duration_ms_eip7782: 6000
+  attestation_due_bps_eip7782: 5000
+  aggregate_due_bps_eip7782: 7500
+  sync_message_due_bps_eip7782: 3333
+  contribution_due_bps_eip7782: 6667
+  proposer_reorg_cutoff_bps_eip7782: 1667
+  payload_attestation_due_bps_eip7782: 7500
+  view_freeze_cutoff_bps_eip7782: 7500
+  inclusion_list_submission_due_bps_eip7782: 6667
+  proposer_inclusion_list_cutoff_bps_eip7782: 9167
+  epochs_per_sync_committee_period_eip7782: 512
   seconds_per_slot: 12
   genesis_delay: 30
   num_validator_keys_per_node: 32
