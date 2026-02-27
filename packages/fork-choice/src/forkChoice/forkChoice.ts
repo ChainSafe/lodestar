@@ -817,14 +817,14 @@ export class ForkChoice implements IForkChoice {
               // Fallback to parent block's number (we know it's post-merge from check above)
               return parentBlock.executionPayloadNumber;
             })(),
-            executionStatus: this.getPostMergeExecStatus(executionStatus), // TODO GLOAS: Need a new execution status to denote scenario where we are waiting for payload, or payload is never revealed.
+            executionStatus: this.getPostGloasExecStatus(executionStatus),
             dataAvailabilityStatus,
           }
         : isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
           ? {
               executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
               executionPayloadNumber: block.body.executionPayload.blockNumber,
-              executionStatus: this.getPostMergeExecStatus(executionStatus),
+              executionStatus: this.getPreGloasExecStatus(executionStatus),
               dataAvailabilityStatus,
             }
           : {
@@ -1424,12 +1424,20 @@ export class ForkChoice implements IForkChoice {
     return dataAvailabilityStatus;
   }
 
-  private getPostMergeExecStatus(
+  private getPreGloasExecStatus(
     executionStatus: MaybeValidExecutionStatus
   ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
-    if (executionStatus === ExecutionStatus.PreMerge)
+    if (executionStatus === ExecutionStatus.PreMerge || executionStatus === ExecutionStatus.PayloadSeparated)
       throw Error(
-        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`
+        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid}, got ${executionStatus}`
+      );
+    return executionStatus;
+  }
+
+  private getPostGloasExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PayloadSeparated {
+    if (executionStatus !== ExecutionStatus.PayloadSeparated)
+      throw Error(
+        `Invalid post-gloas execution status: expected: ${ExecutionStatus.PayloadSeparated}, got ${executionStatus}`
       );
     return executionStatus;
   }

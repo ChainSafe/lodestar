@@ -360,9 +360,12 @@ export class BeaconNode {
       if (this.restApi) await this.restApi.close();
       await this.network.close();
       if (this.metricsServer) await this.metricsServer.close();
-      if (this.monitoring) this.monitoring.close();
+      if (this.monitoring) await this.monitoring.close();
       await this.chain.persistToDisk();
       await this.chain.close();
+      // Abort signal last: close() calls above clear intervals/timeouts so no new
+      // operations get scheduled. If we aborted first, a still-pending interval could
+      // fire and schedule a new operation after abort, leaving it stuck and delaying shutdown.
       if (this.controller) this.controller.abort();
       await sleep(DELAY_BEFORE_CLOSING_DB_MS);
       await this.db.close();

@@ -1,65 +1,48 @@
-import {pipe} from "it-pipe";
 import {Uint8ArrayList} from "uint8arraylist";
 import {describe, expect, it} from "vitest";
 import {
   ChunkType,
   IDENTIFIER_FRAME,
-  SnappyFramesUncompress,
   crc,
+  decodeSnappyFrameData,
+  decodeSnappyFrames,
   encodeSnappy,
+  parseSnappyFrameHeader,
 } from "../../../../../src/utils/snappyIndex.js";
 
 describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
-  it("should work with short input", () =>
-    new Promise<void>((done) => {
-      const testData = "Small test data";
-      const compressIterable = encodeSnappy(Buffer.from(testData));
+  it("should work with short input", async () => {
+    const testData = "Small test data";
+    const compressIterable = encodeSnappy(Buffer.from(testData));
+    const encoded: Uint8Array[] = [];
 
-      const decompress = new SnappyFramesUncompress();
+    for await (const data of compressIterable) {
+      encoded.push(data);
+    }
 
-      void pipe(compressIterable, async (source) => {
-        for await (const data of source) {
-          const result = decompress.uncompress(new Uint8ArrayList(data));
-          if (result) {
-            expect(result.subarray().toString()).toBe(testData);
-            done();
-          }
-        }
-      });
-    }));
+    const result = decodeSnappyFrames(Buffer.concat(encoded));
+    expect(Buffer.from(result.subarray()).toString()).toBe(testData);
+  });
 
-  it("should work with huge input", () =>
-    new Promise<void>((done) => {
-      const testData = Buffer.alloc(100000, 4).toString();
-      const compressIterable = encodeSnappy(Buffer.from(testData));
-      let result = Buffer.alloc(0);
-      const decompress = new SnappyFramesUncompress();
+  it("should work with huge input", async () => {
+    const testData = Buffer.alloc(100000, 4).toString();
+    const compressIterable = encodeSnappy(Buffer.from(testData));
+    const encoded: Uint8Array[] = [];
 
-      void pipe(compressIterable, async (source) => {
-        for await (const data of source) {
-          // testData will come compressed as two or more chunks
-          result = Buffer.concat([
-            result,
-            decompress.uncompress(new Uint8ArrayList(data))?.subarray() ?? Buffer.alloc(0),
-          ]);
-          if (result.length === testData.length) {
-            expect(result.toString()).toBe(testData);
-            done();
-          }
-        }
-      });
-    }));
+    for await (const data of compressIterable) {
+      encoded.push(data);
+    }
+
+    const result = decodeSnappyFrames(Buffer.concat(encoded));
+    expect(Buffer.from(result.subarray()).toString()).toBe(testData);
+  });
 
   it("should detect malformed input", () => {
-    const decompress = new SnappyFramesUncompress();
-
-    expect(() => decompress.uncompress(new Uint8ArrayList(Buffer.alloc(32, 5)))).toThrow();
+    expect(() => decodeSnappyFrames(Buffer.alloc(32, 5))).toThrow();
   });
 
   it("should return null if not enough data", () => {
-    const decompress = new SnappyFramesUncompress();
-
-    expect(decompress.uncompress(new Uint8ArrayList(Buffer.alloc(3, 1)))).toBe(null);
+    expect(() => parseSnappyFrameHeader(Buffer.alloc(3, 1))).toThrow(/incomplete frame header/);
   });
 
   it("should detect invalid checksum", () => {
@@ -71,8 +54,7 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
     // 0xffffffff is clearly an invalid checksum
     chunks.append(Uint8Array.from(Array.from({length: 0x80}, () => 0xff)));
 
-    const decompress = new SnappyFramesUncompress();
-    expect(() => decompress.uncompress(chunks)).toThrow(/checksum/);
+    expect(() => decodeSnappyFrames(chunks.subarray())).toThrow(/checksum/);
   });
 
   it("should detect skippable frames", () => {
@@ -82,8 +64,7 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
     chunks.append(Uint8Array.from([ChunkType.SKIPPABLE, 0x80, 0x00, 0x00]));
     chunks.append(Uint8Array.from(Array.from({length: 0x80}, () => 0xff)));
 
-    const decompress = new SnappyFramesUncompress();
-    expect(decompress.uncompress(chunks)).toBeNull();
+    expect(decodeSnappyFrames(chunks.subarray()).length).toBe(0);
   });
 
   it("should detect large data", () => {
@@ -97,7 +78,19 @@ describe("encodingStrategies / sszSnappy / snappy frames / uncompress", () => {
     chunks.append(checksum);
     chunks.append(data);
 
-    const decompress = new SnappyFramesUncompress();
-    expect(() => decompress.uncompress(chunks)).toThrow(/large/);
+    expect(() => decodeSnappyFrames(chunks.subarray())).toThrow(/large/);
+  });
+
+  it("should parse header and decode uncompressed frame", () => {
+    const payload = Uint8Array.from([1, 2, 3, 4]);
+    const checksum = crc(payload);
+    const frame = Buffer.concat([checksum, payload]);
+
+    const header = Uint8Array.from([ChunkType.UNCOMPRESSED, frame.length, 0x00, 0x00]);
+    const parsed = parseSnappyFrameHeader(header);
+    const decoded = decodeSnappyFrameData(parsed.type, frame);
+
+    expect(parsed.frameSize).toBe(frame.length);
+    expect(Buffer.from(decoded ?? [])).toEqual(Buffer.from(payload));
   });
 });

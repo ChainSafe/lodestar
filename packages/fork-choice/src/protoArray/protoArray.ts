@@ -571,7 +571,7 @@ export class ProtoArray {
       weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,
-      executionStatus: ExecutionStatus.Valid, // TODO GLOAS: Review execution status
+      executionStatus: ExecutionStatus.Valid,
       executionPayloadBlockHash,
       executionPayloadNumber,
       stateRoot: executionPayloadStateRoot,
@@ -789,6 +789,12 @@ export class ProtoArray {
       const node = this.getNodeFromIndex(nodeIndex);
       if (node.executionStatus === ExecutionStatus.PreMerge || node.executionStatus === ExecutionStatus.Valid) {
         break;
+      }
+      // If PayloadSeparated, that means the node is either PENDING or EMPTY, there could be
+      // some ancestor still has syncing status.
+      if (node.executionStatus === ExecutionStatus.PayloadSeparated) {
+        nodeIndex = node.parent;
+        continue;
       }
       this.validateNodeByIndex(nodeIndex);
       nodeIndex = node.parent;

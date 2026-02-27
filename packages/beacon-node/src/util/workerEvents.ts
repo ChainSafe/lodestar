@@ -1,5 +1,5 @@
 import {MessagePort, Worker} from "node:worker_threads";
-import {Message} from "@libp2p/interface";
+import type {Message} from "@libp2p/gossipsub";
 import {Thread} from "@chainsafe/threads";
 import {Logger} from "@lodestar/logger";
 import {sleep} from "@lodestar/utils";
