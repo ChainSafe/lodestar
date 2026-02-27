@@ -1,40 +1,39 @@
+import {EventEmitter} from "node:events";
 import fs from "node:fs";
 import path from "node:path";
-import {EventEmitter} from "node:events";
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {load as loadYaml} from "js-yaml";
+import snappy from "snappy";
+import {expect} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {RootHex, SubnetID, sszTypesFor} from "@lodestar/types";
 import {
   BeaconStateAllForks,
-  createCachedBeaconState,
-  createPubkeyCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  createCachedBeaconState,
+  createPubkeyCache,
   isExecutionStateType,
   syncPubkeys,
 } from "@lodestar/state-transition";
-import {fromHex, toHex, toHexString, toRootHex} from "@lodestar/utils";
-import snappy from "snappy";
-import {expect} from "vitest";
-import {load as loadYaml} from "js-yaml";
-
+import {RootHex, sszTypesFor} from "@lodestar/types";
+import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
+import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
+import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../../src/chain/validation/attestation.js";
+import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
+import {validateGossipBlock} from "../../../src/chain/validation/block.js";
+import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
+import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {validateGossipBlock} from "../../../src/chain/validation/block.js";
-import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
-import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
-import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
-import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
-import {validateGossipAttestationsSameAttData, GossipAttestation} from "../../../src/chain/validation/attestation.js";
-import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import type {IClock} from "../../../src/util/clock.js";
+import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {getConfig} from "../../utils/config.js";
 import {testLogger} from "../../utils/logger.js";
@@ -80,11 +79,11 @@ class GossipTestClock extends EventEmitter implements IClock {
   }
 
   slotWithFutureTolerance(toleranceSec: number): number {
-    return Math.floor(((this.currentTimeMs / 1000 + toleranceSec) - this.genesisTime) / this.secondsPerSlot);
+    return Math.floor((this.currentTimeMs / 1000 + toleranceSec - this.genesisTime) / this.secondsPerSlot);
   }
 
   slotWithPastTolerance(toleranceSec: number): number {
-    return Math.floor(((this.currentTimeMs / 1000 - toleranceSec) - this.genesisTime) / this.secondsPerSlot);
+    return Math.floor((this.currentTimeMs / 1000 - toleranceSec - this.genesisTime) / this.secondsPerSlot);
   }
 
   isCurrentSlotGivenGossipDisparity(slot: number): boolean {
@@ -159,7 +158,7 @@ function loadState(testCaseDir: string, fork: ForkName): BeaconStateAllForks {
 type FinalizedCheckpoint = {epoch: number; rootHex: RootHex};
 
 function loadBlockRootHex(testCaseDir: string, fork: ForkName, name: string): RootHex {
-  const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(loadSszSnappy(testCaseDir, name)) as any;
+  const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(loadSszSnappy(testCaseDir, name));
   return toHex(sszTypesFor(fork).BeaconBlock.hashTreeRoot(signedBlock.message));
 }
 
@@ -218,7 +217,11 @@ function setFinalizedCheckpoint(chain: BeaconChain, checkpoint: FinalizedCheckpo
   forkChoice.updateHead?.();
 }
 
-function isDescendantAtFinalizedCheckpoint(chain: BeaconChain, blockRootHex: RootHex, checkpoint: FinalizedCheckpoint): boolean {
+function isDescendantAtFinalizedCheckpoint(
+  chain: BeaconChain,
+  blockRootHex: RootHex,
+  checkpoint: FinalizedCheckpoint
+): boolean {
   try {
     const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
     return chain.forkChoice.getAncestor(blockRootHex, finalizedSlot) === checkpoint.rootHex;
@@ -253,7 +256,7 @@ export async function runGossipValidationTest(
   const genesisTimeSec = anchorState.genesisTime;
   const clock = new GossipTestClock(
     genesisTimeSec,
-    beaconConfig.SECONDS_PER_SLOT,
+    beaconConfig.SLOT_DURATION_MS / 1000,
     beaconConfig.MAXIMUM_GOSSIP_CLOCK_DISPARITY
   );
 
@@ -261,7 +264,7 @@ export async function runGossipValidationTest(
   const executionEngineBackend = new ExecutionEngineMockBackend({
     onlyPredefinedResponses: false,
     genesisBlockHash: isExecutionStateType(anchorState)
-      ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
+      ? toHex(anchorState.latestExecutionPayloadHeader.blockHash)
       : ZERO_HASH_HEX,
   });
   const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
@@ -319,7 +322,7 @@ export async function runGossipValidationTest(
       for (const blockEntry of meta.blocks) {
         const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(
           loadSszSnappy(testCaseDir, blockEntry.block)
-        ) as any;
+        );
         const slot = signedBlock.message.slot;
         const blockRootHex = toHex(beaconConfig.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
         blockRootsByName.set(blockEntry.block, blockRootHex);
@@ -407,7 +410,7 @@ async function validateMessageForTopic(
 
   switch (topic) {
     case "beacon_block": {
-      const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(bytes) as any;
+      const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(bytes);
       const parentRootHex = toRootHex(signedBlock.message.parentRoot);
 
       if (failedBlockRoots.has(parentRootHex)) {
@@ -427,7 +430,7 @@ async function validateMessageForTopic(
     }
 
     case "beacon_aggregate_and_proof": {
-      const aggregate = sszTypesFor(fork).SignedAggregateAndProof.deserialize(bytes) as any;
+      const aggregate = sszTypesFor(fork).SignedAggregateAndProof.deserialize(bytes);
       const beaconBlockRootHex = toRootHex(aggregate.message.aggregate.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
@@ -446,7 +449,7 @@ async function validateMessageForTopic(
     }
 
     case "beacon_attestation": {
-      const attestation = sszTypesFor(fork).Attestation.deserialize(bytes) as any;
+      const attestation = sszTypesFor(fork).Attestation.deserialize(bytes);
       const beaconBlockRootHex = toRootHex(attestation.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
@@ -471,7 +474,7 @@ async function validateMessageForTopic(
         serializedData: bytes,
         attSlot,
         attDataBase64,
-        subnet: (message.subnet_id ?? 0) as SubnetID,
+        subnet: message.subnet_id ?? 0,
       };
 
       const batchResult = await validateGossipAttestationsSameAttData(fork, chain, [gossipAttestation]);
@@ -481,7 +484,7 @@ async function validateMessageForTopic(
     }
 
     case "proposer_slashing": {
-      const slashing = sszTypesFor(fork).ProposerSlashing.deserialize(bytes) as any;
+      const slashing = sszTypesFor(fork).ProposerSlashing.deserialize(bytes);
       await validateGossipProposerSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertProposerSlashing(slashing);
@@ -489,7 +492,7 @@ async function validateMessageForTopic(
     }
 
     case "attester_slashing": {
-      const slashing = sszTypesFor(fork).AttesterSlashing.deserialize(bytes) as any;
+      const slashing = sszTypesFor(fork).AttesterSlashing.deserialize(bytes);
       await validateGossipAttesterSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool + fork choice
       chain.opPool.insertAttesterSlashing(fork, slashing);
@@ -498,7 +501,7 @@ async function validateMessageForTopic(
     }
 
     case "voluntary_exit": {
-      const exit = sszTypesFor(fork).SignedVoluntaryExit.deserialize(bytes) as any;
+      const exit = sszTypesFor(fork).SignedVoluntaryExit.deserialize(bytes);
       await validateGossipVoluntaryExit(chain, exit);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertVoluntaryExit(exit);

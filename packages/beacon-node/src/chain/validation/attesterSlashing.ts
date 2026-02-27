@@ -59,12 +59,8 @@ export async function validateAttesterSlashing(
     });
   }
 
-  // Additional gossip-side check: assertValidAttesterSlashing() validates slashable data/signatures,
-  // but it does not enforce that any intersecting validator is currently slashable.
-  // Spec reference: process_attester_slashing() requires slashed_any == True after iterating intersecting indices.
   const currentEpoch = state.epochCtx.epoch;
-  const validators = state.validators;
-  if (!intersectingIndices.some((index) => isSlashableValidator(validators.getReadonly(index), currentEpoch))) {
+  if (!intersectingIndices.some((index) => isSlashableValidator(state.validators.getReadonly(index), currentEpoch))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
       error: Error("AttesterSlashing has no slashable validators"),
