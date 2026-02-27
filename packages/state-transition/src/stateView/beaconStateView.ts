@@ -79,6 +79,8 @@ export class BeaconStateView implements IBeaconStateView {
   private _currentEpochParticipation: number[] | null = null;
   // bellatrix
   private _latestExecutionPayloadHeader: ExecutionPayloadHeader | null = null;
+  // this map to latestBlockHash of Gloas too
+  private _latestBlockHash: Bytes32 | null = null;
   // capella
   private _historicalSummaries: capella.HistoricalSummaries | null = null;
   // electra
@@ -203,6 +205,47 @@ export class BeaconStateView implements IBeaconStateView {
     }
 
     return this._latestExecutionPayloadHeader;
+  }
+
+  /**
+   * Cross-fork accessor for the execution block hash of the most recently included payload.
+   * Pre-gloas: reads from latestExecutionPayloadHeader.blockHash.
+   * Gloas+: reads the dedicated latestBlockHash field (EIP-7732).
+   */
+  get latestBlockHash(): Bytes32 {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.bellatrix) {
+      throw new Error("latestBlockHash is not available before Bellatrix");
+    }
+
+    if (this._latestBlockHash === null) {
+      if (this.config.getForkSeq(this.cachedState.slot) >= ForkSeq.gloas) {
+        this._latestBlockHash = (this.cachedState as CachedBeaconStateGloas).latestBlockHash;
+      } else {
+        this._latestBlockHash = (
+          this.cachedState as CachedBeaconStateExecutions
+        ).latestExecutionPayloadHeader.blockHash;
+      }
+    }
+
+    return this._latestBlockHash;
+  }
+
+  /**
+   * The execution block number of the most recently included payload.
+   * Named payloadBlockNumber (not latestBlockNumber) to mirror ExecutionPayloadHeader.blockNumber pre-gloas.
+   * Only available from bellatrix through fulu — not tracked on BeaconState in gloas+ (EIP-7732).
+   */
+  get payloadBlockNumber(): number {
+    const forkSeq = this.config.getForkSeq(this.cachedState.slot);
+    if (forkSeq < ForkSeq.bellatrix) {
+      throw new Error("payloadBlockNumber is not available before Bellatrix");
+    }
+    if (forkSeq >= ForkSeq.gloas) {
+      throw new Error(
+        "payloadBlockNumber is not available in Gloas+: latestExecutionPayloadHeader was removed in EIP-7732"
+      );
+    }
+    return (this.cachedState as CachedBeaconStateExecutions).latestExecutionPayloadHeader.blockNumber;
   }
 
   // capella

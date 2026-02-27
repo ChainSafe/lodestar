@@ -60,6 +60,20 @@ export interface IBeaconStateView {
 
   // bellatrix
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
+  /**
+   * Cross-fork accessor for the execution block hash of the most recently included payload.
+   * Pre-gloas: returns latestExecutionPayloadHeader.blockHash (bellatrix–fulu).
+   * Gloas+: returns the dedicated latestBlockHash state field (EIP-7732).
+   * Throws before bellatrix.
+   */
+  latestBlockHash: Bytes32;
+  /**
+   * The execution block number of the most recently included payload.
+   * Named payloadBlockNumber (not latestBlockNumber) to mirror ExecutionPayloadHeader.blockNumber pre-gloas.
+   * Only available from bellatrix through fulu — not tracked on BeaconState in gloas+ (EIP-7732).
+   * Throws before bellatrix and from gloas onwards.
+   */
+  payloadBlockNumber: number;
 
   // capella
   historicalSummaries: capella.HistoricalSummaries;
@@ -93,12 +107,11 @@ export interface IBeaconStateView {
   getCurrentShuffling(): EpochShuffling;
   getNextShuffling(): EpochShuffling;
 
-  // utils: proposers, anchor checkpoint
+  // Proposer shuffling
   previousProposers: ValidatorIndex[] | null;
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
-  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader};
 
   // Sync committees
   currentSyncCommittee: altair.SyncCommittee;
