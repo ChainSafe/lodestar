@@ -208,6 +208,9 @@ function resolveFinalizedCheckpoint(
     throw new Error("finalized_checkpoint must include either root or block");
   }
 
+  if (cp.epoch == null) {
+    throw new Error("finalized_checkpoint must include an epoch");
+  }
   return {epoch: Number(cp.epoch), rootHex};
 }
 
