@@ -100,7 +100,7 @@ export class Clock extends EventEmitter implements IClock {
   get currentSlotWithGossipDisparity(): Slot {
     const currentSlot = this.currentSlot;
     const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
-    return nextSlotTime - Date.now() < this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY ? currentSlot + 1 : currentSlot;
+    return nextSlotTime - Date.now() <= this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY ? currentSlot + 1 : currentSlot;
   }
 
   get currentEpoch(): Epoch {
@@ -129,12 +129,12 @@ export class Clock extends EventEmitter implements IClock {
     }
     const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
     // we're too close to next slot, accept next slot
-    if (nextSlotTime - Date.now() < this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+    if (nextSlotTime - Date.now() <= this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
       return slot === currentSlot + 1;
     }
     const currentSlotTime = computeTimeAtSlot(this.config, currentSlot, this.genesisTime) * 1000;
     // we've just passed the current slot, accept previous slot
-    if (Date.now() - currentSlotTime < this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+    if (Date.now() - currentSlotTime <= this.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
       return slot === currentSlot - 1;
     }
     return false;
