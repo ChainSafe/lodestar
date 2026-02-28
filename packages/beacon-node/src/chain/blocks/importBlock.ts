@@ -535,10 +535,8 @@ export async function importBlock(
 
   // EIP-7782: Scale reprocess guard with slot duration (2s for 12s slots, 1s for 6s slots)
   const reprocessGuardSec =
-    this.config.getSlotComponentDurationMsForFork(
-      REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS,
-      this.config.getForkName(blockSlot)
-    ) / 1000;
+    this.config.getSlotComponentDurationMs(this.config.getForkName(blockSlot), REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS) /
+    1000;
   const advancedSlot = this.clock.slotWithFutureTolerance(reprocessGuardSec);
 
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed

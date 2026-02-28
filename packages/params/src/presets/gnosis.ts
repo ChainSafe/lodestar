@@ -11,6 +11,7 @@ export const gnosisPreset: BeaconPreset = {
 
   // phase0
   BASE_REWARD_FACTOR: 25,
+  BASE_REWARD_FACTOR_EIP7782: 13,
   SLOTS_PER_EPOCH: 16,
 
   // altair

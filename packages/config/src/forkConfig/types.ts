@@ -66,9 +66,6 @@ export type ForkConfig = {
   /** Get slot duration in ms for a given fork */
   getSlotDurationMs(fork: ForkName): number;
 
-  /** Convert basis points to milliseconds into the slot */
-  getSlotComponentDurationMs(basisPoints: number): number;
-
-  /** Fork-aware version: uses the slot duration for the given fork */
-  getSlotComponentDurationMsForFork(basisPoints: number, fork: ForkName): number;
+  /** Convert basis points to milliseconds into the slot for the given fork */
+  getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number;
 };

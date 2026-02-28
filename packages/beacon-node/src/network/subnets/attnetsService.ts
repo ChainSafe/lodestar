@@ -1,3 +1,6 @@
+/** Half slot in basis points (5000 BPS = 50% of slot) */
+const HALF_SLOT_BPS = 5000;
+
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -169,7 +172,7 @@ export class AttnetsService implements IAttnetsService {
         () => {
           this.onHalfSlot(clockSlot);
         },
-        this.config.getSlotComponentDurationMsForFork(5000, fork)
+        this.config.getSlotComponentDurationMs(fork, HALF_SLOT_BPS)
       );
 
       for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {

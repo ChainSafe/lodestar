@@ -101,6 +101,10 @@ import {AssembledBlockType, BlockType, ProduceFullGloas, ProduceResult} from "./
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
+
+/** Half slot in basis points (5000 BPS = 50% of slot) */
+const HALF_SLOT_BPS = 5000;
+
 import {
   SeenAggregators,
   SeenAttesters,
@@ -1339,7 +1343,7 @@ export class BeaconChain implements IBeaconChain {
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
       // On the last slot of the epoch — use fork-aware half-slot duration (EIP-7782: 3s post-fork)
       const fork = this.config.getForkName(slot);
-      sleep(this.config.getSlotComponentDurationMsForFork(5000, fork))
+      sleep(this.config.getSlotComponentDurationMs(fork, HALF_SLOT_BPS))
         .then(() => this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
           if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);

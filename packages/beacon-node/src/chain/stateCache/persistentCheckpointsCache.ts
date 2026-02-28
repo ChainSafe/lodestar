@@ -489,7 +489,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     }
 
     const blockSlot = state.slot;
-    const processCPStatesTimeMs = this.config.getSlotComponentDurationMs(PROCESS_CHECKPOINT_STATES_BPS);
+    const processCPStatesTimeMs = this.config.getSlotComponentDurationMs(
+      this.config.getForkName(blockSlot),
+      PROCESS_CHECKPOINT_STATES_BPS
+    );
     // we always have clock in production, fallback value is only for test
     const msFromSlot = this.clock?.msFromSlot(blockSlot) ?? processCPStatesTimeMs;
     const msToProcessCPStates = processCPStatesTimeMs - msFromSlot;

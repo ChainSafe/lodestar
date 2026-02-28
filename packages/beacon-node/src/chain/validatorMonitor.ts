@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -989,7 +989,8 @@ function renderAttestationSummary(
   }
 
   const submittedLate =
-    summary.poolSubmitDelayMinSec > config.getSlotComponentDurationMs(LATE_ATTESTATION_SUBMISSION_BPS) / 1000;
+    summary.poolSubmitDelayMinSec >
+    config.getSlotComponentDurationMs(ForkName.phase0, LATE_ATTESTATION_SUBMISSION_BPS) / 1000;
 
   const aggregateInclusion = summary.aggregateInclusionDelaysSec.length > 0;
 
@@ -1116,7 +1117,7 @@ function renderBlockProposalSummary(
 
   if (
     proposal.poolSubmitDelaySec !== null &&
-    proposal.poolSubmitDelaySec > config.getSlotComponentDurationMs(LATE_BLOCK_SUBMISSION_BPS) / 1000
+    proposal.poolSubmitDelaySec > config.getSlotComponentDurationMs(ForkName.phase0, LATE_BLOCK_SUBMISSION_BPS) / 1000
   ) {
     out += "_late";
   }

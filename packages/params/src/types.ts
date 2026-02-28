@@ -35,6 +35,7 @@ export type BeaconPreset = {
 
   // Reward and penalty quotients
   BASE_REWARD_FACTOR: number;
+  BASE_REWARD_FACTOR_EIP7782: number;
   WHISTLEBLOWER_REWARD_QUOTIENT: number;
   PROPOSER_REWARD_QUOTIENT: number;
   INACTIVITY_PENALTY_QUOTIENT: number;
@@ -150,6 +151,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
 
   // Reward and penalty quotients
   BASE_REWARD_FACTOR: "number",
+  BASE_REWARD_FACTOR_EIP7782: "number",
   WHISTLEBLOWER_REWARD_QUOTIENT: "number",
   PROPOSER_REWARD_QUOTIENT: "number",
   INACTIVITY_PENALTY_QUOTIENT: "number",

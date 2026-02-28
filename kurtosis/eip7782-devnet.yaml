@@ -68,4 +68,7 @@ network_params:
 additional_services:
   - dora
 
+dora_params:
+  image: "dora-eip7782:local"
+
 global_log_level: "info"

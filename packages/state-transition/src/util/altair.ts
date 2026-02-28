@@ -1,8 +1,5 @@
-import {BASE_REWARD_FACTOR, EFFECTIVE_BALANCE_INCREMENT, ForkSeq} from "@lodestar/params";
+import {BASE_REWARD_FACTOR, BASE_REWARD_FACTOR_EIP7782, EFFECTIVE_BALANCE_INCREMENT, ForkSeq} from "@lodestar/params";
 import {bigIntSqrt, bnToNum} from "@lodestar/utils";
-
-/** EIP-7782: Halved base reward factor for 6-second slots */
-export const BASE_REWARD_FACTOR_EIP7782 = 32;
 
 /**
  * Before we manage bigIntSqrt(totalActiveStake) as BigInt and return BigInt.

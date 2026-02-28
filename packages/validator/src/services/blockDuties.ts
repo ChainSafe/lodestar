@@ -174,7 +174,7 @@ export class BlockDutiesService {
     const nextFork = this.config.getForkName(nextSlot);
     const lookAheadMs =
       this.config.getSlotDurationMs(nextFork) -
-      this.config.getSlotComponentDurationMsForFork(BLOCK_DUTIES_LOOKAHEAD_BPS, nextFork);
+      this.config.getSlotComponentDurationMs(nextFork, BLOCK_DUTIES_LOOKAHEAD_BPS);
     await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
     this.logger.debug("Polling proposers for next epoch", {nextEpoch, nextSlot});
     // Poll proposers for the next epoch

@@ -9,20 +9,14 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
  * Post-EIP7782: uses SLOT_DURATION_MS_EIP7782 (6000ms)
  */
 export function getSlotDurationMs(config: ChainConfig, slot: Slot): number {
-  if (config.EIP7782_FORK_EPOCH === Infinity) {
-    return config.SLOT_DURATION_MS;
-  }
-  const forkSlot = computeStartSlotAtEpoch(config.EIP7782_FORK_EPOCH);
-  return slot >= forkSlot ? config.SLOT_DURATION_MS_EIP7782 : config.SLOT_DURATION_MS;
+  const epoch = computeEpochAtSlot(slot);
+  return epoch >= config.EIP7782_FORK_EPOCH ? config.SLOT_DURATION_MS_EIP7782 : config.SLOT_DURATION_MS;
 }
 
 /**
  * Get the slot duration in milliseconds for a given epoch.
  */
 export function getSlotDurationMsAtEpoch(config: ChainConfig, epoch: Epoch): number {
-  if (config.EIP7782_FORK_EPOCH === Infinity) {
-    return config.SLOT_DURATION_MS;
-  }
   return epoch >= config.EIP7782_FORK_EPOCH ? config.SLOT_DURATION_MS_EIP7782 : config.SLOT_DURATION_MS;
 }
 
@@ -35,18 +29,12 @@ export function getSlotDurationMsAtEpoch(config: ChainConfig, epoch: Epoch): num
  * This is a piecewise function that changes rate at the fork boundary.
  */
 export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: TimeSeconds): TimeSeconds {
-  if (config.EIP7782_FORK_EPOCH === Infinity) {
-    return genesisTime + slot * (config.SLOT_DURATION_MS / 1000);
-  }
-
   const forkSlot = computeStartSlotAtEpoch(config.EIP7782_FORK_EPOCH);
 
   if (slot < forkSlot) {
-    // Pre-fork: all slots at old duration
     return genesisTime + slot * (config.SLOT_DURATION_MS / 1000);
   }
 
-  // Post-fork: time to reach fork + remaining slots at new duration
   const forkTime = genesisTime + forkSlot * (config.SLOT_DURATION_MS / 1000);
   return forkTime + (slot - forkSlot) * (config.SLOT_DURATION_MS_EIP7782 / 1000);
 }
@@ -58,19 +46,13 @@ export function getSlotsSinceGenesis(config: ChainConfig, genesisTime: TimeSecon
   const nowSec = Date.now() / 1000;
   const diffSec = nowSec - genesisTime;
 
-  if (config.EIP7782_FORK_EPOCH === Infinity) {
-    return Math.floor(diffSec / (config.SLOT_DURATION_MS / 1000));
-  }
-
   const forkSlot = computeStartSlotAtEpoch(config.EIP7782_FORK_EPOCH);
   const forkTimeSec = forkSlot * (config.SLOT_DURATION_MS / 1000);
 
   if (diffSec < forkTimeSec) {
-    // Pre-fork
     return Math.floor(diffSec / (config.SLOT_DURATION_MS / 1000));
   }
 
-  // Post-fork: all pre-fork slots + post-fork slots at new rate
   const postForkSec = diffSec - forkTimeSec;
   return forkSlot + Math.floor(postForkSec / (config.SLOT_DURATION_MS_EIP7782 / 1000));
 }

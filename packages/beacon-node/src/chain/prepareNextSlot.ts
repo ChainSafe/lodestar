@@ -79,7 +79,7 @@ export class PrepareNextSlotScheduler {
       // or precompute epoch transition.
       // EIP-7782: this must be fork-aware (6s post-fork). Using pre-fork 12s timing here
       // causes the scheduler to run too late after the fork and can produce duplicate EL timestamps.
-      await sleep(this.config.getSlotComponentDurationMsForFork(PREPARE_NEXT_SLOT_BPS, fork), this.signal);
+      await sleep(this.config.getSlotComponentDurationMs(fork, PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);

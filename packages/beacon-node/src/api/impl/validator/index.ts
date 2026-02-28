@@ -1092,8 +1092,7 @@ export function getValidatorApi(
       const startSlot = computeStartSlotAtEpoch(epoch);
       const startFork = config.getForkName(startSlot);
       const prepareNextSlotLookAheadMs =
-        config.getSlotDurationMs(startFork) -
-        config.getSlotComponentDurationMsForFork(PREPARE_NEXT_SLOT_BPS, startFork);
+        config.getSlotDurationMs(startFork) - config.getSlotComponentDurationMs(startFork, PREPARE_NEXT_SLOT_BPS);
       const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch
       // this is to avoid missed block proposal due to 0 epoch look ahead

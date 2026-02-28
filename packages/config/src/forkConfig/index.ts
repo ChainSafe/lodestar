@@ -212,45 +212,45 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getAttestationDueMs(fork: ForkName): number {
       if (isForkPostEip7782(fork)) {
-        return this.getSlotComponentDurationMsForFork(config.ATTESTATION_DUE_BPS_EIP7782, fork);
+        return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS_EIP7782);
       }
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.ATTESTATION_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.ATTESTATION_DUE_BPS);
     },
     getAggregateDueMs(fork: ForkName): number {
       if (isForkPostEip7782(fork)) {
-        return this.getSlotComponentDurationMsForFork(config.AGGREGRATE_DUE_BPS_EIP7782, fork);
+        return this.getSlotComponentDurationMs(fork, config.AGGREGRATE_DUE_BPS_EIP7782);
       }
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.AGGREGATE_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.AGGREGATE_DUE_BPS);
     },
     getSyncMessageDueMs(fork: ForkName): number {
       if (isForkPostEip7782(fork)) {
-        return this.getSlotComponentDurationMsForFork(config.SYNC_MESSAGE_DUE_BPS_EIP7782, fork);
+        return this.getSlotComponentDurationMs(fork, config.SYNC_MESSAGE_DUE_BPS_EIP7782);
       }
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.SYNC_MESSAGE_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.SYNC_MESSAGE_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.SYNC_MESSAGE_DUE_BPS);
     },
     getSyncContributionDueMs(fork: ForkName): number {
       if (isForkPostEip7782(fork)) {
-        return this.getSlotComponentDurationMsForFork(config.CONTRIBUTION_DUE_BPS_EIP7782, fork);
+        return this.getSlotComponentDurationMs(fork, config.CONTRIBUTION_DUE_BPS_EIP7782);
       }
       if (isForkPostGloas(fork)) {
-        return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS_GLOAS);
+        return this.getSlotComponentDurationMs(fork, config.CONTRIBUTION_DUE_BPS_GLOAS);
       }
-      return this.getSlotComponentDurationMs(config.CONTRIBUTION_DUE_BPS);
+      return this.getSlotComponentDurationMs(fork, config.CONTRIBUTION_DUE_BPS);
     },
     getProposerReorgCutoffMs(fork: ForkName): number {
       if (isForkPostEip7782(fork)) {
-        return this.getSlotComponentDurationMsForFork(config.PROPOSER_REORG_CUTOFF_BPS_EIP7782, fork);
+        return this.getSlotComponentDurationMs(fork, config.PROPOSER_REORG_CUTOFF_BPS_EIP7782);
       }
-      return this.getSlotComponentDurationMs(config.PROPOSER_REORG_CUTOFF_BPS);
+      return this.getSlotComponentDurationMs(fork, config.PROPOSER_REORG_CUTOFF_BPS);
     },
 
     /** Get slot duration in ms for a given fork */
@@ -258,12 +258,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return isForkPostEip7782(fork) ? config.SLOT_DURATION_MS_EIP7782 : config.SLOT_DURATION_MS;
     },
 
-    getSlotComponentDurationMs(basisPoints: number): number {
-      return Math.round((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);
-    },
-
-    /** Fork-aware version: uses the slot duration for the given fork */
-    getSlotComponentDurationMsForFork(basisPoints: number, fork: ForkName): number {
+    getSlotComponentDurationMs(fork: ForkName, basisPoints: number): number {
       const slotDurationMs = isForkPostEip7782(fork) ? config.SLOT_DURATION_MS_EIP7782 : config.SLOT_DURATION_MS;
       return Math.round((basisPoints * slotDurationMs) / BASIS_POINTS);
     },
