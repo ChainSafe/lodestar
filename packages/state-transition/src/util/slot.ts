@@ -41,7 +41,7 @@ export function computeTimeAtSlot(config: ChainConfig, slot: Slot, genesisTime: 
 
   const forkSlot = computeStartSlotAtEpoch(config.EIP7782_FORK_EPOCH);
 
-  if (slot <= forkSlot) {
+  if (slot < forkSlot) {
     // Pre-fork: all slots at old duration
     return genesisTime + slot * (config.SLOT_DURATION_MS / 1000);
   }
