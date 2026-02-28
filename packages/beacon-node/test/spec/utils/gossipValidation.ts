@@ -208,7 +208,7 @@ function resolveFinalizedCheckpoint(
     throw new Error("finalized_checkpoint must include either root or block");
   }
 
-  return {epoch: cp.epoch, rootHex};
+  return {epoch: Number(cp.epoch), rootHex};
 }
 
 function setFinalizedCheckpoint(chain: BeaconChain, checkpoint: FinalizedCheckpoint): void {
@@ -256,7 +256,7 @@ function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
   }
   // Some validation paths throw raw errors instead of GossipActionError
   // (e.g., validator index out of range → TypeError on undefined access).
-  if (e instanceof TypeError || e instanceof RangeError) {
+  if (e instanceof TypeError || e instanceof RangeError || e instanceof Error) {
     return "reject";
   }
   throw e;
@@ -277,7 +277,7 @@ export async function runGossipValidationTest(
   const config = getConfig(fork);
   const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
 
-  const genesisTimeSec = anchorState.genesisTime;
+  const genesisTimeSec = Number(anchorState.genesisTime);
   const clock = new GossipTestClock(
     genesisTimeSec,
     beaconConfig.SLOT_DURATION_MS / 1000,
@@ -392,9 +392,9 @@ export async function runGossipValidationTest(
         })
     );
 
-    const baseCurrentTimeMs = meta.current_time_ms ?? 0;
+    const baseCurrentTimeMs = Number(meta.current_time_ms ?? 0);
     for (const message of meta.messages) {
-      const messageTimeMs = baseCurrentTimeMs + (message.offset_ms ?? 0);
+      const messageTimeMs = baseCurrentTimeMs + Number(message.offset_ms ?? 0);
       clock.setCurrentTimeMs(messageTimeMs);
 
       let result: "valid" | "ignore" | "reject";
@@ -495,7 +495,7 @@ async function validateMessageForTopic(
         serializedData: bytes,
         attSlot,
         attDataBase64,
-        subnet: message.subnet_id ?? 0,
+        subnet: Number(message.subnet_id ?? 0),
       };
 
       const batchResult = await validateGossipAttestationsSameAttData(fork, chain, [gossipAttestation]);
