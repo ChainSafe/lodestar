@@ -254,7 +254,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
 
     /** Get slot duration in ms for a given fork */
-    getSlotDurationMsForFork(fork: ForkName): number {
+    getSlotDurationMs(fork: ForkName): number {
       return isForkPostEip7782(fork) ? config.SLOT_DURATION_MS_EIP7782 : config.SLOT_DURATION_MS;
     },
 

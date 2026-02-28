@@ -90,8 +90,8 @@ export function computeGossipPeerScoreParams({
   config: BeaconConfig;
   eth2Context: Eth2Context;
 }): Partial<PeerScoreParams> {
-  // TODO EIP-7782: These scoring params are computed once at startup and become stale
-  // after the fork boundary. Should be recomputed when slot duration changes.
+  // TODO EIP-7782:: scoring params are initialized at startup. Make decay/window durations fork-aware
+  // at runtime across epoch/fork boundaries.
   const decayIntervalMs = config.SLOT_DURATION_MS;
   const decayToZero = 0.01;
   const epochDurationMs = config.SLOT_DURATION_MS * SLOTS_PER_EPOCH;
@@ -315,6 +315,7 @@ function getTopicScoreParams(
     params.meshMessageDeliveriesCap = Math.max(capFactor * params.meshMessageDeliveriesThreshold, 2);
     params.meshMessageDeliveriesActivation = activationWindow;
     // the default in gossipsub is 2s is not enough since lodestar suffers from I/O lag
+    // TODO EIP-7782:: make this window fork-aware at runtime
     params.meshMessageDeliveriesWindow = 12 * 1000; // 12s
     params.meshFailurePenaltyDecay = params.meshMessageDeliveriesDecay;
     params.meshMessageDeliveriesWeight =

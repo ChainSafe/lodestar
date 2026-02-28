@@ -163,9 +163,14 @@ export class AttnetsService implements IAttnetsService {
    */
   private onSlot = (clockSlot: Slot): void => {
     try {
-      setTimeout(() => {
-        this.onHalfSlot(clockSlot);
-      }, this.config.SLOT_DURATION_MS * 0.5);
+      // EIP-7782: use fork-aware half-slot duration (3s post-fork, 6s pre-fork)
+      const fork = this.config.getForkName(clockSlot);
+      setTimeout(
+        () => {
+          this.onHalfSlot(clockSlot);
+        },
+        this.config.getSlotComponentDurationMsForFork(5000, fork)
+      );
 
       for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
         if (dutiedSlot === clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {

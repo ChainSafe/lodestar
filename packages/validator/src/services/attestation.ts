@@ -167,9 +167,9 @@ export class AttestationService {
     const attestationDueMs = this.config.getAttestationDueMs(fork);
     const msToCutoffTime = attestationDueMs - this.clock.msFromSlot(slot);
     // submitting attestations asap to avoid busy time at around ATTESTATION_DUE_BPS of slot
+    // EIP-7782: use fork-aware slot duration (6s post-fork)
     const afterBlockDelayMs =
-      1000 *
-      this.clock.secondsPerSlot *
+      this.clock.getSlotDurationMs(slot) *
       (this.opts?.afterBlockDelaySlotFraction ?? DEFAULT_AFTER_BLOCK_DELAY_SLOT_FRACTION);
     await sleep(Math.min(msToCutoffTime, afterBlockDelayMs));
 

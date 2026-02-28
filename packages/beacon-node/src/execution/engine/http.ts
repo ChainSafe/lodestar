@@ -91,8 +91,8 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   urls: ["http://localhost:8551"],
   retries: 2,
   retryDelay: 2000,
-  // TODO EIP-7782: Consider making this fork-aware (6s post-EIP7782).
-  // For now, 12s is a safe default for both pre and post-fork.
+  // EIP-7782: 12s is safe for both pre and post-fork. Post-fork slots are 6s but we allow
+  // extra time for EL responses to avoid spurious timeouts during transient load.
   timeout: 12000,
 };
 

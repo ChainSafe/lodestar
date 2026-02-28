@@ -4028,7 +4028,7 @@
 - name: get_proposer_reorg_cutoff_ms#phase0
   sources:
     - file: packages/config/src/forkConfig/index.ts
-      search: "getProposerReorgCutoffMs(_fork: ForkName): number {"
+      search: "getProposerReorgCutoffMs(fork: ForkName): number {"
   spec: |
     <spec fn="get_proposer_reorg_cutoff_ms" fork="phase0" hash="20263733">
     def get_proposer_reorg_cutoff_ms(epoch: Epoch) -> uint64:

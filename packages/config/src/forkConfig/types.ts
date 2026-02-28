@@ -64,7 +64,7 @@ export type ForkConfig = {
   getProposerReorgCutoffMs(fork: ForkName): number;
 
   /** Get slot duration in ms for a given fork */
-  getSlotDurationMsForFork(fork: ForkName): number;
+  getSlotDurationMs(fork: ForkName): number;
 
   /** Convert basis points to milliseconds into the slot */
   getSlotComponentDurationMs(basisPoints: number): number;

@@ -170,8 +170,11 @@ export class BlockDutiesService {
    */
   private async pollBeaconProposersNextEpoch(currentSlot: Slot, nextEpoch: Epoch, signal: AbortSignal): Promise<void> {
     const nextSlot = currentSlot + 1;
+    // EIP-7782: use fork-aware slot duration for lookahead timing
+    const nextFork = this.config.getForkName(nextSlot);
     const lookAheadMs =
-      this.config.SLOT_DURATION_MS - this.config.getSlotComponentDurationMs(BLOCK_DUTIES_LOOKAHEAD_BPS);
+      this.config.getSlotDurationMs(nextFork) -
+      this.config.getSlotComponentDurationMsForFork(BLOCK_DUTIES_LOOKAHEAD_BPS, nextFork);
     await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
     this.logger.debug("Polling proposers for next epoch", {nextEpoch, nextSlot});
     // Poll proposers for the next epoch

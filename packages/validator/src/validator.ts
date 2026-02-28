@@ -179,7 +179,12 @@ export class Validator {
           urls: typeof clientOrUrls === "string" ? [clientOrUrls] : clientOrUrls,
           // Validator would need the beacon to respond within the slot
           // See https://github.com/ChainSafe/lodestar/issues/5315 for rationale
-          globalInit: {timeoutMs: config.SLOT_DURATION_MS, signal: controller.signal, ...globalInit},
+          // EIP-7782: use minimum slot duration (6s post-fork) for tightest timeout
+          globalInit: {
+            timeoutMs: Math.min(config.SLOT_DURATION_MS, config.SLOT_DURATION_MS_EIP7782),
+            signal: controller.signal,
+            ...globalInit,
+          },
         },
         {config, logger, metrics: metrics?.restApiClient}
       );

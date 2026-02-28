@@ -75,7 +75,7 @@ export function pollExternalSignerPubkeys(
   const interval = setInterval(
     fetchExternalSignerPubkeys,
     externalSigner.fetchInterval ??
-      // Once per epoch by default
+      // Once per epoch by default. EIP-7782: use pre-fork (larger) duration as conservative interval
       SLOTS_PER_EPOCH * config.SLOT_DURATION_MS
   );
   signal.addEventListener("abort", () => clearInterval(interval), {once: true});

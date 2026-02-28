@@ -161,7 +161,8 @@ export class SyncCommitteeService {
     // SyncCommitteeSignature gossip validation.
     const syncMessageDueMs = this.config.getSyncMessageDueMs(fork);
     const msToCutoffTime = syncMessageDueMs - this.clock.msFromSlot(slot);
-    const afterBlockDelayMs = 1000 * this.clock.secondsPerSlot * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
+    // EIP-7782: use fork-aware slot duration (6s post-fork)
+    const afterBlockDelayMs = this.clock.getSlotDurationMs(slot) * (this.opts?.scAfterBlockDelaySlotFraction ?? 0);
     const toDelayMs = Math.min(msToCutoffTime, afterBlockDelayMs);
     if (toDelayMs > 0) {
       await sleep(toDelayMs);

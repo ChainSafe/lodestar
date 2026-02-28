@@ -29,7 +29,7 @@ import {isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
-import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
@@ -266,7 +266,9 @@ export async function importBlock(
       this.metrics.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      if (delaySec < (SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000) {
+      // EIP-7782: use fork-aware slot duration for epoch threshold
+      const headFork = this.config.getForkName(newHead.slot);
+      if (delaySec < (SLOTS_PER_EPOCH * this.config.getSlotDurationMs(headFork)) / 1000) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
         const cutOffSec = this.config.getAttestationDueMs(this.config.getForkName(blockSlot)) / 1000;
         if (delaySec > cutOffSec) {
@@ -531,7 +533,13 @@ export async function importBlock(
     }
   }
 
-  const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
+  // EIP-7782: Scale reprocess guard with slot duration (2s for 12s slots, 1s for 6s slots)
+  const reprocessGuardSec =
+    this.config.getSlotComponentDurationMsForFork(
+      REPROCESS_MIN_TIME_TO_NEXT_SLOT_BPS,
+      this.config.getForkName(blockSlot)
+    ) / 1000;
+  const advancedSlot = this.clock.slotWithFutureTolerance(reprocessGuardSec);
 
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789

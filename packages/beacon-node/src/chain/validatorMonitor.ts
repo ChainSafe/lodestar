@@ -287,7 +287,9 @@ export function createValidatorMonitor(
     logger[logLevel](message, context);
   };
 
-  // Calculate retain time dynamically based on slot duration (2 epochs)
+  // Calculate retain time dynamically based on slot duration (2 epochs).
+  // EIP-7782: uses pre-fork slot duration intentionally — conservative (retains longer post-fork).
+  // Using shorter post-fork duration here could prune too aggressively during fork transition.
   const retainRegisteredValidatorsMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS * RETAIN_REGISTERED_VALIDATORS_EPOCHS;
 
   /** The validators that require additional monitoring. */

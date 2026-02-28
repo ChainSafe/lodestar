@@ -5,6 +5,7 @@ import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
   isExecutionCachedStateType,
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
@@ -141,15 +142,18 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 }
 
 function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTime: boolean): number {
-  const msPerSlot = config.SLOT_DURATION_MS;
+  // Use fork-aware timing: compute next slot boundary from the clock,
+  // which accounts for EIP-7782 slot duration change
+  const currentSlot = chain.clock.currentSlot;
+  const nextSlotTimeSec = computeTimeAtSlot(config, currentSlot + 1, chain.genesisTime);
+  const nowMs = Date.now();
+  const msToNextSlot = Math.max(0, nextSlotTimeSec * 1000 - nowMs);
+
+  // Get the current slot's duration for half-slot calculation
+  const currentSlotTimeSec = computeTimeAtSlot(config, currentSlot, chain.genesisTime);
+  const msPerSlot = (nextSlotTimeSec - currentSlotTimeSec) * 1000;
   const msPerHalfSlot = msPerSlot / 2;
-  const msFromGenesis = Date.now() - chain.genesisTime * 1000;
-  const msToNextSlot =
-    msFromGenesis < 0
-      ? // For future genesis time, calculate time left in the slot
-        -msFromGenesis % msPerSlot
-      : // For past genesis time, calculate time until the next slot
-        msPerSlot - (msFromGenesis % msPerSlot);
+
   if (isFirstTime) {
     // at the 1st time we may miss middle of the current clock slot
     return msToNextSlot > msPerHalfSlot ? msToNextSlot - msPerHalfSlot : msToNextSlot + msPerHalfSlot;

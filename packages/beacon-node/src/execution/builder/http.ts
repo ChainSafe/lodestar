@@ -39,7 +39,8 @@ export type ExecutionBuilderHttpOpts = {
 export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   enabled: false,
   url: "http://localhost:8661",
-  // TODO EIP-7782: Consider making this fork-aware (6s post-EIP7782)
+  // EIP-7782: 12s is safe for both pre and post-fork. Post-fork slots are 6s but the builder
+  // may need extra time to assemble a payload, so keeping 12s as a generous upper bound.
   timeout: 12000,
 };
 

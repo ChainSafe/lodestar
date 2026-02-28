@@ -1337,8 +1337,9 @@ export class BeaconChain implements IBeaconChain {
 
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
-      // On the last slot of the epoch
-      sleep(this.config.SLOT_DURATION_MS / 2)
+      // On the last slot of the epoch — use fork-aware half-slot duration (EIP-7782: 3s post-fork)
+      const fork = this.config.getForkName(slot);
+      sleep(this.config.getSlotComponentDurationMsForFork(5000, fork))
         .then(() => this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
           if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);

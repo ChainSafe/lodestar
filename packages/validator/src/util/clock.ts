@@ -12,6 +12,7 @@ export type ClockOptions = {
 
 export interface IClock {
   readonly genesisTime: number;
+  /** @deprecated Use getSlotDurationMs(slot) for fork-aware timing (EIP-7782) */
   readonly secondsPerSlot: number;
 
   readonly currentEpoch: number;
@@ -24,6 +25,8 @@ export interface IClock {
   secFromSlot(slot: Slot): number;
   getCurrentSlot(): Slot;
   getCurrentEpoch(): Epoch;
+  /** Fork-aware slot duration in ms for a given slot (EIP-7782: 6000 post-fork) */
+  getSlotDurationMs(slot: Slot): number;
 }
 
 export enum TimeItem {
@@ -92,6 +95,11 @@ export class Clock implements IClock {
   /** Seconds elapsed from a specific slot to now */
   secFromSlot(slot: Slot): number {
     return Date.now() / 1000 - computeTimeAtSlot(this.config, slot, this.genesisTime);
+  }
+
+  /** Fork-aware slot duration in ms (EIP-7782: 6000ms post-fork, 12000ms pre-fork) */
+  getSlotDurationMs(slot: Slot): number {
+    return getSlotDurationMs(this.config, slot);
   }
 
   /**

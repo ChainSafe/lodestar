@@ -150,7 +150,7 @@ export class Eth2Gossipsub {
       mcacheLength: 6,
       mcacheGossip: 3,
       // this should be in ms
-      // TODO EIP-7782: Should use fork-aware slot duration after fork boundary
+      // TODO EIP-7782:: make this fork-aware at runtime (epoch/fork boundary) instead of startup/static config
       seenTTL: config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
@@ -159,6 +159,7 @@ export class Eth2Gossipsub {
       // For a single RPC, await processing each message before processing the next
       awaitRpcMessageHandler: opts.gossipsubAwaitHandler,
       // the default in gossipsub is 3s is not enough since lodestar suffers from I/O lag
+      // TODO EIP-7782:: make this fork-aware at runtime (epoch/fork boundary) instead of startup/static config
       gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),

@@ -1,5 +1,5 @@
-import type {BitArray} from "@chainsafe/ssz";
-import type {ChainForkConfig} from "@lodestar/config";
+import {BitArray} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
@@ -12,20 +12,20 @@ import {
   isForkPostElectra,
 } from "@lodestar/params";
 import {
-  type BeaconBlockHeader,
-  type LightClientFinalityUpdate,
-  type LightClientHeader,
-  type LightClientOptimisticUpdate,
-  type LightClientUpdate,
-  type Slot,
-  type SyncCommittee,
+  BeaconBlockHeader,
+  LightClientFinalityUpdate,
+  LightClientHeader,
+  LightClientOptimisticUpdate,
+  LightClientUpdate,
+  Slot,
+  SyncCommittee,
   isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
 import {computeEpochAtSlot, computeSyncPeriodAtSlot, isValidMerkleBranch} from "../utils/index.js";
 import {normalizeMerkleBranch} from "../utils/normalizeMerkleBranch.js";
-import type {LightClientStore} from "./store.js";
+import {LightClientStore} from "./store.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);

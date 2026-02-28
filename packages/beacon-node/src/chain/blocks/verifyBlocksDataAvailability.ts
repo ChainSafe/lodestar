@@ -3,8 +3,8 @@ import {DAData, DAType, IBlockInput} from "./blockInput/index.js";
 
 // We can now wait for full slot duration because unavailable block sync will try pulling
 // the blobs from the network anyway after 500ms of seeing the block.
-// TODO EIP-7782: This should use fork-aware slot duration (6s post-EIP7782).
-// For now, 12s is safe as upper bound for both pre and post-fork.
+// Pre-EIP7782: 12s (full slot). Post-EIP7782: 6s (full slot at new duration).
+// Using 12s as safe upper bound — blocks arriving late post-fork will still resolve within a slot.
 export const BLOB_AVAILABILITY_TIMEOUT = 12_000;
 
 /**
