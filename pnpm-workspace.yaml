@@ -2,7 +2,7 @@ packages:
   - packages/*
 
 catalog:
-  '@chainsafe/lodestar-z': github:chainsafe/lodestar-z#bing/integrate-lodestar
+  '@chainsafe/lodestar-z': github:chainsafe/lodestar-z#bing/blst-mt-verify
   '@vitest/browser': ^4.0.7
   '@vitest/browser-playwright': ^4.0.7
   '@vitest/coverage-v8': ^4.0.7
