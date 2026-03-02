@@ -158,8 +158,8 @@ describe("regen/reload states with n-historical states configuration", () => {
       reloadCount: 0,
       // 1 time for epoch 0 1 2 3, cp state epoch 4 is in memory
       persistCount: 4,
-      // epoch 4: current root checkpoint state + two previous-root checkpoint states
-      numStatesInMemory: 3,
+      // epoch 4, one for Current Root Checkpoint State and one for Previous Root Checkpoint State
+      numStatesInMemory: 2,
       // epoch 2 3, epoch 4 is in-memory
       numStatesPersisted: 2,
       // epoch 3
@@ -254,8 +254,8 @@ describe("regen/reload states with n-historical states configuration", () => {
       reloadCount: 1,
       // {root0, epoch: 0} {root8, epoch: 1} {root16, epoch: 2} {root15, epoch: 2} {root23, epoch: 3} {root24, epoch: 3} {root15, epoch: 3}
       persistCount: 7,
-      // epoch 4, one for Current Root Checkpoint State and one for Previous Root Checkpoint State
-      numStatesInMemory: 2,
+      // epoch 4: CRCS + PRCS from canonical chain + PRCS from pre-reorg chain (not pruned since chain is not finalized)
+      numStatesInMemory: 3,
       // chain is not finalized, so same number to persistCount
       numStatesPersisted: 7,
       // epoch 4
