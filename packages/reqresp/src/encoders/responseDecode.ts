@@ -49,7 +49,6 @@ export async function* responseDecode(
 
       // For multiple chunks, only the last chunk is allowed to have a non-zero error
       // code (i.e. The chunk stream is terminated once an error occurs
-      console.log("bufferedSourceFull", Buffer.from(bufferedSource["buffer"].subarray()).toString("hex"));
       if (status !== RespStatus.SUCCESS) {
         const errorMessage = await readErrorMessage(bytes, opts.signal);
         throw new ResponseError(status, errorMessage);
