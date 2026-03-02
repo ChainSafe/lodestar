@@ -105,8 +105,8 @@ importers:
         specifier: ^23.0.1
         version: 23.0.1
       libp2p:
-        specifier: 3.1.3
-        version: 3.1.3
+        specifier: 3.1.4
+        version: 3.1.4
       node-gyp:
         specifier: ^9.4.0
         version: 9.4.1
@@ -352,8 +352,8 @@ importers:
         specifier: 0.5.6
         version: 0.5.6
       libp2p:
-        specifier: 3.1.3
-        version: 3.1.3
+        specifier: 3.1.4
+        version: 3.1.4
       multiformats:
         specifier: ^13.4.2
         version: 13.4.2
@@ -933,8 +933,8 @@ importers:
         specifier: workspace:^
         version: link:../types
       libp2p:
-        specifier: 3.1.3
-        version: 3.1.3
+        specifier: 3.1.4
+        version: 3.1.4
 
   packages/spec-test-util:
     dependencies:
@@ -5077,8 +5077,8 @@ packages:
     resolution: {integrity: sha512-NVPTth/71cfbdYHqypcO9Lt5WFGTzFEcx81lWd7GDJIgZ95ERdYHGUfCtFejHCyqodKsQkNEx2JCkMpreDty/A==}
     engines: {node: ^20.17.0 || >=22.9.0}
 
-  libp2p@3.1.3:
-    resolution: {integrity: sha512-Jgl6Km1PfFTKR7krDNDxuuxQ6ya3D6VHFOi/XYJA539F62PmbxOQLd+nqbqozwB9BgJVTxaXRVmGTKo7dyrdQw==}
+  libp2p@3.1.4:
+    resolution: {integrity: sha512-GiF4ZGFuldDHHEE12R8R0Pvv8mRBmiksgSgMds+zXRmcu08X1fpXfVV/YknuWrLteOIxDdgY2E3Ur6d6XmKWJA==}
 
   light-my-request@6.0.0:
     resolution: {integrity: sha512-kFkFXrmKCL0EEeOmJybMH5amWFd+AFvlvMlvFTRxCUwbhfapZqDmeLMPoWihntnYY6JpoQDE9k+vOzObF1fDqg==}
@@ -12176,7 +12176,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  libp2p@3.1.3:
+  libp2p@3.1.4:
     dependencies:
       '@chainsafe/is-ip': 2.1.0
       '@chainsafe/netmask': 2.0.0
