@@ -158,8 +158,8 @@ describe("regen/reload states with n-historical states configuration", () => {
       reloadCount: 0,
       // 1 time for epoch 0 1 2 3, cp state epoch 4 is in memory
       persistCount: 4,
-      // epoch 4, one for Current Root Checkpoint State and one for Previous Root Checkpoint State
-      numStatesInMemory: 2,
+      // epoch 4: current root checkpoint state + two previous-root checkpoint states
+      numStatesInMemory: 3,
       // epoch 2 3, epoch 4 is in-memory
       numStatesPersisted: 2,
       // epoch 3
