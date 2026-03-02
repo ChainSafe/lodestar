@@ -1014,10 +1014,10 @@ export function getValidatorApi(
         const isMatchingCanonicalRoot =
           canonicalAttestedBlock !== null && canonicalAttestedBlock.blockRoot === toRootHex(beaconBlockRoot);
 
-        if (isMatchingCanonicalRoot && canonicalAttestedBlock.slot === slot) {
+        if (!isMatchingCanonicalRoot || canonicalAttestedBlock.slot === slot) {
           index = 0;
         } else {
-          index = isMatchingCanonicalRoot && canonicalAttestedBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
+          index = canonicalAttestedBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
         }
       } else if (isForkPostElectra(fork)) {
         index = 0;
