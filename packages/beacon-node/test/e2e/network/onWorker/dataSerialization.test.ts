@@ -1,4 +1,4 @@
-import {TopicValidatorResult} from "@libp2p/interface";
+import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -118,6 +118,9 @@ describe("data serialization through worker boundary", () => {
     unsubscribeGossipCoreTopics: [],
     connectToPeer: [peerId, ["/ip4/1.2.3.4/tcp/13000"]],
     disconnectPeer: [peerId],
+    addDirectPeer: ["/ip4/1.2.3.4/tcp/13000/p2p/" + peerId],
+    removeDirectPeer: [peerId],
+    getDirectPeers: [],
     dumpPeers: [],
     dumpPeer: [peerId],
     dumpPeerScoreStats: [],
@@ -207,6 +210,9 @@ describe("data serialization through worker boundary", () => {
     writeDiscv5Profile: "",
     setAdvertisedGroupCount: null,
     setTargetGroupCount: null,
+    addDirectPeer: peerId,
+    removeDirectPeer: true,
+    getDirectPeers: [peerId],
   };
 
   type TestCase = {id: string; data: unknown; shouldFail?: boolean};

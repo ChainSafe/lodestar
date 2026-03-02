@@ -27,6 +27,7 @@ export type IChainOptions = BlockProcessOpts &
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
     blacklistedBlocks?: string[];
+    // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
@@ -45,7 +46,6 @@ export type IChainOptions = BlockProcessOpts &
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
-    nHistoricalStates?: boolean;
     nHistoricalStatesFileDataStore?: boolean;
   };
 
@@ -119,7 +119,6 @@ export const defaultChainOptions: IChainOptions = {
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value
   minSameMessageSignatureSetsToBatch: 2,
-  nHistoricalStates: true,
   // as of Feb 2025, this option turned out to be very useful:
   //   - it allows to share a persisted checkpoint state to other nodes
   //   - users can prune the persisted checkpoint state files manually to save disc space

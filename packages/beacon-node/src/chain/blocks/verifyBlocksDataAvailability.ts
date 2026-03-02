@@ -29,6 +29,9 @@ export async function verifyBlocksDataAvailability(
 
   const availableTime = Math.max(0, Math.max(...blocks.map((blockInput) => blockInput.getTimeComplete())));
   const dataAvailabilityStatuses: DataAvailabilityStatus[] = blocks.map((blockInput) => {
+    if (blockInput.type === DAType.NoData) {
+      return DataAvailabilityStatus.NotRequired;
+    }
     if (blockInput.type === DAType.PreData) {
       return DataAvailabilityStatus.PreData;
     }

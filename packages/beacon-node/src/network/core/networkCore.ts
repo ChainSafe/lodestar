@@ -1,8 +1,8 @@
-import {Connection, PrivateKey} from "@libp2p/interface";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PublishOpts} from "@libp2p/gossipsub/types";
+import type {Connection, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -452,6 +452,18 @@ export class NetworkCore implements INetworkCore {
 
   async disconnectPeer(peerIdStr: PeerIdStr): Promise<void> {
     await this.libp2p.hangUp(peerIdFromString(peerIdStr));
+  }
+
+  async addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null> {
+    return this.gossip.addDirectPeer(peer);
+  }
+
+  async removeDirectPeer(peerIdStr: PeerIdStr): Promise<boolean> {
+    return this.gossip.removeDirectPeer(peerIdStr);
+  }
+
+  async getDirectPeers(): Promise<string[]> {
+    return this.gossip.getDirectPeers();
   }
 
   private _dumpPeer(peerIdStr: string, connections: Connection[]): routes.lodestar.LodestarNodePeer {

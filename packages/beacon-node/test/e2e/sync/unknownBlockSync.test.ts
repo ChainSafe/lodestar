@@ -5,6 +5,7 @@ import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fulu} from "@lodestar/types";
+import {retry} from "@lodestar/utils";
 import {BlockInputColumns} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../../src/chain/emitter.js";
@@ -17,7 +18,7 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
 describe("sync / unknown block sync for fulu", () => {
-  vi.setConfig({testTimeout: 40_000});
+  vi.setConfig({testTimeout: 60_000});
 
   const validatorCount = 8;
   const ELECTRA_FORK_EPOCH = 0;
@@ -133,8 +134,15 @@ describe("sync / unknown block sync for fulu", () => {
       afterEachCallbacks.push(() => bn2.close().catch(() => {}));
 
       const headSummary = bn.chain.forkChoice.getHead();
-      const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
-      if (!head) throw Error("First beacon node has no head block");
+      // Retry getting head block from db in case of slow persistence
+      const head = await retry(
+        async () => {
+          const block = await bn.db.block.get(fromHexString(headSummary.blockRoot));
+          if (!block) throw Error("First beacon node has no head block");
+          return block;
+        },
+        {retries: 5, retryDelay: 500}
+      );
       const waitForSynced = waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
         bn2.chain.emitter,
         routes.events.EventType.head,

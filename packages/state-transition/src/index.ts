@@ -25,7 +25,7 @@ export {
   createEmptyEpochCacheImmutableData,
 } from "./cache/epochCache.js";
 export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
-export {type Index2PubkeyCache, syncPubkeys} from "./cache/pubkeyCache.js";
+export {type PubkeyCache, createPubkeyCache, syncPubkeys} from "./cache/pubkeyCache.js";
 // Main state caches
 export {
   type BeaconStateCache,
@@ -35,12 +35,14 @@ export {
   isStateValidatorsNodesPopulated,
   loadCachedBeaconState,
 } from "./cache/stateCache.js";
+export {type SyncCommitteeCache} from "./cache/syncCommitteeCache.js";
 export * from "./constants/index.js";
 export type {EpochTransitionStep} from "./epoch/index.js";
 export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";
 export * from "./rewards/index.js";
 export * from "./signatureSets/index.js";
 export * from "./stateTransition.js";
+export * from "./stateView/index.js";
 export type {
   BeaconStateAllForks,
   BeaconStateAltair,

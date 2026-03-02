@@ -4,7 +4,7 @@ import {RequestErrorCode} from "./request/errors.js";
 export type Metrics = ReturnType<typeof getMetrics>;
 
 /**
- * A collection of metrics used throughout the Gossipsub behaviour.
+ * A collection of metrics used throughout the Req/Resp domain.
  */
 export function getMetrics(register: MetricsRegisterExtra) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
@@ -29,7 +29,6 @@ export function getMetrics(register: MetricsRegisterExtra) {
       name: "beacon_reqresp_outgoing_request_roundtrip_time_seconds",
       help: "Histogram of outgoing requests round-trip time",
       labelNames: ["method"],
-      // Spec sets RESP_TIMEOUT = 10 sec
       buckets: [0.1, 0.2, 0.5, 1, 5, 10, 15, 60],
     }),
     outgoingErrors: register.gauge<{method: string}>({
@@ -61,27 +60,12 @@ export function getMetrics(register: MetricsRegisterExtra) {
       name: "beacon_reqresp_incoming_request_handler_time_seconds",
       help: "Histogram of incoming requests internal handling time",
       labelNames: ["method"],
-      // Spec sets RESP_TIMEOUT = 10 sec
       buckets: [0.1, 0.2, 0.5, 1, 5, 10],
     }),
     incomingErrors: register.gauge<{method: string}>({
       name: "beacon_reqresp_incoming_requests_error_total",
       help: "Counts total failed responses handled per method",
       labelNames: ["method"],
-    }),
-    outgoingResponseTTFB: register.histogram<{method: string}>({
-      name: "beacon_reqresp_outgoing_response_ttfb_seconds",
-      help: "Time to first byte (TTFB) for outgoing responses",
-      labelNames: ["method"],
-      // Spec sets TTFB_TIMEOUT = 5 sec
-      buckets: [0.1, 1, 5],
-    }),
-    incomingResponseTTFB: register.histogram<{method: string}>({
-      name: "beacon_reqresp_incoming_response_ttfb_seconds",
-      help: "Time to first byte (TTFB) for incoming responses",
-      labelNames: ["method"],
-      // Spec sets TTFB_TIMEOUT = 5 sec
-      buckets: [0.1, 1, 5],
     }),
     dialErrors: register.gauge({
       name: "beacon_reqresp_dial_errors_total",

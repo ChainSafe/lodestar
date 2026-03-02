@@ -1,7 +1,5 @@
 import {PeerId} from "@libp2p/interface";
-import all from "it-all";
-import {pipe} from "it-pipe";
-import {Libp2p} from "libp2p";
+import type {Libp2p} from "libp2p";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {LodestarError, sleep} from "@lodestar/utils";
@@ -11,7 +9,7 @@ import {MixedProtocol, Protocol, ResponseIncoming} from "../../../src/types.js";
 import {getEmptyHandler, sszSnappyPing} from "../../fixtures/messages.js";
 import {pingProtocol} from "../../fixtures/protocols.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
-import {MockLibP2pStream} from "../../utils/index.js";
+import {createMockStream} from "../../utils/mockStream.js";
 import {getValidPeerId} from "../../utils/peer.js";
 import {responseEncode} from "../../utils/response.js";
 
@@ -27,7 +25,6 @@ describe("request / sendRequest", () => {
     id: string;
     protocols: MixedProtocol[];
     requestBody: ResponseIncoming;
-    maxResponses?: number;
     expectedReturn: unknown[];
   }[] = [
     {
@@ -36,13 +33,6 @@ describe("request / sendRequest", () => {
       requestBody: sszSnappyPing.binaryPayload,
       expectedReturn: [{...sszSnappyPing.binaryPayload, data: Buffer.from(sszSnappyPing.binaryPayload.data)}],
     },
-    // limit to max responses is no longer the responsibility of this package
-    // {
-    //   id: "Return up to maxResponses for a multi-chunk method",
-    //   protocols: [customProtocol({})],
-    //   requestBody: sszSnappySignedBeaconBlockPhase0.binaryPayload,
-    //   expectedReturn: [sszSnappySignedBeaconBlockPhase0.binaryPayload],
-    // },
   ];
 
   beforeEach(() => {
@@ -57,18 +47,25 @@ describe("request / sendRequest", () => {
 
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
+      const encodedResponse = await Array.fromAsync(
+        responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol)
+      );
+
       libp2p = {
-        dialProtocol: vi
-          .fn()
-          .mockResolvedValue(
-            new MockLibP2pStream(
-              responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol),
-              protocols[0].method
-            )
-          ),
+        dialProtocol: vi.fn().mockImplementation(
+          async () =>
+            (
+              await createMockStream({
+                protocol: protocols[0].method,
+                source: (async function* (): AsyncIterable<Uint8Array> {
+                  yield Buffer.concat(encodedResponse);
+                })(),
+              })
+            ).stream
+        ),
       } as unknown as Libp2p;
 
-      const responses = await pipe(
+      const responses = await Array.fromAsync(
         sendRequest(
           {logger, libp2p, metrics: null},
           peerId,
@@ -76,12 +73,151 @@ describe("request / sendRequest", () => {
           protocols.map((p) => p.method),
           EMPTY_REQUEST,
           controller.signal
-        ),
-        all
+        )
       );
-      expect(responses).toEqual(expectedReturn);
+      expect(responses.map((r) => ({...r, data: Buffer.from(r.data)}))).toEqual(expectedReturn);
     });
   }
+
+  it("closes stream gracefully when caller stops consuming responses early", async () => {
+    const encodedResponse = await Array.fromAsync(
+      responseEncode(
+        [
+          {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
+          {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
+        ],
+        emptyProtocol as Protocol
+      )
+    );
+
+    let abortCalled = false;
+    let getStreamState = (): {status: string; readStatus: string; writeStatus: string} => ({
+      status: "not-created",
+      readStatus: "not-created",
+      writeStatus: "not-created",
+    });
+    libp2p = {
+      dialProtocol: vi.fn().mockImplementation(async () => {
+        const streamResult = await createMockStream({
+          protocol: emptyProtocol.method,
+          source: (async function* (): AsyncIterable<Uint8Array> {
+            yield Buffer.concat(encodedResponse);
+            await sleep(100000, controller.signal);
+          })(),
+        });
+        const reqStream = streamResult.stream as unknown as {
+          status: string;
+          readStatus: string;
+          writeStatus: string;
+          abort: (error: Error) => void;
+        };
+        const abort = reqStream.abort.bind(reqStream);
+        reqStream.abort = (error: Error): void => {
+          abortCalled = true;
+          abort(error);
+        };
+        getStreamState = () => ({
+          status: reqStream.status,
+          readStatus: reqStream.readStatus,
+          writeStatus: reqStream.writeStatus,
+        });
+        return streamResult.stream;
+      }),
+    } as unknown as Libp2p;
+
+    let responseCount = 0;
+    for await (const _ of sendRequest(
+      {logger, libp2p, metrics: null},
+      peerId,
+      [emptyProtocol],
+      [emptyProtocol.method],
+      EMPTY_REQUEST,
+      controller.signal
+    )) {
+      responseCount++;
+      break;
+    }
+
+    expect(responseCount).toBe(1);
+    expect(abortCalled).toBe(false);
+    const streamState = getStreamState();
+    expect(streamState.status).not.toBe("aborted");
+    expect(streamState.readStatus).toBe("closed");
+    expect(streamState.writeStatus).toBe("closed");
+  });
+
+  it("aborts stream if remote never closes after early consumer exit", async () => {
+    const encodedResponse = await Array.fromAsync(
+      responseEncode([{status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload}], emptyProtocol as Protocol)
+    );
+
+    let getStreamStatus = (): string => "not-created";
+    libp2p = {
+      dialProtocol: vi.fn().mockImplementation(async () => {
+        const streamResult = await createMockStream({
+          protocol: emptyProtocol.method,
+          source: (async function* (): AsyncIterable<Uint8Array> {
+            yield Buffer.concat(encodedResponse);
+            await sleep(100000, controller.signal);
+          })(),
+        });
+        const reqStream = streamResult.stream as unknown as {status: string};
+        getStreamStatus = () => reqStream.status;
+        return streamResult.stream;
+      }),
+    } as unknown as Libp2p;
+
+    for await (const _ of sendRequest(
+      {logger, libp2p, metrics: null},
+      peerId,
+      [emptyProtocol],
+      [emptyProtocol.method],
+      EMPTY_REQUEST,
+      controller.signal,
+      {respTimeoutMs: 20}
+    )) {
+      break;
+    }
+
+    expect(getStreamStatus()).not.toBe("aborted");
+    await sleep(50, controller.signal);
+    expect(getStreamStatus()).toBe("aborted");
+  });
+
+  it("aborts stream on RESP_TIMEOUT", async () => {
+    const testMethod = "req/test";
+    let getStreamStatus = (): string => "not-created";
+    libp2p = {
+      dialProtocol: vi.fn().mockImplementation(async () => {
+        const streamResult = await createMockStream({
+          protocol: testMethod,
+          source: (async function* (): AsyncIterable<Uint8Array> {
+            await sleep(100000, controller.signal);
+            yield new Uint8Array();
+          })(),
+        });
+        const reqStream = streamResult.stream as unknown as {status: string};
+        getStreamStatus = () => reqStream.status;
+        return streamResult.stream;
+      }),
+    } as unknown as Libp2p;
+
+    await expectRejectedWithLodestarError(
+      Array.fromAsync(
+        sendRequest(
+          {logger, libp2p, metrics: null},
+          peerId,
+          [emptyProtocol],
+          [testMethod],
+          EMPTY_REQUEST,
+          controller.signal,
+          {respTimeoutMs: 1}
+        )
+      ),
+      new RequestError({code: RequestErrorCode.RESP_TIMEOUT})
+    );
+    expect(getStreamStatus()).toBe("aborted");
+  });
 
   describe("timeout cases", () => {
     const peerId = getValidPeerId();
@@ -94,13 +230,13 @@ describe("request / sendRequest", () => {
       error?: LodestarError<any>;
     }[] = [
       {
-        id: "trigger a TTFB_TIMEOUT",
-        opts: {ttfbTimeoutMs: 0},
+        id: "trigger a RESP_TIMEOUT when first response is delayed",
+        opts: {respTimeoutMs: 0},
         source: async function* () {
           await sleep(30); // Pause for too long before first byte
           yield sszSnappyPing.chunks[0];
         },
-        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
+        error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
       {
         id: "trigger a RESP_TIMEOUT",
@@ -113,18 +249,17 @@ describe("request / sendRequest", () => {
         error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
       {
-        // Upstream "abortable-iterator" never throws with an infinite sleep.
         id: "Infinite sleep on first byte",
-        opts: {ttfbTimeoutMs: 1, respTimeoutMs: 1},
+        opts: {respTimeoutMs: 1},
         source: async function* () {
           await sleep(100000, controller.signal);
           yield sszSnappyPing.chunks[0];
         },
-        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
+        error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
       {
         id: "Infinite sleep on second chunk",
-        opts: {ttfbTimeoutMs: 1, respTimeoutMs: 1},
+        opts: {respTimeoutMs: 1},
         source: async function* () {
           yield sszSnappyPing.chunks[0];
           await sleep(100000, controller.signal);
@@ -136,11 +271,13 @@ describe("request / sendRequest", () => {
     for (const {id, source, opts, error} of timeoutTestCases) {
       it(id, async () => {
         libp2p = {
-          dialProtocol: vi.fn().mockResolvedValue(new MockLibP2pStream(source(), testMethod)),
+          dialProtocol: vi
+            .fn()
+            .mockImplementation(async () => (await createMockStream({protocol: testMethod, source: source()})).stream),
         } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(
-          pipe(
+          Array.fromAsync(
             sendRequest(
               {logger, libp2p, metrics: null},
               peerId,
@@ -149,8 +286,7 @@ describe("request / sendRequest", () => {
               EMPTY_REQUEST,
               controller.signal,
               opts
-            ),
-            all
+            )
           ),
           error as LodestarError<any>
         );

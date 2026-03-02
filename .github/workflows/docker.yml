@@ -11,6 +11,10 @@ on:
         description: "Extra tags to apply (comma-separated, e.g. 'latest,rc')"
         required: false
         type: string
+      ref:
+        description: "Git ref to checkout (defaults to triggering ref)"
+        required: false
+        type: string
 
 jobs:
   docker:
@@ -26,6 +30,8 @@ jobs:
             runner: buildjet-4vcpu-ubuntu-2204-arm
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
@@ -39,6 +45,13 @@ jobs:
           --tag chainsafe/lodestar:${{ inputs.tag }}-${{ matrix.arch }}
           --platform linux/${{ matrix.arch }}
           --build-arg COMMIT=$(git rev-parse HEAD)
+
+      - name: Sanity check lodestar (${{ matrix.arch }})
+        run: |
+          docker run -d --name lodestar-sanity-${{ matrix.arch }} -p 9596:9596 chainsafe/lodestar:${{ inputs.tag }}-${{ matrix.arch }} dev --rest.address 0.0.0.0
+          sleep 30
+          curl -f http://127.0.0.1:9596/eth/v1/node/version || (docker logs lodestar-sanity-${{ matrix.arch }} && exit 1)
+          docker stop lodestar-sanity-${{ matrix.arch }}
 
       - name: Build and push custom Grafana
         run: >
@@ -92,11 +105,7 @@ jobs:
             chainsafe/lodestar-prometheus:${{ inputs.tag }}-amd64 \
             chainsafe/lodestar-prometheus:${{ inputs.tag }}-arm64
 
-      - name: Sanity check image
+      - name: Verify lodestar manifest
         run: |
-          docker run -d --name lodestar-sanity -p 9596:9596 chainsafe/lodestar:${{ inputs.tag }} dev --rest.address 0.0.0.0
-          sleep 30
-          curl -f http://127.0.0.1:9596/eth/v1/node/version || (docker logs lodestar-sanity && exit 1)
-          docker stop lodestar-sanity
-
-      - run: docker image history chainsafe/lodestar:${{ inputs.tag }}
+          docker pull chainsafe/lodestar:${{ inputs.tag }}
+          docker image history chainsafe/lodestar:${{ inputs.tag }}

@@ -44,6 +44,15 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInputs: IBloc
 
     // NOTE: Old data is pruned on archive
     if (isBlockInputColumns(blockInput)) {
+      if (!blockInput.hasComputedAllData()) {
+        // Supernodes may only have a subset of the data columns by the time the block begins to be imported
+        // because full data availability can be assumed after NUMBER_OF_COLUMNS / 2 columns are available.
+        // Here, however, all data columns must be fully available/reconstructed before persisting to the DB.
+        await blockInput.waitForComputedAllData(BLOB_AVAILABILITY_TIMEOUT).catch(() => {
+          this.logger.debug("Failed to wait for computed all data", {slot, blockRoot: blockRootHex});
+        });
+      }
+
       const {custodyColumns} = this.custodyConfig;
       const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
       let dataColumnsLen: number;
@@ -116,6 +125,9 @@ export async function persistBlockInputs(this: BeaconChain, blockInputs: IBlockI
       for (const blockInput of blockInputs) {
         this.seenBlockInputCache.prune(blockInput.blockRootHex);
       }
+      // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable.
+      // Clear here (after the DB write) so that writeBlockInputToDb can still use the cached serialized bytes.
+      this.serializedCache.clear();
       if (blockInputs.length === 1) {
         this.logger.debug("Pruned block input", {
           slot: blockInputs[0].slot,

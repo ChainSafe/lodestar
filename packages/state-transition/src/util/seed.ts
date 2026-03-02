@@ -21,7 +21,7 @@ import {
 import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
 import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
-import {BeaconStateAllForks, BeaconStateGloas, CachedBeaconStateAllForks} from "../types.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
 
 /**
@@ -268,29 +268,117 @@ export function getNextSyncCommitteeIndices(
   );
 }
 
-export function naiveGetPayloadTimlinessCommitteeIndices(
-  state: BeaconStateGloas,
-  shuffling: {committees: Uint32Array[][]},
-  effectiveBalanceIncrements: EffectiveBalanceIncrements,
-  epoch: Epoch
-): ValidatorIndex[][] {
+/**
+ * Compute PTC for all slots in an epoch eagerly.
+ */
+export function computePayloadTimelinessCommitteesForEpoch(
+  state: BeaconStateAllForks,
+  epoch: number,
+  committees: Uint32Array[][],
+  effectiveBalanceIncrements: EffectiveBalanceIncrements
+): Uint32Array[] {
   const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
-  const startSlot = computeStartSlotAtEpoch(epoch);
-  const committeeIndices = [];
+  const startSlot = epoch * SLOTS_PER_EPOCH;
+  const result: Uint32Array[] = new Array(SLOTS_PER_EPOCH);
 
-  for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
-    const slotCommittees = shuffling.committees[slot % SLOTS_PER_EPOCH];
-    const indices = naiveComputePayloadTimelinessCommitteeIndices(
-      effectiveBalanceIncrements,
-      slotCommittees.flatMap((c) => Array.from(c)),
-      digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
-    );
-    committeeIndices.push(indices);
+  // Pre-allocate slot seed buffer once, reuse across all slots
+  const slotSeedInput = new Uint8Array(epochSeed.length + 8);
+  slotSeedInput.set(epochSeed, 0);
+  const slotSeedView = new DataView(slotSeedInput.buffer, slotSeedInput.byteOffset, slotSeedInput.byteLength);
+
+  for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+    const slot = startSlot + i;
+    // Write slot as little-endian uint64 (fits in uint32 range)
+    slotSeedView.setUint32(epochSeed.length, slot, true);
+    slotSeedView.setUint32(epochSeed.length + 4, 0, true);
+    const slotSeed = digest(slotSeedInput);
+
+    result[i] = computePayloadTimelinessCommitteeForSlot(slotSeed, committees[i], effectiveBalanceIncrements);
   }
-
-  return committeeIndices;
+  return result;
 }
 
+/**
+ * Compute PTC for a single slot.
+ */
+export function computePayloadTimelinessCommitteeForSlot(
+  slotSeed: Uint8Array,
+  slotCommittees: Uint32Array[],
+  effectiveBalanceIncrements: EffectiveBalanceIncrements
+): Uint32Array {
+  // Concatenate all committee Uint32Arrays for this slot
+  const totalLen = slotCommittees.reduce((sum, c) => sum + c.length, 0);
+  const allIndices = new Uint32Array(totalLen);
+  let offset = 0;
+  for (const c of slotCommittees) {
+    allIndices.set(c, offset);
+    offset += c.length;
+  }
+  return computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, allIndices, slotSeed);
+}
+
+/**
+ * Optimized version of PTC indices computation.
+ * Avoids BigInt conversions and uses DataView for efficient byte reading.
+ */
+export function computePayloadTimelinessCommitteeIndices(
+  effectiveBalanceIncrements: EffectiveBalanceIncrements,
+  indices: Uint32Array,
+  seed: Uint8Array
+): Uint32Array {
+  if (indices.length === 0) {
+    throw Error("Validator indices must not be empty");
+  }
+
+  const result = new Uint32Array(PTC_SIZE);
+  let resultLen = 0;
+
+  const MAX_RANDOM_VALUE = 0xffff; // 2^16 - 1
+  const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE_ELECTRA / EFFECTIVE_BALANCE_INCREMENT;
+  const indicesLen = indices.length;
+
+  // Pre-allocate hash input buffer: seed + 8 bytes for block index
+  const hashInput = new Uint8Array(seed.length + 8);
+  hashInput.set(seed, 0);
+  const hashInputView = new DataView(hashInput.buffer, hashInput.byteOffset, hashInput.byteLength);
+  const seedLen = seed.length;
+
+  let i = 0;
+  let randomBytesView: DataView = new DataView(new ArrayBuffer(0));
+  let lastBlock = -1;
+
+  while (resultLen < PTC_SIZE) {
+    const candidateIndex = indices[i % indicesLen];
+
+    // Only recompute hash every 16 iterations
+    const block = i >>> 4; // Math.floor(i / 16)
+    if (block !== lastBlock) {
+      // Write block as little-endian uint64 (block always fits in uint32 range)
+      hashInputView.setUint32(seedLen, block, true);
+      hashInputView.setUint32(seedLen + 4, 0, true);
+      const randomBytes = digest(hashInput);
+      randomBytesView = new DataView(randomBytes.buffer, randomBytes.byteOffset, randomBytes.byteLength);
+      lastBlock = block;
+    }
+
+    const randomValue = randomBytesView.getUint16((i & 15) * 2, true);
+
+    const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
+    if (effectiveBalanceIncrement * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randomValue) {
+      result[resultLen++] = candidateIndex;
+    }
+    i += 1;
+  }
+
+  return result;
+}
+
+/**
+ * Naive version of PTC indices computation.
+ * Used to verify the optimized `computePayloadTimelinessCommitteeIndices`.
+ *
+ * SLOW CODE - 🐢
+ */
 export function naiveComputePayloadTimelinessCommitteeIndices(
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
   indices: ArrayLike<ValidatorIndex>,

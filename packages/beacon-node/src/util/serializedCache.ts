@@ -14,6 +14,11 @@ export class SerializedCache {
     this.map.set(obj, serialized);
   }
 
+  /**
+   * Replace the internal WeakMap to force GC of all cached entries.
+   * Must only be called after all DB writes that may read from this cache have completed,
+   * otherwise cached serialized bytes will be unavailable and data will be re-serialized unnecessarily.
+   */
   clear(): void {
     this.map = new WeakMap();
   }

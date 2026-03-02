@@ -30,7 +30,7 @@ import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
-import {toCheckpointHex} from "../stateCache/index.js";
+import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
@@ -91,10 +91,15 @@ export async function importBlock(
   }
 
   // 1. Persist block to hot DB (performed asynchronously to avoid blocking head selection)
-  void this.unfinalizedBlockWrites.push([blockInput]);
-
-  // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
-  this.serializedCache.clear();
+  // Wait for space in the write queue to apply backpressure during sync.
+  // Without this, a supernode syncing from behind can accumulate many blocks worth of column
+  // data in memory (up to 128 columns per block) causing OOM before persistence catches up.
+  await this.unfinalizedBlockWrites.waitForSpace();
+  this.unfinalizedBlockWrites.push([blockInput]).catch((e) => {
+    if (!isQueueErrorAborted(e)) {
+      this.logger.error("Error pushing block to unfinalized write queue", {slot: blockSlot}, e as Error);
+    }
+  });
 
   // 2. Import block to fork choice
 

@@ -2,7 +2,7 @@ import assert from "node:assert";
 import {bench, describe} from "@chainsafe/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {bytesToInt} from "@lodestar/utils";
+import {byteArrayEquals, bytesToInt} from "@lodestar/utils";
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
 import {VALIDATOR_BYTES_SIZE} from "../../../../src/util/sszBytes.js";
 import {generateState} from "../../../utils/state.js";
@@ -103,13 +103,13 @@ describe("find modified validators by different ways", () => {
       for (let i = 0; i < state.validators.length; i++) {
         const validatorBytes = ssz.phase0.Validator.serialize(validators[i]);
         if (
-          Buffer.compare(
+          !byteArrayEquals(
             validatorBytes,
             stateBytes.subarray(
               validatorsRange.start + i * VALIDATOR_BYTES_SIZE,
               validatorsRange.start + (i + 1) * VALIDATOR_BYTES_SIZE
             )
-          ) !== 0
+          )
         ) {
           throw Error(`validator ${i} is not equal`);
         }
@@ -139,12 +139,12 @@ describe("find modified validators by different ways", () => {
 
 function validatorDiff(validator: CompositeViewDU<typeof ssz.phase0.Validator>, bytes: Uint8Array): string | null {
   const pubkey = bytes.subarray(0, 48);
-  if (Buffer.compare(validator.pubkey, pubkey) !== 0) {
+  if (!byteArrayEquals(validator.pubkey, pubkey)) {
     return "pubkey";
   }
 
   const withdrawalCredentials = bytes.subarray(48, 80);
-  if (Buffer.compare(validator.withdrawalCredentials, withdrawalCredentials) !== 0) {
+  if (!byteArrayEquals(validator.withdrawalCredentials, withdrawalCredentials)) {
     return "withdrawalCredentials";
   }
 

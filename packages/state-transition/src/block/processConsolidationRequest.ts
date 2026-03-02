@@ -1,5 +1,6 @@
 import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {
@@ -56,7 +57,7 @@ export function processConsolidationRequest(
 
   // Verify source withdrawal credentials
   const hasCorrectCredential = hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials);
-  const isCorrectSourceAddress = Buffer.compare(sourceWithdrawalAddress, sourceAddress) === 0;
+  const isCorrectSourceAddress = byteArrayEquals(sourceWithdrawalAddress, sourceAddress);
   if (!(hasCorrectCredential && isCorrectSourceAddress)) {
     return;
   }
@@ -124,7 +125,7 @@ function isValidSwitchToCompoundRequest(
   const sourceValidator = state.validators.getReadonly(sourceIndex);
   const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   // Verify request has been authorized
-  if (Buffer.compare(sourceWithdrawalAddress, sourceAddress) !== 0) {
+  if (!byteArrayEquals(sourceWithdrawalAddress, sourceAddress)) {
     return false;
   }
 

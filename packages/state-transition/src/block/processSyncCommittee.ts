@@ -1,7 +1,7 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {G2_POINT_AT_INFINITY} from "../constants/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
@@ -32,7 +32,7 @@ export function processSyncAggregate(
       participantIndices
     );
     // When there's no participation we consider the signature valid and just ignore it
-    if (signatureSet !== null && !verifySignatureSet(signatureSet, state.epochCtx.index2pubkey)) {
+    if (signatureSet !== null && !verifySignatureSet(signatureSet, state.epochCtx.pubkeyCache)) {
       throw Error("Sync committee signature invalid");
     }
   }

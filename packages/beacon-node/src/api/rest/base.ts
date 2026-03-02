@@ -1,6 +1,6 @@
 import bearerAuthPlugin from "@fastify/bearer-auth";
 import {fastifyCors} from "@fastify/cors";
-import {FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
+import {FastifyError, FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
 import {parse as parseQueryString} from "qs";
 import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
@@ -73,15 +73,17 @@ export class RestApiServer {
     const server = fastify({
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
-      querystringParser: (str) =>
-        parseQueryString(str, {
-          // Array as comma-separated values must be supported to be OpenAPI spec compliant
-          comma: true,
-          // Drop support for array query strings like `id[0]=1&id[1]=2&id[2]=3` as those are not required to
-          // be OpenAPI spec compliant and results are inconsistent, see https://github.com/ljharb/qs/issues/331.
-          // The schema validation will catch this and throw an error as parsed query string results in an object.
-          parseArrays: false,
-        }),
+      routerOptions: {
+        querystringParser: (str) =>
+          parseQueryString(str, {
+            // Array as comma-separated values must be supported to be OpenAPI spec compliant
+            comma: true,
+            // Drop support for array query strings like `id[0]=1&id[1]=2&id[2]=3` as those are not required to
+            // be OpenAPI spec compliant and results are inconsistent, see https://github.com/ljharb/qs/issues/331.
+            // The schema validation will catch this and throw an error as parsed query string results in an object.
+            parseArrays: false,
+          }),
+      },
       bodyLimit: opts.bodyLimit,
       http: {maxHeaderSize: opts.headerLimit},
     });
@@ -91,10 +93,10 @@ export class RestApiServer {
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 
     // To parse our ApiError -> statusCode
-    server.setErrorHandler((err, _req, res) => {
+    server.setErrorHandler<FastifyError | Error>((err, _req, res) => {
       const stacktraces = opts.stacktraces ? err.stack?.split("\n") : undefined;
-      if (err.validation) {
-        const {instancePath, message} = err.validation[0];
+      if ("validation" in err && err.validation) {
+        const {instancePath = "unknown", message} = err.validation?.[0] ?? {};
         const payload: ErrorResponse = {
           code: 400,
           message: `${instancePath.substring(instancePath.lastIndexOf("/") + 1)} ${message}`,

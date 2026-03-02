@@ -9,6 +9,7 @@ import {prettyPrintIndices, toHex, withTimeout} from "@lodestar/utils";
 import {GOODBYE_KNOWN_CODES, GoodByeReasonCode, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
 import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventData} from "../events.js";
@@ -161,7 +162,6 @@ export class PeerManager {
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
-
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
@@ -195,6 +195,13 @@ export class PeerManager {
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
 
     this.lastStatus = this.statusCache.get();
+
+    // A connection may already be open before listeners are attached.
+    // Seed those peers so they are tracked in connectedPeers immediately.
+    this.bootstrapAlreadyOpenConnections();
+    // Defer status/ping to the next event loop tick so the heartbeat interval and
+    // event listeners are fully registered before we begin handshakes.
+    callInNextEventLoop(() => this.pingAndStatusTimeouts());
 
     // On start-up will connected to existing peers in libp2p.peerStore, same as autoDial behaviour
     this.heartbeat();
@@ -472,6 +479,14 @@ export class PeerManager {
         clientAgent,
         custodyColumns,
       });
+
+      // Identify peer after status proves the connection is usable.
+      // This is the only place we trigger identify — avoids wasted streams on
+      // peers that close identify right after connection open or turn out to be
+      // irrelevant.
+      if (peerData?.agentVersion === null) {
+        void this.identifyPeer(peer.toString(), prettyPrintPeerId(peer), getConnection(this.libp2p, peer.toString()));
+      }
     }
   }
 
@@ -692,6 +707,90 @@ export class PeerManager {
     }
   }
 
+  private bootstrapAlreadyOpenConnections(): void {
+    let bootstrapped = 0;
+
+    for (const {value: connections} of getConnectionsMap(this.libp2p).values()) {
+      for (const connection of connections) {
+        // trackLibp2pConnection handles deduplication via overwriteExisting: false
+        if (this.trackLibp2pConnection(connection, {overwriteExisting: false, triggerHandshakeNow: false})) {
+          bootstrapped++;
+        }
+      }
+    }
+
+    if (bootstrapped > 0) {
+      this.logger.verbose("Bootstrapped already-open libp2p peers", {bootstrapped});
+    }
+  }
+
+  private trackLibp2pConnection(
+    connection: Connection,
+    opts: {overwriteExisting: boolean; triggerHandshakeNow: boolean}
+  ): boolean {
+    const {direction, status, remotePeer} = connection;
+    const remotePeerStr = remotePeer.toString();
+    const remotePeerPrettyStr = prettyPrintPeerId(remotePeer);
+
+    if (status !== "open") {
+      this.logger.debug("Peer disconnected before identify protocol initiated", {
+        peerId: remotePeerPrettyStr,
+        status,
+      });
+      return false;
+    }
+
+    // Ethereum uses secp256k1 for node IDs, reject peers with other key types
+    if (remotePeer.type !== "secp256k1") {
+      this.logger.debug("Peer does not have secp256k1 key, disconnecting", {
+        peer: remotePeerPrettyStr,
+        type: remotePeer.type,
+      });
+      void this.goodbyeAndDisconnect(remotePeer, GoodByeReasonCode.IRRELEVANT_NETWORK);
+      return false;
+    }
+
+    if (!opts.overwriteExisting && this.connectedPeers.has(remotePeerStr)) {
+      return false;
+    }
+
+    // On connection:
+    // - Outbound connections: send a STATUS and PING request
+    // - Inbound connections: expect to be STATUS'd, schedule STATUS and PING for later
+    // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
+    // If that happens, it's okay. Only the "outbound" connection triggers immediate action
+    const now = Date.now();
+    const existingPeerData = this.connectedPeers.get(remotePeerStr);
+    const nodeId = computeNodeId(remotePeer);
+    const peerData: PeerData = {
+      // Keep existing timestamps if this peer already had another open connection.
+      // libp2p may emit multiple connection:open events per peer.
+      lastReceivedMsgUnixTsMs: existingPeerData?.lastReceivedMsgUnixTsMs ?? (direction === "outbound" ? 0 : now),
+      // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
+      lastStatusUnixTsMs:
+        existingPeerData?.lastStatusUnixTsMs ??
+        (direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD),
+      connectedUnixTsMs: existingPeerData?.connectedUnixTsMs ?? now,
+      relevantStatus: existingPeerData?.relevantStatus ?? RelevantPeerStatus.Unknown,
+      direction,
+      nodeId,
+      peerId: remotePeer,
+      status: existingPeerData?.status ?? null,
+      metadata: existingPeerData?.metadata ?? null,
+      agentVersion: existingPeerData?.agentVersion ?? null,
+      agentClient: existingPeerData?.agentClient ?? null,
+      encodingPreference: existingPeerData?.encodingPreference ?? null,
+    };
+    this.connectedPeers.set(remotePeerStr, peerData);
+
+    if (direction === "outbound" && opts.triggerHandshakeNow) {
+      void this.requestPing(remotePeer);
+      void this.requestStatus(remotePeer, this.statusCache.get());
+    }
+
+    return true;
+  }
+
   /**
    * The libp2p Upgrader has successfully upgraded a peer connection on a particular multiaddress
    * This event is routed through the connectionManager
@@ -699,71 +798,13 @@ export class PeerManager {
    * Registers a peer as connected. The `direction` parameter determines if the peer is being
    * dialed or connecting to us.
    */
-  private onLibp2pPeerConnect = async (evt: CustomEvent<Connection>): Promise<void> => {
+  private onLibp2pPeerConnect = (evt: CustomEvent<Connection>): void => {
     const {direction, status, remotePeer} = evt.detail;
-    const remotePeerStr = remotePeer.toString();
-    const remotePeerPrettyStr = prettyPrintPeerId(remotePeer);
-    this.logger.verbose("peer connected", {peer: remotePeerPrettyStr, direction, status});
+    this.logger.verbose("peer connected", {peer: prettyPrintPeerId(remotePeer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction, status});
 
-    if (evt.detail.status !== "open") {
-      this.logger.debug("Peer disconnected before identify protocol initiated", {
-        peerId: remotePeerPrettyStr,
-        status: evt.detail.status,
-      });
-      return;
-    }
-
-    // On connection:
-    // - Outbound connections: send a STATUS and PING request
-    // - Inbound connections: expect to be STATUS'd, schedule STATUS and PING for latter
-    // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
-    // If that happens, it's okay. Only the "outbound" connection triggers immediate action
-    const now = Date.now();
-    const nodeId = computeNodeId(remotePeer);
-    const peerData: PeerData = {
-      lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
-      // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
-      lastStatusUnixTsMs: direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD,
-      connectedUnixTsMs: now,
-      relevantStatus: RelevantPeerStatus.Unknown,
-      direction,
-      nodeId,
-      peerId: remotePeer,
-      status: null,
-      metadata: null,
-      agentVersion: null,
-      agentClient: null,
-      encodingPreference: null,
-    };
-    this.connectedPeers.set(remotePeerStr, peerData);
-
-    if (direction === "outbound") {
-      // this.pingAndStatusTimeouts();
-      void this.requestPing(remotePeer);
-      void this.requestStatus(remotePeer, this.statusCache.get());
-    }
-
-    this.libp2p.services.identify
-      .identify(evt.detail)
-      .then((result) => {
-        const agentVersion = result.agentVersion;
-        if (agentVersion) {
-          peerData.agentVersion = agentVersion;
-          peerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
-        }
-      })
-      .catch((err) => {
-        if (evt.detail.status !== "open") {
-          this.logger.debug("Peer disconnected during identify protocol", {
-            peerId: remotePeerPrettyStr,
-            error: (err as Error).message,
-          });
-        } else {
-          this.logger.debug("Error setting agentVersion for the peer", {peerId: remotePeerPrettyStr}, err);
-        }
-      });
+    this.trackLibp2pConnection(evt.detail, {overwriteExisting: true, triggerHandshakeNow: true});
   };
 
   /**
@@ -772,6 +813,19 @@ export class PeerManager {
   private onLibp2pPeerDisconnect = (evt: CustomEvent<Connection>): void => {
     const {direction, status, remotePeer} = evt.detail;
     const peerIdStr = remotePeer.toString();
+
+    const openConnections =
+      getConnectionsMap(this.libp2p)
+        .get(peerIdStr)
+        ?.value.filter((connection) => connection.status === "open") ?? [];
+    if (openConnections.length > 0) {
+      this.logger.debug("Ignoring peer disconnect event while another connection is still open", {
+        peerId: prettyPrintPeerIdStr(peerIdStr),
+        direction,
+        status,
+      });
+      return;
+    }
 
     let logMessage = "onLibp2pPeerDisconnect";
     const logContext: Record<string, string | number> = {
@@ -804,6 +858,27 @@ export class PeerManager {
       await this.libp2p.hangUp(peer);
     } catch (e) {
       this.logger.debug("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
+    }
+  }
+
+  private async identifyPeer(peerIdStr: string, peerIdPretty: string, connection?: Connection): Promise<void> {
+    if (!connection || connection.status !== "open") {
+      this.logger.debug("Peer has no open connection for identify", {peerId: peerIdPretty});
+      return;
+    }
+
+    try {
+      const result = await this.libp2p.services.identify.identify(connection);
+      const agentVersion = result.agentVersion;
+      if (agentVersion) {
+        const connectedPeerData = this.connectedPeers.get(peerIdStr);
+        if (connectedPeerData) {
+          connectedPeerData.agentVersion = agentVersion;
+          connectedPeerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
+        }
+      }
+    } catch (e) {
+      this.logger.debug("Error setting agentVersion for the peer", {peerId: peerIdPretty}, e as Error);
     }
   }
 

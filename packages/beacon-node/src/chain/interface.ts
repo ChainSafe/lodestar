@@ -1,16 +1,11 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {
-  BeaconStateAllForks,
-  CachedBeaconStateAllForks,
-  EpochShuffling,
-  Index2PubkeyCache,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, EpochShuffling, PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
+  DataColumnSidecars,
   Epoch,
   Root,
   RootHex,
@@ -23,7 +18,6 @@ import {
   altair,
   capella,
   deneb,
-  fulu,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -117,8 +111,7 @@ export interface IBeaconChain {
   readonly regen: IStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly pubkey2index: PubkeyIndexMap;
-  readonly index2pubkey: Index2PubkeyCache;
+  readonly pubkeyCache: PubkeyCache;
   readonly archiveStore: IArchiveStore;
 
   // Ops pool
@@ -224,7 +217,7 @@ export interface IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
-  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<fulu.DataColumnSidecars>;
+  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars>;
   getSerializedDataColumnSidecars(
     blockSlot: Slot,
     blockRootHex: string,

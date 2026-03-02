@@ -78,5 +78,40 @@ describe("bytes utils", async () => {
       },
       runsFactor,
     });
+
+    /**
+     * Node v24.13.0 benchmark results for byteArrayEquals:
+     *
+     * Size         | nodejs (hybrid)              | browser (loop)
+     * -------------|------------------------------|----------------
+     * 32 bytes     | 14.7 ns/op (loop)            | 14.7 ns/op
+     * 48 bytes     | 36 ns/op (loop)              | 36 ns/op
+     * 96 bytes     | 50 ns/op (Buffer.compare)    | 130 ns/op
+     * 1024 bytes   | 55 ns/op (Buffer.compare)    | 940 ns/op
+     * 131072 bytes | 270 ns/op (Buffer.compare)   | 14.8 μs/op
+     *
+     * The nodejs implementation uses a hybrid approach:
+     * - Loop for <=48 bytes (V8 JIT optimized)
+     * - Buffer.compare for >48 bytes (native code)
+     */
+    const arraysToCompare = [
+      {name: "32 bytes (block root)", a: blockRoot, b: new Uint8Array(blockRoot)},
+      {name: "48 bytes (pubkey)", a: new Uint8Array(48).fill(42), b: new Uint8Array(48).fill(42)},
+      {name: "96 bytes (signature)", a: new Uint8Array(96).fill(42), b: new Uint8Array(96).fill(42)},
+      {name: "1024 bytes", a: new Uint8Array(1024).fill(42), b: new Uint8Array(1024).fill(42)},
+      {name: `${BLOB_LEN} bytes (blob)`, a: blob, b: new Uint8Array(blob)},
+    ];
+
+    for (const {name: arrName, a, b} of arraysToCompare) {
+      bench({
+        id: `${name} byteArrayEquals ${arrName}`,
+        fn: () => {
+          for (let i = 0; i < runsFactor; i++) {
+            impl.byteArrayEquals(a, b);
+          }
+        },
+        runsFactor,
+      });
+    }
   }
 });

@@ -1,4 +1,4 @@
-import {Message} from "@libp2p/interface";
+import type {Message} from "@libp2p/gossipsub";
 import {ForkName} from "@lodestar/params";
 import {Slot, SlotOptionalRoot} from "@lodestar/types";
 import {PeerIdStr} from "../../util/peerId.js";
