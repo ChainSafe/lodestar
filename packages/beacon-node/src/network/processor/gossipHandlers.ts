@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {
   ForkName,
+  ForkPostDeneb,
   ForkPostElectra,
   ForkPreElectra,
   ForkSeq,
@@ -70,6 +71,7 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.ts";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -417,9 +419,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.getBlobsTracker.triggerGetBlobs(blockInput);
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
-      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
-        (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
-      );
+      const blobCount = getBlobKzgCommitments(
+        blockInput.forkName,
+        signedBlock as SignedBeaconBlock<ForkPostDeneb>
+      ).length;
+      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blobCount);
     }
 
     chain
