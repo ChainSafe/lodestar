@@ -1580,18 +1580,24 @@ export class ProtoArray {
       return undefined;
     }
 
-    if (isGloasBlock(node)) {
-      // Unknown parent (orphan) case
-      if (!this.indices.has(node.parentRoot)) {
-        return undefined;
-      }
-
-      // Use getParentPayloadStatus for Gloas blocks to get correct EMPTY/FULL variant
-      const parentPayloadStatus = this.getParentPayloadStatus(node);
-      return this.getParentIndexByPayloadStatus(node.parentRoot, parentPayloadStatus);
+    if (!isGloasBlock(node)) {
+      return node.parent;
     }
-    // Simple parent traversal for pre-Gloas blocks (includes fork transition)
-    return node.parent;
+
+    // Preserve intra-block edge for Gloas EMPTY/FULL variants: EMPTY/FULL -> own PENDING.
+    // Dynamic parent selection is only needed for inter-block edge on PENDING variants.
+    if (node.payloadStatus !== PayloadStatus.PENDING) {
+      return node.parent;
+    }
+
+    // Unknown parent (orphan) case
+    if (!this.indices.has(node.parentRoot)) {
+      return undefined;
+    }
+
+    // Use getParentPayloadStatus for Gloas PENDING nodes to get correct EMPTY/FULL parent variant.
+    const parentPayloadStatus = this.getParentPayloadStatus(node);
+    return this.getParentIndexByPayloadStatus(node.parentRoot, parentPayloadStatus);
   }
 
   /**

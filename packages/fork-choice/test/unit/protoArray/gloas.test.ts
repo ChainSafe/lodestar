@@ -496,6 +496,33 @@ describe("Gloas Fork Choice", () => {
       expect(fullNode?.parent).toBe(pendingIndex);
     });
 
+    it("score propagation preserves EMPTY/FULL -> PENDING intra-block edge", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      protoArray.onExecutionPayload("0x02", gloasForkSlot + 1, "0x02", gloasForkSlot, stateRoot, null);
+
+      const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
+      const fullIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
+      if (pendingIndex === undefined || fullIndex === undefined) {
+        throw new Error("Expected PENDING and FULL variants to exist");
+      }
+
+      const deltas = new Array(protoArray.nodes.length).fill(0);
+      deltas[fullIndex] = 100;
+      protoArray.applyScoreChanges({
+        deltas,
+        proposerBoost: null,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+        currentSlot: gloasForkSlot + 2,
+      });
+
+      const pendingNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
+      expect(pendingNode?.weight).toBe(100);
+    });
+
     it("inter-block: new PENDING extends parent's EMPTY or FULL", () => {
       // Block A
       const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
