@@ -98,7 +98,7 @@ export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataC
   });
 }
 
-export async function persistBlockInputs(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
+export async function persistBlockInput(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
   await writeBlockInputToDb
     .call(this, blockInput)
     .catch((e) => {

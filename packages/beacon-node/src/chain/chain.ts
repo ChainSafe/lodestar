@@ -77,7 +77,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {persistBlockInputs} from "./blocks/writeBlockInputToDb.ts";
+import {persistBlockInput} from "./blocks/writeBlockInputToDb.ts";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
@@ -429,7 +429,7 @@ export class BeaconChain implements IBeaconChain {
     );
 
     this.unfinalizedBlockWrites = new JobItemQueue(
-      persistBlockInputs.bind(this),
+      persistBlockInput.bind(this),
       {
         maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES,
         signal,
