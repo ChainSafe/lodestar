@@ -104,7 +104,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The block is from a higher slot than its parent.
   if (parentBlock.slot >= blockSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
+    throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.NOT_LATER_THAN_PARENT,
       parentSlot: parentBlock.slot,
       slot: blockSlot,
