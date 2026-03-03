@@ -1,7 +1,6 @@
-import {fulu} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
-import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
 /**
@@ -10,93 +9,93 @@ import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
  *
  * This operation may be performed before, during or after importing to the fork-choice. As long as errors
  * are handled properly for eventual consistency.
+ *
+ * Block+blobs (pre-fulu) and data columns (fulu+) are written in parallel.
  */
 export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
-  const fnPromises: Promise<void>[] = [];
+  const promises: Promise<void>[] = [writeBlockAndBlobsToDb.call(this, blockInput)];
 
+  if (isBlockInputColumns(blockInput)) {
+    promises.push(writeDataColumnsToDb.call(this, blockInput));
+  }
+
+  await Promise.all(promises);
+  this.logger.debug("Persisted blockInput to db", {slot: blockInput.slot});
+}
+
+async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
   const block = blockInput.getBlock();
   const slot = block.message.slot;
-  const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toRootHex(blockRoot);
+
   const blockBytes = this.serializedCache.get(block);
   if (blockBytes) {
     // skip serializing data if we already have it
     this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-    fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
+    await this.db.block.putBinary(this.db.block.getId(block), blockBytes);
   } else {
     this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-    fnPromises.push(this.db.block.add(block));
+    await this.db.block.add(block);
   }
 
-  this.logger.debug("Persist block to hot DB", {
-    slot: block.message.slot,
-    root: blockRootHex,
-    inputType: blockInput.type,
-  });
+  this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type});
 
-  if (!blockInput.hasAllData()) {
-    await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
-  }
-
-  // NOTE: Old data is pruned on archive
-  if (isBlockInputColumns(blockInput)) {
-    if (!blockInput.hasComputedAllData()) {
-      // Supernodes may only have a subset of the data columns by the time the block begins to be imported
-      // because full data availability can be assumed after NUMBER_OF_COLUMNS / 2 columns are available.
-      // Here, however, all data columns must be fully available/reconstructed before persisting to the DB.
-      await blockInput.waitForComputedAllData(BLOB_AVAILABILITY_TIMEOUT).catch(() => {
-        this.logger.debug("Failed to wait for computed all data", {slot, blockRoot: blockRootHex});
-      });
+  if (isBlockInputBlobs(blockInput)) {
+    if (!blockInput.hasAllData()) {
+      await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
     }
-
-    const {custodyColumns} = this.custodyConfig;
-    const blobsLen = (block.message as fulu.BeaconBlock).body.blobKzgCommitments.length;
-    let dataColumnsLen: number;
-    if (blobsLen === 0) {
-      dataColumnsLen = 0;
-    } else {
-      dataColumnsLen = custodyColumns.length;
-    }
-
-    const dataColumnSidecars = blockInput.getCustodyColumns();
-    if (dataColumnSidecars.length !== dataColumnsLen) {
-      this.logger.debug(
-        `Invalid dataColumnSidecars=${dataColumnSidecars.length} for custody expected custodyColumnsLen=${dataColumnsLen}`
-      );
-    }
-
-    const binaryPuts = [];
-    const nonbinaryPuts = [];
-    for (const dataColumnSidecar of dataColumnSidecars) {
-      // skip reserializing column if we already have it
-      const serialized = this.serializedCache.get(dataColumnSidecar);
-      if (serialized) {
-        binaryPuts.push({key: dataColumnSidecar.index, value: serialized});
-      } else {
-        nonbinaryPuts.push(dataColumnSidecar);
-      }
-    }
-    fnPromises.push(this.db.dataColumnSidecar.putManyBinary(blockRoot, binaryPuts));
-    fnPromises.push(this.db.dataColumnSidecar.putMany(blockRoot, nonbinaryPuts));
-    this.logger.debug("Persisted dataColumnSidecars to hot DB", {
-      slot: block.message.slot,
-      root: blockRootHex,
-      dataColumnSidecars: dataColumnSidecars.length,
-      numBlobs: blobsLen,
-      custodyColumns: custodyColumns.length,
-    });
-  } else if (isBlockInputBlobs(blockInput)) {
     const blobSidecars = blockInput.getBlobs();
-    fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
-    this.logger.debug("Persisted blobSidecars to hot DB", {
-      blobsLen: blobSidecars.length,
-      slot: block.message.slot,
-      root: blockRootHex,
+    await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
+    this.logger.debug("Persisted blobSidecars to hot DB", {blobsLen: blobSidecars.length, slot, root: blockRootHex});
+  }
+}
+
+/**
+ * Persists data columns to DB for a given block. Accepts a narrow sub-interface of IBlockInput
+ * so it can be reused across forks (e.g. Fulu, Gloas).
+ *
+ * NOTE: Old data is pruned on archive.
+ */
+export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataColumnsInput): Promise<void> {
+  const {slot, blockRootHex} = blockInput;
+  const blockRoot = fromHex(blockRootHex);
+
+  if (!blockInput.hasComputedAllData()) {
+    // Supernodes may only have a subset of the data columns by the time the block begins to be imported
+    // because full data availability can be assumed after NUMBER_OF_COLUMNS / 2 columns are available.
+    // Here, however, all data columns must be fully available/reconstructed before persisting to the DB.
+    await blockInput.waitForComputedAllData(BLOB_AVAILABILITY_TIMEOUT).catch(() => {
+      this.logger.debug("Failed to wait for computed all data", {slot, blockRoot: blockRootHex});
     });
   }
 
-  await Promise.all(fnPromises);
-  this.logger.debug("Persisted blockInput to db", {slot});
+  const {custodyColumns} = this.custodyConfig;
+  const dataColumnSidecars = blockInput.getCustodyColumns();
+
+  const binaryPuts: {key: number; value: Uint8Array}[] = [];
+  const nonbinaryPuts = [];
+  for (const dataColumnSidecar of dataColumnSidecars) {
+    // skip reserializing column if we already have it
+    const serialized = this.serializedCache.get(dataColumnSidecar);
+    if (serialized) {
+      binaryPuts.push({key: dataColumnSidecar.index, value: serialized});
+    } else {
+      nonbinaryPuts.push(dataColumnSidecar);
+    }
+  }
+
+  await Promise.all([
+    this.db.dataColumnSidecar.putManyBinary(blockRoot, binaryPuts),
+    this.db.dataColumnSidecar.putMany(blockRoot, nonbinaryPuts),
+  ]);
+
+  this.logger.debug("Persisted dataColumnSidecars to hot DB", {
+    slot,
+    root: blockRootHex,
+    dataColumnSidecars: dataColumnSidecars.length,
+    custodyColumns: custodyColumns.length,
+  });
 }
 
 export async function persistBlockInputs(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
