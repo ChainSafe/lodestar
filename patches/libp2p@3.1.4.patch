@@ -1,0 +1,56 @@
+diff --git a/dist/src/connection-monitor.js b/dist/src/connection-monitor.js
+index 40b0ddd14df0e524acac81e854f990fdb2e58bbb..b6d160e73b7f5e13c4b22fa89427ad9de0e1933b 100644
+--- a/dist/src/connection-monitor.js
++++ b/dist/src/connection-monitor.js
+@@ -40,10 +40,10 @@ export class ConnectionMonitor {
+             this.components.connectionManager.getConnections().forEach(conn => {
+                 Promise.resolve().then(async () => {
+                     let start = Date.now();
++                    const signal = this.timeout.getTimeoutSignal({
++                        signal: this.abortController?.signal
++                    });
+                     try {
+-                        const signal = this.timeout.getTimeoutSignal({
+-                            signal: this.abortController?.signal
+-                        });
+                         const stream = await conn.newStream(this.protocol, {
+                             signal,
+                             runOnLimitedConnection: true
+@@ -74,6 +74,9 @@ export class ConnectionMonitor {
+                         // protocol) so divide the time it took by two
+                         conn.rtt = (Date.now() - start) / 2;
+                     }
++                    finally {
++                        this.timeout.cleanUp(signal);
++                    }
+                 })
+                     .catch(err => {
+                     this.log.error('error during heartbeat - %e', err);
+diff --git a/src/connection-monitor.ts b/src/connection-monitor.ts
+index 1cf9cb010b58665eaf01bc163a25464e916e824b..da24eaa04cfaa2d4c63544c97046f5cff66eba05 100644
+--- a/src/connection-monitor.ts
++++ b/src/connection-monitor.ts
+@@ -96,10 +96,11 @@ export class ConnectionMonitor implements Startable {
+       this.components.connectionManager.getConnections().forEach(conn => {
+         Promise.resolve().then(async () => {
+           let start = Date.now()
++          const signal = this.timeout.getTimeoutSignal({
++            signal: this.abortController?.signal
++          })
++
+           try {
+-            const signal = this.timeout.getTimeoutSignal({
+-              signal: this.abortController?.signal
+-            })
+             const stream = await conn.newStream(this.protocol, {
+               signal,
+               runOnLimitedConnection: true
+@@ -132,6 +133,8 @@ export class ConnectionMonitor implements Startable {
+             // round trips (e.g. 1x for the mss header, then another for the
+             // protocol) so divide the time it took by two
+             conn.rtt = (Date.now() - start) / 2
++          } finally {
++            this.timeout.cleanUp(signal)
+           }
+         })
+           .catch(err => {

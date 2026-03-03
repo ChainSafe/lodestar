@@ -34,3 +34,8 @@ onlyBuiltDependencies:
   - esbuild
   - nx
   - ssh2
+
+patchedDependencies:
+  '@libp2p/prometheus-metrics@5.0.11': patches/@libp2p__prometheus-metrics@5.0.11.patch
+  '@libp2p/utils@7.0.11': patches/@libp2p__utils@7.0.11.patch
+  libp2p@3.1.4: patches/libp2p@3.1.4.patch

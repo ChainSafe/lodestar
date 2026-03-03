@@ -1,0 +1,25 @@
+diff --git a/dist/src/adaptive-timeout.js b/dist/src/adaptive-timeout.js
+index 858c422e48743b344758134486be32797ad40f1c..fac257bacafeafbc09e8d2f9b9b70d2917f648c3 100644
+--- a/dist/src/adaptive-timeout.js
++++ b/dist/src/adaptive-timeout.js
+@@ -46,6 +46,7 @@ export class AdaptiveTimeout {
+         return timeoutSignal;
+     }
+     cleanUp(signal) {
++        signal.clear();
+         const time = Date.now() - signal.start;
+         if (signal.aborted) {
+             this.failure.push(time);
+diff --git a/src/adaptive-timeout.ts b/src/adaptive-timeout.ts
+index 94264623bb640f5b6b55209b33f0c5e25bdc66be..b264b0fc1a0db733422cc8006b8a2ebf1c24038f 100644
+--- a/src/adaptive-timeout.ts
++++ b/src/adaptive-timeout.ts
+@@ -79,6 +79,8 @@ export class AdaptiveTimeout {
+   }
+ 
+   cleanUp (signal: AdaptiveTimeoutSignal): void {
++    signal.clear()
++
+     const time = Date.now() - signal.start
+ 
+     if (signal.aborted) {

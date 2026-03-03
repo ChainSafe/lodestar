@@ -1,0 +1,43 @@
+diff --git a/dist/src/index.js b/dist/src/index.js
+index 653d27b33d0c05e7c616f6e244bb1dc5cb36dd9b..de57e207796f64ccdef5039db8c5f3a3b64e8681 100644
+--- a/dist/src/index.js
++++ b/dist/src/index.js
+@@ -161,9 +161,13 @@ class PrometheusMetrics {
+      * in and out
+      */
+     _track(stream, name) {
+-        stream.addEventListener('message', (evt) => {
+-            this._incrementValue(`${name} received`, evt.data.byteLength);
+-        });
++        const dispatchEvent = stream.dispatchEvent.bind(stream);
++        stream.dispatchEvent = (evt) => {
++            if (evt.type === 'message') {
++                this._incrementValue(`${name} received`, evt.data.byteLength);
++            }
++            return dispatchEvent(evt);
++        };
+         const send = stream.send.bind(stream);
+         stream.send = (buf) => {
+             this._incrementValue(`${name} sent`, buf.byteLength);
+diff --git a/src/index.ts b/src/index.ts
+index 94a7b8512dc1a52709313c302848d580a17b7b8c..8a735a7154b33f9e883492dffdf0c02b022dd34b 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -236,9 +236,14 @@ class PrometheusMetrics implements Metrics {
+    * in and out
+    */
+   _track (stream: MessageStream, name: string): void {
+-    stream.addEventListener('message', (evt) => {
+-      this._incrementValue(`${name} received`, evt.data.byteLength)
+-    })
++    const dispatchEvent = stream.dispatchEvent.bind(stream)
++    stream.dispatchEvent = ((evt: Event) => {
++      if (evt.type === 'message') {
++        this._incrementValue(`${name} received`, (evt as MessageEvent<{ byteLength: number }>).data.byteLength)
++      }
++
++      return dispatchEvent(evt)
++    }) as typeof stream.dispatchEvent
+ 
+     const send = stream.send.bind(stream)
+     stream.send = (buf) => {
