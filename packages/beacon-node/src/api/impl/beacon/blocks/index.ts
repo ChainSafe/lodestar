@@ -48,6 +48,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
   computePreFuluKzgCommitmentsInclusionProof,
@@ -692,13 +693,12 @@ export function getBeaconBlockApi({
         // TODO GLOAS: will this api be used by builders or only for self-building?
       }
 
+      // Validate envelope (including signature verification) before processing
+      await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+
       const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
       if (!payloadInput) {
         throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
-      }
-
-      if (payloadInput.hasPayloadEnvelope()) {
-        throw new ApiError(409, `Payload envelope already received for block root ${blockRootHex}`);
       }
 
       payloadInput.addPayloadEnvelope({
@@ -724,7 +724,8 @@ export function getBeaconBlockApi({
       // The publishExecutionPayloadEnvelope spec says success = "gossip validation + broadcast", so we may
       // want to gossip first. Need spec clarification on whether import failure should prevent broadcast.
       if (payloadInput.isComplete()) {
-        await chain.importExecutionPayload(payloadInput);
+        // Signature already verified in validateApiExecutionPayloadEnvelope
+        await chain.importExecutionPayload(payloadInput, {validSignature: true});
         chain.persistPayloadEnvelope(payloadInput);
         chain.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
           slot,

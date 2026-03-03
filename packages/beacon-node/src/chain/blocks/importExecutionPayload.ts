@@ -1,17 +1,24 @@
+import {PublicKey} from "@chainsafe/blst";
 import {ForkName} from "@lodestar/params";
-import {CachedBeaconStateGloas} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateGloas,
+  createSingleSignatureSetFromComponents,
+  getExecutionPayloadEnvelopeSigningRoot,
+} from "@lodestar/state-transition";
 import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
+import {ImportPayloadOpts} from "./types.js";
 
 export enum PayloadErrorCode {
   EXECUTION_ENGINE_INVALID = "PAYLOAD_ERROR_EXECUTION_ENGINE_INVALID",
   EXECUTION_ENGINE_ERROR = "PAYLOAD_ERROR_EXECUTION_ENGINE_ERROR",
   BLOCK_NOT_IN_FORK_CHOICE = "PAYLOAD_ERROR_BLOCK_NOT_IN_FORK_CHOICE",
   STATE_TRANSITION_ERROR = "PAYLOAD_ERROR_STATE_TRANSITION_ERROR",
+  INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
 }
 
 export type PayloadErrorType =
@@ -32,6 +39,9 @@ export type PayloadErrorType =
   | {
       code: PayloadErrorCode.STATE_TRANSITION_ERROR;
       message: string;
+    }
+  | {
+      code: PayloadErrorCode.INVALID_SIGNATURE;
     };
 
 export class PayloadError extends Error {
@@ -62,7 +72,8 @@ export type ImportPayloadResult = {
  */
 export async function importExecutionPayload(
   this: BeaconChain,
-  payloadInput: PayloadEnvelopeInput
+  payloadInput: PayloadEnvelopeInput,
+  opts: ImportPayloadOpts = {}
 ): Promise<ImportPayloadResult> {
   const envelope = payloadInput.getPayloadEnvelope();
   const blockRootHex = payloadInput.blockRootHex;
@@ -88,7 +99,7 @@ export async function importExecutionPayload(
   // 3. Run verification steps in parallel (like verifyBlocksInEpoch)
   // Note: No data availability check needed here - importExecutionPayload is only
   // called when payloadInput.isComplete() is true, so all data is already available.
-  const [execResult, postPayloadResult] = await Promise.all([
+  const [execResult, signatureValid, postPayloadResult] = await Promise.all([
     // EL verification - notifyNewPayload
     this.executionEngine.notifyNewPayload(
       ForkName.gloas,
@@ -98,14 +109,26 @@ export async function importExecutionPayload(
       envelope.message.executionRequests
     ),
 
+    // Signature verification (skip if already verified during gossip/API validation)
+    opts.validSignature === true
+      ? Promise.resolve(true)
+      : (async () => {
+          const signatureSet = createSingleSignatureSetFromComponents(
+            PublicKey.fromBytes(blockState.builders.getReadonly(envelope.message.builderIndex).pubkey),
+            getExecutionPayloadEnvelopeSigningRoot(this.config, envelope.message),
+            envelope.signature
+          );
+          return this.bls.verifySignatureSets([signatureSet]);
+        })(),
+
     // Process execution payload envelope (state transition)
-    // Signature already verified during gossip/API validation, so pass verify=false.
-    // State root check is done manually below (matching block pipeline pattern).
+    // Signature verified separately above (matching block pipeline pattern).
+    // State root check is done separately below with better error typing (matching block pipeline pattern).
     (async () => {
       try {
         // Clone state to avoid mutating the cached state
         const mutableState = blockState.clone();
-        processExecutionPayloadEnvelope(mutableState, envelope, false);
+        processExecutionPayloadEnvelope(mutableState, envelope, {verifySignature: false, verifyStateRoot: false});
         return {postPayloadState: mutableState};
       } catch (e) {
         throw new PayloadError(
@@ -118,6 +141,11 @@ export async function importExecutionPayload(
       }
     })(),
   ]);
+
+  // 3b. Check signature verification result
+  if (!signatureValid) {
+    throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
+  }
 
   // 4. Handle EL response
   if (execResult.status === ExecutionPayloadStatus.INVALID) {

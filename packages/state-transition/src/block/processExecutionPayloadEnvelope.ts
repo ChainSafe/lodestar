@@ -17,13 +17,14 @@ import {processWithdrawalRequest} from "./processWithdrawalRequest.ts";
 export function processExecutionPayloadEnvelope(
   state: CachedBeaconStateGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-  verify: boolean
+  opts: {verifySignature?: boolean; verifyStateRoot?: boolean} = {}
 ): void {
+  const {verifySignature = true, verifyStateRoot = true} = opts;
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(envelope.slot);
 
-  if (verify && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
+  if (verifySignature && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
     throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
   }
 
@@ -58,7 +59,7 @@ export function processExecutionPayloadEnvelope(
   state.executionPayloadAvailability.set(state.slot % SLOTS_PER_HISTORICAL_ROOT, true);
   state.latestBlockHash = payload.blockHash;
 
-  if (verify && !byteArrayEquals(envelope.stateRoot, state.hashTreeRoot())) {
+  if (verifyStateRoot && !byteArrayEquals(envelope.stateRoot, state.hashTreeRoot())) {
     throw new Error(
       `Envelope's state root does not match state envelope=${toRootHex(envelope.stateRoot)} state=${toRootHex(state.hashTreeRoot())}`
     );

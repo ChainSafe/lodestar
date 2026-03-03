@@ -74,7 +74,7 @@ export function computeEnvelopeStateRoot(
   };
 
   const processEnvelopeTimer = metrics?.blockPayload.executionPayloadEnvelopeProcessingTime.startTimer();
-  processExecutionPayloadEnvelope(postBlockState, signedEnvelope, false);
+  processExecutionPayloadEnvelope(postBlockState, signedEnvelope, {verifySignature: false, verifyStateRoot: true});
   processEnvelopeTimer?.();
 
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({

@@ -623,7 +623,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // if (payloadInput) {
       //   payloadInput.addColumn({columnSidecar, source: BlockInputSource.gossip, seenTimestampSec, peerIdStr});
       //   if (payloadInput.isComplete()) {
-      //     await chain.importExecutionPayload(payloadInput);
+      //     // Signature already verified during gossip validation
+      //     await chain.importExecutionPayload(payloadInput, {validSignature: true});
       //     chain.persistPayloadEnvelope(payloadInput);
       //   }
       // }
@@ -868,7 +869,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
 
       if (payloadInput.isComplete()) {
-        await chain.importExecutionPayload(payloadInput);
+        await chain.importExecutionPayload(payloadInput, {validSignature: true});
         chain.persistPayloadEnvelope(payloadInput);
         chain.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
           slot,

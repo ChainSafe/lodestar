@@ -33,7 +33,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportPayloadResult} from "./blocks/importExecutionPayload.js";
-import {ImportBlockOpts} from "./blocks/types.js";
+import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
@@ -244,7 +244,7 @@ export interface IBeaconChain {
   processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
 
   /** Import execution payload envelope to EL and fork choice after data is available */
-  importExecutionPayload(payloadInput: PayloadEnvelopeInput): Promise<ImportPayloadResult>;
+  importExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<ImportPayloadResult>;
 
   /** Persist payload envelope to DB and prune from seen cache  */
   persistPayloadEnvelope(payloadInput: PayloadEnvelopeInput): Promise<void>;
