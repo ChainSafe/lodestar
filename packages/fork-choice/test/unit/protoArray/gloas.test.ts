@@ -632,6 +632,44 @@ describe("Gloas Fork Choice", () => {
       expect(fullNode?.weight).toBe(100);
     });
 
+    it("resolves orphan PENDING parent dynamically after parent import", () => {
+      // Import child first so it is initially orphaned.
+      const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02Root");
+      protoArray.onBlock(blockB, gloasForkSlot + 1, null);
+
+      const blockBPending = protoArray.getNodeIndexByRootAndStatus("0x03Root", PayloadStatus.PENDING);
+      if (blockBPending === undefined) {
+        throw new Error("Expected child PENDING variant to exist");
+      }
+      expect(protoArray.nodes[blockBPending].parent).toBeUndefined();
+
+      // Import parent later.
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      protoArray.onBlock(blockA, gloasForkSlot + 2, null);
+
+      const blockAEmpty = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.EMPTY);
+      if (blockAEmpty === undefined) {
+        throw new Error("Expected parent EMPTY variant to exist");
+      }
+
+      const deltas = new Array(protoArray.nodes.length).fill(0);
+      deltas[blockBPending] = 100;
+      protoArray.applyScoreChanges({
+        deltas,
+        proposerBoost: null,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+        currentSlot: gloasForkSlot + 2,
+      });
+
+      // Dynamic resolution should reconnect the orphaned child to parent EMPTY.
+      const parentWeight = getNodeByPayloadStatus(protoArray, "0x02Root", PayloadStatus.EMPTY)?.weight;
+      expect(parentWeight).toBe(100);
+      expect((protoArray as any).getParentNodeIndex((protoArray as any).nodes[blockBPending])).toBe(blockAEmpty);
+    });
+
     it("replays late best-descendant updates to higher ancestors", () => {
       const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
       blockA.executionStatus = ExecutionStatus.PayloadSeparated;
