@@ -298,11 +298,9 @@ export class ProtoArray {
 
     // Post-Gloas, check empty and full variants
     const fullNodeIndex = variantIndices[PayloadStatus.FULL];
-    if (fullNodeIndex !== undefined) {
-      const fullNode = this.nodes[fullNodeIndex];
-      if (fullNode && fullNode.executionPayloadBlockHash === blockHash) {
-        return fullNode;
-      }
+    const fullNode = fullNodeIndex !== undefined ? this.nodes[fullNodeIndex] : undefined;
+    if (fullNode && fullNode.executionPayloadBlockHash === blockHash) {
+      return fullNode;
     }
 
     const emptyNode = this.nodes[variantIndices[PayloadStatus.EMPTY]];
@@ -311,10 +309,10 @@ export class ProtoArray {
     }
 
     // If the hash matches the parent block's bid block hash, this references FULL.
-    // FULL can be missing before `onExecutionPayload`, return EMPTY as fallback.
+    // Prefer FULL when it exists, otherwise fallback to EMPTY before envelope import.
     const pendingNode = this.nodes[variantIndices[PayloadStatus.PENDING]];
     if (pendingNode?.blockHashFromBid === blockHash) {
-      return emptyNode ?? pendingNode;
+      return fullNode ?? emptyNode ?? pendingNode;
     }
 
     return null;
@@ -372,6 +370,11 @@ export class ProtoArray {
       this.finalizedRoot = finalizedRoot;
     }
 
+    // Deltas for parents that were already processed in the reverse walk.
+    // This happens when dynamic parent resolution points to a higher index
+    // (e.g. deferred FULL variant created after children).
+    const missedParentDeltas = new Map<number, number>();
+
     // Iterate backwards through all indices in this.nodes
     for (let nodeIndex = this.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
       const node = this.nodes[nodeIndex];
@@ -407,7 +410,7 @@ export class ProtoArray {
       node.weight += nodeDelta;
 
       // Update the parent delta (if any)
-      const parentIndex = node.parent;
+      const parentIndex = this.getParentNodeIndex(node);
       if (parentIndex !== undefined) {
         const parentDelta = deltas[parentIndex];
         if (parentDelta === undefined) {
@@ -419,7 +422,16 @@ export class ProtoArray {
 
         // back-propagate the nodes delta to its parent
         deltas[parentIndex] += nodeDelta;
+
+        // Parent already processed in this reverse walk, apply later.
+        if (parentIndex > nodeIndex) {
+          missedParentDeltas.set(parentIndex, (missedParentDeltas.get(parentIndex) ?? 0) + nodeDelta);
+        }
       }
+    }
+
+    if (missedParentDeltas.size > 0) {
+      this.applyMissedParentDeltas(missedParentDeltas, deltas);
     }
 
     // A second time, iterate backwards through all indices in `this.nodes`.
@@ -437,13 +449,57 @@ export class ProtoArray {
       }
 
       // If the node has a parent, try to update its best-child and best-descendant.
-      const parentIndex = node.parent;
+      const parentIndex = this.getParentNodeIndex(node);
       if (parentIndex !== undefined) {
         this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, proposerBoost?.root ?? null);
       }
     }
     // Update the previous proposer boost
     this.previousProposerBoost = proposerBoost;
+  }
+
+  /**
+   * Apply deferred deltas for parent links that point to higher node indices.
+   * This keeps weight propagation correct when dynamic parent resolution rewires
+   * edges after FULL variant materialization.
+   */
+  private applyMissedParentDeltas(missedParentDeltas: Map<number, number>, deltas: number[]): void {
+    while (missedParentDeltas.size > 0) {
+      const entry = missedParentDeltas.entries().next().value;
+      if (entry === undefined) {
+        break;
+      }
+
+      const [nodeIndex, nodeDelta] = entry;
+      missedParentDeltas.delete(nodeIndex);
+      if (nodeDelta === 0) {
+        continue;
+      }
+
+      const node = this.nodes[nodeIndex];
+      if (node === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+          index: nodeIndex,
+        });
+      }
+
+      node.weight += nodeDelta;
+
+      const parentIndex = this.getParentNodeIndex(node);
+      if (parentIndex !== undefined) {
+        const parentDelta = deltas[parentIndex];
+        if (parentDelta === undefined) {
+          throw new ProtoArrayError({
+            code: ProtoArrayErrorCode.INVALID_PARENT_DELTA,
+            index: parentIndex,
+          });
+        }
+
+        deltas[parentIndex] += nodeDelta;
+        missedParentDeltas.set(parentIndex, (missedParentDeltas.get(parentIndex) ?? 0) + nodeDelta);
+      }
+    }
   }
 
   /**
@@ -1520,7 +1576,16 @@ export class ProtoArray {
    * Returns undefined if parent doesn't exist or can't be found
    */
   private getParentNodeIndex(node: ProtoNode): number | undefined {
+    if (node.parent === undefined) {
+      return undefined;
+    }
+
     if (isGloasBlock(node)) {
+      // Unknown parent (orphan) case
+      if (!this.indices.has(node.parentRoot)) {
+        return undefined;
+      }
+
       // Use getParentPayloadStatus for Gloas blocks to get correct EMPTY/FULL variant
       const parentPayloadStatus = this.getParentPayloadStatus(node);
       return this.getParentIndexByPayloadStatus(node.parentRoot, parentPayloadStatus);

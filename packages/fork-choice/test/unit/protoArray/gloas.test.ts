@@ -551,6 +551,59 @@ describe("Gloas Fork Choice", () => {
       expect(matchedParent?.payloadStatus).toBe(PayloadStatus.EMPTY);
       expect(matchedParent?.blockRoot).toBe("0x02Root");
     });
+
+    it("getBlockHexAndBlockHash() returns FULL for bid block hash once FULL exists", () => {
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      blockA.executionStatus = ExecutionStatus.PayloadSeparated;
+      blockA.blockHashFromBid = "0x02BidHash";
+      blockA.builderIndex = 1;
+      protoArray.onBlock(blockA, gloasForkSlot, null);
+      protoArray.onExecutionPayload("0x02Root", gloasForkSlot + 1, "0x02BidHash", gloasForkSlot, stateRoot, null);
+
+      const matchedParent = protoArray.getBlockHexAndBlockHash("0x02Root", "0x02BidHash");
+      expect(matchedParent).not.toBeNull();
+      expect(matchedParent?.payloadStatus).toBe(PayloadStatus.FULL);
+      expect(matchedParent?.blockRoot).toBe("0x02Root");
+    });
+
+    it("propagates deferred child weight to FULL parent after payload arrival", () => {
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      blockA.executionStatus = ExecutionStatus.PayloadSeparated;
+      blockA.blockHashFromBid = "0x02BidHash";
+      blockA.builderIndex = 1;
+      protoArray.onBlock(blockA, gloasForkSlot, null);
+
+      // Block B references A's FULL via bid hash before A FULL exists.
+      const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02BidHash");
+      protoArray.onBlock(blockB, gloasForkSlot + 1, null);
+
+      // Materialize A FULL later.
+      protoArray.onExecutionPayload("0x02Root", gloasForkSlot + 2, "0x02BidHash", gloasForkSlot, stateRoot, null);
+
+      const blockBPending = protoArray.getNodeIndexByRootAndStatus("0x03Root", PayloadStatus.PENDING);
+      const blockAEmpty = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.EMPTY);
+      const blockAFull = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.FULL);
+      if (blockBPending === undefined || blockAEmpty === undefined || blockAFull === undefined) {
+        throw new Error("Expected block variants to exist");
+      }
+
+      const deltas = new Array(protoArray.nodes.length).fill(0);
+      deltas[blockBPending] = 100;
+      protoArray.applyScoreChanges({
+        deltas,
+        proposerBoost: null,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+        currentSlot: gloasForkSlot + 2,
+      });
+
+      const emptyNode = getNodeByPayloadStatus(protoArray, "0x02Root", PayloadStatus.EMPTY);
+      const fullNode = getNodeByPayloadStatus(protoArray, "0x02Root", PayloadStatus.FULL);
+      expect(emptyNode?.weight).toBe(0);
+      expect(fullNode?.weight).toBe(100);
+    });
   });
 
   describe("Explicit EMPTY vs FULL tiebreaker for recent slots", () => {
