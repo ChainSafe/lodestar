@@ -420,7 +420,13 @@ export class ProtoArray {
           const previousWeight = node.weight - nodeDelta;
 
           if (previousParentIndex !== undefined) {
-            this.backPropagateDeltaToParent(previousParentIndex, nodeIndex, -previousWeight, deltas, missedParentDeltas);
+            this.backPropagateDeltaToParent(
+              previousParentIndex,
+              nodeIndex,
+              -previousWeight,
+              deltas,
+              missedParentDeltas
+            );
           }
 
           if (parentIndex !== undefined) {
