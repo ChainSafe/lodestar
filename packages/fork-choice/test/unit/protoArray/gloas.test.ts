@@ -818,6 +818,26 @@ describe("Gloas Fork Choice", () => {
       // Core regression: A PENDING must be replayed to reflect A FULL's new best-descendant.
       expect(protoArray.nodes[blockAPending].bestDescendant).toBe(blockAFullBestDescendant);
     });
+
+    it("ancestor traversal returns inter-block variants only (no PENDING duplicates)", () => {
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      blockA.executionStatus = ExecutionStatus.PayloadSeparated;
+      blockA.blockHashFromBid = "0x02BidHash";
+      blockA.builderIndex = 1;
+      protoArray.onBlock(blockA, gloasForkSlot, null);
+      protoArray.onExecutionPayload("0x02Root", gloasForkSlot + 1, "0x02BidHash", gloasForkSlot, stateRoot, null);
+
+      const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02BidHash");
+      protoArray.onBlock(blockB, gloasForkSlot + 1, null);
+
+      const ancestors = protoArray.getAllAncestorNodes("0x03Root");
+      expect(ancestors.length).toBeGreaterThan(0);
+      expect(ancestors.every((n) => n.payloadStatus !== PayloadStatus.PENDING)).toBe(true);
+
+      // Ensure no duplicate roots from intra-block FULL/EMPTY -> PENDING hops.
+      const roots = ancestors.map((n) => n.blockRoot);
+      expect(new Set(roots).size).toBe(roots.length);
+    });
   });
 
   describe("Explicit EMPTY vs FULL tiebreaker for recent slots", () => {

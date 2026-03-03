@@ -1741,10 +1741,9 @@ export class ProtoArray {
   }
 
   /**
-   * Get the parent node index for traversal
-   * For Gloas blocks: returns the correct EMPTY/FULL variant based on parent payload status
-   * For pre-Gloas blocks: returns the simple parent index
-   * Returns undefined if parent doesn't exist or can't be found
+   * Get parent node index for score propagation / best-link updates.
+   * For Gloas EMPTY/FULL keep intra-block edge (-> own PENDING).
+   * For Gloas PENDING resolve inter-block parent variant dynamically.
    */
   private getParentNodeIndex(node: ProtoNode): number | undefined {
     if (!isGloasBlock(node)) {
@@ -1763,6 +1762,25 @@ export class ProtoArray {
     }
 
     // Use getParentPayloadStatus for Gloas PENDING nodes to get correct EMPTY/FULL parent variant.
+    const parentPayloadStatus = this.getParentPayloadStatus(node);
+    return this.getParentIndexByPayloadStatus(node.parentRoot, parentPayloadStatus);
+  }
+
+  /**
+   * Get parent node index for ancestor traversal.
+   * For Gloas blocks this always resolves inter-block parent variant (EMPTY/FULL),
+   * never the intra-block EMPTY/FULL -> PENDING edge.
+   */
+  private getAncestorParentNodeIndex(node: ProtoNode): number | undefined {
+    if (!isGloasBlock(node)) {
+      return node.parent;
+    }
+
+    // Unknown parent (orphan) case.
+    if (!this.indices.has(node.parentRoot)) {
+      return undefined;
+    }
+
     const parentPayloadStatus = this.getParentPayloadStatus(node);
     return this.getParentIndexByPayloadStatus(node.parentRoot, parentPayloadStatus);
   }
@@ -1799,8 +1817,8 @@ export class ProtoArray {
    * Handles fork transition from Gloas to pre-Gloas blocks
    */
   *iterateAncestorNodesFromNode(node: ProtoNode): IterableIterator<ProtoNode> {
-    while (node.parent !== undefined) {
-      const parentIndex = this.getParentNodeIndex(node);
+    while (true) {
+      const parentIndex = this.getAncestorParentNodeIndex(node);
       if (parentIndex === undefined) {
         break;
       }
@@ -1841,8 +1859,8 @@ export class ProtoArray {
       nodes.push(node);
     }
 
-    while (node.parent !== undefined) {
-      const parentIndex = this.getParentNodeIndex(node);
+    while (true) {
+      const parentIndex = this.getAncestorParentNodeIndex(node);
       if (parentIndex === undefined) {
         break;
       }
@@ -1884,8 +1902,8 @@ export class ProtoArray {
     // For both Gloas and pre-Gloas blocks
     const result: ProtoNode[] = [];
     let nodeIndex = startIndex;
-    while (node.parent !== undefined) {
-      const parentIndex = this.getParentNodeIndex(node);
+    while (true) {
+      const parentIndex = this.getAncestorParentNodeIndex(node);
       if (parentIndex === undefined) {
         break;
       }
@@ -1934,8 +1952,8 @@ export class ProtoArray {
     }
 
     let nodeIndex = startIndex;
-    while (node.parent !== undefined) {
-      const parentIndex = this.getParentNodeIndex(node);
+    while (true) {
+      const parentIndex = this.getAncestorParentNodeIndex(node);
       if (parentIndex === undefined) {
         break;
       }
