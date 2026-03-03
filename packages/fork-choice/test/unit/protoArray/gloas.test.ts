@@ -631,6 +631,48 @@ describe("Gloas Fork Choice", () => {
       expect(emptyNode?.weight).toBe(0);
       expect(fullNode?.weight).toBe(100);
     });
+
+    it("replays late best-descendant updates to higher ancestors", () => {
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      blockA.executionStatus = ExecutionStatus.PayloadSeparated;
+      blockA.blockHashFromBid = "0x02BidHash";
+      blockA.builderIndex = 1;
+      protoArray.onBlock(blockA, gloasForkSlot, null);
+
+      // Block B references A's FULL before A FULL exists.
+      const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02BidHash");
+      protoArray.onBlock(blockB, gloasForkSlot + 1, null);
+
+      // Materialize A FULL at a later index.
+      protoArray.onExecutionPayload("0x02Root", gloasForkSlot + 2, "0x02BidHash", gloasForkSlot, stateRoot, null);
+
+      const blockBPending = protoArray.getNodeIndexByRootAndStatus("0x03Root", PayloadStatus.PENDING);
+      const blockBEmpty = protoArray.getNodeIndexByRootAndStatus("0x03Root", PayloadStatus.EMPTY);
+      const blockAPending = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.PENDING);
+      const blockAFull = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.FULL);
+      if (blockBPending === undefined || blockBEmpty === undefined || blockAPending === undefined || blockAFull === undefined) {
+        throw new Error("Expected block variants to exist");
+      }
+
+      const deltas = new Array(protoArray.nodes.length).fill(0);
+      deltas[blockBPending] = 100;
+      protoArray.applyScoreChanges({
+        deltas,
+        proposerBoost: null,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+        currentSlot: gloasForkSlot + 2,
+      });
+
+      // A FULL should pick one of B's variants as best descendant.
+      const blockAFullBestDescendant = protoArray.nodes[blockAFull].bestDescendant;
+      expect([blockBPending, blockBEmpty]).toContain(blockAFullBestDescendant);
+
+      // Core regression: A PENDING must be replayed to reflect A FULL's new best-descendant.
+      expect(protoArray.nodes[blockAPending].bestDescendant).toBe(blockAFullBestDescendant);
+    });
   });
 
   describe("Explicit EMPTY vs FULL tiebreaker for recent slots", () => {

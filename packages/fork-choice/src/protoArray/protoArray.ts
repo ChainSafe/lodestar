@@ -434,6 +434,10 @@ export class ProtoArray {
       this.applyMissedParentDeltas(missedParentDeltas, deltas);
     }
 
+    // Parents that changed after they were already processed in this reverse walk.
+    // Their ancestors need a replay step to refresh bestChild/bestDescendant.
+    const lateBestDescendantChildren = new Set<number>();
+
     // A second time, iterate backwards through all indices in `this.nodes`.
     //
     // We _must_ perform these functions separate from the weight-updating loop above to ensure
@@ -451,9 +455,29 @@ export class ProtoArray {
       // If the node has a parent, try to update its best-child and best-descendant.
       const parentIndex = this.getParentNodeIndex(node);
       if (parentIndex !== undefined) {
+        const parentNode = this.nodes[parentIndex];
+        if (parentNode === undefined) {
+          throw new ProtoArrayError({
+            code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+            index: parentIndex,
+          });
+        }
+        const prevBestChild = parentNode.bestChild;
+        const prevBestDescendant = parentNode.bestDescendant;
         this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, proposerBoost?.root ?? null);
+        if (
+          parentIndex > nodeIndex &&
+          (parentNode.bestChild !== prevBestChild || parentNode.bestDescendant !== prevBestDescendant)
+        ) {
+          lateBestDescendantChildren.add(parentIndex);
+        }
       }
     }
+
+    if (lateBestDescendantChildren.size > 0) {
+      this.propagateLateBestDescendantUpdates(lateBestDescendantChildren, currentSlot, proposerBoost?.root ?? null);
+    }
+
     // Update the previous proposer boost
     this.previousProposerBoost = proposerBoost;
   }
@@ -498,6 +522,60 @@ export class ProtoArray {
 
         deltas[parentIndex] += nodeDelta;
         missedParentDeltas.set(parentIndex, (missedParentDeltas.get(parentIndex) ?? 0) + nodeDelta);
+      }
+    }
+  }
+
+  /**
+   * Replay best-child / best-descendant propagation upward for nodes that were
+   * updated after their ancestors had already been processed in reverse order.
+   */
+  private propagateLateBestDescendantUpdates(
+    startChildren: Set<number>,
+    currentSlot: Slot,
+    proposerBoostRoot: RootHex | null
+  ): void {
+    const queue = [...startChildren];
+    const inQueue = new Set(queue);
+
+    while (queue.length > 0) {
+      const childIndex = queue.shift();
+      if (childIndex === undefined) {
+        break;
+      }
+      inQueue.delete(childIndex);
+
+      const childNode = this.nodes[childIndex];
+      if (childNode === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+          index: childIndex,
+        });
+      }
+
+      const parentIndex = this.getParentNodeIndex(childNode);
+      if (parentIndex === undefined) {
+        continue;
+      }
+
+      const parentNode = this.nodes[parentIndex];
+      if (parentNode === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+          index: parentIndex,
+        });
+      }
+
+      const prevBestChild = parentNode.bestChild;
+      const prevBestDescendant = parentNode.bestDescendant;
+      this.maybeUpdateBestChildAndDescendant(parentIndex, childIndex, currentSlot, proposerBoostRoot);
+
+      if (
+        (parentNode.bestChild !== prevBestChild || parentNode.bestDescendant !== prevBestDescendant) &&
+        !inQueue.has(parentIndex)
+      ) {
+        queue.push(parentIndex);
+        inQueue.add(parentIndex);
       }
     }
   }
