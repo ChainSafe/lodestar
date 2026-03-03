@@ -73,30 +73,6 @@ export async function createNodeJsLibp2p(
     noiseCrypto.chaCha20Poly1305Encrypt = asCrypto.chaCha20Poly1305Encrypt;
   }
 
-  const libp2pMetrics = nodeJsLibp2pOpts.metrics
-    ? (components: LodestarComponents) => {
-        const metrics = prometheusMetrics({
-          collectDefaultMetrics: false,
-          preserveExistingMetrics: true,
-          registry: nodeJsLibp2pOpts.metricsRegistry,
-        })(components);
-
-        // Work around identify EOF race:
-        // `trackProtocolStream` attaches a `message` listener immediately after protocol
-        // negotiation. For `/ipfs/id/1.0.0`, identify() adds its own reader later and can
-        // miss the first response frame when metrics listener drains events first.
-        const originalTrackProtocolStream = metrics.trackProtocolStream.bind(metrics);
-        metrics.trackProtocolStream = ((stream) => {
-          if (stream.protocol === "/ipfs/id/1.0.0") {
-            return;
-          }
-          originalTrackProtocolStream(stream);
-        }) as typeof metrics.trackProtocolStream;
-
-        return metrics;
-      }
-    : undefined;
-
   return createLibp2p({
     privateKey,
     nodeInfo: {
@@ -125,7 +101,13 @@ export async function createNodeJsLibp2p(
     ],
     streamMuxers: [mplex({disconnectThreshold})],
     peerDiscovery,
-    metrics: libp2pMetrics,
+    metrics: nodeJsLibp2pOpts.metrics
+      ? prometheusMetrics({
+          collectDefaultMetrics: false,
+          preserveExistingMetrics: true,
+          registry: nodeJsLibp2pOpts.metricsRegistry,
+        })
+      : undefined,
     connectionManager: {
       // dialer config
       maxParallelDials: 100,
