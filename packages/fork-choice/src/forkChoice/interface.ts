@@ -189,7 +189,7 @@ export interface IForkChoice {
    * @param ptcIndices - Array of PTC committee indices that voted
    * @param payloadPresent - Whether validators attest the payload is present
    */
-  notifyPtcMessage(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void;
+  notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void;
   /**
    * Notify fork choice that an execution payload has arrived (Gloas fork)
    * Creates the FULL variant of a Gloas block when the payload becomes available

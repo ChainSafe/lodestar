@@ -230,6 +230,32 @@ export async function importBlock(
     }
   }
 
+  // 4.5. Import payload attestations to fork choice (Gloas)
+  //
+  if (isGloasBeaconBlock(block.message)) {
+    for (const payloadAttestation of block.message.body.payloadAttestations) {
+      try {
+        // Extract PTC indices from aggregation bits
+        const ptcIndices: number[] = [];
+        for (let i = 0; i < payloadAttestation.aggregationBits.bitLen; i++) {
+          if (payloadAttestation.aggregationBits.get(i)) {
+            ptcIndices.push(i);
+          }
+        }
+
+        if (ptcIndices.length > 0) {
+          this.forkChoice.notifyPtcMessages(
+            toRootHex(payloadAttestation.data.beaconBlockRoot),
+            ptcIndices,
+            payloadAttestation.data.payloadPresent
+          );
+        }
+      } catch (e) {
+        this.logger.warn("Error processing PayloadAttestation from block", {slot: blockSlot}, e as Error);
+      }
+    }
+  }
+
   // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
   const oldHead = this.forkChoice.getHead();

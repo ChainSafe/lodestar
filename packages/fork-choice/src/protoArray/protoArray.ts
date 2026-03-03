@@ -64,10 +64,10 @@ export class ProtoArray {
    * Maps block root to boolean array of size PTC_SIZE (from params: 512 mainnet, 2 minimal)
    * Spec: gloas/fork-choice.md#modified-store (line 148)
    *
-   * ptcVote[blockRoot][i] = true if PTC member i voted payload_present=true
+   * ptcVotes[blockRoot][i] = true if PTC member i voted payload_present=true
    * Used by is_payload_timely() to determine if payload is timely
    */
-  private ptcVote = new Map<RootHex, boolean[]>();
+  private ptcVotes = new Map<RootHex, boolean[]>();
 
   constructor({
     pruneThreshold,
@@ -406,9 +406,7 @@ export class ProtoArray {
       });
     }
 
-    const isGloas = isGloasBlock(block);
-
-    if (isGloas) {
+    if (isGloasBlock(block)) {
       // Gloas: Create PENDING + EMPTY nodes with correct parent relationships
       // Parent of new PENDING node = parent block's EMPTY or FULL (inter-block edge)
       // Parent of new EMPTY node = own PENDING node (intra-block edge)
@@ -478,7 +476,7 @@ export class ProtoArray {
 
       // Initialize PTC votes for this block (all false initially)
       // Spec: gloas/fork-choice.md#modified-on_block (line 645)
-      this.ptcVote.set(block.blockRoot, new Array(PTC_SIZE).fill(false));
+      this.ptcVotes.set(block.blockRoot, new Array(PTC_SIZE).fill(false));
     } else {
       // Pre-Gloas: Only create FULL node (payload embedded in block)
       const node: ProtoNode = {
@@ -595,8 +593,8 @@ export class ProtoArray {
    * @param ptcIndices - Array of PTC committee indices that voted (0..PTC_SIZE-1)
    * @param payloadPresent - Whether the validators attest the payload is present
    */
-  notifyPtcMessage(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void {
-    const votes = this.ptcVote.get(blockRoot);
+  notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void {
+    const votes = this.ptcVotes.get(blockRoot);
     if (votes === undefined) {
       // Block not found or not a Gloas block, ignore
       return;
@@ -624,7 +622,7 @@ export class ProtoArray {
    * @param blockRoot - The beacon block root to check
    */
   isPayloadTimely(blockRoot: RootHex): boolean {
-    const votes = this.ptcVote.get(blockRoot);
+    const votes = this.ptcVotes.get(blockRoot);
     if (votes === undefined) {
       // Block not found or not a Gloas block
       return false;
@@ -1071,7 +1069,7 @@ export class ProtoArray {
       this.indices.delete(root);
       // Prune PTC votes for this block to prevent memory leak
       // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
-      this.ptcVote.delete(root);
+      this.ptcVotes.delete(root);
     }
 
     // Store nodes prior to finalization

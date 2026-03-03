@@ -21,21 +21,6 @@ describe("Gloas Fork Choice", () => {
     blockRoot: RootHex,
     payloadStatus: PayloadStatus
   ): ProtoNode | undefined {
-    // const variants = (protoArray as any).indices.get(blockRoot);
-    // if (!variants) return undefined;
-
-    // // For pre-Gloas, variants[0] contains FULL index
-    // if (variants.length === 1) {
-    //   // Pre-Gloas block only has FULL variant
-    //   // Only return if requested payloadStatus is FULL
-    //   if (payloadStatus === PayloadStatus.FULL) {
-    //     return (protoArray as any).nodes[variants[0]];
-    //   }
-    //   return undefined;
-    // }
-
-    // // For post-Gloas, variants[payloadStatus] contains the index for that status
-    // const index = variants[payloadStatus];
     const index = protoArray.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
     if (index === undefined) return undefined;
     return (protoArray as any).nodes[index];
@@ -354,7 +339,7 @@ describe("Gloas Fork Choice", () => {
       });
     });
 
-    it("notifyPtcMessage() updates votes for multiple validators", () => {
+    it("notifyPtcMessages() updates votes for multiple validators", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
 
@@ -362,25 +347,25 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
 
       // Vote yes from validators at indices 0, 1, 2
-      protoArray.notifyPtcMessage("0x02", [0, 1, 2], true);
+      protoArray.notifyPtcMessages("0x02", [0, 1, 2], true);
 
       // Still not timely (need >50% of PTC_SIZE)
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
     });
 
-    it("notifyPtcMessage() validates ptcIndex range", () => {
+    it("notifyPtcMessages() validates ptcIndex range", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
 
-      expect(() => protoArray.notifyPtcMessage("0x02", [-1], true)).toThrow(/Invalid PTC index/);
-      expect(() => protoArray.notifyPtcMessage("0x02", [PTC_SIZE], true)).toThrow(/Invalid PTC index/);
-      expect(() => protoArray.notifyPtcMessage("0x02", [PTC_SIZE + 1], true)).toThrow(/Invalid PTC index/);
-      expect(() => protoArray.notifyPtcMessage("0x02", [0, 1, PTC_SIZE], true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", [-1], true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", [PTC_SIZE], true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", [PTC_SIZE + 1], true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", [0, 1, PTC_SIZE], true)).toThrow(/Invalid PTC index/);
     });
 
-    it("notifyPtcMessage() handles unknown block gracefully", () => {
+    it("notifyPtcMessages() handles unknown block gracefully", () => {
       // Should not throw for unknown block
-      expect(() => protoArray.notifyPtcMessage("0x99", [0], true)).not.toThrow();
+      expect(() => protoArray.notifyPtcMessages("0x99", [0], true)).not.toThrow();
     });
 
     it("isPayloadTimely() returns false when payload not locally available", () => {
@@ -390,7 +375,7 @@ describe("Gloas Fork Choice", () => {
       // Vote yes from majority of PTC
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessage("0x02", indices, true);
+      protoArray.notifyPtcMessages("0x02", indices, true);
 
       // Without execution payload (no FULL variant), should return false
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
@@ -406,7 +391,7 @@ describe("Gloas Fork Choice", () => {
       // Vote yes from majority of PTC (>50%)
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessage("0x02", indices, true);
+      protoArray.notifyPtcMessages("0x02", indices, true);
 
       // Should now be timely
       expect(protoArray.isPayloadTimely("0x02")).toBe(true);
@@ -422,7 +407,7 @@ describe("Gloas Fork Choice", () => {
       // Vote yes from exactly 50% (not >50%)
       const threshold = Math.floor(PTC_SIZE / 2);
       const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessage("0x02", indices, true);
+      protoArray.notifyPtcMessages("0x02", indices, true);
 
       // Should not be timely (need >50%, not >=50%)
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
@@ -439,16 +424,16 @@ describe("Gloas Fork Choice", () => {
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
       // Vote yes from indices 0..threshold-1
       const yesIndices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessage("0x02", yesIndices, true);
+      protoArray.notifyPtcMessages("0x02", yesIndices, true);
       // Vote no from indices threshold..PTC_SIZE-1
       const noIndices = Array.from({length: PTC_SIZE - threshold}, (_, i) => i + threshold);
-      protoArray.notifyPtcMessage("0x02", noIndices, false);
+      protoArray.notifyPtcMessages("0x02", noIndices, false);
 
       // Should be timely (threshold met)
       expect(protoArray.isPayloadTimely("0x02")).toBe(true);
 
       // Change some yes votes to no
-      protoArray.notifyPtcMessage("0x02", [0, 1], false);
+      protoArray.notifyPtcMessages("0x02", [0, 1], false);
 
       // Should no longer be timely
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
@@ -465,8 +450,8 @@ describe("Gloas Fork Choice", () => {
       // Pre-Gloas blocks should not have PTC tracking
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
 
-      // notifyPtcMessage should be no-op
-      expect(() => protoArray.notifyPtcMessage("0x02", [0], true)).not.toThrow();
+      // notifyPtcMessages should be no-op
+      expect(() => protoArray.notifyPtcMessages("0x02", [0], true)).not.toThrow();
     });
   });
 
