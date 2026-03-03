@@ -1,6 +1,6 @@
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
-import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
+import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
 /**
@@ -115,7 +115,13 @@ export async function persistBlockInput(this: BeaconChain, blockInput: IBlockInp
       this.seenBlockInputCache.prune(blockInput.blockRootHex);
       // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable.
       // Clear here (after the DB write) so that writeBlockInputToDb can still use the cached serialized bytes.
-      this.serializedCache.clear();
+      //
+      // For Gloas (BlockInputNoData), the execution payload and columns arrive separately after the beacon block.
+      // Do NOT clear the cache here — it must remain available for writeDataColumnsToDb when the payload arrives.
+      // The cache is cleared in the Gloas payload persistence path instead.
+      if (!isBlockInputNoData(blockInput)) {
+        this.serializedCache.clear();
+      }
       this.logger.debug("Pruned block input", {
         slot: blockInput.slot,
         root: blockInput.blockRootHex,
