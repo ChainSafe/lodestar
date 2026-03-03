@@ -4,6 +4,7 @@ import {GossipActionError} from "./gossipValidation.js";
 export enum ExecutionPayloadEnvelopeErrorCode {
   BELONG_TO_FINALIZED_BLOCK = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BELONG_TO_FINALIZED_BLOCK",
   BLOCK_ROOT_UNKNOWN = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_ROOT_UNKNOWN",
+  PARENT_UNKNOWN = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PARENT_UNKNOWN",
   ENVELOPE_ALREADY_KNOWN = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_ALREADY_KNOWN",
   INVALID_BLOCK = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_BLOCK",
   SLOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_SLOT_MISMATCH",
@@ -15,6 +16,7 @@ export enum ExecutionPayloadEnvelopeErrorCode {
 export type ExecutionPayloadEnvelopeErrorType =
   | {code: ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK; envelopeSlot: Slot; finalizedSlot: Slot}
   | {code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN; blockRoot: RootHex}
+  | {code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN; parentRoot: RootHex; slot: Slot}
   | {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN;
       blockRoot: RootHex;

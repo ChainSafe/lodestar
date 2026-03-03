@@ -9,6 +9,7 @@ import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
@@ -35,8 +36,6 @@ async function validateExecutionPayloadEnvelope(
   // [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
-  // TODO GLOAS: Need to review this, we should queue the envelope for later
-  // processing if the block is not yet known, otherwise we would ignore it here
   const block = chain.forkChoice.getBlock(envelope.beaconBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
@@ -109,9 +108,28 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
-  const state = chain.getHeadState() as CachedBeaconStateGloas;
+  const parentRoot = block.parentRoot;
+  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  if (parentBlock === null) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN,
+      parentRoot,
+      slot: envelope.slot,
+    });
+  }
+
+  const blockState = await chain.regen
+    .getBlockSlotState(parentBlock, block.slot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
+    .catch(() => {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+        code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN,
+        parentRoot,
+        slot: envelope.slot,
+      });
+    });
+
   const signatureSet = createSingleSignatureSetFromComponents(
-    PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey),
+    PublicKey.fromBytes((blockState as CachedBeaconStateGloas).builders.getReadonly(envelope.builderIndex).pubkey),
     getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
     executionPayloadEnvelope.signature
   );
