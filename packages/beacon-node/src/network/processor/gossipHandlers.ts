@@ -622,7 +622,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
       // if (payloadInput) {
       //   payloadInput.addColumn({columnSidecar, source: BlockInputSource.gossip, seenTimestampSec, peerIdStr});
-      //   if (payloadInput.isComplete()) {
+      //   if (payloadInput.shouldImport()) {
       //     // Signature already verified during gossip validation
       //     await chain.importExecutionPayload(payloadInput, {validSignature: true});
       //     chain.persistPayloadEnvelope(payloadInput);
@@ -868,7 +868,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         peerIdStr,
       });
 
-      if (payloadInput.isComplete()) {
+      if (payloadInput.shouldImport()) {
         await chain.importExecutionPayload(payloadInput, {validSignature: true});
         chain.persistPayloadEnvelope(payloadInput);
         chain.emitter.emit(routes.events.EventType.executionPayloadAvailable, {

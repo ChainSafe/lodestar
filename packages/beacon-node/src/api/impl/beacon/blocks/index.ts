@@ -723,7 +723,7 @@ export function getBeaconBlockApi({
       // TODO GLOAS: Unlike publishBlock which gossips and imports in parallel, we import before gossip here.
       // The publishExecutionPayloadEnvelope spec says success = "gossip validation + broadcast", so we may
       // want to gossip first. Need spec clarification on whether import failure should prevent broadcast.
-      if (payloadInput.isComplete()) {
+      if (payloadInput.shouldImport()) {
         // Signature already verified in validateApiExecutionPayloadEnvelope
         await chain.importExecutionPayload(payloadInput, {validSignature: true});
         chain.persistPayloadEnvelope(payloadInput);

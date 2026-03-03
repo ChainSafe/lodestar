@@ -72,6 +72,9 @@ export class PayloadEnvelopeInput {
   private readonly sampledColumns: ColumnIndex[];
   private readonly custodyColumns: ColumnIndex[];
 
+  /** Guard against double import - only one caller can claim the import */
+  private importClaimed = false;
+
   private timeCreatedSec: number;
 
   // Promise for waiting
@@ -226,17 +229,22 @@ export class PayloadEnvelopeInput {
   getSampledColumns(): gloas.DataColumnSidecars {
     return this.sampledColumns
       .filter((idx) => this.columnsCache.has(idx))
-      .map((idx) => this.columnsCache.get(idx)!.columnSidecar);
+      .map((idx) => this.columnsCache.get(idx)?.columnSidecar)
+      .filter((col): col is gloas.DataColumnSidecar => col !== undefined);
   }
 
   getSampledColumnsWithSource(): ColumnWithSource[] {
-    return this.sampledColumns.filter((idx) => this.columnsCache.has(idx)).map((idx) => this.columnsCache.get(idx)!);
+    return this.sampledColumns
+      .filter((idx) => this.columnsCache.has(idx))
+      .map((idx) => this.columnsCache.get(idx))
+      .filter((col): col is ColumnWithSource => col !== undefined);
   }
 
   getCustodyColumns(): gloas.DataColumnSidecars {
     return this.custodyColumns
       .filter((idx) => this.columnsCache.has(idx))
-      .map((idx) => this.columnsCache.get(idx)!.columnSidecar);
+      .map((idx) => this.columnsCache.get(idx)?.columnSidecar)
+      .filter((col): col is gloas.DataColumnSidecar => col !== undefined);
   }
 
   getTimeCreated(): number {
@@ -250,6 +258,20 @@ export class PayloadEnvelopeInput {
 
   isComplete(): boolean {
     return this.state.hasPayload && this.state.hasAllColumns;
+  }
+
+  /**
+   * Check if this caller should import the payload.
+   * Returns true only once - guards against race condition where multiple
+   * gossip handlers (envelope + columns from different peers) could each
+   * observe isComplete() === true and trigger concurrent imports.
+   */
+  shouldImport(): boolean {
+    if (this.isComplete() && !this.importClaimed) {
+      this.importClaimed = true;
+      return true;
+    }
+    return false;
   }
 
   async waitForData(): Promise<gloas.SignedExecutionPayloadEnvelope> {
