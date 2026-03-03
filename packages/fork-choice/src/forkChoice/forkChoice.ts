@@ -903,7 +903,12 @@ export class ForkChoice implements IForkChoice {
       // If slot > block.slot, we can determine FULL or EMPTY. Else always PENDING
       if (slot > block.slot) {
         if (attestationData.index === 1) {
-          payloadStatus = PayloadStatus.FULL;
+          // FULL variant may not exist yet if envelope has not been processed.
+          // In that case, route the vote to EMPTY to avoid dropping valid attestations.
+          payloadStatus =
+            this.protoArray.getNodeIndexByRootAndStatus(blockRootHex, PayloadStatus.FULL) !== undefined
+              ? PayloadStatus.FULL
+              : PayloadStatus.EMPTY;
         } else if (attestationData.index === 0) {
           payloadStatus = PayloadStatus.EMPTY;
         } else {
@@ -1680,7 +1685,11 @@ export class ForkChoice implements IForkChoice {
   ): void {
     // should not happen, attestation is validated before this step
     // Get the node index for the voted block
-    const nextIndex = this.protoArray.getNodeIndexByRootAndStatus(nextRoot, nextPayloadStatus);
+    let nextIndex = this.protoArray.getNodeIndexByRootAndStatus(nextRoot, nextPayloadStatus);
+    if (nextIndex === undefined && nextPayloadStatus === PayloadStatus.FULL) {
+      // FULL may be unavailable until payload envelope import. Fallback to EMPTY.
+      nextIndex = this.protoArray.getNodeIndexByRootAndStatus(nextRoot, PayloadStatus.EMPTY);
+    }
     if (nextIndex === undefined) {
       throw new Error(`Could not find proto index for nextRoot ${nextRoot} with payloadStatus ${nextPayloadStatus}`);
     }
