@@ -7,12 +7,8 @@ import {CreateFromBlockProps, PayloadEnvelopeInput} from "../blocks/payloadEnvel
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 export type {PayloadEnvelopeInputState} from "../blocks/payloadEnvelopeInput/index.js";
-// Re-export for convenience
 export {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 
-/**
- * Modules required for SeenPayloadEnvelopeInput.
- */
 export type SeenPayloadEnvelopeInputModules = {
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
@@ -49,9 +45,6 @@ export class SeenPayloadEnvelopeInput {
     });
   }
 
-  /**
-   * Handle finalization - prune entries for finalized slots.
-   */
   private onFinalized = (checkpoint: CheckpointWithHex): void => {
     // Prune all entries with slot <= finalized slot
     const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
@@ -65,10 +58,6 @@ export class SeenPayloadEnvelopeInput {
     this.logger?.debug(`SeenPayloadEnvelopeInput.onFinalized deleted ${deletedCount} cached entries`);
   };
 
-  /**
-   * Create and store a new PayloadEnvelopeInput during block import.
-   * Throws if input already exists for this block root.
-   */
   add(props: CreateFromBlockProps): PayloadEnvelopeInput {
     if (this.payloadInputs.has(props.blockRootHex)) {
       throw new Error(`PayloadEnvelopeInput already exists for block ${props.blockRootHex}`);
@@ -78,31 +67,18 @@ export class SeenPayloadEnvelopeInput {
     return input;
   }
 
-  /**
-   * Get existing PayloadEnvelopeInput by block root.
-   * Returns undefined if block hasn't been imported yet.
-   */
   get(blockRootHex: RootHex): PayloadEnvelopeInput | undefined {
     return this.payloadInputs.get(blockRootHex);
   }
 
-  /**
-   * Check if PayloadEnvelopeInput exists for block root.
-   */
   has(blockRootHex: RootHex): boolean {
     return this.payloadInputs.has(blockRootHex);
   }
 
-  /**
-   * Remove PayloadEnvelopeInput after payload is written to DB.
-   */
   delete(blockRootHex: RootHex): boolean {
     return this.payloadInputs.delete(blockRootHex);
   }
 
-  /**
-   * Get the current size of the cache.
-   */
   size(): number {
     return this.payloadInputs.size;
   }

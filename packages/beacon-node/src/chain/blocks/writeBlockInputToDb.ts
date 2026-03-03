@@ -127,6 +127,7 @@ export async function persistBlockInputs(this: BeaconChain, blockInputs: IBlockI
       }
       // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable.
       // Clear here (after the DB write) so that writeBlockInputToDb can still use the cached serialized bytes.
+      // TODO GLOAS: We probably need a better SerializedCache with proper eviction instead of clearing entire cache on every write.
       this.serializedCache.clear();
       if (blockInputs.length === 1) {
         this.logger.debug("Pruned block input", {

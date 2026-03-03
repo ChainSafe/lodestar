@@ -4,10 +4,6 @@ import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 
 /**
  * Persists payload envelope data to DB. This operation must be eventually completed if a payload is imported.
- * Else the node will be in an inconsistent state that can lead to being stuck.
- *
- * This operation may be performed before, during or after importing to the fork choice. As long as errors
- * are handled properly for eventual consistency.
  */
 export async function writePayloadEnvelopeInputToDb(
   this: BeaconChain,
@@ -84,6 +80,7 @@ export async function persistPayloadEnvelopeInput(
       this.seenPayloadEnvelopeInput.delete(payloadInput.blockRootHex);
       // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable.
       // Clear here (after the DB write) so that writePayloadEnvelopeInputToDb can still use the cached serialized bytes.
+      // TODO GLOAS: We probably need a better SerializedCache with proper eviction instead of clearing entire cache on every write.
       this.serializedCache.clear();
       this.logger.debug("Pruned payload envelope input", {
         slot: payloadInput.slot,

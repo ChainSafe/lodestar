@@ -63,12 +63,11 @@ export type ImportPayloadResult = {
  * This function:
  * 1. Gets the ProtoBlock from fork choice
  * 2. Regenerates the block state
- * 3. Runs EL verification (notifyNewPayload) in parallel with state transition
- * 4. Updates fork choice from PENDING → FULL status
- * 5. Caches the post-state
+ * 3. Runs EL verification (notifyNewPayload) in parallel with signature verification and processExecutionPayloadEnvelope
+ * 4. Updates fork choice
+ * 5. Caches the post-execution payload state
  * 6. Records metrics for column sources
  *
- * Note: The actual DB write happens asynchronously via writePayloadEnvelopeInputToDb
  */
 export async function importExecutionPayload(
   this: BeaconChain,
@@ -87,7 +86,7 @@ export async function importExecutionPayload(
     });
   }
 
-  // 2. Get pre-state for state transition
+  // 2. Get pre-state for processExecutionPayloadEnvelope
   // We need the block state (post-block, pre-payload) to process the envelope
   const blockState = (await this.regen.getBlockSlotState(
     protoBlock,
@@ -96,11 +95,10 @@ export async function importExecutionPayload(
     RegenCaller.processBlock
   )) as CachedBeaconStateGloas;
 
-  // 3. Run verification steps in parallel (like verifyBlocksInEpoch)
+  // 3. Run verification steps in parallel
   // Note: No data availability check needed here - importExecutionPayload is only
   // called when payloadInput.isComplete() is true, so all data is already available.
   const [execResult, signatureValid, postPayloadResult] = await Promise.all([
-    // EL verification - notifyNewPayload
     this.executionEngine.notifyNewPayload(
       ForkName.gloas,
       envelope.message.payload,
@@ -109,7 +107,6 @@ export async function importExecutionPayload(
       envelope.message.executionRequests
     ),
 
-    // Signature verification (skip if already verified during gossip/API validation)
     opts.validSignature === true
       ? Promise.resolve(true)
       : (async () => {
@@ -121,8 +118,7 @@ export async function importExecutionPayload(
           return this.bls.verifySignatureSets([signatureSet]);
         })(),
 
-    // Process execution payload envelope (state transition)
-    // Signature verified separately above (matching block pipeline pattern).
+    // Signature verified separately above.
     // State root check is done separately below with better error typing (matching block pipeline pattern).
     (async () => {
       try {
@@ -168,9 +164,7 @@ export async function importExecutionPayload(
     });
   }
 
-  // VALID, ACCEPTED, or SYNCING - proceed with import
-
-  // 4b. Verify envelope state root matches post-state (done separately from state transition, like block pipeline)
+  // 4b. Verify envelope state root matches post-state
   const postPayloadState = postPayloadResult.postPayloadState;
   const stateRoot = postPayloadState.hashTreeRoot();
   if (!byteArrayEquals(envelope.message.stateRoot, stateRoot)) {
@@ -183,8 +177,8 @@ export async function importExecutionPayload(
     );
   }
 
-  // 5. Update fork choice: PENDING → FULL
-  // TODO GLOAS: Update API when nc/epbs-fc merged
+  // 5. Update fork choice
+  // TODO GLOAS: Update API when #8739 merged (gloas fork choice)
   // this.forkChoice.onExecutionPayload(
   //   envelope.message.beaconBlockRoot,
   //   postPayloadState.hashTreeRoot()
@@ -199,9 +193,6 @@ export async function importExecutionPayload(
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
-
-  // 8. Write payload envelope to DB (handled separately, see writePayloadEnvelopeInputToDb)
-  // The write + prune happens asynchronously after import completes
 
   return {success: true};
 }

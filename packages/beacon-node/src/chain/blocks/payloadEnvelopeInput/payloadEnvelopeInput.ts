@@ -4,15 +4,6 @@ import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {AddPayloadEnvelopeProps, ColumnWithSource, CreateFromBlockProps, SourceMeta} from "./types.js";
 
-/**
- * Discriminated union for PayloadEnvelopeInput state.
- *
- * 4 possible states:
- * 1. No payload, no columns (initial state, or after adding columns without payload)
- * 2. No payload, all columns (waiting for payload)
- * 3. Has payload, no columns (waiting for columns)
- * 4. Complete (has payload and all columns)
- */
 export type PayloadEnvelopeInputState =
   | {
       hasPayload: false;
@@ -59,7 +50,6 @@ function createPromise<T>(): PromiseParts<T> {
  * Always has bid (required for creation).
  *
  * Completion requires: payload envelope + all sampled columns
- * (bid is always present from creation)
  */
 export class PayloadEnvelopeInput {
   readonly blockRootHex: RootHex;
@@ -77,7 +67,6 @@ export class PayloadEnvelopeInput {
 
   private timeCreatedSec: number;
 
-  // Promise for waiting
   private readonly dataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
 
   state: PayloadEnvelopeInputState;
@@ -99,7 +88,6 @@ export class PayloadEnvelopeInput {
     this.timeCreatedSec = props.timeCreatedSec;
     this.dataPromise = createPromise();
 
-    // Check if all columns already satisfied (no blobs = no columns needed)
     const noBlobs = props.bid.blobKzgCommitments.length === 0;
     const noSampledColumns = props.sampledColumns.length === 0;
     const hasAllColumns = noBlobs || noSampledColumns;
@@ -139,7 +127,6 @@ export class PayloadEnvelopeInput {
     if (this.state.hasPayload) {
       throw new Error("Payload envelope already set");
     }
-    // Validate beacon_block_root matches
     if (toRootHex(props.envelope.message.beaconBlockRoot) !== this.blockRootHex) {
       throw new Error("Payload envelope beacon_block_root mismatch");
     }
@@ -150,7 +137,6 @@ export class PayloadEnvelopeInput {
       peerIdStr: props.peerIdStr,
     };
 
-    // Transition state: hasPayload becomes true
     if (this.state.hasAllColumns) {
       // Complete state
       this.state = {
@@ -176,17 +162,14 @@ export class PayloadEnvelopeInput {
     const {columnSidecar, seenTimestampSec} = columnWithSource;
     this.columnsCache.set(columnSidecar.index, columnWithSource);
 
-    // Check if we now have all sampled columns
     const hasAllSampledColumns = this.sampledColumns.every((idx) => this.columnsCache.has(idx));
     const noBlobs = this.bid.blobKzgCommitments.length === 0;
     const hasAllColumns = hasAllSampledColumns || noBlobs || this.sampledColumns.length === 0;
 
     if (!hasAllColumns) {
-      // Still waiting for more columns, state unchanged
       return;
     }
 
-    // hasAllColumns is now true, transition state
     if (this.state.hasPayload) {
       // Complete state
       this.state = {
@@ -205,8 +188,6 @@ export class PayloadEnvelopeInput {
       };
     }
   }
-
-  // --- Other getters ---
 
   getVersionedHashes(): VersionedHashes {
     return this.versionedHashes;

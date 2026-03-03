@@ -10,26 +10,16 @@ export enum PayloadEnvelopeInputSource {
   recovery = "recovery",
 }
 
-/**
- * Metadata about the source of data for PayloadEnvelopeInput.
- */
 export type SourceMeta = {
   source: PayloadEnvelopeInputSource;
   seenTimestampSec: number;
   peerIdStr?: string;
 };
 
-/**
- * Gloas data column sidecar with source metadata.
- * Uses gloas.DataColumnSidecar (not fulu.DataColumnSidecar).
- */
 export type ColumnWithSource = SourceMeta & {
   columnSidecar: gloas.DataColumnSidecar;
 };
 
-/**
- * Props for creating a PayloadEnvelopeInput from a block.
- */
 export type CreateFromBlockProps = {
   blockRootHex: RootHex;
   block: SignedBeaconBlock<ForkPostGloas>;
@@ -38,9 +28,6 @@ export type CreateFromBlockProps = {
   timeCreatedSec: number;
 };
 
-/**
- * Props for adding a payload envelope to PayloadEnvelopeInput.
- */
 export type AddPayloadEnvelopeProps = SourceMeta & {
   envelope: gloas.SignedExecutionPayloadEnvelope;
 };

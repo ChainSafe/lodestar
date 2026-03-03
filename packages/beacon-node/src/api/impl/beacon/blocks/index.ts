@@ -693,8 +693,13 @@ export function getBeaconBlockApi({
         // TODO GLOAS: will this api be used by builders or only for self-building?
       }
 
-      // Validate envelope (including signature verification) before processing
       await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+
+      // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
+      const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
+      if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
+        await sleep(msToBlockSlot);
+      }
 
       const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
       if (!payloadInput) {
@@ -708,8 +713,7 @@ export function getBeaconBlockApi({
         peerIdStr: undefined,
       });
 
-      // For self-builds, add data columns from cached block production result
-      if (isSelfBuild && dataColumnSidecars.length > 0) {
+      if (dataColumnSidecars.length > 0) {
         for (const columnSidecar of dataColumnSidecars) {
           payloadInput.addColumn({
             columnSidecar,
