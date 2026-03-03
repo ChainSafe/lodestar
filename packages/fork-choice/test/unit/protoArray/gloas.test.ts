@@ -515,6 +515,42 @@ describe("Gloas Fork Choice", () => {
       // Block B's PENDING should point to A's FULL (because parentBlockHash matches)
       expect(blockBPending?.parent).toBe(blockAFull);
     });
+
+    it("resolves FULL parent by bid block hash before FULL variant exists", () => {
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      blockA.executionStatus = ExecutionStatus.PayloadSeparated;
+      blockA.blockHashFromBid = "0x02BidHash";
+      blockA.builderIndex = 1;
+      protoArray.onBlock(blockA, gloasForkSlot, null);
+
+      // Block B extends A's FULL using A's bid block hash, but A's FULL variant is not created yet.
+      const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02BidHash");
+      protoArray.onBlock(blockB, gloasForkSlot + 1, null);
+
+      expect(protoArray.getParentPayloadStatus(blockB)).toBe(PayloadStatus.FULL);
+
+      const blockAEmpty = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.EMPTY);
+      const blockBPending = protoArray.getNodeIndexByRootAndStatus("0x03Root", PayloadStatus.PENDING);
+      if (blockAEmpty === undefined || blockBPending === undefined) {
+        throw new Error("Expected block variants to exist");
+      }
+
+      // FULL is unresolved locally, so parent linkage falls back to EMPTY.
+      expect((protoArray as any).nodes[blockBPending].parent).toBe(blockAEmpty);
+    });
+
+    it("getBlockHexAndBlockHash() falls back to EMPTY for bid block hash when FULL is missing", () => {
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      blockA.executionStatus = ExecutionStatus.PayloadSeparated;
+      blockA.blockHashFromBid = "0x02BidHash";
+      blockA.builderIndex = 1;
+      protoArray.onBlock(blockA, gloasForkSlot, null);
+
+      const matchedParent = protoArray.getBlockHexAndBlockHash("0x02Root", "0x02BidHash");
+      expect(matchedParent).not.toBeNull();
+      expect(matchedParent?.payloadStatus).toBe(PayloadStatus.EMPTY);
+      expect(matchedParent?.blockRoot).toBe("0x02Root");
+    });
   });
 
   describe("Explicit EMPTY vs FULL tiebreaker for recent slots", () => {

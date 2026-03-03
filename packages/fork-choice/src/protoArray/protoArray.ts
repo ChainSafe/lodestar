@@ -177,9 +177,10 @@ export class ProtoArray {
    *     message_block_hash = parent.body.signed_execution_payload_bid.message.block_hash
    *     return PAYLOAD_STATUS_FULL if parent_block_hash == message_block_hash else PAYLOAD_STATUS_EMPTY
    *
-   * In lodestar forkchoice, we don't store the full bid, so we compares parent_block_hash in child's bid with executionPayloadBlockHash in parent:
-   * - If it matches EMPTY variant, return EMPTY
-   * - If it matches FULL variant, return FULL
+   * In Lodestar:
+   * - Compare `parent_block_hash` against the parent bid `block_hash` (`blockHashFromBid`) -> FULL
+   * - Compare against the parent EMPTY/PENDING execution payload block hash -> EMPTY
+   * - If FULL variant exists, also compare against its execution payload block hash -> FULL
    * - If no match, throw UNKNOWN_PARENT_BLOCK error
    *
    * For pre-Gloas blocks: always returns FULL
@@ -191,7 +192,8 @@ export class ProtoArray {
       return PayloadStatus.FULL;
     }
 
-    const parentBlock = this.getBlockHexAndBlockHash(block.parentRoot, parentBlockHash);
+    const defaultStatus = this.getDefaultVariant(block.parentRoot);
+    const parentBlock = defaultStatus !== undefined ? this.getNode(block.parentRoot, defaultStatus) : undefined;
     if (parentBlock == null) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
@@ -200,7 +202,58 @@ export class ProtoArray {
       });
     }
 
-    return parentBlock.payloadStatus;
+    // Fork transition: parent is pre-Gloas, only FULL exists.
+    if (!isGloasBlock(parentBlock)) {
+      if (parentBlock.executionPayloadBlockHash === parentBlockHash) {
+        return PayloadStatus.FULL;
+      }
+
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
+        parentRoot: block.parentRoot,
+        parentHash: parentBlockHash,
+      });
+    }
+
+    // In Gloas, use bid block hash to resolve FULL parent status. This works even
+    // before FULL variant is created by `onExecutionPayload`.
+    if (parentBlock.blockHashFromBid === parentBlockHash) {
+      return PayloadStatus.FULL;
+    }
+
+    // EMPTY and PENDING variants use parent_block_hash as executionPayloadBlockHash.
+    if (parentBlock.executionPayloadBlockHash === parentBlockHash) {
+      return PayloadStatus.EMPTY;
+    }
+
+    // If FULL already exists, also match by FULL execution payload hash.
+    const fullNode = this.getNode(block.parentRoot, PayloadStatus.FULL);
+    if (fullNode?.executionPayloadBlockHash === parentBlockHash) {
+      return PayloadStatus.FULL;
+    }
+
+    throw new ProtoArrayError({
+      code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
+      parentRoot: block.parentRoot,
+      parentHash: parentBlockHash,
+    });
+  }
+
+  /**
+   * Get parent node index by payload status.
+   * FULL may be unavailable until `onExecutionPayload`, so fallback to EMPTY.
+   */
+  private getParentIndexByPayloadStatus(parentRoot: RootHex, payloadStatus: PayloadStatus): number | undefined {
+    const index = this.getNodeIndexByRootAndStatus(parentRoot, payloadStatus);
+    if (index !== undefined) {
+      return index;
+    }
+
+    if (payloadStatus === PayloadStatus.FULL) {
+      return this.getNodeIndexByRootAndStatus(parentRoot, PayloadStatus.EMPTY);
+    }
+
+    return undefined;
   }
 
   /**
@@ -257,8 +310,12 @@ export class ProtoArray {
       return emptyNode;
     }
 
-    // PENDING is the same to EMPTY so not likely we can return it
-    // also it's only specific for fork-choice
+    // If the hash matches the parent block's bid block hash, this references FULL.
+    // FULL can be missing before `onExecutionPayload`, return EMPTY as fallback.
+    const pendingNode = this.nodes[variantIndices[PayloadStatus.PENDING]];
+    if (pendingNode?.blockHashFromBid === blockHash) {
+      return emptyNode ?? pendingNode;
+    }
 
     return null;
   }
@@ -406,9 +463,7 @@ export class ProtoArray {
       });
     }
 
-    const isGloas = isGloasBlock(block);
-
-    if (isGloas) {
+    if (isGloasBlock(block)) {
       // Gloas: Create PENDING + EMPTY nodes with correct parent relationships
       // Parent of new PENDING node = parent block's EMPTY or FULL (inter-block edge)
       // Parent of new EMPTY node = own PENDING node (intra-block edge)
@@ -429,7 +484,7 @@ export class ProtoArray {
         } else {
           // Both blocks are Gloas: determine which parent payload status to extend
           const parentPayloadStatus = this.getParentPayloadStatus(block);
-          parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, parentPayloadStatus);
+          parentIndex = this.getParentIndexByPayloadStatus(block.parentRoot, parentPayloadStatus);
         }
       }
       // else: parent doesn't exist, parentIndex remains undefined (orphan block)
@@ -1445,7 +1500,7 @@ export class ProtoArray {
 
     // Gloas: determine which parent variant (EMPTY or FULL) based on parent_block_hash
     const parentPayloadStatus = this.getParentPayloadStatus(currentBlock);
-    const parentVariantIndex = this.getNodeIndexByRootAndStatus(currentBlock.parentRoot, parentPayloadStatus);
+    const parentVariantIndex = this.getParentIndexByPayloadStatus(currentBlock.parentRoot, parentPayloadStatus);
 
     if (parentVariantIndex === undefined) {
       throw new ForkChoiceError({
@@ -1468,7 +1523,7 @@ export class ProtoArray {
     if (isGloasBlock(node)) {
       // Use getParentPayloadStatus for Gloas blocks to get correct EMPTY/FULL variant
       const parentPayloadStatus = this.getParentPayloadStatus(node);
-      return this.getNodeIndexByRootAndStatus(node.parentRoot, parentPayloadStatus);
+      return this.getParentIndexByPayloadStatus(node.parentRoot, parentPayloadStatus);
     }
     // Simple parent traversal for pre-Gloas blocks (includes fork transition)
     return node.parent;
