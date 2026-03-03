@@ -1,6 +1,12 @@
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
-import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/index.js";
+import {
+  IBlockInput,
+  IDataColumnsInput,
+  isBlockInputBlobs,
+  isBlockInputColumns,
+  isBlockInputNoData,
+} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
 /**
