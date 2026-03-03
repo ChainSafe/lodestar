@@ -1,4 +1,4 @@
-import {isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {equalCheckpointWithHex} from "../store.ts";
 import {
   FastConfirmationCache,
@@ -8,19 +8,20 @@ import {
   FastConfirmationSnapshot,
   IFastConfirmationStore,
 } from "./types.ts";
-import {findLatestConfirmedDescendant, getBlockEpoch, getBlockSlot, isAncestor, isConfirmedChainSafe} from "./utils.ts";
+import {findLatestConfirmedDescendant, getBlock, isAncestor, isConfirmedChainSafe} from "./utils.ts";
 
 const resetIfConfirmedUnavailable: FastConfirmationRule = (snapshot, ctx, _store, cache, decision) => {
-  const confirmedEpoch = getBlockEpoch(ctx, cache, decision.confirmedRoot);
-  if (confirmedEpoch === null) {
+  const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
+  if (!confirmedBlock) {
     return {confirmedRoot: snapshot.finalizedRoot, didReset: true, reason: "confirmed_not_found"};
   }
   return decision;
 };
 
 const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (snapshot, ctx, store, cache, decision) => {
-  const confirmedEpoch = getBlockEpoch(ctx, cache, decision.confirmedRoot);
-  if (confirmedEpoch === null) return decision;
+  const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
+  if (!confirmedBlock) return decision;
+  const confirmedEpoch = computeEpochAtSlot(confirmedBlock.slot);
 
   const confirmedEpochBehindHead = confirmedEpoch + 1 < snapshot.currentEpoch;
   const notAncestorOfHead = !isAncestor(ctx, cache, snapshot.headRoot, decision.confirmedRoot);
@@ -40,8 +41,8 @@ const advanceIfObservedJustified: FastConfirmationRule = (snapshot, ctx, store, 
   if (!snapshot.headUnrealized) return decision;
   if (!equalCheckpointWithHex(store.currentEpochObservedJustifiedCheckpoint, snapshot.headUnrealized)) return decision;
 
-  const confirmedSlot = getBlockSlot(ctx, cache, decision.confirmedRoot);
-  const observedSlot = getBlockSlot(ctx, cache, store.currentEpochObservedJustifiedCheckpoint.rootHex);
+  const confirmedSlot = getBlock(ctx, cache, decision.confirmedRoot)?.slot ?? null;
+  const observedSlot = getBlock(ctx, cache, store.currentEpochObservedJustifiedCheckpoint.rootHex)?.slot ?? null;
   if (confirmedSlot !== null && observedSlot !== null && confirmedSlot < observedSlot) {
     return {
       ...decision,
@@ -53,7 +54,8 @@ const advanceIfObservedJustified: FastConfirmationRule = (snapshot, ctx, store, 
 };
 
 const advanceToLatestConfirmedDescendant: FastConfirmationRule = (snapshot, ctx, store, cache, decision) => {
-  const confirmedEpoch = getBlockEpoch(ctx, cache, decision.confirmedRoot);
+  const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
+  const confirmedEpoch = confirmedBlock ? computeEpochAtSlot(confirmedBlock.slot) : null;
   if (confirmedEpoch !== null && confirmedEpoch + 1 >= snapshot.currentEpoch) {
     const newConfirmed = findLatestConfirmedDescendant(snapshot, ctx, store, cache, decision.confirmedRoot);
     return {

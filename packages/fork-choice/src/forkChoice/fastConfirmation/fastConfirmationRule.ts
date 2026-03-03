@@ -67,8 +67,9 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     );
 
     const changed = confirmedRoot !== previousConfirmedRoot;
-    const confirmedSlot = cache.slotByRoot.get(confirmedRoot) ?? null;
-    const confirmedEpoch = cache.epochByRoot.get(confirmedRoot) ?? null;
+    const confirmedBlock = cache.blockByRoot.get(confirmedRoot) ?? null;
+    const confirmedSlot = confirmedBlock?.slot ?? null;
+    const confirmedEpoch = confirmedBlock ? computeEpochAtSlot(confirmedBlock.slot) : null;
     const logContext = {
       previousConfirmedRoot,
       confirmedRoot,

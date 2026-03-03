@@ -59,10 +59,11 @@ export type FastConfirmationRule = (
 
 export type FastConfirmationCache = {
   blockByRoot: Map<RootHex, ProtoBlock | null>;
-  epochByRoot: Map<RootHex, Epoch | null>;
-  slotByRoot: Map<RootHex, Slot | null>;
-  ancestorRoots: Map<string, RootHex[]>;
+  ancestorRoots: Map<string, RootHex[] | null>;
   committeeBySlot: Map<Slot, Set<ValidatorIndex>>;
+  isDescendantByRootPair: Map<string, boolean>;
+  /** voteRoot -> totalWeight, keyed by sourceKey ("current" | "previous") */
+  voteWeightBySource: Map<string, Map<RootHex, number>>;
   headState?: CachedBeaconStateAllForks | null;
   checkpointStateByKey: Map<string, CachedBeaconStateAllForks | null>;
 };

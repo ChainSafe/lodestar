@@ -5,15 +5,15 @@ import {
   FastConfirmationSnapshot,
   IFastConfirmationStore,
 } from "./types.ts";
-import {getBlockEpoch, getBlockSlot, getUnrealizedJustification} from "./utils.ts";
+import {getBlock, getUnrealizedJustification} from "./utils.ts";
 
 export function createFastConfirmationCache(): FastConfirmationCache {
   return {
     blockByRoot: new Map(),
-    epochByRoot: new Map(),
-    slotByRoot: new Map(),
     ancestorRoots: new Map(),
     committeeBySlot: new Map(),
+    isDescendantByRootPair: new Map(),
+    voteWeightBySource: new Map(),
     checkpointStateByKey: new Map(),
   };
 }
@@ -27,14 +27,15 @@ export function buildFastConfirmationSnapshot(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const headRoot = ctx.getHead().blockRoot;
   const confirmedRoot = store.confirmedRoot;
+  const confirmedBlock = getBlock(ctx, cache, confirmedRoot);
 
   return {
     currentSlot,
     currentEpoch,
     headRoot,
     confirmedRoot,
-    confirmedEpoch: getBlockEpoch(ctx, cache, confirmedRoot),
-    confirmedSlot: getBlockSlot(ctx, cache, confirmedRoot),
+    confirmedEpoch: confirmedBlock ? computeEpochAtSlot(confirmedBlock.slot) : null,
+    confirmedSlot: confirmedBlock?.slot ?? null,
     observedJustified: store.currentEpochObservedJustifiedCheckpoint,
     headUnrealized: getUnrealizedJustification(ctx, cache, headRoot),
     finalizedRoot: ctx.getFinalizedCheckpoint().rootHex,

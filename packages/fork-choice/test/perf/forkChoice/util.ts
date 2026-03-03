@@ -1,5 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {computeTotalBalance} from "../../../src/forkChoice/store.js";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
@@ -8,11 +9,15 @@ const genesisSlot = 0;
 const genesisEpoch = 0;
 const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+function slotRoot(slot: number): string {
+  return "0x" + String(slot).padStart(64, "0");
+}
+
 export type Opts = {
-  // assume there are 64 unfinalized blocks, this number does not make a difference in term of performance
   initialBlockCount: number;
   initialValidatorCount: number;
   initialEquivocatedCount: number;
+  fastConfirmation?: boolean;
 };
 
 export function initializeForkChoice(opts: Opts): ForkChoice {
@@ -37,6 +42,11 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
 
   const balances = new Uint16Array(Array.from({length: opts.initialValidatorCount}, () => 32));
 
+  // The first block of epoch 1 is used as the confirmed root.
+  // This ensures confirmedEpoch + 1 >= currentEpoch so findLatestConfirmedDescendant runs.
+  const epoch1StartSlot = SLOTS_PER_EPOCH;
+  const confirmedBlockRoot = slotRoot(epoch1StartSlot);
+
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot,
     justified: {
@@ -52,16 +62,16 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
-    confirmedRoot: genesisRoot,
+    confirmedRoot: confirmedBlockRoot,
     previousEpochObservedJustifiedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(genesisRoot),
       rootHex: genesisRoot,
     },
     currentEpochObservedJustifiedCheckpoint: {
-      epoch: genesisEpoch,
-      root: fromHexString(genesisRoot),
-      rootHex: genesisRoot,
+      epoch: 1,
+      root: fromHexString(confirmedBlockRoot),
+      rootHex: confirmedBlockRoot,
     },
     previousEpochObservedJustifiedBalances: balances,
     currentEpochObservedJustifiedBalances: balances,
@@ -70,11 +80,18 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     stateGetter: () => null,
   };
 
-  const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null);
+  const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null, {
+    fastConfirmation: opts.fastConfirmation,
+  });
   let parentBlockRoot = genesisRoot;
 
   for (let slot = 1; slot < opts.initialBlockCount; slot++) {
-    const blockRoot = "0x" + String(slot).padStart(64, "0");
+    const blockRoot = slotRoot(slot);
+    // Set unrealizedJustifiedEpoch to 1 for blocks in epoch 1+
+    // so that headJustification.epoch + 1 >= currentEpoch passes in loop 2
+    const blockEpoch = Math.floor(slot / SLOTS_PER_EPOCH);
+    const unrealizedJustifiedEpoch = blockEpoch >= 1 ? 1 : genesisEpoch;
+
     const block: ProtoBlock = {
       slot: genesisSlot + slot,
       blockRoot,
@@ -86,7 +103,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       justifiedRoot: genesisRoot,
       finalizedEpoch: genesisEpoch,
       finalizedRoot: genesisRoot,
-      unrealizedJustifiedEpoch: genesisEpoch,
+      unrealizedJustifiedEpoch,
       unrealizedJustifiedRoot: genesisRoot,
       unrealizedFinalizedEpoch: genesisEpoch,
       unrealizedFinalizedRoot: genesisRoot,
