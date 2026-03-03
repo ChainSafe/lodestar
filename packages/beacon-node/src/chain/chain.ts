@@ -164,7 +164,7 @@ export class BeaconChain implements IBeaconChain {
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
-  readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput[]], void>;
+  readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput], void>;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
