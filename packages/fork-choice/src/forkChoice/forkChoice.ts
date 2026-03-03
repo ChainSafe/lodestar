@@ -903,12 +903,7 @@ export class ForkChoice implements IForkChoice {
       // If slot > block.slot, we can determine FULL or EMPTY. Else always PENDING
       if (slot > block.slot) {
         if (attestationData.index === 1) {
-          // FULL variant may not exist yet if envelope has not been processed.
-          // In that case, route the vote to EMPTY to avoid dropping valid attestations.
-          payloadStatus =
-            this.protoArray.getNodeIndexByRootAndStatus(blockRootHex, PayloadStatus.FULL) !== undefined
-              ? PayloadStatus.FULL
-              : PayloadStatus.EMPTY;
+          payloadStatus = PayloadStatus.FULL;
         } else if (attestationData.index === 0) {
           payloadStatus = PayloadStatus.EMPTY;
         } else {
