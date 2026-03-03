@@ -682,6 +682,58 @@ describe("Gloas Fork Choice", () => {
       expect(getNodeByPayloadStatus(protoArray, "0x02Root", PayloadStatus.FULL)?.weight).toBe(100);
     });
 
+    it("recomputes old parent best links after EMPTY -> FULL reparent", () => {
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      blockA.executionStatus = ExecutionStatus.PayloadSeparated;
+      blockA.blockHashFromBid = "0x02BidHash";
+      blockA.builderIndex = 1;
+      protoArray.onBlock(blockA, gloasForkSlot, null);
+
+      const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02BidHash");
+      protoArray.onBlock(blockB, gloasForkSlot + 1, null);
+
+      const blockBPending = protoArray.getNodeIndexByRootAndStatus("0x03Root", PayloadStatus.PENDING);
+      const blockAEmpty = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.EMPTY);
+      if (blockBPending === undefined || blockAEmpty === undefined) {
+        throw new Error("Expected child PENDING and parent EMPTY variants to exist");
+      }
+
+      const firstDeltas = new Array(protoArray.nodes.length).fill(0);
+      firstDeltas[blockBPending] = 100;
+      protoArray.applyScoreChanges({
+        deltas: firstDeltas,
+        proposerBoost: null,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+        currentSlot: gloasForkSlot + 1,
+      });
+      expect(protoArray.nodes[blockAEmpty].bestChild).toBe(blockBPending);
+
+      protoArray.onExecutionPayload("0x02Root", gloasForkSlot + 2, "0x02BidHash", gloasForkSlot, stateRoot, null);
+      const secondDeltas = new Array(protoArray.nodes.length).fill(0);
+      protoArray.applyScoreChanges({
+        deltas: secondDeltas,
+        proposerBoost: null,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+        currentSlot: gloasForkSlot + 2,
+      });
+
+      const blockAFull = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.FULL);
+      if (blockAFull === undefined) {
+        throw new Error("Expected parent FULL variant to exist");
+      }
+
+      // After reparenting to FULL, old EMPTY parent must not keep stale links.
+      expect(protoArray.nodes[blockAEmpty].bestChild).toBeUndefined();
+      expect(protoArray.nodes[blockAEmpty].bestDescendant).toBeUndefined();
+      expect(protoArray.nodes[blockAFull].bestChild).toBe(blockBPending);
+    });
+
     it("resolves orphan PENDING parent dynamically after parent import", () => {
       // Import child first so it is initially orphaned.
       const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02Root");

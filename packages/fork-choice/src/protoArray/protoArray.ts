@@ -374,6 +374,9 @@ export class ProtoArray {
     // This happens when dynamic parent resolution points to a higher index
     // (e.g. deferred FULL variant created after children).
     const missedParentDeltas = new Map<number, number>();
+    // Gloas PENDING nodes can be reparented dynamically (e.g. EMPTY -> FULL).
+    // We must recompute old parent best links after rewiring.
+    const reparentedOldParents = new Set<number>();
 
     // Iterate backwards through all indices in this.nodes
     for (let nodeIndex = this.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
@@ -420,6 +423,7 @@ export class ProtoArray {
           const previousWeight = node.weight - nodeDelta;
 
           if (previousParentIndex !== undefined) {
+            reparentedOldParents.add(previousParentIndex);
             this.backPropagateDeltaToParent(
               previousParentIndex,
               nodeIndex,
@@ -486,6 +490,15 @@ export class ProtoArray {
           lateBestDescendantChildren.add(parentIndex);
         }
       }
+    }
+
+    if (reparentedOldParents.size > 0) {
+      this.recomputeBestLinksForReparentedParents(
+        reparentedOldParents,
+        lateBestDescendantChildren,
+        currentSlot,
+        proposerBoost?.root ?? null
+      );
     }
 
     if (lateBestDescendantChildren.size > 0) {
@@ -560,6 +573,49 @@ export class ProtoArray {
     // Parent already processed in this reverse walk, apply later.
     if (parentIndex > nodeIndex) {
       missedParentDeltas.set(parentIndex, (missedParentDeltas.get(parentIndex) ?? 0) + delta);
+    }
+  }
+
+  /**
+   * Recompute bestChild/bestDescendant for parents that lost a child due to reparenting.
+   * This prevents stale best links to nodes that no longer belong to the old parent.
+   */
+  private recomputeBestLinksForReparentedParents(
+    parentIndices: Set<number>,
+    lateBestDescendantChildren: Set<number>,
+    currentSlot: Slot,
+    proposerBoostRoot: RootHex | null
+  ): void {
+    for (const parentIndex of parentIndices) {
+      const parentNode = this.nodes[parentIndex];
+      if (parentNode === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+          index: parentIndex,
+        });
+      }
+
+      const prevBestChild = parentNode.bestChild;
+      const prevBestDescendant = parentNode.bestDescendant;
+      parentNode.bestChild = undefined;
+      parentNode.bestDescendant = undefined;
+
+      for (let childIndex = this.nodes.length - 1; childIndex >= 0; childIndex--) {
+        const childNode = this.nodes[childIndex];
+        if (childNode === undefined) {
+          throw new ProtoArrayError({
+            code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+            index: childIndex,
+          });
+        }
+        if (this.getParentNodeIndex(childNode) === parentIndex) {
+          this.maybeUpdateBestChildAndDescendant(parentIndex, childIndex, currentSlot, proposerBoostRoot);
+        }
+      }
+
+      if (parentNode.bestChild !== prevBestChild || parentNode.bestDescendant !== prevBestDescendant) {
+        lateBestDescendantChildren.add(parentIndex);
+      }
     }
   }
 
