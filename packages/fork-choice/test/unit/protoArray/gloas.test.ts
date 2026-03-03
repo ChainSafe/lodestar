@@ -632,6 +632,56 @@ describe("Gloas Fork Choice", () => {
       expect(fullNode?.weight).toBe(100);
     });
 
+    it("migrates historical child weight from EMPTY to FULL when parent variant switches", () => {
+      const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      blockA.executionStatus = ExecutionStatus.PayloadSeparated;
+      blockA.blockHashFromBid = "0x02BidHash";
+      blockA.builderIndex = 1;
+      protoArray.onBlock(blockA, gloasForkSlot, null);
+
+      // Block B intends to extend A FULL, but FULL is unresolved so linkage falls back to EMPTY.
+      const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02BidHash");
+      protoArray.onBlock(blockB, gloasForkSlot + 1, null);
+
+      const blockBPending = protoArray.getNodeIndexByRootAndStatus("0x03Root", PayloadStatus.PENDING);
+      if (blockBPending === undefined) {
+        throw new Error("Expected child PENDING variant to exist");
+      }
+
+      // Accumulate child weight while parent FULL is still missing.
+      const firstDeltas = new Array(protoArray.nodes.length).fill(0);
+      firstDeltas[blockBPending] = 100;
+      protoArray.applyScoreChanges({
+        deltas: firstDeltas,
+        proposerBoost: null,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+        currentSlot: gloasForkSlot + 1,
+      });
+
+      expect(getNodeByPayloadStatus(protoArray, "0x02Root", PayloadStatus.EMPTY)?.weight).toBe(100);
+      expect(getNodeByPayloadStatus(protoArray, "0x02Root", PayloadStatus.FULL)).toBeUndefined();
+
+      // Materialize FULL and run score updates with no additional votes.
+      protoArray.onExecutionPayload("0x02Root", gloasForkSlot + 2, "0x02BidHash", gloasForkSlot, stateRoot, null);
+      const secondDeltas = new Array(protoArray.nodes.length).fill(0);
+      protoArray.applyScoreChanges({
+        deltas: secondDeltas,
+        proposerBoost: null,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+        currentSlot: gloasForkSlot + 2,
+      });
+
+      // Historical weight must migrate from EMPTY to FULL after parent resolution switches.
+      expect(getNodeByPayloadStatus(protoArray, "0x02Root", PayloadStatus.EMPTY)?.weight).toBe(0);
+      expect(getNodeByPayloadStatus(protoArray, "0x02Root", PayloadStatus.FULL)?.weight).toBe(100);
+    });
+
     it("resolves orphan PENDING parent dynamically after parent import", () => {
       // Import child first so it is initially orphaned.
       const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02Root");

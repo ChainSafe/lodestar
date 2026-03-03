@@ -409,24 +409,32 @@ export class ProtoArray {
       // Apply the delta to the node
       node.weight += nodeDelta;
 
-      // Update the parent delta (if any)
       const parentIndex = this.getParentNodeIndex(node);
+
+      // For Gloas PENDING nodes, dynamic parent resolution may switch from
+      // EMPTY to FULL after payload arrival, or from orphan to resolved parent.
+      // Migrate historical weight contribution to the newly resolved parent.
+      if (isGloasBlock(node) && node.payloadStatus === PayloadStatus.PENDING) {
+        const previousParentIndex = node.parent;
+        if (previousParentIndex !== parentIndex) {
+          const previousWeight = node.weight - nodeDelta;
+
+          if (previousParentIndex !== undefined) {
+            this.backPropagateDeltaToParent(previousParentIndex, nodeIndex, -previousWeight, deltas, missedParentDeltas);
+          }
+
+          if (parentIndex !== undefined) {
+            this.backPropagateDeltaToParent(parentIndex, nodeIndex, node.weight, deltas, missedParentDeltas);
+          }
+
+          node.parent = parentIndex;
+          continue;
+        }
+      }
+
+      // Update the parent delta (if any).
       if (parentIndex !== undefined) {
-        const parentDelta = deltas[parentIndex];
-        if (parentDelta === undefined) {
-          throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.INVALID_PARENT_DELTA,
-            index: parentIndex,
-          });
-        }
-
-        // back-propagate the nodes delta to its parent
-        deltas[parentIndex] += nodeDelta;
-
-        // Parent already processed in this reverse walk, apply later.
-        if (parentIndex > nodeIndex) {
-          missedParentDeltas.set(parentIndex, (missedParentDeltas.get(parentIndex) ?? 0) + nodeDelta);
-        }
+        this.backPropagateDeltaToParent(parentIndex, nodeIndex, nodeDelta, deltas, missedParentDeltas);
       }
     }
 
@@ -523,6 +531,29 @@ export class ProtoArray {
         deltas[parentIndex] += nodeDelta;
         missedParentDeltas.set(parentIndex, (missedParentDeltas.get(parentIndex) ?? 0) + nodeDelta);
       }
+    }
+  }
+
+  private backPropagateDeltaToParent(
+    parentIndex: number,
+    nodeIndex: number,
+    delta: number,
+    deltas: number[],
+    missedParentDeltas: Map<number, number>
+  ): void {
+    const parentDelta = deltas[parentIndex];
+    if (parentDelta === undefined) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_PARENT_DELTA,
+        index: parentIndex,
+      });
+    }
+
+    deltas[parentIndex] += delta;
+
+    // Parent already processed in this reverse walk, apply later.
+    if (parentIndex > nodeIndex) {
+      missedParentDeltas.set(parentIndex, (missedParentDeltas.get(parentIndex) ?? 0) + delta);
     }
   }
 
