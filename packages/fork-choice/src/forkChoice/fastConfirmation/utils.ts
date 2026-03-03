@@ -488,9 +488,7 @@ export function isOneConfirmed(
   const supportDiscount = getSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
   const adversarialWeightBase = getAdversarialWeight(ctx, store, cache, balanceSource, blockRoot);
 
-  const isOneConfirmed = 2 * support + supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeightBase;
-
-  return isOneConfirmed;
+  return 2 * support + supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeightBase;
 }
 
 export function getCurrentTarget(ctx: FastConfirmationContext, cache: FastConfirmationCache): CheckpointWithHex | null {
@@ -546,18 +544,20 @@ export function computeHonestFfgSupportForCurrentTarget(
   if (!targetState) return 0;
   const totalActiveBalance = targetState.epochCtx.totalActiveBalanceIncrements;
   const ffgSupport = getCurrentTargetScore(ctx, store, cache);
-  const ffgWeightTillNow = estimateCommitteeWeightBetweenSlots(
+  const tillNowFFGWeight = estimateCommitteeWeightBetweenSlots(
     {state: targetState, balances: targetState.epochCtx.effectiveBalanceIncrements},
     computeStartSlotAtEpoch(currentEpoch),
     (currentSlot - 1) as Slot
   );
 
-  const remainingFfgWeight = totalActiveBalance - ffgWeightTillNow;
-  const remainingHonestFfgWeight =
-    Math.floor(remainingFfgWeight / 100) * (100 - ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD);
+  const remainingFFGWeight = totalActiveBalance - tillNowFFGWeight;
+  const remainingHonestFfgWeight = Math.floor(
+    (remainingFFGWeight * (100 - ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD)) / 100
+  );
 
   const minHonestFfgSupport =
-    ffgSupport - Math.min(Math.floor(ffgWeightTillNow / 100) * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD, ffgSupport);
+    ffgSupport -
+    Math.min(Math.floor((tillNowFFGWeight * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD) / 100), ffgSupport);
 
   return minHonestFfgSupport + remainingHonestFfgWeight;
 }
@@ -636,11 +636,13 @@ export function willCheckpointBeJustified(
   );
 
   const remainingFfgWeight = totalActiveBalance - ffgWeightTillNow;
-  const remainingHonestFfgWeight =
-    Math.floor(remainingFfgWeight / 100) * (100 - ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD);
+  const remainingHonestFfgWeight = Math.floor(
+    (remainingFfgWeight * (100 - ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD)) / 100
+  );
 
   const minHonestFfgSupport =
-    ffgSupport - Math.min(Math.floor(ffgWeightTillNow / 100) * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD, ffgSupport);
+    ffgSupport -
+    Math.min(Math.floor((ffgWeightTillNow * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD) / 100), ffgSupport);
 
   const honestSupport = minHonestFfgSupport + remainingHonestFfgWeight;
   return 3 * honestSupport >= 2 * totalActiveBalance;
