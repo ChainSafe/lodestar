@@ -688,7 +688,12 @@ describe("Gloas Fork Choice", () => {
       const blockBEmpty = protoArray.getNodeIndexByRootAndStatus("0x03Root", PayloadStatus.EMPTY);
       const blockAPending = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.PENDING);
       const blockAFull = protoArray.getNodeIndexByRootAndStatus("0x02Root", PayloadStatus.FULL);
-      if (blockBPending === undefined || blockBEmpty === undefined || blockAPending === undefined || blockAFull === undefined) {
+      if (
+        blockBPending === undefined ||
+        blockBEmpty === undefined ||
+        blockAPending === undefined ||
+        blockAFull === undefined
+      ) {
         throw new Error("Expected block variants to exist");
       }
 

@@ -1648,11 +1648,11 @@ export class ProtoArray {
   }
 
   /**
-  * Get the parent node index for traversal
-  * For Gloas blocks: returns the correct EMPTY/FULL variant based on parent payload status
-  * For pre-Gloas blocks: returns the simple parent index
-  * Returns undefined if parent doesn't exist or can't be found
-  */
+   * Get the parent node index for traversal
+   * For Gloas blocks: returns the correct EMPTY/FULL variant based on parent payload status
+   * For pre-Gloas blocks: returns the simple parent index
+   * Returns undefined if parent doesn't exist or can't be found
+   */
   private getParentNodeIndex(node: ProtoNode): number | undefined {
     if (!isGloasBlock(node)) {
       return node.parent;
