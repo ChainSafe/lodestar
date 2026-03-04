@@ -841,7 +841,7 @@ export class ValidatorStore {
       );
     }
     if (isPostGloas) {
-      // In Gloas, data.index signals payload status: 0 (EMPTY) or 1 (FULL)
+      // After Gloas, data.index signals payload status: 0 (EMPTY) or 1 (FULL)
       if (data.index !== 0 && data.index !== 1) {
         throw Error(`Invalid payload status index post-gloas during signing: data.index=${data.index}`);
       }
