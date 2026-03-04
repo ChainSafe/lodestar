@@ -3,7 +3,7 @@ import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
@@ -58,22 +58,22 @@ describe("AttestationService", () => {
   });
 
   const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 1};
-  const gloasConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 1};
+  const gloasConfig: Partial<ChainConfig> = {GLOAS_FORK_EPOCH: 0};
 
-  const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>, ForkName, number][] = [
-    ["With default configuration", {}, {}, ForkName.phase0, 0],
-    ["With default configuration post-electra", {}, electraConfig, ForkName.electra, SLOTS_PER_EPOCH],
-    ["With default configuration post-gloas", {}, gloasConfig, ForkName.gloas, SLOTS_PER_EPOCH],
+  const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
+    ["With default configuration", {}, {}],
+    ["With default configuration post-electra", {}, electraConfig],
+    ["With default configuration post-gloas", {}, gloasConfig],
   ];
 
-  for (const [title, opts, chainConfig, expectedFork, testSlot] of testContexts) {
+  for (const [title, opts, chainConfig] of testContexts) {
     describe(title, () => {
       it("Should produce, sign, and publish an attestation + aggregate", async () => {
+        const slot = 0;
         const clock = new ClockMock();
         const config = createChainForkConfig({...defaultConfig, ...chainConfig});
-        expect(config.getForkName(testSlot)).toBe(expectedFork);
-        const isPostElectra = config.getForkName(testSlot) !== ForkName.phase0;
-        const isPostGloas = config.getForkName(testSlot) === ForkName.gloas;
+        const isPostElectra = chainConfig.ELECTRA_FORK_EPOCH === 0;
+        const isPostGloas = chainConfig.GLOAS_FORK_EPOCH === 0;
         const attestationService = new AttestationService(
           loggerVc,
           api,
@@ -90,6 +90,9 @@ describe("AttestationService", () => {
         const singleAttestation = isPostElectra
           ? ssz.electra.SingleAttestation.defaultValue()
           : ssz.phase0.Attestation.defaultValue();
+        if (isPostGloas) {
+          singleAttestation.data.index = 1;
+        }
         const aggregatedAttestation = isPostElectra
           ? ssz.electra.Attestation.defaultValue()
           : ssz.phase0.Attestation.defaultValue();
@@ -99,7 +102,7 @@ describe("AttestationService", () => {
         const duties: AttDutyAndProof[] = [
           {
             duty: {
-              slot: testSlot,
+              slot,
               committeeIndex: 6,
               committeeLength: 120,
               committeesAtSlot: 120,
@@ -110,11 +113,6 @@ describe("AttestationService", () => {
             selectionProof: ZERO_HASH,
           },
         ];
-        if (isPostGloas) {
-          singleAttestation.data.index = 1;
-        }
-        singleAttestation.data.slot = testSlot;
-        aggregatedAttestation.data.slot = testSlot;
 
         // Return empty replies to duties service
         api.beacon.postStateValidators.mockResolvedValue(
@@ -130,7 +128,7 @@ describe("AttestationService", () => {
         // Mock beacon's attestation and aggregates endpoints
         api.validator.produceAttestationData.mockResolvedValue(mockApiResponse({data: singleAttestation.data}));
         api.validator.getAggregatedAttestationV2.mockResolvedValue(
-          mockApiResponse({data: aggregatedAttestation, meta: {version: expectedFork}})
+          mockApiResponse({data: aggregatedAttestation, meta: {version: config.getForkName(slot)}})
         );
         api.beacon.submitPoolAttestationsV2.mockResolvedValue(mockApiResponse({}));
         api.validator.publishAggregateAndProofsV2.mockResolvedValue(mockApiResponse({}));
@@ -140,7 +138,7 @@ describe("AttestationService", () => {
         validatorStore.signAggregateAndProof.mockResolvedValue(aggregateAndProof);
 
         // Trigger clock onSlot for slot 0
-        await clock.tickSlotFns(testSlot, controller.signal);
+        await clock.tickSlotFns(slot, controller.signal);
 
         // Must submit the attestation received through produceAttestationData()
         expect(api.beacon.submitPoolAttestationsV2).toHaveBeenCalledOnce();
@@ -157,10 +155,11 @@ describe("AttestationService", () => {
           : isPostElectra
             ? 0
             : duties[0].duty.committeeIndex;
+
         expect(validatorStore.signAttestation).toHaveBeenCalledWith(
           duties[0].duty,
           expect.objectContaining({index: expectedIndex}),
-          Math.floor(testSlot / SLOTS_PER_EPOCH)
+          computeEpochAtSlot(slot)
         );
       });
     });
