@@ -1002,15 +1002,15 @@ export function getValidatorApi(
         const canonicalBlock = chain.forkChoice.getCanonicalBlockByRoot(beaconBlockRoot);
         if (!canonicalBlock) {
           // This should never happen
-          throw Error(`Block not found in fork choice slot=${slot}, root=${toRootHex(beaconBlockRoot)}`);
+          throw Error(`Block not found in fork choice for slot=${slot}, root=${toRootHex(beaconBlockRoot)}`);
         }
         // After Gloas, attestation.data.index signals payload status in fork-choice:
         // - 0 = EMPTY / not present, 1 = FULL / present
         // - same-slot attestations must always use index = 0
-        if (canonicalBlock.slot === slot) {
-          index = 0;
-        } else {
+        if (canonicalBlock.slot !== slot) {
           index = canonicalBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
+        } else {
+          index = 0;
         }
       } else if (isForkPostElectra(fork)) {
         index = 0;
