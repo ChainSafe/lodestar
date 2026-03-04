@@ -186,7 +186,7 @@ export async function validateGossipAttestationsSameAttData(
       chain.seenAttesters.add(targetEpoch, validatorIndex);
     } else {
       step0ResultOrErrors[oldIndex] = {
-        err: new AttestationError(GossipAction.IGNORE, {
+        err: new AttestationError(GossipAction.REJECT, {
           code: AttestationErrorCode.INVALID_SIGNATURE,
         }),
       };
