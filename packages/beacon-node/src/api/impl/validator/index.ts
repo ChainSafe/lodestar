@@ -1003,10 +1003,11 @@ export function getValidatorApi(
         // - 0 = EMPTY / not present, 1 = FULL / present
         // - same-slot attestations must always use index = 0
         const canonicalAttestedBlock = chain.forkChoice.getCanonicalBlockClosestLteSlot(slot);
-        const isMatchingCanonicalRoot =
-          canonicalAttestedBlock !== null && canonicalAttestedBlock.blockRoot === toRootHex(beaconBlockRoot);
-
-        if (!isMatchingCanonicalRoot || canonicalAttestedBlock.slot === slot) {
+        if (
+          !canonicalAttestedBlock ||
+          canonicalAttestedBlock.blockRoot !== toRootHex(beaconBlockRoot) ||
+          canonicalAttestedBlock.slot === slot
+        ) {
           index = 0;
         } else {
           index = canonicalAttestedBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
