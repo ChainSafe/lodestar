@@ -20,7 +20,7 @@ import {
   isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {Attestation, BeaconBlock, altair, capella, electra, phase0, ssz} from "@lodestar/types";
+import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -230,6 +230,32 @@ export async function importBlock(
     }
   }
 
+  // 4.5. Import payload attestations to fork choice (Gloas)
+  //
+  if (isGloasBeaconBlock(block.message)) {
+    for (const payloadAttestation of block.message.body.payloadAttestations) {
+      try {
+        // Extract PTC indices from aggregation bits
+        const ptcIndices: number[] = [];
+        for (let i = 0; i < payloadAttestation.aggregationBits.bitLen; i++) {
+          if (payloadAttestation.aggregationBits.get(i)) {
+            ptcIndices.push(i);
+          }
+        }
+
+        if (ptcIndices.length > 0) {
+          this.forkChoice.notifyPtcMessages(
+            toRootHex(payloadAttestation.data.beaconBlockRoot),
+            ptcIndices,
+            payloadAttestation.data.payloadPresent
+          );
+        }
+      } catch (e) {
+        this.logger.warn("Error processing PayloadAttestation from block", {slot: blockSlot}, e as Error);
+      }
+    }
+  }
+
   // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
   const oldHead = this.forkChoice.getHead();
@@ -345,7 +371,7 @@ export async function importBlock(
         //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
         //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
         const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
-          blockSummary.blockRoot,
+          blockSummary,
           this.clock.secFromSlot(currentSlot),
           currentSlot
         );
@@ -441,7 +467,12 @@ export async function importBlock(
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
     this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
-    const parentBlockSummary = this.forkChoice.getBlock(checkpointState.latestBlockHeader.parentRoot);
+    const parentBlockSummary = isGloasBeaconBlock(block.message)
+      ? this.forkChoice.getBlockHexAndBlockHash(
+          toRootHex(checkpointState.latestBlockHeader.parentRoot),
+          toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+        )
+      : this.forkChoice.getBlockDefaultStatus(checkpointState.latestBlockHeader.parentRoot);
 
     if (parentBlockSummary) {
       const justifiedCheckpoint = checkpointState.currentJustifiedCheckpoint;

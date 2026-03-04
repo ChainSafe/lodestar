@@ -600,7 +600,7 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
-      const block = this.forkChoice.getBlock(state.latestBlockHeader.hashTreeRoot());
+      const block = this.forkChoice.getBlockDefaultStatus(state.latestBlockHeader.hashTreeRoot());
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state,
@@ -616,7 +616,7 @@ export class BeaconChain implements IBeaconChain {
     // TODO: This is very inneficient for debug requests of serialized content, since it deserializes to serialize again
     const cachedStateCtx = this.regen.getStateSync(stateRoot);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
+      const block = this.forkChoice.getBlockDefaultStatus(cachedStateCtx.latestBlockHeader.hashTreeRoot());
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
@@ -650,7 +650,7 @@ export class BeaconChain implements IBeaconChain {
     // finalized or justified checkpoint states maynot be available with PersistentCheckpointStateCache, use getCheckpointStateOrBytes() api to get Uint8Array
     const cachedStateCtx = this.regen.getCheckpointStateSync(checkpoint);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
+      const block = this.forkChoice.getBlockDefaultStatus(cachedStateCtx.latestBlockHeader.hashTreeRoot());
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
@@ -667,7 +667,7 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpoint);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlock(checkpoint.root);
+      const block = this.forkChoice.getBlockDefaultStatus(checkpoint.root);
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
@@ -711,7 +711,7 @@ export class BeaconChain implements IBeaconChain {
   async getBlockByRoot(
     root: string
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const block = this.forkChoice.getBlockHex(root);
+    const block = this.forkChoice.getBlockHexDefaultStatus(root);
     if (block) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -735,7 +735,7 @@ export class BeaconChain implements IBeaconChain {
   async getSerializedBlockByRoot(
     root: string
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
-    const block = this.forkChoice.getBlockHex(root);
+    const block = this.forkChoice.getBlockHexDefaultStatus(root);
     if (block) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first

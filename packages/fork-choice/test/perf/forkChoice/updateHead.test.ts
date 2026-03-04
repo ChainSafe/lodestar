@@ -1,6 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {ForkChoice, ProtoBlock} from "../../../src/index.js";
+import {ForkChoice, PayloadStatus, ProtoBlock} from "../../../src/index.js";
 import {Opts, initializeForkChoice} from "./util.js";
 
 describe("forkchoice updateHead", () => {
@@ -30,7 +29,7 @@ describe("forkchoice updateHead", () => {
         const forkChoice = initializeForkChoice(opts);
 
         const vote1 = forkChoice.updateHead();
-        const vote2 = forkChoice.getBlockHex(vote1.parentRoot);
+        const vote2 = forkChoice.getBlockHexDefaultStatus(vote1.parentRoot);
         if (!vote2) throw Error("no vote2");
         if (vote1.blockRoot === vote2.blockRoot) throw Error("blockRoot vote1 == vote2");
         if (vote1.slot === vote2.slot) throw Error("slot vote1 == vote2");
@@ -56,9 +55,8 @@ describe("forkchoice updateHead", () => {
 });
 
 function everyoneVotes(vote: ProtoBlock, forkChoice: ForkChoice): void {
-  const nextEpoch = computeEpochAtSlot(vote.slot);
   const nextRoot = vote.blockRoot;
   for (let i = 0; i < forkChoice["balances"].length; i++) {
-    forkChoice["addLatestMessage"](i, nextEpoch, nextRoot);
+    forkChoice["addLatestMessage"](i, vote.slot, nextRoot, PayloadStatus.FULL);
   }
 }

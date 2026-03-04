@@ -10,6 +10,7 @@ import {
   ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
@@ -41,6 +42,11 @@ describe("Forkchoice", () => {
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+        // Pre-Gloas block fields (required to avoid being treated as Gloas)
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
+        timeliness: false,
       } as Omit<ProtoBlock, "targetRoot">,
       genesisSlot
     );
@@ -49,16 +55,36 @@ describe("Forkchoice", () => {
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot + 1,
     justified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(finalizedRoot),
+        rootHex: finalizedRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances: new Uint16Array([32]),
       totalBalance: 32,
     },
     unrealizedJustified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(finalizedRoot),
+        rootHex: finalizedRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances: new Uint16Array([32]),
     },
-    finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-    unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    finalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+      payloadStatus: PayloadStatus.FULL,
+    },
+    unrealizedFinalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+      payloadStatus: PayloadStatus.FULL,
+    },
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
   };
@@ -104,6 +130,11 @@ describe("Forkchoice", () => {
 
       timeliness: false,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
+      builderIndex: null,
+      blockHashFromBid: null,
     };
   };
 
@@ -111,7 +142,7 @@ describe("Forkchoice", () => {
     for (let slot = genesisSlot + 1; slot <= tillSlot; slot++) {
       if (!skippedSlots.includes(slot)) {
         const block = getBlock(slot, skippedSlots);
-        protoArr.onBlock(block, block.slot);
+        protoArr.onBlock(block, block.slot, null);
       }
     }
   };
@@ -119,12 +150,19 @@ describe("Forkchoice", () => {
   it("getAllAncestorBlocks", () => {
     // Add block that is a finalized descendant.
     const block = getBlock(genesisSlot + 1);
-    protoArr.onBlock(block, block.slot);
+    protoArr.onBlock(block, block.slot, null);
     const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
     const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1));
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries).toHaveLength(1);
-    expect(summaries[0]).toEqual({...block, bestChild: undefined, bestDescendant: undefined, parent: 0, weight: 0});
+    expect(summaries[0]).toEqual({
+      ...block,
+      bestChild: undefined,
+      bestDescendant: undefined,
+      parent: 0,
+      weight: 0,
+      payloadStatus: 2, // Pre-Gloas blocks always have PAYLOAD_STATUS_FULL
+    });
   });
 
   it("getAllAncestorAndNonAncestorBlocks equals getAllAncestorBlocks + getAllNonAncestorBlocks", () => {
@@ -136,7 +174,7 @@ describe("Forkchoice", () => {
       ...getBlock(genesisSlot + 10),
       parentRoot: finalizedRoot, // Connect directly to genesis
     };
-    protoArr.onBlock(forkBlock, forkBlock.slot);
+    protoArr.onBlock(forkBlock, forkBlock.slot, null);
 
     const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
@@ -193,7 +231,7 @@ describe("Forkchoice", () => {
       const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
       const blockRoot = getBlockRoot(atSlot);
-      const block = forkchoice.getBlockHex(blockRoot);
+      const block = forkchoice.getBlockHexDefaultStatus(blockRoot);
       if (!block) throw Error(`No block for blockRoot ${blockRoot}`);
 
       const expectedDependentRoot = getBlockRoot(pivotSlot);

@@ -78,7 +78,7 @@ export async function validateGossipBlobSidecar(
   // already know this block.
   const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
   const blockHex = toRootHex(blockRoot);
-  if (chain.forkChoice.getBlockHex(blockHex) !== null) {
+  if (chain.forkChoice.getBlockHexDefaultStatus(blockHex) !== null) {
     throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.ALREADY_KNOWN, root: blockHex});
   }
 
@@ -89,7 +89,7 @@ export async function validateGossipBlobSidecar(
   // gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is
   // retrieved).
   const parentRoot = toRootHex(blobSidecar.signedBlockHeader.message.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:

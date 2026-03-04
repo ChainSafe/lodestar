@@ -1,5 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
@@ -218,6 +219,7 @@ describe("SeenBlockInputCache", async () => {
         epoch: config.DENEB_FORK_EPOCH,
         root,
         rootHex,
+        payloadStatus: PayloadStatus.FULL,
       });
       expect(cache.get(childRootHex)).toBeUndefined();
       expect(cache.get(parentRootHex)).toBeUndefined();
@@ -228,6 +230,7 @@ describe("SeenBlockInputCache", async () => {
         epoch: config.CAPELLA_FORK_EPOCH,
         root,
         rootHex,
+        payloadStatus: PayloadStatus.FULL,
       });
       expect(cache.get(childRootHex)).toBe(childBlockInput);
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);

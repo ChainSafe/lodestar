@@ -1,7 +1,8 @@
 import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interface.js";
+import {PayloadStatus} from "../protoArray/interface.js";
+import {CheckpointWithPayloadAndBalance, CheckpointWithPayloadAndTotalBalance} from "./interface.js";
 
 /**
  * Stores checkpoints in a hybrid format:
@@ -9,6 +10,15 @@ import {CheckpointHexWithBalance, CheckpointHexWithTotalBalance} from "./interfa
  * - Root in string hex for fast comparisons inside the fork-choice
  */
 export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
+
+/**
+ * Checkpoint with payload status for Gloas fork choice.
+ * Used to track which variant (EMPTY or FULL) of the finalized/justified block to use.
+ *
+ * Pre-Gloas: payloadStatus is always FULL (payload embedded in block)
+ * Gloas: determined by state.execution_payload_availability
+ */
+export type CheckpointWithPayload = CheckpointWithHex & {payloadStatus: PayloadStatus};
 
 export type JustifiedBalances = EffectiveBalanceIncrements;
 
@@ -19,7 +29,7 @@ export type JustifiedBalances = EffectiveBalanceIncrements;
  * @param blockState state that declares justified checkpoint `checkpoint`
  */
 export type JustifiedBalancesGetter = (
-  checkpoint: CheckpointWithHex,
+  checkpoint: CheckpointWithPayload,
   blockState: CachedBeaconStateAllForks
 ) => JustifiedBalances;
 
@@ -37,11 +47,11 @@ export type JustifiedBalancesGetter = (
  */
 export interface IForkChoiceStore {
   currentSlot: Slot;
-  get justified(): CheckpointHexWithTotalBalance;
-  set justified(justified: CheckpointHexWithBalance);
-  unrealizedJustified: CheckpointHexWithBalance;
-  finalizedCheckpoint: CheckpointWithHex;
-  unrealizedFinalizedCheckpoint: CheckpointWithHex;
+  get justified(): CheckpointWithPayloadAndTotalBalance;
+  set justified(justified: CheckpointWithPayloadAndBalance);
+  unrealizedJustified: CheckpointWithPayloadAndBalance;
+  finalizedCheckpoint: CheckpointWithPayload;
+  unrealizedFinalizedCheckpoint: CheckpointWithPayload;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
 }
@@ -50,10 +60,10 @@ export interface IForkChoiceStore {
  * IForkChoiceStore implementer which emits forkChoice events on updated justified and finalized checkpoints.
  */
 export class ForkChoiceStore implements IForkChoiceStore {
-  private _justified: CheckpointHexWithTotalBalance;
-  unrealizedJustified: CheckpointHexWithBalance;
-  private _finalizedCheckpoint: CheckpointWithHex;
-  unrealizedFinalizedCheckpoint: CheckpointWithHex;
+  private _justified: CheckpointWithPayloadAndTotalBalance;
+  unrealizedJustified: CheckpointWithPayloadAndBalance;
+  private _finalizedCheckpoint: CheckpointWithPayload;
+  unrealizedFinalizedCheckpoint: CheckpointWithPayload;
   equivocatingIndices = new Set<ValidatorIndex>();
   justifiedBalancesGetter: JustifiedBalancesGetter;
   currentSlot: Slot;
@@ -64,37 +74,49 @@ export class ForkChoiceStore implements IForkChoiceStore {
     finalizedCheckpoint: phase0.Checkpoint,
     justifiedBalances: EffectiveBalanceIncrements,
     justifiedBalancesGetter: JustifiedBalancesGetter,
+    /**
+     * Payload status for justified checkpoint.
+     * Pre-Gloas: always FULL
+     * Gloas: determined by state.execution_payload_availability
+     */
+    justifiedPayloadStatus: PayloadStatus,
+    /**
+     * Payload status for finalized checkpoint.
+     * Pre-Gloas: always FULL
+     * Gloas: determined by state.execution_payload_availability
+     */
+    finalizedPayloadStatus: PayloadStatus,
     private readonly events?: {
-      onJustified: (cp: CheckpointWithHex) => void;
-      onFinalized: (cp: CheckpointWithHex) => void;
+      onJustified: (cp: CheckpointWithPayload) => void;
+      onFinalized: (cp: CheckpointWithPayload) => void;
     }
   ) {
     this.justifiedBalancesGetter = justifiedBalancesGetter;
     this.currentSlot = currentSlot;
     const justified = {
-      checkpoint: toCheckpointWithHex(justifiedCheckpoint),
+      checkpoint: toCheckpointWithPayload(justifiedCheckpoint, justifiedPayloadStatus),
       balances: justifiedBalances,
       totalBalance: computeTotalBalance(justifiedBalances),
     };
     this._justified = justified;
     this.unrealizedJustified = justified;
-    this._finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
+    this._finalizedCheckpoint = toCheckpointWithPayload(finalizedCheckpoint, finalizedPayloadStatus);
     this.unrealizedFinalizedCheckpoint = this._finalizedCheckpoint;
   }
 
-  get justified(): CheckpointHexWithTotalBalance {
+  get justified(): CheckpointWithPayloadAndTotalBalance {
     return this._justified;
   }
-  set justified(justified: CheckpointHexWithBalance) {
+  set justified(justified: CheckpointWithPayloadAndBalance) {
     this._justified = {...justified, totalBalance: computeTotalBalance(justified.balances)};
     this.events?.onJustified(justified.checkpoint);
   }
 
-  get finalizedCheckpoint(): CheckpointWithHex {
+  get finalizedCheckpoint(): CheckpointWithPayload {
     return this._finalizedCheckpoint;
   }
-  set finalizedCheckpoint(checkpoint: CheckpointWithHex) {
-    const cp = toCheckpointWithHex(checkpoint);
+  set finalizedCheckpoint(checkpoint: CheckpointWithPayload) {
+    const cp = toCheckpointWithPayload(checkpoint, checkpoint.payloadStatus);
     this._finalizedCheckpoint = cp;
     this.events?.onFinalized(cp);
   }
@@ -108,6 +130,16 @@ export function toCheckpointWithHex(checkpoint: phase0.Checkpoint): CheckpointWi
     epoch: checkpoint.epoch,
     root,
     rootHex: toRootHex(root),
+  };
+}
+
+export function toCheckpointWithPayload(
+  checkpoint: phase0.Checkpoint,
+  payloadStatus: PayloadStatus
+): CheckpointWithPayload {
+  return {
+    ...toCheckpointWithHex(checkpoint),
+    payloadStatus,
   };
 }
 
