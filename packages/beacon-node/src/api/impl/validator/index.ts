@@ -1000,8 +1000,8 @@ export function getValidatorApi(
       let index: CommitteeIndex;
       if (isForkPostGloas(fork)) {
         // After Gloas, attestation.data.index signals payload status in fork-choice:
-        // 0 = EMPTY / not present, 1 = FULL / present.
-        // Per spec, same-slot attestations must always use index = 0.
+        // - 0 = EMPTY / not present, 1 = FULL / present
+        // - same-slot attestations must always use index = 0
         const canonicalAttestedBlock = chain.forkChoice.getCanonicalBlockClosestLteSlot(slot);
         const isMatchingCanonicalRoot =
           canonicalAttestedBlock !== null && canonicalAttestedBlock.blockRoot === toRootHex(beaconBlockRoot);
