@@ -298,10 +298,16 @@ export class ReqRespBeaconNode extends ReqResp {
     }
 
     if (ForkSeq[fork] >= ForkSeq.gloas) {
-      protocolsAtFork.push([
-        protocols.ExecutionPayloadEnvelopesByRoot(fork, this.config),
-        this.getHandler(ReqRespMethod.ExecutionPayloadEnvelopesByRoot),
-      ]);
+      protocolsAtFork.push(
+        [
+          protocols.ExecutionPayloadEnvelopesByRange(fork, this.config),
+          this.getHandler(ReqRespMethod.ExecutionPayloadEnvelopesByRange),
+        ],
+        [
+          protocols.ExecutionPayloadEnvelopesByRoot(fork, this.config),
+          this.getHandler(ReqRespMethod.ExecutionPayloadEnvelopesByRoot),
+        ]
+      );
     }
 
     return protocolsAtFork;
