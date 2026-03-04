@@ -34,9 +34,6 @@ importers:
       '@chainsafe/lodestar':
         specifier: workspace:*
         version: link:packages/cli
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/48055893741f09b1b5fae3153c9f8bd59601060f
       debug:
         specifier: ^4.4.3
         version: 4.4.3
