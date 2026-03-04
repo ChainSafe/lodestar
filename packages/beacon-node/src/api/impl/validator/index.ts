@@ -999,7 +999,7 @@ export function getValidatorApi(
 
       let index: CommitteeIndex;
       if (isForkPostGloas(fork)) {
-        // In Gloas (ePBS), attestation.data.index signals payload status in fork-choice:
+        // After Gloas, attestation.data.index signals payload status in fork-choice:
         // 0 = EMPTY / not present, 1 = FULL / present.
         // Per spec, same-slot attestations must always use index = 0.
         const canonicalAttestedBlock = chain.forkChoice.getCanonicalBlockClosestLteSlot(slot);
