@@ -18,6 +18,7 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 onlyBuiltDependencies:
+  - '@chainsafe/lodestar-z'
   - '@parcel/watcher'
   - '@swc/core'
   - aws-sdk
