@@ -246,7 +246,7 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
         }
       }
 
-      forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+      forkchoiceStub.getBlockHexDefaultStatus.mockReturnValue(generateProtoBlock());
       forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
 
       const shufflingCache = new ShufflingCache();

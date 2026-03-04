@@ -307,7 +307,7 @@ async function validateAttestationNoSignatureCheck(
         }
 
         // [REJECT] `attestation.data.index == 0` if `block.slot == attestation.data.slot`.
-        const block = chain.forkChoice.getBlock(attData.beaconBlockRoot);
+        const block = chain.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
 
         // block being null will be handled by `verifyHeadBlockAndTargetRoot`
         if (block !== null && block.slot === attSlot && attData.index !== 0) {
@@ -756,7 +756,7 @@ export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0
 function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): ProtoBlock {
   // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
-  const headBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+  const headBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,

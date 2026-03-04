@@ -1,7 +1,7 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
+import {ExecutionStatus, ForkChoice, IForkChoiceStore, PayloadStatus, ProtoArray} from "@lodestar/fork-choice";
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
@@ -68,6 +68,11 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
 
           timeliness: false,
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+          parentBlockHash: null,
+          payloadStatus: 2, // PayloadStatus.FULL
+          builderIndex: null,
+          blockHashFromBid: null,
         },
         originalState.slot
       );
@@ -93,8 +98,14 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+            parentBlockHash: null,
+            payloadStatus: 2, // PayloadStatus.FULL
+            builderIndex: null,
+            blockHashFromBid: null,
           },
-          slot
+          slot,
+          null
         );
       }
 
@@ -106,16 +117,32 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
       const fcStore: IForkChoiceStore = {
         currentSlot: originalState.slot,
         justified: {
-          checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+          checkpoint: {
+            ...justifiedCheckpoint,
+            rootHex: toHexString(justifiedCheckpoint.root),
+            payloadStatus: PayloadStatus.FULL,
+          },
           balances: originalState.epochCtx.effectiveBalanceIncrements,
           totalBalance,
         },
         unrealizedJustified: {
-          checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+          checkpoint: {
+            ...justifiedCheckpoint,
+            rootHex: toHexString(justifiedCheckpoint.root),
+            payloadStatus: PayloadStatus.FULL,
+          },
           balances: originalState.epochCtx.effectiveBalanceIncrements,
         },
-        finalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
-        unrealizedFinalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
+        finalizedCheckpoint: {
+          ...finalizedCheckpoint,
+          rootHex: toHexString(finalizedCheckpoint.root),
+          payloadStatus: PayloadStatus.FULL,
+        },
+        unrealizedFinalizedCheckpoint: {
+          ...finalizedCheckpoint,
+          rootHex: toHexString(finalizedCheckpoint.root),
+          payloadStatus: PayloadStatus.FULL,
+        },
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
       };

@@ -20,7 +20,7 @@ export async function updateBackfillRange(
   try {
     // Mark the sequence in backfill db from finalized block's slot till anchor slot as
     // filled.
-    const finalizedBlockFC = chain.forkChoice.getBlockHex(finalized.rootHex);
+    const finalizedBlockFC = chain.forkChoice.getBlockHexDefaultStatus(finalized.rootHex);
     if (finalizedBlockFC && finalizedBlockFC.slot > chain.anchorStateLatestBlockSlot) {
       await db.backfilledRanges.put(finalizedBlockFC.slot, chain.anchorStateLatestBlockSlot);
 

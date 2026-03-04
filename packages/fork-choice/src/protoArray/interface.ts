@@ -36,6 +36,23 @@ export enum ExecutionStatus {
   PayloadSeparated = "PayloadSeparated",
 }
 
+/**
+ * Payload status for ePBS (Gloas fork)
+ * Spec: gloas/fork-choice.md#constants
+ */
+export enum PayloadStatus {
+  PENDING = 0,
+  EMPTY = 1,
+  FULL = 2,
+}
+
+/**
+ * Check if a block is in the Gloas fork (ePBS enabled)
+ */
+export function isGloasBlock(block: ProtoBlock): boolean {
+  return block.parentBlockHash !== null;
+}
+
 export type LVHValidResponse = {
   executionStatus: ExecutionStatus.Valid;
   latestValidExecHash: RootHex;
@@ -51,6 +68,11 @@ export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus
 
 export type BlockExtraMeta =
   | {
+      // Pre-gloas:
+      //   - block hash of payload of the block
+      // Post-gloas:
+      //   - this is parentBlockHash of block bid because payload is only received later
+      //   - payload block hash for FULL variant
       executionPayloadBlockHash: RootHex;
       executionPayloadNumber: UintNum64;
       executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
@@ -102,14 +124,25 @@ export type ProtoBlock = BlockExtraMeta & {
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
 
-  // GLOAS: The followings are from bids. Used for execution payload gossip validation
-  builderIndex?: number;
-  blockHashHex?: RootHex;
+  /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
+  payloadStatus: PayloadStatus;
+
+  // GLOAS: The followings are from bids. They are null in pre-gloas
+  // Used for execution payload gossip validation
+  builderIndex: number | null;
+  // Used for execution payload gossip validation. Not to be confused with executionPayloadBlockHash
+  blockHashFromBid: RootHex | null;
+
+  // Used to determine if this block extends EMPTY or FULL parent variant
+  // Spec: gloas/fork-choice.md#new-get_parent_payload_status
+  parentBlockHash: RootHex | null;
 };
 
 /**
  * A block root with additional metadata required to form a DAG
  * with vote weights and best blocks stored as metadata
+ *
+ * It is also used as ForkChoiceNode in fork choice spec
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;

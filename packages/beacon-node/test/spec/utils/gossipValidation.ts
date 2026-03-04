@@ -247,7 +247,7 @@ function isDescendantAtFinalizedCheckpoint(
 ): boolean {
   try {
     const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    return chain.forkChoice.getAncestor(blockRootHex, finalizedSlot) === checkpoint.rootHex;
+    return chain.forkChoice.getAncestor(blockRootHex, finalizedSlot).blockRoot === checkpoint.rootHex;
   } catch {
     return false;
   }

@@ -4,6 +4,7 @@ import {
   BlockExtraMeta,
   ExecutionStatus,
   MaybeValidExecutionStatus,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
@@ -74,7 +75,12 @@ function setupForkChoice(): ProtoArray {
       finalizedEpoch: 0,
       finalizedRoot: "-",
 
-      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      executionPayloadBlockHash: null,
+      executionStatus: ExecutionStatus.PreMerge,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     0
   );
@@ -115,8 +121,14 @@ function setupForkChoice(): ProtoArray {
         timeliness: false,
 
         ...executionData,
+
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
+        builderIndex: null,
+        blockHashFromBid: null,
       },
-      block.slot
+      block.slot,
+      null
     );
   }
 
@@ -289,7 +301,10 @@ describe("executionStatus / invalidate all postmerge chain", () => {
 
   const fcHead = fc.findHead("0", 3);
   it("pre merge block should be the FC head", () => {
-    expect(fcHead).toBe("0");
+    // findHead returns ProtoNode
+    // For pre-Gloas blocks, this should have blockRoot "0" and payloadStatus FULL (2)
+    expect(fcHead.blockRoot).toBe("0");
+    expect(fcHead.payloadStatus).toBe(2); // PayloadStatus.FULL
   });
 });
 
@@ -421,7 +436,8 @@ function collectProtoarrayValidationStatus(fcArray: ProtoArray): ValidationTestC
   const expectedForkChoice: ValidationTestCase[] = [];
 
   for (const fcRoot of fcRoots) {
-    const fcNode = fcArray.getNode(fcRoot);
+    const defaultStatus = fcArray.getDefaultVariant(fcRoot);
+    const fcNode = defaultStatus !== undefined ? fcArray.getNode(fcRoot, defaultStatus) : undefined;
     const bestChild =
       fcNode?.bestChild !== undefined ? fcArray["getNodeFromIndex"](fcNode.bestChild).blockRoot : undefined;
     const bestDescendant =
