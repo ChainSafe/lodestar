@@ -89,6 +89,7 @@
   },
   "dependencies": {
     "@chainsafe/lodestar": "workspace:*",
+    "@chainsafe/lodestar-z": "catalog:",
     "debug": "^4.4.3"
   },
   "resolutions": {
