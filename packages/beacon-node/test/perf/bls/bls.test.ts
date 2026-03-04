@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import {bench, describe} from "@chainsafe/benchmark";
+import {blsBatch} from "@chainsafe/lodestar-z/bls-batch";
 import {
   PublicKey,
   SecretKey,
@@ -9,7 +10,8 @@ import {
   verify,
   verifyMultipleAggregateSignatures,
 } from "@chainsafe/lodestar-z/blst";
-import {linspace} from "../../../src/util/numpy.js";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {linspace} from "../../../src/util/numpy.ts";
 
 describe("BLS ops", () => {
   type Keypair = {publicKey: PublicKey; secretKey: SecretKey};
@@ -123,6 +125,98 @@ describe("BLS ops", () => {
       beforeEach: () => linspace(0, count - 1).map((i) => getKeypair(i).publicKey),
       fn: (pubkeys) => {
         aggregatePublicKeys(pubkeys);
+      },
+    });
+  }
+});
+
+describe("BLS napi batching bindings", () => {
+  const maxKeys = 256;
+  blsBatch.init(40_000);
+
+  const secretKeys: SecretKey[] = [];
+  for (let i = 0; i < maxKeys; i++) {
+    const bytes = new Uint8Array(32);
+    const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    dataView.setUint32(0, i + 1, true);
+    const sk = SecretKey.fromKeygen(bytes);
+    secretKeys.push(sk);
+    pubkeyCache.set(i, sk.toPublicKey().toBytes());
+  }
+
+  type IndexedSet = {index: number; message: Uint8Array; signature: Uint8Array};
+  type SingleSet = {publicKey: Uint8Array; message: Uint8Array; signature: Uint8Array};
+
+  function getIndexedSet(i: number): IndexedSet {
+    const message = Buffer.alloc(32, i + 1);
+    return {index: i, message, signature: secretKeys[i].sign(message).toBytes()};
+  }
+
+  function getSingleSet(i: number): SingleSet {
+    const message = Buffer.alloc(32, i + 1);
+    return {
+      publicKey: secretKeys[i].toPublicKey().toBytes(),
+      message,
+      signature: secretKeys[i].sign(message).toBytes(),
+    };
+  }
+
+  const seedMessage = crypto.randomBytes(32);
+  function getSameMessageSet(i: number): {index: number; signature: Uint8Array} {
+    return {index: i, signature: secretKeys[i].sign(seedMessage).toBytes()};
+  }
+
+  for (const count of [3, 8, 32, 64, 128]) {
+    bench({
+      id: `blsBatch.verify(indexed) ${count}`,
+      beforeEach: () => linspace(0, count - 1).map((i) => getIndexedSet(i)),
+      fn: (sets) => {
+        const isValid = blsBatch.verify(blsBatch.indexed, sets);
+        if (!isValid) throw Error("Invalid");
+      },
+    });
+  }
+
+  for (const count of [3, 8, 32, 64, 128]) {
+    bench({
+      id: `blsBatch.verify(single) ${count}`,
+      beforeEach: () => linspace(0, count - 1).map((i) => getSingleSet(i)),
+      fn: (sets) => {
+        const isValid = blsBatch.verify(blsBatch.single, sets);
+        if (!isValid) throw Error("Invalid");
+      },
+    });
+  }
+
+  for (const count of [3, 8, 32, 64, 128]) {
+    bench({
+      id: `blsBatch.asyncVerify(indexed) ${count}`,
+      beforeEach: () => linspace(0, count - 1).map((i) => getIndexedSet(i)),
+      fn: async (sets) => {
+        const isValid = await blsBatch.asyncVerify(blsBatch.indexed, sets);
+        if (!isValid) throw Error("Invalid");
+      },
+    });
+  }
+
+  for (const count of [3, 8, 32, 64, 128]) {
+    bench({
+      id: `blsBatch.asyncVerify(single) ${count}`,
+      beforeEach: () => linspace(0, count - 1).map((i) => getSingleSet(i)),
+      fn: (sets) => {
+        const isValid = blsBatch.asyncVerify(blsBatch.single, sets);
+        if (!isValid) throw Error("Invalid");
+      },
+    });
+  }
+
+  for (const count of [3, 8, 32, 64, 128]) {
+    bench({
+      id: `blsBatch.asyncVerifySameMessage ${count}`,
+      beforeEach: () => linspace(0, count - 1).map((i) => getSameMessageSet(i)),
+      fn: async (sets) => {
+        const isValid = await blsBatch.asyncVerifySameMessage(sets, seedMessage);
+        if (!isValid) throw Error("Invalid");
       },
     });
   }
