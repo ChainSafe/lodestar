@@ -460,7 +460,7 @@ export class EpochCache {
     }
 
     // Compute PTC eagerly for all slots in the epoch
-    const previousPayloadTimelinessCommittees: Uint32Array[] = [];
+    let previousPayloadTimelinessCommittees: Uint32Array[] = [];
     let payloadTimelinessCommittees: Uint32Array[] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
       payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
@@ -469,6 +469,18 @@ export class EpochCache {
         currentShuffling.committees,
         effectiveBalanceIncrements
       );
+
+      // Populate previous-epoch committees when creating cache from an in-memory state.
+      // This is needed for epoch-boundary lookups (slot N block validating slot N-1 attestation)
+      // after restart / fresh cache initialization.
+      if (!isGenesis && previousEpoch >= config.GLOAS_FORK_EPOCH) {
+        previousPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
+          state,
+          previousEpoch,
+          previousShuffling.committees,
+          effectiveBalanceIncrements
+        );
+      }
     }
 
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
