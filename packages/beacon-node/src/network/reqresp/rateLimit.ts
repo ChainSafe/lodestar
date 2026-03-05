@@ -83,6 +83,16 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
       (req) => req.length
     ),
   },
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: {
+    // Rationale: similar to BeaconBlocksByRange — one envelope per block
+    byPeer: {quota: config.MAX_REQUEST_PAYLOADS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(
+      fork,
+      config,
+      ReqRespMethod.ExecutionPayloadEnvelopesByRange,
+      (req) => req.count
+    ),
+  },
   [ReqRespMethod.LightClientBootstrap]: {
     // As similar in the nature of `Status` protocol so we use the same rate limits.
     byPeer: {quota: 5, quotaTimeMs: 15_000},

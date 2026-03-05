@@ -100,6 +100,12 @@ export const ExecutionPayloadEnvelopesByRoot = toProtocol({
   contextBytesType: ContextBytesType.ForkDigest,
 });
 
+export const ExecutionPayloadEnvelopesByRange = toProtocol({
+  method: ReqRespMethod.ExecutionPayloadEnvelopesByRange,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
 export const LightClientBootstrap = toProtocol({
   method: ReqRespMethod.LightClientBootstrap,
   version: Version.V1,

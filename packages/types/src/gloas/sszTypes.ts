@@ -166,6 +166,14 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
+export const ExecutionPayloadEnvelopesByRangeRequest = new ContainerType(
+  {
+    startSlot: Slot,
+    count: UintNum64,
+  },
+  {typeName: "ExecutionPayloadEnvelopesByRangeRequest", jsonCase: "eth2"}
+);
+
 export const BeaconBlockBody = new ContainerType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
