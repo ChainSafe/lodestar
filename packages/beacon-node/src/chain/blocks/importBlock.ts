@@ -116,7 +116,7 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true 
+  // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true
   // Post-Gloas: blockSummary.payloadStatus is always PENDING, so payloadPresent = false (block state only, no payload processing yet)
   const isGloasBlock = blockSummary.blockHashFromBid !== null;
   const payloadPresent = !isGloasBlock;

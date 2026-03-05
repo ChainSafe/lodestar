@@ -41,7 +41,7 @@ export class DbCPStateDatastore implements CPStateDatastore {
 }
 
 export function datastoreKeyToCheckpoint(key: DatastoreKey): phase0.Checkpoint {
-  // Strip the payloadPresent suffix byte if present 
+  // Strip the payloadPresent suffix byte if present
   const cpBytes = key.length === 41 ? key.subarray(0, 40) : key;
   return ssz.phase0.Checkpoint.deserialize(cpBytes);
 }

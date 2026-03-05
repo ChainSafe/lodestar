@@ -2,7 +2,14 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithPayload, IForkChoice, PayloadStatus, ProtoBlock, UpdateHeadOpt, getCheckpointPayloadStatus} from "@lodestar/fork-choice";
+import {
+  CheckpointWithPayload,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  UpdateHeadOpt,
+  getCheckpointPayloadStatus,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -641,7 +648,7 @@ export class BeaconChain implements IBeaconChain {
       return this.cpStateDatastore.readLatestSafe();
     }
 
-    // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint. 
+    // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint.
     const persistedKey = checkpointToDatastoreKey(checkpoint, true);
     return this.cpStateDatastore.read(persistedKey);
   }
