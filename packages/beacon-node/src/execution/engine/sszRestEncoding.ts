@@ -90,10 +90,10 @@ export function encodeForkchoiceState(
 /**
  * Encode a ForkchoiceUpdated request.
  *
- * Layout: ForkchoiceState(96 fixed) + attributes_offset(4) + optional Union[None, PayloadAttributes]
+ * Layout: ForkchoiceState(96 fixed) + attributes_offset(4) + List[PayloadAttributes, 1]
  *
- * Union encoding: if None, offset points to end of data.
- * If present: selector byte 1 + PayloadAttributes SSZ.
+ * List[PayloadAttributes, 1]: empty = absent; offset(4) + element data = present
+ * (PayloadAttributes is variable-size, so the list uses a 4-byte item offset)
  *
  * PayloadAttributes V3: timestamp(8) + prevRandao(32) + suggestedFeeRecipient(20)
  *   + withdrawals_offset(4) + parentBeaconBlockRoot(32) + withdrawals list
@@ -110,12 +110,12 @@ export function encodeForkchoiceUpdatedRequest(
   const FIXED_SIZE = 100;
 
   if (!attributes) {
-    // No attributes: offset points to end, no variable data
+    // No attributes: offset points to end (empty list)
     const buf = new Uint8Array(FIXED_SIZE);
     buf.set(headBlockHash, 0);
     buf.set(safeBlockHash, 32);
     buf.set(finalizedBlockHash, 64);
-    writeUint32LE(buf, 96, FIXED_SIZE); // offset to end = None union
+    writeUint32LE(buf, 96, FIXED_SIZE);
     return buf;
   }
 
@@ -130,8 +130,8 @@ export function encodeForkchoiceUpdatedRequest(
   const withdrawalsSize = withdrawals.length * 44;
   const attrTotalSize = ATTR_FIXED + withdrawalsSize;
 
-  // Total: FIXED_SIZE + 1 (union selector) + attrTotalSize
-  const totalSize = FIXED_SIZE + 1 + attrTotalSize;
+  // Total: FIXED_SIZE + 4 (list item offset) + attrTotalSize
+  const totalSize = FIXED_SIZE + 4 + attrTotalSize;
   const buf = new Uint8Array(totalSize);
 
   // ForkchoiceState
@@ -139,23 +139,22 @@ export function encodeForkchoiceUpdatedRequest(
   buf.set(safeBlockHash, 32);
   buf.set(finalizedBlockHash, 64);
 
-  // Offset to attributes union
+  // Offset to attributes list data
   writeUint32LE(buf, 96, FIXED_SIZE);
 
-  // Union selector: 1 = present
+  // List[PayloadAttributes, 1] with 1 element: item offset(4) + element data
   let pos = FIXED_SIZE;
-  buf[pos] = 1;
-  pos += 1;
+  writeUint32LE(buf, pos, 4); // offset to element data (past the single item offset)
+  pos += 4;
 
-  // PayloadAttributes
-  const attrStart = pos;
+  // PayloadAttributes element data
   writeUint64LE(buf, pos, BigInt(attributes.timestamp));
   pos += 8;
   buf.set(attributes.prevRandao, pos);
   pos += 32;
   buf.set(feeRecipientBytes, pos);
   pos += 20;
-  // withdrawals_offset: relative to attrStart
+  // withdrawals_offset: relative to element start
   writeUint32LE(buf, pos, ATTR_FIXED);
   pos += 4;
   if (parentBeaconBlockRoot) {
@@ -322,7 +321,7 @@ export interface DecodedPayloadStatus {
  *   Byte 0: status (0=VALID, 1=INVALID, 2=SYNCING, 3=ACCEPTED, 4=INVALID_BLOCK_HASH)
  *   Bytes 1-4: latestValidHash offset (uint32 LE)
  *   Bytes 5-8: validationError offset (uint32 LE)
- *   Variable: latestValidHash as Union (selector byte 0=None, 1=present + 32 bytes)
+ *   Variable: latestValidHash as List[Hash32, 1] (0 bytes = absent, 32 bytes = present)
  *   Variable: validationError as UTF-8 bytes
  */
 export function decodePayloadStatus(data: Uint8Array): DecodedPayloadStatus {
@@ -339,16 +338,12 @@ export function decodePayloadStatus(data: Uint8Array): DecodedPayloadStatus {
   const latestValidHashOffset = readUint32LE(data, 1);
   const validationErrorOffset = readUint32LE(data, 5);
 
-  // Decode latestValidHash (Union)
+  // Decode latestValidHash: List[Hash32, 1] — 0 bytes = absent, 32 bytes = present
   let latestValidHash: string | null = null;
-  if (latestValidHashOffset < data.length) {
-    const selector = data[latestValidHashOffset];
-    if (selector === 1) {
-      // 32-byte hash present
-      const hashBytes = data.subarray(latestValidHashOffset + 1, latestValidHashOffset + 33);
-      latestValidHash = "0x" + bytesToHex(hashBytes);
-    }
-    // selector === 0 means None
+  const hashLen = validationErrorOffset - latestValidHashOffset;
+  if (hashLen === 32) {
+    const hashBytes = data.subarray(latestValidHashOffset, validationErrorOffset);
+    latestValidHash = "0x" + bytesToHex(hashBytes);
   }
 
   // Decode validationError
@@ -375,7 +370,7 @@ export interface DecodedForkchoiceUpdatedResponse {
  *   Bytes 0-3: payloadStatus offset
  *   Bytes 4-7: payloadId offset
  *   Variable: payloadStatus (decoded with decodePayloadStatus)
- *   Variable: payloadId as Union (selector 0=None, 1=present + 8 bytes)
+ *   Variable: payloadId as List[Bytes8, 1] (0 bytes = absent, 8 bytes = present)
  */
 export function decodeForkchoiceUpdatedResponse(data: Uint8Array): DecodedForkchoiceUpdatedResponse {
   if (data.length < 8) {
@@ -390,14 +385,11 @@ export function decodeForkchoiceUpdatedResponse(data: Uint8Array): DecodedForkch
   const payloadStatusBytes = data.subarray(payloadStatusOffset, payloadStatusEnd);
   const payloadStatus = decodePayloadStatus(payloadStatusBytes);
 
-  // Decode payloadId (Union)
+  // Decode payloadId: List[Bytes8, 1] — 0 bytes = absent, 8 bytes = present
   let payloadId: string | null = null;
-  if (payloadIdOffset < data.length) {
-    const selector = data[payloadIdOffset];
-    if (selector === 1) {
-      const idBytes = data.subarray(payloadIdOffset + 1, payloadIdOffset + 9);
-      payloadId = "0x" + bytesToHex(idBytes);
-    }
+  const pidData = data.subarray(payloadIdOffset);
+  if (pidData.length === 8) {
+    payloadId = "0x" + bytesToHex(pidData);
   }
 
   return {payloadStatus, payloadId};
