@@ -43,27 +43,11 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   pruneOnFinalized(finalizedEpoch: Epoch): void;
-  /**
-   * Process block state for caching and memory management (after stateTransition).
-   * Manages both block state and payload state variants together based on root canonicality.
-   * Should be called once per block import, not separately for block state and payload state.
-   * @param blockRootHex - Block root hex
-   * @param postState - Cached beacon state after block processing
-   */
   processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void;
-  /**
-   * Process payload state for caching (after processExecutionPayloadEnvelope).
-   * Only called for Gloas blocks that have payloads revealed.
-   * @param blockRootHex - Block root hex
-   * @param payloadState - Cached beacon state after payload processing
-   */
   processPayloadState(payloadState: CachedBeaconStateAllForks): void;
   /**
-   * Add checkpoint state to cache.
-   * @param cp - Checkpoint (epoch + root)
-   * @param item - Cached beacon state
-   * @param payloadPresent - For Gloas: true if this is payload state, false if block state.
-   *                         Always true for pre-Gloas.
+   * payloadPresent is true if this is payload state, false if block state.
+   * payloadPresent is always true for pre-gloas.
    */
   addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks, payloadPresent: boolean): void;
   updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void;

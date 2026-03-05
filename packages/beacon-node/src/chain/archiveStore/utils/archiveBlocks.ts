@@ -94,6 +94,7 @@ export async function archiveBlocks(
       logger.verbose("Migrated blobSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
     }
 
+    // TODO GLOAS: nit - this should be handled in archiveExecutionPayloadEnvelopes although functionally it does not make a difference
     if (finalizedPostFulu) {
       const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
         config,

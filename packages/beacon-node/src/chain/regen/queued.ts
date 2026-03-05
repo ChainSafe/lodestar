@@ -181,11 +181,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   /**
-   * Process payload state for caching after processExecutionPayloadEnvelope.
-   * Only called for Gloas blocks that have payloads revealed.
-   * The payload state has a different state root than the block state.
-   * Note: We don't call checkpointStateCache.processState() here because it was already
-   * called during block import and processes both block state and payload state variants together.
+   * Process payload state for caching after importing execution payload..
    */
   processPayloadState(payloadState: CachedBeaconStateAllForks): void {
     // Add payload state to block state cache (keyed by payload state root)

@@ -116,8 +116,8 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true (execution payload embedded in block)
-  // Post-Gloas: blockSummary.payloadStatus is always PENDING (EMPTY variant also created), payloadPresent = false (block state only, no payload processing yet)
+  // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true 
+  // Post-Gloas: blockSummary.payloadStatus is always PENDING, so payloadPresent = false (block state only, no payload processing yet)
   const isGloasBlock = blockSummary.blockHashFromBid !== null;
   const payloadPresent = !isGloasBlock;
   // processState manages both block state and payload state variants together for memory/disk management
@@ -461,8 +461,6 @@ export async function importBlock(
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    // Pre-Gloas: payloadPresent = true (FULL variant, execution payload embedded in block)
-    // Post-Gloas: payloadPresent = false (PENDING variant with EMPTY also created, block state only)
     this.regen.addCheckpointState(cp, checkpointState, payloadPresent);
     // consumers should not mutate state ever
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
