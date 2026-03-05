@@ -1,7 +1,5 @@
 import axios from "axios";
 import {describe, expect, it, vi} from "vitest";
-// biome-ignore lint/suspicious/noTsIgnore: TS6059 during TS6 migration (ESM boundary)
-// @ts-ignore
 import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
