@@ -57,8 +57,8 @@ describe("AttestationService", () => {
     vi.resetAllMocks();
   });
 
-  const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 1};
-  const gloasConfig: Partial<ChainConfig> = {GLOAS_FORK_EPOCH: 0};
+  const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0};
+  const gloasConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0};
 
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
     ["With default configuration", {}, {}],
@@ -72,8 +72,8 @@ describe("AttestationService", () => {
         const slot = 0;
         const clock = new ClockMock();
         const config = createChainForkConfig({...defaultConfig, ...chainConfig});
-        const isPostElectra = chainConfig.ELECTRA_FORK_EPOCH === 0;
-        const isPostGloas = chainConfig.GLOAS_FORK_EPOCH === 0;
+        const isPostElectra = config.getForkSeq(slot) >= ForkSeq.electra;
+        const isPostGloas = config.getForkSeq(slot) >= ForkSeq.gloas;
         const attestationService = new AttestationService(
           loggerVc,
           api,
