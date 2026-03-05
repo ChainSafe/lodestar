@@ -94,6 +94,13 @@ export type EngineApiRpcParamTypes = {
 
   engine_getBlobsV1: [DATA[]];
   engine_getBlobsV2: [DATA[]];
+
+  /**
+   * Exchange supported capability identifiers between CL and EL.
+   *
+   * Used for Engine API transport negotiation and feature discovery.
+   */
+  engine_exchangeCapabilities: [string[]];
 };
 
 export type PayloadStatus = {
@@ -140,6 +147,9 @@ export type EngineApiRpcReturnTypes = {
 
   engine_getBlobsV1: (BlobAndProofRpc | null)[];
   engine_getBlobsV2: BlobAndProofV2Rpc[] | null;
+
+  /** Returns EL-advertised capability identifiers. */
+  engine_exchangeCapabilities: string[];
 };
 
 type ExecutionPayloadRpcWithValue = {

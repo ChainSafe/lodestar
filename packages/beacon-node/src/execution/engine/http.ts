@@ -1,12 +1,17 @@
+import {
+  EngineSszNegotiationState,
+  LODESTAR_ENGINE_SSZ_CAPABILITIES,
+  buildEngineDispatchPlan,
+  isEngineSszUnsupportedStatus,
+} from "@lodestar/api";
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkPostFulu, ForkPreFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {strip0xPrefix} from "@lodestar/utils";
-import {Metrics} from "../../metrics/index.js";
+import {ErrorAborted, TimeoutError, fetch, fromHex, retry, strip0xPrefix} from "@lodestar/utils";
+import type {Metrics} from "../../metrics/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
-import {getLodestarClientVersion} from "../../util/metadata.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {
   ClientCode,
@@ -26,7 +31,9 @@ import {
   JsonRpcHttpClientEvent,
   ReqOpts,
 } from "./jsonRpcHttpClient.js";
+import {encodeJwtToken} from "./jwt.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
+import {decodeEngineSszResponse, encodeEngineSszRequest} from "./sszTransport.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
   EngineApiRpcParamTypes,
@@ -106,6 +113,17 @@ const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
  * https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#specification-3
  */
 const MAX_VERSIONED_HASHES = 128;
+const REQUEST_TIMEOUT = 30 * 1000;
+const MAX_ERROR_BODY_LENGTH = 500;
+
+function getLodestarEngineClientVersion(opts?: {version?: string; commit?: string}): ClientVersion {
+  return {
+    code: ClientCode.LS,
+    name: "Lodestar",
+    version: opts?.version ?? "",
+    commit: opts?.commit?.slice(0, 8) ?? "",
+  };
+}
 
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
@@ -116,6 +134,7 @@ const getPayloadBodiesByRangeOpts: ReqOpts = {routeId: "getPayloadBodiesByRange"
 const getBlobsV1Opts: ReqOpts = {routeId: "getBlobsV1"};
 const getBlobsV2Opts: ReqOpts = {routeId: "getBlobsV2"};
 const getClientVersionOpts: ReqOpts = {routeId: "getClientVersion"};
+const exchangeCapabilitiesOpts: ReqOpts = {routeId: "exchangeCapabilities"};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -138,6 +157,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   /** Cached EL client version from the latest getClientVersion call */
   clientVersion?: ClientVersion | null;
 
+  /** Cached EL capability advertisement from engine_exchangeCapabilities */
+  engineCapabilities?: string[];
+
+  /** Negotiated SSZ endpoint support derived from exchangeCapabilities. */
+  private readonly sszNegotiation = new EngineSszNegotiationState(LODESTAR_ENGINE_SSZ_CAPABILITIES);
+
+  private readonly signal: AbortSignal;
+  private readonly jwtSecret?: Uint8Array;
+
   readonly payloadIdCache = new PayloadIdCache();
   /**
    * A queue to serialize the fcUs and newPayloads calls:
@@ -151,10 +179,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly rpcFetchQueue: JobItemQueue<[EngineRequest], EngineResponse>;
 
   private jobQueueProcessor = async ({method, params, methodOpts}: EngineRequest): Promise<EngineResponse> => {
-    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-      {method, params},
-      methodOpts
-    );
+    return this.fetchWithSelectedTransport(method, params, methodOpts);
   };
 
   constructor(
@@ -169,6 +194,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     );
     this.logger = logger;
     this.metrics = metrics ?? null;
+    this.signal = signal;
+    this.jwtSecret = opts?.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined;
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
       this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}));
@@ -178,9 +205,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       if (this.clientVersion === undefined) {
         this.clientVersion = null;
         // This statement should only be called first time receiving response after startup
-        this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
-          this.logger.debug("Unable to get execution client version", {}, e);
-        });
+        this.getClientVersion(getLodestarEngineClientVersion(this.opts))
+          .then(() => this.exchangeCapabilities(LODESTAR_ENGINE_SSZ_CAPABILITIES))
+          .catch((e) => {
+            this.logger.debug("Unable to negotiate execution engine capabilities", {}, e);
+          });
       }
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
     });
@@ -442,16 +471,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         method = "engine_getPayloadV5";
         break;
     }
-    const payloadResponse = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >(
-      {
-        method,
-        params: [payloadId],
-      },
-      getPayloadOpts
-    );
+    const payloadResponse = await this.fetchWithSelectedTransport(method, [payloadId], getPayloadOpts);
     return parseExecutionPayload(fork, payloadResponse);
   }
 
@@ -462,10 +482,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayloadBodiesByHash(_fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
     const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [blockHashes]}, getPayloadBodiesByHashOpts);
+    const response = await this.fetchWithSelectedTransport(method, [blockHashes], getPayloadBodiesByHashOpts);
     return response.map(deserializeExecutionPayloadBody);
   }
 
@@ -478,10 +495,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     assertReqSizeLimit(blockCount, 32);
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [start, count]}, getPayloadBodiesByRangeOpts);
+    const response = await this.fetchWithSelectedTransport(method, [start, count], getPayloadBodiesByRangeOpts);
     return response.map(deserializeExecutionPayloadBody);
   }
 
@@ -508,16 +522,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   private async getBlobsV1(versionedHashesHex: string[]) {
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes["engine_getBlobsV1"],
-      EngineApiRpcParamTypes["engine_getBlobsV1"]
-    >(
-      {
-        method: "engine_getBlobsV1",
-        params: [versionedHashesHex],
-      },
-      getBlobsV1Opts
-    );
+    const response = await this.fetchWithSelectedTransport("engine_getBlobsV1", [versionedHashesHex], getBlobsV1Opts);
 
     const invalidLength = response.length !== versionedHashesHex.length;
 
@@ -543,16 +548,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       }
     }
 
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes["engine_getBlobsV2"],
-      EngineApiRpcParamTypes["engine_getBlobsV2"]
-    >(
-      {
-        method: "engine_getBlobsV2",
-        params: [versionedHashesHex],
-      },
-      getBlobsV2Opts
-    );
+    const response = await this.fetchWithSelectedTransport("engine_getBlobsV2", [versionedHashesHex], getBlobsV2Opts);
 
     // engine_getBlobsV2 does not return partial responses. It returns null if any blob is not found
     const invalidLength = !!response && response.length !== versionedHashesHex.length;
@@ -578,10 +574,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
     const method = "engine_getClientVersionV1";
 
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]}, getClientVersionOpts);
+    const response = await this.fetchWithSelectedTransport(
+      method,
+      [{...clientVersion, commit: `0x${clientVersion.commit}`}],
+      getClientVersionOpts
+    );
 
     const clientVersions = response.map((cv) => {
       const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
@@ -598,6 +595,155 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return clientVersions;
   }
 
+  private async exchangeCapabilities(clCapabilities: string[]): Promise<string[]> {
+    const method = "engine_exchangeCapabilities";
+
+    const capabilities = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({method, params: [clCapabilities]}, exchangeCapabilitiesOpts);
+
+    this.engineCapabilities = capabilities;
+    this.sszNegotiation.updateFromElCapabilities(capabilities);
+    this.logger.debug("Execution engine capabilities updated", {capabilitiesCount: capabilities.length});
+
+    return capabilities;
+  }
+
+  private async fetchWithSelectedTransport<M extends EngineRequestKey>(
+    method: M,
+    params: EngineApiRpcParamTypes[M],
+    methodOpts: ReqOpts
+  ): Promise<EngineApiRpcReturnTypes[M]> {
+    const dispatchPlan = buildEngineDispatchPlan(
+      method,
+      params as unknown[],
+      this.sszNegotiation,
+      ({method: sszMethod, params: sszParams}) => encodeEngineSszRequest(sszMethod as EngineRequestKey, sszParams)
+    );
+
+    if (dispatchPlan.transport === "json-rpc") {
+      this.logger.debug("Engine JSON-RPC dispatch plan selected", {method, reason: dispatchPlan.reason});
+      return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[M], EngineApiRpcParamTypes[M]>(
+        {method, params},
+        methodOpts
+      );
+    }
+
+    if (this.opts?.urls.length === 0 || this.opts?.urls === undefined) {
+      this.logger.debug("Engine SSZ dispatch selected but HTTP URLs are unavailable, using JSON-RPC fallback", {
+        method,
+      });
+      return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[M], EngineApiRpcParamTypes[M]>(
+        {method, params},
+        methodOpts
+      );
+    }
+
+    this.logger.debug("Engine SSZ dispatch plan selected", {
+      method,
+      endpoint: dispatchPlan.request.urlPath,
+      httpMethod: dispatchPlan.request.method,
+    });
+
+    try {
+      return await this.fetchSszWithRetries(method, dispatchPlan.request, methodOpts);
+    } catch (e) {
+      if (e instanceof HttpRpcError && isEngineSszUnsupportedStatus(e.status)) {
+        this.logger.debug("Engine SSZ request unsupported by EL, falling back to JSON-RPC", {
+          method,
+          endpoint: dispatchPlan.request.urlPath,
+          status: e.status,
+        });
+        return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[M], EngineApiRpcParamTypes[M]>(
+          {method, params},
+          methodOpts
+        );
+      }
+      throw e;
+    }
+  }
+
+  private async fetchSszWithRetries<M extends EngineRequestKey>(
+    method: M,
+    request: {urlPath: string; method: "GET" | "POST"; body?: Uint8Array; headers: Record<string, string>},
+    methodOpts: ReqOpts
+  ): Promise<EngineApiRpcReturnTypes[M]> {
+    let lastError: Error | null = null;
+    const retries = methodOpts.retries ?? this.opts?.retries ?? 0;
+    const retryDelay = methodOpts.retryDelay ?? this.opts?.retryDelay;
+
+    for (const baseUrl of this.opts?.urls ?? []) {
+      try {
+        return await retry(async () => this.fetchSszOnUrl(method, baseUrl, request, methodOpts), {
+          retries,
+          retryDelay,
+          shouldRetry: methodOpts.shouldRetry,
+          signal: this.signal,
+        });
+      } catch (e) {
+        lastError = e as Error;
+      }
+    }
+
+    throw lastError ?? Error(`No execution engine URLs available for SSZ request ${method}`);
+  }
+
+  private async fetchSszOnUrl<M extends EngineRequestKey>(
+    method: M,
+    baseUrl: string,
+    request: {urlPath: string; method: "GET" | "POST"; body?: Uint8Array; headers: Record<string, string>},
+    methodOpts: ReqOpts
+  ): Promise<EngineApiRpcReturnTypes[M]> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), methodOpts.timeout ?? this.opts?.timeout ?? REQUEST_TIMEOUT);
+    const onParentSignalAbort = (): void => controller.abort();
+
+    this.signal.addEventListener("abort", onParentSignalAbort, {once: true});
+
+    try {
+      const headers: Record<string, string> = {...request.headers};
+      if (this.jwtSecret) {
+        const token = encodeJwtToken(
+          {
+            iat: Math.floor(Date.now() / 1000),
+            id: this.opts?.jwtId,
+            clv: this.opts?.jwtVersion,
+          },
+          this.jwtSecret
+        );
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(new URL(request.urlPath, baseUrl).toString(), {
+        method: request.method,
+        headers,
+        body: request.body ? Buffer.from(request.body) : undefined,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const bodyText = await response.text();
+        throw new HttpRpcError(response.status, `${response.statusText}: ${bodyText.slice(0, MAX_ERROR_BODY_LENGTH)}`);
+      }
+
+      const bodyBytes = response.status === 204 ? new Uint8Array() : new Uint8Array(await response.arrayBuffer());
+
+      return decodeEngineSszResponse(method, response.status, bodyBytes);
+    } catch (e) {
+      if (controller.signal.aborted) {
+        if (this.signal.aborted) {
+          throw new ErrorAborted("request");
+        }
+        throw new TimeoutError("request");
+      }
+      throw e;
+    } finally {
+      clearTimeout(timeout);
+      this.signal.removeEventListener("abort", onParentSignalAbort);
+    }
+  }
+
   private updateEngineState(newState: ExecutionEngineState): void {
     const oldState = this.state;
 
@@ -606,10 +752,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     switch (newState) {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
-        this.getClientVersion(getLodestarClientVersion(this.opts)).catch((e) => {
-          this.logger.debug("Unable to get execution client version", {}, e);
-          this.clientVersion = null;
-        });
+        this.getClientVersion(getLodestarEngineClientVersion(this.opts))
+          .then(() => this.exchangeCapabilities(LODESTAR_ENGINE_SSZ_CAPABILITIES))
+          .catch((e) => {
+            this.logger.debug("Unable to negotiate execution engine capabilities", {}, e);
+            this.clientVersion = null;
+          });
         break;
       case ExecutionEngineState.OFFLINE:
         this.logger.error("Execution client went offline", {oldState, newState});

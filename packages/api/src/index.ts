@@ -8,7 +8,22 @@ export type {
   IHttpClient,
   Metrics,
 } from "./utils/client/index.js";
-export {ApiResponse, HttpClient, defaultInit} from "./utils/client/index.js";
+export {
+  ApiResponse,
+  ENGINE_SSZ_ACCEPT,
+  ENGINE_SSZ_CONTENT_TYPE,
+  EngineSszNegotiationState,
+  HttpClient,
+  LODESTAR_ENGINE_METHODS_IN_USE,
+  LODESTAR_ENGINE_SSZ_CAPABILITIES,
+  buildEngineDispatchPlan,
+  buildEngineSszRequestInit,
+  defaultInit,
+  getEngineSszMethodDescriptor,
+  getUniqueEngineSszCapabilitiesForMethods,
+  isEngineSszUnsupportedStatus,
+  selectEngineTransport,
+} from "./utils/client/index.js";
 export type {ApiRequestInit} from "./utils/client/request.js";
 export {HttpHeader, MediaType} from "./utils/headers.js";
 export type {HttpErrorCodes, HttpSuccessCodes} from "./utils/httpStatusCode.js";

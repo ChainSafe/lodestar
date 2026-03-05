@@ -145,7 +145,15 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
       engine_getBlobsV2: this.getBlobsV2.bind(this),
+      engine_exchangeCapabilities: this.exchangeCapabilities.bind(this),
     };
+  }
+
+  private exchangeCapabilities(
+    capabilities: EngineApiRpcParamTypes["engine_exchangeCapabilities"][0]
+  ): EngineApiRpcReturnTypes["engine_exchangeCapabilities"] {
+    // Mock EL echoes advertised capabilities by default.
+    return capabilities;
   }
 
   private getPayloadBodiesByHash(
