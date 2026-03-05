@@ -36,7 +36,9 @@ async function validateExecutionPayloadEnvelope(
   // [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
-  const block = chain.forkChoice.getBlock(envelope.beaconBlockRoot);
+  // TODO GLOAS: Need to review this, we should queue the envelope for later
+  // processing if the block is not yet known, otherwise we would ignore it here
+  const block = chain.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,

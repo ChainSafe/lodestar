@@ -416,7 +416,7 @@ const forkChoiceTest =
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
-                  head.blockRoot,
+                  head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );

@@ -73,7 +73,7 @@ export async function validateGossipDataColumnSidecar(
   // 6) [IGNORE] The sidecar's block's parent (defined by block_header.parent_root) has been seen (via gossip
   //             or non-gossip sources)
   const parentRoot = toRootHex(blockHeader.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
