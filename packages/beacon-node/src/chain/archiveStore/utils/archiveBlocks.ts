@@ -67,6 +67,7 @@ export async function archiveBlocks(
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
   const finalizedPostFulu = finalizedCheckpoint.epoch >= config.FULU_FORK_EPOCH;
+  const finalizedPostGloas = finalizedCheckpoint.epoch >= config.GLOAS_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -94,7 +95,6 @@ export async function archiveBlocks(
       logger.verbose("Migrated blobSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
     }
 
-    // TODO GLOAS: nit - this should be handled in archiveExecutionPayloadEnvelopes although functionally it does not make a difference
     if (finalizedPostFulu) {
       const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
         config,
@@ -104,6 +104,15 @@ export async function archiveBlocks(
         currentEpoch
       );
       logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
+    }
+
+    if (finalizedPostGloas) {
+      const migratedEntries = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
+        config,
+        db,
+        finalizedCanonicalBlockRoots
+      );
+      logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {...logCtx, migratedEntries});
     }
   }
 
@@ -145,6 +154,11 @@ export async function archiveBlocks(
     if (finalizedPostFulu) {
       await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical dataColumnSidecars from hot DB", logCtx);
+    }
+
+    if (finalizedPostGloas) {
+      await db.executionPayloadEnvelope.batchDelete(nonCanonicalBlockRoots);
+      logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", logCtx);
     }
   }
 
@@ -372,6 +386,39 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
   }
 
   return migratedWrappedDataColumns;
+}
+
+async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
+  config: ChainForkConfig,
+  db: IBeaconDb,
+  blocks: BlockRootSlot[]
+): Promise<number> {
+  let migratedEnvelopes = 0;
+
+  const gloasBlocks = blocks.filter((block) => config.getForkSeq(block.slot) >= ForkSeq.gloas);
+  if (gloasBlocks.length === 0) return 0;
+
+  const envelopeEntries: KeyValue<Slot, Uint8Array>[] = [];
+  const migratedRoots: Uint8Array[] = [];
+
+  for (const block of gloasBlocks) {
+    const bytes = await db.executionPayloadEnvelope.getBinary(block.root);
+    if (bytes !== null) {
+      envelopeEntries.push({key: block.slot, value: bytes});
+      migratedRoots.push(block.root);
+    }
+    // If bytes is null, it is fine because not all blocks have execution payload envelopes
+  }
+
+  if (envelopeEntries.length > 0) {
+    await Promise.all([
+      db.executionPayloadEnvelopeArchive.batchPutBinary(envelopeEntries),
+      db.executionPayloadEnvelope.batchDelete(migratedRoots),
+    ]);
+    migratedEnvelopes = envelopeEntries.length;
+  }
+
+  return migratedEnvelopes;
 }
 
 /**
