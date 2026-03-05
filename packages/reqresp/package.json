@@ -46,7 +46,7 @@
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.2.0",
     "@libp2p/interface": "^3.1.0",
-    "@libp2p/utils": "^7.0.11",
+    "@libp2p/utils": "^7.0.12",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/utils": "workspace:^",
@@ -62,7 +62,7 @@
     "@libp2p/peer-id": "^6.0.4",
     "@lodestar/logger": "workspace:^",
     "@lodestar/types": "workspace:^",
-    "libp2p": "3.1.4"
+    "libp2p": "3.1.5"
   },
   "peerDependencies": {
     "libp2p": "^3.1.4"
