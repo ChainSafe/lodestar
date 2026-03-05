@@ -702,8 +702,8 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
+      // Shift and compute current epoch PTC eagerly for all slots.
       this.previousPayloadTimelinessCommittees = this.payloadTimelinessCommittees;
-      // Compute PTC eagerly for all slots in the epoch
       this.payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
         upcomingEpoch,
@@ -1039,10 +1039,7 @@ export class EpochCache {
     }
 
     if (epoch === this.epoch - 1) {
-      const committee = this.previousPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
-      if (committee !== undefined) {
-        return committee;
-      }
+      return this.previousPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
     }
 
     throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
