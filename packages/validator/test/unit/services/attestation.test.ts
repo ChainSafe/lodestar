@@ -58,7 +58,7 @@ describe("AttestationService", () => {
   });
 
   const electraConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0};
-  const gloasConfig: Partial<ChainConfig> = {ELECTRA_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0};
+  const gloasConfig: Partial<ChainConfig> = {GLOAS_FORK_EPOCH: 0};
 
   const testContexts: [string, AttestationServiceOpts, Partial<ChainConfig>][] = [
     ["With default configuration", {}, {}],
