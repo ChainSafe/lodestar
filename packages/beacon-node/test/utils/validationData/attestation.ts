@@ -1,5 +1,6 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
@@ -12,7 +13,6 @@ import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
 } from "../../../../state-transition/test/perf/util.js";
-import {getEmptyLogger} from "@lodestar/logger/empty";
 import {BlsVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
