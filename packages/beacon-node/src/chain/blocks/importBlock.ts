@@ -69,8 +69,15 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus, indexedAttestations} =
-    fullyVerifiedBlock;
+  const {
+    blockInput,
+    postState,
+    postEnvelopeState,
+    parentBlockSlot,
+    executionStatus,
+    dataAvailabilityStatus,
+    indexedAttestations,
+  } = fullyVerifiedBlock;
   const block = blockInput.getBlock();
   const source = blockInput.getBlockSource();
   const {slot: blockSlot} = block.message;
@@ -122,9 +129,21 @@ export async function importBlock(
   const payloadPresent = !isGloasBlock;
   // processState manages both block state and payload state variants together for memory/disk management
   this.regen.processState(blockRootHex, postState);
+  this.logger.verbose("Added block to forkchoice and block state cache", {slot: blockSlot, root: blockRootHex, stateRoot: toRootHex(postState.hashTreeRoot())});
+
+  if (postEnvelopeState !== null) {
+    this.regen.processPayloadState(postEnvelopeState);
+    this.forkChoice.onExecutionPayload(
+      blockRootHex,
+      toRootHex(postEnvelopeState.latestBlockHash),
+      // TODO GLOAS: this is not right but we don't need to track it as part of consensus spec, lighthouse also does not track it
+      0,
+      toRootHex(postEnvelopeState.hashTreeRoot())
+    );
+    this.logger.verbose("Added envelope state to block state cache", {slot: blockSlot, root: blockRootHex, stateRoot: toRootHex(postEnvelopeState.hashTreeRoot())});
+  }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
-  this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
   // Post-Gloas: immediately import pending envelope for this block if available.
   // This makes the block FULL right away, so child blocks won't need to wait

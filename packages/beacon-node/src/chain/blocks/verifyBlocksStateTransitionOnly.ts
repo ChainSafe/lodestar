@@ -35,15 +35,21 @@ export async function verifyBlocksStateTransitionOnly(
   validatorMonitor: ValidatorMonitor | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
-): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
+): Promise<{
+  postStates: CachedBeaconStateAllForks[];
+  postEnvelopeStates: Map<Slot, CachedBeaconStateGloas | null>;
+  proposerBalanceDeltas: number[];
+  verifyStateTime: number;
+}> {
   const postStates: CachedBeaconStateAllForks[] = [];
+  const postEnvelopeStates = new Map<Slot, CachedBeaconStateGloas | null>();
   const proposerBalanceDeltas: number[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
     const block = blocks[i].getBlock();
-    const preState = i === 0 ? preState0 : postStates[i - 1];
+    const preState = i === 0 ? preState0 : postEnvelopeStates.get(blocks[i - 1].getBlock().message.slot) ??  postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()
@@ -67,27 +73,46 @@ export async function verifyBlocksStateTransitionOnly(
       {metrics, validatorMonitor}
     );
 
-    const signedEnvelope = envelopes?.get(block.message.slot) ?? null;
-    if (signedEnvelope && isGloasBeaconBlock(block.message)) {
-      // Envelope signatures are verified in verifyBlocksSignatures(); avoid duplicate checks here.
-      processExecutionPayloadEnvelope(postState as CachedBeaconStateGloas, signedEnvelope, false);
-    }
-
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
     });
-    const stateRoot = postState.hashTreeRoot();
+    const stateRootAfterStateTransition = postState.hashTreeRoot();
     hashTreeRootTimer?.();
 
-    // Check state root matches
-    if (!byteArrayEquals(block.message.stateRoot, stateRoot)) {
+    // Check state root from block right after stateTransition()
+    if (!byteArrayEquals(block.message.stateRoot, stateRootAfterStateTransition)) {
       throw new BlockError(block, {
         code: BlockErrorCode.INVALID_STATE_ROOT,
-        root: postState.hashTreeRoot(),
+        root: stateRootAfterStateTransition,
         expectedRoot: block.message.stateRoot,
         preState,
         postState,
       });
+    }
+
+    const signedEnvelope = envelopes?.get(block.message.slot) ?? null;
+    if (signedEnvelope && isGloasBeaconBlock(block.message)) {
+      const postEnvelopeState = postState.clone(true) as CachedBeaconStateGloas;
+      // Envelope signatures are verified in verifyBlocksSignatures(); avoid duplicate checks here.
+      processExecutionPayloadEnvelope(postEnvelopeState, signedEnvelope, false);
+
+      const envelopeHashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+        source: StateHashTreeRootSource.envelopeTransition,
+      });
+      const stateRootAfterEnvelope = postEnvelopeState.hashTreeRoot();
+      envelopeHashTreeRootTimer?.();
+
+      // Check state root from signed envelope right after processExecutionPayloadEnvelope()
+      if (!byteArrayEquals(signedEnvelope.message.stateRoot, stateRootAfterEnvelope)) {
+        throw new BlockError(block, {
+          code: BlockErrorCode.INVALID_STATE_ROOT,
+          root: stateRootAfterEnvelope,
+          expectedRoot: signedEnvelope.message.stateRoot,
+          preState,
+          postState: postEnvelopeState,
+        });
+      }
+      postEnvelopeStates.set(block.message.slot, postEnvelopeState);
     }
 
     postStates[i] = postState;
@@ -120,5 +145,5 @@ export async function verifyBlocksStateTransitionOnly(
     logger.debug("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
   }
 
-  return {postStates, proposerBalanceDeltas, verifyStateTime};
+  return {postStates, postEnvelopeStates, proposerBalanceDeltas, verifyStateTime};
 }

@@ -2,6 +2,7 @@ import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice"
 import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   computeEpochAtSlot,
   isStateValidatorsNodesPopulated,
@@ -42,6 +43,7 @@ export async function verifyBlocksInEpoch(
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
+  postEnvelopeStates: Map<Slot, CachedBeaconStateGloas | null>;
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
   dataAvailabilityStatuses: DataAvailabilityStatus[];
@@ -180,7 +182,7 @@ export async function verifyBlocksInEpoch(
     const [
       segmentExecStatus,
       {dataAvailabilityStatuses, availableTime},
-      {postStates, proposerBalanceDeltas, verifyStateTime},
+      {postStates, postEnvelopeStates, proposerBalanceDeltas, verifyStateTime},
       {verifySignaturesTime},
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
@@ -297,7 +299,14 @@ export async function verifyBlocksInEpoch(
       );
     }
 
-    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock};
+    return {
+      postStates,
+      postEnvelopeStates,
+      dataAvailabilityStatuses,
+      proposerBalanceDeltas,
+      segmentExecStatus,
+      indexedAttestationsByBlock,
+    };
   } finally {
     abortController.abort();
   }

@@ -72,6 +72,7 @@ export enum StateCloneSource {
 export enum StateHashTreeRootSource {
   stateTransition = "state_transition",
   blockTransition = "block_transition",
+  envelopeTransition = "envelope_transition",
   prepareNextSlot = "prepare_next_slot",
   prepareNextEpoch = "prepare_next_epoch",
   regenState = "regen_state",
