@@ -254,7 +254,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       try {
         const version =
           ForkSeq[fork] >= ForkSeq.fulu ? 5 : ForkSeq[fork] >= ForkSeq.electra ? 4 : ForkSeq[fork] >= ForkSeq.deneb ? 3 : ForkSeq[fork] >= ForkSeq.capella ? 2 : 1;
-        const path = `/engine/v${version}/new_payload`;
+        const path = `/engine/v${version}/payloads`;
         const body = encodeNewPayloadRequest(fork, executionPayload, versionedHashes, parentBlockRoot, executionRequests);
         const resp = await this.sszRestClient.doRequest(path, body);
         const decoded = decodePayloadStatus(resp);
@@ -421,7 +421,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     if (this.sszRestClient) {
       try {
         const version = ForkSeq[fork] >= ForkSeq.deneb ? 3 : ForkSeq[fork] >= ForkSeq.capella ? 2 : 1;
-        const path = `/engine/v${version}/forkchoice_updated`;
+        const path = `/engine/v${version}/forkchoice`;
         const headBytes = fromHex(headBlockHash);
         const safeBytes = fromHex(safeBlockHash);
         const finalizedBytes = fromHex(finalizedBlockHash);
@@ -553,10 +553,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       try {
         const version =
           ForkSeq[fork] >= ForkSeq.fulu ? 5 : ForkSeq[fork] >= ForkSeq.electra ? 4 : ForkSeq[fork] >= ForkSeq.deneb ? 3 : ForkSeq[fork] >= ForkSeq.capella ? 2 : 1;
-        const path = `/engine/v${version}/get_payload`;
-        const payloadIdBytes = fromHex(payloadId);
-        const body = encodeGetPayloadRequest(payloadIdBytes);
-        const resp = await this.sszRestClient.doRequest(path, body);
+        const path = `/engine/v${version}/payloads/${payloadId}`;
+        const resp = await this.sszRestClient.doGetRequest(path);
         const decoded = decodeGetPayloadResponse(resp);
 
         // The executionPayloadSsz needs to be parsed back through the JSON-RPC parseExecutionPayload path
@@ -669,7 +667,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     if (this.sszRestClient) {
       try {
         const version = isForkPostFulu(fork) ? 2 : 1;
-        const path = `/engine/v${version}/get_blobs`;
+        const path = `/engine/v${version}/blobs`;
         const body = encodeGetBlobsRequest(versionedHashes);
         const resp = await this.sszRestClient.doRequest(path, body);
         const decoded = decodeGetBlobsResponse(resp);

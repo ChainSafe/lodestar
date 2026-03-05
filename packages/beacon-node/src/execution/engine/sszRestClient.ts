@@ -83,14 +83,29 @@ export class SszRestClient {
    * - On non-200: attempts to parse JSON error body and throws SszRestError
    */
   async doRequest(path: string, body: Uint8Array): Promise<Uint8Array> {
+    return this._fetch(path, "POST", body);
+  }
+
+  /**
+   * GET request (no body) to `baseUrl + path` and return the response as Uint8Array.
+   * Used for getPayload where payload_id is in the URL path.
+   */
+  async doGetRequest(path: string): Promise<Uint8Array> {
+    return this._fetch(path, "GET", undefined);
+  }
+
+  private async _fetch(path: string, method: string, body: Uint8Array | undefined): Promise<Uint8Array> {
     const url = `${this.baseUrl}${path}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeout);
 
     try {
       const headers: Record<string, string> = {
-        "Content-Type": "application/octet-stream",
+        Accept: "application/octet-stream",
       };
+      if (body) {
+        headers["Content-Type"] = "application/octet-stream";
+      }
 
       if (this.jwtSecret) {
         const jwtClaim: JwtClaim = {
@@ -103,27 +118,16 @@ export class SszRestClient {
       }
 
       const res = await fetch(url, {
-        method: "POST",
-        body: body as unknown as BodyInit,
+        method,
+        body: body ? (body as unknown as BodyInit) : undefined,
         headers,
         signal: controller.signal,
       });
 
       if (!res.ok) {
-        // Try to parse JSON error from EL
-        let code = res.status;
-        let message = res.statusText;
-        // Read body as text first, then try to parse as JSON
-        const bodyText = await res.text().catch(() => "");
-        if (bodyText) {
-          try {
-            const errJson = JSON.parse(bodyText) as {code?: number; message?: string};
-            if (errJson.code !== undefined) code = errJson.code;
-            if (errJson.message !== undefined) message = errJson.message;
-          } catch {
-            message = bodyText.slice(0, 500);
-          }
-        }
+        // Error responses use text/plain per execution-apis SSZ spec
+        const code = res.status;
+        const message = await res.text().catch(() => res.statusText);
         throw new SszRestError(code, message);
       }
 
