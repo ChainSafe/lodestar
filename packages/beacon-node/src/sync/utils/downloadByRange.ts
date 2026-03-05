@@ -168,8 +168,11 @@ export function cacheByRangeResponses({
 
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
     const firstColumn = columnSidecars.at(0);
-    const dataSlot =
-      firstColumn && "slot" in firstColumn ? firstColumn.slot : firstColumn?.signedBlockHeader.message.slot;
+    const dataSlot = firstColumn
+      ? isGloasDataColumnSidecar(firstColumn)
+        ? firstColumn.slot
+        : firstColumn.signedBlockHeader.message.slot
+      : undefined;
     if (dataSlot === undefined) {
       throw new Error(
         `Coding Error: empty columnSidecars returned for blockRoot=${toRootHex(blockRoot)} from validation functions`
@@ -195,7 +198,7 @@ export function cacheByRangeResponses({
         actual: existing.type,
       });
     }
-    if (columnSidecars.length > 0 && "slot" in columnSidecars[0]) {
+    if (columnSidecars.length > 0 && isGloasDataColumnSidecar(columnSidecars[0])) {
       continue;
     }
     for (const columnSidecar of columnSidecars as fulu.DataColumnSidecars) {
