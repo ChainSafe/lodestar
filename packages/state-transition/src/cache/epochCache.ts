@@ -225,8 +225,10 @@ export class EpochCache {
   currentSyncCommitteeIndexed: SyncCommitteeCache;
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
-
-  // TODO GLOAS: See if we need to cached PTC for prev/next epoch
+  // TODO GLOAS: See if we need to cached PTC for next epoch
+  // PTC for previous epoch, required for epoch-boundary lookups
+  // eg. slot N block validating slot N-1 attestations
+  previousPayloadTimelinessCommittees: Uint32Array[];
   // PTC for current epoch, computed eagerly at epoch transition
   payloadTimelinessCommittees: Uint32Array[];
 
@@ -266,6 +268,7 @@ export class EpochCache {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
+    previousPayloadTimelinessCommittees: Uint32Array[];
     payloadTimelinessCommittees: Uint32Array[];
     epoch: Epoch;
     syncPeriod: SyncPeriod;
@@ -296,6 +299,7 @@ export class EpochCache {
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
+    this.previousPayloadTimelinessCommittees = data.previousPayloadTimelinessCommittees;
     this.payloadTimelinessCommittees = data.payloadTimelinessCommittees;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
@@ -448,6 +452,7 @@ export class EpochCache {
     }
 
     // Compute PTC eagerly for all slots in the epoch
+    let previousPayloadTimelinessCommittees: Uint32Array[] = [];
     let payloadTimelinessCommittees: Uint32Array[] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
       payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
@@ -456,6 +461,15 @@ export class EpochCache {
         currentShuffling.committees,
         effectiveBalanceIncrements
       );
+
+      if (!isGenesis && previousEpoch >= config.GLOAS_FORK_EPOCH) {
+        previousPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
+          state,
+          previousEpoch,
+          previousShuffling.committees,
+          effectiveBalanceIncrements
+        );
+      }
     }
 
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
@@ -530,6 +544,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
+      previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
@@ -575,6 +590,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
+      previousPayloadTimelinessCommittees: this.previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees: this.payloadTimelinessCommittees,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
@@ -686,6 +702,7 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
+      this.previousPayloadTimelinessCommittees = this.payloadTimelinessCommittees;
       this.payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
         upcomingEpoch,
@@ -1016,11 +1033,18 @@ export class EpochCache {
       throw new Error("Payload Timeliness Committee is not available before gloas fork");
     }
 
-    if (epoch !== this.epoch) {
-      throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
+    if (epoch === this.epoch) {
+      return this.payloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
     }
 
-    return this.payloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
+    if (epoch === this.epoch - 1) {
+      const committee = this.previousPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
+      if (committee !== undefined) {
+        return committee;
+      }
+    }
+
+    throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
   }
 
   getIndexedPayloadAttestation(
