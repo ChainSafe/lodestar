@@ -547,6 +547,8 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
+    // TODO GLOAS: this endpoint needs to be updated because post-gloas there could be two variants of the persisted checkpoint state (empty or full).
+    // Either add a an additional parameter `payloadPresent`, or return one or both variants of state. 
     getPersistedCheckpointState: {
       url: "/eth/v1/lodestar/persisted_checkpoint_state",
       method: "GET",

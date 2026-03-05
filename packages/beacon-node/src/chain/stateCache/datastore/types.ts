@@ -5,7 +5,7 @@ export type DatastoreKey = Uint8Array;
 
 // Make this generic to support testing
 export interface CPStateDatastore {
-  write: (cpKey: phase0.Checkpoint, stateBytes: Uint8Array) => Promise<DatastoreKey>;
+  write: (cpKey: phase0.Checkpoint, stateBytes: Uint8Array, payloadPresent: boolean) => Promise<DatastoreKey>;
   remove: (key: DatastoreKey) => Promise<void>;
   read: (key: DatastoreKey) => Promise<Uint8Array | null>;
   readLatestSafe: () => Promise<Uint8Array | null>;

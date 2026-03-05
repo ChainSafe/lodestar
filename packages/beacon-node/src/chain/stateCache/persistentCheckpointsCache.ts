@@ -752,7 +752,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
                 AllocSource.PERSISTENT_CHECKPOINTS_CACHE_STATE,
                 (stateBytes) => {
                   timer?.();
-                  return this.datastore.write(cpPersist, stateBytes);
+                  return this.datastore.write(cpPersist, stateBytes, payloadPresent);
                 },
                 this.bufferPool
               );

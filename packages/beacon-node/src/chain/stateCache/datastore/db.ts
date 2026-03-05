@@ -14,8 +14,8 @@ import {CPStateDatastore, DatastoreKey} from "./types.js";
 export class DbCPStateDatastore implements CPStateDatastore {
   constructor(private readonly db: IBeaconDb) {}
 
-  async write(cpKey: phase0.Checkpoint, stateBytes: Uint8Array): Promise<DatastoreKey> {
-    const serializedCheckpoint = checkpointToDatastoreKey(cpKey);
+  async write(cpKey: phase0.Checkpoint, stateBytes: Uint8Array, payloadPresent: boolean): Promise<DatastoreKey> {
+    const serializedCheckpoint = checkpointToDatastoreKey(cpKey, payloadPresent);
     await this.db.checkpointState.putBinary(serializedCheckpoint, stateBytes);
     return serializedCheckpoint;
   }
@@ -41,11 +41,17 @@ export class DbCPStateDatastore implements CPStateDatastore {
 }
 
 export function datastoreKeyToCheckpoint(key: DatastoreKey): phase0.Checkpoint {
-  return ssz.phase0.Checkpoint.deserialize(key);
+  // Strip the payloadPresent suffix byte if present 
+  const cpBytes = key.length === 41 ? key.subarray(0, 40) : key;
+  return ssz.phase0.Checkpoint.deserialize(cpBytes);
 }
 
-export function checkpointToDatastoreKey(cp: phase0.Checkpoint): DatastoreKey {
-  return ssz.phase0.Checkpoint.serialize(cp);
+export function checkpointToDatastoreKey(cp: phase0.Checkpoint, payloadPresent: boolean): DatastoreKey {
+  const cpBytes = ssz.phase0.Checkpoint.serialize(cp);
+  const key = new Uint8Array(cpBytes.length + 1);
+  key.set(cpBytes);
+  key[cpBytes.length] = payloadPresent ? 1 : 0;
+  return key;
 }
 
 /**
