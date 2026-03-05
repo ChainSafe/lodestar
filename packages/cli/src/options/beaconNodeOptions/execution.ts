@@ -9,6 +9,7 @@ export type ExecutionEngineArgs = {
   "execution.retries": number;
   "execution.retryDelay": number;
   "execution.engineMock"?: boolean;
+  "execution.sszRestUrl"?: string;
   jwtSecret?: string;
   jwtId?: string;
 };
@@ -32,6 +33,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
      */
     jwtSecretHex: args.jwtSecret ? extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()) : undefined,
     jwtId: args.jwtId,
+    sszRestUrl: args["execution.sszRestUrl"],
   };
 }
 
@@ -73,6 +75,13 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
     description: "Set the execution engine to mock mode (development only)",
     type: "boolean",
     hidden: false,
+    group: "execution",
+  },
+
+  "execution.sszRestUrl": {
+    description:
+      "EIP-8161: SSZ-REST Engine API transport URL. When configured, Lodestar will try SSZ-REST first and fall back to JSON-RPC on network errors.",
+    type: "string",
     group: "execution",
   },
 
