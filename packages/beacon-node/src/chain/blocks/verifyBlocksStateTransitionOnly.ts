@@ -1,10 +1,13 @@
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
   stateTransition,
 } from "@lodestar/state-transition";
+import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
+import {Slot, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -25,6 +28,7 @@ import {ImportBlockOpts} from "./types.js";
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blocks: IBlockInput[],
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   dataAvailabilityStatuses: DataAvailabilityStatus[],
   logger: Logger,
   metrics: Metrics | null,
@@ -62,6 +66,11 @@ export async function verifyBlocksStateTransitionOnly(
       },
       {metrics, validatorMonitor}
     );
+
+    const signedEnvelope = envelopes?.get(block.message.slot) ?? null;
+    if (signedEnvelope && isGloasBeaconBlock(block.message)) {
+      processExecutionPayloadEnvelope(postState as CachedBeaconStateGloas, signedEnvelope, true);
+    }
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,

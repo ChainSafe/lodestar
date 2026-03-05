@@ -44,7 +44,7 @@ export type CacheByRangeResponsesProps = {
   peerIdStr: string;
   responses: ValidatedResponses;
   batchBlocks: IBlockInput[];
-  batchEnvelops: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+  batchEnvelops: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
 };
 
 export type ValidatedBlock = {
@@ -66,12 +66,12 @@ export type ValidatedResponses = {
   validatedBlocks?: ValidatedBlock[];
   validatedBlobSidecars?: ValidatedBlobSidecars[];
   validatedColumnSidecars?: ValidatedColumnSidecars[];
-  validatedEnvelopes?: gloas.ExecutionPayloadEnvelope[];
+  validatedEnvelopes?: gloas.SignedExecutionPayloadEnvelope[];
 };
 
 export type DownloadByRangeResult = {
   blocks: IBlockInput[];
-  envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
 };
 
 /**
@@ -204,12 +204,12 @@ export function cacheByRangeResponses({
     }
   }
 
-  const envelopesBySlot = new Map<number, gloas.ExecutionPayloadEnvelope>();
+  const envelopesBySlot = new Map<Slot, gloas.SignedExecutionPayloadEnvelope>();
   for (const [slot, envelope] of batchEnvelops ?? []) {
     envelopesBySlot.set(slot, envelope);
   }
   for (const envelope of responses.validatedEnvelopes ?? []) {
-    envelopesBySlot.set(envelope.slot, envelope);
+    envelopesBySlot.set(envelope.message.slot, envelope);
   }
   const envelopes = envelopesBySlot.size > 0 ? envelopesBySlot : null;
 
@@ -422,7 +422,7 @@ export async function validateResponses({
   const validatedBlocks = validatedResponses.validatedBlocks;
   if (signedEnvelopes?.length) {
     validateEnvelopesByRangeResponse({envelopes: signedEnvelopes, validatedBlocks: validatedBlocks ?? []});
-    validatedResponses.validatedEnvelopes = signedEnvelopes.map((envelope) => envelope.message);
+    validatedResponses.validatedEnvelopes = signedEnvelopes;
   }
 
   return {result: validatedResponses, warnings};

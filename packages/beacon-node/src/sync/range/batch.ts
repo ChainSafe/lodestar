@@ -46,13 +46,13 @@ export type Attempt = {
 export type AwaitingDownloadState = {
   status: BatchStatus.AwaitingDownload;
   blocks: IBlockInput[];
-  envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
 };
 
 export type DownloadSuccessState = {
   status: BatchStatus.AwaitingProcessing;
   blocks: IBlockInput[];
-  envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
 };
 
 export type BatchState =
@@ -61,19 +61,19 @@ export type BatchState =
       status: BatchStatus.Downloading;
       peer: PeerIdStr;
       blocks: IBlockInput[];
-      envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+      envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
     }
   | DownloadSuccessState
   | {
       status: BatchStatus.Processing;
       blocks: IBlockInput[];
-      envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+      envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
       attempt: Attempt;
     }
   | {
       status: BatchStatus.AwaitingValidation;
       blocks: IBlockInput[];
-      envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+      envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
       attempt: Attempt;
     };
 
@@ -299,7 +299,7 @@ export class Batch {
     return this.state.blocks;
   }
 
-  getEnvelopes(): Map<Slot, gloas.ExecutionPayloadEnvelope> | null {
+  getEnvelopes(): Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null {
     return this.state.envelopes;
   }
 
@@ -320,7 +320,7 @@ export class Batch {
   downloadingSuccess(
     peer: PeerIdStr,
     blocks: IBlockInput[],
-    envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null = null
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null
   ): DownloadSuccessState {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
@@ -380,19 +380,20 @@ export class Batch {
   /**
    * AwaitingProcessing -> Processing
    */
-  startProcessing(): IBlockInput[] {
+  startProcessing(): {blocks: IBlockInput[]; envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null} {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
 
     const blocks = this.state.blocks;
+    const envelopes = this.state.envelopes;
     const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
     // Reset goodPeers in case another download attempt needs to be made.  When Attempt is successful or not the peers
     // that the data came from will be handled by the Attempt that goes for processing
     const peers = this.goodPeers;
     this.goodPeers = [];
     this.state = {status: BatchStatus.Processing, blocks, envelopes: this.state.envelopes, attempt: {peers, hash}};
-    return blocks;
+    return {blocks, envelopes};
   }
 
   /**

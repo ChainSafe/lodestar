@@ -218,9 +218,9 @@ describe("sync / range / chain", () => {
 
 function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
   return {
-    processChainSegment(blocks, syncType) {
+    processChainSegment(blocks, envelopes, syncType) {
       logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.slot).join(",")});
-      return fns.processChainSegment(blocks, syncType);
+      return fns.processChainSegment(blocks, envelopes, syncType);
     },
     downloadByRange(peer, request, syncType) {
       logger.debug("mock downloadBeaconBlocksByRange", request.state.status);

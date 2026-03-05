@@ -1,4 +1,4 @@
-import {SignedBeaconBlock} from "@lodestar/types";
+import {SignedBeaconBlock, Slot, gloas} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -22,20 +22,27 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[IBlockInput[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[IBlockInput[], ImportBlockOpts, Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null], void>;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[IBlockInput[], ImportBlockOpts], void>(
-      (job, importOpts) => {
-        return processBlocks.call(chain, job, {...opts, ...importOpts});
+    this.jobQueue = new JobItemQueue<
+      [IBlockInput[], ImportBlockOpts, Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null],
+      void
+    >(
+      (job, importOpts, envelopes) => {
+        return processBlocks.call(chain, job, envelopes, {...opts, ...importOpts});
       },
       {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.blockProcessorQueue ?? undefined
     );
   }
 
-  async processBlocksJob(job: IBlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
-    await this.jobQueue.push(job, opts);
+  async processBlocksJob(
+    job: IBlockInput[],
+    opts: ImportBlockOpts = {},
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null
+  ): Promise<void> {
+    await this.jobQueue.push(job, opts, envelopes);
   }
 }
 
@@ -52,6 +59,7 @@ export class BlockProcessor {
 export async function processBlocks(
   this: BeaconChain,
   blocks: IBlockInput[],
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
@@ -74,7 +82,7 @@ export async function processBlocks(
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
     const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock} =
-      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
+      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, envelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate

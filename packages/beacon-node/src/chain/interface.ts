@@ -255,6 +255,11 @@ export interface IBeaconChain {
   processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(
+    blocks: IBlockInput[],
+    envelopes?: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    opts?: ImportBlockOpts
+  ): Promise<void>;
 
   /** Process a signed execution payload envelope (post-gloas) */
   importExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void>;
