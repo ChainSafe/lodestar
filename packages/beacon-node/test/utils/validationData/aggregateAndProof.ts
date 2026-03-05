@@ -4,6 +4,7 @@ import {getSecretKeyFromIndexCached} from "@lodestar/state-transition/test-utils
 import {phase0, ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {SeenAggregators} from "../../../src/chain/seenCache/index.js";
+import {getSecretKeyFromIndexCached} from "../../utils/state-transition.js";
 import {signCached} from "../cache.js";
 import {AttestationValidDataOpts, getAttestationValidData} from "./attestation.js";
 

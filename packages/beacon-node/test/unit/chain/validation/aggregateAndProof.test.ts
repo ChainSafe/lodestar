@@ -8,6 +8,7 @@ import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {memoOnce} from "../../../utils/cache.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../utils/state-transition.js";
 import {
   AggregateAndProofValidDataOpts,
   getAggregateAndProofValidData,

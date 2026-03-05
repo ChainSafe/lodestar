@@ -4,6 +4,7 @@ import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-trans
 import {ssz} from "@lodestar/types";
 import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
 import {getAttDataFromAttestationSerialized} from "../../../../src/util/sszBytes.js";
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../utils/state-transition.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 
 describe("validate gossip attestation", () => {
