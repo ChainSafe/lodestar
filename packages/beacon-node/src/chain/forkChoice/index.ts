@@ -157,7 +157,7 @@ export function initializeForkChoiceFromFinalizedState(
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-        payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
+        payloadStatus: getCheckpointPayloadStatus(state, checkpoint.epoch),
         builderIndex: isForkPostGloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex : null,
         blockHashFromBid: isForkPostGloas
           ? toRootHex((state as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash)
@@ -254,7 +254,7 @@ export function initializeForkChoiceFromUnfinalizedState(
       : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-    payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
+    payloadStatus: getCheckpointPayloadStatus(unfinalizedState, computeEpochAtSlot(blockHeader.slot)),
     builderIndex: isForkPostGloas
       ? (unfinalizedState as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex
       : null,
