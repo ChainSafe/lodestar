@@ -151,7 +151,7 @@
     "datastore-fs": "^11.0.2",
     "datastore-level": "^12.0.2",
     "deepmerge": "^4.3.1",
-    "fastify": "^5.7.4",
+    "fastify": "^5.8.1",
     "interface-datastore": "^9.0.2",
     "jwt-simple": "0.5.6",
     "libp2p": "3.1.5",
