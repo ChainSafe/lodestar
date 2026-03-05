@@ -9,6 +9,7 @@ export enum RegenErrorCode {
   BLOCK_NOT_IN_DB = "REGEN_ERROR_BLOCK_NOT_IN_DB",
   STATE_TRANSITION_ERROR = "REGEN_ERROR_STATE_TRANSITION_ERROR",
   INVALID_STATE_ROOT = "REGEN_ERROR_INVALID_STATE_ROOT",
+  INTERNAL_ERROR = "REGEN_ERROR_INTERNAL_ERROR",
 }
 
 export type RegenErrorType =
@@ -19,12 +20,13 @@ export type RegenErrorType =
   | {code: RegenErrorCode.TOO_MANY_BLOCK_PROCESSED; stateRoot: RootHex | Root}
   | {code: RegenErrorCode.BLOCK_NOT_IN_DB; blockRoot: RootHex | Root}
   | {code: RegenErrorCode.STATE_TRANSITION_ERROR; error: Error}
-  | {code: RegenErrorCode.INVALID_STATE_ROOT; slot: Slot; expected: RootHex; actual: RootHex};
+  | {code: RegenErrorCode.INVALID_STATE_ROOT; slot: Slot; expected: RootHex; actual: RootHex}
+  | {code: RegenErrorCode.INTERNAL_ERROR; message: string};
 
 export class RegenError extends Error {
   type: RegenErrorType;
   constructor(type: RegenErrorType) {
-    super(type.code);
+    super(type.code === RegenErrorCode.INTERNAL_ERROR ? `${type.code}: ${type.message}` : type.code);
     this.type = type;
   }
 }

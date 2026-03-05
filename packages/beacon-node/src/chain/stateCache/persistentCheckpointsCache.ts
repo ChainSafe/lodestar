@@ -895,7 +895,7 @@ export function fcCheckpointToHexPayload(checkpoint: CheckpointWithPayload): Che
 }
 
 export function toCheckpointKey(cp: CheckpointHexPayload): string {
-  return `${cp.rootHex}:${cp.epoch}`;
+  return `${cp.rootHex}:${cp.epoch}:${cp.payloadPresent}`;
 }
 
 /**

@@ -179,9 +179,10 @@ export class StateRegenerator implements IStateRegeneratorInternal {
 
       // Convert PayloadStatus to payloadPresent boolean
       if (b.payloadStatus === PayloadStatus.PENDING) {
-        // Should not happen. iterateAncestorBlocks should yield EMPTY or FULL
-        blocksToReplay.push(b);
-        continue;
+        throw new RegenError({
+          code: RegenErrorCode.INTERNAL_ERROR,
+          message: `Unexpected PENDING payloadStatus for ancestor block ${b.blockRoot} at slot ${b.slot}`,
+        });
       }
       const payloadPresent = b.payloadStatus === PayloadStatus.FULL;
 

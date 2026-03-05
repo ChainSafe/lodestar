@@ -2,7 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithPayload, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithPayload, IForkChoice, PayloadStatus, ProtoBlock, UpdateHeadOpt, getCheckpointPayloadStatus} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -365,11 +365,8 @@ export class BeaconChain implements IBeaconChain {
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     blockStateCache.add(anchorState);
     blockStateCache.setHeadState(anchorState);
-    // TODO: For Gloas, determine if anchor state is block state or payload state
-    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
-    // Post-Gloas: Could be either - depends on whether anchor was loaded with payload processing
-    // For now, assume true
-    checkpointStateCache.add(checkpoint, anchorState, true);
+    const payloadPresent = getCheckpointPayloadStatus(anchorState, checkpoint.epoch) === PayloadStatus.FULL;
+    checkpointStateCache.add(checkpoint, anchorState, payloadPresent);
 
     const forkChoice = initializeForkChoice(
       config,
