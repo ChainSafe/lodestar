@@ -181,7 +181,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   /**
-   * Process payload state for caching after importing execution payload..
+   * Process payload state for caching after importing execution payload.
    */
   processPayloadState(payloadState: CachedBeaconStateAllForks): void {
     // Add payload state to block state cache (keyed by payload state root)

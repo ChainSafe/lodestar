@@ -26,7 +26,7 @@ export type RegenErrorType =
 export class RegenError extends Error {
   type: RegenErrorType;
   constructor(type: RegenErrorType) {
-    super(type.code === RegenErrorCode.INTERNAL_ERROR ? `${type.code}: ${type.message}` : type.code);
+    super(type.code);
     this.type = type;
   }
 }

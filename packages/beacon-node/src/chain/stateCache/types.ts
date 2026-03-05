@@ -5,9 +5,6 @@ import {Epoch, RootHex, phase0} from "@lodestar/types";
 /**
  * Checkpoint hex representation for state cache keys.
  * Extends CheckpointWithHex (from fork-choice) with payloadPresent.
- * For Gloas (ePBS), payloadPresent distinguishes between block state and payload state.
- * - payloadPresent = true: payload state (after processing execution payload) - always true for pre-Gloas
- * - payloadPresent = false: block state (after processing beacon block, before payload)
  */
 export type CheckpointHexPayload = {epoch: Epoch; rootHex: RootHex; payloadPresent: boolean};
 
@@ -69,13 +66,6 @@ export interface CheckpointStateCache {
   getOrReload(cp: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | null>;
   getStateOrBytes(cp: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
   get(cpOrKey: CheckpointHexPayload | string): CachedBeaconStateAllForks | null;
-  /**
-   * Add checkpoint state to cache.
-   * @param cp - Checkpoint (epoch + root)
-   * @param state - Cached beacon state
-   * @param payloadPresent - For Gloas: true if this is payload state, false if block state.
-   *                         Always true for pre-Gloas.
-   */
   add(cp: phase0.Checkpoint, state: CachedBeaconStateAllForks, payloadPresent: boolean): void;
   getLatest(rootHex: RootHex, maxEpoch: Epoch, payloadPresent: boolean): CachedBeaconStateAllForks | null;
   getOrReloadLatest(
@@ -86,12 +76,6 @@ export interface CheckpointStateCache {
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch, payloadPresent: boolean): number | null;
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
   pruneFinalized(finalizedEpoch: Epoch): void;
-  /**
-   * Process state for checkpoint caching and memory management.
-   * Manages both block state and payload state variants together based on root canonicality.
-   * @param blockRootHex - Block root hex
-   * @param state - Cached beacon state
-   */
   processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number>;
   clear(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
