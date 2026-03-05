@@ -111,7 +111,16 @@ async function validateExecutionPayloadEnvelope(
 
   // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
   const parentRoot = block.parentRoot;
-  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  const parentHash = block.parentBlockHash;
+  if (parentHash === null) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN,
+      parentRoot,
+      slot: envelope.slot,
+    });
+  }
+
+  const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentHash);
   if (parentBlock === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN,
@@ -120,6 +129,7 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // Get pre-state to get correct builder's pubkey.
   const blockState = await chain.regen
     .getBlockSlotState(parentBlock, block.slot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {

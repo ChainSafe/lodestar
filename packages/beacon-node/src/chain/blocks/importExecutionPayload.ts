@@ -78,7 +78,7 @@ export async function importExecutionPayload(
   const blockRootHex = payloadInput.blockRootHex;
 
   // 1. Get ProtoBlock for parent root lookup
-  const protoBlock = this.forkChoice.getBlockHex(blockRootHex);
+  const protoBlock = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
   if (!protoBlock) {
     throw new PayloadError({
       code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE,

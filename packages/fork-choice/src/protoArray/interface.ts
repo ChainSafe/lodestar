@@ -123,22 +123,13 @@ export type ProtoBlock = BlockExtraMeta & {
 
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
-<<<<<<< HEAD
-=======
 
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
 
-  // GLOAS: The followings are from bids. They are null in pre-gloas
-  // Used for execution payload gossip validation
-  builderIndex: number | null;
-  // Used for execution payload gossip validation. Not to be confused with executionPayloadBlockHash
-  blockHashFromBid: RootHex | null;
-
   // Used to determine if this block extends EMPTY or FULL parent variant
   // Spec: gloas/fork-choice.md#new-get_parent_payload_status
   parentBlockHash: RootHex | null;
->>>>>>> unstable
 };
 
 /**

@@ -24,6 +24,7 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
+  isGloasBeaconBlock,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -833,10 +834,6 @@ export class ForkChoice implements IForkChoice {
             }),
 
       payloadStatus: isGloasBeaconBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL,
-      builderIndex: isGloasBeaconBlock(block) ? block.body.signedExecutionPayloadBid.message.builderIndex : null,
-      blockHashFromBid: isGloasBeaconBlock(block)
-        ? toRootHex(block.body.signedExecutionPayloadBid.message.blockHash)
-        : null,
       parentBlockHash: parentHashHex,
     };
 
