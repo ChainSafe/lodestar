@@ -49,7 +49,8 @@ export async function verifyBlocksStateTransitionOnly(
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
     const block = blocks[i].getBlock();
-    const preState = i === 0 ? preState0 : postEnvelopeStates.get(blocks[i - 1].getBlock().message.slot) ??  postStates[i - 1];
+    const preState =
+      i === 0 ? preState0 : (postEnvelopeStates.get(blocks[i - 1].getBlock().message.slot) ?? postStates[i - 1]);
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()

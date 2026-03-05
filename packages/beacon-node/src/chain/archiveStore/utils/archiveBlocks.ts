@@ -399,7 +399,10 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
   return migratedWrappedDataColumns;
 }
 
-async function migrateExecutionPayloadEnvelopesFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot[]): Promise<number> {
+async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
+  db: IBeaconDb,
+  blocks: BlockRootSlot[]
+): Promise<number> {
   let migratedEnvelopes = 0;
   for (let i = 0; i < blocks.length; i += BLOCK_BATCH_SIZE) {
     const toIdx = Math.min(i + BLOCK_BATCH_SIZE, blocks.length);

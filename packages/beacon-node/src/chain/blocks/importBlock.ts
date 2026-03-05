@@ -129,7 +129,11 @@ export async function importBlock(
   const payloadPresent = !isGloasBlock;
   // processState manages both block state and payload state variants together for memory/disk management
   this.regen.processState(blockRootHex, postState);
-  this.logger.verbose("Added block to forkchoice and block state cache", {slot: blockSlot, root: blockRootHex, stateRoot: toRootHex(postState.hashTreeRoot())});
+  this.logger.verbose("Added block to forkchoice and block state cache", {
+    slot: blockSlot,
+    root: blockRootHex,
+    stateRoot: toRootHex(postState.hashTreeRoot()),
+  });
 
   if (postEnvelopeState !== null) {
     this.regen.processPayloadState(postEnvelopeState);
@@ -140,7 +144,11 @@ export async function importBlock(
       0,
       toRootHex(postEnvelopeState.hashTreeRoot())
     );
-    this.logger.verbose("Added envelope state to block state cache", {slot: blockSlot, root: blockRootHex, stateRoot: toRootHex(postEnvelopeState.hashTreeRoot())});
+    this.logger.verbose("Added envelope state to block state cache", {
+      slot: blockSlot,
+      root: blockRootHex,
+      stateRoot: toRootHex(postEnvelopeState.hashTreeRoot()),
+    });
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
