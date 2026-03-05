@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../../state-transition/test/perf/util.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
+import {generateTestCachedBeaconStateOnlyValidators} from "../../utils/state-transition.js";
 
 describe("ShufflingCache", () => {
   const vc = 64;

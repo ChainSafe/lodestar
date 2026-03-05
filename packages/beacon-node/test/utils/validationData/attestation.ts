@@ -8,10 +8,6 @@ import {
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
 import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
-import {
-  generateTestCachedBeaconStateOnlyValidators,
-  getSecretKeyFromIndexCached,
-} from "../../../../state-transition/test/perf/util.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -21,6 +17,10 @@ import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggre
 import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
+import {
+  generateTestCachedBeaconStateOnlyValidators,
+  getSecretKeyFromIndexCached,
+} from "../../utils/state-transition.js";
 import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
 import {testLogger} from "../logger.js";

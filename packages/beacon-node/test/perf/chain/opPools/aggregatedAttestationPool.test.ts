@@ -13,9 +13,9 @@ import {
   newFilledArray,
 } from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
+import {generatePerfTestCachedStateAltair} from "../../../utils/state-transition.js";
 
 const vc = 1_500_000;
 

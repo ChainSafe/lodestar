@@ -1,7 +1,7 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../../../../../../state-transition/test/perf/util.js";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 import {linspace} from "../../../../../src/util/numpy.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../../../../utils/state-transition.js";
 
 // Using state.validators.persistent is the fastest way of retrieving pubkeys by far
 // Benchmark data from Wed Jun 30 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz

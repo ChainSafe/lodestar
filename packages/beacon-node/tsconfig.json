@@ -1,6 +1,24 @@
 {
   "extends": "../../tsconfig.json",
   "include": ["src", "test"],
+  "exclude": [
+    // Tests are intentionally excluded from the `check-types` compilation.
+    // TS6059 errors because those files fall outside this package's `rootDir`.
+    "test/utils/state-transition.ts",
+    "test/unit/chain/validation/attestation/validateAttestation.test.ts",
+    "test/perf/api/impl/validator/attester.test.ts",
+    "test/perf/chain/opPools/aggregatedAttestationPool.test.ts",
+    "test/perf/chain/opPools/opPool.test.ts",
+    "test/perf/chain/produceBlock/produceBlockBody.test.ts",
+    "test/perf/chain/validation/aggregateAndProof.test.ts",
+    "test/perf/chain/validation/attestation.test.ts",
+    "test/perf/chain/verifyImportBlocks.test.ts",
+    "test/unit/chain/validation/attestation/validateAttestation.test.ts",
+    "test/unit/chain/validation/aggregateAndProof.test.ts",
+    "test/unit/chain/shufflingCache.test.ts",
+    "test/utils/validationData/aggregateAndProof.ts",
+    "test/utils/validationData/attestation.ts",
+  ],
   "compilerOptions": {
     "outDir": "lib"
   }

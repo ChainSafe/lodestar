@@ -3,7 +3,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../../state-transition/test/perf/util.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../../src/chain/index.js";
 import {
@@ -17,6 +16,7 @@ import {
 import {getAttDataFromAttestationSerialized} from "../../../../../src/util/sszBytes.js";
 import {memoOnce} from "../../../../utils/cache.js";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors.js";
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../utils/state-transition.js";
 import {AttestationValidDataOpts, getAttestationValidData} from "../../../../utils/validationData/attestation.js";
 
 // TODO: more tests for electra

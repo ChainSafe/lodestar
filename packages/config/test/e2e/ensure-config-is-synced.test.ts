@@ -1,5 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
 import {fetch, fromHex} from "@lodestar/utils";
+// biome-ignore lint/suspicious/noTsIgnore: TS6059 during TS6 migration (ESM boundary)
+// @ts-ignore
 import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
