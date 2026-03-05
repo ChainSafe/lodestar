@@ -4,7 +4,6 @@ import {
   ForkChoice,
   ForkChoiceStore,
   JustifiedBalancesGetter,
-  PayloadStatus,
   ProtoArray,
   ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
