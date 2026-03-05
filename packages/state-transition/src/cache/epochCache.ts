@@ -451,7 +451,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
     }
 
-    // Compute PTC eagerly for all slots in the epoch
+    // Compute PTC for all slots in the prev/current epoch
     let previousPayloadTimelinessCommittees: Uint32Array[] = [];
     let payloadTimelinessCommittees: Uint32Array[] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
@@ -703,6 +703,7 @@ export class EpochCache {
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
       this.previousPayloadTimelinessCommittees = this.payloadTimelinessCommittees;
+      // Compute PTC eagerly for all slots in the epoch
       this.payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
         upcomingEpoch,
