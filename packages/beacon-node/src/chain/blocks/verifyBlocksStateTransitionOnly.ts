@@ -69,7 +69,8 @@ export async function verifyBlocksStateTransitionOnly(
 
     const signedEnvelope = envelopes?.get(block.message.slot) ?? null;
     if (signedEnvelope && isGloasBeaconBlock(block.message)) {
-      processExecutionPayloadEnvelope(postState as CachedBeaconStateGloas, signedEnvelope, true);
+      // Envelope signatures are verified in verifyBlocksSignatures(); avoid duplicate checks here.
+      processExecutionPayloadEnvelope(postState as CachedBeaconStateGloas, signedEnvelope, false);
     }
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
