@@ -15,7 +15,7 @@ import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
-import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
+import {DownloadByRangeError, DownloadByRangeErrorCode, DownloadByRangeResult} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -50,7 +50,7 @@ export type SyncChainFns = {
     peer: PeerSyncMeta,
     batch: Batch,
     syncType: RangeSyncType
-  ) => Promise<WarnResult<IBlockInput[], DownloadByRangeError>>;
+  ) => Promise<WarnResult<DownloadByRangeResult, DownloadByRangeError>>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Gets current peer custodyColumns and earliestAvailableSlot */
@@ -516,7 +516,7 @@ export class SyncChain {
         });
         this.metrics?.syncRange.downloadByRange.success.inc();
         const {warnings, result} = res.result;
-        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
+        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result.blocks, result.envelopes);
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
         };

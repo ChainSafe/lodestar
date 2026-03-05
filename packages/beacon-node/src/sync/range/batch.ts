@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
+import {ForkName, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {Epoch, RootHex, Slot, gloas, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -46,19 +46,36 @@ export type Attempt = {
 export type AwaitingDownloadState = {
   status: BatchStatus.AwaitingDownload;
   blocks: IBlockInput[];
+  envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
 };
 
 export type DownloadSuccessState = {
   status: BatchStatus.AwaitingProcessing;
   blocks: IBlockInput[];
+  envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
 };
 
 export type BatchState =
   | AwaitingDownloadState
-  | {status: BatchStatus.Downloading; peer: PeerIdStr; blocks: IBlockInput[]}
+  | {
+      status: BatchStatus.Downloading;
+      peer: PeerIdStr;
+      blocks: IBlockInput[];
+      envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+    }
   | DownloadSuccessState
-  | {status: BatchStatus.Processing; blocks: IBlockInput[]; attempt: Attempt}
-  | {status: BatchStatus.AwaitingValidation; blocks: IBlockInput[]; attempt: Attempt};
+  | {
+      status: BatchStatus.Processing;
+      blocks: IBlockInput[];
+      envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+      attempt: Attempt;
+    }
+  | {
+      status: BatchStatus.AwaitingValidation;
+      blocks: IBlockInput[];
+      envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
+      attempt: Attempt;
+    };
 
 export type BatchMetadata = {
   startEpoch: Epoch;
@@ -85,7 +102,7 @@ export class Batch {
   /** Block, blob and column requests that are used to determine the best peer and are used in downloadByRange */
   requests: DownloadByRangeRequests;
   /** State of the batch. */
-  state: BatchState = {status: BatchStatus.AwaitingDownload, blocks: []};
+  state: BatchState = {status: BatchStatus.AwaitingDownload, blocks: [], envelopes: null};
   /** Peers that provided good data */
   goodPeers: PeerIdStr[] = [];
   /** The `Attempts` that have been made and failed to send us this batch. */
@@ -130,13 +147,25 @@ export class Batch {
         step: 1,
       };
       if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
-        return {
-          blocksRequest,
-          columnsRequest: {
+        const columnsRequest = {
+          startSlot: this.startSlot,
+          count: this.count,
+          columns: this.custodyConfig.sampledColumns,
+        };
+        if (isForkPostGloas(this.forkName)) {
+          const envelopesRequest: gloas.ExecutionPayloadEnvelopesByRangeRequest = {
             startSlot: this.startSlot,
             count: this.count,
-            columns: this.custodyConfig.sampledColumns,
-          },
+          };
+          return {
+            blocksRequest,
+            columnsRequest,
+            envelopesRequest,
+          };
+        }
+        return {
+          blocksRequest,
+          columnsRequest,
         };
       }
       if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
@@ -207,6 +236,12 @@ export class Batch {
           startSlot: dataStartSlot,
           columns: Array.from(neededColumns),
         };
+        if (isForkPostGloas(this.forkName)) {
+          requests.envelopesRequest = {
+            count,
+            startSlot: dataStartSlot,
+          };
+        }
       } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
         requests.blobsRequest = {
           count,
@@ -220,7 +255,8 @@ export class Batch {
   }
 
   /**
-   * Post-fulu we should only get columns that peer has advertised
+   * Post-fulu we should only get columns that peer has advertised.
+   * envelopesRequest is unchanged, all peers can serve envelopes.
    */
   getRequestsForPeer(peer: PeerSyncMeta): DownloadByRangeRequests {
     if (!isForkPostFulu(this.forkName)) {
@@ -263,6 +299,10 @@ export class Batch {
     return this.state.blocks;
   }
 
+  getEnvelopes(): Map<Slot, gloas.ExecutionPayloadEnvelope> | null {
+    return this.state.envelopes;
+  }
+
   /**
    * AwaitingDownload -> Downloading
    */
@@ -271,13 +311,17 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }
 
-    this.state = {status: BatchStatus.Downloading, peer, blocks: this.state.blocks};
+    this.state = {status: BatchStatus.Downloading, peer, blocks: this.state.blocks, envelopes: this.state.envelopes};
   }
 
   /**
    * Downloading -> AwaitingProcessing
    */
-  downloadingSuccess(peer: PeerIdStr, blocks: IBlockInput[]): DownloadSuccessState {
+  downloadingSuccess(
+    peer: PeerIdStr,
+    blocks: IBlockInput[],
+    envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null = null
+  ): DownloadSuccessState {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
@@ -305,11 +349,13 @@ export class Batch {
         status: this.state.status,
       });
     }
+    const envelopesMap = envelopes ?? this.state.envelopes;
+
     if (allComplete) {
-      this.state = {status: BatchStatus.AwaitingProcessing, blocks};
+      this.state = {status: BatchStatus.AwaitingProcessing, blocks, envelopes: envelopesMap};
     } else {
       this.requests = this.getRequests(blocks);
-      this.state = {status: BatchStatus.AwaitingDownload, blocks};
+      this.state = {status: BatchStatus.AwaitingDownload, blocks, envelopes: envelopesMap};
     }
 
     return this.state as DownloadSuccessState;
@@ -328,7 +374,7 @@ export class Batch {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks, envelopes: this.state.envelopes};
   }
 
   /**
@@ -345,7 +391,7 @@ export class Batch {
     // that the data came from will be handled by the Attempt that goes for processing
     const peers = this.goodPeers;
     this.goodPeers = [];
-    this.state = {status: BatchStatus.Processing, blocks, attempt: {peers, hash}};
+    this.state = {status: BatchStatus.Processing, blocks, envelopes: this.state.envelopes, attempt: {peers, hash}};
     return blocks;
   }
 
@@ -357,7 +403,12 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    this.state = {status: BatchStatus.AwaitingValidation, blocks: this.state.blocks, attempt: this.state.attempt};
+    this.state = {
+      status: BatchStatus.AwaitingValidation,
+      blocks: this.state.blocks,
+      envelopes: this.state.envelopes,
+      attempt: this.state.attempt,
+    };
   }
 
   /**
@@ -408,7 +459,7 @@ export class Batch {
 
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
-    this.state = {status: BatchStatus.AwaitingDownload, blocks: []};
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: [], envelopes: null};
   }
 
   private onProcessingError(attempt: Attempt): void {
@@ -419,7 +470,7 @@ export class Batch {
 
     // remove any downloaded blocks and re-attempt
     // TODO(fulu): need to remove the bad blocks from the SeenBlockInputCache
-    this.state = {status: BatchStatus.AwaitingDownload, blocks: []};
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: [], envelopes: null};
   }
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */

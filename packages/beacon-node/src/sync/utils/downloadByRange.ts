@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
-import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
+import {DataColumnSidecars, SignedBeaconBlock, Slot, deneb, fulu, gloas, isGloasDataColumnSidecar, phase0} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
@@ -21,12 +21,14 @@ export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
   blobsRequest?: deneb.BlobSidecarsByRangeRequest;
   columnsRequest?: fulu.DataColumnSidecarsByRangeRequest;
+  envelopesRequest?: gloas.ExecutionPayloadEnvelopesByRangeRequest;
 };
 
 export type DownloadByRangeResponses = {
   blocks?: SignedBeaconBlock[];
   blobSidecars?: deneb.BlobSidecars;
-  columnSidecars?: fulu.DataColumnSidecars;
+  columnSidecars?: fulu.DataColumnSidecars | gloas.DataColumnSidecars;
+  signedEnvelopes?: gloas.SignedExecutionPayloadEnvelope[];
 };
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
@@ -42,6 +44,7 @@ export type CacheByRangeResponsesProps = {
   peerIdStr: string;
   responses: ValidatedResponses;
   batchBlocks: IBlockInput[];
+  batchEnvelops: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
 };
 
 export type ValidatedBlock = {
@@ -56,13 +59,19 @@ export type ValidatedBlobSidecars = {
 
 export type ValidatedColumnSidecars = {
   blockRoot: Uint8Array;
-  columnSidecars: fulu.DataColumnSidecars;
+  columnSidecars: fulu.DataColumnSidecars | gloas.DataColumnSidecars;
 };
 
 export type ValidatedResponses = {
   validatedBlocks?: ValidatedBlock[];
   validatedBlobSidecars?: ValidatedBlobSidecars[];
   validatedColumnSidecars?: ValidatedColumnSidecars[];
+  validatedEnvelopes?: gloas.ExecutionPayloadEnvelope[];
+};
+
+export type DownloadByRangeResult = {
+  blocks: IBlockInput[];
+  envelopes: Map<Slot, gloas.ExecutionPayloadEnvelope> | null;
 };
 
 /**
@@ -73,7 +82,8 @@ export function cacheByRangeResponses({
   peerIdStr,
   responses,
   batchBlocks,
-}: CacheByRangeResponsesProps): IBlockInput[] {
+  batchEnvelops,
+}: CacheByRangeResponsesProps): DownloadByRangeResult {
   const source = BlockInputSource.byRange;
   const seenTimestampSec = Date.now() / 1000;
   const updatedBatchBlocks = new Map<Slot, IBlockInput>(batchBlocks.map((block) => [block.slot, block]));
@@ -148,7 +158,9 @@ export function cacheByRangeResponses({
   }
 
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
-    const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
+    const firstColumn = columnSidecars.at(0);
+    const dataSlot =
+      firstColumn && "slot" in firstColumn ? firstColumn.slot : firstColumn?.signedBlockHeader.message.slot;
     if (dataSlot === undefined) {
       throw new Error(
         `Coding Error: empty columnSidecars returned for blockRoot=${toRootHex(blockRoot)} from validation functions`
@@ -162,6 +174,10 @@ export function cacheByRangeResponses({
     }
 
     if (!isBlockInputColumns(existing)) {
+      if (existing.type === DAType.PayloadBid) {
+        // Post-gloas columns are cross-validated separately; no column cache insertion for payload-bid block inputs.
+        continue;
+      }
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISMATCH_BLOCK_INPUT_TYPE,
         slot: existing.slot,
@@ -170,7 +186,10 @@ export function cacheByRangeResponses({
         actual: existing.type,
       });
     }
-    for (const columnSidecar of columnSidecars) {
+    if (columnSidecars.length > 0 && "slot" in columnSidecars[0]) {
+      continue;
+    }
+    for (const columnSidecar of columnSidecars as fulu.DataColumnSidecars) {
       // will throw if root hex does not match (meaning we are following the wrong chain)
       existing.addColumn(
         {
@@ -185,7 +204,16 @@ export function cacheByRangeResponses({
     }
   }
 
-  return Array.from(updatedBatchBlocks.values());
+  const envelopesBySlot = new Map<number, gloas.ExecutionPayloadEnvelope>();
+  for (const [slot, envelope] of batchEnvelops ?? []) {
+    envelopesBySlot.set(slot, envelope);
+  }
+  for (const envelope of responses.validatedEnvelopes ?? []) {
+    envelopesBySlot.set(envelope.slot, envelope);
+  }
+  const envelopes = envelopesBySlot.size > 0 ? envelopesBySlot : null;
+
+  return {blocks: Array.from(updatedBatchBlocks.values()), envelopes};
 }
 
 export async function downloadByRange({
@@ -196,6 +224,7 @@ export async function downloadByRange({
   blocksRequest,
   blobsRequest,
   columnsRequest,
+  envelopesRequest,
 }: DownloadAndCacheByRangeProps): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   let response: DownloadByRangeResponses;
   try {
@@ -205,12 +234,13 @@ export async function downloadByRange({
       blocksRequest,
       blobsRequest,
       columnsRequest,
+      envelopesRequest,
     });
   } catch (err) {
     throw new DownloadByRangeError({
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR,
       reason: (err as Error).message,
-      ...requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}),
+      ...requestsLogMeta({blocksRequest, blobsRequest, columnsRequest, envelopesRequest}),
     });
   }
 
@@ -220,6 +250,7 @@ export async function downloadByRange({
     blocksRequest,
     blobsRequest,
     columnsRequest,
+    envelopesRequest,
     ...response,
   });
 
@@ -235,13 +266,15 @@ export async function requestByRange({
   blocksRequest,
   blobsRequest,
   columnsRequest,
+  envelopesRequest,
 }: DownloadByRangeRequests & {
   network: INetwork;
   peerIdStr: PeerIdStr;
 }): Promise<DownloadByRangeResponses> {
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
-  let columnSidecars: undefined | fulu.DataColumnSidecars;
+  let columnSidecars: undefined | fulu.DataColumnSidecars | gloas.DataColumnSidecars;
+  let signedEnvelopes: undefined | gloas.SignedExecutionPayloadEnvelope[];
 
   const requests: Promise<unknown>[] = [];
 
@@ -269,12 +302,21 @@ export async function requestByRange({
     );
   }
 
+  if (envelopesRequest) {
+    requests.push(
+      network.sendExecutionPayloadEnvelopesByRange(peerIdStr, envelopesRequest).then((envelopes) => {
+        signedEnvelopes = envelopes;
+      })
+    );
+  }
+
   await Promise.all(requests);
 
   return {
     blocks,
     blobSidecars,
     columnSidecars,
+    signedEnvelopes,
   };
 }
 
@@ -287,9 +329,11 @@ export async function validateResponses({
   blocksRequest,
   blobsRequest,
   columnsRequest,
+  envelopesRequest,
   blocks,
   blobSidecars,
   columnSidecars,
+  signedEnvelopes,
 }: DownloadByRangeRequests &
   DownloadByRangeResponses & {
     config: ChainForkConfig;
@@ -302,7 +346,7 @@ export async function validateResponses({
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-        ...requestsLogMeta({blobsRequest, columnsRequest}),
+        ...requestsLogMeta({blobsRequest, columnsRequest, envelopesRequest}),
       },
       "No blocks to validate data requests against"
     );
@@ -334,7 +378,7 @@ export async function validateResponses({
     throw new DownloadByRangeError(
       {
         code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-        ...requestsLogMeta({blobsRequest, columnsRequest}),
+        ...requestsLogMeta({blobsRequest, columnsRequest, envelopesRequest}),
       },
       "No blocks in data request slot range to validate data response against"
     );
@@ -345,16 +389,13 @@ export async function validateResponses({
       throw new DownloadByRangeError(
         {
           code: DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE,
-          ...requestsLogMeta({blobsRequest, columnsRequest}),
+          ...requestsLogMeta({blobsRequest, columnsRequest, envelopesRequest}),
         },
         "No blobSidecars to validate against blobsRequest"
       );
     }
 
-    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
-      blocksForDataValidation,
-      blobSidecars
-    );
+    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(blocksForDataValidation, blobSidecars);
   }
 
   if (columnsRequest) {
@@ -362,7 +403,7 @@ export async function validateResponses({
       throw new DownloadByRangeError(
         {
           code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
-          ...requestsLogMeta({blobsRequest, columnsRequest}),
+          ...requestsLogMeta({blobsRequest, columnsRequest, envelopesRequest}),
         },
         "No columnSidecars to check columnRequest against"
       );
@@ -376,6 +417,12 @@ export async function validateResponses({
     );
     validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
     warnings = validatedColumnSidecarsResult.warnings;
+  }
+
+  const validatedBlocks = validatedResponses.validatedBlocks;
+  if (signedEnvelopes?.length) {
+    validateEnvelopesByRangeResponse({envelopes: signedEnvelopes, validatedBlocks: validatedBlocks ?? []});
+    validatedResponses.validatedEnvelopes = signedEnvelopes.map((envelope) => envelope.message);
   }
 
   return {result: validatedResponses, warnings};
@@ -487,6 +534,35 @@ export function validateBlockByRangeResponse(
     result: response,
     warnings: null,
   };
+}
+
+export function validateEnvelopesByRangeResponse({
+  envelopes,
+  validatedBlocks,
+}: {
+  envelopes: gloas.SignedExecutionPayloadEnvelope[];
+  validatedBlocks: ValidatedBlock[];
+}): void {
+  const blockBySlot = new Map(validatedBlocks.map(({block, blockRoot}) => [block.message.slot, {block, blockRoot}]));
+  for (const signedEnvelope of envelopes) {
+    const env = signedEnvelope.message;
+    const entry = blockBySlot.get(env.slot);
+    if (!entry) {
+      throw new DownloadByRangeError({code: DownloadByRangeErrorCode.ENVELOPE_NO_MATCHING_BLOCK, slot: env.slot});
+    }
+    const {block, blockRoot} = entry;
+    const bid = (block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message;
+
+    if (!byteArrayEquals(env.beaconBlockRoot, blockRoot)) {
+      throw new DownloadByRangeError({code: DownloadByRangeErrorCode.ENVELOPE_WRONG_BLOCK_ROOT, slot: env.slot});
+    }
+    if (env.builderIndex !== bid.builderIndex) {
+      throw new DownloadByRangeError({code: DownloadByRangeErrorCode.ENVELOPE_WRONG_BUILDER_INDEX, slot: env.slot});
+    }
+    if (!byteArrayEquals(env.payload.blockHash, bid.blockHash)) {
+      throw new DownloadByRangeError({code: DownloadByRangeErrorCode.ENVELOPE_WRONG_BLOCK_HASH, slot: env.slot});
+    }
+  }
 }
 
 /**
@@ -608,16 +684,16 @@ export async function validateColumnsByRangeResponse(
   config: ChainForkConfig,
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedBlock[],
-  columnSidecars: fulu.DataColumnSidecars
+  columnSidecars: DataColumnSidecars
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
 
-  const seenColumns = new Map<Slot, Map<number, fulu.DataColumnSidecar>>();
+  const seenColumns = new Map<Slot, Map<number, fulu.DataColumnSidecar | gloas.DataColumnSidecar>>();
   let currentSlot = -1;
   let currentIndex = -1;
   // Check for duplicates and order
   for (const columnSidecar of columnSidecars) {
-    const slot = columnSidecar.signedBlockHeader.message.slot;
+    const slot = isGloasDataColumnSidecar(columnSidecar) ? columnSidecar.slot : columnSidecar.signedBlockHeader.message.slot;
     let seenSlotColumns = seenColumns.get(slot);
     if (!seenSlotColumns) {
       seenSlotColumns = new Map();
@@ -676,7 +752,7 @@ export async function validateColumnsByRangeResponse(
     const slot = block.message.slot;
     const rootHex = toRootHex(blockRoot);
     const forkName = config.getForkName(slot);
-    const columnSidecarsMap: Map<number, fulu.DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
+    const columnSidecarsMap = seenColumns.get(slot) ?? new Map();
     const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index);
 
     let blobCount: number;
@@ -764,7 +840,8 @@ export async function validateColumnsByRangeResponse(
         slot,
         blockRoot,
         blobCount,
-        columnSidecars
+        columnSidecars,
+        getBlobKzgCommitments(forkName, block as SignedBeaconBlock<ForkPostFulu>)
       ).then(() => ({
         blockRoot,
         columnSidecars,
@@ -818,7 +895,7 @@ export function getBlocksForDataValidation(
   return dataRequestBlocks;
 }
 
-function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: DownloadByRangeRequests) {
+function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest, envelopesRequest}: DownloadByRangeRequests) {
   const logMeta: {
     blockStartSlot?: number;
     blockCount?: number;
@@ -826,6 +903,8 @@ function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: Download
     blobCount?: number;
     columnStartSlot?: number;
     columnCount?: number;
+    envelopeStartSlot?: number;
+    envelopeCount?: number;
   } = {};
   if (blocksRequest) {
     logMeta.blockStartSlot = blocksRequest.startSlot;
@@ -838,6 +917,10 @@ function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: Download
   if (columnsRequest) {
     logMeta.columnStartSlot = columnsRequest.startSlot;
     logMeta.columnCount = columnsRequest.count;
+  }
+  if (envelopesRequest) {
+    logMeta.envelopeStartSlot = envelopesRequest.startSlot;
+    logMeta.envelopeCount = envelopesRequest.count;
   }
   return logMeta;
 }
@@ -871,6 +954,10 @@ export enum DownloadByRangeErrorCode {
   /** Cached block input type mismatches new data */
   MISMATCH_BLOCK_FORK = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_FORK",
   MISMATCH_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_INPUT_TYPE",
+  ENVELOPE_NO_MATCHING_BLOCK = "DOWNLOAD_BY_RANGE_ERROR_ENVELOPE_NO_MATCHING_BLOCK",
+  ENVELOPE_WRONG_BLOCK_ROOT = "DOWNLOAD_BY_RANGE_ERROR_ENVELOPE_WRONG_BLOCK_ROOT",
+  ENVELOPE_WRONG_BUILDER_INDEX = "DOWNLOAD_BY_RANGE_ERROR_ENVELOPE_WRONG_BUILDER_INDEX",
+  ENVELOPE_WRONG_BLOCK_HASH = "DOWNLOAD_BY_RANGE_ERROR_ENVELOPE_WRONG_BLOCK_HASH",
 }
 
 export type DownloadByRangeErrorType =
@@ -885,6 +972,8 @@ export type DownloadByRangeErrorType =
       blobCount?: number;
       columnStartSlot?: number;
       columnCount?: number;
+      envelopeStartSlot?: number;
+      envelopeCount?: number;
     }
   | {
       code: DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS;
@@ -907,6 +996,8 @@ export type DownloadByRangeErrorType =
       blobCount?: number;
       columnStartSlot?: number;
       columnCount?: number;
+      envelopeStartSlot?: number;
+      envelopeCount?: number;
       reason: string;
     }
   | {
@@ -962,6 +1053,14 @@ export type DownloadByRangeErrorType =
       blockRoot: string;
       expected: DAType;
       actual: DAType;
+    }
+  | {
+      code:
+        | DownloadByRangeErrorCode.ENVELOPE_NO_MATCHING_BLOCK
+        | DownloadByRangeErrorCode.ENVELOPE_WRONG_BLOCK_ROOT
+        | DownloadByRangeErrorCode.ENVELOPE_WRONG_BUILDER_INDEX
+        | DownloadByRangeErrorCode.ENVELOPE_WRONG_BLOCK_HASH;
+      slot: number;
     };
 
 export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType> {}
