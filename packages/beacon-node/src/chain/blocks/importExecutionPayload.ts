@@ -187,6 +187,8 @@ export async function importExecutionPayload(
   // 6. Cache payload state
   // TODO GLOAS: Enable when PR #8868 merged (adds processPayloadState)
   // this.regen.processPayloadState(postPayloadState);
+  // if epoch boundary also call
+  // this.regen.addCheckpointState(cp, checkpointState, true);
 
   // 7. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
