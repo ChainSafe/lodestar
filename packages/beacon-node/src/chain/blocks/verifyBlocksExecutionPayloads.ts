@@ -294,10 +294,7 @@ function getSegmentErrorResponse(
           : isGloasBeaconBlock(block.message)
             ? toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash)
             : null;
-      if (
-        executionBlockHash !== null &&
-        executionBlockHash === lvhResponse.latestValidExecHash
-      ) {
+      if (executionBlockHash !== null && executionBlockHash === lvhResponse.latestValidExecHash) {
         lvhFound = true;
         break;
       }

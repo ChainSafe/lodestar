@@ -1070,29 +1070,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob([block], opts);
+    return this.blockProcessor.processBlocksJob([block], null, opts);
   }
 
-  async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
   async processChainSegment(
     blocks: IBlockInput[],
-    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
-    opts?: ImportBlockOpts
-  ): Promise<void>;
-  async processChainSegment(
-    blocks: IBlockInput[],
-    envelopesOrOpts?: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null | ImportBlockOpts,
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null,
     opts?: ImportBlockOpts
   ): Promise<void> {
-    const envelopes =
-      envelopesOrOpts instanceof Map || envelopesOrOpts === null
-        ? envelopesOrOpts
-        : null;
-    const importOpts =
-      envelopesOrOpts instanceof Map || envelopesOrOpts === null
-        ? opts
-        : envelopesOrOpts;
-    return this.blockProcessor.processBlocksJob(blocks, importOpts, envelopes);
+    return this.blockProcessor.processBlocksJob(blocks, envelopes, opts);
   }
 
   async importExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void> {

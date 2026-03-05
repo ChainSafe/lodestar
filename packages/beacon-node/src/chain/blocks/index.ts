@@ -22,14 +22,17 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[IBlockInput[], ImportBlockOpts, Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null], void>;
+  readonly jobQueue: JobItemQueue<
+    [IBlockInput[], Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null, ImportBlockOpts],
+    void
+  >;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
     this.jobQueue = new JobItemQueue<
-      [IBlockInput[], ImportBlockOpts, Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null],
+      [IBlockInput[], Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null, ImportBlockOpts],
       void
     >(
-      (job, importOpts, envelopes) => {
+      (job, envelopes, importOpts) => {
         return processBlocks.call(chain, job, envelopes, {...opts, ...importOpts});
       },
       {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
@@ -39,10 +42,10 @@ export class BlockProcessor {
 
   async processBlocksJob(
     job: IBlockInput[],
-    opts: ImportBlockOpts = {},
-    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null,
+    opts: ImportBlockOpts = {}
   ): Promise<void> {
-    await this.jobQueue.push(job, opts, envelopes);
+    await this.jobQueue.push(job, envelopes, opts);
   }
 }
 

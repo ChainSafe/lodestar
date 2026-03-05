@@ -1,6 +1,15 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
-import {DataColumnSidecars, SignedBeaconBlock, Slot, deneb, fulu, gloas, isGloasDataColumnSidecar, phase0} from "@lodestar/types";
+import {
+  DataColumnSidecars,
+  SignedBeaconBlock,
+  Slot,
+  deneb,
+  fulu,
+  gloas,
+  isGloasDataColumnSidecar,
+  phase0,
+} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
@@ -395,7 +404,10 @@ export async function validateResponses({
       );
     }
 
-    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(blocksForDataValidation, blobSidecars);
+    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
+      blocksForDataValidation,
+      blobSidecars
+    );
   }
 
   if (columnsRequest) {
@@ -693,7 +705,9 @@ export async function validateColumnsByRangeResponse(
   let currentIndex = -1;
   // Check for duplicates and order
   for (const columnSidecar of columnSidecars) {
-    const slot = isGloasDataColumnSidecar(columnSidecar) ? columnSidecar.slot : columnSidecar.signedBlockHeader.message.slot;
+    const slot = isGloasDataColumnSidecar(columnSidecar)
+      ? columnSidecar.slot
+      : columnSidecar.signedBlockHeader.message.slot;
     let seenSlotColumns = seenColumns.get(slot);
     if (!seenSlotColumns) {
       seenSlotColumns = new Map();

@@ -10,7 +10,17 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {DataColumnSidecar, DataColumnSidecars, Root, Slot, SubnetID, deneb, fulu, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {
+  DataColumnSidecar,
+  DataColumnSidecars,
+  Root,
+  Slot,
+  SubnetID,
+  deneb,
+  fulu,
+  isGloasDataColumnSidecar,
+  ssz,
+} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
@@ -361,7 +371,10 @@ export async function validateBlockDataColumnSidecars(
       const slot = firstSidecarSignedBlockHeader.message.slot;
       const signature = firstSidecarSignedBlockHeader.signature;
       if (!chain.seenBlockInputCache.isVerifiedProposerSignature(slot, rootHex, signature)) {
-        const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(chain.config, firstSidecarSignedBlockHeader);
+        const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(
+          chain.config,
+          firstSidecarSignedBlockHeader
+        );
 
         if (
           !(await chain.bls.verifySignatureSets([signatureSet], {

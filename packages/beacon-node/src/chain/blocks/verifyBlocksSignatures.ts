@@ -1,5 +1,6 @@
 import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
+import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateGloas,
@@ -7,8 +8,7 @@ import {
   getBlockSignatureSets,
   getExecutionPayloadEnvelopeSigningRoot,
 } from "@lodestar/state-transition";
-import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
-import {IndexedAttestation, Slot, SignedBeaconBlock, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {IndexedAttestation, SignedBeaconBlock, Slot, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
