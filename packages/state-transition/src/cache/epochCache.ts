@@ -226,7 +226,7 @@ export class EpochCache {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
   // TODO GLOAS: See if we need to cached PTC for next epoch
-  // PTC for previous epoch, required for epoch-boundary lookups
+  // PTC for previous epoch, required for epoch boundary lookups
   // eg. slot N block validating slot N-1 attestations
   previousPayloadTimelinessCommittees: Uint32Array[];
   // PTC for current epoch, computed eagerly at epoch transition
