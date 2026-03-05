@@ -225,9 +225,8 @@ export class EpochCache {
   currentSyncCommitteeIndexed: SyncCommitteeCache;
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
-  // TODO GLOAS: See if we need to cached PTC for next epoch
-  // PTC for previous epoch, required for epoch boundary lookups
-  // eg. slot N block validating slot N-1 attestations
+  // TODO GLOAS: See if we need to cache PTC for next epoch
+  // PTC for previous epoch, required for slot N block validating slot N-1 attestations
   previousPayloadTimelinessCommittees: Uint32Array[];
   // PTC for current epoch, computed eagerly at epoch transition
   payloadTimelinessCommittees: Uint32Array[];
@@ -702,7 +701,7 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
-      // Shift and compute current epoch PTC eagerly for all slots.
+      // Shift and compute current epoch PTC eagerly for all slots
       this.previousPayloadTimelinessCommittees = this.payloadTimelinessCommittees;
       this.payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
@@ -1038,7 +1037,7 @@ export class EpochCache {
       return this.payloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
     }
 
-    if (epoch === this.epoch - 1) {
+    if (epoch === this.epoch - 1 && this.previousPayloadTimelinessCommittees.length > 0) {
       return this.previousPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
     }
 
