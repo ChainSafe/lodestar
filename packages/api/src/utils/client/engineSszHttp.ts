@@ -43,7 +43,6 @@ export function isEngineSszUnsupportedStatus(status: number): boolean {
   return (
     status === HttpStatusCode.NOT_FOUND ||
     status === HttpStatusCode.NOT_IMPLEMENTED ||
-    status === HttpStatusCode.UNSUPPORTED_MEDIA_TYPE ||
-    status === HttpStatusCode.BAD_REQUEST
+    status === HttpStatusCode.UNSUPPORTED_MEDIA_TYPE
   );
 }

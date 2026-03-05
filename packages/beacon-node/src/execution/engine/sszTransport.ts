@@ -302,11 +302,7 @@ const payloadStatusByCode: Record<number, ExecutionPayloadStatus> = {
 const zeroRootHex = bytesToData(new Uint8Array(32));
 const zeroPayloadIdHex = bytesToData(new Uint8Array(8));
 
-function serializePayloadStatusFromSsz(value: {
-  status: number;
-  latestValidHash: Uint8Array;
-  validationError: Uint8Array;
-}): {
+function parsePayloadStatusFromSsz(value: {status: number; latestValidHash: Uint8Array; validationError: Uint8Array}): {
   status: ExecutionPayloadStatus;
   latestValidHash: string | null;
   validationError: string | null;
@@ -485,7 +481,7 @@ export function decodeEngineSszResponse<M extends keyof EngineApiRpcReturnTypes>
     case "engine_newPayloadV2":
     case "engine_newPayloadV3":
     case "engine_newPayloadV4": {
-      return serializePayloadStatusFromSsz(payloadStatusV1Type.deserialize(bytes)) as EngineApiRpcReturnTypes[M];
+      return parsePayloadStatusFromSsz(payloadStatusV1Type.deserialize(bytes)) as EngineApiRpcReturnTypes[M];
     }
 
     case "engine_forkchoiceUpdatedV1":
@@ -493,7 +489,7 @@ export function decodeEngineSszResponse<M extends keyof EngineApiRpcReturnTypes>
     case "engine_forkchoiceUpdatedV3": {
       const response = forkchoiceUpdatedResponseV1Type.deserialize(bytes);
       return {
-        payloadStatus: serializePayloadStatusFromSsz(response.payloadStatus),
+        payloadStatus: parsePayloadStatusFromSsz(response.payloadStatus),
         payloadId: bytesToData(response.payloadId) === zeroPayloadIdHex ? null : bytesToData(response.payloadId),
       } as EngineApiRpcReturnTypes[M];
     }

@@ -1,16 +1,16 @@
 export type EngineSszEndpoint = `${"GET" | "POST"} /engine/${string}`;
 
-const ENGINE_REST_PREFIX = "/engine/";
-
 export function isEngineSszCapability(value: string): value is EngineSszEndpoint {
   if (typeof value !== "string") return false;
-  const trimmed = value.trim();
-  const upper = trimmed.toUpperCase();
-  const lower = trimmed.toLowerCase();
-  return (
-    (upper.startsWith("GET ") || upper.startsWith("POST ")) &&
-    (lower.includes(`${ENGINE_REST_PREFIX}`) || lower.endsWith("/engine/v1/capabilities"))
-  );
+
+  const parts = value.trim().split(/\s+/);
+  if (parts.length < 2) return false;
+
+  const method = parts[0].toUpperCase();
+  if (method !== "GET" && method !== "POST") return false;
+
+  const path = parts.slice(1).join(" ").toLowerCase();
+  return path.startsWith("/engine/");
 }
 
 /**

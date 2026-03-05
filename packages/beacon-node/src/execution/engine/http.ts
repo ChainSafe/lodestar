@@ -647,7 +647,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
 
     try {
-      return await this.fetchSszWithRetries(method, dispatchPlan.request, methodOpts);
+      const response = await this.fetchSszWithRetries(method, dispatchPlan.request, methodOpts);
+      this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
+      return response;
     } catch (e) {
       if (e instanceof HttpRpcError && isEngineSszUnsupportedStatus(e.status)) {
         this.logger.debug("Engine SSZ request unsupported by EL, falling back to JSON-RPC", {
@@ -660,6 +662,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           methodOpts
         );
       }
+
+      this.updateEngineState(getExecutionEngineState({payloadError: e, oldState: this.state}));
       throw e;
     }
   }
