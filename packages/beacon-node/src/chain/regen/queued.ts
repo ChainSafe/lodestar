@@ -1,10 +1,12 @@
 import {routes} from "@lodestar/api";
 import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, isGloasBeaconBlock, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {getCheckpointFromState} from "../blocks/utils/checkpoint.ts";
 import {BlockStateCache, CheckpointHexPayload, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {
@@ -194,6 +196,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   processPayloadState(payloadState: CachedBeaconStateAllForks): void {
     // Add payload state to block state cache (keyed by payload state root)
     this.blockStateCache.add(payloadState);
+    if (payloadState.slot % SLOTS_PER_EPOCH === 0) {
+      this.addCheckpointState(getCheckpointFromState(payloadState), payloadState, true);
+    }
   }
 
   // TODO GLOAS: This should also be called when importing execution payload after we implement it

@@ -223,6 +223,21 @@ describe("sync / range / batch", async () => {
       });
     });
 
+    describe("ForkGloas", () => {
+      const startEpoch = config.GLOAS_FORK_EPOCH + 1;
+
+      it("should request envelopes even when data column requests are out of availability window", () => {
+        vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
+          startEpoch + config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS + 1
+        );
+        const batch = new Batch(startEpoch, config, clock, custodyConfig);
+
+        expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
+        expect(batch.requests.columnsRequest).toBeUndefined();
+        expect(batch.requests.envelopesRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
+      });
+    });
+
     it("should not request data pre-deneb", () => {
       const startEpoch = config.CAPELLA_FORK_EPOCH - 1;
       const batch = new Batch(startEpoch, config, clock, custodyConfig);
@@ -261,6 +276,17 @@ describe("sync / range / batch", async () => {
 
   describe("downloadingSuccess", () => {
     it("should handle blocks that are not in slot-wise order", () => {});
+  });
+
+  it("should not count failed download attempts when explicitly disabled", () => {
+    const startEpoch = 0;
+    const batch = new Batch(startEpoch, config, clock, custodyConfig);
+
+    batch.startDownloading(peer);
+    batch.downloadingError(peer, {countFailedAttempt: false});
+
+    expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+    expect(batch.getFailedPeers()).toEqual([]);
   });
 
   it("Complete state flow", () => {

@@ -236,6 +236,7 @@ export interface IBeaconChain {
     blockRootHex: string,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
+  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
@@ -253,7 +254,11 @@ export interface IBeaconChain {
   /** Process a block until complete */
   processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(
+    blocks: IBlockInput[],
+    envelopes?: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    opts?: ImportBlockOpts
+  ): Promise<void>;
 
   /** Process a signed execution payload envelope (post-gloas) */
   importExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void>;

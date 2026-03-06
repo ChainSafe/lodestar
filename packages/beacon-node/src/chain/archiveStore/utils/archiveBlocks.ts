@@ -1,10 +1,10 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithPayload, IForkChoice, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
@@ -19,7 +19,6 @@ const BLOCK_BATCH_SIZE = 256;
 const BLOB_SIDECAR_BATCH_SIZE = 32;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
-type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 
 /**
  * Persist orphaned block to disk
@@ -53,7 +52,7 @@ export async function archiveBlocks(
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer | undefined,
   logger: Logger,
-  finalizedCheckpoint: CheckpointHex,
+  finalizedCheckpoint: CheckpointWithPayload,
   currentEpoch: Epoch,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
@@ -62,18 +61,32 @@ export async function archiveBlocks(
   // Use fork choice to determine the blocks to archive and delete
   // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
   const {ancestors: finalizedCanonicalBlocks, nonAncestors: finalizedNonCanonicalBlocks} =
-    forkChoice.getAllAncestorAndNonAncestorBlocks(finalizedCheckpoint.rootHex);
+    forkChoice.getAllAncestorAndNonAncestorBlocks(finalizedCheckpoint.rootHex, finalizedCheckpoint.payloadStatus);
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
   const finalizedPostFulu = finalizedCheckpoint.epoch >= config.FULU_FORK_EPOCH;
+  const finalizedPostGloas = finalizedCheckpoint.epoch >= config.GLOAS_FORK_EPOCH;
 
-  const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
-    slot: block.slot,
-    root: fromHex(block.blockRoot),
-  }));
+  const finalizedCanonicalBlockRoots: BlockRootSlot[] = [];
+  const finalizedCanonicalEnvelopeBlockRoots: BlockRootSlot[] = [];
+  for (const block of finalizedCanonicalBlocks) {
+    const rootAndSlot = {slot: block.slot, root: fromHex(block.blockRoot)};
+    const isPostGloasBlock = config.getForkSeq(block.slot) >= ForkSeq.gloas;
 
-  const logCtx = {currentEpoch, finalizedEpoch: finalizedCheckpoint.epoch, finalizedRoot: finalizedCheckpoint.rootHex};
+    finalizedCanonicalBlockRoots.push(rootAndSlot);
+    if (isPostGloasBlock && block.payloadStatus === PayloadStatus.FULL) {
+      finalizedCanonicalEnvelopeBlockRoots.push(rootAndSlot);
+    }
+  }
+
+  const envelopeCount = finalizedCanonicalEnvelopeBlockRoots.length;
+  const logCtx = {
+    currentEpoch,
+    finalizedEpoch: finalizedCheckpoint.epoch,
+    finalizedRoot: finalizedCheckpoint.rootHex,
+    envelopeCount,
+  };
 
   if (finalizedCanonicalBlockRoots.length > 0) {
     await migrateBlocksFromHotToColdDb(db, finalizedCanonicalBlockRoots);
@@ -103,6 +116,14 @@ export async function archiveBlocks(
         currentEpoch
       );
       logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
+    }
+
+    if (finalizedPostGloas && finalizedCanonicalEnvelopeBlockRoots.length > 0) {
+      const migratedEntries = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
+        db,
+        finalizedCanonicalEnvelopeBlockRoots
+      );
+      logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {...logCtx, migratedEntries});
     }
   }
 
@@ -371,6 +392,39 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
   }
 
   return migratedWrappedDataColumns;
+}
+
+async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
+  db: IBeaconDb,
+  blocks: BlockRootSlot[]
+): Promise<number> {
+  let migratedEnvelopes = 0;
+  for (let i = 0; i < blocks.length; i += BLOCK_BATCH_SIZE) {
+    const toIdx = Math.min(i + BLOCK_BATCH_SIZE, blocks.length);
+    const canonicalBlocks = blocks.slice(i, toIdx);
+
+    if (canonicalBlocks.length === 0) break;
+
+    const canonicalEnvelopeEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
+      canonicalBlocks.map(async (block) => {
+        const envelopeBytes = await db.executionPayloadEnvelope.getBinary(block.root);
+        if (!envelopeBytes) {
+          throw Error(`No executionPayloadEnvelope found for slot ${block.slot} root ${toRootHex(block.root)}`);
+        }
+
+        return {key: block.slot, value: envelopeBytes};
+      })
+    );
+
+    await Promise.all([
+      db.executionPayloadEnvelopeArchive.batchPutBinary(canonicalEnvelopeEntries),
+      db.executionPayloadEnvelope.batchDelete(canonicalBlocks.map((block) => block.root)),
+    ]);
+
+    migratedEnvelopes += canonicalEnvelopeEntries.length;
+  }
+
+  return migratedEnvelopes;
 }
 
 /**

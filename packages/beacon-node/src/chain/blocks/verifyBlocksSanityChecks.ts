@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, isGloasBeaconBlock} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IChainOptions} from "../options.js";
@@ -28,9 +28,11 @@ export function verifyBlocksSanityChecks(
     config: ChainForkConfig;
     opts: IChainOptions;
     blacklistedBlocks: Map<RootHex, Slot | null>;
+    logger?: Logger;
   },
   blocks: IBlockInput[],
-  opts: ImportBlockOpts
+  opts: ImportBlockOpts,
+  envelopes: Map<Slot, unknown> | null = null
 ): {
   relevantBlocks: IBlockInput[];
   parentSlots: Slot[];
@@ -39,6 +41,11 @@ export function verifyBlocksSanityChecks(
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
+
+  chain.logger?.debug("verifyBlocksSanityChecks", {
+    blockCount: blocks.length,
+    envelopeCount: envelopes?.size ?? 0,
+  });
 
   const relevantBlocks: IBlockInput[] = [];
   const parentSlots: Slot[] = [];

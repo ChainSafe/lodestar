@@ -1,6 +1,14 @@
+import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
-import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
-import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
+import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
+  createSingleSignatureSetFromComponents,
+  getBlockSignatureSets,
+  getExecutionPayloadEnvelopeSigningRoot,
+} from "@lodestar/state-transition";
+import {IndexedAttestation, SignedBeaconBlock, Slot, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -22,6 +30,7 @@ export async function verifyBlocksSignatures(
   metrics: Metrics | null,
   preState0: CachedBeaconStateAllForks,
   blocks: SignedBeaconBlock[],
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   indexedAttestationsByBlock: IndexedAttestation[][],
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
@@ -34,17 +43,29 @@ export async function verifyBlocksSignatures(
   // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
   // so the attester and proposer shufflings are correct.
   for (const [i, block] of blocks.entries()) {
+    let blockSignaturesPromise: Promise<boolean>;
+    if (opts.validSignatures) {
+      // Skip all block signature verification
+      blockSignaturesPromise = Promise.resolve(true);
+    } else {
+      // Verify signatures per block to track which block is invalid
+      blockSignaturesPromise = bls.verifySignatureSets(
+        getBlockSignatureSets(config, currentSyncCommitteeIndexed, block, indexedAttestationsByBlock[i], {
+          skipProposerSignature: opts.validProposerSignature,
+        })
+      );
+    }
+
+    const signedEnvelope = envelopes?.get(block.message.slot) ?? null;
+    const envelopeSignaturePromise =
+      signedEnvelope && isGloasBeaconBlock(block.message)
+        ? verifyExecutionPayloadEnvelopeSignature(bls, preState0 as CachedBeaconStateGloas, block, signedEnvelope)
+        : Promise.resolve(true);
+
     // Use [i] to make clear that the index has to be correct to blame the right block below on BlockError()
-    isValidPromises[i] = opts.validSignatures
-      ? // Skip all signature verification
-        Promise.resolve(true)
-      : //
-        // Verify signatures per block to track which block is invalid
-        bls.verifySignatureSets(
-          getBlockSignatureSets(config, currentSyncCommitteeIndexed, block, indexedAttestationsByBlock[i], {
-            skipProposerSignature: opts.validProposerSignature,
-          })
-        );
+    isValidPromises[i] = Promise.all([blockSignaturesPromise, envelopeSignaturePromise]).then(
+      ([blockSigsValid, envelopeSigValid]) => blockSigsValid && envelopeSigValid
+    );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
     // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to
@@ -77,6 +98,27 @@ export async function verifyBlocksSignatures(
   }
 
   return {verifySignaturesTime};
+}
+
+async function verifyExecutionPayloadEnvelopeSignature(
+  bls: IBlsVerifier,
+  state: CachedBeaconStateGloas,
+  block: SignedBeaconBlock,
+  signedEnvelope: gloas.SignedExecutionPayloadEnvelope
+): Promise<boolean> {
+  const envelope = signedEnvelope.message;
+  const pubkey =
+    envelope.builderIndex === BUILDER_INDEX_SELF_BUILD
+      ? state.epochCtx.index2pubkey[block.message.proposerIndex]
+      : PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey);
+  const publicKey = pubkey instanceof PublicKey ? pubkey : PublicKey.fromBytes(pubkey);
+  const signatureSet = createSingleSignatureSetFromComponents(
+    publicKey,
+    getExecutionPayloadEnvelopeSigningRoot(state.config, envelope),
+    signedEnvelope.signature
+  );
+
+  return bls.verifySignatureSets([signatureSet]);
 }
 
 type AllValidRes = {allValid: true} | {allValid: false; index: number};

@@ -19,6 +19,12 @@ const multiStreamSelectErrorCodes = {
   protocolSelectionFailed: "protocol selection failed",
 };
 
+const reqRespRateLimitErrorMessages = [
+  RequestErrorCode.REQUEST_RATE_LIMITED,
+  RequestErrorCode.REQUEST_SELF_RATE_LIMITED,
+  RequestErrorCode.RESP_RATE_LIMITED,
+] as const;
+
 export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): PeerAction | null {
   switch (e.type.code) {
     case RequestErrorCode.INVALID_REQUEST:
@@ -27,7 +33,9 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
       return PeerAction.LowToleranceError;
 
     case RequestErrorCode.SERVER_ERROR:
-      return PeerAction.MidToleranceError;
+      return reqRespRateLimitErrorMessages.some((errMessage) => e.message.includes(errMessage))
+        ? null
+        : PeerAction.MidToleranceError;
     case RequestErrorCode.UNKNOWN_ERROR_STATUS:
       return PeerAction.HighToleranceError;
 
@@ -60,6 +68,7 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
         return PeerAction.Fatal;
       case ReqRespMethod.Metadata:
       case ReqRespMethod.Status:
+      case ReqRespMethod.ExecutionPayloadEnvelopesByRange:
         return PeerAction.LowToleranceError;
       default:
         return null;
