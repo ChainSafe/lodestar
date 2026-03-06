@@ -178,6 +178,37 @@ export async function verifyBlocksInEpoch(
       });
     }
 
+    const verifyStateTransitionPromise = verifyBlocksStateTransitionOnly(
+      preState0,
+      blockInputs,
+      envelopes,
+      // hack availability for state transition eval as availability is separately determined
+      blocks.map(() => DataAvailabilityStatus.Available),
+      this.logger,
+      this.metrics,
+      this.validatorMonitor,
+      abortController.signal,
+      opts
+    );
+
+    const verifySignaturesPromise =
+      opts.skipVerifyBlockSignatures !== true
+        ? verifyStateTransitionPromise.then(({preStates}) =>
+            verifyBlocksSignatures(
+              this.config,
+              this.bls,
+              this.logger,
+              this.metrics,
+              preState0,
+              blocks,
+              envelopes,
+              indexedAttestationsByBlock,
+              opts,
+              preStates
+            )
+          )
+        : Promise.resolve({verifySignaturesTime: Date.now()});
+
     // batch all I/O operations to reduce overhead
     const [
       segmentExecStatus,
@@ -192,33 +223,10 @@ export async function verifyBlocksInEpoch(
 
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
-      verifyBlocksStateTransitionOnly(
-        preState0,
-        blockInputs,
-        envelopes,
-        // hack availability for state transition eval as availability is separately determined
-        blocks.map(() => DataAvailabilityStatus.Available),
-        this.logger,
-        this.metrics,
-        this.validatorMonitor,
-        abortController.signal,
-        opts
-      ),
+      verifyStateTransitionPromise,
 
       // All signatures at once
-      opts.skipVerifyBlockSignatures !== true
-        ? verifyBlocksSignatures(
-            this.config,
-            this.bls,
-            this.logger,
-            this.metrics,
-            preState0,
-            blocks,
-            envelopes,
-            indexedAttestationsByBlock,
-            opts
-          )
-        : Promise.resolve({verifySignaturesTime: Date.now()}),
+      verifySignaturesPromise,
     ]);
 
     if (opts.verifyOnly !== true) {

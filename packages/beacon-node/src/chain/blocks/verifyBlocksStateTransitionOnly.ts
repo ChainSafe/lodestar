@@ -36,11 +36,13 @@ export async function verifyBlocksStateTransitionOnly(
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
+  preStates: CachedBeaconStateAllForks[];
   postStates: CachedBeaconStateAllForks[];
   postEnvelopeStates: Map<Slot, CachedBeaconStateGloas | null>;
   proposerBalanceDeltas: number[];
   verifyStateTime: number;
 }> {
+  const preStates: CachedBeaconStateAllForks[] = [];
   const postStates: CachedBeaconStateAllForks[] = [];
   const postEnvelopeStates = new Map<Slot, CachedBeaconStateGloas | null>();
   const proposerBalanceDeltas: number[] = [];
@@ -51,6 +53,7 @@ export async function verifyBlocksStateTransitionOnly(
     const block = blocks[i].getBlock();
     const preState =
       i === 0 ? preState0 : (postEnvelopeStates.get(blocks[i - 1].getBlock().message.slot) ?? postStates[i - 1]);
+    preStates[i] = preState;
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()
@@ -146,5 +149,5 @@ export async function verifyBlocksStateTransitionOnly(
     logger.debug("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
   }
 
-  return {postStates, postEnvelopeStates, proposerBalanceDeltas, verifyStateTime};
+  return {preStates, postStates, postEnvelopeStates, proposerBalanceDeltas, verifyStateTime};
 }

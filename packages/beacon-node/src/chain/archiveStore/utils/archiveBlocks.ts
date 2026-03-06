@@ -74,13 +74,9 @@ export async function archiveBlocks(
     const rootAndSlot = {slot: block.slot, root: fromHex(block.blockRoot)};
     const isPostGloasBlock = config.getForkSeq(block.slot) >= ForkSeq.gloas;
 
-    if (isPostGloasBlock) {
-      finalizedCanonicalBlockRoots.push(rootAndSlot);
-      if (block.payloadStatus === PayloadStatus.FULL) {
-        finalizedCanonicalEnvelopeBlockRoots.push(rootAndSlot);
-      }
-    } else {
-      finalizedCanonicalBlockRoots.push(rootAndSlot);
+    finalizedCanonicalBlockRoots.push(rootAndSlot);
+    if (isPostGloasBlock && block.payloadStatus === PayloadStatus.FULL) {
+      finalizedCanonicalEnvelopeBlockRoots.push(rootAndSlot);
     }
   }
 
