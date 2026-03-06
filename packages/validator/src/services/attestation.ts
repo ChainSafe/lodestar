@@ -1,6 +1,6 @@
 import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
+import {ForkName, isForkPostElectra} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SignedAggregateAndProof, SingleAttestation, Slot, phase0, ssz} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
@@ -108,8 +108,7 @@ export class AttestationService {
         Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
           const attestationData: phase0.AttestationData = {
             ...attestationNoCommittee,
-            // Post-Gloas: preserve BN-provided index (payload status signal)
-            index: isForkPostGloas(fork) ? attestationNoCommittee.index : isForkPostElectra(fork) ? 0 : index,
+            index: isForkPostElectra(fork) ? 0 : index,
           };
           return this.produceAndPublishAggregates(fork, attestationData, index, dutiesSameCommittee);
         })
@@ -146,11 +145,7 @@ export class AttestationService {
 
     await Promise.all(
       duties.map(async ({duty}) => {
-        const index = isForkPostGloas(fork)
-          ? attestationNoCommittee.index
-          : isForkPostElectra(fork)
-            ? 0
-            : duty.committeeIndex;
+        const index = isForkPostElectra(fork) ? 0 : duty.committeeIndex;
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
         const logCtxValidator = {slot, index, head: headRootHex, validatorIndex: duty.validatorIndex};
 

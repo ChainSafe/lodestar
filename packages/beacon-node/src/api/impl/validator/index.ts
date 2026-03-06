@@ -997,29 +997,8 @@ export function getValidatorApi(
       const headBlockRoot = fromHex(headBlockRootHex);
       const fork = config.getForkName(slot);
 
-      const beaconBlockRoot =
-        slot >= headSlot
-          ? // When attesting to the head slot or later, always use the head of the chain.
-            headBlockRoot
-          : // Permit attesting to slots *prior* to the current head. This is desirable when
-            // the VC and BN are out-of-sync due to time issues or overloading.
-            getBlockRootAtSlot(headState, slot);
-
       let index: CommitteeIndex;
-      if (isForkPostGloas(fork)) {
-        // In Gloas (ePBS), attestation.data.index signals payload status in fork-choice:
-        // 0 = EMPTY / not present, 1 = FULL / present.
-        // Per spec, same-slot attestations must always use index = 0.
-        const canonicalAttestedBlock = chain.forkChoice.getCanonicalBlockClosestLteSlot(slot);
-        const isMatchingCanonicalRoot =
-          canonicalAttestedBlock !== null && canonicalAttestedBlock.blockRoot === toRootHex(beaconBlockRoot);
-
-        if (!isMatchingCanonicalRoot || canonicalAttestedBlock.slot === slot) {
-          index = 0;
-        } else {
-          index = canonicalAttestedBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
-        }
-      } else if (isForkPostElectra(fork)) {
+      if (isForkPostElectra(fork)) {
         index = 0;
       } else {
         if (committeeIndex === undefined) {
@@ -1027,6 +1006,14 @@ export function getValidatorApi(
         }
         index = committeeIndex;
       }
+
+      const beaconBlockRoot =
+        slot >= headSlot
+          ? // When attesting to the head slot or later, always use the head of the chain.
+            headBlockRoot
+          : // Permit attesting to slots *prior* to the current head. This is desirable when
+            // the VC and BN are out-of-sync due to time issues or overloading.
+            getBlockRootAtSlot(headState, slot);
 
       const targetSlot = computeStartSlotAtEpoch(attEpoch);
       const targetRoot =
