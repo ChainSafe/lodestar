@@ -182,7 +182,7 @@ describe("Forkchoice", () => {
     const canonicalBlockRoot = getBlockRoot(genesisSlot + 3);
     const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlockRoot);
     const canonicalNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(canonicalBlockRoot);
-    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot);
+    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
 
     expect(canonicalCombined.ancestors).toEqual(canonicalAncestorBlocks);
     expect(canonicalCombined.nonAncestors).toEqual(canonicalNonAncestorBlocks);
@@ -191,7 +191,7 @@ describe("Forkchoice", () => {
     const forkBlockRoot = getBlockRoot(genesisSlot + 10);
     const forkAncestorBlocks = forkchoice.getAllAncestorBlocks(forkBlockRoot);
     const forkNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(forkBlockRoot);
-    const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot);
+    const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
 
     expect(forkCombined.ancestors).toEqual(forkAncestorBlocks);
     expect(forkCombined.nonAncestors).toEqual(forkNonAncestorBlocks);
