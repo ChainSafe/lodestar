@@ -15,7 +15,7 @@ import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
-import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
+import {DownloadByRangeError, DownloadByRangeErrorCode, isRateLimitRequestError} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -480,7 +480,7 @@ export class SyncChain {
 
         // Rate-limited responses are handled with backoff rather than peer penalties.
         // The peer is healthy but throttling us — penalizing it would make things worse.
-        if (errCode === DownloadByRangeErrorCode.RATE_LIMITED) {
+        if (isRateLimitRequestError(errCode)) {
           const delayMs = batch.downloadingRateLimited(peer.peerId);
           if (delayMs > 0) {
             this.logger.debug("Batch download rate limited, backing off", {
