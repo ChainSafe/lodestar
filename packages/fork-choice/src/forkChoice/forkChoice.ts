@@ -1211,6 +1211,21 @@ export class ForkChoice implements IForkChoice {
     };
   }
 
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null {
+    const blockRootHex = toRootHex(blockRoot);
+    if (blockRootHex === this.head.blockRoot) {
+      return this.head;
+    }
+
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot)) {
+      if (block.blockRoot === blockRootHex) {
+        return block;
+      }
+    }
+
+    return null;
+  }
+
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null {
     if (slot > this.head.slot) {
       return null;
