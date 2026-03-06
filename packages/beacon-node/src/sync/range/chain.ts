@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Root, Slot} from "@lodestar/types";
-import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
+import {Epoch, Root, Slot, gloas} from "@lodestar/types";
+import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -15,7 +15,7 @@ import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
-import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
+import {DownloadByRangeError, DownloadByRangeErrorCode, DownloadByRangeResult} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -44,13 +44,17 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: IBlockInput[], syncType: RangeSyncType) => Promise<void>;
+  processChainSegment: (
+    blocks: IBlockInput[],
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    syncType: RangeSyncType
+  ) => Promise<void>;
   /** Must download blocks, and validate their range */
   downloadByRange: (
     peer: PeerSyncMeta,
     batch: Batch,
     syncType: RangeSyncType
-  ) => Promise<WarnResult<IBlockInput[], DownloadByRangeError>>;
+  ) => Promise<WarnResult<DownloadByRangeResult, DownloadByRangeError>>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Gets current peer custodyColumns and earliestAvailableSlot */
@@ -458,6 +462,7 @@ export class SyncChain {
    * Requests the batch assigned to the given id from a given peer.
    */
   private async sendBatch(batch: Batch, peer: PeerSyncMeta): Promise<void> {
+    const previousEnvelopeCount = batch.getEnvelopes()?.size ?? 0;
     this.logger.verbose("Downloading batch", {
       id: this.logId,
       ...batch.getMetadata(),
@@ -516,10 +521,17 @@ export class SyncChain {
         });
         this.metrics?.syncRange.downloadByRange.success.inc();
         const {warnings, result} = res.result;
-        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
+        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result.blocks, result.envelopes);
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
         };
+        const envelopesMeta = getEnvelopeLogMeta(downloadSuccessOutput.envelopes, previousEnvelopeCount);
+        this.logger.debug("Batch envelopes after downloadingSuccess", {
+          id: this.logId,
+          epoch: batch.startEpoch,
+          peer: prettyPrintPeerIdStr(peer.peerId),
+          ...envelopesMeta,
+        });
 
         if (warnings && warnings.length > 0) {
           for (const warning of warnings) {
@@ -556,6 +568,7 @@ export class SyncChain {
           id: this.logId,
           epoch: batch.startEpoch,
           ...logMeta,
+          ...(envelopesMeta ?? {}),
           peer: prettyPrintPeerIdStr(peer.peerId),
         });
       }
@@ -578,10 +591,18 @@ export class SyncChain {
    * Sends `batch` to the processor. Note: batch may be empty
    */
   private async processBatch(batch: Batch): Promise<void> {
-    const blocks = batch.startProcessing();
+    const {blocks, envelopes} = batch.startProcessing();
+    const processLogMeta: Record<string, number> = {blockCount: blocks.length};
+    const envelopesMeta = getEnvelopeLogMeta(envelopes);
+    this.logger.debug("Processing batch", {
+      id: this.logId,
+      epoch: batch.startEpoch,
+      ...processLogMeta,
+      ...(envelopesMeta ?? {}),
+    });
 
     // wrapError ensures to never call both batch success() and batch error()
-    const res = await wrapError(this.processChainSegment(blocks, this.syncType));
+    const res = await wrapError(this.processChainSegment(blocks, envelopes, this.syncType));
 
     if (!res.err) {
       batch.processingSuccess();
@@ -711,4 +732,25 @@ export function shouldReportPeerOnBatchError(
     case BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS:
       return null;
   }
+}
+
+function getEnvelopeLogMeta(
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+  previousEnvelopeCount = 0
+): {envelopeCount: number; newEnvelopeCount: number; envelopeSlots: string | null} {
+  if (!envelopes || envelopes.size === 0) {
+    return {
+      envelopeCount: 0,
+      newEnvelopeCount: 0,
+      envelopeSlots: null,
+    };
+  }
+
+  const envelopeSlots = Array.from(envelopes.keys()).sort((a, b) => a - b);
+
+  return {
+    envelopeCount: envelopes.size,
+    newEnvelopeCount: Math.max(envelopes.size - previousEnvelopeCount, 0),
+    envelopeSlots: prettyPrintIndices(envelopeSlots),
+  };
 }

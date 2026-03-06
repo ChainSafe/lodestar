@@ -117,7 +117,7 @@ describe("sync / range / chain", () => {
             })
           );
         }
-        return {result: blocks, warnings: null};
+        return {result: {blocks, envelopes: null}, warnings: null};
       };
 
       const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -172,7 +172,7 @@ describe("sync / range / chain", () => {
           })
         );
       }
-      return {result: blocks, warnings: null};
+      return {result: {blocks, envelopes: null}, warnings: null};
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -218,9 +218,9 @@ describe("sync / range / chain", () => {
 
 function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
   return {
-    processChainSegment(blocks, syncType) {
+    processChainSegment(blocks, envelopes, syncType) {
       logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.slot).join(",")});
-      return fns.processChainSegment(blocks, syncType);
+      return fns.processChainSegment(blocks, envelopes, syncType);
     },
     downloadByRange(peer, request, syncType) {
       logger.debug("mock downloadBeaconBlocksByRange", request.state.status);

@@ -884,6 +884,34 @@ export class BeaconChain implements IBeaconChain {
     return sidecarsFinalized;
   }
 
+  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
+    const envelopeInput = this.seenPayloadEnvelopeCache.get(blockRootHex);
+    if (envelopeInput?.hasEnvelope()) {
+      const envelope = envelopeInput.getEnvelope();
+      const serialized = this.serializedCache.get(envelope);
+      if (serialized) {
+        return serialized;
+      }
+      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+    }
+
+    const pendingEnvelope = this.pendingEnvelopes.get(blockRootHex);
+    if (pendingEnvelope) {
+      const serialized = this.serializedCache.get(pendingEnvelope);
+      if (serialized) {
+        return serialized;
+      }
+      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(pendingEnvelope);
+    }
+
+    const unfinalizedEnvelope = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
+    if (unfinalizedEnvelope) {
+      return unfinalizedEnvelope;
+    }
+
+    return this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot);
+  }
+
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
     const {slot, parentBlock} = blockAttributes;
     const state = await this.regen.getBlockSlotState(
@@ -1042,11 +1070,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob([block], opts);
+    return this.blockProcessor.processBlocksJob([block], null, opts);
   }
 
-  async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob(blocks, opts);
+  async processChainSegment(
+    blocks: IBlockInput[],
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null,
+    opts?: ImportBlockOpts
+  ): Promise<void> {
+    return this.blockProcessor.processBlocksJob(blocks, envelopes, opts);
   }
 
   async importExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void> {

@@ -7,18 +7,20 @@ import {
   MaybeValidExecutionStatus,
   ProtoBlock,
 } from "@lodestar/fork-choice";
-import {ForkSeq} from "@lodestar/params";
+import {ForkPostDeneb, ForkSeq} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   isExecutionBlockBodyType,
   isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
-import {bellatrix, electra} from "@lodestar/types";
+import {SignedBeaconBlock, Slot, bellatrix, electra, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
@@ -63,6 +65,7 @@ export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
@@ -101,11 +104,16 @@ export async function verifyBlocksExecutionPayload(
     if (signal.aborted) {
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
-    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, preState0);
+    const verifyResponse = await verifyBlockExecutionPayload(
+      chain,
+      blockInput,
+      envelopes?.get(blockInput.slot) ?? null,
+      preState0
+    );
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
-      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs);
+      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs, envelopes);
     }
 
     // If we are here then its because executionStatus is one of MaybeValidExecutionStatus
@@ -146,6 +154,7 @@ export async function verifyBlocksExecutionPayload(
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   blockInput: IBlockInput,
+  signedEnvelope: gloas.SignedExecutionPayloadEnvelope | null,
   preState0: CachedBeaconStateAllForks
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
@@ -154,11 +163,15 @@ export async function verifyBlockExecutionPayload(
   const executionEnabled =
     ForkSeq[fork] >= ForkSeq.gloas || (isExecutionStateType(preState0) && isExecutionEnabled(preState0, block.message));
 
+  const envelope = signedEnvelope?.message ?? null;
+
   /** Not null if execution payload is embedded in the block body (pre-Gloas post-merge blocks) */
   const executionPayloadEnabled =
     executionEnabled && isExecutionBlockBodyType(block.message.body) ? block.message.body.executionPayload : null;
+  const executionPayloadFromEnvelope = executionEnabled && envelope ? envelope.payload : null;
+  const executionPayload = executionPayloadEnabled ?? executionPayloadFromEnvelope;
 
-  if (!executionPayloadEnabled) {
+  if (!executionPayload) {
     if (executionEnabled) {
       // Post-Gloas bid-only blocks: execution payload is delivered separately via envelope.
       // Block is valid but payload status is pending until envelope arrives.
@@ -169,16 +182,26 @@ export async function verifyBlockExecutionPayload(
     return {executionStatus: ExecutionStatus.PreMerge, lvhResponse: undefined, execError: null};
   }
   const versionedHashes =
-    isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput) ? blockInput.getVersionedHashes() : undefined;
+    isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput)
+      ? blockInput.getVersionedHashes()
+      : isGloasBeaconBlock(block.message)
+        ? getBlobKzgCommitments(blockInput.forkName, block as SignedBeaconBlock<ForkPostDeneb>).map(
+            kzgCommitmentToVersionedHash
+          )
+        : undefined;
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
-    ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
+    ForkSeq[fork] >= ForkSeq.gloas
+      ? envelope?.executionRequests
+      : ForkSeq[fork] >= ForkSeq.electra
+        ? (block.message.body as electra.BeaconBlockBody).executionRequests
+        : undefined;
 
-  const logCtx = {slot: blockInput.slot, executionBlock: executionPayloadEnabled.blockNumber};
+  const logCtx = {slot: blockInput.slot, executionBlock: executionPayload.blockNumber};
   chain.logger.debug("Call engine api newPayload", logCtx);
   const execResult = await chain.executionEngine.notifyNewPayload(
     fork,
-    executionPayloadEnabled,
+    executionPayload,
     versionedHashes,
     parentBlockRoot,
     executionRequests
@@ -248,7 +271,8 @@ export async function verifyBlockExecutionPayload(
 function getSegmentErrorResponse(
   {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
   parentBlock: ProtoBlock,
-  blocks: IBlockInput[]
+  blocks: IBlockInput[],
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null
 ): SegmentExecStatus {
   const {executionStatus, lvhResponse, execError} = verifyResponse;
   let invalidSegmentLVH: LVHInvalidResponse | undefined = undefined;
@@ -261,10 +285,16 @@ function getSegmentErrorResponse(
     let lvhFound = false;
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
       const block = blocks[mayBeLVHIndex].getBlock();
-      if (
-        toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
-        lvhResponse.latestValidExecHash
-      ) {
+      const signedEnvelope = envelopes?.get(block.message.slot) ?? null;
+      const envelope = signedEnvelope?.message ?? null;
+      const executionBlockHash = isExecutionBlockBodyType(block.message.body)
+        ? toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash)
+        : envelope
+          ? toRootHex(envelope.payload.blockHash)
+          : isGloasBeaconBlock(block.message)
+            ? toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash)
+            : null;
+      if (executionBlockHash !== null && executionBlockHash === lvhResponse.latestValidExecHash) {
         lvhFound = true;
         break;
       }

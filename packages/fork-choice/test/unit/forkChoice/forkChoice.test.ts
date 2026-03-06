@@ -152,7 +152,9 @@ describe("Forkchoice", () => {
     const block = getBlock(genesisSlot + 1);
     protoArr.onBlock(block, block.slot);
     const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
-    const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1));
+    const canonicalBlock = forkchoice.getBlockHexDefaultStatus(getBlockRoot(genesisSlot + 1));
+    if (!canonicalBlock) throw new Error("Expected block to exist");
+    const summaries = forkchoice.getAllAncestorBlocks(canonicalBlock);
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries).toHaveLength(1);
     expect(summaries[0]).toEqual({
@@ -163,6 +165,18 @@ describe("Forkchoice", () => {
       weight: 0,
       payloadStatus: 2, // Pre-Gloas blocks always have PAYLOAD_STATUS_FULL
     });
+  });
+
+  it("getAllAncestorBlocks supports ProtoBlock input", () => {
+    const block = getBlock(genesisSlot + 1);
+    protoArr.onBlock(block, block.slot);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
+    const head = forkchoice.getHead();
+
+    const summaries = forkchoice.getAllAncestorBlocks(head);
+
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].blockRoot).toBe(head.blockRoot);
   });
 
   it("getAllAncestorAndNonAncestorBlocks equals getAllAncestorBlocks + getAllNonAncestorBlocks", () => {
@@ -180,18 +194,22 @@ describe("Forkchoice", () => {
 
     // Test with a block from the canonical chain
     const canonicalBlockRoot = getBlockRoot(genesisSlot + 3);
-    const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlockRoot);
+    const canonicalBlock = forkchoice.getBlockHexDefaultStatus(canonicalBlockRoot);
+    if (!canonicalBlock) throw new Error("Expected canonical block to exist");
+    const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlock);
     const canonicalNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(canonicalBlockRoot);
-    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot);
+    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
 
     expect(canonicalCombined.ancestors).toEqual(canonicalAncestorBlocks);
     expect(canonicalCombined.nonAncestors).toEqual(canonicalNonAncestorBlocks);
 
     // Test with a block from the fork chain
     const forkBlockRoot = getBlockRoot(genesisSlot + 10);
-    const forkAncestorBlocks = forkchoice.getAllAncestorBlocks(forkBlockRoot);
+    const forkBlockSummary = forkchoice.getBlockHexDefaultStatus(forkBlockRoot);
+    if (!forkBlockSummary) throw new Error("Expected fork block to exist");
+    const forkAncestorBlocks = forkchoice.getAllAncestorBlocks(forkBlockSummary);
     const forkNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(forkBlockRoot);
-    const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot);
+    const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
 
     expect(forkCombined.ancestors).toEqual(forkAncestorBlocks);
     expect(forkCombined.nonAncestors).toEqual(forkNonAncestorBlocks);

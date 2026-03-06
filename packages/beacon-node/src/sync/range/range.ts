@@ -172,7 +172,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   }
 
   /** Convenience method for `SyncChain` */
-  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, syncType) => {
+  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, envelopes, syncType) => {
     // Not trusted, verify signatures
     const flags: ImportBlockOpts = {
       // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
@@ -194,12 +194,13 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       // Should only be used for debugging or testing
       for (const block of blocks) await this.chain.processBlock(block, flags);
     } else {
-      await this.chain.processChainSegment(blocks, flags);
+      await this.chain.processChainSegment(blocks, envelopes, flags);
     }
   };
 
   private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
     const batchBlocks = batch.getBlocks();
+    const batchEnvelops = batch.getEnvelopes();
     const {result, warnings} = await downloadByRange({
       config: this.config,
       network: this.network,
@@ -213,6 +214,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       peerIdStr: peer.peerId,
       responses: result,
       batchBlocks,
+      batchEnvelops,
     });
     return {result: cached, warnings};
   };

@@ -12,6 +12,7 @@ import {
   ValidatorIndex,
   deneb,
   electra,
+  gloas,
   isElectraSingleAttestation,
   phase0,
   ssz,
@@ -334,6 +335,7 @@ describe("getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized", () => {
     DENEB_FORK_EPOCH: 5,
     ELECTRA_FORK_EPOCH: 10,
     FULU_FORK_EPOCH: 15,
+    GLOAS_FORK_EPOCH: 20,
   });
 
   it("should return 0 blob count pre deneb", async () => {
@@ -366,6 +368,20 @@ describe("getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized", () => {
     const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
     block.message.body.blobKzgCommitments = kzgCommitments;
     block.message.slot = slot;
+    const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
+
+    const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
+
+    expect(blobsCount).toBe(blobs.length);
+  });
+
+  it("should return blob count post gloas from signed execution payload bid", async () => {
+    const slot = computeStartSlotAtEpoch(20);
+    const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue() as gloas.SignedBeaconBlock;
+    const blobs = [generateRandomBlob(), generateRandomBlob(), generateRandomBlob()];
+    const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
+    block.message.slot = slot;
+    block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = kzgCommitments;
     const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
 
     const blobsCount = getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(config, blockBytes);
