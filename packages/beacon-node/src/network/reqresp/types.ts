@@ -147,8 +147,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
-  [ReqRespMethod.DataColumnSidecarsByRange]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
-  [ReqRespMethod.DataColumnSidecarsByRoot]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRange]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar as Type<fulu.DataColumnSidecar>,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar as Type<fulu.DataColumnSidecar>,
   [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
