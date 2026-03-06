@@ -10,7 +10,13 @@ import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS, MAX_RATE_LIMITED_RETRIES} from "../constants.js";
+import {
+  MAX_BATCH_DOWNLOAD_ATTEMPTS,
+  MAX_BATCH_PROCESSING_ATTEMPTS,
+  MAX_RATE_LIMITED_RETRIES,
+  RATE_LIMITED_INITIAL_DELAY_MS,
+  RATE_LIMITED_MAX_DELAY_MS,
+} from "../constants.js";
 import {DownloadByRangeRequests} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
@@ -22,6 +28,8 @@ export enum BatchStatus {
   AwaitingDownload = "AwaitingDownload",
   /** The batch is being downloaded. */
   Downloading = "Downloading",
+  /** The batch download was rate-limited and is waiting for cooldown before retrying. */
+  RateLimited = "RateLimited",
   /** The batch has been completely downloaded and is ready for processing. */
   AwaitingProcessing = "AwaitingProcessing",
   /** The batch is being processed. */
@@ -56,6 +64,7 @@ export type DownloadSuccessState = {
 export type BatchState =
   | AwaitingDownloadState
   | {status: BatchStatus.Downloading; peer: PeerIdStr; blocks: IBlockInput[]}
+  | {status: BatchStatus.RateLimited; blocks: IBlockInput[]}
   | DownloadSuccessState
   | {status: BatchStatus.Processing; blocks: IBlockInput[]; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; blocks: IBlockInput[]; attempt: Attempt};
@@ -95,7 +104,7 @@ export class Batch {
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
   /** The number of consecutive rate-limited download attempts. Reset on any successful download. */
-  rateLimitedAttempts = 0;
+  private rateLimitedAttempts = 0;
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
@@ -336,11 +345,10 @@ export class Batch {
   }
 
   /**
-   * Downloading -> AwaitingDownload (rate-limited variant)
+   * Downloading -> RateLimited (with cooldown) or falls through to regular error
    *
-   * Tracked separately from regular download failures. Rate-limited responses indicate the peer
-   * is healthy but throttling us — we should back off rather than burn through download attempts.
-   * Returns the current consecutive rate-limited attempt count for backoff calculation.
+   * Returns the cooldown delay in ms. If 0, max retries exhausted and state has been
+   * transitioned via downloadingError() — caller should NOT call endCoolDown().
    */
   downloadingRateLimited(peer: PeerIdStr): number {
     if (this.state.status !== BatchStatus.Downloading) {
@@ -355,8 +363,24 @@ export class Batch {
       return 0;
     }
 
+    const delayMs = Math.min(
+      RATE_LIMITED_INITIAL_DELAY_MS * 2 ** (this.rateLimitedAttempts - 1),
+      RATE_LIMITED_MAX_DELAY_MS
+    );
+
+    this.state = {status: BatchStatus.RateLimited, blocks: this.state.blocks};
+    return delayMs;
+  }
+
+  /**
+   * RateLimited -> AwaitingDownload
+   */
+  endCoolDown(): void {
+    if (this.state.status !== BatchStatus.RateLimited) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.RateLimited));
+    }
+
     this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
-    return this.rateLimitedAttempts;
   }
 
   /**

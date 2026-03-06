@@ -14,14 +14,7 @@ import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
-import {
-  BATCH_BUFFER_SIZE,
-  EPOCHS_PER_BATCH,
-  MAX_LOOK_AHEAD_EPOCHS,
-  MAX_RATE_LIMITED_RETRIES,
-  RATE_LIMITED_INITIAL_DELAY_MS,
-  RATE_LIMITED_MAX_DELAY_MS,
-} from "../constants.js";
+import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
 import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
@@ -427,7 +420,11 @@ export class SyncChain {
     // Note: Don't count batches in the AwaitingValidation state, to prevent stalling sync
     // if the current processing window is contained in a long range of skip slots.
     const batchesInBuffer = batches.filter((batch) => {
-      return batch.state.status === BatchStatus.Downloading || batch.state.status === BatchStatus.AwaitingProcessing;
+      return (
+        batch.state.status === BatchStatus.Downloading ||
+        batch.state.status === BatchStatus.RateLimited ||
+        batch.state.status === BatchStatus.AwaitingProcessing
+      );
     });
     if (batchesInBuffer.length > BATCH_BUFFER_SIZE) {
       return null;
@@ -484,19 +481,16 @@ export class SyncChain {
         // Rate-limited responses are handled with backoff rather than peer penalties.
         // The peer is healthy but throttling us — penalizing it would make things worse.
         if (errCode === DownloadByRangeErrorCode.RATE_LIMITED) {
-          // Compute backoff delay BEFORE transitioning state. The batch stays in Downloading
-          // while we sleep, preventing other triggerBatchDownloader() calls from picking it up.
-          const nextAttempt = batch.rateLimitedAttempts + 1;
-          if (nextAttempt <= MAX_RATE_LIMITED_RETRIES) {
-            const delay = Math.min(RATE_LIMITED_INITIAL_DELAY_MS * 2 ** (nextAttempt - 1), RATE_LIMITED_MAX_DELAY_MS);
+          const delayMs = batch.downloadingRateLimited(peer.peerId);
+          if (delayMs > 0) {
             this.logger.debug("Batch download rate limited, backing off", {
               id: this.logId,
               ...batch.getMetadata(),
               peer: prettyPrintPeerIdStr(peer.peerId),
-              attempt: nextAttempt,
-              delayMs: delay,
+              delayMs,
             });
-            await new Promise((r) => setTimeout(r, delay));
+            await new Promise((r) => setTimeout(r, delayMs));
+            batch.endCoolDown();
           } else {
             this.logger.debug("Batch download rate limited, max retries exhausted", {
               id: this.logId,
@@ -504,8 +498,6 @@ export class SyncChain {
               peer: prettyPrintPeerIdStr(peer.peerId),
             });
           }
-          // NOW transition to AwaitingDownload (or fall through to regular error if max retries exceeded)
-          batch.downloadingRateLimited(peer.peerId);
         } else {
           if (this.syncType === RangeSyncType.Finalized) {
             // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.

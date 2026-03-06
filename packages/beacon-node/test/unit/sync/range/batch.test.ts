@@ -5,7 +5,12 @@ import {ssz} from "@lodestar/types";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
-import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_RATE_LIMITED_RETRIES} from "../../../../src/sync/constants.js";
+import {
+  MAX_BATCH_DOWNLOAD_ATTEMPTS,
+  MAX_RATE_LIMITED_RETRIES,
+  RATE_LIMITED_INITIAL_DELAY_MS,
+  RATE_LIMITED_MAX_DELAY_MS,
+} from "../../../../src/sync/constants.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {clock, config} from "../../../utils/blocksAndData.js";
@@ -376,21 +381,31 @@ describe("sync / range / batch", async () => {
   });
 
   describe("Rate-limited download handling", () => {
-    it("downloadingRateLimited should return attempt count and transition to AwaitingDownload", () => {
+    it("downloadingRateLimited should return cooldown delay and transition to RateLimited", () => {
       const batch = new Batch(0, config, clock, custodyConfig);
       batch.startDownloading(peer);
-      const attempt = batch.downloadingRateLimited(peer);
-      expect(attempt).toBe(1);
+      const delayMs = batch.downloadingRateLimited(peer);
+      expect(delayMs).toBe(RATE_LIMITED_INITIAL_DELAY_MS);
+      expect(batch.state.status).toBe(BatchStatus.RateLimited);
+    });
+
+    it("endCoolDown should transition RateLimited to AwaitingDownload", () => {
+      const batch = new Batch(0, config, clock, custodyConfig);
+      batch.startDownloading(peer);
+      batch.downloadingRateLimited(peer);
+      batch.endCoolDown();
       expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
     });
 
-    it("downloadingRateLimited should increment attempt count on consecutive calls", () => {
+    it("downloadingRateLimited should back off with exponential delay on consecutive calls", () => {
       const batch = new Batch(0, config, clock, custodyConfig);
 
       for (let i = 1; i <= MAX_RATE_LIMITED_RETRIES; i++) {
         batch.startDownloading(peer);
-        const attempt = batch.downloadingRateLimited(peer);
-        expect(attempt).toBe(i);
+        const delayMs = batch.downloadingRateLimited(peer);
+        expect(delayMs).toBe(Math.min(RATE_LIMITED_INITIAL_DELAY_MS * 2 ** (i - 1), RATE_LIMITED_MAX_DELAY_MS));
+        expect(batch.state.status).toBe(BatchStatus.RateLimited);
+        batch.endCoolDown();
         expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
       }
     });
@@ -402,14 +417,15 @@ describe("sync / range / batch", async () => {
       for (let i = 0; i < MAX_RATE_LIMITED_RETRIES; i++) {
         batch.startDownloading(peer);
         batch.downloadingRateLimited(peer);
+        batch.endCoolDown();
       }
 
       // Next rate-limited attempt exceeds MAX_RATE_LIMITED_RETRIES and falls through
       // to regular download error tracking (resets rateLimitedAttempts, adds to failedDownloadAttempts)
       batch.startDownloading(peer);
-      const attempt = batch.downloadingRateLimited(peer);
+      const delayMs = batch.downloadingRateLimited(peer);
       // rateLimitedAttempts was reset to 0
-      expect(attempt).toBe(0);
+      expect(delayMs).toBe(0);
       expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
     });
 
@@ -426,6 +442,7 @@ describe("sync / range / batch", async () => {
       for (let i = 0; i < MAX_RATE_LIMITED_RETRIES; i++) {
         batch.startDownloading(peer);
         batch.downloadingRateLimited(peer);
+        batch.endCoolDown();
       }
 
       // This will exceed MAX_BATCH_DOWNLOAD_ATTEMPTS via the fall-through path
@@ -439,8 +456,10 @@ describe("sync / range / batch", async () => {
       // Accumulate some rate-limited attempts
       batch.startDownloading(peer);
       batch.downloadingRateLimited(peer);
+      batch.endCoolDown();
       batch.startDownloading(peer);
       batch.downloadingRateLimited(peer);
+      batch.endCoolDown();
 
       // Successful download should still work after rate-limited attempts
       batch.startDownloading(peer);
@@ -463,8 +482,10 @@ describe("sync / range / batch", async () => {
       // Accumulate some rate-limited attempts
       batch.startDownloading(peer);
       batch.downloadingRateLimited(peer);
+      batch.endCoolDown();
       batch.startDownloading(peer);
       batch.downloadingRateLimited(peer);
+      batch.endCoolDown();
 
       // Regular error should reset rate-limit counter
       batch.startDownloading(peer);
@@ -472,8 +493,8 @@ describe("sync / range / batch", async () => {
 
       // After reset, rate-limited attempt should start from 1 again
       batch.startDownloading(peer);
-      const attempt = batch.downloadingRateLimited(peer);
-      expect(attempt).toBe(1);
+      const delayMs = batch.downloadingRateLimited(peer);
+      expect(delayMs).toBe(RATE_LIMITED_INITIAL_DELAY_MS);
     });
   });
 });

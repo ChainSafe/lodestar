@@ -30,6 +30,7 @@ describe("sync / range / batches", () => {
           BatchStatus.AwaitingValidation,
           BatchStatus.Processing,
           BatchStatus.Downloading,
+          BatchStatus.RateLimited,
           BatchStatus.AwaitingProcessing,
           BatchStatus.AwaitingDownload,
           BatchStatus.Downloading,
@@ -53,7 +54,7 @@ describe("sync / range / batches", () => {
       {
         id: "Only PreProcessing, is valid",
         valid: true,
-        batches: [BatchStatus.Downloading],
+        batches: [BatchStatus.RateLimited],
       },
       {
         id: "AwaitingValidation after Processing, not valid",
@@ -112,7 +113,7 @@ describe("sync / range / batches", () => {
       },
       {
         id: "Next batch is not ready to process, return none",
-        batches: [BatchStatus.AwaitingValidation, BatchStatus.Downloading, BatchStatus.AwaitingProcessing],
+        batches: [BatchStatus.AwaitingValidation, BatchStatus.RateLimited, BatchStatus.AwaitingProcessing],
       },
       {
         id: "Empty, return none",
@@ -228,6 +229,10 @@ describe("sync / range / batches", () => {
 
     batch.startDownloading(peer);
     if (status === BatchStatus.Downloading) return batch;
+    if (status === BatchStatus.RateLimited) {
+      batch.downloadingRateLimited(peer);
+      return batch;
+    }
 
     batch.downloadingSuccess(peer, []);
     if (status === BatchStatus.AwaitingProcessing) return batch;
