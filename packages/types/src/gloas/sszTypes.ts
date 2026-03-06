@@ -290,3 +290,5 @@ export const DataColumnSidecar = new ContainerType(
 );
 
 export const DataColumnSidecars = new ListCompositeType(DataColumnSidecar, NUMBER_OF_COLUMNS);
+
+// Req/Resp types (ExecutionPayloadEnvelopesByRangeRequest defined above)

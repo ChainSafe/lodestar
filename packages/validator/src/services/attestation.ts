@@ -108,7 +108,7 @@ export class AttestationService {
         Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
           const attestationData: phase0.AttestationData = {
             ...attestationNoCommittee,
-            // Post-Gloas: preserve BN-provided index (payload status signal)
+            // After Gloas, preserve index returned by beacon node (payload status signal)
             index: isForkPostGloas(fork) ? attestationNoCommittee.index : isForkPostElectra(fork) ? 0 : index,
           };
           return this.produceAndPublishAggregates(fork, attestationData, index, dutiesSameCommittee);
