@@ -545,7 +545,6 @@ export class SyncChain {
         }
 
         if (
-          errCode === DownloadByRangeErrorCode.ENVELOPE_MISSING_FOR_BLOCK ||
           errCode === DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE ||
           errCode === DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE ||
           errCode === DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE
@@ -555,6 +554,7 @@ export class SyncChain {
 
         if (
           errCode === DownloadByRangeErrorCode.REQ_RESP_ERROR &&
+          "reason" in downloadErr.type &&
           shouldReportPeerOnReqRespErrorReason(downloadErr.type.reason)
         ) {
           this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
@@ -796,7 +796,6 @@ export class SyncChain {
  */
 function shouldTreatAsTransientDownloadError(err: DownloadByRangeError): boolean {
   switch (err.type.code) {
-    case DownloadByRangeErrorCode.ENVELOPE_MISSING_FOR_BLOCK:
     case DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE:
     case DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE:
     case DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE:
@@ -829,7 +828,6 @@ function shouldReportPeerOnReqRespErrorReason(reason: string): boolean {
 
 function shouldQuarantinePeerOnDownloadError(err: DownloadByRangeError): boolean {
   switch (err.type.code) {
-    case DownloadByRangeErrorCode.ENVELOPE_MISSING_FOR_BLOCK:
     case DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE:
       return true;
 

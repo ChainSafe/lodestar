@@ -603,12 +603,10 @@ export function validateEnvelopesByRangeResponse({
     seenEnvelopeSlots.add(env.slot);
   }
 
-  for (const {block} of validatedBlocks) {
-    const slot = block.message.slot;
-    if (!seenEnvelopeSlots.has(slot)) {
-      throw new DownloadByRangeError({code: DownloadByRangeErrorCode.ENVELOPE_MISSING_FOR_BLOCK, slot});
-    }
-  }
+  // Blocks without envelopes are allowed: the payload may have been orphaned (never
+  // revealed by the builder).  The state-transition EMPTY path handles this correctly
+  // and subsequent block state-root checks will catch any maliciously omitted envelopes.
+  // Do NOT penalise or quarantine the peer for this — it is a valid serving behaviour.
 }
 
 /**
