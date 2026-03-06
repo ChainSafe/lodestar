@@ -475,12 +475,13 @@ export class SyncChain {
 
       if (res.err) {
         // There's several known error cases where we want to take action on the peer
-        const errCode = (res.err as LodestarError<{code: string}>).type?.code;
+        const errCode = (res.err as LodestarError<{code: string}>).type?.code ?? (res.err as {code?: string}).code;
         this.metrics?.syncRange.downloadByRange.error.inc({client: peer.client, code: errCode ?? "UNKNOWN"});
 
         // Rate-limited responses are handled with backoff rather than peer penalties.
         // The peer is healthy but throttling us — penalizing it would make things worse.
-        if (isRateLimitRequestError(errCode)) {
+        const isRateLimited = isRateLimitRequestError(errCode);
+        if (isRateLimited) {
           const delayMs = batch.downloadingRateLimited(peer.peerId);
           if (delayMs > 0) {
             this.logger.debug("Batch download rate limited, backing off", {
@@ -498,7 +499,10 @@ export class SyncChain {
               peer: prettyPrintPeerIdStr(peer.peerId),
             });
           }
-        } else {
+        }
+
+        // Important: avoid duplicate error logging and downloadingError() for rate-limited responses.
+        if (!isRateLimited) {
           if (this.syncType === RangeSyncType.Finalized) {
             // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.
             // The below cases indicate the peer may be on a different chain, so are not penalized during head sync.

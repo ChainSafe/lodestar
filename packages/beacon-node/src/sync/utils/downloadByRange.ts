@@ -208,7 +208,7 @@ export async function downloadByRange({
       columnsRequest,
     });
   } catch (err) {
-    const errCode = (err as LodestarError<{code: string}>).type?.code;
+    const errCode = (err as LodestarError<{code: string}>).type?.code ?? (err as {code?: string}).code;
     // Let rate-limit errors propagate with original reqresp code so chain.ts
     // can detect them via isRateLimitRequestError without code remapping.
     if (isRateLimitRequestError(errCode)) {
