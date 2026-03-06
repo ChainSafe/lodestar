@@ -27,7 +27,7 @@
     "build:release": "pnpm clean && pnpm run build",
     "build:watch": "pnpm run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsc",
+    "check-types": "tsgo",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test:unit": "vitest run --project unit --project unit-minimal",
