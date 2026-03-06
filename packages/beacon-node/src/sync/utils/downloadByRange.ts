@@ -209,12 +209,10 @@ export async function downloadByRange({
     });
   } catch (err) {
     const errCode = (err as LodestarError<{code: string}>).type?.code;
+    // Let rate-limit errors propagate with original reqresp code so chain.ts
+    // can detect them via isRateLimitRequestError without code remapping.
     if (isRateLimitRequestError(errCode)) {
-      throw new DownloadByRangeError({
-        code: DownloadByRangeErrorCode.RATE_LIMITED,
-        reason: (err as Error).message,
-        ...requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}),
-      });
+      throw err;
     }
     throw new DownloadByRangeError({
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR,
@@ -870,9 +868,6 @@ export enum DownloadByRangeErrorCode {
   /** Error at the reqresp layer */
   REQ_RESP_ERROR = "DOWNLOAD_BY_RANGE_ERROR_REQ_RESP_ERROR",
 
-  /** The peer or our own rate limiter throttled the request */
-  RATE_LIMITED = "DOWNLOAD_BY_RANGE_ERROR_RATE_LIMITED",
-
   // Errors validating a chain of blocks (not considering associated data)
 
   PARENT_ROOT_MISMATCH = "DOWNLOAD_BY_RANGE_ERROR_PARENT_ROOT_MISMATCH",
@@ -924,16 +919,6 @@ export type DownloadByRangeErrorType =
     }
   | {
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR;
-      blockStartSlot?: number;
-      blockCount?: number;
-      blobStartSlot?: number;
-      blobCount?: number;
-      columnStartSlot?: number;
-      columnCount?: number;
-      reason: string;
-    }
-  | {
-      code: DownloadByRangeErrorCode.RATE_LIMITED;
       blockStartSlot?: number;
       blockCount?: number;
       blobStartSlot?: number;
