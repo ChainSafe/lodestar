@@ -54,7 +54,7 @@
     "build:bundle": "vite build",
     "check-bundle": "node -e \"(async function() { await import('./dist/lightclient.min.mjs') })()\"",
     "build:release": "pnpm clean && pnpm run build && pnpm run build:bundle",
-    "check-types": "tsc",
+    "check-types": "tsgo",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",

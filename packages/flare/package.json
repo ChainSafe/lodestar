@@ -30,7 +30,7 @@
     "build:release": "pnpm run clean && pnpm run build",
     "build:watch": "pnpm run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" flare --help",
-    "check-types": "tsc",
+    "check-types": "tsgo",
     "lint": "biome check src/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
