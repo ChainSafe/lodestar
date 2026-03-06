@@ -113,7 +113,7 @@ export function getLodestarApi({
       return {
         // biome-ignore lint/complexity/useLiteralKeys: The `blockProcessor` is a protected attribute
         data: (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
-          const [blockInputs, opts] = item.args;
+          const [blockInputs, _envelopes, opts] = item.args;
           return {
             blockSlots: blockInputs.map((blockInput) => blockInput.slot),
             jobOpts: opts,

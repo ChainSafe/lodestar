@@ -518,10 +518,13 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
   const slot = getSlotFromSignedBeaconBlockSerialized(blockBytes);
   if (slot === null) throw new Error("Can not parse the slot from block bytes");
 
-  if (config.getForkSeq(slot) < ForkSeq.deneb) return 0;
+  const forkSeq = config.getForkSeq(slot);
+  if (forkSeq < ForkSeq.deneb) return 0;
+  const commitmentSize = ssz.deneb.KZGCommitment.fixedSize;
+  const forkName = config.getForkName(slot);
+  const forkSsz = ssz[forkName as ForkPostDeneb];
 
-  const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody, KZGCommitment} =
-    ssz[config.getForkName(slot) as ForkPostDeneb];
+  const {SignedBeaconBlock, BeaconBlock, BeaconBlockBody} = forkSsz;
 
   const view = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
   const singedBlockFieldRanges = SignedBeaconBlock.getFieldRanges(view, 0, blockBytes.length);
@@ -537,12 +540,56 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
     messageRange.start + bodyRange.start,
     messageRange.end + bodyRange.end
   );
-  const kzgCommitmentsIndex = Object.keys(BeaconBlockBody.fields).indexOf("blobKzgCommitments");
-  const kzgCommitmentsRange = bodyFieldRanges[kzgCommitmentsIndex];
-  const commitmentSize = KZGCommitment.fixedSize;
+  let start: number;
+  let end: number;
 
-  const end = messageRange.end + bodyRange.end + kzgCommitmentsRange.end;
-  const start = messageRange.start + bodyRange.start + kzgCommitmentsRange.start;
+  if (forkSeq >= ForkSeq.gloas) {
+    const {SignedExecutionPayloadBid, ExecutionPayloadBid} = forkSsz as typeof ssz.gloas;
+    const signedExecutionPayloadBidIndex = Object.keys(BeaconBlockBody.fields).indexOf("signedExecutionPayloadBid");
+    if (signedExecutionPayloadBidIndex < 0) return 0;
+    const signedExecutionPayloadBidRange = bodyFieldRanges[signedExecutionPayloadBidIndex];
+    if (!signedExecutionPayloadBidRange) return 0;
+
+    const signedExecutionPayloadBidFieldRanges = SignedExecutionPayloadBid.getFieldRanges(
+      view,
+      messageRange.start + bodyRange.start + signedExecutionPayloadBidRange.start,
+      messageRange.end + bodyRange.end + signedExecutionPayloadBidRange.end
+    );
+    const bidMessageIndex = Object.keys(SignedExecutionPayloadBid.fields).indexOf("message");
+    if (bidMessageIndex < 0) return 0;
+    const bidMessageRange = signedExecutionPayloadBidFieldRanges[bidMessageIndex];
+    if (!bidMessageRange) return 0;
+
+    const executionPayloadBidFieldRanges = ExecutionPayloadBid.getFieldRanges(
+      view,
+      messageRange.start + bodyRange.start + signedExecutionPayloadBidRange.start + bidMessageRange.start,
+      messageRange.end + bodyRange.end + signedExecutionPayloadBidRange.end + bidMessageRange.end
+    );
+    const kzgCommitmentsIndex = Object.keys(ExecutionPayloadBid.fields).indexOf("blobKzgCommitments");
+    if (kzgCommitmentsIndex < 0) return 0;
+    const kzgCommitmentsRange = executionPayloadBidFieldRanges[kzgCommitmentsIndex];
+    if (!kzgCommitmentsRange) return 0;
+
+    end =
+      messageRange.end +
+      bodyRange.end +
+      signedExecutionPayloadBidRange.end +
+      bidMessageRange.end +
+      kzgCommitmentsRange.end;
+    start =
+      messageRange.start +
+      bodyRange.start +
+      signedExecutionPayloadBidRange.start +
+      bidMessageRange.start +
+      kzgCommitmentsRange.start;
+  } else {
+    const kzgCommitmentsIndex = Object.keys(BeaconBlockBody.fields).indexOf("blobKzgCommitments");
+    if (kzgCommitmentsIndex < 0) return 0;
+    const kzgCommitmentsRange = bodyFieldRanges[kzgCommitmentsIndex];
+    if (!kzgCommitmentsRange) return 0;
+    end = messageRange.end + bodyRange.end + kzgCommitmentsRange.end;
+    start = messageRange.start + bodyRange.start + kzgCommitmentsRange.start;
+  }
 
   return Math.round(((end > blockBytes.byteLength ? blockBytes.byteLength : end) - start) / commitmentSize);
 }

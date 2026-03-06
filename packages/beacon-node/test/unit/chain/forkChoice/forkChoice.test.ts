@@ -200,19 +200,22 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(block20.message, state20, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
       forkChoice.onBlock(block24.message, state24, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
       forkChoice.onBlock(block28.message, state28, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message))).toHaveLength(3);
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message))).toHaveLength(5);
+      const block16Summary = forkChoice.getBlockHexDefaultStatus(hashBlock(block16.message));
+      const block24Summary = forkChoice.getBlockHexDefaultStatus(hashBlock(block24.message));
+      if (!block16Summary || !block24Summary) throw new Error("Expected block summaries to exist");
+      expect(forkChoice.getAllAncestorBlocks(block16Summary)).toHaveLength(3);
+      expect(forkChoice.getAllAncestorBlocks(block24Summary)).toHaveLength(5);
       expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block08.message))).not.toBeNull();
       expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block12.message))).not.toBeNull();
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(true);
       expect(forkChoice.hasBlockHex(hashBlock(block12.message))).toBe(true);
       forkChoice.onBlock(block32.message, state32, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
       forkChoice.prune(hashBlock(block16.message));
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).toBeWithMessage(
+      expect(forkChoice.getAllAncestorBlocks(block16Summary).length).toBeWithMessage(
         0,
         "getAllAncestorBlocks should not return finalized block"
       );
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message))).toHaveLength(2);
+      expect(forkChoice.getAllAncestorBlocks(block24Summary)).toHaveLength(2);
       expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block08.message))).toBe(null);
       expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block12.message))).toBe(null);
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(false);

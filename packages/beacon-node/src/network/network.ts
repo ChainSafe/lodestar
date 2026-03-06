@@ -647,7 +647,19 @@ export class Network implements INetwork {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRoot, [Version.V1], request),
       request.length,
-      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRoot]
+      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRoot],
+      this.chain.serializedCache
+    );
+  }
+
+  async sendExecutionPayloadEnvelopesByRange(
+    peerId: PeerIdStr,
+    request: gloas.ExecutionPayloadEnvelopesByRangeRequest
+  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRange, [Version.V1], request),
+      request.count,
+      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRange]
     );
   }
 

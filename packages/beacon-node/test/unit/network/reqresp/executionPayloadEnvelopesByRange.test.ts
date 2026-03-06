@@ -59,7 +59,7 @@ describe("beacon-node / network / reqresp / handlers / executionPayloadEnvelopes
     const request = {startSlot: 64, count: 2};
 
     const responses = [];
-    for await (const response of onExecutionPayloadEnvelopesByRange(request, chain, db, {} as any, "teku")) {
+    for await (const response of onExecutionPayloadEnvelopesByRange(request, chain, db)) {
       responses.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(response.data));
     }
 
@@ -94,7 +94,7 @@ describe("beacon-node / network / reqresp / handlers / executionPayloadEnvelopes
     const request = {startSlot: 1, count: 1};
 
     const responses = [];
-    for await (const response of onExecutionPayloadEnvelopesByRange(request, chain, db, {} as any, "teku")) {
+    for await (const response of onExecutionPayloadEnvelopesByRange(request, chain, db)) {
       responses.push(response);
     }
 
@@ -156,7 +156,7 @@ describe("beacon-node / network / reqresp / handlers / executionPayloadEnvelopes
     const request = {startSlot: 64, count: 3};
 
     const responses = [];
-    for await (const response of onExecutionPayloadEnvelopesByRange(request, chain, db, {} as any, "teku")) {
+    for await (const response of onExecutionPayloadEnvelopesByRange(request, chain, db)) {
       responses.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(response.data));
     }
 

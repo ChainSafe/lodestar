@@ -127,7 +127,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         });
       });
 
-      await chain.processChainSegment(blocksImport, {
+      await chain.processChainSegment(blocksImport, null, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
         // Importing attestations also triggers a head update, see https://github.com/ChainSafe/lodestar/issues/3804
         // TODO: Review if this is okay, can we prevent some attacks by importing attestations?

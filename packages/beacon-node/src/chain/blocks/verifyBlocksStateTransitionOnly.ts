@@ -1,10 +1,13 @@
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
   stateTransition,
 } from "@lodestar/state-transition";
+import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
+import {Slot, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -25,21 +28,55 @@ import {ImportBlockOpts} from "./types.js";
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blocks: IBlockInput[],
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   dataAvailabilityStatuses: DataAvailabilityStatus[],
   logger: Logger,
   metrics: Metrics | null,
   validatorMonitor: ValidatorMonitor | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
-): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
+): Promise<{
+  preStates: CachedBeaconStateAllForks[];
+  postStates: CachedBeaconStateAllForks[];
+  postEnvelopeStates: Map<Slot, CachedBeaconStateGloas | null>;
+  proposerBalanceDeltas: number[];
+  verifyStateTime: number;
+}> {
+  const preStates: CachedBeaconStateAllForks[] = [];
   const postStates: CachedBeaconStateAllForks[] = [];
+  const postEnvelopeStates = new Map<Slot, CachedBeaconStateGloas | null>();
   const proposerBalanceDeltas: number[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
     const block = blocks[i].getBlock();
-    const preState = i === 0 ? preState0 : postStates[i - 1];
+    let preState: CachedBeaconStateAllForks;
+    if (i === 0) {
+      preState = preState0;
+    } else {
+      const prevSlot = blocks[i - 1].getBlock().message.slot;
+      const prevPostEnvelopeState = postEnvelopeStates.get(prevSlot);
+      if (prevPostEnvelopeState && isGloasBeaconBlock(block.message)) {
+        // In ePBS, the proposer may build on the FULL path (saw previous envelope)
+        // or the EMPTY path (didn't see it). Check bid.parentBlockHash to determine:
+        // - If it matches the previous envelope's payload.blockHash → FULL path
+        // - Otherwise → EMPTY path (use block-only state)
+        const bid = block.message.body.signedExecutionPayloadBid.message;
+        const prevEnvelope = envelopes?.get(prevSlot);
+        if (prevEnvelope && byteArrayEquals(bid.parentBlockHash, prevEnvelope.message.payload.blockHash)) {
+          // FULL path: block builds on top of revealed payload
+          preState = prevPostEnvelopeState;
+        } else {
+          // EMPTY path: block was produced without seeing previous envelope
+          preState = postStates[i - 1];
+        }
+      } else {
+        // No envelope for previous block or pre-Gloas: use envelope state if available, else block state
+        preState = prevPostEnvelopeState ?? postStates[i - 1];
+      }
+    }
+    preStates[i] = preState;
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()
@@ -66,18 +103,43 @@ export async function verifyBlocksStateTransitionOnly(
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
     });
-    const stateRoot = postState.hashTreeRoot();
+    const stateRootAfterStateTransition = postState.hashTreeRoot();
     hashTreeRootTimer?.();
 
-    // Check state root matches
-    if (!byteArrayEquals(block.message.stateRoot, stateRoot)) {
+    // Check state root from block right after stateTransition()
+    if (!byteArrayEquals(block.message.stateRoot, stateRootAfterStateTransition)) {
       throw new BlockError(block, {
         code: BlockErrorCode.INVALID_STATE_ROOT,
-        root: postState.hashTreeRoot(),
+        root: stateRootAfterStateTransition,
         expectedRoot: block.message.stateRoot,
         preState,
         postState,
       });
+    }
+
+    const signedEnvelope = envelopes?.get(block.message.slot) ?? null;
+    if (signedEnvelope && isGloasBeaconBlock(block.message)) {
+      const postEnvelopeState = postState.clone(true) as CachedBeaconStateGloas;
+      // Envelope signatures are verified in verifyBlocksSignatures(); avoid duplicate checks here.
+      processExecutionPayloadEnvelope(postEnvelopeState, signedEnvelope, false);
+
+      const envelopeHashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+        source: StateHashTreeRootSource.envelopeTransition,
+      });
+      const stateRootAfterEnvelope = postEnvelopeState.hashTreeRoot();
+      envelopeHashTreeRootTimer?.();
+
+      // Check state root from signed envelope right after processExecutionPayloadEnvelope()
+      if (!byteArrayEquals(signedEnvelope.message.stateRoot, stateRootAfterEnvelope)) {
+        throw new BlockError(block, {
+          code: BlockErrorCode.INVALID_STATE_ROOT,
+          root: stateRootAfterEnvelope,
+          expectedRoot: signedEnvelope.message.stateRoot,
+          preState,
+          postState: postEnvelopeState,
+        });
+      }
+      postEnvelopeStates.set(block.message.slot, postEnvelopeState);
     }
 
     postStates[i] = postState;
@@ -110,5 +172,5 @@ export async function verifyBlocksStateTransitionOnly(
     logger.debug("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
   }
 
-  return {postStates, proposerBalanceDeltas, verifyStateTime};
+  return {preStates, postStates, postEnvelopeStates, proposerBalanceDeltas, verifyStateTime};
 }

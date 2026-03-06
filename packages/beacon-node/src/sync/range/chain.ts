@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Root, Slot} from "@lodestar/types";
-import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
+import {Epoch, Root, Slot, gloas} from "@lodestar/types";
+import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -15,7 +15,7 @@ import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
-import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
+import {DownloadByRangeError, DownloadByRangeErrorCode, DownloadByRangeResult} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -31,6 +31,10 @@ import {
   validateBatchesStatus,
 } from "./utils/index.js";
 
+const RATE_LIMITED_DOWNLOAD_RETRY_MS = 1_000;
+const PEER_QUARANTINE_MS = 2 * 60_000;
+const PEER_QUARANTINE_STRIKES = 2;
+
 export type SyncChainModules = {
   config: ChainForkConfig;
   clock: IClock;
@@ -44,13 +48,17 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: IBlockInput[], syncType: RangeSyncType) => Promise<void>;
+  processChainSegment: (
+    blocks: IBlockInput[],
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    syncType: RangeSyncType
+  ) => Promise<void>;
   /** Must download blocks, and validate their range */
   downloadByRange: (
     peer: PeerSyncMeta,
     batch: Batch,
     syncType: RangeSyncType
-  ) => Promise<WarnResult<IBlockInput[], DownloadByRangeError>>;
+  ) => Promise<WarnResult<DownloadByRangeResult, DownloadByRangeError>>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Gets current peer custodyColumns and earliestAvailableSlot */
@@ -133,6 +141,8 @@ export class SyncChain {
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
   private readonly peerset = new Map<PeerIdStr, ChainTarget>();
+  private readonly peerQuarantineUntilByPeer = new Map<PeerIdStr, number>();
+  private readonly quarantineStrikeCountByPeer = new Map<PeerIdStr, number>();
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
@@ -228,6 +238,16 @@ export class SyncChain {
    * Add peer to the chain and request batches if active
    */
   addPeer(peer: PeerIdStr, target: ChainTarget): void {
+    const quarantineUntil = this.peerQuarantineUntilByPeer.get(peer);
+    if (quarantineUntil && quarantineUntil > Date.now()) {
+      return;
+    }
+
+    if (quarantineUntil) {
+      this.peerQuarantineUntilByPeer.delete(peer);
+    }
+
+    this.quarantineStrikeCountByPeer.delete(peer);
     this.peerset.set(peer, target);
     this.computeTarget();
     this.triggerBatchDownloader();
@@ -241,6 +261,20 @@ export class SyncChain {
     const deleted = this.peerset.delete(peerId);
     this.computeTarget();
     return deleted;
+  }
+
+  private quarantinePeer(peerId: PeerIdStr, reason: string): void {
+    const quarantineUntil = Date.now() + PEER_QUARANTINE_MS;
+    this.peerQuarantineUntilByPeer.set(peerId, quarantineUntil);
+    this.quarantineStrikeCountByPeer.delete(peerId);
+    this.removePeer(peerId);
+    this.logger.verbose("Quarantined peer for post-fork sync errors", {
+      id: this.logId,
+      peer: prettyPrintPeerIdStr(peerId),
+      reason,
+      quarantineMs: PEER_QUARANTINE_MS,
+      quarantineUntil,
+    });
   }
 
   /**
@@ -458,9 +492,14 @@ export class SyncChain {
    * Requests the batch assigned to the given id from a given peer.
    */
   private async sendBatch(batch: Batch, peer: PeerSyncMeta): Promise<void> {
+    const previousEnvelopeCount = batch.getEnvelopes()?.size ?? 0;
+    let nextDownloadAttemptDelayMs = 0;
+
     this.logger.verbose("Downloading batch", {
       id: this.logId,
       ...batch.getMetadata(),
+      fork: batch.forkName,
+      hasEnvelopeRequest: batch.requests.envelopesRequest != null,
       peer: prettyPrintPeerIdStr(peer.peerId),
     });
     try {
@@ -470,8 +509,10 @@ export class SyncChain {
       const res = await wrapError(this.downloadByRange(peer, batch, this.syncType));
 
       if (res.err) {
+        const downloadErr = res.err as DownloadByRangeError;
+        const isTransientDownloadError = shouldTreatAsTransientDownloadError(downloadErr);
         // There's several known error cases where we want to take action on the peer
-        const errCode = (res.err as LodestarError<{code: string}>).type?.code;
+        const errCode = (downloadErr as LodestarError<{code: string}>).type?.code;
         this.metrics?.syncRange.downloadByRange.error.inc({client: peer.client, code: errCode ?? "UNKNOWN"});
         if (this.syncType === RangeSyncType.Finalized) {
           // For finalized sync, we are stricter with peers as there is no ambiguity about which chain we're syncing.
@@ -502,12 +543,50 @@ export class SyncChain {
           case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
             this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
         }
+
+        if (
+          errCode === DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE ||
+          errCode === DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE ||
+          errCode === DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE
+        ) {
+          this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
+        }
+
+        if (
+          errCode === DownloadByRangeErrorCode.REQ_RESP_ERROR &&
+          "reason" in downloadErr.type &&
+          shouldReportPeerOnReqRespErrorReason(downloadErr.type.reason)
+        ) {
+          this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
+        }
+
+        if (shouldQuarantinePeerOnDownloadError(downloadErr)) {
+          const strikeCount = (this.quarantineStrikeCountByPeer.get(peer.peerId) ?? 0) + 1;
+          if (strikeCount >= PEER_QUARANTINE_STRIKES) {
+            this.quarantinePeer(peer.peerId, res.err.message);
+          } else {
+            this.quarantineStrikeCountByPeer.set(peer.peerId, strikeCount);
+            this.logger.verbose("Peer hit quarantine strike", {
+              id: this.logId,
+              peer: prettyPrintPeerIdStr(peer.peerId),
+              strikeCount,
+              requiredStrikes: PEER_QUARANTINE_STRIKES,
+              reason: res.err.message,
+            });
+          }
+        } else {
+          this.quarantineStrikeCountByPeer.delete(peer.peerId);
+        }
+
         this.logger.verbose(
           "Batch download error",
           {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
           res.err
         );
-        batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
+        batch.downloadingError(peer.peerId, {countFailedAttempt: !isTransientDownloadError}); // Throws after MAX_DOWNLOAD_ATTEMPTS
+        if (isTransientDownloadError) {
+          nextDownloadAttemptDelayMs = RATE_LIMITED_DOWNLOAD_RETRY_MS;
+        }
       } else {
         this.logger.verbose("Batch download success", {
           id: this.logId,
@@ -515,11 +594,19 @@ export class SyncChain {
           peer: prettyPrintPeerIdStr(peer.peerId),
         });
         this.metrics?.syncRange.downloadByRange.success.inc();
+        this.quarantineStrikeCountByPeer.delete(peer.peerId);
         const {warnings, result} = res.result;
-        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
+        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result.blocks, result.envelopes);
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
         };
+        const envelopesMeta = getEnvelopeLogMeta(downloadSuccessOutput.envelopes, previousEnvelopeCount);
+        this.logger.debug("Batch envelopes after downloadingSuccess", {
+          id: this.logId,
+          epoch: batch.startEpoch,
+          peer: prettyPrintPeerIdStr(peer.peerId),
+          ...envelopesMeta,
+        });
 
         if (warnings && warnings.length > 0) {
           for (const warning of warnings) {
@@ -556,6 +643,7 @@ export class SyncChain {
           id: this.logId,
           epoch: batch.startEpoch,
           ...logMeta,
+          ...(envelopesMeta ?? {}),
           peer: prettyPrintPeerIdStr(peer.peerId),
         });
       }
@@ -570,18 +658,31 @@ export class SyncChain {
       this.batchProcessor.end(e as Error);
     }
 
-    // Preemptively request more blocks from peers whilst we process current blocks
-    this.triggerBatchDownloader();
+    // Preemptively request more blocks from peers whilst we process current blocks.
+    // For req/resp rate-limit errors, delay the retry to avoid a hot retry loop.
+    if (nextDownloadAttemptDelayMs > 0) {
+      setTimeout(() => this.triggerBatchDownloader(), nextDownloadAttemptDelayMs);
+    } else {
+      this.triggerBatchDownloader();
+    }
   }
 
   /**
    * Sends `batch` to the processor. Note: batch may be empty
    */
   private async processBatch(batch: Batch): Promise<void> {
-    const blocks = batch.startProcessing();
+    const {blocks, envelopes} = batch.startProcessing();
+    const processLogMeta: Record<string, number> = {blockCount: blocks.length};
+    const envelopesMeta = getEnvelopeLogMeta(envelopes);
+    this.logger.debug("Processing batch", {
+      id: this.logId,
+      epoch: batch.startEpoch,
+      ...processLogMeta,
+      ...(envelopesMeta ?? {}),
+    });
 
     // wrapError ensures to never call both batch success() and batch error()
-    const res = await wrapError(this.processChainSegment(blocks, this.syncType));
+    const res = await wrapError(this.processChainSegment(blocks, envelopes, this.syncType));
 
     if (!res.err) {
       batch.processingSuccess();
@@ -693,6 +794,55 @@ export class SyncChain {
  * Enforces that a report peer action is defined for all BatchErrorCode exhaustively.
  * If peer should not be downscored, returns null.
  */
+function shouldTreatAsTransientDownloadError(err: DownloadByRangeError): boolean {
+  switch (err.type.code) {
+    case DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE:
+    case DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE:
+    case DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE:
+      return true;
+
+    case DownloadByRangeErrorCode.REQ_RESP_ERROR: {
+      const reason = err.type.reason;
+      return (
+        reason.includes("REQUEST_ERROR_SELF_RATE_LIMITED") ||
+        reason.includes("REQUEST_ERROR_RATE_LIMITED") ||
+        reason.includes("RESPONSE_ERROR_RATE_LIMITED") ||
+        reason.includes("REQUEST_ERROR_DIAL_ERROR") ||
+        reason.includes("REQUEST_ERROR_INVALID_REQUEST") ||
+        reason.includes("Message was truncated")
+      );
+    }
+
+    default:
+      return false;
+  }
+}
+
+function shouldReportPeerOnReqRespErrorReason(reason: string): boolean {
+  return (
+    reason.includes("REQUEST_ERROR_DIAL_ERROR") ||
+    reason.includes("REQUEST_ERROR_INVALID_REQUEST") ||
+    reason.includes("Message was truncated")
+  );
+}
+
+function shouldQuarantinePeerOnDownloadError(err: DownloadByRangeError): boolean {
+  switch (err.type.code) {
+    case DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE:
+      return true;
+
+    case DownloadByRangeErrorCode.REQ_RESP_ERROR:
+      return (
+        err.type.reason.includes("unexpected end of input") ||
+        err.type.reason.includes("REQUEST_ERROR_INVALID_REQUEST") ||
+        err.type.reason.includes("Message was truncated")
+      );
+
+    default:
+      return false;
+  }
+}
+
 export function shouldReportPeerOnBatchError(
   code: BatchErrorCode
 ): {action: PeerAction.LowToleranceError; reason: string} | null {
@@ -711,4 +861,25 @@ export function shouldReportPeerOnBatchError(
     case BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS:
       return null;
   }
+}
+
+function getEnvelopeLogMeta(
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+  previousEnvelopeCount = 0
+): {envelopeCount: number; newEnvelopeCount: number; envelopeSlots: string | null} {
+  if (!envelopes || envelopes.size === 0) {
+    return {
+      envelopeCount: 0,
+      newEnvelopeCount: 0,
+      envelopeSlots: null,
+    };
+  }
+
+  const envelopeSlots = Array.from(envelopes.keys()).sort((a, b) => a - b);
+
+  return {
+    envelopeCount: envelopes.size,
+    newEnvelopeCount: Math.max(envelopes.size - previousEnvelopeCount, 0),
+    envelopeSlots: prettyPrintIndices(envelopeSlots),
+  };
 }
