@@ -268,6 +268,7 @@ export interface IForkChoice {
     blockRoot: RootHex,
     payloadStatus: PayloadStatus
   ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
   /**
