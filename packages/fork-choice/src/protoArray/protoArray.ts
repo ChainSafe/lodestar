@@ -1545,9 +1545,7 @@ export class ProtoArray {
       }
 
       node = this.nodes[parentIndex];
-      if (node.payloadStatus !== PayloadStatus.PENDING) {
-        nodes.push(node);
-      }
+      nodes.push(node);
     }
 
     return nodes;
