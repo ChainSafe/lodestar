@@ -26,8 +26,6 @@ function generateElectraState(chainForkConfig: ChainForkConfig, opts: TestBeacon
   const stateSlot = opts.slot ?? 0;
   const state = chainForkConfig.getForkTypes(stateSlot).BeaconState.defaultValue() as electra.BeaconState;
 
-  Object.assign(state, opts);
-
   const validatorOpts = {
     activation: 0,
     withdrawableEpoch: FAR_FUTURE_EPOCH,
@@ -35,7 +33,7 @@ function generateElectraState(chainForkConfig: ChainForkConfig, opts: TestBeacon
   };
   const validators = opts.validators ?? generateValidators(16, validatorOpts);
 
-  state.genesisTime = Math.floor(Date.now() / 1000);
+  state.genesisTime = 1606824000; // Fixed timestamp for deterministic tests
   state.slot = stateSlot;
   state.fork.previousVersion = chainConfig.GENESIS_FORK_VERSION;
   state.fork.currentVersion = chainConfig.GENESIS_FORK_VERSION;
@@ -56,6 +54,9 @@ function generateElectraState(chainForkConfig: ChainForkConfig, opts: TestBeacon
 
   state.depositRequestsStartIndex = 2023n;
   state.latestExecutionPayloadHeader = ssz.electra.ExecutionPayloadHeader.defaultValue();
+
+  // Apply overrides from opts after all defaults are set
+  Object.assign(state, opts);
 
   return ssz.electra.BeaconState.toViewDU(state);
 }
