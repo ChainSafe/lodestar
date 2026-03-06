@@ -1,9 +1,9 @@
 import {describe, expect, it, vi} from "vitest";
 import {fetch, fromHex} from "@lodestar/utils";
-import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
 import {ChainConfig} from "../../src/chainConfig/types.js";
+import {ethereumConsensusSpecsTests} from "./specTestVersioning.js";
 
 // Not e2e, but slow. Run with e2e tests
 

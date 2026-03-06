@@ -1,11 +1,6 @@
 {
   "extends": "../../tsconfig.json",
   "include": ["src", "test"],
-  "exclude": [
-    // Tests are intentionally excluded from the `check-types` compilation.
-    // TS6059 errors because those files fall outside this package's `rootDir`.
-    "test/unit/block/processConsolidationRequest.test.ts"
-  ],
   "compilerOptions": {
     "outDir": "lib"
   }

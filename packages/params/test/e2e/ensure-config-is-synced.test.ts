@@ -1,10 +1,10 @@
 import axios from "axios";
 import {describe, expect, it, vi} from "vitest";
-import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {BeaconPreset, ForkName} from "../../src/index.js";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
 import {loadConfigYaml} from "../yaml.js";
+import {ethereumConsensusSpecsTests} from "./specTestVersioning.js";
 
 // Not e2e, but slow. Run with e2e tests
 /**
