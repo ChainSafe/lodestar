@@ -36,11 +36,13 @@ export async function verifyBlocksStateTransitionOnly(
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
+  preStates: CachedBeaconStateAllForks[];
   postStates: CachedBeaconStateAllForks[];
   postEnvelopeStates: Map<Slot, CachedBeaconStateGloas | null>;
   proposerBalanceDeltas: number[];
   verifyStateTime: number;
 }> {
+  const preStates: CachedBeaconStateAllForks[] = [];
   const postStates: CachedBeaconStateAllForks[] = [];
   const postEnvelopeStates = new Map<Slot, CachedBeaconStateGloas | null>();
   const proposerBalanceDeltas: number[] = [];
@@ -49,8 +51,32 @@ export async function verifyBlocksStateTransitionOnly(
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
     const block = blocks[i].getBlock();
-    const preState =
-      i === 0 ? preState0 : (postEnvelopeStates.get(blocks[i - 1].getBlock().message.slot) ?? postStates[i - 1]);
+    let preState: CachedBeaconStateAllForks;
+    if (i === 0) {
+      preState = preState0;
+    } else {
+      const prevSlot = blocks[i - 1].getBlock().message.slot;
+      const prevPostEnvelopeState = postEnvelopeStates.get(prevSlot);
+      if (prevPostEnvelopeState && isGloasBeaconBlock(block.message)) {
+        // In ePBS, the proposer may build on the FULL path (saw previous envelope)
+        // or the EMPTY path (didn't see it). Check bid.parentBlockHash to determine:
+        // - If it matches the previous envelope's payload.blockHash → FULL path
+        // - Otherwise → EMPTY path (use block-only state)
+        const bid = block.message.body.signedExecutionPayloadBid.message;
+        const prevEnvelope = envelopes?.get(prevSlot);
+        if (prevEnvelope && byteArrayEquals(bid.parentBlockHash, prevEnvelope.message.payload.blockHash)) {
+          // FULL path: block builds on top of revealed payload
+          preState = prevPostEnvelopeState;
+        } else {
+          // EMPTY path: block was produced without seeing previous envelope
+          preState = postStates[i - 1];
+        }
+      } else {
+        // No envelope for previous block or pre-Gloas: use envelope state if available, else block state
+        preState = prevPostEnvelopeState ?? postStates[i - 1];
+      }
+    }
+    preStates[i] = preState;
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()
@@ -146,5 +172,5 @@ export async function verifyBlocksStateTransitionOnly(
     logger.debug("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
   }
 
-  return {postStates, postEnvelopeStates, proposerBalanceDeltas, verifyStateTime};
+  return {preStates, postStates, postEnvelopeStates, proposerBalanceDeltas, verifyStateTime};
 }

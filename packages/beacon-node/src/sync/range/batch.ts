@@ -146,47 +146,39 @@ export class Batch {
         count: this.count,
         step: 1,
       };
+      const requests: DownloadByRangeRequests = {blocksRequest};
+
+      // Post-Gloas envelopes are required for block processing, independent of DA retention window.
+      if (isForkPostGloas(this.forkName)) {
+        requests.envelopesRequest = {
+          startSlot: this.startSlot,
+          count: this.count,
+        };
+      }
+
       if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
-        const columnsRequest = {
+        requests.columnsRequest = {
           startSlot: this.startSlot,
           count: this.count,
           columns: this.custodyConfig.sampledColumns,
         };
-        if (isForkPostGloas(this.forkName)) {
-          const envelopesRequest: gloas.ExecutionPayloadEnvelopesByRangeRequest = {
-            startSlot: this.startSlot,
-            count: this.count,
-          };
-          return {
-            blocksRequest,
-            columnsRequest,
-            envelopesRequest,
-          };
-        }
-        return {
-          blocksRequest,
-          columnsRequest,
+      } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
+        requests.blobsRequest = {
+          startSlot: this.startSlot,
+          count: this.count,
         };
       }
-      if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
-        return {
-          blocksRequest,
-          blobsRequest: {
-            startSlot: this.startSlot,
-            count: this.count,
-          },
-        };
-      }
-      return {
-        blocksRequest,
-      };
+
+      return requests;
     }
 
     // subsequent request where part of the epoch has already been downloaded. Need to figure out what is the beginning
     // of the range where download needs to resume
     let blockStartSlot = this.startSlot;
     let dataStartSlot = this.startSlot;
+    let envelopeStartSlot = this.startSlot;
     const neededColumns = new Set<number>();
+    const envelopesBySlot = this.state.envelopes ?? new Map<Slot, gloas.SignedExecutionPayloadEnvelope>();
 
     // ensure blocks are in slot-wise order
     for (const blockInput of blocks) {
@@ -204,6 +196,10 @@ export class Batch {
       if (blockInput.hasBlock() && blockStartSlot === blockSlot) {
         blockStartSlot = blockSlot + 1;
       }
+      if (blockInput.hasBlock() && envelopeStartSlot === blockSlot && envelopesBySlot.has(blockSlot)) {
+        envelopeStartSlot = blockSlot + 1;
+      }
+
       if (!blockInput.hasAllData()) {
         if (isBlockInputColumns(blockInput)) {
           for (const index of blockInput.getMissingSampledColumnMeta().missing) {
@@ -227,6 +223,14 @@ export class Batch {
         step: 1,
       };
     }
+
+    if (isForkPostGloas(this.forkName) && envelopeStartSlot <= endSlot) {
+      requests.envelopesRequest = {
+        startSlot: envelopeStartSlot,
+        count: endSlot - envelopeStartSlot + 1,
+      };
+    }
+
     if (dataStartSlot <= endSlot) {
       // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
       const count = endSlot - dataStartSlot + 1;
@@ -236,12 +240,6 @@ export class Batch {
           startSlot: dataStartSlot,
           columns: Array.from(neededColumns),
         };
-        if (isForkPostGloas(this.forkName)) {
-          requests.envelopesRequest = {
-            count,
-            startSlot: dataStartSlot,
-          };
-        }
       } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
         requests.blobsRequest = {
           count,
@@ -364,14 +362,16 @@ export class Batch {
   /**
    * Downloading -> AwaitingDownload
    */
-  downloadingError(peer: PeerIdStr): void {
+  downloadingError(peer: PeerIdStr, {countFailedAttempt = true}: {countFailedAttempt?: boolean} = {}): void {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    this.failedDownloadAttempts.push(peer);
-    if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
-      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
+    if (countFailedAttempt) {
+      this.failedDownloadAttempts.push(peer);
+      if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
+        throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
+      }
     }
 
     this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks, envelopes: this.state.envelopes};

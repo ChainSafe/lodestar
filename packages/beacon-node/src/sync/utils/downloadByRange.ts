@@ -322,7 +322,11 @@ export async function requestByRange({
     );
   }
 
-  await Promise.all(requests);
+  const results = await Promise.allSettled(requests);
+  const rejected = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+  if (rejected) {
+    throw rejected.reason;
+  }
 
   return {
     blocks,
@@ -376,24 +380,24 @@ export async function validateResponses({
   }
 
   const dataRequest = blobsRequest ?? columnsRequest;
-  if (!dataRequest) {
-    return {result: validatedResponses, warnings};
-  }
+  let blocksForDataValidation: ValidatedBlock[] = [];
 
-  const blocksForDataValidation = getBlocksForDataValidation(
-    dataRequest,
-    batchBlocks,
-    validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
-  );
-
-  if (!blocksForDataValidation.length) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-        ...requestsLogMeta({blobsRequest, columnsRequest, envelopesRequest}),
-      },
-      "No blocks in data request slot range to validate data response against"
+  if (dataRequest) {
+    blocksForDataValidation = getBlocksForDataValidation(
+      dataRequest,
+      batchBlocks,
+      validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
     );
+
+    if (!blocksForDataValidation.length) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+          ...requestsLogMeta({blobsRequest, columnsRequest, envelopesRequest}),
+        },
+        "No blocks in data request slot range to validate data response against"
+      );
+    }
   }
 
   if (blobsRequest) {
@@ -434,10 +438,26 @@ export async function validateResponses({
     warnings = validatedColumnSidecarsResult.warnings;
   }
 
-  const validatedBlocks = validatedResponses.validatedBlocks;
-  if (signedEnvelopes?.length) {
-    validateEnvelopesByRangeResponse({envelopes: signedEnvelopes, validatedBlocks: validatedBlocks ?? []});
-    validatedResponses.validatedEnvelopes = signedEnvelopes;
+  if (envelopesRequest) {
+    const blocksForEnvelopeValidation = getBlocksForDataValidation(
+      envelopesRequest,
+      batchBlocks,
+      validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
+    );
+
+    if (!blocksForEnvelopeValidation.length) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+          ...requestsLogMeta({blobsRequest, columnsRequest, envelopesRequest}),
+        },
+        "No blocks in envelope request slot range to validate envelope response against"
+      );
+    }
+
+    const envelopes = signedEnvelopes ?? [];
+    validateEnvelopesByRangeResponse({envelopes, validatedBlocks: blocksForEnvelopeValidation});
+    validatedResponses.validatedEnvelopes = envelopes;
   }
 
   return {result: validatedResponses, warnings};
@@ -559,6 +579,8 @@ export function validateEnvelopesByRangeResponse({
   validatedBlocks: ValidatedBlock[];
 }): void {
   const blockBySlot = new Map(validatedBlocks.map(({block, blockRoot}) => [block.message.slot, {block, blockRoot}]));
+  const seenEnvelopeSlots = new Set<Slot>();
+
   for (const signedEnvelope of envelopes) {
     const env = signedEnvelope.message;
     const entry = blockBySlot.get(env.slot);
@@ -577,7 +599,14 @@ export function validateEnvelopesByRangeResponse({
     if (!byteArrayEquals(env.payload.blockHash, bid.blockHash)) {
       throw new DownloadByRangeError({code: DownloadByRangeErrorCode.ENVELOPE_WRONG_BLOCK_HASH, slot: env.slot});
     }
+
+    seenEnvelopeSlots.add(env.slot);
   }
+
+  // Blocks without envelopes are allowed: the payload may have been orphaned (never
+  // revealed by the builder).  The state-transition EMPTY path handles this correctly
+  // and subsequent block state-root checks will catch any maliciously omitted envelopes.
+  // Do NOT penalise or quarantine the peer for this — it is a valid serving behaviour.
 }
 
 /**
@@ -972,6 +1001,7 @@ export enum DownloadByRangeErrorCode {
   MISMATCH_BLOCK_FORK = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_FORK",
   MISMATCH_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_INPUT_TYPE",
   ENVELOPE_NO_MATCHING_BLOCK = "DOWNLOAD_BY_RANGE_ERROR_ENVELOPE_NO_MATCHING_BLOCK",
+  ENVELOPE_MISSING_FOR_BLOCK = "DOWNLOAD_BY_RANGE_ERROR_ENVELOPE_MISSING_FOR_BLOCK",
   ENVELOPE_WRONG_BLOCK_ROOT = "DOWNLOAD_BY_RANGE_ERROR_ENVELOPE_WRONG_BLOCK_ROOT",
   ENVELOPE_WRONG_BUILDER_INDEX = "DOWNLOAD_BY_RANGE_ERROR_ENVELOPE_WRONG_BUILDER_INDEX",
   ENVELOPE_WRONG_BLOCK_HASH = "DOWNLOAD_BY_RANGE_ERROR_ENVELOPE_WRONG_BLOCK_HASH",
@@ -1074,6 +1104,7 @@ export type DownloadByRangeErrorType =
   | {
       code:
         | DownloadByRangeErrorCode.ENVELOPE_NO_MATCHING_BLOCK
+        | DownloadByRangeErrorCode.ENVELOPE_MISSING_FOR_BLOCK
         | DownloadByRangeErrorCode.ENVELOPE_WRONG_BLOCK_ROOT
         | DownloadByRangeErrorCode.ENVELOPE_WRONG_BUILDER_INDEX
         | DownloadByRangeErrorCode.ENVELOPE_WRONG_BLOCK_HASH;
