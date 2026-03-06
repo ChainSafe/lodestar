@@ -1225,7 +1225,7 @@ export class ForkChoice implements IForkChoice {
       return this.head;
     }
 
-    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot)) {
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot, this.head.payloadStatus)) {
       if (block.blockRoot === blockRootHex) {
         return block;
       }
