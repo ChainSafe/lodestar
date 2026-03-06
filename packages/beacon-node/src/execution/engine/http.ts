@@ -91,11 +91,6 @@ export type ExecutionEngineHttpOpts = {
    * Lodestar commit to be used for `ClientVersion`
    */
   commit?: string;
-  /**
-   * EIP-8161: SSZ-REST Engine API transport URL.
-   * When configured, the engine will try SSZ-REST first and fall back to JSON-RPC on network errors.
-   */
-  sszRestUrl?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -190,18 +185,19 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.logger = logger;
     this.metrics = metrics ?? null;
 
-    // EIP-8161: Initialize SSZ-REST client if configured
-    if (opts?.sszRestUrl) {
+    // EIP-8161: Initialize SSZ-REST client using the same Engine API URL.
+    // SSZ-REST routes are served on the same port under /engine/* paths.
+    {
+      const engineUrl = opts?.urls?.[0] ?? "http://localhost:8551";
+      const baseUrl = engineUrl.replace(/\/+$/, "");
       this.sszRestClient = new SszRestClient({
-        baseUrl: opts.sszRestUrl,
-        jwtSecretHex: opts.jwtSecretHex,
-        jwtId: opts.jwtId,
-        jwtVersion: opts.jwtVersion,
-        timeout: opts.timeout,
+        baseUrl,
+        jwtSecretHex: opts?.jwtSecretHex,
+        jwtId: opts?.jwtId,
+        jwtVersion: opts?.jwtVersion,
+        timeout: opts?.timeout,
       });
-      this.logger.info("SSZ-REST Engine API transport enabled (EIP-8161)", {url: opts.sszRestUrl});
-    } else {
-      this.sszRestClient = null;
+      this.logger.info("SSZ-REST Engine API transport enabled (EIP-8161)", {url: baseUrl});
     }
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
