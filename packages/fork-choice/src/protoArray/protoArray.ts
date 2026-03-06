@@ -1681,11 +1681,8 @@ export class ProtoArray {
    * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
    * For pre-Gloas blocks: returns FULL variants
    */
-  getAllAncestorNodes(blockRoot: RootHex): ProtoNode[] {
-    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const defaultStatus = this.getDefaultVariant(blockRoot);
-    const startIndex =
-      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
+  getAllAncestorNodes(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoNode[] {
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
     if (startIndex === undefined) {
       return [];
     }
@@ -1698,14 +1695,8 @@ export class ProtoArray {
       });
     }
 
-    // Include starting node if node is pre-gloas
-    // Reason why we exclude post-gloas is because node is always default variant (PENDING)
-    // which we want to exclude.
-    const nodes: ProtoNode[] = [];
-
-    if (!isGloasBlock(node)) {
-      nodes.push(node);
-    }
+    // Include starting node
+    const nodes: ProtoNode[] = [node];
 
     while (node.parent !== undefined) {
       const parentIndex = this.getParentNodeIndex(node);

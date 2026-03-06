@@ -4,6 +4,68 @@ import {RootHex} from "@lodestar/types";
 import {ExecutionStatus, PayloadStatus, ProtoArray} from "../../../src/index.js";
 
 describe("ProtoArray", () => {
+  it("getAllAncestorNodes includes the starting node", () => {
+    const genesisSlot = 0;
+    const genesisEpoch = 0;
+    const stateRoot = "0";
+    const finalizedRoot = "1";
+    const parentRoot = "1";
+    const childRoot = "2";
+    const fc = ProtoArray.initialize(
+      {
+        slot: genesisSlot,
+        stateRoot,
+        parentRoot,
+        blockRoot: finalizedRoot,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: stateRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: stateRoot,
+        unrealizedJustifiedEpoch: genesisEpoch,
+        unrealizedJustifiedRoot: stateRoot,
+        unrealizedFinalizedEpoch: genesisEpoch,
+        unrealizedFinalizedRoot: stateRoot,
+        timeliness: false,
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
+        builderIndex: null,
+        blockHashFromBid: null,
+      },
+      genesisSlot
+    );
+
+    fc.onBlock(
+      {
+        slot: genesisSlot + 1,
+        blockRoot: childRoot,
+        parentRoot: finalizedRoot,
+        stateRoot,
+        targetRoot: finalizedRoot,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: stateRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: stateRoot,
+        unrealizedJustifiedEpoch: genesisEpoch,
+        unrealizedJustifiedRoot: stateRoot,
+        unrealizedFinalizedEpoch: genesisEpoch,
+        unrealizedFinalizedRoot: stateRoot,
+        timeliness: false,
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
+        builderIndex: null,
+        blockHashFromBid: null,
+      },
+      genesisSlot + 1
+    );
+
+    const ancestors = fc.getAllAncestorNodes(childRoot, PayloadStatus.FULL);
+    expect(ancestors.map((node) => node.blockRoot)).toEqual([childRoot, finalizedRoot]);
+  });
+
   it("finalized descendant", () => {
     const genesisSlot = 0;
     const genesisEpoch = 0;

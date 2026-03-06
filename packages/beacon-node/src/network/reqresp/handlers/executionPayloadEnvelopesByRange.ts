@@ -27,8 +27,8 @@ export async function* onExecutionPayloadEnvelopesByRange(
 
   // Non-finalized range: from chain cache
   if (endSlot > finalizedSlot) {
-    const headRoot = chain.forkChoice.getHeadRoot();
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+    const head = chain.forkChoice.getHead();
+    const headChain = chain.forkChoice.getAllAncestorBlocks(head);
     for (let i = headChain.length - 1; i >= 0; i--) {
       const block = headChain[i];
       if (block.slot >= startSlot && block.slot < endSlot) {

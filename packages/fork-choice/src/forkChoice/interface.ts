@@ -256,7 +256,7 @@ export interface IForkChoice {
    * Iterates backwards through ancestor block summaries, starting from a block root
    */
   iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<ProtoBlock>;
-  getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  getAllAncestorBlocks(block: ProtoBlock): ProtoBlock[];
   /**
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
