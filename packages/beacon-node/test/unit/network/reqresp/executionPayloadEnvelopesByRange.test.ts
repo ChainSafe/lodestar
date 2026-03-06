@@ -56,7 +56,7 @@ describe("beacon-node / network / reqresp / handlers / executionPayloadEnvelopes
       },
     } as any;
 
-    const request = {startSlot: 64, count: 2, step: 1};
+    const request = {startSlot: 64, count: 2};
 
     const responses = [];
     for await (const response of onExecutionPayloadEnvelopesByRange(request, chain, db, {} as any, "teku")) {
@@ -91,7 +91,7 @@ describe("beacon-node / network / reqresp / handlers / executionPayloadEnvelopes
       executionPayloadEnvelope: {get: vi.fn()},
     } as any;
 
-    const request = {startSlot: 1, count: 1, step: 1};
+    const request = {startSlot: 1, count: 1};
 
     const responses = [];
     for await (const response of onExecutionPayloadEnvelopesByRange(request, chain, db, {} as any, "teku")) {
@@ -104,7 +104,7 @@ describe("beacon-node / network / reqresp / handlers / executionPayloadEnvelopes
     expect(db.executionPayloadEnvelope.get).not.toHaveBeenCalled();
   });
 
-  it("respects step and includes head envelope when ancestor list excludes head", async () => {
+  it("includes head envelope when ancestor list excludes head", async () => {
     const finalizedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
     finalizedEnvelope.message.slot = 64;
     finalizedEnvelope.message.beaconBlockRoot = rootWithByte(64);
@@ -113,14 +113,14 @@ describe("beacon-node / network / reqresp / handlers / executionPayloadEnvelopes
     headEnvelope.message.slot = 66;
     headEnvelope.message.beaconBlockRoot = rootWithByte(66);
 
-    const skippedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    skippedEnvelope.message.slot = 65;
-    skippedEnvelope.message.beaconBlockRoot = rootWithByte(65);
+    const slot65Envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    slot65Envelope.message.slot = 65;
+    slot65Envelope.message.beaconBlockRoot = rootWithByte(65);
 
     const archivedBySlot = new Map<number, typeof finalizedEnvelope>([[64, finalizedEnvelope]]);
     const hotByRoot = new Map<string, typeof headEnvelope>([
       [toRootHex(headEnvelope.message.beaconBlockRoot), headEnvelope],
-      [toRootHex(skippedEnvelope.message.beaconBlockRoot), skippedEnvelope],
+      [toRootHex(slot65Envelope.message.beaconBlockRoot), slot65Envelope],
     ]);
 
     const chain = {
@@ -136,7 +136,6 @@ describe("beacon-node / network / reqresp / handlers / executionPayloadEnvelopes
       forkChoice: {
         getFinalizedCheckpointSlot: () => 64,
         getHeadRoot: () => "0xhead",
-        // Simulate Gloas behavior where getAllAncestorBlocks() omits the current head node
         getBlockHexDefaultStatus: () => ({slot: 66, blockRoot: toRootHex(rootWithByte(66))}),
         getAllAncestorBlocks: () => [
           {slot: 65, blockRoot: toRootHex(rootWithByte(65))},
@@ -154,13 +153,13 @@ describe("beacon-node / network / reqresp / handlers / executionPayloadEnvelopes
       },
     } as any;
 
-    const request = {startSlot: 64, count: 2, step: 2};
+    const request = {startSlot: 64, count: 3};
 
     const responses = [];
     for await (const response of onExecutionPayloadEnvelopesByRange(request, chain, db, {} as any, "teku")) {
       responses.push(ssz.gloas.SignedExecutionPayloadEnvelope.deserialize(response.data));
     }
 
-    expect(responses.map((e) => e.message.slot)).toEqual([64, 66]);
+    expect(responses.map((e) => e.message.slot)).toEqual([64, 65, 66]);
   });
 });

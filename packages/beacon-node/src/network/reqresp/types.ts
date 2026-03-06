@@ -54,7 +54,7 @@ export enum ReqRespMethod {
 }
 
 // To typesafe events to network
-type ExecutionPayloadEnvelopesByRangeRequest = phase0.BeaconBlocksByRangeRequest;
+
 export type RequestBodyByMethod = {
   [ReqRespMethod.Status]: Status;
   [ReqRespMethod.Goodbye]: phase0.Goodbye;
@@ -66,7 +66,7 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequest;
-  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: ExecutionPayloadEnvelopesByRangeRequest;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: gloas.ExecutionPayloadEnvelopesByRangeRequest;
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
@@ -115,7 +115,7 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
-  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: ssz.gloas.BeaconBlocksByRangeRequest,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest,
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequestType(config),
 
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,

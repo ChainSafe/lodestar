@@ -1,29 +1,28 @@
 import {PeerId} from "@libp2p/interface";
-import {ResponseOutgoing} from "@lodestar/reqresp";
+import {ChainConfig} from "@lodestar/config";
+import {GENESIS_SLOT} from "@lodestar/params";
+import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {phase0, ssz} from "@lodestar/types";
+import {gloas, ssz} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.ts";
-import {validateBeaconBlocksByRangeRequest} from "./beaconBlocksByRange.js";
 
 /**
  * Serve signed execution payload envelopes over req/resp by range.
  *
- * Behavior is equivalent to BeaconBlocksByRange v2 but with envelope responses,
- * matching spec for ExecutionPayloadEnvelopesByRange.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/p2p-interface.md#executionpayloadenvelopesbyrange-v1
  */
 export async function* onExecutionPayloadEnvelopesByRange(
-  request: phase0.BeaconBlocksByRangeRequest,
+  request: gloas.ExecutionPayloadEnvelopesByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
-  const {startSlot, count} = validateBeaconBlocksByRangeRequest(chain.config, request);
-  const step = request.step > 0 ? request.step : 1;
-  const endSlot = startSlot + count * step;
+  const {startSlot, count} = validateEnvelopesByRangeRequest(chain.config, request);
+  const endSlot = startSlot + count;
 
   if (startSlot < chain.earliestAvailableSlot) {
     chain.logger.verbose("Peer did not respect earliestAvailableSlot for ExecutionPayloadEnvelopesByRange", {
@@ -39,7 +38,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
   if (startSlot <= finalizedSlot) {
     const finalizedEndSlot = Math.min(endSlot, finalizedSlot + 1);
 
-    for (let slot = startSlot; slot < finalizedEndSlot; slot += step) {
+    for (let slot = startSlot; slot < finalizedEndSlot; slot++) {
       const envelope = await db.executionPayloadEnvelopeArchive.get(slot);
       if (!envelope) {
         continue;
@@ -53,14 +52,13 @@ export async function* onExecutionPayloadEnvelopesByRange(
   }
 
   // Non-finalized range (canonical head chain by root)
+  // Note: getAllAncestorBlocks excludes the Gloas head (PENDING variant),
+  // so we must check the head separately via getBlockHexDefaultStatus.
   const nonFinalizedStartSlot = Math.max(startSlot, finalizedSlot + 1);
   if (endSlot > nonFinalizedStartSlot) {
     const seenRoots = new Set<string>();
 
-    const maybeYieldEnvelope = async function* (block: {slot: number; blockRoot: string}) {
-      if (block.slot < nonFinalizedStartSlot || block.slot >= endSlot || (block.slot - startSlot) % step !== 0) {
-        return;
-      }
+    const yieldEnvelope = async function* (block: {slot: number; blockRoot: string}) {
       if (seenRoots.has(block.blockRoot)) {
         return;
       }
@@ -76,12 +74,8 @@ export async function* onExecutionPayloadEnvelopesByRange(
       };
     };
 
+    // Iterate ancestors oldest-to-newest (ascending slot order)
     const headRoot = chain.forkChoice.getHeadRoot();
-    const headBlock = chain.forkChoice.getBlockHexDefaultStatus(headRoot);
-    if (headBlock) {
-      yield* maybeYieldEnvelope(headBlock);
-    }
-
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
     for (let i = headChain.length - 1; i >= 0; i--) {
       const block = headChain[i];
@@ -93,7 +87,33 @@ export async function* onExecutionPayloadEnvelopesByRange(
         break;
       }
 
-      yield* maybeYieldEnvelope(block);
+      yield* yieldEnvelope(block);
+    }
+
+    // Head block (may be excluded from ancestor list for Gloas PENDING variant)
+    const headBlock = chain.forkChoice.getBlockHexDefaultStatus(headRoot);
+    if (headBlock && headBlock.slot >= nonFinalizedStartSlot && headBlock.slot < endSlot) {
+      yield* yieldEnvelope(headBlock);
     }
   }
+}
+
+export function validateEnvelopesByRangeRequest(
+  config: ChainConfig,
+  request: gloas.ExecutionPayloadEnvelopesByRangeRequest
+): gloas.ExecutionPayloadEnvelopesByRangeRequest {
+  const {startSlot} = request;
+  let {count} = request;
+
+  if (count < 1) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
+  }
+  if (startSlot < GENESIS_SLOT) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
+  }
+  if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
+    count = config.MAX_REQUEST_BLOCKS_DENEB;
+  }
+
+  return {startSlot, count};
 }
