@@ -831,13 +831,21 @@ export class ValidatorStore {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
 
-    const isPostElectra = this.config.getForkSeq(data.slot) >= ForkSeq.electra;
+    const forkSeq = this.config.getForkSeq(data.slot);
+    const isPostElectra = forkSeq >= ForkSeq.electra;
+    const isPostGloas = forkSeq >= ForkSeq.gloas;
+
     if (!isPostElectra && duty.committeeIndex !== data.index) {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
     }
-    if (isPostElectra && data.index !== 0) {
+    if (isPostGloas) {
+      // After Gloas, data.index signals payload status: 0 (EMPTY) or 1 (FULL)
+      if (data.index !== 0 && data.index !== 1) {
+        throw Error(`Invalid payload status index post-gloas during signing: data.index=${data.index}`);
+      }
+    } else if (isPostElectra && data.index !== 0) {
       throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
     }
   }
