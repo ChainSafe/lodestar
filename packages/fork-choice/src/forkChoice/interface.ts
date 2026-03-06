@@ -265,6 +265,7 @@ export interface IForkChoice {
    * Returns both ancestor and non-ancestor blocks in a single traversal.
    */
   getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
   /**
