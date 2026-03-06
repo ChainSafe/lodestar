@@ -32,8 +32,7 @@ export async function verifyBlocksSignatures(
   blocks: SignedBeaconBlock[],
   envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   indexedAttestationsByBlock: IndexedAttestation[][],
-  opts: ImportBlockOpts,
-  preStatesByBlock?: CachedBeaconStateAllForks[]
+  opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
@@ -58,10 +57,9 @@ export async function verifyBlocksSignatures(
     }
 
     const signedEnvelope = envelopes?.get(block.message.slot) ?? null;
-    const envelopeState = preStatesByBlock?.[i] ?? preState0;
     const envelopeSignaturePromise =
       signedEnvelope && isGloasBeaconBlock(block.message)
-        ? verifyExecutionPayloadEnvelopeSignature(bls, envelopeState as CachedBeaconStateGloas, block, signedEnvelope)
+        ? verifyExecutionPayloadEnvelopeSignature(bls, preState0 as CachedBeaconStateGloas, block, signedEnvelope)
         : Promise.resolve(true);
 
     // Use [i] to make clear that the index has to be correct to blame the right block below on BlockError()
