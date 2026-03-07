@@ -169,8 +169,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     // to avoid startup failures (`headState does not exist`).
     return (
       this.checkpointStateCache.getLatest(head.blockRoot, Infinity, preferredPayloadPresent) ||
-      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, !preferredPayloadPresent) ||
-      this.blockStateCache.get(head.stateRoot)
+      this.blockStateCache.get(head.stateRoot) ||
+      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, !preferredPayloadPresent)
     );
   }
 

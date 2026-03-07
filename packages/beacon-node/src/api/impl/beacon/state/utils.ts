@@ -58,7 +58,7 @@ export async function getStateResponseWithRegen(
         : stateId
       : null;
 
-  const res =
+  let res =
     typeof stateId === "string"
       ? await chain.getStateByStateRoot(stateId, {allowRegen: true})
       : typeof stateId === "number"
@@ -68,6 +68,12 @@ export async function getStateResponseWithRegen(
             ? await chain.getStateBySlot(stateId, {allowRegen: true})
             : await chain.getHistoricalStateBySlot(stateId)
         : await chain.getStateOrBytesByCheckpoint(checkpointStateId ?? stateId);
+
+  // Defensive fallback: if post-Gloas checkpoint normalization prefers EMPTY but that
+  // variant is unavailable, retry original checkpoint status before returning 404.
+  if (!res && checkpointStateId) {
+    res = await chain.getStateOrBytesByCheckpoint(stateId);
+  }
 
   if (!res) {
     throw new ApiError(404, `State not found for id '${inStateId}'`);
