@@ -151,7 +151,7 @@ export function initializeForkChoiceFromFinalizedState(
 
         ...(isForkPostGloas
           ? {
-              executionPayloadBlockHash: toRootHex((state as unknown as CachedBeaconStateGloas).latestBlockHash),
+              executionPayloadBlockHash: toRootHex((state as CachedBeaconStateGloas).latestBlockHash),
               executionPayloadNumber: 0,
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
             }
@@ -173,9 +173,7 @@ export function initializeForkChoiceFromFinalizedState(
         blockHashFromBid: isForkPostGloas
           ? toRootHex((state as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash)
           : null,
-        parentBlockHash: isForkPostGloas
-          ? toRootHex((state as unknown as CachedBeaconStateGloas).latestBlockHash)
-          : null,
+        parentBlockHash: isForkPostGloas ? toRootHex((state as CachedBeaconStateGloas).latestBlockHash) : null,
       },
       currentSlot
     ),
@@ -260,7 +258,7 @@ export function initializeForkChoiceFromUnfinalizedState(
 
     ...(isForkPostGloas
       ? {
-          executionPayloadBlockHash: toRootHex((unfinalizedState as unknown as CachedBeaconStateGloas).latestBlockHash),
+          executionPayloadBlockHash: toRootHex((unfinalizedState as CachedBeaconStateGloas).latestBlockHash),
           executionPayloadNumber: 0,
           executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
         }
@@ -284,9 +282,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     blockHashFromBid: isForkPostGloas
       ? toRootHex((unfinalizedState as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash)
       : null,
-    parentBlockHash: isForkPostGloas
-      ? toRootHex((unfinalizedState as unknown as CachedBeaconStateGloas).latestBlockHash)
-      : null,
+    parentBlockHash: isForkPostGloas ? toRootHex((unfinalizedState as CachedBeaconStateGloas).latestBlockHash) : null,
   };
 
   const parentSlot = blockHeader.slot - 1;
