@@ -1,7 +1,7 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
-import {CheckpointWithPayload, IForkChoice} from "@lodestar/fork-choice";
-import {GENESIS_SLOT} from "@lodestar/params";
+import {CheckpointWithPayload, IForkChoice, PayloadStatus} from "@lodestar/fork-choice";
+import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
@@ -47,6 +47,17 @@ export async function getStateResponseWithRegen(
 ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
   const stateId = resolveStateId(chain.forkChoice, inStateId);
 
+  // For checkpoint identifiers on post-Gloas forks, serve the consensus post-state (EMPTY path)
+  // rather than a post-envelope variant. This matches spec intent and Prysm checkpoint behavior.
+  const checkpointStateId =
+    typeof stateId !== "string" && typeof stateId !== "number"
+      ? inStateId === "finalized" || inStateId === "justified"
+        ? chain.config.getForkSeqAtEpoch(stateId.epoch) >= ForkSeq.gloas
+          ? {...stateId, payloadStatus: PayloadStatus.EMPTY}
+          : stateId
+        : stateId
+      : null;
+
   const res =
     typeof stateId === "string"
       ? await chain.getStateByStateRoot(stateId, {allowRegen: true})
@@ -56,7 +67,7 @@ export async function getStateResponseWithRegen(
           : stateId >= chain.forkChoice.getFinalizedBlock().slot
             ? await chain.getStateBySlot(stateId, {allowRegen: true})
             : await chain.getHistoricalStateBySlot(stateId)
-        : await chain.getStateOrBytesByCheckpoint(stateId);
+        : await chain.getStateOrBytesByCheckpoint(checkpointStateId ?? stateId);
 
   if (!res) {
     throw new ApiError(404, `State not found for id '${inStateId}'`);
