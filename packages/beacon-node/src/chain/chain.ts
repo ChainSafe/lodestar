@@ -39,6 +39,7 @@ import {
   computeSyncCommitteeRewards,
   getEffectiveBalanceIncrementsZeroInactive,
   getEffectiveBalancesFromStateBytes,
+  isParentBlockFull,
   processSlots,
 } from "@lodestar/state-transition";
 import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
@@ -384,11 +385,13 @@ export class BeaconChain implements IBeaconChain {
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     blockStateCache.add(anchorState);
     blockStateCache.setHeadState(anchorState);
-    // TODO: For Gloas, determine if anchor state is block state or payload state
+    // Determine payload status from anchor state for Gloas
     // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
-    // Post-Gloas: Could be either - depends on whether anchor was loaded with payload processing
-    // For now, assume true
-    checkpointStateCache.add(checkpoint, anchorState, true);
+    // Post-Gloas: check if envelope was applied using isParentBlockFull()
+    const anchorPayloadPresent = isForkPostGloas(config.getForkName(anchorState.slot))
+      ? isParentBlockFull(anchorState as CachedBeaconStateGloas)
+      : true;
+    checkpointStateCache.add(checkpoint, anchorState, anchorPayloadPresent);
 
     const forkChoice = initializeForkChoice(
       config,

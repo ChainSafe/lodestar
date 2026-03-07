@@ -93,6 +93,23 @@ export async function verifyBlocksInEpoch(
         const updatedParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
         if (updatedParent) break;
 
+        const downloadedParentEnvelope = envelopes?.get(parentBlock.slot);
+        if (downloadedParentEnvelope && toRootHex(downloadedParentEnvelope.message.beaconBlockRoot) === parentRootHex) {
+          try {
+            await this.importExecutionPayloadEnvelope(downloadedParentEnvelope);
+            envelopes?.delete(parentBlock.slot);
+            this.logger.info("Imported downloaded parent envelope before block import", {
+              parentRoot: parentRootHex,
+              parentSlot: parentBlock.slot,
+              childSlot: block0.message.slot,
+              attempt,
+            });
+            break;
+          } catch (e) {
+            this.logger.debug("Failed importing downloaded parent envelope", {parentRoot: parentRootHex}, e as Error);
+          }
+        }
+
         const pendingEnvelope = this.pendingEnvelopes.get(parentRootHex);
         if (pendingEnvelope) {
           try {

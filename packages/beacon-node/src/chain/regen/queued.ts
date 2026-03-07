@@ -162,10 +162,15 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null {
     // Convert PayloadStatus to payloadPresent boolean.
     // PENDING blocks are in fork-choice but lack an envelope — treat as non-FULL.
-    const payloadPresent = head.payloadStatus === PayloadStatus.FULL;
+    const preferredPayloadPresent = head.payloadStatus === PayloadStatus.FULL;
+
+    // In some restart edge cases, fork-choice may reference a head variant whose payload status
+    // differs from the variant persisted in checkpoint cache. Fall back to the opposite variant
+    // to avoid startup failures (`headState does not exist`).
     return (
-      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, payloadPresent) ||
-      this.blockStateCache.get(head.stateRoot)
+      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, preferredPayloadPresent) ||
+      this.blockStateCache.get(head.stateRoot) ||
+      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, !preferredPayloadPresent)
     );
   }
 

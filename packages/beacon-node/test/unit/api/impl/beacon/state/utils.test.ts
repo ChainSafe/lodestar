@@ -1,6 +1,8 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {PayloadStatus} from "@lodestar/fork-choice";
+import {ForkSeq} from "@lodestar/params";
+import {getStateResponseWithRegen, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
 describe("beacon state api utils", () => {
@@ -56,5 +58,47 @@ describe("beacon state api utils", () => {
         expect.fail("validator index should be found - Uint8Array input");
       }
     });
+  });
+});
+
+describe("getStateResponseWithRegen", () => {
+  it("falls back to original checkpoint payload status if forced EMPTY lookup misses", async () => {
+    const finalizedCheckpoint = {
+      epoch: 123,
+      rootHex: "0xabc",
+      payloadStatus: PayloadStatus.FULL,
+      payloadPresent: true,
+    };
+
+    const expectedResponse = {
+      state: new Uint8Array([1, 2, 3]),
+      executionOptimistic: false,
+      finalized: true,
+    };
+
+    const chain = {
+      forkChoice: {
+        getFinalizedCheckpoint: vi.fn().mockReturnValue(finalizedCheckpoint),
+      },
+      config: {
+        getForkSeqAtEpoch: vi.fn().mockReturnValue(ForkSeq.gloas),
+      },
+      clock: {
+        currentSlot: 1000,
+      },
+      getStateByStateRoot: vi.fn(),
+      getStateBySlot: vi.fn(),
+      getHistoricalStateBySlot: vi.fn(),
+      getStateOrBytesByCheckpoint: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(expectedResponse),
+    } as never;
+
+    const response = await getStateResponseWithRegen(chain, "finalized");
+
+    expect(response).toBe(expectedResponse);
+    expect(chain.getStateOrBytesByCheckpoint).toHaveBeenNthCalledWith(1, {
+      ...finalizedCheckpoint,
+      payloadStatus: PayloadStatus.EMPTY,
+    });
+    expect(chain.getStateOrBytesByCheckpoint).toHaveBeenNthCalledWith(2, finalizedCheckpoint);
   });
 });

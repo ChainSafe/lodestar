@@ -405,23 +405,32 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
 
     if (canonicalBlocks.length === 0) break;
 
-    const canonicalEnvelopeEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
+    const canonicalEnvelopeEntries = await Promise.all(
       canonicalBlocks.map(async (block) => {
         const envelopeBytes = await db.executionPayloadEnvelope.getBinary(block.root);
         if (!envelopeBytes) {
-          throw Error(`No executionPayloadEnvelope found for slot ${block.slot} root ${toRootHex(block.root)}`);
+          // Not every canonical Gloas block is guaranteed to have a revealed envelope.
+          // Skip missing envelopes (orphaned/unrevealed payload path) instead of failing
+          // finalized archival processing.
+          return null;
         }
 
-        return {key: block.slot, value: envelopeBytes};
+        return {slot: block.slot, root: block.root, value: envelopeBytes};
       })
     );
 
-    await Promise.all([
-      db.executionPayloadEnvelopeArchive.batchPutBinary(canonicalEnvelopeEntries),
-      db.executionPayloadEnvelope.batchDelete(canonicalBlocks.map((block) => block.root)),
-    ]);
+    const envelopesToArchive = canonicalEnvelopeEntries.filter((entry) => entry !== null);
 
-    migratedEnvelopes += canonicalEnvelopeEntries.length;
+    if (envelopesToArchive.length > 0) {
+      await Promise.all([
+        db.executionPayloadEnvelopeArchive.batchPutBinary(
+          envelopesToArchive.map((entry) => ({key: entry.slot, value: entry.value}))
+        ),
+        db.executionPayloadEnvelope.batchDelete(envelopesToArchive.map((entry) => entry.root)),
+      ]);
+    }
+
+    migratedEnvelopes += envelopesToArchive.length;
   }
 
   return migratedEnvelopes;

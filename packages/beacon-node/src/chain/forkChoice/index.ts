@@ -10,7 +10,7 @@ import {
   ForkChoiceOpts as RawForkChoiceOpts,
   getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
-import {ZERO_HASH_HEX} from "@lodestar/params";
+import {ForkSeq, ZERO_HASH_HEX} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateGloas,
@@ -22,6 +22,7 @@ import {
   getEffectiveBalanceIncrementsZeroInactive,
   isExecutionStateType,
   isMergeTransitionComplete,
+  isParentBlockFull,
 } from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
@@ -106,7 +107,7 @@ export function initializeForkChoiceFromFinalizedState(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
-  const isForkPostGloas = (state as CachedBeaconStateGloas).latestBlockHash !== undefined;
+  const isForkPostGloas = config.getForkSeq(state.slot) >= ForkSeq.gloas;
 
   // Determine justified checkpoint payload status
   const justifiedPayloadStatus = getCheckpointPayloadStatus(state, justifiedCheckpoint.epoch);
@@ -148,16 +149,26 @@ export function initializeForkChoiceFromFinalizedState(
         unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
         unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
-        ...(isExecutionStateType(state) && isMergeTransitionComplete(state)
+        ...(isForkPostGloas
           ? {
-              executionPayloadBlockHash: toRootHex(state.latestExecutionPayloadHeader.blockHash),
-              executionPayloadNumber: state.latestExecutionPayloadHeader.blockNumber,
+              executionPayloadBlockHash: toRootHex((state as CachedBeaconStateGloas).latestBlockHash),
+              executionPayloadNumber: 0,
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
             }
-          : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+          : isExecutionStateType(state) && isMergeTransitionComplete(state)
+            ? {
+                executionPayloadBlockHash: toRootHex(state.latestExecutionPayloadHeader.blockHash),
+                executionPayloadNumber: state.latestExecutionPayloadHeader.blockNumber,
+                executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+              }
+            : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-        payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
+        payloadStatus: isForkPostGloas
+          ? isParentBlockFull(state as CachedBeaconStateGloas)
+            ? PayloadStatus.FULL
+            : PayloadStatus.EMPTY
+          : PayloadStatus.FULL,
         builderIndex: isForkPostGloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex : null,
         blockHashFromBid: isForkPostGloas
           ? toRootHex((state as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash)
@@ -206,7 +217,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   // this is not the justified state, but there is no other ways to get justified balances
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(unfinalizedState);
 
-  const isForkPostGloas = (unfinalizedState as CachedBeaconStateGloas).latestBlockHash !== undefined;
+  const isForkPostGloas = config.getForkSeq(unfinalizedState.slot) >= ForkSeq.gloas;
 
   // For unfinalized state, use getCheckpointPayloadStatus to determine the correct status.
   // It checks state.execution_payload_availability to determine EMPTY vs FULL.
@@ -245,16 +256,26 @@ export function initializeForkChoiceFromUnfinalizedState(
     unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
     unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
-    ...(isExecutionStateType(unfinalizedState) && isMergeTransitionComplete(unfinalizedState)
+    ...(isForkPostGloas
       ? {
-          executionPayloadBlockHash: toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash),
-          executionPayloadNumber: unfinalizedState.latestExecutionPayloadHeader.blockNumber,
+          executionPayloadBlockHash: toRootHex((unfinalizedState as CachedBeaconStateGloas).latestBlockHash),
+          executionPayloadNumber: 0,
           executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
         }
-      : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+      : isExecutionStateType(unfinalizedState) && isMergeTransitionComplete(unfinalizedState)
+        ? {
+            executionPayloadBlockHash: toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash),
+            executionPayloadNumber: unfinalizedState.latestExecutionPayloadHeader.blockNumber,
+            executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+          }
+        : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-    payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
+    payloadStatus: isForkPostGloas
+      ? isParentBlockFull(unfinalizedState as CachedBeaconStateGloas)
+        ? PayloadStatus.FULL
+        : PayloadStatus.EMPTY
+      : PayloadStatus.FULL,
     builderIndex: isForkPostGloas
       ? (unfinalizedState as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex
       : null,
