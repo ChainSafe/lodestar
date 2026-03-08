@@ -13,6 +13,7 @@ import {
 } from "../../../../src/sync/constants.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
+import {PeerIdStr} from "../../../../src/util/peerId.js";
 import {clock, config} from "../../../utils/blocksAndData.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
@@ -421,10 +422,10 @@ describe("sync / range / batch", async () => {
       }
 
       // Next rate-limited attempt exceeds MAX_RATE_LIMITED_RETRIES and falls through
-      // to regular download error tracking (resets rateLimitedAttempts, adds to failedDownloadAttempts)
+      // to regular download error tracking (resets rateLimitedPeers, adds to failedDownloadAttempts)
       batch.startDownloading(peer);
       const delayMs = batch.downloadingRateLimited(peer);
-      // rateLimitedAttempts was reset to 0
+      // rateLimitedPeers was reset
       expect(delayMs).toBe(0);
       expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
     });
@@ -476,6 +477,48 @@ describe("sync / range / batch", async () => {
       expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
     });
 
+    it("rateLimitedPeers should be included in getFailedPeers for peerBalancer", () => {
+      const batch = new Batch(0, config, clock, custodyConfig);
+      const peer2 = "peer2" as PeerIdStr;
+
+      // Rate-limit from peer1
+      batch.startDownloading(peer);
+      batch.downloadingRateLimited(peer);
+      batch.endCoolDown();
+
+      // Rate-limit from peer2
+      batch.startDownloading(peer2);
+      batch.downloadingRateLimited(peer2);
+      batch.endCoolDown();
+
+      // Both peers should appear in getFailedPeers
+      const failedPeers = batch.getFailedPeers();
+      expect(failedPeers).toContain(peer);
+      expect(failedPeers).toContain(peer2);
+    });
+
+    it("downloadingSuccess should clear rateLimitedPeers from getFailedPeers", () => {
+      const batch = new Batch(0, config, clock, custodyConfig);
+
+      // Rate-limit then succeed
+      batch.startDownloading(peer);
+      batch.downloadingRateLimited(peer);
+      batch.endCoolDown();
+      batch.startDownloading(peer);
+      batch.downloadingSuccess(peer, [
+        BlockInputPreData.createFromBlock({
+          block: ssz.capella.SignedBeaconBlock.defaultValue(),
+          blockRootHex: "0x1234",
+          source: BlockInputSource.byRoot,
+          seenTimestampSec: Date.now() / 1000,
+          forkName: ForkName.capella,
+          daOutOfRange: false,
+        }),
+      ]);
+
+      // rateLimitedPeers should be cleared
+      expect(batch.getFailedPeers()).not.toContain(peer);
+    });
     it("downloadingError should reset rate-limited attempt counter", () => {
       const batch = new Batch(0, config, clock, custodyConfig);
 

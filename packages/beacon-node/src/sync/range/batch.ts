@@ -103,8 +103,8 @@ export class Batch {
   readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
-  /** The number of consecutive rate-limited download attempts. Reset on any successful download. */
-  private rateLimitedAttempts = 0;
+  /** Peers that rate-limited us during download attempts. Used by peerBalancer to prefer alternative peers. */
+  readonly rateLimitedPeers: PeerIdStr[] = [];
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
@@ -263,7 +263,11 @@ export class Batch {
    * Gives a list of peers from which this batch has had a failed download or processing attempt.
    */
   getFailedPeers(): PeerIdStr[] {
-    return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.flatMap((a) => a.peers)];
+    return [
+      ...this.failedDownloadAttempts,
+      ...this.failedProcessingAttempts.flatMap((a) => a.peers),
+      ...this.rateLimitedPeers,
+    ];
   }
 
   getMetadata(): BatchMetadata {
@@ -296,7 +300,7 @@ export class Batch {
     // ensure that blocks are always sorted before getting stored on the batch.state or being used to getRequests
     blocks.sort((a, b) => a.slot - b.slot);
 
-    this.rateLimitedAttempts = 0; // Reset rate-limit streak on successful download
+    this.rateLimitedPeers.length = 0; // Reset rate-limit streak on successful download
     this.goodPeers.push(peer);
 
     let allComplete = true;
@@ -335,7 +339,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    this.rateLimitedAttempts = 0; // Reset rate-limit streak on a non-rate-limit error
+    this.rateLimitedPeers.length = 0; // Reset rate-limit streak on a non-rate-limit error
     this.failedDownloadAttempts.push(peer);
     if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
@@ -355,16 +359,17 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    this.rateLimitedAttempts++;
-    if (this.rateLimitedAttempts > MAX_RATE_LIMITED_RETRIES) {
+    if (this.rateLimitedPeers.length >= MAX_RATE_LIMITED_RETRIES) {
       // After exhausting rate-limit retries, fall through to regular download error handling.
       // downloadingError() will reset the rate-limit counter and handle attempt tracking.
       this.downloadingError(peer);
       return 0;
     }
 
+    this.rateLimitedPeers.push(peer);
+
     const delayMs = Math.min(
-      RATE_LIMITED_INITIAL_DELAY_MS * 2 ** (this.rateLimitedAttempts - 1),
+      RATE_LIMITED_INITIAL_DELAY_MS * 2 ** (this.rateLimitedPeers.length - 1),
       RATE_LIMITED_MAX_DELAY_MS
     );
 

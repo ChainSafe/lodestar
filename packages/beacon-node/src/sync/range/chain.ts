@@ -484,13 +484,17 @@ export class SyncChain {
         if (isRateLimited) {
           const delayMs = batch.downloadingRateLimited(peer.peerId);
           if (delayMs > 0) {
-            this.logger.debug("Batch download rate limited, backing off", {
+            this.logger.debug("Batch download rate limited", {
               id: this.logId,
               ...batch.getMetadata(),
               peer: prettyPrintPeerIdStr(peer.peerId),
+              rateLimitedPeers: batch.rateLimitedPeers.length,
               delayMs,
             });
-            await new Promise((r) => setTimeout(r, delayMs));
+            // Transition back to AwaitingDownload so triggerBatchDownloader can select
+            // a different peer. Rate-limited peers are tracked in getFailedPeers(),
+            // so peerBalancer will prefer alternative peers. If no alternative is available
+            // the backoff delay is applied before retrying with the same peer pool.
             batch.endCoolDown();
           } else {
             this.logger.debug("Batch download rate limited, max retries exhausted", {
