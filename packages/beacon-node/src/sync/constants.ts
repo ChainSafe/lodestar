@@ -80,8 +80,6 @@ export const MAX_RATE_LIMITED_RETRIES = 3;
 /**
  * Initial delay in milliseconds before retrying a rate-limited batch download.
  * Doubles on each consecutive rate-limited attempt up to {@link RATE_LIMITED_MAX_DELAY_MS}.
- * When alternative peers are available, the peerBalancer will prefer them over
- * rate-limited peers before applying backoff.
  */
 export const RATE_LIMITED_INITIAL_DELAY_MS = 50;
 

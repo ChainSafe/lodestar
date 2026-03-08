@@ -103,7 +103,7 @@ export class Batch {
   readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
-  /** Peers that rate-limited us during download attempts. Used by peerBalancer to prefer alternative peers. */
+  /** Peers that rate-limited us during download attempts. Reset when a download attempt does not fail due to rate limiting (e.g. on successful downloads or non-rate-limit errors). Used by peerBalancer to prefer alternative peers. */
   readonly rateLimitedPeers: PeerIdStr[] = [];
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
