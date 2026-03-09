@@ -1,5 +1,7 @@
 /**
- * Cache serialized bytes keyed by object identity.
+ * A cache to store the serialized version of an object
+ *
+ * This is a thin wrapper around WeakMap
  */
 export class SerializedCache {
   private map: WeakMap<object, Uint8Array> = new WeakMap();
