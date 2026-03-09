@@ -34,27 +34,34 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
   const slot = block.message.slot;
   const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toRootHex(blockRoot);
+  const fnPromises: Promise<void>[] = [];
 
   const blockBytes = this.serializedCache.get(block);
   if (blockBytes) {
     // skip serializing data if we already have it
     this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-    await this.db.block.putBinary(this.db.block.getId(block), blockBytes);
+    fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
   } else {
     this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-    await this.db.block.add(block);
+    fnPromises.push(this.db.block.add(block));
   }
 
   this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type});
 
   if (isBlockInputBlobs(blockInput)) {
-    if (!blockInput.hasAllData()) {
-      await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
-    }
-    const blobSidecars = blockInput.getBlobs();
-    await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
-    this.logger.debug("Persisted blobSidecars to hot DB", {blobsLen: blobSidecars.length, slot, root: blockRootHex});
+    fnPromises.push(
+      (async () => {
+        if (!blockInput.hasAllData()) {
+          await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
+        }
+        const blobSidecars = blockInput.getBlobs();
+        await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
+        this.logger.debug("Persisted blobSidecars to hot DB", {blobsLen: blobSidecars.length, slot, root: blockRootHex});
+      })()
+    );
   }
+
+  await Promise.all(fnPromises);
 }
 
 /**
