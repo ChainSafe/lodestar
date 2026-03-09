@@ -66,8 +66,7 @@ export async function createNodeJsLibp2p(
     }
   }
   const transports: Libp2pInit["transports"] = [];
-  // TODO: TCP should always be enabled, this is a hack to test QUIC
-  if (!networkOpts.disableQuic) {
+  if (!networkOpts.disableTcp) {
     transports.unshift(
       tcp({
         // Reject connections when the server's connection count gets high

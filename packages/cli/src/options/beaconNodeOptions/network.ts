@@ -25,6 +25,7 @@ export type NetworkArgs = {
   slotsToSubscribeBeforeAggregatorDuty?: number;
   disablePeerScoring?: boolean;
   disableQuic?: boolean;
+  disableTcp?: boolean;
   mdns?: boolean;
   directPeers?: string[];
   "network.maxPeers"?: number;
@@ -112,12 +113,13 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   }
 
   const disableQuic = args.disableQuic;
+  const disableTcp = args.disableTcp;
 
   const bindMu = listenAddress ? `${muArgs.listenAddress}${muArgs.discoveryPort}` : undefined;
-  const localMu = listenAddress ? `${muArgs.listenAddress}${muArgs.port}` : undefined;
+  const localMu = listenAddress && !disableTcp ? `${muArgs.listenAddress}${muArgs.port}` : undefined;
   const quicMu = listenAddress && !disableQuic ? `${muArgs.listenAddress}${muArgs.quicPort}` : undefined;
   const bindMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.discoveryPort6}` : undefined;
-  const localMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
+  const localMu6 = listenAddress6 && !disableTcp ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
   const quicMu6 = listenAddress6 && !disableQuic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
   const targetPeers = args.targetPeers;
@@ -160,6 +162,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
     disablePeerScoring: args.disablePeerScoring,
     disableQuic,
+    disableTcp,
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
@@ -290,6 +293,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "boolean",
     description: "Disable QUIC transport",
     defaultDescription: String(defaultOptions.network.disableQuic === true),
+    group: "network",
+  },
+
+  disableTcp: {
+    type: "boolean",
+    description: "Disable TCP transport",
+    defaultDescription: String(defaultOptions.network.disableTcp === true),
     group: "network",
   },
 

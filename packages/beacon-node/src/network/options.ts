@@ -48,6 +48,7 @@ export interface NetworkOptions
    */
   disconnectThreshold?: number;
   disableQuic?: boolean;
+  disableTcp?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -70,6 +71,8 @@ export const defaultNetworkOptions: NetworkOptions = {
   disableLightClientServer: false,
   // enable quic by default
   disableQuic: false,
+  // enable tcp by default
+  disableTcp: false,
   // specific option for fulu
   //   - this is the same to TARGET_SUBNET_PEERS
   //   - for fusaka-devnets, we have 25-30 peers per subnet
