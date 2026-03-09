@@ -152,7 +152,7 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
   /** Only safe to call when `hasBlockAndAllData` is true */
   getTimeComplete(): number;
   /**
-   * Return object identities used as keys in `SerializedCache` that can be safely removed
+   * Return object references used as keys in `SerializedCache` that can be safely removed
    * once this block input lifecycle has completed.
    */
   getSerializedCacheKeys(): object[];

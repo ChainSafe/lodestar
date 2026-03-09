@@ -15,7 +15,7 @@ export class SerializedCache {
   }
 
   /**
-   * Delete cached serialized entries for the provided object identities.
+   * Delete cached serialized entries for the provided object references.
    * Must only be called after all DB writes that may read from this cache have completed,
    * otherwise cached serialized bytes will be unavailable and data will be re-serialized unnecessarily.
    */
