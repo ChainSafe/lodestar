@@ -1,7 +1,7 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithPayload, IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus, IForkChoice} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
@@ -52,7 +52,7 @@ export async function archiveBlocks(
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer | undefined,
   logger: Logger,
-  finalizedCheckpoint: CheckpointWithPayload,
+  finalizedCheckpoint: CheckpointWithPayloadStatus,
   currentEpoch: Epoch,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,

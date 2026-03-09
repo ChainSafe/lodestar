@@ -2,7 +2,13 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, CheckpointWithPayload, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  CheckpointWithPayloadStatus,
+  IForkChoice,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -1186,7 +1192,7 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private justifiedBalancesGetter(
-    checkpoint: CheckpointWithPayload,
+    checkpoint: CheckpointWithPayloadStatus,
     blockState: CachedBeaconStateAllForks
   ): EffectiveBalanceIncrements {
     this.metrics?.balancesCache.requests.inc();
@@ -1225,7 +1231,7 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private closestJustifiedBalancesStateToCheckpoint(
-    checkpoint: CheckpointWithPayload,
+    checkpoint: CheckpointWithPayloadStatus,
     blockState: CachedBeaconStateAllForks
   ): {state: CachedBeaconStateAllForks; stateId: string; shouldWarn: boolean} {
     const state = this.regen.getCheckpointStateSync(checkpoint);

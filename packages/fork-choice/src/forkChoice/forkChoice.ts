@@ -54,7 +54,7 @@ import {
   NotReorgedReason,
   ShouldOverrideForkChoiceUpdateResult,
 } from "./interface.js";
-import {CheckpointWithPayload, IForkChoiceStore, JustifiedBalances, toCheckpointWithPayload} from "./store.js";
+import {CheckpointWithPayloadStatus, IForkChoiceStore, JustifiedBalances, toCheckpointWithPayload} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;
@@ -557,11 +557,11 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes;
   }
 
-  getFinalizedCheckpoint(): CheckpointWithPayload {
+  getFinalizedCheckpoint(): CheckpointWithPayloadStatus {
     return this.fcStore.finalizedCheckpoint;
   }
 
-  getJustifiedCheckpoint(): CheckpointWithPayload {
+  getJustifiedCheckpoint(): CheckpointWithPayloadStatus {
     return this.fcStore.justified.checkpoint;
   }
 
@@ -700,8 +700,8 @@ export class ForkChoice implements IForkChoice {
     // This is an optimization. It should reduce the amount of times we run
     // `process_justification_and_finalization` by approximately 1/3rd when the chain is
     // performing optimally.
-    let unrealizedJustifiedCheckpoint: CheckpointWithPayload;
-    let unrealizedFinalizedCheckpoint: CheckpointWithPayload;
+    let unrealizedJustifiedCheckpoint: CheckpointWithPayloadStatus;
+    let unrealizedFinalizedCheckpoint: CheckpointWithPayloadStatus;
     if (this.opts?.computeUnrealized) {
       if (
         parentBlock.unrealizedJustifiedEpoch === blockEpoch &&
@@ -1478,8 +1478,8 @@ export class ForkChoice implements IForkChoice {
    * Since this balances are already available the getter is just `() => balances`, without cache interaction
    */
   private updateCheckpoints(
-    justifiedCheckpoint: CheckpointWithPayload,
-    finalizedCheckpoint: CheckpointWithPayload,
+    justifiedCheckpoint: CheckpointWithPayloadStatus,
+    finalizedCheckpoint: CheckpointWithPayloadStatus,
     getJustifiedBalances: () => JustifiedBalances
   ): void {
     // Update justified checkpoint.
@@ -1499,8 +1499,8 @@ export class ForkChoice implements IForkChoice {
    * Update unrealized checkpoints in store if necessary
    */
   private updateUnrealizedCheckpoints(
-    unrealizedJustifiedCheckpoint: CheckpointWithPayload,
-    unrealizedFinalizedCheckpoint: CheckpointWithPayload,
+    unrealizedJustifiedCheckpoint: CheckpointWithPayloadStatus,
+    unrealizedFinalizedCheckpoint: CheckpointWithPayloadStatus,
     getJustifiedBalances: () => JustifiedBalances
   ): void {
     if (unrealizedJustifiedCheckpoint.epoch > this.fcStore.unrealizedJustified.checkpoint.epoch) {
