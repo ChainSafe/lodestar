@@ -14,6 +14,11 @@ export class SerializedCache {
     this.map.set(obj, serialized);
   }
 
+  /**
+   * Delete cached serialized entries for the provided object identities.
+   * Must only be called after all DB writes that may read from this cache have completed,
+   * otherwise cached serialized bytes will be unavailable and data will be re-serialized unnecessarily.
+   */
   delete(objs: object[]): void {
     for (const obj of objs) {
       this.map.delete(obj);
