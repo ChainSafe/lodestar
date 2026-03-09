@@ -1477,11 +1477,8 @@ export class ProtoArray {
    * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
    * For pre-Gloas blocks: returns FULL variants
    */
-  *iterateAncestorNodes(blockRoot: RootHex): IterableIterator<ProtoNode> {
-    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const defaultStatus = this.getDefaultVariant(blockRoot);
-    const startIndex =
-      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
+  *iterateAncestorNodes(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoNode> {
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
     if (startIndex === undefined) {
       return;
     }
@@ -1520,11 +1517,8 @@ export class ProtoArray {
    * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
    * For pre-Gloas blocks: returns FULL variants
    */
-  getAllAncestorNodes(blockRoot: RootHex): ProtoNode[] {
-    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const defaultStatus = this.getDefaultVariant(blockRoot);
-    const startIndex =
-      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
+  getAllAncestorNodes(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoNode[] {
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
     if (startIndex === undefined) {
       return [];
     }
@@ -1537,12 +1531,10 @@ export class ProtoArray {
       });
     }
 
-    // Include starting node if node is pre-gloas
-    // Reason why we exclude post-gloas is because node is always default variant (PENDING)
-    // which we want to exclude.
+    // Exclude PENDING variant from returned ancestors.
     const nodes: ProtoNode[] = [];
 
-    if (!isGloasBlock(node)) {
+    if (node.payloadStatus !== PayloadStatus.PENDING) {
       nodes.push(node);
     }
 
@@ -1567,13 +1559,8 @@ export class ProtoArray {
    * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
    * For pre-Gloas blocks: returns FULL variants
    */
-  getAllNonAncestorNodes(blockRoot: RootHex): ProtoNode[] {
-    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const defaultStatus = this.getDefaultVariant(blockRoot);
-    if (defaultStatus === undefined) {
-      return [];
-    }
-    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus);
+  getAllNonAncestorNodes(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoNode[] {
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
     if (startIndex === undefined) {
       return [];
     }
@@ -1613,11 +1600,11 @@ export class ProtoArray {
    * For Gloas blocks: returns EMPTY/FULL variants (not PENDING) based on parent payload status
    * For pre-Gloas blocks: returns FULL variants
    */
-  getAllAncestorAndNonAncestorNodes(blockRoot: RootHex): {ancestors: ProtoNode[]; nonAncestors: ProtoNode[]} {
-    // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const defaultStatus = this.getDefaultVariant(blockRoot);
-    const startIndex =
-      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(blockRoot, defaultStatus) : undefined;
+  getAllAncestorAndNonAncestorNodes(
+    blockRoot: RootHex,
+    payloadStatus: PayloadStatus
+  ): {ancestors: ProtoNode[]; nonAncestors: ProtoNode[]} {
+    const startIndex = this.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
     if (startIndex === undefined) {
       return {ancestors: [], nonAncestors: []};
     }
@@ -1735,26 +1722,28 @@ export class ProtoArray {
   /**
    * Returns `true` if the `descendantRoot` has an ancestor with `ancestorRoot`.
    * Always returns `false` if either input roots are unknown.
-   * Still returns `true` if `ancestorRoot` === `descendantRoot` (and the roots are known)
+   * Still returns `true` if `ancestorRoot` === `descendantRoot` and payload statuses match.
    */
-  isDescendant(ancestorRoot: RootHex, descendantRoot: RootHex): boolean {
-    // We use the default variant (PENDING for Gloas, FULL for pre-Gloas)
-    // We cannot use FULL/EMPTY variants for Gloas because they may not be canonical
-    const defaultStatus = this.getDefaultVariant(ancestorRoot);
-    const ancestorNode = defaultStatus !== undefined ? this.getNode(ancestorRoot, defaultStatus) : undefined;
+  isDescendant(
+    ancestorRoot: RootHex,
+    ancestorPayloadStatus: PayloadStatus,
+    descendantRoot: RootHex,
+    descendantPayloadStatus: PayloadStatus
+  ): boolean {
+    const ancestorNode = this.getNode(ancestorRoot, ancestorPayloadStatus);
     if (!ancestorNode) {
       return false;
     }
 
-    if (ancestorRoot === descendantRoot) {
+    if (ancestorRoot === descendantRoot && ancestorPayloadStatus === descendantPayloadStatus) {
       return true;
     }
 
-    for (const node of this.iterateAncestorNodes(descendantRoot)) {
+    for (const node of this.iterateAncestorNodes(descendantRoot, descendantPayloadStatus)) {
       if (node.slot < ancestorNode.slot) {
         return false;
       }
-      if (node.blockRoot === ancestorNode.blockRoot) {
+      if (node.blockRoot === ancestorNode.blockRoot && node.payloadStatus === ancestorNode.payloadStatus) {
         return true;
       }
     }
