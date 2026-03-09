@@ -2,6 +2,7 @@ import {describe, expect, it} from "vitest";
 import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
+import {NetworkArgs, parseArgs as parseNetworkArgs} from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {
@@ -209,5 +210,48 @@ describe("options / beaconNodeOptions", () => {
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     expect(options).toEqual(expectedOptions);
+  });
+});
+
+describe("options / network / disableTcp and disableQuic", () => {
+  it("should include both tcp and quic multiaddrs by default", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000} as NetworkArgs);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+  });
+
+  it("should exclude tcp multiaddrs when disableTcp is true", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, disableTcp: true} as NetworkArgs);
+    const tcpAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/tcp/"));
+    expect(tcpAddrs).toHaveLength(0);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+    expect(result.disableTcp).toBe(true);
+  });
+
+  it("should exclude quic multiaddrs when disableQuic is true", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, disableQuic: true} as NetworkArgs);
+    const quicAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/quic"));
+    expect(quicAddrs).toHaveLength(0);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
+    expect(result.disableQuic).toBe(true);
+  });
+
+  it("should exclude ipv6 tcp multiaddrs when disableTcp is true", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      listenAddress6: "::",
+      port: 9000,
+      disableTcp: true,
+    } as NetworkArgs);
+    const tcpAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/tcp/"));
+    expect(tcpAddrs).toHaveLength(0);
+    // quic for both ipv4 and ipv6 should still be present
+    const quicAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/quic"));
+    expect(quicAddrs).toHaveLength(2);
+  });
+
+  it("should pass disableTcp through to network options", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, disableTcp: true} as NetworkArgs);
+    expect(result.disableTcp).toBe(true);
   });
 });

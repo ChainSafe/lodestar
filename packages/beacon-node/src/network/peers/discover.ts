@@ -88,7 +88,7 @@ export type SubnetDiscvQueryMs = {
 
 type CachedENR = {
   peerId: PeerId;
-  multiaddrTCP: Multiaddr;
+  multiaddrTCP?: Multiaddr;
   multiaddrQUIC?: Multiaddr;
   subnets: Record<SubnetType, boolean[]>;
   addedUnixMs: number;
@@ -399,15 +399,14 @@ export class PeerDiscovery {
       this.randomNodeQuery.count++;
     }
     const peerId = enr.peerId;
-    // tcp multiaddr is known to be be present, checked inside the worker
+    // At least one transport is known to be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
-    if (!multiaddrTCP) {
-      this.logger.warn("Discv5 worker sent enr without tcp multiaddr", {enr: enr.encodeTxt()});
+    const multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);
+    if (!multiaddrTCP && !multiaddrQUIC) {
+      this.logger.warn("Discv5 worker sent enr without any transport multiaddr", {enr: enr.encodeTxt()});
       this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.no_multiaddrs});
       return;
     }
-    // quic multiaddr is optional
-    const multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);
 
     // Are this fields mandatory?
     const attnetsBytes = enr.kvs.get(ENRKey.attnets); // 64 bits
@@ -442,7 +441,7 @@ export class PeerDiscovery {
    */
   private handleDiscoveredPeer(
     peerId: PeerId,
-    multiaddrTCP: Multiaddr,
+    multiaddrTCP: Multiaddr | undefined,
     multiaddrQUIC: Multiaddr | undefined,
     attnets: boolean[],
     syncnets: boolean[],
@@ -469,8 +468,10 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.already_connected;
       }
 
-      // ignore peers if they don't have the transport we are using
-      if (!this.transports.includes("tcp") && !multiaddrQUIC) {
+      // ignore peers if they don't share any transport with us
+      const hasTcpMatch = this.transports.includes("tcp") && multiaddrTCP;
+      const hasQuicMatch = this.transports.includes("quic") && multiaddrQUIC;
+      if (!hasTcpMatch && !hasQuicMatch) {
         return DiscoveredPeerStatus.no_multiaddrs;
       }
 
