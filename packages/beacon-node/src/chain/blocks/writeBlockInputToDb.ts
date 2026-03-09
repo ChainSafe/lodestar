@@ -1,4 +1,7 @@
+import {ForkPostDeneb, isForkPostDeneb} from "@lodestar/params";
+import {SignedBeaconBlock} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {BeaconChain} from "../chain.js";
 import {
   IBlockInput,
@@ -26,7 +29,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blockInput: IBlockI
   }
 
   await Promise.all(promises);
-  this.logger.debug("Persisted blockInput to db", {slot: blockInput.slot});
+  this.logger.debug("Persisted blockInput to db", {slot: blockInput.slot, root: blockInput.blockRootHex});
 }
 
 async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput): Promise<void> {
@@ -34,6 +37,9 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
   const slot = block.message.slot;
   const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toRootHex(blockRoot);
+  const numBlobs = isForkPostDeneb(blockInput.forkName)
+    ? getBlobKzgCommitments(blockInput.forkName, block as SignedBeaconBlock<ForkPostDeneb>).length
+    : undefined;
   const fnPromises: Promise<void>[] = [];
 
   const blockBytes = this.serializedCache.get(block);
@@ -46,7 +52,7 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
     fnPromises.push(this.db.block.add(block));
   }
 
-  this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type});
+  this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type, numBlobs});
 
   if (isBlockInputBlobs(blockInput)) {
     fnPromises.push(
@@ -56,7 +62,11 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
         }
         const blobSidecars = blockInput.getBlobs();
         await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
-        this.logger.debug("Persisted blobSidecars to hot DB", {blobsLen: blobSidecars.length, slot, root: blockRootHex});
+        this.logger.debug("Persisted blobSidecars to hot DB", {
+          slot,
+          root: blockRootHex,
+          numBlobs: blobSidecars.length,
+        });
       })()
     );
   }
