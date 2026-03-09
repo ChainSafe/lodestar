@@ -7,7 +7,7 @@ minimumReleaseAge: 2880
 
 minimumReleaseAgeExclude:
   - "@libp2p/*"
-  - "@chainsafe/libp2p-quic"
+  - "@chainsafe/libp2p-quic*"
   - "libp2p"
 
 nodeLinker: isolated
