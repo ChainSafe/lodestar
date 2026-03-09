@@ -539,7 +539,8 @@ export class Network implements INetwork {
         this.config.getForkSeq(this.clock.currentSlot) >= ForkSeq.altair ? [Version.V2] : [Version.V2, Version.V1],
         request
       ),
-      request
+      request,
+      this.chain.serializedCache
     );
   }
 
