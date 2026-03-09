@@ -645,6 +645,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     variants.delete(payloadPresent);
     if (variants.size === 0) {
       rootMap.delete(rootHex);
+      if (rootMap.size === 0) {
+        this.epochIndex.delete(epoch);
+      }
     }
   }
 
