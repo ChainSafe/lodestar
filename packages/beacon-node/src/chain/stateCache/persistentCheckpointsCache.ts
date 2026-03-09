@@ -210,7 +210,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       return stateOrStateBytesData ?? null;
     }
     const {persistedKey, stateBytes} = stateOrStateBytesData;
-    const logMeta = {persistedKey: toHex(persistedKey)};
+    const logMeta = {
+      epoch: cp.epoch,
+      rootHex: cp.rootHex,
+      payloadPresent: cp.payloadPresent,
+      persistedKey: toHex(persistedKey),
+    };
     this.logger.debug("Reload: read state successful", logMeta);
     this.metrics?.cpStateCache.stateReloadSecFromSlot.observe(
       this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0
@@ -305,7 +310,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Similar to get() api without reloading from disk
    */
-  get(cpOrKey: CheckpointHexPayload | string): CachedBeaconStateAllForks | null {
+  get(cpOrKey: CheckpointHexPayload | CacheKey): CachedBeaconStateAllForks | null {
     this.metrics?.cpStateCache.lookups.inc();
     const cpKey = typeof cpOrKey === "string" ? cpOrKey : toCacheKey(cpOrKey);
     const cacheItem = this.cache.get(cpKey);
@@ -346,11 +351,16 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.logger.verbose("Added checkpoint state to memory but a persisted key existed", {
         epoch: cp.epoch,
         rootHex: cpHex.rootHex,
+        payloadPresent,
         persistedKey: toHex(persistedKey),
       });
     } else {
       this.cache.set(key, {type: CacheItemType.inMemory, state});
-      this.logger.verbose("Added checkpoint state to memory", {epoch: cp.epoch, rootHex: cpHex.rootHex});
+      this.logger.verbose("Added checkpoint state to memory", {
+        epoch: cp.epoch,
+        rootHex: cpHex.rootHex,
+        payloadPresent,
+      });
     }
     this.addToEpochIndex(cp.epoch, cpHex.rootHex, cpHex.payloadPresent);
     this.prunePersistedStates();
@@ -825,13 +835,21 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           }
         }
         this.cache.delete(key);
+        this.logger.verbose("Pruned checkpoint state", {
+          epoch,
+          rootHex,
+          payloadPresent,
+          type: cacheItem ? (isPersistedCacheItem(cacheItem) ? "persisted" : "in-memory") : "missing",
+        });
       }
     }
     this.epochIndex.delete(epoch);
-    this.logger.verbose("Pruned checkpoint states for epoch", {
+    this.logger.verbose("Pruned all checkpoint states for epoch", {
       epoch,
       persistCount,
-      rootHexes: Array.from(rootHexMap.keys()).join(","),
+      items: Array.from(rootHexMap.entries())
+        .flatMap(([rootHex, variants]) => Array.from(variants).map((p) => `${rootHex}:${p}`))
+        .join(","),
     });
   }
 
