@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
-import {SignableENR} from "@chainsafe/enr";
 import tmp from "tmp";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {SignableENR} from "@chainsafe/enr";
 import {initPrivateKeyAndEnr, overwriteEnrWithCliArgs} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {testLogger} from "../../utils.js";
@@ -14,11 +14,7 @@ describe("overwriteEnrWithCliArgs", () => {
     const enr = SignableENR.createFromPrivateKey(privateKey);
     const logger = testLogger();
 
-    overwriteEnrWithCliArgs(
-      enr,
-      {listenAddress: "0.0.0.0", port: 9000, nat: true} as unknown as BeaconArgs,
-      logger
-    );
+    overwriteEnrWithCliArgs(enr, {listenAddress: "0.0.0.0", port: 9000, nat: true} as unknown as BeaconArgs, logger);
 
     expect(enr.tcp).toBe(9000);
     expect(enr.quic).toBe(9001);
@@ -80,11 +76,7 @@ describe("overwriteEnrWithCliArgs", () => {
     const logger = testLogger();
 
     // No quicPort arg, no enr.quic arg — should fall back to existing enr value
-    overwriteEnrWithCliArgs(
-      enr,
-      {listenAddress: "0.0.0.0", port: 9000, nat: true} as unknown as BeaconArgs,
-      logger
-    );
+    overwriteEnrWithCliArgs(enr, {listenAddress: "0.0.0.0", port: 9000, nat: true} as unknown as BeaconArgs, logger);
 
     expect(enr.quic).toBe(9001);
     expect(enr.quic6).toBe(9002);
