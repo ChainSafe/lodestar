@@ -229,8 +229,8 @@ importers:
         specifier: ^17.0.0
         version: 17.0.0
       '@chainsafe/libp2p-quic':
-        specifier: file:chainsafe-libp2p-quic-1.1.8.tgz
-        version: file:packages/beacon-node/chainsafe-libp2p-quic-1.1.8.tgz
+        specifier: ^2.0.0
+        version: 2.0.0
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -1440,10 +1440,9 @@ packages:
   '@chainsafe/libp2p-noise@17.0.0':
     resolution: {integrity: sha512-vwrmY2Y+L1xYhIDiEpl61KHxwrLCZoXzTpwhyk34u+3+6zCAZPL3GxH3i2cs+u5IYNoyLptORdH17RKFXy7upA==}
 
-  '@chainsafe/libp2p-quic@file:packages/beacon-node/chainsafe-libp2p-quic-1.1.8.tgz':
-    resolution: {integrity: sha512-VmVi/YViMBwNXw04MSaVLNTI+GrxVRour4igjVL1lSlM1VXGcrrQ6g6OCjcvQuOUm5wl3xQ3Dvy9UF/oqkZJVA==, tarball: file:packages/beacon-node/chainsafe-libp2p-quic-1.1.8.tgz}
-    version: 1.1.8
-    engines: {node: '>= 20'}
+  '@chainsafe/libp2p-quic@2.0.0':
+    resolution: {integrity: sha512-RNxHNdo22XhS5DEFbT0fAaZFfrEmuIVRP5InqgMq8md6r0f61AATZdmYqAuNkcj6VSBareLlCAJ/iuhhNZYt7A==}
+    engines: {node: '>= 22'}
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
@@ -7692,7 +7691,7 @@ snapshots:
       uint8arrays: 5.1.0
       wherearewe: 2.0.1
 
-  '@chainsafe/libp2p-quic@file:packages/beacon-node/chainsafe-libp2p-quic-1.1.8.tgz':
+  '@chainsafe/libp2p-quic@2.0.0':
     dependencies:
       '@libp2p/crypto': 5.1.13
       '@libp2p/interface': 3.1.0
