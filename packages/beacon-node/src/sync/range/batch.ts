@@ -105,6 +105,8 @@ export class Batch {
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
   /** Peers that rate-limited us during download attempts. Reset when a download attempt does not fail due to rate limiting (e.g. on successful downloads or non-rate-limit errors). Used by peerBalancer to prefer alternative peers. */
   readonly rateLimitedPeers: PeerIdStr[] = [];
+  /** Cooldown deadline for peers in `rateLimitedPeers`. While active, retries to those peers should be delayed. */
+  private rateLimitCoolDownUntilMs = 0;
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
@@ -270,6 +272,24 @@ export class Batch {
     ];
   }
 
+  /**
+   * Remaining cooldown for a rate-limited peer. Returns 0 when:
+   * - batch is not in RateLimited state,
+   * - peer is not part of current rate-limit streak,
+   * - or cooldown already elapsed.
+   */
+  getRateLimitCoolDownRemainingMs(peer: PeerIdStr): number {
+    if (this.state.status !== BatchStatus.RateLimited) {
+      return 0;
+    }
+
+    if (!this.rateLimitedPeers.includes(peer)) {
+      return 0;
+    }
+
+    return Math.max(this.rateLimitCoolDownUntilMs - Date.now(), 0);
+  }
+
   getMetadata(): BatchMetadata {
     return {startEpoch: this.startEpoch, status: this.state.status};
   }
@@ -301,6 +321,7 @@ export class Batch {
     blocks.sort((a, b) => a.slot - b.slot);
 
     this.rateLimitedPeers.length = 0; // Reset rate-limit streak on successful download
+    this.rateLimitCoolDownUntilMs = 0;
     this.goodPeers.push(peer);
 
     let allComplete = true;
@@ -340,6 +361,7 @@ export class Batch {
     }
 
     this.rateLimitedPeers.length = 0; // Reset rate-limit streak on a non-rate-limit error
+    this.rateLimitCoolDownUntilMs = 0;
     this.failedDownloadAttempts.push(peer);
     if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
@@ -373,6 +395,7 @@ export class Batch {
       RATE_LIMITED_MAX_DELAY_MS
     );
 
+    this.rateLimitCoolDownUntilMs = Date.now() + delayMs;
     this.state = {status: BatchStatus.RateLimited, blocks: this.state.blocks};
     return delayMs;
   }
@@ -385,6 +408,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.RateLimited));
     }
 
+    this.rateLimitCoolDownUntilMs = 0;
     this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
   }
 

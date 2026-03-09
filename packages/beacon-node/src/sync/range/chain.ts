@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Root, Slot} from "@lodestar/types";
-import {ErrorAborted, LodestarError, Logger, sleep, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -132,6 +132,8 @@ export class SyncChain {
   private readonly batchProcessor = new ItTrigger();
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
+  /** One-shot timers used to wake downloader when a batch cooldown elapses. */
+  private readonly batchCoolDownTimeouts = new Map<Epoch, ReturnType<typeof setTimeout>>();
   private readonly peerset = new Map<PeerIdStr, ChainTarget>();
 
   private readonly logger: Logger;
@@ -221,6 +223,7 @@ export class SyncChain {
    * Permanently remove this chain. Throws the main AsyncIterable
    */
   remove(): void {
+    this.clearAllBatchCoolDownWakeups();
     this.batchProcessor.end(new ErrorAborted("SyncChain"));
   }
 
@@ -291,6 +294,35 @@ export class SyncChain {
     }
   }
 
+  private scheduleBatchCoolDownWakeup(startEpoch: Epoch, delayMs: number): void {
+    const existing = this.batchCoolDownTimeouts.get(startEpoch);
+    if (existing) {
+      clearTimeout(existing);
+    }
+
+    const timeout = setTimeout(() => {
+      this.batchCoolDownTimeouts.delete(startEpoch);
+      this.triggerBatchDownloader();
+    }, delayMs);
+
+    this.batchCoolDownTimeouts.set(startEpoch, timeout);
+  }
+
+  private clearBatchCoolDownWakeup(startEpoch: Epoch): void {
+    const timeout = this.batchCoolDownTimeouts.get(startEpoch);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.batchCoolDownTimeouts.delete(startEpoch);
+    }
+  }
+
+  private clearAllBatchCoolDownWakeups(): void {
+    for (const timeout of this.batchCoolDownTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.batchCoolDownTimeouts.clear();
+  }
+
   /**
    * Main Promise that handles the sync process. Will resolve when initial sync completes
    * i.e. when it successfully processes a epoch >= than this chain `targetEpoch`
@@ -316,6 +348,7 @@ export class SyncChain {
         if (batch) await this.processBatch(batch);
       }
 
+      this.clearAllBatchCoolDownWakeups();
       this.status = SyncChainStatus.Done;
       this.logger.verbose("SyncChain Done", {id: this.logId});
     } catch (e) {
@@ -327,6 +360,7 @@ export class SyncChain {
         this.pruneBlockInputs(batch.getBlocks());
       }
 
+      this.clearAllBatchCoolDownWakeups();
       this.status = SyncChainStatus.Error;
       this.logger.verbose("SyncChain Error", {id: this.logId}, e as Error);
 
@@ -387,14 +421,28 @@ export class SyncChain {
 
     // Retry download of existing batches
     for (const batch of this.batches.values()) {
-      if (batch.state.status !== BatchStatus.AwaitingDownload) {
+      if (batch.state.status !== BatchStatus.AwaitingDownload && batch.state.status !== BatchStatus.RateLimited) {
         continue;
       }
 
       const peer = peerBalancer.bestPeerToRetryBatch(batch);
-      if (peer) {
-        void this.sendBatch(batch, peer);
+      if (!peer) {
+        continue;
       }
+
+      if (batch.state.status === BatchStatus.RateLimited) {
+        const remainingCoolDownMs = batch.getRateLimitCoolDownRemainingMs(peer.peerId);
+        if (remainingCoolDownMs > 0) {
+          this.scheduleBatchCoolDownWakeup(batch.startEpoch, remainingCoolDownMs);
+          continue;
+        }
+
+        // Cooldown elapsed (or selected peer is not part of the rate-limited set), resume normal retry flow.
+        batch.endCoolDown();
+      }
+
+      this.clearBatchCoolDownWakeup(batch.startEpoch);
+      void this.sendBatch(batch, peer);
     }
 
     // find the next pending batch and request it from the peer
@@ -467,6 +515,8 @@ export class SyncChain {
       ...batch.getMetadata(),
       peer: prettyPrintPeerIdStr(peer.peerId),
     });
+    this.clearBatchCoolDownWakeup(batch.startEpoch);
+
     try {
       batch.startDownloading(peer.peerId);
 
@@ -492,12 +542,7 @@ export class SyncChain {
               rateLimitedPeers: uniqueRateLimitedPeers.map((peerId) => prettyPrintPeerIdStr(peerId)).join(", "),
               delayMs,
             });
-            // Wait for cooldown before transitioning back to AwaitingDownload so triggerBatchDownloader can select
-            // a different peer. Rate-limited peers are tracked in getFailedPeers(),
-            // so peerBalancer will prefer alternative peers. If no alternative is available
-            // the backoff delay is applied before retrying with the same peer pool.
-            await sleep(delayMs);
-            batch.endCoolDown();
+            this.scheduleBatchCoolDownWakeup(batch.startEpoch, delayMs);
           } else {
             this.logger.debug("Batch download rate limited, max retries exhausted", {
               id: this.logId,
@@ -668,6 +713,7 @@ export class SyncChain {
     for (const [batchKey, batch] of this.batches.entries()) {
       if (batch.startEpoch < newLastEpochWithProcessBlocks) {
         this.batches.delete(batchKey);
+        this.clearBatchCoolDownWakeup(batchKey);
         this.validatedEpochs += EPOCHS_PER_BATCH;
 
         // The last batch attempt is right, all others are wrong. Penalize other peers

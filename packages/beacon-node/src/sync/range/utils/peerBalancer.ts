@@ -55,7 +55,7 @@ export class ChainPeersBalancer {
    * Sort peers by (1) no failed request (2) less active requests, then pick first
    */
   bestPeerToRetryBatch(batch: Batch): PeerSyncMeta | undefined {
-    if (batch.state.status !== BatchStatus.AwaitingDownload) {
+    if (batch.state.status !== BatchStatus.AwaitingDownload && batch.state.status !== BatchStatus.RateLimited) {
       return;
     }
     const {columnsRequest} = batch.requests;
@@ -88,7 +88,7 @@ export class ChainPeersBalancer {
    * Return peers with 0 or no active requests that has a higher target slot than this batch and has columns we need.
    */
   idlePeerForBatch(batch: Batch): PeerSyncInfo | undefined {
-    if (batch.state.status !== BatchStatus.AwaitingDownload) {
+    if (batch.state.status !== BatchStatus.AwaitingDownload && batch.state.status !== BatchStatus.RateLimited) {
       return;
     }
     const eligiblePeers = this.filterPeers(batch, this.custodyConfig.sampledColumns, true);
@@ -113,7 +113,7 @@ export class ChainPeersBalancer {
   private filterPeers(batch: Batch, requestColumns: number[], noActiveRequest: boolean): PeerInfoColumn[] {
     const eligiblePeers: PeerInfoColumn[] = [];
 
-    if (batch.state.status !== BatchStatus.AwaitingDownload) {
+    if (batch.state.status !== BatchStatus.AwaitingDownload && batch.state.status !== BatchStatus.RateLimited) {
       return eligiblePeers;
     }
 
