@@ -101,6 +101,18 @@ export type MissingColumnMeta = {
 };
 
 /**
+ * Minimal interface required to write data columns to the DB.
+ * Used by `writeDataColumnsToDb` and designed to be reusable across forks (e.g. Fulu, Gloas).
+ */
+export interface IDataColumnsInput {
+  readonly slot: Slot;
+  readonly blockRootHex: string;
+  getCustodyColumns(): fulu.DataColumnSidecars;
+  hasComputedAllData(): boolean;
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<fulu.DataColumnSidecars>;
+}
+
+/**
  * This is used to validate that BlockInput implementations follow some minimal subset of operations
  * and that adding a new implementation won't break consumers that rely on this subset.
  *

@@ -34,7 +34,7 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.forkChoice.getBlockHex(blockRootHex);
+    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
     const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(blockRoot);
 

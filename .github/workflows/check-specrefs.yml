@@ -32,7 +32,7 @@ jobs:
         fi
 
     - name: Install ethspecify
-      run: python3 -mpip install ethspecify
+      run: python3 -mpip install ethspecify==0.3.9
 
     - name: Update spec references
       run: ethspecify process --path=specrefs
