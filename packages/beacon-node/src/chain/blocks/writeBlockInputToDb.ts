@@ -101,6 +101,7 @@ export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataC
     root: blockRootHex,
     dataColumnSidecars: dataColumnSidecars.length,
     custodyColumns: custodyColumns.length,
+    numBlobs: dataColumnSidecars[0]?.column.length,
   });
 }
 
@@ -126,6 +127,8 @@ export async function persistBlockInput(this: BeaconChain, blockInput: IBlockInp
       // Do NOT clear the cache here — it must remain available for writeDataColumnsToDb when the payload arrives.
       // The cache is cleared in the Gloas payload persistence path instead.
       if (!isBlockInputNoData(blockInput)) {
+        // TODO: enhance this SerializedCache for Gloas because payload may not come
+        // see https://github.com/ChainSafe/lodestar/pull/8974#discussion_r2885598229
         this.serializedCache.clear();
       }
       this.logger.debug("Pruned block input", {
