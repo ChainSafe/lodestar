@@ -1016,7 +1016,10 @@ export function getValidatorApi(
         // - 0 = EMPTY / not present, 1 = FULL / present
         // - same-slot attestations must always use index = 0
         if (canonicalBlock.slot !== slot) {
-          index = canonicalBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
+          // Use FULL-variant availability for this beacon block root, not only the current
+          // canonical variant. The canonical view can temporarily prefer EMPTY for tiebreaking
+          // while the FULL sibling already exists and should be attested as payload-present.
+          index = chain.forkChoice.getBlock(beaconBlockRoot, PayloadStatus.FULL) !== null ? 1 : 0;
         } else {
           index = 0;
         }
