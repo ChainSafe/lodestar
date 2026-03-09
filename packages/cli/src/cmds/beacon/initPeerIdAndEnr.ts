@@ -74,8 +74,8 @@ export function overwriteEnrWithCliArgs(
   if (!opts?.bootnode) {
     maybeUpdateEnr(enr, "tcp", args.disableTcp ? undefined : (args["enr.tcp"] ?? port ?? enr.tcp));
     maybeUpdateEnr(enr, "tcp6", args.disableTcp ? undefined : (args["enr.tcp6"] ?? port6 ?? enr.tcp6));
-    maybeUpdateEnr(enr, "quic", args.disableQuic ? undefined : (args["enr.quic"] ?? quicPort));
-    maybeUpdateEnr(enr, "quic6", args.disableQuic ? undefined : (args["enr.quic6"] ?? quicPort6));
+    maybeUpdateEnr(enr, "quic", args.disableQuic ? undefined : (args["enr.quic"] ?? quicPort ?? enr.quic));
+    maybeUpdateEnr(enr, "quic6", args.disableQuic ? undefined : (args["enr.quic6"] ?? quicPort6 ?? enr.quic6));
   }
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
@@ -94,9 +94,13 @@ export function overwriteEnrWithCliArgs(
         if (ip4) {
           enr.delete("ip");
           enr.delete("udp");
+          enr.delete("tcp");
+          enr.delete("quic");
         } else {
           enr.delete("ip6");
           enr.delete("udp6");
+          enr.delete("tcp6");
+          enr.delete("quic6");
         }
       }
     }

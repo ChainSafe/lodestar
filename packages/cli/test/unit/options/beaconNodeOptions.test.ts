@@ -68,6 +68,7 @@ describe("options / beaconNodeOptions", () => {
       listenAddress: "127.0.0.1",
       port: 9001,
       discoveryPort: 9002,
+      quicPort: 9003,
       bootnodes: [
         "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
       ],
@@ -179,7 +180,7 @@ describe("options / beaconNodeOptions", () => {
         },
         maxPeers: 30,
         targetPeers: 25,
-        localMultiaddrs: ["/ip4/127.0.0.1/tcp/9001"],
+        localMultiaddrs: ["/ip4/127.0.0.1/udp/9003/quic-v1", "/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
         slotsToSubscribeBeforeAggregatorDuty: 1,
         disablePeerScoring: true,
@@ -253,5 +254,39 @@ describe("options / network / disableTcp and disableQuic", () => {
   it("should pass disableTcp through to network options", () => {
     const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, disableTcp: true} as NetworkArgs);
     expect(result.disableTcp).toBe(true);
+  });
+
+  it("should throw when both TCP and QUIC are disabled", () => {
+    expect(() =>
+      parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, disableTcp: true, disableQuic: true} as NetworkArgs)
+    ).toThrow("Cannot disable both TCP and QUIC transports");
+  });
+
+  it("should throw when discoveryPort and quicPort collide", () => {
+    expect(() =>
+      parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, discoveryPort: 9001, quicPort: 9001} as NetworkArgs)
+    ).toThrow(/discoveryPort and quicPort must not collide/);
+  });
+
+  it("should not throw on port collision when quic is disabled", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      port: 9000,
+      discoveryPort: 9001,
+      quicPort: 9001,
+      disableQuic: true,
+    } as NetworkArgs);
+    expect(result.disableQuic).toBe(true);
+  });
+
+  it("should throw when discoveryPort6 and quicPort6 collide", () => {
+    expect(() =>
+      parseNetworkArgs({
+        listenAddress6: "::",
+        port6: 9000,
+        discoveryPort6: 9001,
+        quicPort6: 9001,
+      } as NetworkArgs)
+    ).toThrow(/discoveryPort6 and quicPort6 must not collide/);
   });
 });

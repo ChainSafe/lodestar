@@ -115,6 +115,23 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const disableQuic = args.disableQuic;
   const disableTcp = args.disableTcp;
 
+  if (disableQuic && disableTcp) {
+    throw new YargsError("Cannot disable both TCP and QUIC transports");
+  }
+
+  if (!disableQuic) {
+    if (discoveryPort !== undefined && quicPort !== undefined && discoveryPort === quicPort) {
+      throw new YargsError(
+        `discoveryPort and quicPort must not collide, both are UDP. Got discoveryPort=${discoveryPort} quicPort=${quicPort}`
+      );
+    }
+    if (discoveryPort6 !== undefined && quicPort6 !== undefined && discoveryPort6 === quicPort6) {
+      throw new YargsError(
+        `discoveryPort6 and quicPort6 must not collide, both are UDP. Got discoveryPort6=${discoveryPort6} quicPort6=${quicPort6}`
+      );
+    }
+  }
+
   const bindMu = listenAddress ? `${muArgs.listenAddress}${muArgs.discoveryPort}` : undefined;
   const localMu = listenAddress && !disableTcp ? `${muArgs.listenAddress}${muArgs.port}` : undefined;
   const quicMu = listenAddress && !disableQuic ? `${muArgs.listenAddress}${muArgs.quicPort}` : undefined;
