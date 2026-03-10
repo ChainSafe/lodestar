@@ -183,7 +183,16 @@ export class PeerDiscovery {
       });
     }
 
-    this.transports = libp2p.services.components.transportManager.getTransports().map((t) => t[Symbol.toStringTag]);
+    // Transport tags vary by library: @libp2p/tcp uses '@libp2p/tcp', @chainsafe/libp2p-quic uses 'quic'
+    // Normalize to simple 'tcp' / 'quic' strings for matching
+    this.transports = libp2p.services.components.transportManager
+      .getTransports()
+      .map((t) => t[Symbol.toStringTag])
+      .map((tag) => {
+        if (tag?.includes("tcp")) return "tcp";
+        if (tag?.includes("quic")) return "quic";
+        return tag;
+      });
   }
 
   static async init(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts): Promise<PeerDiscovery> {
