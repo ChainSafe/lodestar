@@ -46,11 +46,11 @@ export class SeenPayloadEnvelopeInput {
   }
 
   private onFinalized = (checkpoint: CheckpointWithHex): void => {
-    // Prune all entries with slot <= finalized slot
+    // Prune all entries with slot < finalized slot
     const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
     let deletedCount = 0;
     for (const [rootHex, input] of this.payloadInputs) {
-      if (input.slot <= finalizedSlot) {
+      if (input.slot < finalizedSlot) {
         this.payloadInputs.delete(rootHex);
         deletedCount++;
       }

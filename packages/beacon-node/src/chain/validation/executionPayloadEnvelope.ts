@@ -53,7 +53,7 @@ async function validateExecutionPayloadEnvelope(
   if (!payloadInput) {
     // PayloadEnvelopeInput should have been created during block import
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
+      code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
       blockRoot: blockRootHex,
     });
   }
@@ -135,7 +135,7 @@ async function validateExecutionPayloadEnvelope(
     .getBlockSlotState(parentBlock, block.slot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
       throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-        code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN,
+        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_PARENT_STATE,
         parentRoot,
         slot: envelope.slot,
       });

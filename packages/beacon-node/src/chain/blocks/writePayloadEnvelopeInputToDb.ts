@@ -4,6 +4,10 @@ import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 
 /**
  * Persists payload envelope data to DB. This operation must be eventually completed if a payload is imported.
+ *
+ * TODO: Persist envelope metadata (stateRoot, executionRequests, builderIndex, etc.) without the full
+ * execution payload body — only keep the blockHash reference. The EL already stores the payload.
+ * See https://github.com/ChainSafe/lodestar/issues/5671
  */
 export async function writePayloadEnvelopeInputToDb(
   this: BeaconChain,

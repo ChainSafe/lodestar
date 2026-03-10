@@ -126,7 +126,6 @@ export async function importExecutionPayload(
     // State root check is done separately below with better error typing (matching block pipeline pattern).
     (async () => {
       try {
-        // Clone state to avoid mutating the cached state
         const mutableState = blockState.clone();
         processExecutionPayloadEnvelope(mutableState, envelope, {verifySignature: false, verifyStateRoot: false});
         return {postPayloadState: mutableState};
@@ -199,6 +198,12 @@ export async function importExecutionPayload(
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
+
+  this.logger.verbose("Execution payload imported", {
+    slot: payloadInput.slot,
+    beaconBlockRoot: blockRootHex,
+    blockHash: payloadInput.getBlockHashHex(),
+  });
 
   return {success: true};
 }
