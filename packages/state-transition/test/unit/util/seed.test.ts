@@ -56,7 +56,6 @@ describe("computeProposerIndex", () => {
   }
 });
 
-
 describe("electra getNextSyncCommitteeIndices", () => {
   const vc = 1000;
   const validators = generateValidators(vc);
