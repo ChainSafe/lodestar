@@ -1,6 +1,6 @@
-import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "../index.js";
-import {config as chainConfig} from "../default.js";
 import {ForkName} from "@lodestar/params";
+import {config as chainConfig} from "../default.js";
+import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "../index.js";
 
 export const ZERO_HASH = Buffer.alloc(32, 0);
 

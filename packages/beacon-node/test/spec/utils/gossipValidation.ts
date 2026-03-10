@@ -5,6 +5,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import snappy from "snappy";
 import {expect} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -35,7 +36,6 @@ import {GossipType} from "../../../src/network/gossip/interface.js";
 import type {IClock} from "../../../src/util/clock.js";
 import {getBeaconAttestationGossipIndex, getSlotFromBeaconAttestationSerialized} from "../../../src/util/sszBytes.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {getConfig} from "../../utils/config.js";
 import {testLogger} from "../../utils/logger.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 

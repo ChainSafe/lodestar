@@ -3,11 +3,9 @@ import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/ben
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {getNetworkCachedBlock, getNetworkCachedState, rangeSyncTest} from "@lodestar/state-transition/test-utils";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-import {rangeSyncTest} from "@lodestar/state-transition/test-utils";
-import {beforeValue} from "../../utils/beforeValueBenchmark.js";
-import {getNetworkCachedBlock, getNetworkCachedState} from "@lodestar/state-transition/test-utils";
 import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
@@ -15,6 +13,7 @@ import {BeaconChain} from "../../../src/chain/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
+import {beforeValue} from "../../utils/beforeValueBenchmark.js";
 import {testLogger} from "../../utils/logger.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`

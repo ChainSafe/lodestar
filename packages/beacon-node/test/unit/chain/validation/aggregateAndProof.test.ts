@@ -1,8 +1,8 @@
 import {describe, it} from "vitest";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
+import {phase0, ssz} from "@lodestar/types";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";

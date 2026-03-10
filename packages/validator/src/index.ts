@@ -1,3 +1,4 @@
+export {Bucket} from "./buckets.js";
 export {waitForGenesis} from "./genesis.js";
 export {type Metrics, getMetrics} from "./metrics.js";
 export * from "./repositories/index.js";
@@ -20,4 +21,3 @@ export {
   externalSignerUpCheck,
 } from "./util/externalSignerClient.js";
 export {Validator, type ValidatorOptions} from "./validator.js";
-export {Bucket} from "./buckets.js";

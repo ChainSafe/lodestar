@@ -1,6 +1,6 @@
-import specTestVersions from "../spec-tests-version.json" with {type: "json"};
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import specTestVersions from "../spec-tests-version.json" with {type: "json"};
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

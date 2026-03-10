@@ -1,6 +1,7 @@
 import {afterAll, beforeAll, describe, expect, it, vi} from "vitest";
 import {ApiClient, WireFormat, getClient} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {
   SignedBeaconBlock,
@@ -10,7 +11,6 @@ import {
   isExecutionPayloadHeader,
 } from "@lodestar/types";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
-import {getConfig} from "../../../../../utils/config.js";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 

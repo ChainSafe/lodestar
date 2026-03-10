@@ -1,5 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/test-utils";
 import {ZERO_HASH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -8,7 +9,6 @@ import {NetworkConfig} from "../../../src/network/networkConfig.js";
 import {computeNodeId} from "../../../src/network/subnets/index.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {serializeCgc} from "../../../src/util/metadata.js";
-import {config} from "../../utils/config.js";
 import {testLogger} from "../../utils/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
 

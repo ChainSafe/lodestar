@@ -7,11 +7,11 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
 } from "@lodestar/state-transition/test-utils";
+import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
