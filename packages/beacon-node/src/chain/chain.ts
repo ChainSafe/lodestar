@@ -3,7 +3,6 @@ import {PrivateKey} from "@libp2p/interface";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {
-  CheckpointWithHex,
   CheckpointWithPayloadStatus,
   IForkChoice,
   PayloadStatus,
@@ -655,7 +654,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getStateByCheckpoint(
-    checkpoint: CheckpointWithPayload
+    checkpoint: CheckpointWithPayloadStatus
   ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null {
     // finalized or justified checkpoint states maynot be available with PersistentCheckpointStateCache, use getCheckpointStateOrBytes() api to get Uint8Array
     const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
@@ -674,7 +673,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getStateOrBytesByCheckpoint(
-    checkpoint: CheckpointWithPayload
+    checkpoint: CheckpointWithPayloadStatus
   ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
     const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHexPayload);
@@ -1381,7 +1380,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenContributionAndProof.prune(head.slot);
   }
 
-  private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithPayload): void {
+  private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithPayloadStatus): void {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
@@ -1392,7 +1391,7 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithPayload): Promise<void> {
+  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithPayloadStatus): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
@@ -1434,7 +1433,7 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithPayload): Promise<void> {
+  private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithPayloadStatus): Promise<void> {
     if (this.custodyConfig.targetCustodyGroupCount === this.config.NUMBER_OF_CUSTODY_GROUPS) {
       // Custody requirements can only be increased, we can disable dynamic custody updates
       // if the node already maintains custody of all custody groups in case it is configured

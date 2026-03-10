@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithPayload} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -913,11 +913,11 @@ export function toCheckpointHexPayload(checkpoint: phase0.Checkpoint, payloadPre
 }
 
 /**
- * Convert fork-choice CheckpointWithPayload to beacon-node CheckpointHexPayload.
+ * Convert fork-choice CheckpointWithPayloadStatus to beacon-node CheckpointHexPayload.
  * Maps PayloadStatus enum to boolean payloadPresent.
  * @throws Error if checkpoint has PENDING payload status (ambiguous which variant to use)
  */
-export function fcCheckpointToHexPayload(checkpoint: CheckpointWithPayload): CheckpointHexPayload {
+export function fcCheckpointToHexPayload(checkpoint: CheckpointWithPayloadStatus): CheckpointHexPayload {
   const PayloadStatus = {PENDING: 0, EMPTY: 1, FULL: 2} as const;
 
   if (checkpoint.payloadStatus === PayloadStatus.PENDING) {
