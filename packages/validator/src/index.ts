@@ -20,3 +20,4 @@ export {
   externalSignerUpCheck,
 } from "./util/externalSignerClient.js";
 export {Validator, type ValidatorOptions} from "./validator.js";
+export {Bucket} from "./buckets.js";
