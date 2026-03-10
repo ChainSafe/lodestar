@@ -31,13 +31,14 @@ The core insight: blobs and data columns are large, write-once, read-rarely, and
 
 Compared to epoch-based (Prysm style) or root-based layouts:
 
-| Approach | Pruning | Lookup by slot | Lookup by root | Dir fanout |
-|----------|---------|----------------|----------------|------------|
-| **By epoch** | Delete epoch dirs | Compute epoch, scan dir | Need index | ~225 files/dir at 32 slots/epoch |
-| **By slot** | Delete slot dirs below cutoff | Direct path | Need index | 1 file per slot dir |
-| **By root** | Scan all dirs for expiry | Need index | Direct path | Unbounded |
+| Approach     | Pruning                       | Lookup by slot          | Lookup by root | Dir fanout                       |
+| ------------ | ----------------------------- | ----------------------- | -------------- | -------------------------------- |
+| **By epoch** | Delete epoch dirs             | Compute epoch, scan dir | Need index     | ~225 files/dir at 32 slots/epoch |
+| **By slot**  | Delete slot dirs below cutoff | Direct path             | Need index     | 1 file per slot dir              |
+| **By root**  | Scan all dirs for expiry      | Need index              | Direct path    | Unbounded                        |
 
 **Slot-based** is chosen because:
+
 1. **Pruning is the critical path.** With 128 data columns per block, the volume of expired data is enormous. Slot-based layout enables `rm -rf slot_dir` for each expired slot with no scanning.
 2. **Archive queries are slot-keyed.** The beacon API serves finalized blobs/columns by slot. Direct path construction: `data_columns/<slot>/0x<root>.dcol`.
 3. **Bounded directory entries.** Each slot directory contains at most 1 file (canonical block). During the unfinalized window, a slot might have a few files from different forks, but fork count is small (typically 1-3).
@@ -82,6 +83,7 @@ Blob sidecars use the existing `BlobSidecarsWrapper` SSZ encoding, which is alre
 ```
 
 Where `BlobSidecarsWrapper` is:
+
 ```typescript
 {
   blockRoot: Root,       // 32 bytes
@@ -135,6 +137,7 @@ Each column is independently Snappy block-compressed (not framed). This preserve
 **Offset table for random access:** Variable-size compressed columns cannot use fixed-stride seeking. The `(N+1)`-entry offset table (one uint32 per column plus a sentinel) enables O(1) seek: read `offsets[p]` and `offsets[p+1]` to get the byte range for bitmap position `p`.
 
 **128-bit bitmap:** With `NUMBER_OF_COLUMNS = 128`, a 16-byte bitmap (128 bits) is sufficient. Bit `i` being set indicates column `i` is present in the file. This supports:
+
 - Partial column storage (supernode with subset of columns)
 - Incremental writes (receive columns over time, update bitmap)
 - O(1) existence checks without reading column data
@@ -163,6 +166,7 @@ To read column `i` from a `.dcol` file:
 #### Size Analysis
 
 Per data column sidecar with 6 blobs (uncompressed):
+
 - Column data: 6 cells x 2,048 bytes = 12,288 bytes
 - KZG commitments: 6 x 48 = 288 bytes
 - KZG proofs: 6 x 48 = 288 bytes
@@ -178,10 +182,12 @@ Per block with 128 columns (Snappy compressed): offset table (516B) + compressed
 Per block with 6 blobs (pre-fulu, blob sidecars only): **~786 KB**
 
 Daily data volume (at 7,200 slots/day, assuming all slots have 6 blobs):
+
 - Data columns: 7,200 x ~1.0 MB ≈ **~7 GB/day** (down from ~11.9 GB/day uncompressed)
 - Blob sidecars: 7,200 x 786 KB = **~5.5 GB/day**
 
 With 18-day retention (`MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS` = 4096 epochs ≈ 18.2 days):
+
 - Data columns: **~125 GB retained** (down from ~216 GB uncompressed)
 - Blob sidecars: ~100 GB retained
 
@@ -205,9 +211,9 @@ async function atomicWrite(targetPath: string, data: Uint8Array): Promise<void> 
   const fd = await fs.open(tmpPath, "w");
   try {
     await fd.write(data);
-    await fd.datasync();      // fsync the data
+    await fd.datasync(); // fsync the data
     await fd.close();
-    await fs.rename(tmpPath, targetPath);  // atomic on same filesystem
+    await fs.rename(tmpPath, targetPath); // atomic on same filesystem
   } catch (e) {
     await fd.close().catch(() => {});
     await fs.unlink(tmpPath).catch(() => {});
@@ -245,16 +251,18 @@ async function onBlobSidecars(slot: Slot, blockRoot: Root, wrapper: BlobSidecars
 }
 
 // On data column reception (gossip or RPC)
-async function onDataColumnSidecars(
-  slot: Slot, blockRoot: Root, columns: DataColumnSidecar[]
-): Promise<void> {
+async function onDataColumnSidecars(slot: Slot, blockRoot: Root, columns: DataColumnSidecar[]): Promise<void> {
   const dir = path.join(this.columnsDir, padSlot(slot));
   await fs.mkdir(dir, {recursive: true});
   const filePath = path.join(dir, `0x${toRootHex(blockRoot)}.dcol`);
   const existing = await this.readDcolHeader(filePath);
   const merged = existing ? mergeColumns(existing, columns) : packColumns(slot, blockRoot, columns);
   await atomicWrite(filePath, merged);
-  this.existenceCache.setColumnsPresent(slot, blockRoot, columns.map(c => c.index));
+  this.existenceCache.setColumnsPresent(
+    slot,
+    blockRoot,
+    columns.map((c) => c.index)
+  );
 }
 ```
 
@@ -266,6 +274,7 @@ Data columns may arrive incrementally (subset of 128 columns at a time). The `.d
 2. **Subsequent writes:** Read existing file, merge new columns into the sorted position, update bitmap, atomic rewrite.
 
 Merging decompresses existing columns, adds new ones, then re-encodes the full file:
+
 - Read all existing columns via `readAllColumns()`
 - Merge with new columns (add or overwrite by index)
 - Re-encode: compress each column, build offset table, atomic write
@@ -280,7 +289,10 @@ A major optimization: gossip-received blobs and columns arrive as SSZ bytes on t
 // Instead of: serialize(deserialize(wireBytes))
 // Just: write(wireBytes)
 async function onValidatedColumnBytes(
-  slot: Slot, blockRoot: Root, columnIndex: ColumnIndex, sszBytes: Uint8Array
+  slot: Slot,
+  blockRoot: Root,
+  columnIndex: ColumnIndex,
+  sszBytes: Uint8Array
 ): Promise<void> {
   // sszBytes is the validated SSZ wire bytes - write directly
   await this.appendColumnBytes(slot, blockRoot, columnIndex, sszBytes);
@@ -352,10 +364,12 @@ The cache also provides `getAnyRootForSlot(slot)` which resolves slot → root f
 ### Memory Usage
 
 Per slot with one canonical block:
+
 - Blob entry: ~80 bytes (RootHex string in Set)
 - Column entry: ~96 bytes (RootHex string + bigint bitmap)
 
 For 18-day retention window (~130,000 slots):
+
 - Blobs: 130,000 x 80 = **~10 MB**
 - Columns: 130,000 x 96 = **~12 MB**
 - **Total: ~22 MB** (negligible)
@@ -378,12 +392,8 @@ Currently the cache is rebuilt from disk on every startup by walking all slot di
 
 ```typescript
 async function pruneExpiredData(currentEpoch: Epoch): Promise<void> {
-  const blobCutoffSlot = computeStartSlotAtEpoch(
-    currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-  );
-  const columnCutoffSlot = computeStartSlotAtEpoch(
-    currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
-  );
+  const blobCutoffSlot = computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS);
+  const columnCutoffSlot = computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS);
 
   // Prune blobs
   await pruneDirectoriesBelowSlot(this.blobsDir, blobCutoffSlot);
@@ -416,11 +426,13 @@ async function pruneDirectoriesBelowSlot(baseDir: string, cutoffSlot: Slot): Pro
 ### Pruning Performance
 
 **Current (LevelDB):** Deleting expired blobs/columns requires:
+
 1. Key scan to find expired entries
 2. Individual key deletions in LevelDB
 3. LSM compaction to actually reclaim space (happens asynchronously, I/O intensive)
 
 **Proposed (filesystem):** Deleting expired blobs/columns requires:
+
 1. `readdir` to list slot directories
 2. `rm -rf` for each expired slot directory
 3. Space is reclaimed immediately by the filesystem
@@ -448,6 +460,7 @@ Step 1 replaces the current "delete non-canonical blocks from hot" LevelDB opera
 Add a `--chain.flatFileStorage` CLI flag (default: `true`).
 
 When enabled:
+
 - Blob sidecars and data columns are written to the filesystem
 - Reads go to filesystem (with LevelDB fallback for data written before the flag was enabled)
 - Pruning operates on the filesystem
@@ -490,6 +503,7 @@ The migration can be interrupted and resumed (check existence before writing).
 ### Phase 1c: Remove LevelDB Blob/Column Storage
 
 Once migration is verified:
+
 1. Remove the `--flatFileStorage` flag, make it the default
 2. Remove `BlobSidecarsRepository`, `BlobSidecarsArchiveRepository`, `DataColumnSidecarRepository`, `DataColumnSidecarArchiveRepository`
 3. Remove bucket IDs 27, 28, 57, 58
@@ -498,6 +512,7 @@ Once migration is verified:
 ### Phase 2: Separate DB for Blocks (Future)
 
 Following Lighthouse's approach, blocks could stay in a KV store but in a separate instance:
+
 - Main DB: fork choice state, op pool, indices, light client data
 - Block DB: finalized + unfinalized blocks
 - Filesystem: blobs and data columns
@@ -521,7 +536,7 @@ interface IFlatFileStore {
   getBlobSidecarsBinaryBySlot(slot: Slot): Promise<Uint8Array | null>;
   putBlobSidecars(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void>;
   deleteBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<void>;
-  hasBlobSidecars(slot: Slot, blockRoot: RootHex): boolean;  // sync, from cache
+  hasBlobSidecars(slot: Slot, blockRoot: RootHex): boolean; // sync, from cache
   blobSidecarsBinaryEntriesStream(opts: {gte: Slot; lt: Slot}): AsyncIterable<{slot: Slot; data: Uint8Array}>;
 
   // Data columns
@@ -531,18 +546,19 @@ interface IFlatFileStore {
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
   putDataColumns(slot: Slot, blockRoot: RootHex, columns: DataColumnSidecar[]): Promise<void>;
   deleteDataColumns(slot: Slot, blockRoot: RootHex): Promise<void>;
-  hasDataColumn(slot: Slot, blockRoot: RootHex, index: number): boolean;  // sync, from cache
-  getColumnBitmap(slot: Slot, blockRoot: RootHex): bigint | null;  // sync, from cache
+  hasDataColumn(slot: Slot, blockRoot: RootHex, index: number): boolean; // sync, from cache
+  getColumnBitmap(slot: Slot, blockRoot: RootHex): bigint | null; // sync, from cache
 
   // Pruning
   deleteNonCanonical(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;
   pruneBlobsBeforeSlot(slot: Slot): Promise<void>;
   pruneColumnsBeforeSlot(slot: Slot): Promise<void>;
-  pruneHotBlobs(): Promise<void>;  // no-op for flat files (no hot/cold distinction)
+  pruneHotBlobs(): Promise<void>; // no-op for flat files (no hot/cold distinction)
 }
 ```
 
 Key differences from the original proposal:
+
 - All methods take `RootHex` (hex string) instead of `Root` (Uint8Array), matching Lodestar's fork choice conventions
 - By-slot lookups (`getBlobSidecarsBinaryBySlot`, `getDataColumnsBinaryBySlot`) for finalized reqresp handlers that only know the slot
 - Separate `pruneBlobsBeforeSlot`/`pruneColumnsBeforeSlot` (blobs and columns may have different retention windows)
@@ -574,6 +590,7 @@ Callers check `if (db.flatFileStore)` before using flat file APIs, falling back 
 The `archiveBlocks` function in `archiveStore/utils/archiveBlocks.ts` simplifies significantly:
 
 **Before (LevelDB):**
+
 1. Read blob/column from hot bucket (by root)
 2. Write to archive bucket (by slot) - re-keying
 3. Delete from hot bucket
@@ -581,6 +598,7 @@ The `archiveBlocks` function in `archiveStore/utils/archiveBlocks.ts` simplifies
 5. Batch delete expired entries
 
 **After (flat files):**
+
 1. Delete non-canonical files for finalized slots
 2. Delete expired slot directories
 
@@ -592,44 +610,44 @@ No migration step needed - data is already in its final location.
 
 ### Write Amplification
 
-| Operation | LevelDB (current) | Flat File (proposed) |
-|-----------|-------------------|---------------------|
-| Initial write | 1x write + LSM compaction (10-30x over lifetime) | 1x write + fsync |
-| Hot→cold migration | 1x read + 1x write + 1x delete + compaction | Not needed |
-| Pruning | 1x delete + compaction to reclaim space | 1x unlink (instant reclaim) |
-| **Total write amplification** | **~15-50x** | **~1x** |
+| Operation                     | LevelDB (current)                                | Flat File (proposed)        |
+| ----------------------------- | ------------------------------------------------ | --------------------------- |
+| Initial write                 | 1x write + LSM compaction (10-30x over lifetime) | 1x write + fsync            |
+| Hot→cold migration            | 1x read + 1x write + 1x delete + compaction      | Not needed                  |
+| Pruning                       | 1x delete + compaction to reclaim space          | 1x unlink (instant reclaim) |
+| **Total write amplification** | **~15-50x**                                      | **~1x**                     |
 
 ### Disk Usage
 
-| | LevelDB | Flat File |
-|--|---------|-----------|
-| Storage overhead | ~1.1-1.5x (SSZ + LevelDB metadata + LSM levels) | ~0.5-0.65x (Snappy-compressed SSZ + offset table + 149B header) |
-| Post-delete bloat | Significant until compaction | None (unlink reclaims immediately) |
-| Fragmentation | Internal (LSM levels) | Filesystem-level (minimal with modern ext4/xfs) |
+|                   | LevelDB                                         | Flat File                                                       |
+| ----------------- | ----------------------------------------------- | --------------------------------------------------------------- |
+| Storage overhead  | ~1.1-1.5x (SSZ + LevelDB metadata + LSM levels) | ~0.5-0.65x (Snappy-compressed SSZ + offset table + 149B header) |
+| Post-delete bloat | Significant until compaction                    | None (unlink reclaims immediately)                              |
+| Fragmentation     | Internal (LSM levels)                           | Filesystem-level (minimal with modern ext4/xfs)                 |
 
 ### Read Latency
 
-| Operation | LevelDB | Flat File |
-|-----------|---------|-----------|
-| Single blob lookup | ~0.5-2ms (key lookup + decompress) | ~0.1-0.5ms (open + read, cached by OS) |
-| Single column lookup | ~0.5-2ms (key lookup + decompress) | ~0.1-0.3ms (open + header pread + column pread + snappy decompress) |
-| Existence check | ~0.3-1ms (key lookup) | **~0ns** (in-memory cache) |
-| Batch column lookup (4 cols) | ~2-8ms (4 key lookups) | ~0.2-0.5ms (open + header pread + table pread + 4 column preads, ~30 KB total) |
-| All columns for block | ~5-15ms (128 key lookups) | ~1-3ms (single file read + 128 snappy decompress) |
+| Operation                    | LevelDB                            | Flat File                                                                      |
+| ---------------------------- | ---------------------------------- | ------------------------------------------------------------------------------ |
+| Single blob lookup           | ~0.5-2ms (key lookup + decompress) | ~0.1-0.5ms (open + read, cached by OS)                                         |
+| Single column lookup         | ~0.5-2ms (key lookup + decompress) | ~0.1-0.3ms (open + header pread + column pread + snappy decompress)            |
+| Existence check              | ~0.3-1ms (key lookup)              | **~0ns** (in-memory cache)                                                     |
+| Batch column lookup (4 cols) | ~2-8ms (4 key lookups)             | ~0.2-0.5ms (open + header pread + table pread + 4 column preads, ~30 KB total) |
+| All columns for block        | ~5-15ms (128 key lookups)          | ~1-3ms (single file read + 128 snappy decompress)                              |
 
 ### Throughput (Sustained Writes)
 
-| | LevelDB | Flat File |
-|--|---------|-----------|
+|                                   | LevelDB                               | Flat File                            |
+| --------------------------------- | ------------------------------------- | ------------------------------------ |
 | 128 columns/block at 12s interval | Bottleneck: LSM compaction contention | 128 sequential writes, no contention |
-| Concurrent block processing | Single LevelDB lock | Independent files, full parallelism |
+| Concurrent block processing       | Single LevelDB lock                   | Independent files, full parallelism  |
 
 ### Pruning Speed
 
-| | LevelDB | Flat File |
-|--|---------|-----------|
-| Prune 1 epoch (32 slots, ~54 MB columns) | 10-30 seconds (scan + delete + compact) | <1 second (32 x rm -rf) |
-| Prune 1 day (225 epochs, ~12 GB columns) | Minutes (heavy I/O, blocks other operations) | ~5-10 seconds |
+|                                          | LevelDB                                      | Flat File               |
+| ---------------------------------------- | -------------------------------------------- | ----------------------- |
+| Prune 1 epoch (32 slots, ~54 MB columns) | 10-30 seconds (scan + delete + compact)      | <1 second (32 x rm -rf) |
+| Prune 1 day (225 epochs, ~12 GB columns) | Minutes (heavy I/O, blocks other operations) | ~5-10 seconds           |
 
 ---
 
@@ -684,6 +702,7 @@ packages/beacon-node/src/db/
 **Issue:** A parent directory (`blob_sidecars/`) with 130,000+ entries could slow down `readdir` and `lookup`.
 
 **Mitigation:**
+
 - ext4 with `dir_index` (default since 2005) uses htree for O(1) lookup even with millions of entries
 - xfs handles large directories natively
 - If needed, add epoch-level grouping (reduces entries per directory to ~32)
@@ -693,6 +712,7 @@ packages/beacon-node/src/db/
 **Issue:** Power failure during atomic write could leave `.part` files.
 
 **Mitigation:**
+
 - On startup, scan for and delete `.part` files
 - The rename-based atomic write ensures that a complete file is either fully present or absent
 - The existence cache is rebuilt from actual files, ignoring `.part` files
@@ -702,6 +722,7 @@ packages/beacon-node/src/db/
 **Issue:** In rare deep reorgs, a slot directory might contain files from multiple competing blocks.
 
 **Mitigation:**
+
 - Already handled: each file is named by block root, so multiple files per slot coexist
 - On finalization, non-canonical files are deleted
 - The existence cache tracks per-root presence
@@ -711,6 +732,7 @@ packages/beacon-node/src/db/
 **Issue:** Filesystem I/O might be slower than LevelDB's batch operations under high contention.
 
 **Mitigation:**
+
 - The feature flag allows instant rollback to LevelDB
 - Write batching: group column writes for the same block into a single file write
 - OS page cache handles read caching automatically (no need for application-level read cache)
@@ -720,6 +742,7 @@ packages/beacon-node/src/db/
 **Issue:** Bit rot or filesystem corruption could silently corrupt stored data.
 
 **Mitigation:**
+
 - SSZ deserialization will fail on corrupted data (natural integrity check)
 - Optional: add a CRC32 checksum to the `.dcol` reserved header bytes in a future version
 - Block root in the `.dcol` header enables cross-validation
