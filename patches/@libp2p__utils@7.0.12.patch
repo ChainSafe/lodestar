@@ -1,0 +1,48 @@
+diff --git a/dist/src/repeating-task.js b/dist/src/repeating-task.js
+index e3d9e459cbc11347b14338309c3f06da3e1d2e98..02f3acb53607efb5760977530105776ec1acc025 100644
+--- a/dist/src/repeating-task.js
++++ b/dist/src/repeating-task.js
+@@ -9,8 +9,9 @@ export function repeatingTask(fn, interval, options) {
+         const opts = {
+             signal: shutdownController.signal
+         };
++        let signal;
+         if (options?.timeout != null) {
+-            const signal = anySignal([shutdownController.signal, AbortSignal.timeout(options.timeout)]);
++            signal = anySignal([shutdownController.signal, AbortSignal.timeout(options.timeout)]);
+             setMaxListeners(Infinity, signal);
+             opts.signal = signal;
+         }
+@@ -20,6 +21,7 @@ export function repeatingTask(fn, interval, options) {
+         })
+             .catch(() => { })
+             .finally(() => {
++            signal?.clear();
+             running = false;
+             if (shutdownController.signal.aborted) {
+                 // task has been cancelled, bail
+diff --git a/src/repeating-task.ts b/src/repeating-task.ts
+index 0393c2c1188fa3a881f78619c3cf1ac1883f96ad..982ffbccf7b5513eb91ad7d95d56eb239e44e962 100644
+--- a/src/repeating-task.ts
++++ b/src/repeating-task.ts
+@@ -77,8 +77,10 @@ export function repeatingTask (fn: (options?: AbortOptions) => void | Promise<vo
+       signal: shutdownController.signal
+     }
+ 
++    let signal: ReturnType<typeof anySignal> | undefined
++
+     if (options?.timeout != null) {
+-      const signal = anySignal([shutdownController.signal, AbortSignal.timeout(options.timeout)])
++      signal = anySignal([shutdownController.signal, AbortSignal.timeout(options.timeout)])
+       setMaxListeners(Infinity, signal)
+ 
+       opts.signal = signal
+@@ -91,6 +93,8 @@ export function repeatingTask (fn: (options?: AbortOptions) => void | Promise<vo
+     })
+       .catch(() => {})
+       .finally(() => {
++        signal?.clear()
++
+         running = false
+ 
+         if (shutdownController.signal.aborted) {
