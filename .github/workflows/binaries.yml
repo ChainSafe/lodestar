@@ -27,7 +27,7 @@ jobs:
             arch: arm64
     runs-on: ${{matrix.os}}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Install arm64 specifics
         if: matrix.arch == 'arm64'
         run: |-
@@ -45,13 +45,13 @@ jobs:
           npx caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -D -p "pnpm clean:nm && pnpm install --frozen-lockfile --prod" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/packages/cli/bin/lodestar.js"
           tar -czf "dist/lodestar-${{ inputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz" "lodestar"
       - name: Upload binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: binaries-${{ matrix.os }}
           path: dist/
           if-no-files-found: error
       - name: Sanity check binary
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             exec.exec('./lodestar dev');

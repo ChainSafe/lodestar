@@ -11,17 +11,17 @@ jobs:
     name: Build and run Kurtosis
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Build Docker image - local only
         run: >
           docker buildx build . --load \
             --tag chainsafe/lodestar:kurtosis-ci \
             --build-arg COMMIT=$(git rev-parse HEAD)
       - name: Run test
-        uses: ethpandaops/kurtosis-assertoor-github-action@v1
+        uses: ethpandaops/kurtosis-assertoor-github-action@5932604b244dbd2ddb811516b516a9094f4d2c2f # v1
         with:
           ethereum_package_args: ".github/workflows/assets/kurtosis_sim_test_config.yaml"
