@@ -127,6 +127,9 @@ export function parseDcolHeader(data: Uint8Array): DcolHeader {
 /**
  * Read a single column by its column index from a dcol file buffer.
  * Returns the uncompressed column data, or null if column is not present.
+ *
+ * Note: Production reads use getColumnByteRange() + fd.read() for targeted I/O.
+ * This function is a convenience for tests and mergeDcolColumns.
  */
 export function readColumn(fileData: Uint8Array, header: DcolHeader, index: number): Uint8Array | null {
   if (!getBit(header.bitmap, index)) return null;
@@ -134,7 +137,7 @@ export function readColumn(fileData: Uint8Array, header: DcolHeader, index: numb
   const p = popcount(header.bitmap, index);
   const N = totalBits(header.bitmap);
   const tableStart = DCOL_HEADER_SIZE;
-  const dataStart = tableStart + (N + 1) * 4;
+  const dataStart = tableStart + offsetTableSize(N);
   const tableView = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
 
   const colStart = dataStart + tableView.getUint32(tableStart + p * 4, false);
@@ -153,7 +156,7 @@ export function readAllColumns(fileData: Uint8Array, header: DcolHeader): {index
   const N = totalBits(header.bitmap);
 
   const tableStart = DCOL_HEADER_SIZE;
-  const dataStart = tableStart + (N + 1) * 4;
+  const dataStart = tableStart + offsetTableSize(N);
   const tableView = new DataView(fileData.buffer, fileData.byteOffset, fileData.byteLength);
 
   let pos = 0;
@@ -186,9 +189,11 @@ export interface ColumnByteRange {
 export function getColumnByteRange(header: DcolHeader, offsetTable: Uint8Array, index: number): ColumnByteRange | null {
   if (!getBit(header.bitmap, index)) return null;
 
+  // popcount(bitmap, index) counts bits in [0, index) — the number of columns
+  // stored before this one, giving the correct offset table position.
   const p = popcount(header.bitmap, index);
   const N = totalBits(header.bitmap);
-  const dataStart = DCOL_HEADER_SIZE + (N + 1) * 4;
+  const dataStart = DCOL_HEADER_SIZE + offsetTableSize(N);
   const view = new DataView(offsetTable.buffer, offsetTable.byteOffset, offsetTable.byteLength);
 
   const colStart = view.getUint32(p * 4, false);
@@ -237,7 +242,7 @@ export function encodeDcolFile(
 
   // Build offset table
   const N = sorted.length;
-  const oTableSize = (N + 1) * 4;
+  const oTableSize = offsetTableSize(N);
   const offsets = new Uint8Array(oTableSize);
   const offsetView = new DataView(offsets.buffer, offsets.byteOffset, offsets.byteLength);
 
