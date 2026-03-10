@@ -440,6 +440,7 @@ export class SeenBlockInput {
   }
 
   private evictBlockInput(blockInput: IBlockInput): void {
+    // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
     this.serializedCache.delete(blockInput.getSerializedCacheKeys());
     this.blockInputs.delete(blockInput.blockRootHex);
   }
