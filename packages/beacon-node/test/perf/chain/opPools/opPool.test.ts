@@ -10,7 +10,7 @@ import {
 } from "@lodestar/params";
 import {CachedBeaconStateAltair, PubkeyCache} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
+import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test-utils";
 import {BlockType} from "../../../../src/chain/interface.js";
 import {OpPool} from "../../../../src/chain/opPools/opPool.js";
 import {generateBlsToExecutionChanges} from "../../../fixtures/capella.js";

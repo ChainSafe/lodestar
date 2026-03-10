@@ -3,9 +3,9 @@ import {bench, describe} from "@chainsafe/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {byteArrayEquals, bytesToInt} from "@lodestar/utils";
+import {generateState} from "../../../../src/testUtils/state.js";
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
 import {VALIDATOR_BYTES_SIZE} from "../../../../src/util/sszBytes.js";
-import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
 
 /**

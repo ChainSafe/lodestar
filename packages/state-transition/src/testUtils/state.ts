@@ -8,17 +8,17 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {EpochCacheOpts} from "../../src/cache/epochCache.js";
-import {BeaconStateCache} from "../../src/cache/stateCache.js";
-import {ZERO_HASH} from "../../src/constants/index.js";
+import {EpochCacheOpts} from "../cache/epochCache.js";
+import {BeaconStateCache} from "../cache/stateCache.js";
+import {ZERO_HASH} from "../constants/index.js";
 import {
   BeaconStateAllForks,
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   createCachedBeaconState,
   createPubkeyCache,
-} from "../../src/index.js";
-import {newZeroedArray} from "../../src/util/index.js";
+} from "../index.js";
+import {newZeroedArray} from "../util/index.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

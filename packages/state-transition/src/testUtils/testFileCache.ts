@@ -5,10 +5,10 @@ import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {fetch} from "@lodestar/utils";
-import {CachedBeaconStateAllForks} from "../../src/index.js";
-import {testCachePath} from "../cache.js";
-import {createCachedBeaconStateTest} from "../utils/state.js";
+import {CachedBeaconStateAllForks} from "../index.js";
+import {testCachePath} from "./cache.js";
 import {getInfuraBeaconUrl} from "./infura.js";
+import {createCachedBeaconStateTest} from "./state.js";
 
 /**
  * Full link example:
@@ -96,6 +96,7 @@ export async function getNetworkCachedBlock(
 
 async function downloadTestFile(fileId: string): Promise<Uint8Array> {
   const fileUrl = `${TEST_FILES_BASE_URL}/${fileId}`;
+  // biome-ignore lint/suspicious/noConsole: We explicity need to log to console
   console.log(`Downloading file ${fileUrl}`);
 
   try {

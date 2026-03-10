@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {RequestError, RequestErrorCode, ResponseIncoming} from "@lodestar/reqresp";
-import {SerializedCache} from "../../../util/serializedCache.ts";
+import {SerializedCache} from "../../../util/serializedCache.js";
 import {ResponseTypeGetter} from "../types.js";
 
 /**
