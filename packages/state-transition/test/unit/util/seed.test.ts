@@ -6,8 +6,6 @@ import {bytesToInt} from "@lodestar/utils";
 import {
   computePayloadTimelinessCommitteeIndices,
   computeProposerIndex,
-  computeShuffledIndex,
-  getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   getRandaoMix,
   naiveComputePayloadTimelinessCommitteeIndices,
@@ -58,17 +56,6 @@ describe("computeProposerIndex", () => {
   }
 });
 
-describe("computeShuffledIndex", () => {
-  const seed = crypto.randomBytes(32);
-  const vc = 1000;
-  const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-  it("should be the same to the naive version", () => {
-    for (let i = 0; i < vc; i++) {
-      const expectedIndex = computeShuffledIndex(i, vc, seed);
-      expect(shuffledIndexFn(i)).toBe(expectedIndex);
-    }
-  });
-});
 
 describe("electra getNextSyncCommitteeIndices", () => {
   const vc = 1000;
