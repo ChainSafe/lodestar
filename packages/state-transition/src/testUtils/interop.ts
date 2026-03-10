@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {interopSecretKey} from "../../src/index.js";
+import {interopSecretKey} from "../index.js";
 import {testCachePath} from "./cache.js";
 
 const interopPubkeysCachedPath = path.join(testCachePath, "interop-pubkeys.json");
