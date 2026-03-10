@@ -12,7 +12,7 @@ import {
   ProtoNode,
 } from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
-import {CheckpointWithHex, CheckpointWithPayload} from "./store.js";
+import {CheckpointWithHex, CheckpointWithPayloadStatus} from "./store.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -25,7 +25,7 @@ export type CheckpointsWithHex = {
 };
 
 export type CheckpointWithPayloadAndBalance = {
-  checkpoint: CheckpointWithPayload;
+  checkpoint: CheckpointWithPayloadStatus;
   balances: EffectiveBalanceIncrements;
 };
 
@@ -124,8 +124,8 @@ export interface IForkChoice {
    * Retrieve all nodes for the debug API.
    */
   getAllNodes(): ProtoNode[];
-  getFinalizedCheckpoint(): CheckpointWithPayload;
-  getJustifiedCheckpoint(): CheckpointWithPayload;
+  getFinalizedCheckpoint(): CheckpointWithPayloadStatus;
+  getJustifiedCheckpoint(): CheckpointWithPayloadStatus;
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -246,7 +246,12 @@ export interface IForkChoice {
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
    */
-  isDescendant(ancestorRoot: RootHex, descendantRoot: RootHex): boolean;
+  isDescendant(
+    ancestorRoot: RootHex,
+    ancestorPayloadStatus: PayloadStatus,
+    descendantRoot: RootHex,
+    descendantPayloadStatus: PayloadStatus
+  ): boolean;
   /**
    * Prune items up to a finalized root.
    */
@@ -255,16 +260,20 @@ export interface IForkChoice {
   /**
    * Iterates backwards through ancestor block summaries, starting from a block root
    */
-  iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<ProtoBlock>;
-  getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  iterateAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock>;
+  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
   /**
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  getAllNonAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
   /**
    * Returns both ancestor and non-ancestor blocks in a single traversal.
    */
-  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
+  getAllAncestorAndNonAncestorBlocks(
+    blockRoot: RootHex,
+    payloadStatus: PayloadStatus
+  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
   /**
@@ -274,7 +283,7 @@ export interface IForkChoice {
   /**
    * Iterates forward descendants of blockRoot. Does not yield blockRoot itself
    */
-  forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock>;
+  forwardIterateDescendants(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock>;
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */

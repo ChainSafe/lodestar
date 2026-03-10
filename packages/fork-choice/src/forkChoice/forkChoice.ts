@@ -54,7 +54,7 @@ import {
   NotReorgedReason,
   ShouldOverrideForkChoiceUpdateResult,
 } from "./interface.js";
-import {CheckpointWithPayload, IForkChoiceStore, JustifiedBalances, toCheckpointWithPayload} from "./store.js";
+import {CheckpointWithPayloadStatus, IForkChoiceStore, JustifiedBalances, toCheckpointWithPayload} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;
@@ -557,11 +557,11 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes;
   }
 
-  getFinalizedCheckpoint(): CheckpointWithPayload {
+  getFinalizedCheckpoint(): CheckpointWithPayloadStatus {
     return this.fcStore.finalizedCheckpoint;
   }
 
-  getJustifiedCheckpoint(): CheckpointWithPayload {
+  getJustifiedCheckpoint(): CheckpointWithPayloadStatus {
     return this.fcStore.justified.checkpoint;
   }
 
@@ -700,8 +700,8 @@ export class ForkChoice implements IForkChoice {
     // This is an optimization. It should reduce the amount of times we run
     // `process_justification_and_finalization` by approximately 1/3rd when the chain is
     // performing optimally.
-    let unrealizedJustifiedCheckpoint: CheckpointWithPayload;
-    let unrealizedFinalizedCheckpoint: CheckpointWithPayload;
+    let unrealizedJustifiedCheckpoint: CheckpointWithPayloadStatus;
+    let unrealizedFinalizedCheckpoint: CheckpointWithPayloadStatus;
     if (this.opts?.computeUnrealized) {
       if (
         parentBlock.unrealizedJustifiedEpoch === blockEpoch &&
@@ -1133,8 +1133,13 @@ export class ForkChoice implements IForkChoice {
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
    */
-  isDescendant(ancestorRoot: RootHex, descendantRoot: RootHex): boolean {
-    return this.protoArray.isDescendant(ancestorRoot, descendantRoot);
+  isDescendant(
+    ancestorRoot: RootHex,
+    ancestorPayloadStatus: PayloadStatus,
+    descendantRoot: RootHex,
+    descendantPayloadStatus: PayloadStatus
+  ): boolean {
+    return this.protoArray.isDescendant(ancestorRoot, ancestorPayloadStatus, descendantRoot, descendantPayloadStatus);
   }
 
   /**
@@ -1177,16 +1182,16 @@ export class ForkChoice implements IForkChoice {
    * Iterates backwards through block summaries, starting from a block root.
    * Return only the non-finalized blocks.
    */
-  iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<ProtoBlock> {
-    return this.protoArray.iterateAncestorNodes(blockRoot);
+  iterateAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock> {
+    return this.protoArray.iterateAncestorNodes(blockRoot, payloadStatus);
   }
 
   /**
    * Returns all blocks backwards starting from a block root.
    * Return only the non-finalized blocks.
    */
-  getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
-    const blocks = this.protoArray.getAllAncestorNodes(blockRoot);
+  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[] {
+    const blocks = this.protoArray.getAllAncestorNodes(blockRoot, payloadStatus);
     // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
     return blocks.slice(0, blocks.length - 1);
   }
@@ -1194,21 +1199,39 @@ export class ForkChoice implements IForkChoice {
   /**
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
-    return this.protoArray.getAllNonAncestorNodes(blockRoot);
+  getAllNonAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[] {
+    return this.protoArray.getAllNonAncestorNodes(blockRoot, payloadStatus);
   }
 
   /**
    * Returns both ancestor and non-ancestor blocks in a single traversal.
    */
-  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]} {
-    const {ancestors, nonAncestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot);
+  getAllAncestorAndNonAncestorBlocks(
+    blockRoot: RootHex,
+    payloadStatus: PayloadStatus
+  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]} {
+    const {ancestors, nonAncestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot, payloadStatus);
 
     return {
       // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
       ancestors: ancestors.slice(0, ancestors.length - 1),
       nonAncestors,
     };
+  }
+
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null {
+    const blockRootHex = toRootHex(blockRoot);
+    if (blockRootHex === this.head.blockRoot) {
+      return this.head;
+    }
+
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot, this.head.payloadStatus)) {
+      if (block.blockRoot === blockRootHex) {
+        return block;
+      }
+    }
+
+    return null;
   }
 
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null {
@@ -1220,7 +1243,7 @@ export class ForkChoice implements IForkChoice {
       return this.head;
     }
 
-    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot)) {
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot, this.head.payloadStatus)) {
       if (block.slot === slot) {
         return block;
       }
@@ -1233,7 +1256,7 @@ export class ForkChoice implements IForkChoice {
       return this.head;
     }
 
-    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot)) {
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot, this.head.payloadStatus)) {
       if (slot >= block.slot) {
         return block;
       }
@@ -1246,23 +1269,15 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes;
   }
 
-  // TODO GLOAS: this function is ambiguous, consumer should also provide payload, or it should accept a ProtoBlock instead
-  // also consumer may want PENDING or EMPTY only
-  *forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock> {
+  *forwardIterateDescendants(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock> {
     const rootsInChain = new Set([blockRoot]);
-
-    const blockVariants = this.protoArray.indices.get(blockRoot);
-    if (blockVariants === undefined) {
+    const blockIndex = this.protoArray.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
+    if (blockIndex === undefined) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: blockRoot,
       });
     }
-
-    // Find the minimum index among all variants to start iteration
-    const blockIndex = Array.isArray(blockVariants)
-      ? Math.min(...blockVariants.filter((idx) => idx !== undefined))
-      : blockVariants;
 
     for (let i = blockIndex + 1; i < this.protoArray.nodes.length; i++) {
       const node = this.protoArray.nodes[i];
@@ -1463,8 +1478,8 @@ export class ForkChoice implements IForkChoice {
    * Since this balances are already available the getter is just `() => balances`, without cache interaction
    */
   private updateCheckpoints(
-    justifiedCheckpoint: CheckpointWithPayload,
-    finalizedCheckpoint: CheckpointWithPayload,
+    justifiedCheckpoint: CheckpointWithPayloadStatus,
+    finalizedCheckpoint: CheckpointWithPayloadStatus,
     getJustifiedBalances: () => JustifiedBalances
   ): void {
     // Update justified checkpoint.
@@ -1484,8 +1499,8 @@ export class ForkChoice implements IForkChoice {
    * Update unrealized checkpoints in store if necessary
    */
   private updateUnrealizedCheckpoints(
-    unrealizedJustifiedCheckpoint: CheckpointWithPayload,
-    unrealizedFinalizedCheckpoint: CheckpointWithPayload,
+    unrealizedJustifiedCheckpoint: CheckpointWithPayloadStatus,
+    unrealizedFinalizedCheckpoint: CheckpointWithPayloadStatus,
     getJustifiedBalances: () => JustifiedBalances
   ): void {
     if (unrealizedJustifiedCheckpoint.epoch > this.fcStore.unrealizedJustified.checkpoint.epoch) {

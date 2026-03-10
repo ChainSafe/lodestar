@@ -168,7 +168,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
 
     const getSeedStateTimer = this.modules.metrics?.regenGetState.getSeedState.startTimer({caller});
     // iterateAncestorBlocks only returns ancestor blocks, not the block itself
-    for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot)) {
+    for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot, block.payloadStatus)) {
       state = this.modules.blockStateCache.get(b.stateRoot);
       if (state) {
         break;

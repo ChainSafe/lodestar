@@ -3,7 +3,8 @@ import {PrivateKey} from "@libp2p/interface";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {
-  CheckpointWithPayload,
+  CheckpointWithHex,
+  CheckpointWithPayloadStatus,
   IForkChoice,
   PayloadStatus,
   ProtoBlock,
@@ -84,7 +85,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {persistBlockInputs} from "./blocks/writeBlockInputToDb.ts";
+import {persistBlockInput} from "./blocks/writeBlockInputToDb.ts";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
@@ -171,7 +172,7 @@ export class BeaconChain implements IBeaconChain {
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
-  readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput[]], void>;
+  readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput], void>;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -437,7 +438,7 @@ export class BeaconChain implements IBeaconChain {
     );
 
     this.unfinalizedBlockWrites = new JobItemQueue(
-      persistBlockInputs.bind(this),
+      persistBlockInput.bind(this),
       {
         maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES,
         signal,
@@ -1197,7 +1198,7 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private justifiedBalancesGetter(
-    checkpoint: CheckpointWithPayload,
+    checkpoint: CheckpointWithPayloadStatus,
     blockState: CachedBeaconStateAllForks
   ): EffectiveBalanceIncrements {
     this.metrics?.balancesCache.requests.inc();
@@ -1236,7 +1237,7 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private closestJustifiedBalancesStateToCheckpoint(
-    checkpoint: CheckpointWithPayload,
+    checkpoint: CheckpointWithPayloadStatus,
     blockState: CachedBeaconStateAllForks
   ): {state: CachedBeaconStateAllForks; stateId: string; shouldWarn: boolean} {
     const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
@@ -1251,7 +1252,10 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // Find a state in the same branch of checkpoint at same epoch. Balances should exactly the same
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(
+      checkpoint.rootHex,
+      checkpoint.payloadStatus
+    )) {
       if (computeEpochAtSlot(descendantBlock.slot) === checkpoint.epoch) {
         const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {
@@ -1267,7 +1271,10 @@ export class BeaconChain implements IBeaconChain {
 
     // Find a state in the same branch of checkpoint at a latter epoch. Balances are not the same, but should be close
     // Note: must call .forwardIterateDescendants() again since nodes are not sorted
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(
+      checkpoint.rootHex,
+      checkpoint.payloadStatus
+    )) {
       if (computeEpochAtSlot(descendantBlock.slot) > checkpoint.epoch) {
         const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {
