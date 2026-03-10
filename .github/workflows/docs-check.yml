@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 24
@@ -29,4 +29,4 @@ jobs:
 
       # Run spellcheck AFTER building docs, in case the CLI reference has issues
       - name: Spellcheck
-        uses: rojopolis/spellcheck-github-actions@0.32.0
+        uses: rojopolis/spellcheck-github-actions@531492f4dd27f0593ca398f2ed225d1b92eec828 # 0.32.0

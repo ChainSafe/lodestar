@@ -28,7 +28,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 24
@@ -39,7 +39,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 24
@@ -57,7 +57,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sim-test-multifork-logs
           path: packages/cli/test-logs
@@ -68,7 +68,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 24
@@ -86,7 +86,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sim-test-endpoints-logs
           path: packages/cli/test-logs
@@ -97,7 +97,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 24
@@ -115,7 +115,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sim-test-eth-backup-provider-logs
           path: packages/cli/test-logs
@@ -126,7 +126,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 24
@@ -144,7 +144,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sim-test-mixed-clients-logs
           path: packages/cli/test-logs
