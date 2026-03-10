@@ -388,6 +388,18 @@
           "legendFormat": "created_by_blob",
           "range": true,
           "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_seen_block_input_cache_serialized_object_count",
+          "instant": false,
+          "legendFormat": "serialized_objects",
+          "range": true,
+          "refId": "G"
         }
       ],
       "title": "Block Input",
