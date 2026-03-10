@@ -22,7 +22,7 @@ jobs:
     name: Backfill versioned docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: unstable
           fetch-depth: 0
@@ -73,7 +73,7 @@ jobs:
 
       - name: Install pnpm
         if: steps.versions.outputs.missing != '' && github.event.inputs.dry_run != 'true'
-        uses: pnpm/action-setup@c5ba7f7862a0f64c1b1a05fbac13e0b8e86ba08c # v4
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         if: steps.versions.outputs.missing != '' && github.event.inputs.dry_run != 'true'
