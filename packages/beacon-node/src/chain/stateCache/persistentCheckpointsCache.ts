@@ -55,6 +55,22 @@ type CacheItem = InMemoryCacheItem | PersistedCacheItem;
 
 type LoadedStateBytesData = {persistedKey: DatastoreKey; stateBytes: Uint8Array};
 
+/** Bitmask for tracking which payload variants exist per root in the epochIndex */
+const enum PayloadAvailability {
+  NOT_PRESENT = 1,
+  PRESENT = 2,
+}
+
+const PAYLOAD_AVAILABILITY_ALL = [PayloadAvailability.NOT_PRESENT, PayloadAvailability.PRESENT] as const;
+
+function toPayloadAvailability(payloadPresent: boolean): PayloadAvailability {
+  return payloadPresent ? PayloadAvailability.PRESENT : PayloadAvailability.NOT_PRESENT;
+}
+
+function fromPayloadAvailability(flag: PayloadAvailability): boolean {
+  return flag === PayloadAvailability.PRESENT;
+}
+
 /**
  * Before n-historical states, lodestar keeps all checkpoint states since finalized
  * Since Sep 2024, lodestar stores 3 most recent checkpoint states in memory and the rest on disk. The finalized state
@@ -107,8 +123,8 @@ const PROCESS_CHECKPOINT_STATES_BPS = 6667;
  */
 export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<CacheKey, CacheItem>;
-  /** Epoch -> Map<blockRoot, Set<payloadPresent>> */
-  private readonly epochIndex = new MapDef<Epoch, Map<RootHex, Set<boolean>>>(() => new Map());
+  /** Epoch -> Map<blockRoot, PayloadAvailability bitmask> */
+  private readonly epochIndex = new MapDef<Epoch, Map<RootHex, number>>(() => new Map());
   private readonly config: BeaconConfig;
   private readonly metrics: Metrics | null | undefined;
   private readonly logger: Logger;
@@ -375,7 +391,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       .sort((a, b) => b - a)
       .filter((e) => e <= maxEpoch);
     for (const epoch of epochs) {
-      if (this.epochIndex.get(epoch)?.get(rootHex)?.has(payloadPresent)) {
+      if (this.hasPayloadVariant(epoch, rootHex, payloadPresent)) {
         const inMemoryClonedState = this.get({rootHex, epoch, payloadPresent});
         if (inMemoryClonedState) {
           return inMemoryClonedState;
@@ -402,7 +418,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       .sort((a, b) => b - a)
       .filter((e) => e <= maxEpoch);
     for (const epoch of epochs) {
-      if (this.epochIndex.get(epoch)?.get(rootHex)?.has(payloadPresent)) {
+      if (this.hasPayloadVariant(epoch, rootHex, payloadPresent)) {
         try {
           const state = await this.getOrReload({rootHex, epoch, payloadPresent});
           if (state) {
@@ -584,8 +600,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         return firstState;
       }
 
-      for (const [rootHex, variants] of this.epochIndex.get(epoch) || []) {
-        for (const payloadPresent of variants) {
+      for (const [rootHex, bitmask] of this.epochIndex.get(epoch) || []) {
+        for (const flag of PAYLOAD_AVAILABILITY_ALL) {
+          if (!(bitmask & flag)) continue;
+          const payloadPresent = fromPayloadAvailability(flag);
           const cpKey = toCacheKey({rootHex, epoch, payloadPresent});
           const cacheItem = this.cache.get(cpKey);
           if (cacheItem === undefined) {
@@ -629,26 +647,27 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
   private addToEpochIndex(epoch: Epoch, rootHex: RootHex, payloadPresent: boolean): void {
     const rootMap = this.epochIndex.getOrDefault(epoch);
-    let variants = rootMap.get(rootHex);
-    if (variants === undefined) {
-      variants = new Set();
-      rootMap.set(rootHex, variants);
-    }
-    variants.add(payloadPresent);
+    rootMap.set(rootHex, (rootMap.get(rootHex) ?? 0) | toPayloadAvailability(payloadPresent));
   }
 
   private removeFromEpochIndex(epoch: Epoch, rootHex: RootHex, payloadPresent: boolean): void {
     const rootMap = this.epochIndex.get(epoch);
     if (rootMap === undefined) return;
-    const variants = rootMap.get(rootHex);
-    if (variants === undefined) return;
-    variants.delete(payloadPresent);
-    if (variants.size === 0) {
+    const existing = rootMap.get(rootHex);
+    if (existing === undefined) return;
+    const updated = existing & ~toPayloadAvailability(payloadPresent);
+    if (updated === 0) {
       rootMap.delete(rootHex);
       if (rootMap.size === 0) {
         this.epochIndex.delete(epoch);
       }
+    } else {
+      rootMap.set(rootHex, updated);
     }
+  }
+
+  private hasPayloadVariant(epoch: Epoch, rootHex: RootHex, payloadPresent: boolean): boolean {
+    return Boolean((this.epochIndex.get(epoch)?.get(rootHex) ?? 0) & toPayloadAvailability(payloadPresent));
   }
 
   /** ONLY FOR DEBUGGING PURPOSES. For lodestar debug API */
@@ -729,7 +748,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const prevEpochRoot = toRootHex(getBlockRootAtSlot(state, epochBoundarySlot - 1));
 
     // for each epoch, usually there are 2 rootHexes respective to the 2 checkpoint states: Previous Root Checkpoint State and Current Root Checkpoint State
-    const cpRootHexMap = this.epochIndex.get(epoch) ?? new Map<RootHex, Set<boolean>>();
+    const cpRootHexMap = this.epochIndex.get(epoch) ?? new Map<RootHex, number>();
     const persistedRootHexes = new Set<RootHex>();
 
     // 1) if there is no CRCS, persist PRCS (block 0 of epoch is skipped). In this case prevEpochRoot === epochBoundaryHex
@@ -744,8 +763,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
     }
 
-    for (const [rootHex, variants] of cpRootHexMap) {
-      for (const payloadPresent of variants) {
+    for (const [rootHex, bitmask] of cpRootHexMap) {
+      for (const flag of PAYLOAD_AVAILABILITY_ALL) {
+        if (!(bitmask & flag)) continue;
+        const payloadPresent = fromPayloadAvailability(flag);
         const cpKey = toCacheKey({epoch: epoch, rootHex, payloadPresent});
         const cacheItem = this.cache.get(cpKey);
 
@@ -823,9 +844,11 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    */
   private async deleteAllEpochItems(epoch: Epoch): Promise<void> {
     let persistCount = 0;
-    const rootHexMap = this.epochIndex.get(epoch) || new Map<RootHex, Set<boolean>>();
-    for (const [rootHex, variants] of rootHexMap) {
-      for (const payloadPresent of variants) {
+    const rootHexMap = this.epochIndex.get(epoch) || new Map<RootHex, number>();
+    for (const [rootHex, bitmask] of rootHexMap) {
+      for (const flag of PAYLOAD_AVAILABILITY_ALL) {
+        if (!(bitmask & flag)) continue;
+        const payloadPresent = fromPayloadAvailability(flag);
         const key = toCacheKey({rootHex, epoch, payloadPresent});
         const cacheItem = this.cache.get(key);
 
@@ -851,7 +874,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       epoch,
       persistCount,
       items: Array.from(rootHexMap.entries())
-        .flatMap(([rootHex, variants]) => Array.from(variants).map((p) => `${rootHex}:${p}`))
+        .flatMap(([rootHex, bitmask]) =>
+          PAYLOAD_AVAILABILITY_ALL.filter((f) => bitmask & f).map((f) => `${rootHex}:${fromPayloadAvailability(f)}`)
+        )
         .join(","),
     });
   }
