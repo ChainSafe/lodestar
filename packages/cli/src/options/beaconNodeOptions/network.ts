@@ -314,6 +314,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
   },
 
   disableTcp: {
+    hidden: true,
     type: "boolean",
     description: "Disable TCP transport",
     defaultDescription: String(defaultOptions.network.disableTcp === true),
