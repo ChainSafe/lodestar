@@ -856,6 +856,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       } catch (e) {
         logger.error("Error adding to payloadAttestation pool", {}, e as Error);
       }
+      chain.forkChoice.notifyPtcMessages(
+        toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+        [validationResult.validatorCommitteeIndex],
+        payloadAttestationMessage.data.payloadPresent
+      );
     },
     [GossipType.execution_payload_bid]: async ({
       gossipData,

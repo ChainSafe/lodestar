@@ -864,7 +864,7 @@ function isValidShuffling(
   // attestation's shuffling is the same as the current state's.
   // To account for skipped slots, find the first block at *or before* the pivot slot.
   const beaconBlockRootHex = blockRootHex;
-  const beaconBlock = forkChoice.getBlockHex(beaconBlockRootHex);
+  const beaconBlock = forkChoice.getBlockHexDefaultStatus(beaconBlockRootHex);
   if (!beaconBlock) {
     return InvalidAttestationData.BlockNotInForkChoice;
   }

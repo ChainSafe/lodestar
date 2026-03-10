@@ -82,8 +82,9 @@ export async function* onDataColumnSidecarsByRange(
   // Non-finalized range of columns
   if (endSlot > finalizedSlot) {
     const unfinalizedStartSlot = Math.max(startSlot, finalizedSlot + 1);
-    const headRoot = chain.forkChoice.getHeadRoot();
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+    const headBlock = chain.forkChoice.getHead();
+    const headRoot = headBlock.blockRoot;
+    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {

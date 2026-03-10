@@ -20,7 +20,7 @@ export async function* onBlobSidecarsByRoot(
   for (const blobIdentifier of requestBody) {
     const {blockRoot, index} = blobIdentifier;
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.forkChoice.getBlockHex(blockRootHex);
+    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
 
     // NOTE: Only support non-finalized blocks.
     // SPEC: Clients MUST support requesting blocks and sidecars since the latest finalized epoch.

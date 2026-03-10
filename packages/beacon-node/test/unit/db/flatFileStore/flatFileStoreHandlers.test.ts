@@ -65,7 +65,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         config: defaultConfig,
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getHeadRoot: () => ROOT_A,
+          getHead: () => ({blockRoot: ROOT_A, payloadStatus: "FULL"}),
           getAllAncestorBlocks: () => opts.headChain ?? [],
         },
       } as unknown as IBeaconChain;
@@ -178,7 +178,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         config: fuluConfig,
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getHeadRoot: () => ROOT_A,
+          getHead: () => ({blockRoot: ROOT_A, payloadStatus: "FULL"}),
           getAllAncestorBlocks: () => opts.headChain ?? [],
         },
         custodyConfig: {
