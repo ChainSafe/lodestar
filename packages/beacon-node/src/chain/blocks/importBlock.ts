@@ -113,7 +113,7 @@ export async function importBlock(
   // Without this, a supernode syncing from behind can accumulate many blocks worth of column
   // data in memory (up to 128 columns per block) causing OOM before persistence catches up.
   await this.unfinalizedBlockWrites.waitForSpace();
-  this.unfinalizedBlockWrites.push([blockInput]).catch((e) => {
+  this.unfinalizedBlockWrites.push(blockInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error("Error pushing block to unfinalized write queue", {slot: blockSlot}, e as Error);
     }

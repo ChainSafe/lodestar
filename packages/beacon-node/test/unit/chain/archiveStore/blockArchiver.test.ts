@@ -2,6 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
@@ -68,7 +69,7 @@ describe("block archiver task", () => {
       forkChoiceStub,
       lightclientServer,
       logger,
-      {epoch: 5, rootHex: ZERO_HASH_HEX},
+      {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX, payloadStatus: PayloadStatus.FULL},
       currentEpoch
     );
 
@@ -141,7 +142,12 @@ describe("block archiver task", () => {
       forkChoiceStub,
       lightclientServer,
       logger,
-      {epoch: config.FULU_FORK_EPOCH + 1, rootHex: ZERO_HASH_HEX},
+      {
+        epoch: config.FULU_FORK_EPOCH + 1,
+        root: fromHexString(ZERO_HASH_HEX),
+        rootHex: ZERO_HASH_HEX,
+        payloadStatus: PayloadStatus.FULL,
+      },
       currentEpoch
     );
 
