@@ -64,6 +64,7 @@
     "@chainsafe/ssz": "^1.2.2",
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",
-    "@lodestar/utils": "workspace:^"
+    "@lodestar/utils": "workspace:^",
+    "@lodestar/spec-test-util": "workspace:^"
   }
 }

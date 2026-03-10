@@ -20,11 +20,11 @@ jobs:
 
     - name: Check version consistency
       run: |
-        SPEC_TEST_VERSION=$(grep 'specVersion:' packages/beacon-node/test/spec/specTestVersioning.ts | head -1 | sed 's/.*specVersion: "\(.*\)".*/\1/')
+        SPEC_TEST_VERSION=$(grep '"specVersion":' spec-tests-version.jsonc | head -1 | sed 's/.*"specVersion": "\(.*\)".*/\1/')
         ETHSPECIFY_VERSION=$(grep '^version:' specrefs/.ethspecify.yml | sed 's/version: //')
         if [ "$SPEC_TEST_VERSION" != "$ETHSPECIFY_VERSION" ]; then
-          echo "Version mismatch between specTestVersioning.ts and ethspecify"
-          echo "  packages/beacon-node/test/spec/specTestVersioning.ts: $SPEC_TEST_VERSION"
+          echo "Version mismatch between spec-teests-version.jsonc and ethspecify"
+          echo "  spec-tests-version.jsonc: $SPEC_TEST_VERSION"
           echo "  specrefs/.ethspecify.yml: $ETHSPECIFY_VERSION"
           exit 1
         else
