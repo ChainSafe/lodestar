@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -65,7 +65,7 @@ jobs:
     needs: [tag, binaries]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Needs full depth for changelog generation
 
@@ -77,14 +77,14 @@ jobs:
         run: node scripts/generate_changelog.mjs ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md
 
       - name: Get binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           path: dist/
           merge-multiple: true
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -101,7 +101,7 @@ jobs:
       # In case of failure
       - name: Rollback on failure
         if: failure()
-        uses: author/action-rollback@1.0.4
+        uses: author/action-rollback@f4473931b1155b601092ec00eb1fa4882b80219f # 1.0.4
         with:
           release_id: ${{ steps.create_release.outputs.id }}
           tag: ${{ needs.tag.outputs.tag }}
@@ -115,7 +115,7 @@ jobs:
     needs: [tag, npm]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
-      - uses: nflaig/release-comment-on-pr@v1
+      - uses: nflaig/release-comment-on-pr@addf0108e7a60a9aaef4eee2900d69b126a75a5d # v1
         with:
           token: ${{ secrets.GH_PAGES_TOKEN }}
 
@@ -125,7 +125,7 @@ jobs:
     needs: [tag, npm]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} latest 900
 
   docker:
