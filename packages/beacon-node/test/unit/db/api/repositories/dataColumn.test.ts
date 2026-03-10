@@ -2,6 +2,7 @@ import {rimraf} from "rimraf";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {Root, fulu, ssz} from "@lodestar/types";
 import {fromAsync, toHex} from "@lodestar/utils";
@@ -9,7 +10,6 @@ import {DataColumnSidecarRepository} from "../../../../../src/db/repositories/da
 import {DataColumnSidecarArchiveRepository} from "../../../../../src/db/repositories/dataColumnSidecarArchive.js";
 import {getDataColumnSidecarsFromBlock} from "../../../../../src/util/dataColumns.js";
 import {kzg} from "../../../../../src/util/kzg.js";
-import {testLogger} from "../../../../utils/logger.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const config = createChainForkConfig({

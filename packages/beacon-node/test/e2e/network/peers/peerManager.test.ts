@@ -4,6 +4,7 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus, getConnectionsMap} from "../../../../src/network/index.js";
@@ -17,7 +18,6 @@ import {IAttnetsService, computeNodeId} from "../../../../src/network/subnets/in
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig, getCustodyGroups} from "../../../../src/util/dataColumns.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
-import {testLogger} from "../../../utils/logger.js";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
 import {getValidPeerId} from "../../../utils/peer.js";
 import {generateState} from "../../../utils/state.js";

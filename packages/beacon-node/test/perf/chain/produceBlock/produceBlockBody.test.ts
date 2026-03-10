@@ -2,6 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test-utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
@@ -9,7 +10,6 @@ import {BeaconChain} from "../../../../src/chain/index.js";
 import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
-import {testLogger} from "../../../utils/logger.js";
 
 const logger = testLogger();
 

@@ -1,5 +1,6 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
@@ -23,7 +24,6 @@ import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
-import {testLogger} from "../logger.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;

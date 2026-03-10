@@ -5,6 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
   ForkPostDeneb,
@@ -53,7 +54,6 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {testLogger} from "../../utils/logger.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";

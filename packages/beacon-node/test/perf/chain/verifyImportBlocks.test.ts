@@ -2,6 +2,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getNetworkCachedBlock, getNetworkCachedState, rangeSyncTest} from "@lodestar/state-transition/test-utils";
 import {sleep, toHex} from "@lodestar/utils";
@@ -14,7 +15,6 @@ import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {beforeValue} from "../../utils/beforeValueBenchmark.js";
-import {testLogger} from "../../utils/logger.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache

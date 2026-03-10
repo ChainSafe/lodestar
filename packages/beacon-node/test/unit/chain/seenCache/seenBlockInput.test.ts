@@ -1,6 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
 import {PayloadStatus} from "@lodestar/fork-choice";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
@@ -23,7 +24,6 @@ import {
   generateBlockWithBlobSidecars,
   generateChainOfBlocks,
 } from "../../../utils/blocksAndData.js";
-import {testLogger} from "../../../utils/logger.js";
 
 describe("SeenBlockInputCache", async () => {
   let cache: SeenBlockInput;
