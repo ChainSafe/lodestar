@@ -151,7 +151,7 @@ export async function getDevBeaconNode(
     logger,
     processShutdownCallback: () => {},
     privateKey,
-    dataDir: ".",
+    dataDir: tmpDir.name,
     peerStoreDir,
     anchorState: cachedState,
     wsCheckpoint,
