@@ -23,6 +23,7 @@ import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
+import {EpochShuffling, getShufflingSlotSubarray} from "./epochShuffling.js";
 
 /**
  * Compute proposer indices for an epoch
@@ -274,7 +275,7 @@ export function getNextSyncCommitteeIndices(
 export function computePayloadTimelinessCommitteesForEpoch(
   state: BeaconStateAllForks,
   epoch: number,
-  committees: Uint32Array[][],
+  epochShuffling: EpochShuffling,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array[] {
   const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
@@ -293,35 +294,17 @@ export function computePayloadTimelinessCommitteesForEpoch(
     slotSeedView.setUint32(epochSeed.length + 4, 0, true);
     const slotSeed = digest(slotSeedInput);
 
-    result[i] = computePayloadTimelinessCommitteeForSlot(slotSeed, committees[i], effectiveBalanceIncrements);
+    const slotCommitteeIndices = getShufflingSlotSubarray(epochShuffling.shuffling, i);
+    result[i] = computePayloadTimelinessCommitteeForSlot(effectiveBalanceIncrements, slotCommitteeIndices, slotSeed);
   }
   return result;
 }
 
 /**
  * Compute PTC for a single slot.
- */
-export function computePayloadTimelinessCommitteeForSlot(
-  slotSeed: Uint8Array,
-  slotCommittees: Uint32Array[],
-  effectiveBalanceIncrements: EffectiveBalanceIncrements
-): Uint32Array {
-  // Concatenate all committee Uint32Arrays for this slot
-  const totalLen = slotCommittees.reduce((sum, c) => sum + c.length, 0);
-  const allIndices = new Uint32Array(totalLen);
-  let offset = 0;
-  for (const c of slotCommittees) {
-    allIndices.set(c, offset);
-    offset += c.length;
-  }
-  return computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, allIndices, slotSeed);
-}
-
-/**
- * Optimized version of PTC indices computation.
  * Avoids BigInt conversions and uses DataView for efficient byte reading.
  */
-export function computePayloadTimelinessCommitteeIndices(
+export function computePayloadTimelinessCommitteeForSlot(
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
   indices: Uint32Array,
   seed: Uint8Array
@@ -375,7 +358,7 @@ export function computePayloadTimelinessCommitteeIndices(
 
 /**
  * Naive version of PTC indices computation.
- * Used to verify the optimized `computePayloadTimelinessCommitteeIndices`.
+ * Used to verify the optimized `computePayloadTimelinessCommitteeForSlot`.
  *
  * SLOW CODE - 🐢
  */

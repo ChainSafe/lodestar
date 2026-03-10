@@ -4,7 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {bytesToInt} from "@lodestar/utils";
 import {
-  computePayloadTimelinessCommitteeIndices,
+  computePayloadTimelinessCommitteeForSlot,
   computeProposerIndex,
   computeShuffledIndex,
   getComputeShuffledIndexFn,
@@ -94,7 +94,7 @@ describe("electra getNextSyncCommitteeIndices", () => {
   }
 });
 
-describe("computePayloadTimelinessCommitteeIndices", () => {
+describe("computePayloadTimelinessCommitteeForSlot", () => {
   const seed = crypto.randomBytes(32);
   const vc = 1000;
   const indices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
@@ -105,7 +105,7 @@ describe("computePayloadTimelinessCommitteeIndices", () => {
 
   it("should be the same to the naive version", () => {
     const expected = naiveComputePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
-    const result = computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
+    const result = computePayloadTimelinessCommitteeForSlot(effectiveBalanceIncrements, indices, seed);
     expect(result).toEqual(new Uint32Array(expected));
   });
 });

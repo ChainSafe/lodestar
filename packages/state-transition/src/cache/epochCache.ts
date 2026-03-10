@@ -458,7 +458,7 @@ export class EpochCache {
       payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
         currentEpoch,
-        currentShuffling.committees,
+        currentShuffling,
         effectiveBalanceIncrements
       );
 
@@ -466,7 +466,7 @@ export class EpochCache {
         previousPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
           state,
           previousEpoch,
-          previousShuffling.committees,
+          previousShuffling,
           effectiveBalanceIncrements
         );
       }
@@ -707,7 +707,7 @@ export class EpochCache {
       this.payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
         upcomingEpoch,
-        this.currentShuffling.committees,
+        this.currentShuffling,
         this.effectiveBalanceIncrements
       );
     }

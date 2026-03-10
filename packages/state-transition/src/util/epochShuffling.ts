@@ -62,6 +62,15 @@ export function computeCommitteeCount(activeValidatorCount: number): number {
   return Math.max(1, Math.min(MAX_COMMITTEES_PER_SLOT, committeesPerSlot));
 }
 
+export function getShufflingSlotSubarray(shuffling: Uint32Array, slotInEpoch: number): Uint32Array {
+  const n = shuffling.length;
+  const committeesPerSlot = computeCommitteeCount(n);
+  const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
+  const start = Math.floor((n * slotInEpoch * committeesPerSlot) / committeeCount);
+  const end = Math.floor((n * (slotInEpoch + 1) * committeesPerSlot) / committeeCount);
+  return shuffling.subarray(start, end);
+}
+
 function buildCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
   const activeValidatorCount = shuffling.length;
   const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
