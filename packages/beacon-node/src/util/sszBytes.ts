@@ -452,7 +452,7 @@ export function getSlotFromBeaconStateSerialized(data: Uint8Array): Slot | null 
  *
  * If the high bytes are not zero, return null
  */
-function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
+export function getSlotFromOffset(data: Uint8Array, offset: number): Slot | null {
   return checkSlotHighBytes(data, offset) ? getSlotFromOffsetTrusted(data, offset) : null;
 }
 

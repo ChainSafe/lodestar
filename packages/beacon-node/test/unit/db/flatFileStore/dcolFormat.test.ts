@@ -95,17 +95,29 @@ describe("dcolFormat", () => {
       expect(() => parseDcolHeader(data)).toThrow("Unsupported dcol version");
     });
 
-    it("should handle large slot values", () => {
+    it("should handle max 4-byte slot value", () => {
       const original = {
         version: DCOL_VERSION,
         bitmap: new Uint8Array(16),
         blockRoot: new Uint8Array(32),
-        slot: 9007199254740991, // Number.MAX_SAFE_INTEGER
+        slot: 0xffffffff, // max uint32, ~1634 years after genesis
       };
 
       const encoded = encodeDcolHeader(original);
       const decoded = parseDcolHeader(encoded);
-      expect(decoded.slot).toBe(9007199254740991);
+      expect(decoded.slot).toBe(0xffffffff);
+    });
+
+    it("should reject slot exceeding 4-byte range", () => {
+      const header = encodeDcolHeader({
+        version: DCOL_VERSION,
+        bitmap: new Uint8Array(16),
+        blockRoot: new Uint8Array(32),
+        slot: 0,
+      });
+      // Manually set a non-zero high byte in the slot field (slot starts at byte 53)
+      header[53 + 4] = 1;
+      expect(() => parseDcolHeader(header)).toThrow("dcol slot exceeds 4-byte range");
     });
   });
 

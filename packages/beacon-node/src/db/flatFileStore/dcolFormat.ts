@@ -7,7 +7,7 @@
  *     [_reserved:   4B]       — zero-filled
  *     [bitmap:     16B]       — 128-bit bitmap of which columns are present
  *     [blockRoot:  32B]
- *     [slot:        8B BE]
+ *     [slot:        8B LE]       — only low 4 bytes used (matching SSZ convention)
  *     [reserved:   88B]       — zero-filled, for future use
  *
  *   OFFSET TABLE ((N+1) * 4 bytes, where N = popcount(bitmap)):
@@ -27,6 +27,7 @@
 
 import {compressSync} from "snappy";
 import {uncompress} from "snappyjs";
+import {getSlotFromOffset} from "../../util/sszBytes.js";
 
 export const DCOL_VERSION = 0x01;
 export const DCOL_HEADER_SIZE = 149;
@@ -91,11 +92,10 @@ export function encodeDcolHeader(header: DcolHeader): Uint8Array {
   buf.set(header.bitmap, BITMAP_OFFSET);
   buf.set(header.blockRoot, BLOCK_ROOT_OFFSET);
 
-  // Slot as 8-byte BE (JavaScript safe integer range is sufficient)
-  const hi = Math.floor(header.slot / 0x100000000);
-  const lo = header.slot >>> 0;
-  view.setUint32(SLOT_OFFSET, hi, false);
-  view.setUint32(SLOT_OFFSET + 4, lo, false);
+  // Slot as 8-byte LE (matching SSZ convention used throughout Lodestar).
+  // High 4 bytes are always zero for practical slot values (4B covers ~1634 years).
+  view.setUint32(SLOT_OFFSET, header.slot >>> 0, true);
+  // bytes SLOT_OFFSET+4..+7 are already zero
 
   // reserved bytes are already zero
   return buf;
@@ -105,7 +105,6 @@ export function parseDcolHeader(data: Uint8Array): DcolHeader {
   if (data.length < DCOL_HEADER_SIZE) {
     throw new Error(`dcol file too small: ${data.length} < ${DCOL_HEADER_SIZE}`);
   }
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
   const version = data[0];
   if (version !== DCOL_VERSION) {
@@ -115,9 +114,10 @@ export function parseDcolHeader(data: Uint8Array): DcolHeader {
   const bitmap = Uint8Array.prototype.slice.call(data, BITMAP_OFFSET, BITMAP_OFFSET + BITMAP_BYTES) as Uint8Array;
   const blockRoot = Uint8Array.prototype.slice.call(data, BLOCK_ROOT_OFFSET, BLOCK_ROOT_OFFSET + 32) as Uint8Array;
 
-  const hi = view.getUint32(SLOT_OFFSET, false);
-  const lo = view.getUint32(SLOT_OFFSET + 4, false);
-  const slot = hi * 0x100000000 + lo;
+  const slot = getSlotFromOffset(data, SLOT_OFFSET);
+  if (slot === null) {
+    throw new Error("dcol slot exceeds 4-byte range");
+  }
 
   return {version, bitmap, blockRoot, slot};
 }

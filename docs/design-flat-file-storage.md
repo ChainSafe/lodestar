@@ -108,7 +108,7 @@ Header (149 bytes):
   [_reserved:   4 bytes]  Zero-filled
   [bitmap:     16 bytes]  128-bit bitmap, bit i = 1 if column i is present
   [block_root: 32 bytes]  Block root for integrity verification
-  [slot:        8 bytes]  Big-endian uint64, slot number
+  [slot:        8 bytes]  Little-endian uint64 (matching SSZ convention), only low 4 bytes used
   [reserved:   88 bytes]  Zero-filled, for future use
 
 Total header: 1 + 4 + 16 + 32 + 8 + 88 = 149 bytes
