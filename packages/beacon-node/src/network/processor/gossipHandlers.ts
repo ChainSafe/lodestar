@@ -855,8 +855,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       if (!payloadInput) {
         // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
-        logger.warn("PayloadEnvelopeInput not found after validation", {blockRootHex, slot});
-        return;
+        throw Error(`PayloadEnvelopeInput not found after validation blockRoot=${blockRootHex} slot=${slot}`);
       }
 
       chain.serializedCache.set(executionPayloadEnvelope, serializedData);

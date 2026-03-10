@@ -54,6 +54,7 @@ function createPromise<T>(): PromiseParts<T> {
 export class PayloadEnvelopeInput {
   readonly blockRootHex: RootHex;
   readonly slot: Slot;
+  readonly proposerIndex: ValidatorIndex;
   readonly bid: gloas.ExecutionPayloadBid;
   readonly versionedHashes: VersionedHashes;
 
@@ -74,6 +75,7 @@ export class PayloadEnvelopeInput {
   private constructor(props: {
     blockRootHex: RootHex;
     slot: Slot;
+    proposerIndex: ValidatorIndex;
     bid: gloas.ExecutionPayloadBid;
     sampledColumns: ColumnIndex[];
     custodyColumns: ColumnIndex[];
@@ -81,6 +83,7 @@ export class PayloadEnvelopeInput {
   }) {
     this.blockRootHex = props.blockRootHex;
     this.slot = props.slot;
+    this.proposerIndex = props.proposerIndex;
     this.bid = props.bid;
     this.versionedHashes = props.bid.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
     this.sampledColumns = props.sampledColumns;
@@ -100,6 +103,7 @@ export class PayloadEnvelopeInput {
     return new PayloadEnvelopeInput({
       blockRootHex: props.blockRootHex,
       slot: props.block.message.slot,
+      proposerIndex: props.block.message.proposerIndex,
       bid,
       sampledColumns: props.sampledColumns,
       custodyColumns: props.custodyColumns,

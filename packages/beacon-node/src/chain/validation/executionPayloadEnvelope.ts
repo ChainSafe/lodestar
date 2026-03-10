@@ -1,4 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
+import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {
   CachedBeaconStateGloas,
   computeStartSlotAtEpoch,
@@ -140,8 +141,14 @@ async function validateExecutionPayloadEnvelope(
       });
     });
 
+  const state = blockState as CachedBeaconStateGloas;
+  const builderPubkey =
+    envelope.builderIndex === BUILDER_INDEX_SELF_BUILD
+      ? state.epochCtx.pubkeyCache.getOrThrow(payloadInput.proposerIndex)
+      : PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey);
+
   const signatureSet = createSingleSignatureSetFromComponents(
-    PublicKey.fromBytes((blockState as CachedBeaconStateGloas).builders.getReadonly(envelope.builderIndex).pubkey),
+    builderPubkey,
     getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
     executionPayloadEnvelope.signature
   );

@@ -146,7 +146,9 @@ export async function importBlock(
       custodyColumns: this.custodyConfig.custodyColumns,
       timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
     });
-    this.logger.debug("Created PayloadEnvelopeInput for Gloas block", {slot: blockSlot, root: blockRootHex});
+    if (opts.seenTimestampSec !== undefined) {
+      this.logger.debug("Created PayloadEnvelopeInput for Gloas block", {slot: blockSlot, root: blockRootHex});
+    }
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});

@@ -1,5 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
-import {ForkName} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {
   CachedBeaconStateGloas,
   createSingleSignatureSetFromComponents,
@@ -110,8 +110,12 @@ export async function importExecutionPayload(
     opts.validSignature === true
       ? Promise.resolve(true)
       : (async () => {
+          const builderPubkey =
+            envelope.message.builderIndex === BUILDER_INDEX_SELF_BUILD
+              ? blockState.epochCtx.pubkeyCache.getOrThrow(payloadInput.proposerIndex)
+              : PublicKey.fromBytes(blockState.builders.getReadonly(envelope.message.builderIndex).pubkey);
           const signatureSet = createSingleSignatureSetFromComponents(
-            PublicKey.fromBytes(blockState.builders.getReadonly(envelope.message.builderIndex).pubkey),
+            builderPubkey,
             getExecutionPayloadEnvelopeSigningRoot(this.config, envelope.message),
             envelope.signature
           );
