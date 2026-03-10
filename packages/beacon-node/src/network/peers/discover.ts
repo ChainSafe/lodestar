@@ -376,12 +376,10 @@ export class PeerDiscovery {
       return;
     }
 
-    // There is at least one multiaddr
-    // We assume its the tcp multiaddr, we also assume that there may be an additional quic multiaddr
-    // In practice this will only be challenged for mdns discovered peers
-    // TODO: make this smarter
-    const multiaddrTCP = multiaddrs[0];
-    const multiaddrQUIC = multiaddrs[1];
+    // Select multiaddrs by protocol rather than index — libp2p discovery events
+    // don't guarantee ordering or number of addresses
+    const multiaddrTCP = multiaddrs.find((ma) => ma.toString().includes("/tcp/"));
+    const multiaddrQUIC = multiaddrs.find((ma) => ma.toString().includes("/quic-v1"));
 
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
