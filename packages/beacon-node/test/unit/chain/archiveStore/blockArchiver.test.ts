@@ -216,7 +216,12 @@ describe("block archiver task", () => {
       forkChoiceStub,
       lightclientServer,
       logger,
-      {epoch: currentEpoch, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX, payloadStatus: PayloadStatus.FULL},
+      {
+        epoch: currentEpoch,
+        root: fromHexString(ZERO_HASH_HEX),
+        rootHex: ZERO_HASH_HEX,
+        payloadStatus: PayloadStatus.FULL,
+      },
       currentEpoch
     );
 
