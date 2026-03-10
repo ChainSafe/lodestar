@@ -71,8 +71,6 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
 
           parentBlockHash: null,
           payloadStatus: 2, // PayloadStatus.FULL
-          builderIndex: null,
-          blockHashFromBid: null,
         },
         originalState.slot
       );
@@ -101,8 +99,6 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
 
             parentBlockHash: null,
             payloadStatus: 2, // PayloadStatus.FULL
-            builderIndex: null,
-            blockHashFromBid: null,
           },
           slot,
           null
