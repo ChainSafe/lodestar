@@ -13,12 +13,19 @@ import {processConsolidationRequest} from "./processConsolidationRequest.ts";
 import {processDepositRequest} from "./processDepositRequest.ts";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.ts";
 
-// This function does not call execution engine to verify payload. Need to call it from other place
+export type ProcessExecutionPayloadEnvelopeOpts = {
+  dontTransferCache?: boolean;
+};
+
+// Unlike other block processing functions which mutate state in-place, this function
+// clones the state and returns the post-state, similar to stateTransition().
+// This function does not call execution engine to verify payload. Need to call it from other place.
 export function processExecutionPayloadEnvelope(
   state: CachedBeaconStateGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-  verify: boolean
-): void {
+  verify: boolean,
+  opts?: ProcessExecutionPayloadEnvelopeOpts
+): CachedBeaconStateGloas {
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(envelope.slot);
@@ -27,42 +34,49 @@ export function processExecutionPayloadEnvelope(
     throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
   }
 
-  validateExecutionPayloadEnvelope(state, envelope);
+  // .clone() before mutating state, similar to stateTransition()
+  const postState = state.clone(opts?.dontTransferCache) as CachedBeaconStateGloas;
+
+  validateExecutionPayloadEnvelope(postState, envelope);
 
   const requests = envelope.executionRequests;
 
   for (const deposit of requests.deposits) {
-    processDepositRequest(fork, state, deposit);
+    processDepositRequest(fork, postState, deposit);
   }
 
   for (const withdrawal of requests.withdrawals) {
-    processWithdrawalRequest(fork, state, withdrawal);
+    processWithdrawalRequest(fork, postState, withdrawal);
   }
 
   for (const consolidation of requests.consolidations) {
-    processConsolidationRequest(state, consolidation);
+    processConsolidationRequest(postState, consolidation);
   }
 
   // Queue the builder payment
-  const paymentIndex = SLOTS_PER_EPOCH + (state.slot % SLOTS_PER_EPOCH);
-  const payment = state.builderPendingPayments.get(paymentIndex).clone();
+  const paymentIndex = SLOTS_PER_EPOCH + (postState.slot % SLOTS_PER_EPOCH);
+  const payment = postState.builderPendingPayments.get(paymentIndex).clone();
   const amount = payment.withdrawal.amount;
 
   if (amount > 0) {
-    state.builderPendingWithdrawals.push(payment.withdrawal);
+    postState.builderPendingWithdrawals.push(payment.withdrawal);
   }
 
-  state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
+  postState.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
 
   // Cache the execution payload hash
-  state.executionPayloadAvailability.set(state.slot % SLOTS_PER_HISTORICAL_ROOT, true);
-  state.latestBlockHash = payload.blockHash;
+  postState.executionPayloadAvailability.set(postState.slot % SLOTS_PER_HISTORICAL_ROOT, true);
+  postState.latestBlockHash = payload.blockHash;
 
-  if (verify && !byteArrayEquals(envelope.stateRoot, state.hashTreeRoot())) {
+  postState.commit();
+
+  if (verify && !byteArrayEquals(envelope.stateRoot, postState.hashTreeRoot())) {
     throw new Error(
-      `Envelope's state root does not match state envelope=${toRootHex(envelope.stateRoot)} state=${toRootHex(state.hashTreeRoot())}`
+      `Envelope's state root does not match state envelope=${toRootHex(envelope.stateRoot)} state=${toRootHex(postState.hashTreeRoot())}`
     );
   }
+
+  return postState;
 }
 
 function validateExecutionPayloadEnvelope(
