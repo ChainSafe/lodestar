@@ -1,6 +1,6 @@
-import {fromHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
+import {writeDataColumnsToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Persists payload envelope data to DB. This operation must be eventually completed if a payload is imported.
@@ -15,49 +15,14 @@ export async function writePayloadEnvelopeInputToDb(
 ): Promise<void> {
   const envelope = payloadInput.getPayloadEnvelope();
   const blockRootHex = payloadInput.blockRootHex;
-  const blockRoot = fromHex(blockRootHex);
-
-  const fnPromises: Promise<void>[] = [];
 
   const envelopeBytes = this.serializedCache.get(envelope);
-  if (envelopeBytes) {
-    fnPromises.push(
-      this.db.executionPayloadEnvelope.putBinary(this.db.executionPayloadEnvelope.getId(envelope), envelopeBytes)
-    );
-  } else {
-    fnPromises.push(this.db.executionPayloadEnvelope.add(envelope));
-  }
+  const envelopePromise = envelopeBytes
+    ? this.db.executionPayloadEnvelope.putBinary(this.db.executionPayloadEnvelope.getId(envelope), envelopeBytes)
+    : this.db.executionPayloadEnvelope.add(envelope);
 
-  // payloadInput.isComplete() must be true in order to reach this function.
-  // So we should have all kzg commitments here.
-  const blobsLen = payloadInput.getBlobKzgCommitments().length;
-  if (blobsLen > 0) {
-    const {custodyColumns} = this.custodyConfig;
-    const dataColumnSidecars = payloadInput.getCustodyColumns();
-
-    const binaryPuts = [];
-    const nonbinaryPuts = [];
-    for (const dataColumnSidecar of dataColumnSidecars) {
-      const serialized = this.serializedCache.get(dataColumnSidecar);
-      if (serialized) {
-        binaryPuts.push({key: dataColumnSidecar.index, value: serialized});
-      } else {
-        nonbinaryPuts.push(dataColumnSidecar);
-      }
-    }
-    fnPromises.push(this.db.dataColumnSidecar.putManyBinary(blockRoot, binaryPuts));
-    fnPromises.push(this.db.dataColumnSidecar.putMany(blockRoot, nonbinaryPuts));
-
-    this.logger.debug("Persisting payload dataColumnSidecars to hot DB", {
-      slot: payloadInput.slot,
-      root: blockRootHex,
-      dataColumnSidecars: dataColumnSidecars.length,
-      numBlobs: blobsLen,
-      custodyColumns: custodyColumns.length,
-    });
-  }
-
-  await Promise.all(fnPromises);
+  // Write envelope and data columns in parallel (reuses shared column writing logic)
+  await Promise.all([envelopePromise, writeDataColumnsToDb.call(this, payloadInput)]);
   this.logger.debug("Persisted payload envelope to db", {
     slot: payloadInput.slot,
     root: blockRootHex,

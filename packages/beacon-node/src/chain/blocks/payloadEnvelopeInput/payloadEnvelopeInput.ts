@@ -1,5 +1,5 @@
-import {ColumnIndex, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {ColumnIndex, DataColumnSidecars, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
+import {toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {AddPayloadEnvelopeProps, ColumnWithSource, CreateFromBlockProps, SourceMeta} from "./types.js";
@@ -68,7 +68,8 @@ export class PayloadEnvelopeInput {
 
   private timeCreatedSec: number;
 
-  private readonly dataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
+  private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
+  private readonly columnsDataPromise: PromiseParts<DataColumnSidecars>;
 
   state: PayloadEnvelopeInputState;
 
@@ -89,13 +90,19 @@ export class PayloadEnvelopeInput {
     this.sampledColumns = props.sampledColumns;
     this.custodyColumns = props.custodyColumns;
     this.timeCreatedSec = props.timeCreatedSec;
-    this.dataPromise = createPromise();
+    this.payloadEnvelopeDataPromise = createPromise();
+    this.columnsDataPromise = createPromise();
 
     const noBlobs = props.bid.blobKzgCommitments.length === 0;
     const noSampledColumns = props.sampledColumns.length === 0;
     const hasAllColumns = noBlobs || noSampledColumns;
 
-    this.state = hasAllColumns ? {hasPayload: false, hasAllColumns: true} : {hasPayload: false, hasAllColumns: false};
+    if (hasAllColumns) {
+      this.state = {hasPayload: false, hasAllColumns: true};
+      this.columnsDataPromise.resolve(this.getSampledColumns());
+    } else {
+      this.state = {hasPayload: false, hasAllColumns: false};
+    }
   }
 
   static createFromBlock(props: CreateFromBlockProps): PayloadEnvelopeInput {
@@ -150,7 +157,7 @@ export class PayloadEnvelopeInput {
         payloadEnvelopeSource: source,
         timeCompleteSec: props.seenTimestampSec,
       };
-      this.dataPromise.resolve(props.envelope);
+      this.payloadEnvelopeDataPromise.resolve(props.envelope);
     } else {
       // Has payload, waiting for columns
       this.state = {
@@ -174,6 +181,9 @@ export class PayloadEnvelopeInput {
       return;
     }
 
+    // All sampled columns received - resolve columns promise
+    this.columnsDataPromise.resolve(this.getSampledColumns());
+
     if (this.state.hasPayload) {
       // Complete state
       this.state = {
@@ -183,7 +193,7 @@ export class PayloadEnvelopeInput {
         payloadEnvelopeSource: this.state.payloadEnvelopeSource,
         timeCompleteSec: seenTimestampSec,
       };
-      this.dataPromise.resolve(this.state.payloadEnvelope);
+      this.payloadEnvelopeDataPromise.resolve(this.state.payloadEnvelope);
     } else {
       // No payload yet, all columns ready
       this.state = {
@@ -232,6 +242,17 @@ export class PayloadEnvelopeInput {
       .filter((col): col is gloas.DataColumnSidecar => col !== undefined);
   }
 
+  hasComputedAllData(): boolean {
+    return this.state.hasAllColumns;
+  }
+
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecars> {
+    if (this.state.hasAllColumns) {
+      return Promise.resolve(this.getSampledColumns());
+    }
+    return withTimeout(() => this.columnsDataPromise.promise, timeout, signal);
+  }
+
   getTimeCreated(): number {
     return this.timeCreatedSec;
   }
@@ -260,7 +281,7 @@ export class PayloadEnvelopeInput {
   }
 
   async waitForData(): Promise<gloas.SignedExecutionPayloadEnvelope> {
-    return this.dataPromise.promise;
+    return this.payloadEnvelopeDataPromise.promise;
   }
 
   getSerializedCacheKeys(): object[] {
