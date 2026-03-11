@@ -5,7 +5,6 @@ import {generatePerfTestCachedStateAltair} from "../../../src/testUtils/util.js"
 import {
   computeProposerIndex,
   computeShuffledIndex,
-  getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
@@ -85,17 +84,6 @@ describe("computeShuffledIndex", () => {
       fn: () => {
         for (let i = 0; i < vc; i++) {
           computeShuffledIndex(i, vc, seed);
-        }
-      },
-    });
-
-    const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-    // getComputeShuffledIndexFn() is also not in prod anymore so no need to track it
-    bench.skip({
-      id: `cached computeShuffledIndex ${vc} validators`,
-      fn: () => {
-        for (let i = 0; i < vc; i++) {
-          shuffledIndexFn(i);
         }
       },
     });
