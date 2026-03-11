@@ -1550,7 +1550,7 @@ export class BeaconChain implements IBeaconChain {
       // We must NOT use proof.blockHash because gossip proofs from other clients may use
       // incompatible SSZ encodings, causing the deserialized blockHash to be garbage.
       // The fork choice proto-array is the authoritative source for execution block hashes.
-      const block = this.forkChoice.getBlockHex(blockRootHex);
+      const block = this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
       if (block == null || block.executionPayloadBlockHash == null) {
         this.logger.debug("Cannot transition block to valid: not found in fork choice", {
           slot: proof.slot,
