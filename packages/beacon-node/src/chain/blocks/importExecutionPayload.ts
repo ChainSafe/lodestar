@@ -126,9 +126,7 @@ export async function importExecutionPayload(
     // State root check is done separately below with better error typing (matching block pipeline pattern).
     (async () => {
       try {
-        const mutableState = blockState.clone();
-        processExecutionPayloadEnvelope(mutableState, envelope, {verifySignature: false, verifyStateRoot: false});
-        return {postPayloadState: mutableState};
+        return {postPayloadState: processExecutionPayloadEnvelope(blockState, envelope, {verifySignature: false, verifyStateRoot: false})};
       } catch (e) {
         throw new PayloadError(
           {
