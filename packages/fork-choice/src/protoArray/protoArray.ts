@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
@@ -19,6 +20,19 @@ import {
  * Spec: gloas/fork-choice.md (PAYLOAD_TIMELY_THRESHOLD = PTC_SIZE // 2)
  */
 const PAYLOAD_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
+
+/** Count set bits in a Uint8Array without allocation (Brian Kernighan's algorithm) */
+function bitCount(arr: Uint8Array): number {
+  let count = 0;
+  for (let i = 0; i < arr.length; i++) {
+    let byte = arr[i];
+    while (byte) {
+      byte &= byte - 1;
+      count++;
+    }
+  }
+  return count;
+}
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
@@ -60,14 +74,14 @@ export class ProtoArray {
   private previousProposerBoost: ProposerBoost | null = null;
 
   /**
-   * PTC (Payload Timeliness Committee) votes per block
-   * Maps block root to boolean array of size PTC_SIZE (from params: 512 mainnet, 2 minimal)
+   * PTC (Payload Timeliness Committee) votes per block as bitvectors
+   * Maps block root to BitArray of PTC_SIZE bits (512 mainnet, 2 minimal)
    * Spec: gloas/fork-choice.md#modified-store (line 148)
    *
-   * ptcVotes[blockRoot][i] = true if PTC member i voted payload_present=true
+   * Bit i is set if PTC member i voted payload_present=true
    * Used by is_payload_timely() to determine if payload is timely
    */
-  private ptcVotes = new Map<RootHex, boolean[]>();
+  private ptcVotes = new Map<RootHex, BitArray>();
 
   constructor({
     pruneThreshold,
@@ -476,7 +490,7 @@ export class ProtoArray {
 
       // Initialize PTC votes for this block (all false initially)
       // Spec: gloas/fork-choice.md#modified-on_block (line 645)
-      this.ptcVotes.set(block.blockRoot, new Array(PTC_SIZE).fill(false));
+      this.ptcVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
     } else {
       // Pre-Gloas: Only create FULL node (payload embedded in block)
       const node: ProtoNode = {
@@ -605,8 +619,7 @@ export class ProtoArray {
         throw new Error(`Invalid PTC index: ${ptcIndex}, must be 0..${PTC_SIZE - 1}`);
       }
 
-      // Update the vote
-      votes[ptcIndex] = payloadPresent;
+      votes.set(ptcIndex, payloadPresent);
     }
   }
 
@@ -636,7 +649,7 @@ export class ProtoArray {
     }
 
     // Count votes for payload_present=true
-    const yesVotes = votes.filter((v) => v).length;
+    const yesVotes = bitCount(votes.uint8Array);
     return yesVotes > PAYLOAD_TIMELY_THRESHOLD;
   }
 
