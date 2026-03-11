@@ -19,7 +19,6 @@ import {
   generateSignedBeaconBlockHeader,
   generateVoluntaryExits,
 } from "../../../fixtures/phase0.js";
-import {generatePerfTestCachedStateAltair} from "../../../utils/state-transition.js";
 
 describe("opPool", () => {
   let originalState: CachedBeaconStateAltair;

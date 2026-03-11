@@ -2,7 +2,6 @@ import {bench, describe} from "@chainsafe/benchmark";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../utils/state-transition.js";
 import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof.js";
 
 describe("validate gossip signedAggregateAndProof", () => {
