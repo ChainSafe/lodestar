@@ -14,8 +14,8 @@ import {processDepositRequest} from "./processDepositRequest.ts";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.ts";
 
 export type ProcessExecutionPayloadEnvelopeOpts = {
-  verifySignature?: boolean,
-  verifyStateRoot?: boolean,
+  verifySignature?: boolean;
+  verifyStateRoot?: boolean;
   dontTransferCache?: boolean;
 };
 
@@ -27,7 +27,7 @@ export function processExecutionPayloadEnvelope(
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   opts?: ProcessExecutionPayloadEnvelopeOpts
 ): CachedBeaconStateGloas {
-  const {verifySignature = true, verifyStateRoot = true} = opts;
+  const {verifySignature = true, verifyStateRoot = true} = opts ?? {};
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(envelope.slot);

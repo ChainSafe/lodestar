@@ -81,11 +81,7 @@ export async function persistPayloadEnvelopeInput(
       );
     })
     .finally(() => {
-      this.seenPayloadEnvelopeInput.delete(payloadInput.blockRootHex);
-      // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable.
-      // Clear here (after the DB write) so that writePayloadEnvelopeInputToDb can still use the cached serialized bytes.
-      // TODO GLOAS: We probably need a better SerializedCache with proper eviction instead of clearing entire cache on every write.
-      this.serializedCache.clear();
+      this.seenPayloadEnvelopeInput.prune(payloadInput.blockRootHex);
       this.logger.debug("Pruned payload envelope input", {
         slot: payloadInput.slot,
         root: payloadInput.blockRootHex,

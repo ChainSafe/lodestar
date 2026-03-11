@@ -336,6 +336,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenPayloadEnvelopeInput = new SeenPayloadEnvelopeInput({
       chainEvents: emitter,
       signal,
+      serializedCache: this.serializedCache,
       metrics,
       logger,
     });

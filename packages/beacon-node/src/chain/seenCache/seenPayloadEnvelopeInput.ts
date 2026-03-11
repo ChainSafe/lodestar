@@ -3,6 +3,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {CreateFromBlockProps, PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
@@ -12,6 +13,7 @@ export {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 export type SeenPayloadEnvelopeInputModules = {
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
+  serializedCache: SerializedCache;
   metrics: Metrics | null;
   logger?: Logger;
 };
@@ -25,12 +27,14 @@ export type SeenPayloadEnvelopeInputModules = {
 export class SeenPayloadEnvelopeInput {
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
+  private readonly serializedCache: SerializedCache;
   private readonly logger?: Logger;
   private payloadInputs = new Map<RootHex, PayloadEnvelopeInput>();
 
-  constructor({chainEvents, signal, metrics, logger}: SeenPayloadEnvelopeInputModules) {
+  constructor({chainEvents, signal, serializedCache, metrics, logger}: SeenPayloadEnvelopeInputModules) {
     this.chainEvents = chainEvents;
     this.signal = signal;
+    this.serializedCache = serializedCache;
     this.logger = logger;
 
     if (metrics) {
@@ -49,9 +53,9 @@ export class SeenPayloadEnvelopeInput {
     // Prune all entries with slot < finalized slot
     const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
     let deletedCount = 0;
-    for (const [rootHex, input] of this.payloadInputs) {
+    for (const [, input] of this.payloadInputs) {
       if (input.slot < finalizedSlot) {
-        this.payloadInputs.delete(rootHex);
+        this.evictPayloadInput(input);
         deletedCount++;
       }
     }
@@ -75,11 +79,19 @@ export class SeenPayloadEnvelopeInput {
     return this.payloadInputs.has(blockRootHex);
   }
 
-  delete(blockRootHex: RootHex): boolean {
-    return this.payloadInputs.delete(blockRootHex);
+  prune(blockRootHex: RootHex): void {
+    const payloadInput = this.payloadInputs.get(blockRootHex);
+    if (payloadInput) {
+      this.evictPayloadInput(payloadInput);
+    }
   }
 
   size(): number {
     return this.payloadInputs.size;
+  }
+
+  private evictPayloadInput(payloadInput: PayloadEnvelopeInput): void {
+    this.serializedCache.delete(payloadInput.getSerializedCacheKeys());
+    this.payloadInputs.delete(payloadInput.blockRootHex);
   }
 }

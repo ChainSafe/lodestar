@@ -263,6 +263,20 @@ export class PayloadEnvelopeInput {
     return this.dataPromise.promise;
   }
 
+  getSerializedCacheKeys(): object[] {
+    const objects: object[] = [];
+
+    if (this.state.hasPayload) {
+      objects.push(this.state.payloadEnvelope);
+    }
+
+    for (const {columnSidecar} of this.columnsCache.values()) {
+      objects.push(columnSidecar);
+    }
+
+    return objects;
+  }
+
   getLogMeta(): {
     slot: number;
     blockRoot: string;
