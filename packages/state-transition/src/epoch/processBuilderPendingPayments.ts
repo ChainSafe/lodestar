@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateGloas} from "../types.ts";
-import {getBuilderPaymentQuorumThreshold} from "../util/gloas.ts";
+import {CachedBeaconStateGloas} from "../types.js";
+import {getBuilderPaymentQuorumThreshold} from "../util/gloas.js";
 
 /**
  * Processes the builder pending payments from the previous epoch.

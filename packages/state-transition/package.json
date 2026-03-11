@@ -33,6 +33,11 @@
       "bun": "./src/slot/index.ts",
       "types": "./lib/slot/index.d.ts",
       "import": "./lib/slot/index.js"
+    },
+    "./test-utils": {
+      "bun": "./src/testUtils/index.ts",
+      "types": "./lib/testUtils/index.d.ts",
+      "import": "./lib/testUtils/index.js"
     }
   },
   "files": [

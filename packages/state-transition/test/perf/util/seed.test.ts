@@ -1,6 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
+import {generatePerfTestCachedStateAltair} from "../../../src/testUtils/util.js";
 import {
   computeProposerIndex,
   computeShuffledIndex,
@@ -9,7 +10,6 @@ import {
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
 } from "../../../src/util/seed.js";
-import {generatePerfTestCachedStateAltair} from "../util.js";
 
 // I'm not sure how to populate a good test data for this benchmark
 describe("computeProposerIndex", () => {

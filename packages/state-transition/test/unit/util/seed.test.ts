@@ -3,6 +3,7 @@ import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {bytesToInt} from "@lodestar/utils";
+import {generateState} from "../../../src/testUtils/state.js";
 import {
   computePayloadTimelinessCommitteeIndices,
   computeProposerIndex,
@@ -14,7 +15,6 @@ import {
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
 } from "../../../src/util/index.js";
-import {generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 describe("getRandaoMix", () => {

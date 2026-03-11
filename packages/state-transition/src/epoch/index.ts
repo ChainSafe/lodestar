@@ -16,7 +16,7 @@ import {
   CachedBeaconStatePhase0,
   EpochTransitionCache,
 } from "../types.js";
-import {processBuilderPendingPayments} from "./processBuilderPendingPayments.ts";
+import {processBuilderPendingPayments} from "./processBuilderPendingPayments.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";

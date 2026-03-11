@@ -1,6 +1,7 @@
 import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ACTIVE_PRESET, PresetName, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
@@ -13,7 +14,6 @@ import {
 } from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
-import {testLogger} from "../../../utils/logger.js";
 import {generateCachedState} from "../../../utils/state.js";
 
 describe("PersistentCheckpointStateCache", () => {

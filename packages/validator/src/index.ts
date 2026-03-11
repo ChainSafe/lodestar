@@ -1,3 +1,4 @@
+export {Bucket} from "./buckets.js";
 export {waitForGenesis} from "./genesis.js";
 export {type Metrics, getMetrics} from "./metrics.js";
 export * from "./repositories/index.js";
