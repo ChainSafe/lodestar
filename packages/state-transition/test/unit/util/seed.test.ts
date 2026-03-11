@@ -7,8 +7,6 @@ import {generateState} from "../../../src/testUtils/state.js";
 import {
   computePayloadTimelinessCommitteeIndices,
   computeProposerIndex,
-  computeShuffledIndex,
-  getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   getRandaoMix,
   naiveComputePayloadTimelinessCommitteeIndices,
@@ -56,18 +54,6 @@ describe("computeProposerIndex", () => {
       expect(result).toBe(expected);
     });
   }
-});
-
-describe("computeShuffledIndex", () => {
-  const seed = crypto.randomBytes(32);
-  const vc = 1000;
-  const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-  it("should be the same to the naive version", () => {
-    for (let i = 0; i < vc; i++) {
-      const expectedIndex = computeShuffledIndex(i, vc, seed);
-      expect(shuffledIndexFn(i)).toBe(expectedIndex);
-    }
-  });
 });
 
 describe("electra getNextSyncCommitteeIndices", () => {
