@@ -35,3 +35,6 @@ onlyBuiltDependencies:
   - esbuild
   - nx
   - ssh2
+
+patchedDependencies:
+  "@libp2p/utils@7.0.12": patches/@libp2p__utils@7.0.12.patch
