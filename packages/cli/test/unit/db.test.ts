@@ -1,6 +1,6 @@
 import {describe, it} from "vitest";
-import {Bucket as BeaconBucket} from "../../../beacon-node/src/db/buckets.js";
-import {Bucket as ValidatorBucket} from "../../../validator/src/buckets.js";
+import {Bucket as BeaconBucket} from "@lodestar/beacon-node/db";
+import {Bucket as ValidatorBucket} from "@lodestar/validator";
 
 describe("no db bucket overlap", () => {
   it("beacon and validator dn buckets do not overlap", () => {

@@ -1,7 +1,7 @@
-import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
-import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
+import { PublicKey, SecretKey } from "@chainsafe/lodestar-z/blst";
+import { BitArray, fromHexString } from "@chainsafe/ssz";
+import { createBeaconConfig, createChainForkConfig } from "@lodestar/config";
+import { config } from "@lodestar/config/default";
 import {
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -12,8 +12,8 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
-import {BeaconState, Slot, phase0, ssz} from "@lodestar/types";
-import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
+import { BeaconState, Slot, phase0, ssz } from "@lodestar/types";
+import { getEffectiveBalanceIncrements } from "../cache/effectiveBalanceIncrements.js";
 import {
   computeCommitteeCount,
   computeEpochAtSlot,
@@ -22,17 +22,17 @@ import {
   interopSecretKey,
   newFilledArray,
   processSlots,
-} from "../../src/index.js";
+} from "../index.js";
 import {
   BeaconStateAltair,
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
-} from "../../src/types.js";
-import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
-import {getActiveValidatorIndices} from "../../src/util/validator.js";
-import {interopPubkeysCached} from "../utils/interop.js";
+} from "../types.js";
+import { getNextSyncCommittee } from "../util/syncCommittee.js";
+import { getActiveValidatorIndices } from "../util/validator.js";
+import { interopPubkeysCached } from "./interop.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -64,8 +64,8 @@ export const perfStateEpoch = epoch;
 export function getPubkeys(vc = numValidators) {
   const pubkeysMod = interopPubkeysCached(keypairsMod);
   const pubkeysModObj = pubkeysMod.map((pk) => PublicKey.fromBytes(pk));
-  const pubkeys = Array.from({length: vc}, (_, i) => pubkeysMod[i % keypairsMod]);
-  return {pubkeysMod, pubkeysModObj, pubkeys};
+  const pubkeys = Array.from({ length: vc }, (_, i) => pubkeysMod[i % keypairsMod]);
+  return { pubkeysMod, pubkeysModObj, pubkeys };
 }
 
 /** Get secret key of a validatorIndex, if the pubkeys are generated with `getPubkeys()` */
@@ -84,7 +84,7 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
   return sk;
 }
 
-function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>) {
+function getPubkeyCaches({ pubkeysMod }: ReturnType<typeof getPubkeys>) {
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkeyCache = createPubkeyCache();
   for (let i = 0; i < numValidators; i++) {
@@ -92,13 +92,13 @@ function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>) {
     pubkeyCache.set(i, pubkey);
   }
 
-  return {pubkeyCache};
+  return { pubkeyCache };
 }
 
-export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean}): CachedBeaconStatePhase0 {
+export function generatePerfTestCachedStatePhase0(opts?: { goBackOneSlot: boolean }): CachedBeaconStatePhase0 {
   // Generate only some publicKeys
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const { pubkeys, pubkeysMod, pubkeysModObj } = getPubkeys();
+  const { pubkeyCache } = getPubkeyCaches({ pubkeys, pubkeysMod, pubkeysModObj });
 
   if (!phase0State) {
     const state = buildPerformanceStatePhase0();
@@ -133,7 +133,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       const committee = shuffling.committees[slotInEpoch][index];
       phase0CachedState23637.previousEpochAttestations.push(
         ssz.phase0.PendingAttestation.toViewDU({
-          aggregationBits: BitArray.fromBoolArray(Array.from({length: committee.length}, () => true)),
+          aggregationBits: BitArray.fromBoolArray(Array.from({ length: committee.length }, () => true)),
           data: {
             beaconBlockRoot: phase0CachedState23637.blockRoots.get(slotInEpoch % SLOTS_PER_HISTORICAL_ROOT),
             index,
@@ -158,7 +158,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
 
       phase0CachedState23637.currentEpochAttestations.push(
         ssz.phase0.PendingAttestation.toViewDU({
-          aggregationBits: BitArray.fromBoolArray(Array.from({length: committee.length}, () => true)),
+          aggregationBits: BitArray.fromBoolArray(Array.from({ length: committee.length }, () => true)),
           data: {
             beaconBlockRoot: phase0CachedState23637.blockRoots.get(slotInEpoch % SLOTS_PER_HISTORICAL_ROOT),
             index,
@@ -206,10 +206,10 @@ export function generatePerfTestCachedStateAltair(opts?: {
   goBackOneSlot: boolean;
   vc?: number;
 }): CachedBeaconStateAltair {
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const { pubkeys, pubkeysMod, pubkeysModObj } = getPubkeys(opts?.vc);
+  const { pubkeyCache } = getPubkeyCaches({ pubkeys, pubkeysMod, pubkeysModObj });
 
-  const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
+  const altairConfig = createChainForkConfig({ ALTAIR_FORK_EPOCH: 0 });
 
   const origState = generatePerformanceStateAltair(pubkeys);
 
@@ -244,7 +244,7 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
 
     state.previousEpochParticipation = newFilledArray(pubkeys.length, 0b111);
     state.currentEpochParticipation = state.previousEpochParticipation;
-    state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2);
+    state.inactivityScores = Array.from({ length: pubkeys.length }, (_, i) => i % 2);
 
     // Placeholder syncCommittees
     state.currentSyncCommittee = ssz.altair.SyncCommittee.defaultValue();
@@ -258,7 +258,7 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     const activeValidatorIndices = getActiveValidatorIndices(altairState, epoch);
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrements(altairState);
-    const {syncCommittee} = getNextSyncCommittee(
+    const { syncCommittee } = getNextSyncCommittee(
       ForkSeq.altair,
       altairState,
       activeValidatorIndices,
@@ -318,8 +318,8 @@ function buildPerformanceStatePhase0(pubkeysArg?: Uint8Array[]): phase0.BeaconSt
       stateRoot: fromHexString("0x2761ae355e8a53c11e0e37d5e417f8984db0c53fa83f1bc65f89c6af35a196a7"),
       bodyRoot: fromHexString("0x249a1962eef90e122fa2447040bfac102798b1dba9c73e5593bc5aa32eb92bfd"),
     },
-    blockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, (_, i) => Buffer.alloc(32, i)),
-    stateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, (_, i) => Buffer.alloc(32, i)),
+    blockRoots: Array.from({ length: SLOTS_PER_HISTORICAL_ROOT }, (_, i) => Buffer.alloc(32, i)),
+    stateRoots: Array.from({ length: SLOTS_PER_HISTORICAL_ROOT }, (_, i) => Buffer.alloc(32, i)),
     historicalRoots: [],
     // Eth1
     eth1Data: {
@@ -345,8 +345,8 @@ function buildPerformanceStatePhase0(pubkeysArg?: Uint8Array[]): phase0.BeaconSt
       exitEpoch: Infinity,
       withdrawableEpoch: Infinity,
     })),
-    balances: Array.from({length: pubkeys.length}, () => 31217089836),
-    randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i)),
+    balances: Array.from({ length: pubkeys.length }, () => 31217089836),
+    randaoMixes: Array.from({ length: EPOCHS_PER_HISTORICAL_VECTOR }, (_, i) => Buffer.alloc(32, i)),
     // Slashings
     slashings: ssz.phase0.Slashings.defaultValue(),
     previousEpochAttestations: [],
@@ -376,7 +376,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   slot: Slot;
 }): CachedBeaconStateAllForks {
   // Generate only some publicKeys
-  const {pubkeys, pubkeysMod} = getPubkeys(vc);
+  const { pubkeys, pubkeysMod } = getPubkeys(vc);
 
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkeyCache = createPubkeyCache();
@@ -424,6 +424,6 @@ export function generateTestCachedBeaconStateOnlyValidators({
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
       pubkeyCache,
     },
-    {skipSyncPubkeys: true}
+    { skipSyncPubkeys: true }
   );
 }

@@ -1,5 +1,6 @@
 import {afterEach, describe, it} from "vitest";
 import {config} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
@@ -12,7 +13,6 @@ import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
-import {testLogger} from "../../../utils/logger.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {

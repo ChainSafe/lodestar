@@ -1,15 +1,14 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
+import {generatePerfTestCachedStateAltair} from "../../../src/testUtils/util.js";
 import {
   computeProposerIndex,
   computeShuffledIndex,
-  getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
 } from "../../../src/util/seed.js";
-import {generatePerfTestCachedStateAltair} from "../util.js";
 
 // I'm not sure how to populate a good test data for this benchmark
 describe("computeProposerIndex", () => {
@@ -85,17 +84,6 @@ describe("computeShuffledIndex", () => {
       fn: () => {
         for (let i = 0; i < vc; i++) {
           computeShuffledIndex(i, vc, seed);
-        }
-      },
-    });
-
-    const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-    // getComputeShuffledIndexFn() is also not in prod anymore so no need to track it
-    bench.skip({
-      id: `cached computeShuffledIndex ${vc} validators`,
-      fn: () => {
-        for (let i = 0; i < vc; i++) {
-          shuffledIndexFn(i);
         }
       },
     });

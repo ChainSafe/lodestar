@@ -1,6 +1,6 @@
 import {bench, describe} from "@chainsafe/benchmark";
-import * as browser from "../../src/bytes/browser.ts";
-import * as nodejs from "../../src/bytes/nodejs.ts";
+import * as browser from "../../src/bytes/browser.js";
+import * as nodejs from "../../src/bytes/nodejs.js";
 
 describe("bytes utils", async () => {
   const runsFactor = 1000;

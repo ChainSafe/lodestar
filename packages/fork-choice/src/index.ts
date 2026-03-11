@@ -24,7 +24,7 @@ export {
 export * from "./forkChoice/safeBlocks.js";
 export {
   type CheckpointWithHex,
-  type CheckpointWithPayload,
+  type CheckpointWithPayloadStatus,
   ForkChoiceStore,
   type IForkChoiceStore,
   type JustifiedBalancesGetter,

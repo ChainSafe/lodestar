@@ -1461,6 +1461,10 @@ export function createLodestarMetrics(
           name: "lodestar_seen_block_input_cache_size",
           help: "Number of cached BlockInputs",
         }),
+        serializedObjectCount: register.gauge({
+          name: "lodestar_seen_block_input_cache_serialized_object_count",
+          help: "Number of serialized objects retained by cached BlockInputs",
+        }),
         duplicateBlockCount: register.gauge<{source: BlockInputSource}>({
           name: "lodestar_seen_block_input_cache_duplicate_block_count",
           help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",

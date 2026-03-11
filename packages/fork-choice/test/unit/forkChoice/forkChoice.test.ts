@@ -152,7 +152,7 @@ describe("Forkchoice", () => {
     const block = getBlock(genesisSlot + 1);
     protoArr.onBlock(block, block.slot, null);
     const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
-    const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1));
+    const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1), PayloadStatus.FULL);
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries).toHaveLength(1);
     expect(summaries[0]).toEqual({
@@ -180,18 +180,18 @@ describe("Forkchoice", () => {
 
     // Test with a block from the canonical chain
     const canonicalBlockRoot = getBlockRoot(genesisSlot + 3);
-    const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlockRoot);
-    const canonicalNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(canonicalBlockRoot);
-    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot);
+    const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
+    const canonicalNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
+    const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
 
     expect(canonicalCombined.ancestors).toEqual(canonicalAncestorBlocks);
     expect(canonicalCombined.nonAncestors).toEqual(canonicalNonAncestorBlocks);
 
     // Test with a block from the fork chain
     const forkBlockRoot = getBlockRoot(genesisSlot + 10);
-    const forkAncestorBlocks = forkchoice.getAllAncestorBlocks(forkBlockRoot);
-    const forkNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(forkBlockRoot);
-    const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot);
+    const forkAncestorBlocks = forkchoice.getAllAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
+    const forkNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
+    const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
 
     expect(forkCombined.ancestors).toEqual(forkAncestorBlocks);
     expect(forkCombined.nonAncestors).toEqual(forkNonAncestorBlocks);

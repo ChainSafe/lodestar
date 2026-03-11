@@ -6,7 +6,7 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {prettyPrintPeerId} from "../../util.ts";
+import {prettyPrintPeerId} from "../../util.js";
 
 // TODO: Unit test
 
@@ -47,9 +47,10 @@ export async function* onBeaconBlocksByRange(
 
   // Non-finalized range of blocks
   if (endSlot > finalizedSlot) {
-    const headRoot = chain.forkChoice.getHeadRoot();
+    const headBlock = chain.forkChoice.getHead();
+    const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
     // getAllAncestorBlocks response includes the head node, so it's the full chain.
 
     // Iterate head chain with ascending block numbers

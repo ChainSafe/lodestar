@@ -1,6 +1,7 @@
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
@@ -16,7 +17,6 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconState, altair, bellatrix, electra, ssz} from "@lodestar/types";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
-import {getConfig} from "./config.js";
 import {generateValidator, generateValidators} from "./validator.js";
 
 /**

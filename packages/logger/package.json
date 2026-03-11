@@ -38,6 +38,11 @@
       "bun": "./src/empty.ts",
       "types": "./lib/empty.d.ts",
       "import": "./lib/empty.js"
+    },
+    "./test-utils": {
+      "bun": "./src/testUtils.ts",
+      "types": "./lib/testUtils.d.ts",
+      "import": "./lib/testUtils.js"
     }
   },
   "files": [

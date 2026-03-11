@@ -29,6 +29,11 @@
       "bun": "./src/configs.ts",
       "types": "./lib/configs.d.ts",
       "import": "./lib/configs.js"
+    },
+    "./test-utils": {
+      "bun": "./src/testUtils/index.ts",
+      "types": "./lib/testUtils/index.d.ts",
+      "import": "./lib/testUtils/index.js"
     }
   },
   "files": [
@@ -64,6 +69,7 @@
     "@chainsafe/ssz": "^1.2.2",
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",
-    "@lodestar/utils": "workspace:^"
+    "@lodestar/utils": "workspace:^",
+    "@lodestar/spec-test-util": "workspace:^"
   }
 }

@@ -11,7 +11,7 @@ import {
   GossipValidatorBatchFn,
   GossipValidatorFn,
 } from "../gossip/interface.js";
-import {prettyPrintPeerIdStr} from "../util.ts";
+import {prettyPrintPeerIdStr} from "../util.js";
 
 export type ValidatorFnModules = {
   config: ChainForkConfig;

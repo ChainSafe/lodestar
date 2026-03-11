@@ -12,10 +12,10 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: pnpm/action-setup@v4
+    - uses: pnpm/action-setup@c5ba7f7862a0f64c1b1a05fbac13e0b8e86ba08c # v4
 
     - name: Setup Node
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
         node-version: ${{inputs.node}}
         check-latest: true
@@ -43,7 +43,7 @@ runs:
       run: echo "key=build-cache-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}" >> $GITHUB_OUTPUT
 
     - name: Restore build
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       id: cache-build-restore
       with:
         path: |
@@ -69,7 +69,7 @@ runs:
       run: pnpm check-bundle
 
     - name: Cache build artifacts
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           lib/

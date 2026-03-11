@@ -16,15 +16,15 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
     - name: Check version consistency
       run: |
-        SPEC_TEST_VERSION=$(grep 'specVersion:' packages/beacon-node/test/spec/specTestVersioning.ts | head -1 | sed 's/.*specVersion: "\(.*\)".*/\1/')
+        SPEC_TEST_VERSION=$(grep '"specVersion":' spec-tests-version.json | head -1 | sed 's/.*"specVersion": "\(.*\)".*/\1/')
         ETHSPECIFY_VERSION=$(grep '^version:' specrefs/.ethspecify.yml | sed 's/version: //')
         if [ "$SPEC_TEST_VERSION" != "$ETHSPECIFY_VERSION" ]; then
-          echo "Version mismatch between specTestVersioning.ts and ethspecify"
-          echo "  packages/beacon-node/test/spec/specTestVersioning.ts: $SPEC_TEST_VERSION"
+          echo "Version mismatch between spec-teests-version.json and ethspecify"
+          echo "  spec-tests-version.json: $SPEC_TEST_VERSION"
           echo "  specrefs/.ethspecify.yml: $ETHSPECIFY_VERSION"
           exit 1
         else

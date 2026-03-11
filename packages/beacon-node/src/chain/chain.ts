@@ -2,7 +2,13 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  CheckpointWithPayloadStatus,
+  IForkChoice,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -58,7 +64,7 @@ import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRoot
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.ts";
+import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -69,15 +75,15 @@ import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumn
 import {callInNextEventLoop} from "../util/eventLoop.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
-import {JobItemQueue} from "../util/queue/itemQueue.ts";
+import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.ts";
+import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {persistBlockInputs} from "./blocks/writeBlockInputToDb.ts";
+import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
@@ -164,7 +170,7 @@ export class BeaconChain implements IBeaconChain {
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
-  readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput[]], void>;
+  readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput], void>;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -314,12 +320,14 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
+    this.serializedCache = new SerializedCache();
     this.seenBlockInputCache = new SeenBlockInput({
       config,
       custodyConfig: this.custodyConfig,
       clock,
       chainEvents: emitter,
       signal,
+      serializedCache: this.serializedCache,
       metrics,
       logger,
     });
@@ -406,8 +414,6 @@ export class BeaconChain implements IBeaconChain {
     this.bls = bls;
     this.emitter = emitter;
 
-    this.serializedCache = new SerializedCache();
-
     this.getBlobsTracker = new GetBlobsTracker({
       logger,
       executionEngine: this.executionEngine,
@@ -429,7 +435,7 @@ export class BeaconChain implements IBeaconChain {
     );
 
     this.unfinalizedBlockWrites = new JobItemQueue(
-      persistBlockInputs.bind(this),
+      persistBlockInput.bind(this),
       {
         maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES,
         signal,
@@ -1186,7 +1192,7 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private justifiedBalancesGetter(
-    checkpoint: CheckpointWithHex,
+    checkpoint: CheckpointWithPayloadStatus,
     blockState: CachedBeaconStateAllForks
   ): EffectiveBalanceIncrements {
     this.metrics?.balancesCache.requests.inc();
@@ -1225,7 +1231,7 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private closestJustifiedBalancesStateToCheckpoint(
-    checkpoint: CheckpointWithHex,
+    checkpoint: CheckpointWithPayloadStatus,
     blockState: CachedBeaconStateAllForks
   ): {state: CachedBeaconStateAllForks; stateId: string; shouldWarn: boolean} {
     const state = this.regen.getCheckpointStateSync(checkpoint);
@@ -1239,7 +1245,10 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // Find a state in the same branch of checkpoint at same epoch. Balances should exactly the same
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(
+      checkpoint.rootHex,
+      checkpoint.payloadStatus
+    )) {
       if (computeEpochAtSlot(descendantBlock.slot) === checkpoint.epoch) {
         const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {
@@ -1255,7 +1264,10 @@ export class BeaconChain implements IBeaconChain {
 
     // Find a state in the same branch of checkpoint at a latter epoch. Balances are not the same, but should be close
     // Note: must call .forwardIterateDescendants() again since nodes are not sorted
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(
+      checkpoint.rootHex,
+      checkpoint.payloadStatus
+    )) {
       if (computeEpochAtSlot(descendantBlock.slot) > checkpoint.epoch) {
         const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {

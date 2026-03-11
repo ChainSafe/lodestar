@@ -584,6 +584,9 @@ importers:
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
+      '@lodestar/spec-test-util':
+        specifier: workspace:^
+        version: link:../spec-test-util
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types

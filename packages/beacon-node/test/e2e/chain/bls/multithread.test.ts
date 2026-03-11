@@ -1,9 +1,9 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
-import {testLogger} from "../../../utils/logger.js";
 
 describe("chain / bls / multithread queue", () => {
   const logger = testLogger();
