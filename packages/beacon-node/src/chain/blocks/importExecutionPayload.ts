@@ -167,23 +167,24 @@ export async function importExecutionPayload(
 
   // 4b. Verify envelope state root matches post-state
   const postPayloadState = postPayloadResult.postPayloadState;
-  const stateRoot = postPayloadState.hashTreeRoot();
-  if (!byteArrayEquals(envelope.message.stateRoot, stateRoot)) {
+  const postPayloadStateRoot = postPayloadState.hashTreeRoot();
+  if (!byteArrayEquals(envelope.message.stateRoot, postPayloadStateRoot)) {
     throw new PayloadError(
       {
         code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-        message: `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(stateRoot)}`,
+        message: `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(postPayloadStateRoot)}`,
       },
-      `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(stateRoot)}`
+      `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(postPayloadStateRoot)}`
     );
   }
 
   // 5. Update fork choice
-  // TODO GLOAS: Update API when #8739 merged (gloas fork choice)
-  // this.forkChoice.onExecutionPayload(
-  //   envelope.message.beaconBlockRoot,
-  //   postPayloadState.hashTreeRoot()
-  // );
+  this.forkChoice.onExecutionPayload(
+    blockRootHex,
+    payloadInput.getBlockHashHex(),
+    envelope.message.payload.blockNumber,
+    toRootHex(postPayloadStateRoot)
+  );
 
   // 6. Cache payload state
   // TODO GLOAS: Enable when PR #8868 merged (adds processPayloadState)
