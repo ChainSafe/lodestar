@@ -52,7 +52,7 @@ export function generateState(
   const validators =
     opts.validators ??
     (withPubkey
-      ? Array.from({length: numValidators}, (_, i) => {
+      ? Array.from({length: numValidators}, (_, _i) => {
           return generateValidator({
             ...validatorOpts,
           });
