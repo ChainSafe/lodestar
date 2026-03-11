@@ -322,12 +322,14 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
+    this.serializedCache = new SerializedCache();
     this.seenBlockInputCache = new SeenBlockInput({
       config,
       custodyConfig: this.custodyConfig,
       clock,
       chainEvents: emitter,
       signal,
+      serializedCache: this.serializedCache,
       metrics,
       logger,
     });
@@ -419,8 +421,6 @@ export class BeaconChain implements IBeaconChain {
     this.regen = regen;
     this.bls = bls;
     this.emitter = emitter;
-
-    this.serializedCache = new SerializedCache();
 
     this.getBlobsTracker = new GetBlobsTracker({
       logger,

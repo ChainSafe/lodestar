@@ -61,7 +61,6 @@ export function computeNewStateRoot(
  * Compute the state root after processing an execution payload envelope.
  * Similar to `computeNewStateRoot` but for payload envelope processing.
  *
- * The `postBlockState` is mutated in place, callers must ensure it is not needed afterward.
  */
 export function computeEnvelopeStateRoot(
   metrics: Metrics | null,
@@ -74,13 +73,17 @@ export function computeEnvelopeStateRoot(
   };
 
   const processEnvelopeTimer = metrics?.blockPayload.executionPayloadEnvelopeProcessingTime.startTimer();
-  processExecutionPayloadEnvelope(postBlockState, signedEnvelope, {verifySignature: false, verifyStateRoot: true});
+  const postEnvelopeState = processExecutionPayloadEnvelope(postBlockState, signedEnvelope, {
+    verifySignature: false,
+    verifyStateRoot: true,
+    dontTransferCache: true,
+  });
   processEnvelopeTimer?.();
 
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
     source: StateHashTreeRootSource.computeEnvelopeStateRoot,
   });
-  const stateRoot = postBlockState.hashTreeRoot();
+  const stateRoot = postEnvelopeState.hashTreeRoot();
   hashTreeRootTimer?.();
 
   return stateRoot;
