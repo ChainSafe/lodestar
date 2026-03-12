@@ -238,6 +238,31 @@ export function createLodestarMetrics(
       }),
     },
 
+    payloadEnvelopeProcessorQueue: {
+      length: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_length",
+        help: "Count of total payload envelope processor queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_dropped_jobs_total",
+        help: "Count of total payload envelope processor queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_payload_envelope_processor_queue_job_time_seconds",
+        help: "Time to process payload envelope processor queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_payload_envelope_processor_queue_job_wait_time_seconds",
+        help: "Time from job added to the payload envelope processor queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_concurrency",
+        help: "Current concurrency of payload envelope processor queue",
+      }),
+    },
+
     unfinalizedPayloadEnvelopeWritesQueue: {
       length: register.gauge({
         name: "lodestar_unfinalized_payload_envelope_writes_queue_length",

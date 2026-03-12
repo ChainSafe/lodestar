@@ -1,3 +1,4 @@
+import {routes} from "@lodestar/api";
 import {PublicKey} from "@chainsafe/blst";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {
@@ -13,6 +14,8 @@ import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {ImportPayloadOpts} from "./types.js";
+
+const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
 export enum PayloadErrorCode {
   EXECUTION_ENGINE_INVALID = "PAYLOAD_ERROR_EXECUTION_ENGINE_INVALID",
@@ -54,10 +57,6 @@ export class PayloadError extends Error {
   }
 }
 
-export type ImportPayloadResult = {
-  success: boolean;
-};
-
 /**
  * Import an execution payload envelope after all data is available.
  *
@@ -74,7 +73,7 @@ export async function importExecutionPayload(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
   opts: ImportPayloadOpts = {}
-): Promise<ImportPayloadResult> {
+): Promise<void> {
   const envelope = payloadInput.getPayloadEnvelope();
   const blockRootHex = payloadInput.blockRootHex;
 
@@ -223,5 +222,13 @@ export async function importExecutionPayload(
     blockHash: payloadInput.getBlockHashHex(),
   });
 
-  return {success: true};
+  // 9. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
+  const currentSlot = this.clock.currentSlot;
+  if (currentSlot - payloadInput.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+    this.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
+      slot: payloadInput.slot,
+      blockRoot: blockRootHex,
+    });
+  }
+
 }

@@ -730,11 +730,8 @@ export function getBeaconBlockApi({
       // want to gossip first. Need spec clarification on whether import failure should prevent broadcast.
       if (payloadInput.shouldImport()) {
         // Signature already verified in validateApiExecutionPayloadEnvelope
-        await chain.importExecutionPayload(payloadInput, {validSignature: true});
-        chain.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
-          slot,
-          blockRoot: blockRootHex,
-        });
+        // TODO GLOAS: Emit execution_payload_gossip event for gossip receipt.
+        chain.processExecutionPayload(payloadInput, {validSignature: true});
       }
 
       const valLogMeta = {
