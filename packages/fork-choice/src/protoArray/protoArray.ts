@@ -2,7 +2,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {bitCount, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
@@ -20,19 +20,6 @@ import {
  * Spec: gloas/fork-choice.md (PAYLOAD_TIMELY_THRESHOLD = PTC_SIZE // 2)
  */
 const PAYLOAD_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
-
-/** Count set bits in a Uint8Array without allocation (Brian Kernighan's algorithm) */
-function bitCount(arr: Uint8Array): number {
-  let count = 0;
-  for (let i = 0; i < arr.length; i++) {
-    let byte = arr[i];
-    while (byte) {
-      byte &= byte - 1;
-      count++;
-    }
-  }
-  return count;
-}
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
