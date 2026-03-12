@@ -1,5 +1,5 @@
-import {routes} from "@lodestar/api";
 import {PublicKey} from "@chainsafe/blst";
+import {routes} from "@lodestar/api";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {
   CachedBeaconStateGloas,
@@ -230,5 +230,4 @@ export async function importExecutionPayload(
       blockRoot: blockRootHex,
     });
   }
-
 }

@@ -111,13 +111,13 @@ import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produ
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
+  PayloadEnvelopeInput,
   SeenAggregators,
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
   SeenPayloadAttesters,
-  PayloadEnvelopeInput,
   SeenPayloadEnvelopeInput,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";

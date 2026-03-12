@@ -24,10 +24,7 @@ export class PayloadEnvelopeProcessor {
     );
   }
 
-  async processPayloadEnvelopeJob(
-    payloadInput: PayloadEnvelopeInput,
-    opts: ImportPayloadOpts = {}
-  ): Promise<void> {
+  async processPayloadEnvelopeJob(payloadInput: PayloadEnvelopeInput, opts: ImportPayloadOpts = {}): Promise<void> {
     await this.jobQueue.push(payloadInput, opts);
   }
 }
