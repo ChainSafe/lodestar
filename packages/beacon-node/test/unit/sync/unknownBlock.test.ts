@@ -4,6 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
@@ -22,7 +23,6 @@ import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {generateBlockWithColumnSidecars} from "../../utils/blocksAndData.js";
-import {testLogger} from "../../utils/logger.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
 
 describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {

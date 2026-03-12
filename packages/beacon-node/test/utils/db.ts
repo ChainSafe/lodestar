@@ -2,8 +2,8 @@ import childProcess from "node:child_process";
 import {ChainForkConfig} from "@lodestar/config";
 import {FilterOptions} from "@lodestar/db";
 import {LevelDbController} from "@lodestar/db/controller/level";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {BeaconDb} from "../../src/index.js";
-import {testLogger} from "./logger.js";
 
 export const TEMP_DB_LOCATION = ".tmpdb";
 

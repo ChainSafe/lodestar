@@ -12,8 +12,8 @@ import {
   getBlockRootAtSlot,
   newFilledArray,
 } from "@lodestar/state-transition";
+import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
-import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 

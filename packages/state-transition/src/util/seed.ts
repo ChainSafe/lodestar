@@ -417,8 +417,6 @@ export function naiveComputePayloadTimelinessCommitteeIndices(
  * https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf
  *
  * See the 'generalized domain' algorithm on page 3.
- * This is the naive implementation just to make sure lodestar follows the spec, this is not for production.
- * The optimized version is in `getComputeShuffledIndexFn`.
  */
 export function computeShuffledIndex(index: number, indexCount: number, seed: Bytes32): number {
   let permuted = index;
@@ -437,75 +435,6 @@ export function computeShuffledIndex(index: number, indexCount: number, seed: By
     permuted = bit ? flip : permuted;
   }
   return permuted;
-}
-
-type ComputeShuffledIndexFn = (index: number) => number;
-
-/**
- * An optimized version of `computeShuffledIndex`, this is for production.
- */
-export function getComputeShuffledIndexFn(indexCount: number, seed: Bytes32): ComputeShuffledIndexFn {
-  // there are possibly SHUFFLE_ROUND_COUNT (90 for mainnet) values for this cache
-  // this cache will always hit after the 1st call
-  const pivotByIndex: Map<number, number> = new Map();
-  // given 2M active validators, there are 2 M / 256 = 8k possible positionDiv
-  // it means there are at most 8k different sources for each round
-  const sourceByPositionDivByIndex: Map<number, Map<number, Uint8Array>> = new Map();
-  // 32 bytes seed + 1 byte i
-  const pivotBuffer = Buffer.alloc(32 + 1);
-  pivotBuffer.set(seed, 0);
-  // 32 bytes seed + 1 byte i + 4 bytes positionDiv
-  const sourceBuffer = Buffer.alloc(32 + 1 + 4);
-  sourceBuffer.set(seed, 0);
-
-  return (index): number => {
-    assert.lt(index, indexCount, "indexCount must be less than index");
-    assert.lte(indexCount, 2 ** 40, "indexCount too big");
-    let permuted = index;
-    // const _seed = seed;
-    for (let i = 0; i < SHUFFLE_ROUND_COUNT; i++) {
-      // optimized version of the below naive code
-      // const pivot = Number(
-      //   bytesToBigInt(digest(Buffer.concat([_seed, intToBytes(i, 1)])).slice(0, 8)) % BigInt(indexCount)
-      // );
-
-      let pivot = pivotByIndex.get(i);
-      if (pivot == null) {
-        // naive version always creates a new buffer, we can reuse the buffer
-        // pivot = Number(
-        //   bytesToBigInt(digest(Buffer.concat([_seed, intToBytes(i, 1)])).slice(0, 8)) % BigInt(indexCount)
-        // );
-        pivotBuffer[32] = i % 256;
-        pivot = Number(bytesToBigInt(digest(pivotBuffer).subarray(0, 8)) % BigInt(indexCount));
-        pivotByIndex.set(i, pivot);
-      }
-
-      const flip = (pivot + indexCount - permuted) % indexCount;
-      const position = Math.max(permuted, flip);
-
-      // optimized version of the below naive code
-      // const source = digest(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(Math.floor(position / 256), 4)]));
-      let sourceByPositionDiv = sourceByPositionDivByIndex.get(i);
-      if (sourceByPositionDiv == null) {
-        sourceByPositionDiv = new Map<number, Uint8Array>();
-        sourceByPositionDivByIndex.set(i, sourceByPositionDiv);
-      }
-      const positionDiv256 = Math.floor(position / 256);
-      let source = sourceByPositionDiv.get(positionDiv256);
-      if (source == null) {
-        // naive version always creates a new buffer, we can reuse the buffer
-        // don't want to go through intToBytes() to avoid BigInt
-        sourceBuffer[32] = i % 256;
-        sourceBuffer.writeUint32LE(positionDiv256, 33);
-        source = digest(sourceBuffer);
-        sourceByPositionDiv.set(positionDiv256, source);
-      }
-      const byte = source[Math.floor((position % 256) / 8)];
-      const bit = (byte >> (position % 8)) % 2;
-      permuted = bit ? flip : permuted;
-    }
-    return permuted;
-  };
 }
 
 /**

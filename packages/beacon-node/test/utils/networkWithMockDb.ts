@@ -1,5 +1,6 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {createCachedBeaconState, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -11,7 +12,6 @@ import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.j
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
 import {ClockStatic} from "./clock.js";
-import {testLogger} from "./logger.js";
 import {generateState} from "./state.js";
 
 export type NetworkForTestOpts = {

@@ -7,11 +7,11 @@ import {
 } from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateGloas} from "../types.ts";
-import {computeSigningRoot, computeTimeAtSlot} from "../util/index.ts";
-import {processConsolidationRequest} from "./processConsolidationRequest.ts";
-import {processDepositRequest} from "./processDepositRequest.ts";
-import {processWithdrawalRequest} from "./processWithdrawalRequest.ts";
+import {CachedBeaconStateGloas} from "../types.js";
+import {computeSigningRoot, computeTimeAtSlot} from "../util/index.js";
+import {processConsolidationRequest} from "./processConsolidationRequest.js";
+import {processDepositRequest} from "./processDepositRequest.js";
+import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 export type ProcessExecutionPayloadEnvelopeOpts = {
   verifySignature?: boolean;

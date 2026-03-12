@@ -6,7 +6,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
-import {prettyPrintPeerId} from "../../util.ts";
+import {prettyPrintPeerId} from "../../util.js";
 import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,

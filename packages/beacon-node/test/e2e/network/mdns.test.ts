@@ -5,6 +5,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SignableENR} from "@chainsafe/enr";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
@@ -13,7 +14,6 @@ import {NetworkOptions, defaultNetworkOptions} from "../../../src/network/option
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {memoOnce} from "../../utils/cache.js";
-import {testLogger} from "../../utils/logger.js";
 import {createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState, zeroProtoBlock} from "../../utils/state.js";
 

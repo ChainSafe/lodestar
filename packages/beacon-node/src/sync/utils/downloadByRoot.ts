@@ -6,7 +6,7 @@ import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRo
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {ChainEventEmitter} from "../../chain/emitter.js";
-import {IBeaconChain} from "../../chain/interface.ts";
+import {IBeaconChain} from "../../chain/interface.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
