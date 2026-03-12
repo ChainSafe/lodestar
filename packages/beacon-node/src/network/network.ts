@@ -403,12 +403,22 @@ export class Network implements INetwork {
   }
 
   async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number> {
-    const epoch = voluntaryExit.message.epoch;
-    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+    const boundaries =
+      this.clock.currentEpoch >= this.config.DENEB_FORK_EPOCH
+        ? getActiveForkBoundaries(this.config, this.clock.currentEpoch).filter(
+            ({fork}) => ForkSeq[fork] >= ForkSeq.capella
+          )
+        : [this.config.getForkBoundaryAtEpoch(voluntaryExit.message.epoch)];
 
-    return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit, {
-      ignoreDuplicatePublishError: true,
-    });
+    const publishResults = await Promise.all(
+      boundaries.map((boundary) =>
+        this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit, {
+          ignoreDuplicatePublishError: true,
+        })
+      )
+    );
+
+    return publishResults[0] ?? 0;
   }
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
