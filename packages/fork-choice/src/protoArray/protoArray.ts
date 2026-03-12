@@ -169,6 +169,26 @@ export class ProtoArray {
   }
 
   /**
+   * Get the node index for the default/canonical variant in a single hash lookup.
+   * - Pre-Gloas blocks: returns the FULL variant index
+   * - Gloas blocks: returns the PENDING variant index
+   */
+  getDefaultNodeIndex(blockRoot: RootHex): number | undefined {
+    const variantOrArr = this.indices.get(blockRoot);
+    if (variantOrArr == null) {
+      return undefined;
+    }
+
+    // Pre-Gloas: value is the index directly
+    if (!Array.isArray(variantOrArr)) {
+      return variantOrArr;
+    }
+
+    // Gloas: PENDING is the canonical variant
+    return variantOrArr[PayloadStatus.PENDING];
+  }
+
+  /**
    * Determine which parent payload status a block extends
    * Spec: gloas/fork-choice.md#new-get_parent_payload_status
    *   def get_parent_payload_status(store: Store, block: BeaconBlock) -> PayloadStatus:
@@ -676,8 +696,8 @@ export class ProtoArray {
 
     // Get proposer boost block
     // We don't care about variant here, just need proposer boost block info
-    const defaultStatus = this.getDefaultVariant(proposerBoostRoot);
-    const proposerBoostBlock = defaultStatus !== undefined ? this.getNode(proposerBoostRoot, defaultStatus) : undefined;
+    const proposerBoostIndex = this.getDefaultNodeIndex(proposerBoostRoot);
+    const proposerBoostBlock = proposerBoostIndex !== undefined ? this.getNodeByIndex(proposerBoostIndex) : undefined;
     if (!proposerBoostBlock) {
       // Proposer boost block not found, default to extending payload
       return true;
@@ -746,11 +766,7 @@ export class ProtoArray {
       //
       const {invalidateFromParentBlockRoot, latestValidExecHash} = execResponse;
       // TODO GLOAS: verify if getting default variant is correct here
-      const defaultStatus = this.getDefaultVariant(invalidateFromParentBlockRoot);
-      const invalidateFromParentIndex =
-        defaultStatus !== undefined
-          ? this.getNodeIndexByRootAndStatus(invalidateFromParentBlockRoot, defaultStatus)
-          : undefined;
+      const invalidateFromParentIndex = this.getDefaultNodeIndex(invalidateFromParentBlockRoot);
       if (invalidateFromParentIndex === undefined) {
         throw Error(`Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} in forkChoice`);
       }
@@ -963,9 +979,7 @@ export class ProtoArray {
     }
 
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const defaultStatus = this.getDefaultVariant(justifiedRoot);
-    const justifiedIndex =
-      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(justifiedRoot, defaultStatus) : undefined;
+    const justifiedIndex = this.getDefaultNodeIndex(justifiedRoot);
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN,
@@ -1654,12 +1668,7 @@ export class ProtoArray {
    * Uses default variant (PENDING for Gloas, FULL for pre-Gloas)
    */
   hasBlock(blockRoot: RootHex): boolean {
-    const defaultVariant = this.getDefaultVariant(blockRoot);
-    if (defaultVariant === undefined) {
-      return false;
-    }
-    const index = this.getNodeIndexByRootAndStatus(blockRoot, defaultVariant);
-    return index !== undefined;
+    return this.getDefaultNodeIndex(blockRoot) !== undefined;
   }
 
   /**
