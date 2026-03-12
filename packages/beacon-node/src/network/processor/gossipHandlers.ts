@@ -625,7 +625,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       //   if (payloadInput.shouldImport()) {
       //     // Signature already verified during gossip validation
       //     await chain.importExecutionPayload(payloadInput, {validSignature: true});
-      //     chain.persistPayloadEnvelope(payloadInput);
       //   }
       // }
     },
@@ -869,7 +868,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       if (payloadInput.shouldImport()) {
         await chain.importExecutionPayload(payloadInput, {validSignature: true});
-        chain.persistPayloadEnvelope(payloadInput);
         chain.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
           slot,
           blockRoot: blockRootHex,

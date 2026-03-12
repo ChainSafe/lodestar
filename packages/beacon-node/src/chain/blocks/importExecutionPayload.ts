@@ -8,6 +8,7 @@ import {
 import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
@@ -86,7 +87,20 @@ export async function importExecutionPayload(
     });
   }
 
-  // 2. Get pre-state for processExecutionPayloadEnvelope
+  // 2. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
+  // Wait for space in the write queue to apply backpressure during sync.
+  await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
+  this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
+    if (!isQueueErrorAborted(e)) {
+      this.logger.error(
+        "Error pushing payload envelope to unfinalized write queue",
+        {slot: payloadInput.slot, root: blockRootHex},
+        e as Error
+      );
+    }
+  });
+
+  // 3. Get pre-state for processExecutionPayloadEnvelope
   // We need the block state (post-block, pre-payload) to process the envelope
   const blockState = (await this.regen.getBlockSlotState(
     protoBlock,
@@ -95,7 +109,7 @@ export async function importExecutionPayload(
     RegenCaller.processBlock
   )) as CachedBeaconStateGloas;
 
-  // 3. Run verification steps in parallel
+  // 4. Run verification steps in parallel
   // Note: No data availability check needed here - importExecutionPayload is only
   // called when payloadInput.isComplete() is true, so all data is already available.
   const [execResult, signatureValid, postPayloadResult] = await Promise.all([
@@ -144,12 +158,12 @@ export async function importExecutionPayload(
     })(),
   ]);
 
-  // 3b. Check signature verification result
+  // 4b. Check signature verification result
   if (!signatureValid) {
     throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
   }
 
-  // 4. Handle EL response
+  // 5. Handle EL response
   if (execResult.status === ExecutionPayloadStatus.INVALID) {
     throw new PayloadError({
       code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
@@ -170,7 +184,7 @@ export async function importExecutionPayload(
     });
   }
 
-  // 4b. Verify envelope state root matches post-state
+  // 5b. Verify envelope state root matches post-state
   const postPayloadState = postPayloadResult.postPayloadState;
   const postPayloadStateRoot = postPayloadState.hashTreeRoot();
   if (!byteArrayEquals(envelope.message.stateRoot, postPayloadStateRoot)) {
@@ -183,7 +197,7 @@ export async function importExecutionPayload(
     );
   }
 
-  // 5. Update fork choice
+  // 6. Update fork choice
   this.forkChoice.onExecutionPayload(
     blockRootHex,
     payloadInput.getBlockHashHex(),
@@ -191,13 +205,13 @@ export async function importExecutionPayload(
     toRootHex(postPayloadStateRoot)
   );
 
-  // 6. Cache payload state
+  // 7. Cache payload state
   // TODO GLOAS: Enable when PR #8868 merged (adds processPayloadState)
   // this.regen.processPayloadState(postPayloadState);
   // if epoch boundary also call
   // this.regen.addCheckpointState(cp, checkpointState, true);
 
-  // 7. Record metrics for payload envelope and column sources
+  // 8. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});

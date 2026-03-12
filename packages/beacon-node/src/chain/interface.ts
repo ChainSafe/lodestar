@@ -246,9 +246,6 @@ export interface IBeaconChain {
   /** Import execution payload envelope to EL and fork choice after data is available */
   importExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<ImportPayloadResult>;
 
-  /** Persist payload envelope to DB and prune from seen cache  */
-  persistPayloadEnvelope(payloadInput: PayloadEnvelopeInput): Promise<void>;
-
   getStatus(): Status;
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;

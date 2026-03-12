@@ -731,7 +731,6 @@ export function getBeaconBlockApi({
       if (payloadInput.shouldImport()) {
         // Signature already verified in validateApiExecutionPayloadEnvelope
         await chain.importExecutionPayload(payloadInput, {validSignature: true});
-        chain.persistPayloadEnvelope(payloadInput);
         chain.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
           slot,
           blockRoot: blockRootHex,

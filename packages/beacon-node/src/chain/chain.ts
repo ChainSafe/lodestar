@@ -116,6 +116,7 @@ import {
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
   SeenPayloadAttesters,
+  PayloadEnvelopeInput,
   SeenPayloadEnvelopeInput,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
@@ -149,6 +150,13 @@ const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
  */
 const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 16;
 
+/**
+ * The maximum number of pending unfinalized payload envelope writes to the database before backpressure is applied.
+ * Similar to block writes, payload envelope write queue entries hold references to payload inputs
+ * (including columns) keeping them in memory. Keep moderate to avoid OOM during sync.
+ */
+const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
+
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
@@ -173,6 +181,7 @@ export class BeaconChain implements IBeaconChain {
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
   readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput], void>;
+  readonly unfinalizedPayloadEnvelopeWrites: JobItemQueue<[PayloadEnvelopeInput], void>;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -452,6 +461,15 @@ export class BeaconChain implements IBeaconChain {
       metrics?.unfinalizedBlockWritesQueue
     );
 
+    this.unfinalizedPayloadEnvelopeWrites = new JobItemQueue(
+      persistPayloadEnvelopeInput.bind(this),
+      {
+        maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES,
+        signal,
+      },
+      metrics?.unfinalizedPayloadEnvelopeWritesQueue
+    );
+
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -482,6 +500,7 @@ export class BeaconChain implements IBeaconChain {
     // we can abort any ongoing unfinalized block writes.
     // TODO: persist fork choice to disk and allow unfinalized block writes to complete.
     this.unfinalizedBlockWrites.dropAllJobs();
+    this.unfinalizedPayloadEnvelopeWrites.dropAllJobs();
 
     this.abortController.abort();
   }
@@ -1012,8 +1031,6 @@ export class BeaconChain implements IBeaconChain {
   }
 
   importExecutionPayload = importExecutionPayload.bind(this);
-
-  persistPayloadEnvelope = persistPayloadEnvelopeInput.bind(this);
 
   getStatus(): Status {
     const head = this.forkChoice.getHead();
