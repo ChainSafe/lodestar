@@ -1,3 +1,4 @@
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, DataColumnSidecars, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
 import {toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
@@ -7,21 +8,25 @@ import {AddPayloadEnvelopeProps, ColumnWithSource, CreateFromBlockProps, SourceM
 export type PayloadEnvelopeInputState =
   | {
       hasPayload: false;
-      hasAllColumns: false;
+      hasAllData: false;
+      hasComputedAllData: false;
     }
   | {
       hasPayload: false;
-      hasAllColumns: true;
+      hasAllData: true;
+      hasComputedAllData: boolean;
     }
   | {
       hasPayload: true;
-      hasAllColumns: false;
+      hasAllData: false;
+      hasComputedAllData: false;
       payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
       payloadEnvelopeSource: SourceMeta;
     }
   | {
       hasPayload: true;
-      hasAllColumns: true;
+      hasAllData: true;
+      hasComputedAllData: boolean;
       payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
       payloadEnvelopeSource: SourceMeta;
       timeCompleteSec: number;
@@ -95,13 +100,13 @@ export class PayloadEnvelopeInput {
 
     const noBlobs = props.bid.blobKzgCommitments.length === 0;
     const noSampledColumns = props.sampledColumns.length === 0;
-    const hasAllColumns = noBlobs || noSampledColumns;
+    const hasAllData = noBlobs || noSampledColumns;
 
-    if (hasAllColumns) {
-      this.state = {hasPayload: false, hasAllColumns: true};
+    if (hasAllData) {
+      this.state = {hasPayload: false, hasAllData: true, hasComputedAllData: true};
       this.columnsDataPromise.resolve(this.getSampledColumns());
     } else {
-      this.state = {hasPayload: false, hasAllColumns: false};
+      this.state = {hasPayload: false, hasAllData: false, hasComputedAllData: false};
     }
   }
 
@@ -148,11 +153,12 @@ export class PayloadEnvelopeInput {
       peerIdStr: props.peerIdStr,
     };
 
-    if (this.state.hasAllColumns) {
+    if (this.state.hasAllData) {
       // Complete state
       this.state = {
         hasPayload: true,
-        hasAllColumns: true,
+        hasAllData: true,
+        hasComputedAllData: this.state.hasComputedAllData,
         payloadEnvelope: props.envelope,
         payloadEnvelopeSource: source,
         timeCompleteSec: props.seenTimestampSec,
@@ -162,7 +168,8 @@ export class PayloadEnvelopeInput {
       // Has payload, waiting for columns
       this.state = {
         hasPayload: true,
-        hasAllColumns: false,
+        hasAllData: false,
+        hasComputedAllData: false,
         payloadEnvelope: props.envelope,
         payloadEnvelopeSource: source,
       };
@@ -173,32 +180,44 @@ export class PayloadEnvelopeInput {
     const {columnSidecar, seenTimestampSec} = columnWithSource;
     this.columnsCache.set(columnSidecar.index, columnWithSource);
 
-    const hasAllSampledColumns = this.sampledColumns.every((idx) => this.columnsCache.has(idx));
-    const noBlobs = this.bid.blobKzgCommitments.length === 0;
-    const hasAllColumns = hasAllSampledColumns || noBlobs || this.sampledColumns.length === 0;
+    const sampledColumns = this.getSampledColumns();
+    const hasAllData =
+      // already hasAllData
+      this.state.hasAllData ||
+      // has all sampled columns
+      sampledColumns.length === this.sampledColumns.length ||
+      // has enough columns to reconstruct the rest
+      this.columnsCache.size >= NUMBER_OF_COLUMNS / 2;
 
-    if (!hasAllColumns) {
+    const hasComputedAllData =
+      // has all sampled columns
+      sampledColumns.length === this.sampledColumns.length;
+
+    if (!hasAllData) {
       return;
     }
 
-    // All sampled columns received - resolve columns promise
-    this.columnsDataPromise.resolve(this.getSampledColumns());
+    if (hasComputedAllData) {
+      this.columnsDataPromise.resolve(sampledColumns);
+    }
 
     if (this.state.hasPayload) {
       // Complete state
       this.state = {
         hasPayload: true,
-        hasAllColumns: true,
+        hasAllData: true,
+        hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
         payloadEnvelope: this.state.payloadEnvelope,
         payloadEnvelopeSource: this.state.payloadEnvelopeSource,
         timeCompleteSec: seenTimestampSec,
       };
       this.payloadEnvelopeDataPromise.resolve(this.state.payloadEnvelope);
     } else {
-      // No payload yet, all columns ready
+      // No payload yet, all data ready
       this.state = {
         hasPayload: false,
-        hasAllColumns: true,
+        hasAllData: true,
+        hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
       };
     }
   }
@@ -243,11 +262,11 @@ export class PayloadEnvelopeInput {
   }
 
   hasComputedAllData(): boolean {
-    return this.state.hasAllColumns;
+    return this.state.hasComputedAllData;
   }
 
   waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecars> {
-    if (this.state.hasAllColumns) {
+    if (this.state.hasComputedAllData) {
       return Promise.resolve(this.getSampledColumns());
     }
     return withTimeout(() => this.columnsDataPromise.promise, timeout, signal);
@@ -258,12 +277,12 @@ export class PayloadEnvelopeInput {
   }
 
   getTimeComplete(): number {
-    if (!this.state.hasPayload || !this.state.hasAllColumns) throw new Error("Not yet complete");
+    if (!this.state.hasPayload || !this.state.hasAllData) throw new Error("Not yet complete");
     return this.state.timeCompleteSec;
   }
 
   isComplete(): boolean {
-    return this.state.hasPayload && this.state.hasAllColumns;
+    return this.state.hasPayload && this.state.hasAllData;
   }
 
   /**
@@ -302,7 +321,8 @@ export class PayloadEnvelopeInput {
     slot: number;
     blockRoot: string;
     hasPayload: boolean;
-    hasAllColumns: boolean;
+    hasAllData: boolean;
+    hasComputedAllData: boolean;
     isComplete: boolean;
     columnsCount: number;
     sampledColumnsCount: number;
@@ -311,7 +331,8 @@ export class PayloadEnvelopeInput {
       slot: this.slot,
       blockRoot: this.blockRootHex,
       hasPayload: this.state.hasPayload,
-      hasAllColumns: this.state.hasAllColumns,
+      hasAllData: this.state.hasAllData,
+      hasComputedAllData: this.state.hasComputedAllData,
       isComplete: this.isComplete(),
       columnsCount: this.columnsCache.size,
       sampledColumnsCount: this.sampledColumns.length,
