@@ -3,8 +3,10 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   StateHashTreeRootSource,
+  isBuilderIndex,
   stateTransition,
 } from "@lodestar/state-transition";
+import {ForkSeq} from "@lodestar/params";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -41,10 +43,13 @@ export async function verifyBlocksStateTransitionOnly(
     const block = blocks[i].getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
+    const hasBuilderVoluntaryExit =
+      preState.config.getForkSeq(block.message.slot) >= ForkSeq.gloas &&
+      block.message.body.voluntaryExits.some((voluntaryExit) => isBuilderIndex(voluntaryExit.message.validatorIndex));
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
-    const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
+    const useBlsBatchVerify = !opts?.disableBlsBatchVerify && !hasBuilderVoluntaryExit;
     const postState = stateTransition(
       preState,
       block,

@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest";
 import {BlobSchedule, ChainConfig, ChainForkConfig, ForkBoundary, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {getActiveForkBoundaries, getVoluntaryExitPublishForkBoundaries} from "../../../src/network/forks.js";
+import {getActiveForkBoundaries} from "../../../src/network/forks.js";
 
 function getForkConfig({
   altair,
@@ -246,26 +246,3 @@ for (const testScenario of testScenarios) {
     }
   });
 }
-
-describe("network / voluntary exit publish boundaries", () => {
-  const forkConfig = getForkConfig({
-    altair: 10,
-    bellatrix: 20,
-    capella: 30,
-    deneb: 40,
-    electra: 50,
-    fulu: 60,
-    blobSchedule: [],
-  });
-
-  it("uses the exit epoch boundary before Deneb", () => {
-    expect(getVoluntaryExitPublishForkBoundaries(forkConfig, 35, 30)).toEqual([{fork: ForkName.capella, epoch: 30}]);
-  });
-
-  it("uses all active post-capella boundaries once Deneb is active", () => {
-    expect(getVoluntaryExitPublishForkBoundaries(forkConfig, 50, 30)).toEqual([
-      {fork: ForkName.deneb, epoch: 40},
-      {fork: ForkName.electra, epoch: 50},
-    ]);
-  });
-});

@@ -1,5 +1,4 @@
 import {ChainForkConfig, ForkBoundary} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 
 /**
@@ -55,18 +54,6 @@ export function getActiveForkBoundaries(config: ChainForkConfig, epoch: Epoch): 
   }
 
   return activeBoundaries;
-}
-
-export function getVoluntaryExitPublishForkBoundaries(
-  config: ChainForkConfig,
-  currentEpoch: Epoch,
-  exitEpoch: Epoch
-): ForkBoundary[] {
-  if (currentEpoch >= config.DENEB_FORK_EPOCH) {
-    return getActiveForkBoundaries(config, currentEpoch).filter(({fork}) => ForkSeq[fork] >= ForkSeq.capella);
-  }
-
-  return [config.getForkBoundaryAtEpoch(exitEpoch)];
 }
 
 /**

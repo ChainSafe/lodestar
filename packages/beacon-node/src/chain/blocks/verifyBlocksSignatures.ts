@@ -1,5 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
-import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, getBlockSignatureSets, isBuilderIndex} from "@lodestar/state-transition";
+import {ForkSeq} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -34,12 +35,18 @@ export async function verifyBlocksSignatures(
   // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
   // so the attester and proposer shufflings are correct.
   for (const [i, block] of blocks.entries()) {
+    const hasBuilderVoluntaryExit =
+      config.getForkSeq(block.message.slot) >= ForkSeq.gloas &&
+      block.message.body.voluntaryExits.some((voluntaryExit) => isBuilderIndex(voluntaryExit.message.validatorIndex));
+
     // Use [i] to make clear that the index has to be correct to blame the right block below on BlockError()
-    isValidPromises[i] = opts.validSignatures
+    isValidPromises[i] = opts.validSignatures || hasBuilderVoluntaryExit
       ? // Skip all signature verification
         Promise.resolve(true)
       : //
-        // Verify signatures per block to track which block is invalid
+        // Verify signatures per block to track which block is invalid.
+        // Blocks with builder voluntary exits are verified inline in state-transition
+        // since batch verification does not have access to pre-state builder pubkeys.
         bls.verifySignatureSets(
           getBlockSignatureSets(config, currentSyncCommitteeIndexed, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
