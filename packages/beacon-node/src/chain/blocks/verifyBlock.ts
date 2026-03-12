@@ -1,9 +1,10 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   computeEpochAtSlot,
+  isBuilderIndex,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {IndexedAttestation, deneb} from "@lodestar/types";
@@ -93,6 +94,12 @@ export async function verifyBlocksInEpoch(
     throw Error(`preState at slot ${preState0.slot} must be dialed to block epoch ${block0Epoch}`);
   }
 
+  const hasBuilderVoluntaryExit =
+    fork >= ForkSeq.gloas &&
+    blocks.some((block) =>
+      block.message.body.voluntaryExits.some((voluntaryExit) => isBuilderIndex(voluntaryExit.message.validatorIndex))
+    );
+
   const abortController = new AbortController();
 
   try {
@@ -138,11 +145,14 @@ export async function verifyBlocksInEpoch(
         this.metrics,
         this.validatorMonitor,
         abortController.signal,
-        opts
+        {
+          ...opts,
+          disableBlsBatchVerify: opts.disableBlsBatchVerify || hasBuilderVoluntaryExit,
+        }
       ),
 
       // All signatures at once
-      opts.skipVerifyBlockSignatures !== true
+      opts.skipVerifyBlockSignatures !== true && !hasBuilderVoluntaryExit
         ? verifyBlocksSignatures(
             this.config,
             this.bls,

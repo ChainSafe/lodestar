@@ -43,7 +43,7 @@ import {promiseAllMaybeAsync} from "../util/promises.js";
 import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
-import {getActiveForkBoundaries} from "./forks.js";
+import {getActiveForkBoundaries, getVoluntaryExitPublishForkBoundaries} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
 import {INetwork} from "./interface.js";
@@ -403,12 +403,16 @@ export class Network implements INetwork {
   }
 
   async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number> {
-    const epoch = voluntaryExit.message.epoch;
-    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+    const publishResults = await Promise.all(
+      getVoluntaryExitPublishForkBoundaries(this.config, this.clock.currentEpoch, voluntaryExit.message.epoch).map(
+        (boundary) =>
+          this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit, {
+            ignoreDuplicatePublishError: true,
+          })
+      )
+    );
 
-    return this.publishGossip<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, boundary}, voluntaryExit, {
-      ignoreDuplicatePublishError: true,
-    });
+    return publishResults[0] ?? 0;
   }
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
