@@ -765,7 +765,7 @@ export class ProtoArray {
       // if its in fcU.
       //
       const {invalidateFromParentBlockRoot, latestValidExecHash} = execResponse;
-      // TODO GLOAS: verify if getting default variant is correct here
+      // TODO GLOAS: verify if getting the default/canonical node index is correct here
       const invalidateFromParentIndex = this.getDefaultNodeIndex(invalidateFromParentBlockRoot);
       if (invalidateFromParentIndex === undefined) {
         throw Error(`Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} in forkChoice`);
