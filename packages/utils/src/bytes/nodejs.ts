@@ -89,4 +89,13 @@ export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
   return Buffer.compare(a, b) === 0;
 }
 
-export {bigIntToBytes, bytesToBigInt, bytesToInt, fromHexInto, intToBytes, toHexString, xor} from "./browser.js";
+export {
+  bigIntToBytes,
+  bitCount,
+  bytesToBigInt,
+  bytesToInt,
+  fromHexInto,
+  intToBytes,
+  toHexString,
+  xor,
+} from "./browser.js";

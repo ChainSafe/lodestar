@@ -134,7 +134,7 @@ export class SeenBlockInput {
     if (metrics) {
       metrics.seenCache.blockInput.blockInputCount.addCollect(() => {
         metrics.seenCache.blockInput.blockInputCount.set(this.blockInputs.size);
-        metrics.seenCache.blockInput.serializedObjectCount.set(
+        metrics.seenCache.blockInput.serializedObjectRefs.set(
           Array.from(this.blockInputs.values()).reduce(
             (count, blockInput) => count + blockInput.getSerializedCacheKeys().length,
             0
@@ -250,6 +250,7 @@ export class SeenBlockInput {
           peerIdStr,
         });
       }
+      this.metrics?.seenCache.blockInput.createdByBlock.inc();
       this.blockInputs.set(blockInput.blockRootHex, blockInput);
     }
 
@@ -349,7 +350,7 @@ export class SeenBlockInput {
         custodyColumns: this.custodyConfig.custodyColumns,
         sampledColumns: this.custodyConfig.sampledColumns,
       });
-      this.metrics?.seenCache.blockInput.createdByBlob.inc();
+      this.metrics?.seenCache.blockInput.createdByColumn.inc();
       this.blockInputs.set(blockRootHex, blockInput);
     }
 
