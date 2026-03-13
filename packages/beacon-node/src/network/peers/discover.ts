@@ -59,6 +59,7 @@ export enum DiscoveredPeerStatus {
   cached = "cached",
   dropped = "dropped",
   no_multiaddrs = "no_multiaddrs",
+  transport_incompatible = "transport_incompatible",
   peer_cooling_down = "peer_cooling_down",
 }
 
@@ -479,7 +480,7 @@ export class PeerDiscovery {
       const hasTcpMatch = this.transports.includes("tcp") && multiaddrTCP;
       const hasQuicMatch = this.transports.includes("quic") && multiaddrQUIC;
       if (!hasTcpMatch && !hasQuicMatch) {
-        return DiscoveredPeerStatus.no_multiaddrs;
+        return DiscoveredPeerStatus.transport_incompatible;
       }
 
       // Ignore dialing peers
