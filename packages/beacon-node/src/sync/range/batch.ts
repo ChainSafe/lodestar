@@ -266,7 +266,12 @@ export class Batch {
    * Gives a list of peers from which this batch has had a failed download or processing attempt.
    */
   getFailedPeers(): PeerIdStr[] {
-    return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.flatMap((a) => a.peers)];
+    return [
+      ...this.failedDownloadAttempts,
+      ...this.failedProcessingAttempts.flatMap((a) => a.peers),
+      // TODO: should this get counted here? Will penalize peers for outbound rate limits
+      // ...this.rateLimitedPeers.keys(),
+    ];
   }
 
   getMetadata(): BatchMetadata {
