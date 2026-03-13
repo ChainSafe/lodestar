@@ -28,16 +28,8 @@ export function processExecutionPayloadEnvelope(
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(envelope.slot);
 
-  if (verifySignature) {
-    const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
-      state.config,
-      state,
-      signedEnvelope,
-      state.latestBlockHeader.proposerIndex
-    );
-    if (!verifySignatureSet(signatureSet)) {
-      throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
-    }
+  if (verifySignature && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
+    throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
   }
 
   // .clone() before mutating state, similar to stateTransition()
@@ -160,4 +152,17 @@ function validateExecutionPayloadEnvelope(
   }
 
   // Skipped: Verify the execution payload is valid
+}
+
+function verifyExecutionPayloadEnvelopeSignature(
+  state: CachedBeaconStateGloas,
+  signedEnvelope: gloas.SignedExecutionPayloadEnvelope
+): boolean {
+  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
+    state.config,
+    state,
+    signedEnvelope,
+    state.latestBlockHeader.proposerIndex
+  );
+  return verifySignatureSet(signatureSet);
 }
