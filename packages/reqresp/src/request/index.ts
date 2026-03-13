@@ -38,6 +38,17 @@ function scheduleStreamAbortIfNotClosed(stream: Stream, timeoutMs: number): void
 
 type ClearableSignal = AbortSignal & {clear: () => void};
 
+/**
+ * Compose an abort signal from an optional parent signal and a timeout, with explicit cleanup.
+ *
+ * This replaces a plain `AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])` to work
+ * around a memory leak in Node.js where AbortSignal.any() retains references to all source
+ * signals for the lifetime of the longest-lived signal (the timeout). In a long-running
+ * req/resp workload this causes unbounded growth of the dependent-signal set.
+ *
+ * Upstream issue: https://github.com/nodejs/node/issues/54614
+ * Lodestar investigation: https://github.com/ChainSafe/lodestar/issues/8969
+ */
 function createRespSignal(signal: AbortSignal | undefined, timeoutMs: number): ClearableSignal {
   const timeoutSignal = AbortSignal.timeout(timeoutMs);
   const signals = signal ? [signal, timeoutSignal] : [timeoutSignal];
