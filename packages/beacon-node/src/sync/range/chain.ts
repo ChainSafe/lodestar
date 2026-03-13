@@ -603,12 +603,6 @@ export class SyncChain {
           peer: prettyPrintPeerIdStr(peer.peerId),
         });
       }
-
-      // Preemptively request more blocks from peers whilst we process current blocks
-      //
-      // TODO(fulu): why is this second call here.  should fall through to the one below the catch block. commenting
-      //      for now and will resolve during PR process
-      // this.triggerBatchDownloader();
     } catch (e) {
       // bubble the error up to the main async iterable loop
       this.batchProcessor.end(e as Error);

@@ -7,7 +7,6 @@ import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
-import {prettyPrintPeerIdStr} from "../../network/util.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -106,7 +105,10 @@ export class Batch {
   readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
-  /** Peers that are rate-limited (inbound or outbound) during download attempts */
+  /**
+   * Peers that are rate-limited (inbound or outbound) during download attempts
+   * Note that this is unbounded and entries do not get deleted except with the batch itself
+   */
   readonly rateLimitedPeers = new Map<PeerIdStr, RateLimitMeta>();
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
@@ -409,8 +411,8 @@ export class Batch {
   }
 
   /**
-   * Returns the unix time for when the timeout expires.  If the timeout has passed delete the
-   * entry.  If there is not a rate-limit return epoch time of 0.
+   * Returns the unix time for when the timeout expires.  If the timeout has passed reset the
+   * timeout.  If there is not a rate-limit return epoch time of 0.
    */
   getPeerCoolDownTimeout(peer: PeerIdStr): number {
     const rateLimit = this.rateLimitedPeers.get(peer);
