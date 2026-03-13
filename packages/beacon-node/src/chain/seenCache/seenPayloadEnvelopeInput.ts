@@ -59,7 +59,7 @@ export class SeenPayloadEnvelopeInput {
         deletedCount++;
       }
     }
-    this.logger?.debug(`SeenPayloadEnvelopeInput.onFinalized deleted ${deletedCount} cached entries`);
+    this.logger?.debug("SeenPayloadEnvelopeInput.onFinalized deleted cached entries", {deletedCount});
   };
 
   add(props: CreateFromBlockProps): PayloadEnvelopeInput {

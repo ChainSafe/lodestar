@@ -841,6 +841,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
+      // TODO GLOAS: handle BLOCK_ROOT_UNKNOWN error to trigger sync
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 
       const slot = executionPayloadEnvelope.message.slot;
