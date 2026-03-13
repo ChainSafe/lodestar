@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {describe, it} from "vitest";
-import {ForkName} from "@lodestar/params";
+import {ForkName, forkAll} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {RunnerType, TestRunner} from "./types.js";
 
@@ -59,7 +59,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7805"],
+  skippedForks: ["eip7805", "heze"],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
