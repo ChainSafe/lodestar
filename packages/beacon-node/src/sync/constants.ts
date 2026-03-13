@@ -69,3 +69,21 @@ export const MAX_CONCURRENT_REQUESTS = 2;
  * so having this constant too big is a waste of resources and peers may rate limit us.
  */
 export const MAX_LOOK_AHEAD_EPOCHS = 2;
+
+/**
+ * Maximum number of consecutive rate-limited download attempts per batch before giving up.
+ * Rate-limited attempts are tracked separately from regular download failures since they
+ * indicate the peer is healthy but throttling us — retrying with backoff is appropriate.
+ */
+export const MAX_RATE_LIMITED_RETRIES = 3;
+
+/**
+ * Initial delay in milliseconds before retrying a rate-limited batch download.
+ * Doubles on each consecutive rate-limited attempt up to {@link RATE_LIMITED_MAX_DELAY_MS}.
+ */
+export const RATE_LIMITED_INITIAL_DELAY_MS = 50;
+
+/**
+ * Maximum backoff delay in milliseconds for rate-limited batch retries.
+ */
+export const RATE_LIMITED_MAX_DELAY_MS = 200;
