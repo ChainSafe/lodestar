@@ -59,7 +59,7 @@ describe("QueuedStateRegenerator - getClosestHeadState", () => {
     const regenerator = new QueuedStateRegenerator({
       signal: new AbortController().signal,
       metrics: null,
-      logger: {debug: vi.fn(), warn: vi.fn(), error: vi.fn()},
+      logger: {debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), verbose: vi.fn()},
       forkChoice: {} as never,
       blockStateCache: blockStateCache as never,
       checkpointStateCache: checkpointStateCache as never,
@@ -108,7 +108,7 @@ describe("QueuedStateRegenerator - getClosestHeadState", () => {
     const regenerator = new QueuedStateRegenerator({
       signal: new AbortController().signal,
       metrics: null,
-      logger: {debug: vi.fn(), warn: vi.fn(), error: vi.fn()},
+      logger: {debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), verbose: vi.fn()},
       forkChoice: {} as never,
       blockStateCache: blockStateCache as never,
       checkpointStateCache: checkpointStateCache as never,
