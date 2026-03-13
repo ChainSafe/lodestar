@@ -11,7 +11,7 @@ import type {PeerScoreParams, PeerScoreStatsDump} from "@libp2p/gossipsub/score"
 import type {AddrInfo, PublishOpts, TopicStr} from "@libp2p/gossipsub/types";
 import type {PeerId} from "@libp2p/interface";
 import {peerIdFromString} from "@libp2p/peer-id";
-import {multiaddr} from "@multiformats/multiaddr";
+import {type Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
@@ -538,7 +538,9 @@ export function parseDirectPeers(directPeerStrs: routes.lodestar.DirectPeer[], l
         const peerId = enr.peerId;
 
         // Get all available transport multiaddrs from ENR
-        const addrs = [enr.getLocationMultiaddr("quic"), enr.getLocationMultiaddr("tcp")].filter(Boolean);
+        const addrs = [enr.getLocationMultiaddr("quic"), enr.getLocationMultiaddr("tcp")].filter(
+          (a): a is Multiaddr => a != null
+        );
         if (addrs.length === 0) {
           logger.warn("ENR does not contain any transport multiaddr", {enr: peerStr});
           continue;
