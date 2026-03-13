@@ -7,6 +7,7 @@ import {
   ForkChoiceErrorCode,
   NotReorgedReason,
   getSafeExecutionBlockHash,
+  isGloasBlock,
 } from "@lodestar/fork-choice";
 import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -118,8 +119,7 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true
   // Post-Gloas: blockSummary.payloadStatus is always PENDING, so payloadPresent = false (block state only, no payload processing yet)
-  const isGloasBlock = blockSummary.blockHashFromBid !== null;
-  const payloadPresent = !isGloasBlock;
+  const payloadPresent = !isGloasBlock(blockSummary);
   // processState manages both block state and payload state variants together for memory/disk management
   this.regen.processState(blockRootHex, postState);
 

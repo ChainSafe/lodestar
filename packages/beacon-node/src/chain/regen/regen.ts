@@ -402,8 +402,8 @@ export async function processSlotsToNearestCheckpoint(
     // processSlots() only does epoch transitions, never processes payloads
     // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
     // Post-Gloas: result is a block state (payloadPresent=false)
-    const isGloas = checkpointState.config.getForkSeq(checkpointState.slot) >= ForkSeq.gloas;
-    checkpointStateCache.add(cp, checkpointState, !isGloas);
+    const isPayloadPresent = checkpointState.config.getForkSeq(checkpointState.slot) < ForkSeq.gloas;
+    checkpointStateCache.add(cp, checkpointState, isPayloadPresent);
     // consumers should not mutate state ever
     emitter?.emit(ChainEvent.checkpoint, cp, checkpointState);
 
