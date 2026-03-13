@@ -1,11 +1,6 @@
-import {PublicKey} from "@chainsafe/blst";
 import {routes} from "@lodestar/api";
-import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
-import {
-  CachedBeaconStateGloas,
-  createSingleSignatureSetFromComponents,
-  getExecutionPayloadEnvelopeSigningRoot,
-} from "@lodestar/state-transition";
+import {ForkName} from "@lodestar/params";
+import {CachedBeaconStateGloas, getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
 import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
@@ -123,14 +118,11 @@ export async function importExecutionPayload(
     opts.validSignature === true
       ? Promise.resolve(true)
       : (async () => {
-          const builderPubkey =
-            envelope.message.builderIndex === BUILDER_INDEX_SELF_BUILD
-              ? blockState.epochCtx.pubkeyCache.getOrThrow(payloadInput.proposerIndex)
-              : PublicKey.fromBytes(blockState.builders.getReadonly(envelope.message.builderIndex).pubkey);
-          const signatureSet = createSingleSignatureSetFromComponents(
-            builderPubkey,
-            getExecutionPayloadEnvelopeSigningRoot(this.config, envelope.message),
-            envelope.signature
+          const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
+            this.config,
+            blockState,
+            envelope,
+            payloadInput.proposerIndex
           );
           return this.bls.verifySignatureSets([signatureSet]);
         })(),

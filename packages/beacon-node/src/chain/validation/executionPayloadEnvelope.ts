@@ -1,10 +1,7 @@
-import {PublicKey} from "@chainsafe/blst";
-import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {
   CachedBeaconStateGloas,
   computeStartSlotAtEpoch,
-  createSingleSignatureSetFromComponents,
-  getExecutionPayloadEnvelopeSigningRoot,
+  getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -142,18 +139,14 @@ async function validateExecutionPayloadEnvelope(
     });
 
   const state = blockState as CachedBeaconStateGloas;
-  const builderPubkey =
-    envelope.builderIndex === BUILDER_INDEX_SELF_BUILD
-      ? state.epochCtx.pubkeyCache.getOrThrow(payloadInput.proposerIndex)
-      : PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey);
-
-  const signatureSet = createSingleSignatureSetFromComponents(
-    builderPubkey,
-    getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
-    executionPayloadEnvelope.signature
+  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
+    chain.config,
+    state,
+    executionPayloadEnvelope,
+    payloadInput.proposerIndex
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
     });

@@ -1,14 +1,10 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {
-  BUILDER_INDEX_SELF_BUILD,
-  DOMAIN_BEACON_BUILDER,
-  SLOTS_PER_EPOCH,
-  SLOTS_PER_HISTORICAL_ROOT,
-} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {getExecutionPayloadEnvelopeSignatureSet} from "../signatureSets/executionPayloadEnvelope.js";
 import {CachedBeaconStateGloas} from "../types.js";
-import {computeSigningRoot, computeTimeAtSlot} from "../util/index.js";
+import {computeTimeAtSlot} from "../util/index.js";
+import {verifySignatureSet} from "../util/signatureSets.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
@@ -32,8 +28,16 @@ export function processExecutionPayloadEnvelope(
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(envelope.slot);
 
-  if (verifySignature && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
-    throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
+  if (verifySignature) {
+    const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
+      state.config,
+      state,
+      signedEnvelope,
+      state.latestBlockHeader.proposerIndex
+    );
+    if (!verifySignatureSet(signatureSet)) {
+      throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
+    }
   }
 
   // .clone() before mutating state, similar to stateTransition()
@@ -156,34 +160,4 @@ function validateExecutionPayloadEnvelope(
   }
 
   // Skipped: Verify the execution payload is valid
-}
-
-function verifyExecutionPayloadEnvelopeSignature(
-  state: CachedBeaconStateGloas,
-  signedEnvelope: gloas.SignedExecutionPayloadEnvelope
-): boolean {
-  const builderIndex = signedEnvelope.message.builderIndex;
-
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_BUILDER);
-  const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, signedEnvelope.message, domain);
-
-  try {
-    let publicKey: PublicKey;
-
-    if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
-      const validatorIndex = state.latestBlockHeader.proposerIndex;
-      const proposerPubkey = state.epochCtx.pubkeyCache.get(validatorIndex);
-      if (!proposerPubkey) {
-        return false;
-      }
-      publicKey = proposerPubkey;
-    } else {
-      publicKey = PublicKey.fromBytes(state.builders.getReadonly(builderIndex).pubkey);
-    }
-    const signature = Signature.fromBytes(signedEnvelope.signature, true);
-
-    return verify(signingRoot, publicKey, signature);
-  } catch (_e) {
-    return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
-  }
 }
