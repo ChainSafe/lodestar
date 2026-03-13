@@ -1,5 +1,6 @@
 import path from "node:path";
 import {expect} from "vitest";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -12,7 +13,6 @@ import {
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";

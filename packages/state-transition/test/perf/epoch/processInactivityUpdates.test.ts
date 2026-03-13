@@ -1,7 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {processInactivityUpdates} from "../../../src/epoch/processInactivityUpdates.js";
+import {generatePerfTestCachedStateAltair, numValidators} from "../../../src/testUtils/util.js";
 import {StateAltairEpoch} from "../types.js";
-import {generatePerfTestCachedStateAltair, numValidators} from "../util.js";
 import {mutateInactivityScores} from "./util.js";
 import {FlagFactors, generateBalanceDeltasEpochTransitionCache} from "./utilPhase0.js";
 

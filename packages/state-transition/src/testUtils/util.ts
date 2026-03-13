@@ -13,7 +13,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {BeaconState, Slot, phase0, ssz} from "@lodestar/types";
-import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
+import {getEffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {
   computeCommitteeCount,
   computeEpochAtSlot,
@@ -22,17 +22,17 @@ import {
   interopSecretKey,
   newFilledArray,
   processSlots,
-} from "../../src/index.js";
+} from "../index.js";
 import {
   BeaconStateAltair,
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
-} from "../../src/types.js";
-import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
-import {getActiveValidatorIndices} from "../../src/util/validator.js";
-import {interopPubkeysCached} from "../utils/interop.js";
+} from "../types.js";
+import {getNextSyncCommittee} from "../util/syncCommittee.js";
+import {getActiveValidatorIndices} from "../util/validator.js";
+import {interopPubkeysCached} from "./interop.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;

@@ -14,7 +14,7 @@ import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDeposit} from "./processDeposit.js";
 import {processDepositRequest} from "./processDepositRequest.js";
-import {processPayloadAttestation} from "./processPayloadAttestation.ts";
+import {processPayloadAttestation} from "./processPayloadAttestation.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";

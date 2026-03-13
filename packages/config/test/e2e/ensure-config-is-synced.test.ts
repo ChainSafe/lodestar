@@ -1,9 +1,9 @@
 import {describe, expect, it, vi} from "vitest";
 import {fetch, fromHex} from "@lodestar/utils";
-import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
 import {ChainConfig} from "../../src/chainConfig/types.js";
+import specTestsVersions from "../spec-tests-version.json" with {type: "json"};
 
 // Not e2e, but slow. Run with e2e tests
 
@@ -61,12 +61,18 @@ describe("Ensure chainConfig is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
   it("mainnet chainConfig values match spec", async () => {
-    const remoteConfig = await downloadRemoteConfig("mainnet", ethereumConsensusSpecsTests.specVersion);
+    const remoteConfig = await downloadRemoteConfig(
+      "mainnet",
+      specTestsVersions.ethereumConsensusSpecsTests.specVersion
+    );
     assertCorrectConfig({...mainnetChainConfig}, remoteConfig);
   });
 
   it("minimal chainConfig values match spec", async () => {
-    const remoteConfig = await downloadRemoteConfig("minimal", ethereumConsensusSpecsTests.specVersion);
+    const remoteConfig = await downloadRemoteConfig(
+      "minimal",
+      specTestsVersions.ethereumConsensusSpecsTests.specVersion
+    );
     assertCorrectConfig({...minimalChainConfig}, remoteConfig);
   });
 });

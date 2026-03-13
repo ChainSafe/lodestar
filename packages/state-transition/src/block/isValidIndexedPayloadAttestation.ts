@@ -1,7 +1,7 @@
 import {gloas} from "@lodestar/types";
-import {getIndexedPayloadAttestationSignatureSet} from "../signatureSets/index.ts";
+import {getIndexedPayloadAttestationSignatureSet} from "../signatureSets/index.js";
 import {CachedBeaconStateGloas} from "../types.js";
-import {verifySignatureSet} from "../util/index.ts";
+import {verifySignatureSet} from "../util/index.js";
 
 export function isValidIndexedPayloadAttestation(
   state: CachedBeaconStateGloas,

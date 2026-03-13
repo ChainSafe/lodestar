@@ -5,15 +5,15 @@ import {ChainForkConfig, createCachedGenesis} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER, GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconState, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
-import {E2STORE_HEADER_SIZE, EntryType, readEntry, readVersion} from "../e2s.ts";
-import {snappyUncompress} from "../util.ts";
+import {E2STORE_HEADER_SIZE, EntryType, readEntry, readVersion} from "../e2s.js";
+import {snappyUncompress} from "../util.js";
 import {
   EraIndices,
   computeEraNumberFromBlockSlot,
   parseEraName,
   readAllEraIndices,
   readSlotFromBeaconStateBytes,
-} from "./util.ts";
+} from "./util.js";
 
 /**
  * EraReader is responsible for reading and validating ERA files.
