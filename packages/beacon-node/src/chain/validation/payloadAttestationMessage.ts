@@ -59,8 +59,7 @@ async function validatePayloadAttestationMessage(
   // [IGNORE] The message's block `data.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue attestation for processing
   // once the block is retrieved. Note a client might want to request payload after).
-  const block = chain.forkChoice.getBlock(data.beaconBlockRoot);
-  if (block === null) {
+  if (!chain.forkChoice.hasBlock(data.beaconBlockRoot)) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
       blockRoot: toRootHex(data.beaconBlockRoot),
@@ -87,8 +86,16 @@ async function validatePayloadAttestationMessage(
   }
 
   // [REJECT] `payload_attestation_message.signature` is valid with respect to the validator's public key.
+  const validatorPubkey = chain.pubkeyCache.get(validatorIndex);
+  if (!validatorPubkey) {
+    throw new PayloadAttestationError(GossipAction.REJECT, {
+      code: PayloadAttestationErrorCode.INVALID_ATTESTER,
+      attesterIndex: validatorIndex,
+    });
+  }
+
   const signatureSet = createSingleSignatureSetFromComponents(
-    chain.index2pubkey[validatorIndex],
+    validatorPubkey,
     getPayloadAttestationDataSigningRoot(chain.config, data),
     payloadAttestationMessage.signature
   );

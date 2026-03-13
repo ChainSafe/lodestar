@@ -1,10 +1,11 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
   ForkPostDeneb,
@@ -17,8 +18,8 @@ import {
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
-  Index2PubkeyCache,
   createCachedBeaconState,
+  createPubkeyCache,
   isExecutionStateType,
   signedBlockToSignedHeader,
   syncPubkeys,
@@ -53,8 +54,6 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {getConfig} from "../../utils/config.js";
-import {testLogger} from "../../utils/logger.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -97,15 +96,13 @@ const forkChoiceTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkey2index = new PubkeyIndexMap();
-        const index2pubkey: Index2PubkeyCache = [];
-        syncPubkeys(anchorState.validators.getAllReadonlyValues(), pubkey2index, index2pubkey);
+        const pubkeyCache = createPubkeyCache();
+        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {
             config: beaconConfig,
-            pubkey2index,
-            index2pubkey,
+            pubkeyCache,
           },
           {skipSyncPubkeys: true}
         );
@@ -133,8 +130,7 @@ const forkChoiceTest =
           {
             privateKey: await generateKeyPair("secp256k1"),
             config: beaconConfig,
-            pubkey2index,
-            index2pubkey,
+            pubkeyCache,
             db: getMockedBeaconDb(),
             dataDir: ".",
             dbName: ",",
@@ -420,7 +416,7 @@ const forkChoiceTest =
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
-                  head.blockRoot,
+                  head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );

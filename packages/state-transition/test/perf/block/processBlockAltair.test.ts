@@ -16,8 +16,12 @@ import {
   ExecutionPayloadStatus,
   stateTransition,
 } from "../../../src/index.js";
+import {
+  cachedStateAltairPopulateCaches,
+  generatePerfTestCachedStateAltair,
+  perfStateId,
+} from "../../../src/testUtils/util.js";
 import {StateBlock} from "../types.js";
-import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
 import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
 // As of Jun 12 2021

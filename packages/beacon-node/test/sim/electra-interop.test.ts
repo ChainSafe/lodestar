@@ -3,6 +3,7 @@ import fs from "node:fs";
 import {afterAll, afterEach, describe, it, vi} from "vitest";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
+import {TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {Epoch, Slot, electra} from "@lodestar/types";
@@ -15,7 +16,6 @@ import {bytesToData, dataToBytes} from "../../src/execution/engine/utils.js";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {BeaconNode} from "../../src/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
-import {TestLoggerOpts, testLogger} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
@@ -364,7 +364,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     if (headState.validators.length !== 33 || headState.balances.length !== 33) {
       throw Error("New validator is not reflected in the beacon state at slot 5");
     }
-    if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
+    if (epochCtx.pubkeyCache.size !== 33) {
       throw Error("Pubkey cache is not updated");
     }
 
@@ -391,7 +391,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     if (headState.validators.length !== 33 || headState.balances.length !== 33) {
       throw Error("New validator is not reflected in the beacon state.");
     }
-    if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
+    if (epochCtx.pubkeyCache.size !== 33) {
       throw Error("New validator is not in pubkey cache");
     }
 

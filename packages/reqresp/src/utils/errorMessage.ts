@@ -1,8 +1,7 @@
 import {decode as varintDecode, encodingLength as varintEncodingLength} from "uint8-varint";
-import {Uint8ArrayList} from "uint8arraylist";
 import {writeSszSnappyPayload} from "../encodingStrategies/sszSnappy/encode.js";
 import {Encoding} from "../types.js";
-import {SnappyFramesUncompress} from "./snappyIndex.js";
+import {decodeSnappyFrames} from "./snappyIndex.js";
 
 // ErrorMessage schema:
 //
@@ -13,18 +12,21 @@ import {SnappyFramesUncompress} from "./snappyIndex.js";
 // By convention, the error_message is a sequence of bytes that MAY be interpreted as a
 // UTF-8 string (for debugging purposes). Clients MUST treat as valid any byte sequences
 //
-// Spec v1.1.10 https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#responding-side
+// https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#responding-side
 
 /**
  * Encodes a UTF-8 string to 256 bytes max
  */
-export async function* encodeErrorMessage(errorMessage: string, encoding: Encoding): AsyncGenerator<Buffer> {
+export function* encodeErrorMessage(errorMessage: string, encoding: Encoding): Generator<Buffer> {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(errorMessage).slice(0, 256);
 
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
       yield* writeSszSnappyPayload(bytes);
+      break;
+    default:
+      throw Error("Unsupported encoding");
   }
 }
 
@@ -32,9 +34,9 @@ export async function* encodeErrorMessage(errorMessage: string, encoding: Encodi
  * Encodes a UTF-8 error message string into a single buffer (max 256 bytes before encoding).
  * Unlike `encodeErrorMessage`, this collects all encoded chunks into one buffer.
  */
-export async function encodeErrorMessageToBuffer(errorMessage: string, encoding: Encoding): Promise<Buffer> {
+export function encodeErrorMessageToBuffer(errorMessage: string, encoding: Encoding): Buffer {
   const chunks: Buffer[] = [];
-  for await (const chunk of encodeErrorMessage(errorMessage, encoding)) {
+  for (const chunk of encodeErrorMessage(errorMessage, encoding)) {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
@@ -43,21 +45,20 @@ export async function encodeErrorMessageToBuffer(errorMessage: string, encoding:
 /**
  * Decodes error message from network bytes and removes non printable, non ascii characters.
  */
-export async function decodeErrorMessage(encodedErrorMessage: Uint8Array): Promise<string> {
-  const encoder = new TextDecoder();
+export function decodeErrorMessage(encodedErrorMessage: Uint8Array): string {
+  const decoder = new TextDecoder();
   let sszDataLength: number;
   try {
     sszDataLength = varintDecode(encodedErrorMessage);
-    const decompressor = new SnappyFramesUncompress();
     const varintBytes = varintEncodingLength(sszDataLength);
-    const errorMessage = decompressor.uncompress(new Uint8ArrayList(encodedErrorMessage.subarray(varintBytes)));
-    if (errorMessage == null || errorMessage.length !== sszDataLength) {
+    const errorMessage = decodeSnappyFrames(encodedErrorMessage.subarray(varintBytes));
+    if (errorMessage.length !== sszDataLength) {
       throw new Error("Malformed input: data length mismatch");
     }
     // remove non ascii characters from string
-    return encoder.decode(errorMessage.subarray(0)).replace(/[^\x20-\x7F]/g, "");
+    return decoder.decode(errorMessage.subarray(0)).replace(/[^\x20-\x7F]/g, "");
   } catch (_e) {
     // remove non ascii characters from string
-    return encoder.decode(encodedErrorMessage.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");
+    return decoder.decode(encodedErrorMessage.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");
   }
 }

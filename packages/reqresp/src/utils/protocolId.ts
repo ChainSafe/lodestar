@@ -1,14 +1,14 @@
 import {Encoding, ProtocolAttributes} from "../types.js";
 
 /**
- * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#protocol-identification
  */
 export function formatProtocolID(protocolPrefix: string, method: string, version: number, encoding: Encoding): string {
   return `${protocolPrefix}/${method}/${version}/${encoding}`;
 }
 
 /**
- * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/p2p-interface.md#protocol-identification
  */
 export function parseProtocolID(protocolId: string): ProtocolAttributes {
   const result = protocolId.split("/");

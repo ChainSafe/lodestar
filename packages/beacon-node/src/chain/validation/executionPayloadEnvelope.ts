@@ -37,7 +37,7 @@ async function validateExecutionPayloadEnvelope(
   // the block is retrieved).
   // TODO GLOAS: Need to review this, we should queue the envelope for later
   // processing if the block is not yet known, otherwise we would ignore it here
-  const block = chain.forkChoice.getBlock(envelope.beaconBlockRoot);
+  const block = chain.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,
@@ -79,7 +79,7 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  if (block.builderIndex === undefined || block.blockHashHex === undefined) {
+  if (block.builderIndex == null || block.blockHashFromBid == null) {
     // This indicates this block is a pre-gloas block which is wrong
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
@@ -97,11 +97,11 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `payload.block_hash == bid.block_hash`
-  if (toRootHex(payload.blockHash) !== block.blockHashHex) {
+  if (toRootHex(payload.blockHash) !== block.blockHashFromBid) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
       envelopeBlockHash: toRootHex(payload.blockHash),
-      bidBlockHash: block.blockHashHex,
+      bidBlockHash: block.blockHashFromBid,
     });
   }
 

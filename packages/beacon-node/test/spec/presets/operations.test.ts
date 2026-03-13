@@ -1,4 +1,5 @@
 import path from "node:path";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -14,7 +15,6 @@ import {
 import * as blockFns from "@lodestar/state-transition/block";
 import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {getConfig} from "../../utils/config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -75,17 +75,16 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
       signed_envelope: gloas.SignedExecutionPayloadEnvelope;
       execution: {execution_valid: boolean};
     }
-  ) => {
+  ): CachedBeaconStateAllForks | void => {
     const fork = state.config.getForkSeq(state.slot);
     if (fork >= ForkSeq.gloas) {
-      blockFns.processExecutionPayloadEnvelope(state as CachedBeaconStateGloas, testCase.signed_envelope, true);
-    } else {
-      blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
-        executionPayloadStatus: testCase.execution.execution_valid
-          ? ExecutionPayloadStatus.valid
-          : ExecutionPayloadStatus.invalid,
-      });
+      return blockFns.processExecutionPayloadEnvelope(state as CachedBeaconStateGloas, testCase.signed_envelope, true);
     }
+    blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
+      executionPayloadStatus: testCase.execution.execution_valid
+        ? ExecutionPayloadStatus.valid
+        : ExecutionPayloadStatus.invalid,
+    });
   },
 
   bls_to_execution_change: (state, testCase: {address_change: capella.SignedBLSToExecutionChange}) => {
@@ -120,7 +119,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   },
 };
 
-export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => void;
+export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => T | void;
 
 export type OperationsTestCase = {
   meta?: {bls_setting?: bigint};
@@ -141,7 +140,12 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
       const epoch = (state.fork as phase0.Fork).epoch;
       const cachedState = createCachedBeaconStateTest(state, getConfig(fork, epoch));
 
-      operationFn(cachedState, testcase);
+      const postState = operationFn(cachedState, testcase);
+      // processExecutionPayloadEnvelope returns the postState, other operations mutate the state in-place and return void
+      if (postState !== undefined) {
+        postState.commit();
+        return postState;
+      }
       state.commit();
       return state;
     },

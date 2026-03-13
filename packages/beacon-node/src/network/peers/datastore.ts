@@ -8,6 +8,9 @@ type MemoryItem = {
   data: Uint8Array;
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: used below (copied from upstream)
+type AwaitGenerator<T, TReturn = any, TNext = any> = Generator<T, TReturn, TNext> | AsyncGenerator<T, TReturn, TNext>;
+
 /**
  * Before libp2p 0.35, peerstore stays in memory and periodically write to db after n dirty items
  * This has a memory issue because all peer data stays in memory and loaded at startup time
@@ -93,7 +96,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
    * This throws error if not found
    * see https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8edb31590ec0bc/src/index.js#L102
    */
-  async get(key: Key): Promise<Uint8Array> {
+  async get(key: Key, options?: AbortOptions): Promise<Uint8Array> {
     const keyStr = key.toString();
     const memoryItem = this._memoryDatastore.get(keyStr);
     if (memoryItem) {
@@ -102,16 +105,16 @@ export class Eth2PeerDataStore extends BaseDatastore {
     }
 
     // this throws error if not found
-    const dbValue = await this._dbDatastore.get(key);
+    const dbValue = await this._dbDatastore.get(key, options);
     // don't call this._memoryDatastore.set directly
     // we want to get through prune() logic with fromDb as true
     await this._put(key, dbValue, true);
     return dbValue;
   }
 
-  async has(key: Key): Promise<boolean> {
+  async has(key: Key, options?: AbortOptions): Promise<boolean> {
     try {
-      await this.get(key);
+      await this.get(key, options);
     } catch (err) {
       // this is the same to how js-datastore-level handles notFound error
       // https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8edb31590ec0bc/src/index.js#L121
@@ -121,26 +124,26 @@ export class Eth2PeerDataStore extends BaseDatastore {
     return true;
   }
 
-  async delete(key: Key): Promise<void> {
+  async delete(key: Key, options?: AbortOptions): Promise<void> {
     this._memoryDatastore.delete(key.toString());
-    await this._dbDatastore.delete(key);
+    await this._dbDatastore.delete(key, options);
   }
 
-  async *_all(q: Query): AsyncIterable<Pair> {
+  async *_all(q: Query, options?: AbortOptions): AwaitGenerator<Pair> {
     for (const [key, value] of this._memoryDatastore.entries()) {
       yield {
         key: new Key(key),
         value: value.data,
       };
     }
-    yield* this._dbDatastore.query(q);
+    yield* this._dbDatastore.query(q, options);
   }
 
-  async *_allKeys(q: KeyQuery): AsyncIterable<Key> {
+  async *_allKeys(q: KeyQuery, options?: AbortOptions): AwaitGenerator<Key> {
     for (const key of this._memoryDatastore.keys()) {
       yield new Key(key);
     }
-    yield* this._dbDatastore.queryKeys(q);
+    yield* this._dbDatastore.queryKeys(q, options);
   }
 
   private async _addDirtyItem(keyStr: string): Promise<void> {

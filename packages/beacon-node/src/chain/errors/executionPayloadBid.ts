@@ -1,5 +1,5 @@
 import {BuilderIndex, RootHex, Slot} from "@lodestar/types";
-import {GossipActionError} from "./gossipValidation.ts";
+import {GossipActionError} from "./gossipValidation.js";
 
 export enum ExecutionPayloadBidErrorCode {
   BUILDER_NOT_ELIGIBLE = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_NOT_ELIGIBLE",

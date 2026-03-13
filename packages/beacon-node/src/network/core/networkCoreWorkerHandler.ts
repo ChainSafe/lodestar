@@ -1,9 +1,9 @@
 import path from "node:path";
 import workerThreads from "node:worker_threads";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
-import {PrivateKey} from "@libp2p/interface";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PublishOpts} from "@libp2p/gossipsub/types";
+import type {PrivateKey} from "@libp2p/interface";
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";

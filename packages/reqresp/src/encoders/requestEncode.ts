@@ -9,7 +9,7 @@ import {MixedProtocol} from "../types.js";
  * Requests may contain no payload (e.g. /eth2/beacon_chain/req/metadata/1/)
  * if so, it would yield no byte chunks
  */
-export async function* requestEncode(protocol: MixedProtocol, requestBody: Uint8Array): AsyncGenerator<Buffer> {
+export function* requestEncode(protocol: MixedProtocol, requestBody: Uint8Array): Generator<Buffer> {
   const type = protocol.requestSizes;
 
   if (type && requestBody !== null) {

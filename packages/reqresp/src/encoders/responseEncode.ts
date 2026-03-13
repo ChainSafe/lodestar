@@ -14,30 +14,23 @@ const SUCCESS_BUFFER = Buffer.from([RespStatus.SUCCESS]);
  * ```
  * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
-export function responseEncodeSuccess(
+export async function* responseEncodeSuccess(
   protocol: Protocol,
-  cbs: {onChunk: (chunkIndex: number) => void}
-): (source: AsyncIterable<ResponseOutgoing>) => AsyncIterable<Buffer> {
-  return async function* responseEncodeSuccessTransform(source) {
-    let chunkIndex = 0;
+  source: AsyncIterable<ResponseOutgoing>
+): AsyncIterable<Uint8Array> {
+  for await (const chunk of source) {
+    // <result>
+    yield SUCCESS_BUFFER;
 
-    for await (const chunk of source) {
-      // Postfix increment, return 0 as first chunk
-      cbs.onChunk(chunkIndex++);
-
-      // <result>
-      yield SUCCESS_BUFFER;
-
-      // <context-bytes> - from altair
-      const contextBytes = getContextBytes(protocol.contextBytes, chunk);
-      if (contextBytes) {
-        yield contextBytes as Buffer;
-      }
-
-      // <encoding-dependent-header> | <encoded-payload>
-      yield* writeEncodedPayload(chunk.data, protocol.encoding);
+    // <context-bytes> - from altair
+    const contextBytes = getContextBytes(protocol.contextBytes, chunk);
+    if (contextBytes) {
+      yield contextBytes;
     }
-  };
+
+    // <encoding-dependent-header> | <encoded-payload>
+    yield* writeEncodedPayload(chunk.data, protocol.encoding);
+  }
 }
 
 /**
@@ -50,20 +43,15 @@ export function responseEncodeSuccess(
  * Only the last `<response_chunk>` is allowed to have a non-zero error code, so this
  * fn yields exactly one `<error_response>` and afterwards the stream must be terminated
  */
-export async function* responseEncodeError(
+export function* responseEncodeError(
   protocol: Pick<MixedProtocol, "encoding">,
   status: RpcResponseStatusError,
   errorMessage: string
-): AsyncGenerator<Buffer> {
-  if (!errorMessage) {
-    yield Buffer.from([status]);
-    return;
-  }
-
+): Generator<Buffer> {
   // Combine <result> and <error_message> into a single chunk for atomic delivery.
   // Yielding them separately causes a race condition where the stream closes after the
   // status byte but before the error message arrives on the reader side.
-  const errorMessageBuffer = await encodeErrorMessageToBuffer(errorMessage, protocol.encoding);
+  const errorMessageBuffer = encodeErrorMessageToBuffer(errorMessage, protocol.encoding);
   yield Buffer.concat([Buffer.from([status]), errorMessageBuffer]);
 }
 
