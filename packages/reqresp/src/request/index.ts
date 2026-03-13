@@ -50,6 +50,9 @@ function createRespSignal(signal: AbortSignal | undefined, timeoutMs: number): C
   };
 
   const onAbort = (): void => {
+    if (controller.signal.aborted) {
+      return;
+    }
     const reason = signals.find((entry) => entry.aborted)?.reason;
     controller.abort(reason);
     clear();
