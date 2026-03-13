@@ -36,6 +36,42 @@ function scheduleStreamAbortIfNotClosed(stream: Stream, timeoutMs: number): void
   stream.addEventListener("close", onClose, {once: true});
 }
 
+type ClearableSignal = AbortSignal & {clear: () => void};
+
+function createRespSignal(signal: AbortSignal | undefined, timeoutMs: number): ClearableSignal {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const signals = signal ? [signal, timeoutSignal] : [timeoutSignal];
+  const controller = new AbortController();
+
+  const clear = (): void => {
+    for (const entry of signals) {
+      entry.removeEventListener("abort", onAbort);
+    }
+  };
+
+  const onAbort = (): void => {
+    if (controller.signal.aborted) {
+      return;
+    }
+    const reason = signals.find((entry) => entry.aborted)?.reason;
+    controller.abort(reason);
+    clear();
+  };
+
+  for (const entry of signals) {
+    if (entry.aborted) {
+      onAbort();
+      break;
+    }
+    entry.addEventListener("abort", onAbort);
+  }
+
+  const respSignal = controller.signal as ClearableSignal;
+  respSignal.clear = clear;
+
+  return respSignal;
+}
+
 export interface SendRequestOpts {
   /** The maximum time for complete response transfer. */
   respTimeoutMs?: number;
@@ -154,9 +190,7 @@ export async function* sendRequest(
     }
 
     // RESP_TIMEOUT: Maximum time for complete response transfer
-    const respSignal = signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(RESP_TIMEOUT)])
-      : AbortSignal.timeout(RESP_TIMEOUT);
+    const respSignal = createRespSignal(signal, RESP_TIMEOUT);
 
     let responseError: Error | null = null;
     let responseFullyConsumed = false;
@@ -199,6 +233,7 @@ export async function* sendRequest(
           }
         }
       }
+      respSignal.clear();
       metrics?.outgoingClosedStreams?.inc({method});
       logger.verbose("Req  stream closed", logCtx);
     }
