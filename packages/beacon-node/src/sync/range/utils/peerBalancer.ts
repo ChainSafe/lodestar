@@ -11,9 +11,14 @@ import {ChainTarget} from "./chainTarget.js";
 
 export type PeerSyncInfo = PeerSyncMeta & {
   target: ChainTarget;
+  timeout?: number;
 };
 
-type PeerInfoColumn = {syncInfo: PeerSyncInfo; columns: number; hasEarliestAvailableSlots: boolean};
+type PeerInfoColumn = {
+  syncInfo: PeerSyncInfo;
+  columns: number;
+  hasEarliestAvailableSlots: boolean;
+};
 
 /**
  * Balance and organize peers to perform requests with a SyncChain
@@ -54,8 +59,8 @@ export class ChainPeersBalancer {
    * Return the most suitable peer to retry
    * Sort peers by (1) no failed request (2) less active requests, then pick first
    */
-  bestPeerToRetryBatch(batch: Batch): PeerSyncMeta | undefined {
-    if (batch.state.status !== BatchStatus.AwaitingDownload) {
+  bestPeerToRetryBatch(batch: Batch): PeerSyncInfo | undefined {
+    if (batch.state.status !== BatchStatus.AwaitingDownload && batch.state.status !== BatchStatus.RateLimited) {
       return;
     }
     const {columnsRequest} = batch.requests;
@@ -88,7 +93,7 @@ export class ChainPeersBalancer {
    * Return peers with 0 or no active requests that has a higher target slot than this batch and has columns we need.
    */
   idlePeerForBatch(batch: Batch): PeerSyncInfo | undefined {
-    if (batch.state.status !== BatchStatus.AwaitingDownload) {
+    if (batch.state.status !== BatchStatus.AwaitingDownload && batch.state.status !== BatchStatus.RateLimited) {
       return;
     }
     const eligiblePeers = this.filterPeers(batch, this.custodyConfig.sampledColumns, true);
@@ -110,10 +115,16 @@ export class ChainPeersBalancer {
     return undefined;
   }
 
-  private filterPeers(batch: Batch, requestColumns: number[], noActiveRequest: boolean): PeerInfoColumn[] {
+  private filterPeers(
+    batch: Batch,
+    requestColumns: number[],
+    noActiveRequest: boolean,
+    allowRateLimited = false
+  ): PeerInfoColumn[] {
     const eligiblePeers: PeerInfoColumn[] = [];
+    let hasCoolingDownPeers = false;
 
-    if (batch.state.status !== BatchStatus.AwaitingDownload) {
+    if (batch.state.status !== BatchStatus.AwaitingDownload && batch.state.status !== BatchStatus.RateLimited) {
       return eligiblePeers;
     }
 
@@ -133,6 +144,17 @@ export class ChainPeersBalancer {
 
       if (target.slot < batch.startSlot) {
         continue;
+      }
+
+      let timeout: number | undefined;
+      const coolDownTimeout = batch.getPeerCoolDownTimeout(peer.peerId);
+      if (coolDownTimeout !== 0) {
+        if (!allowRateLimited) {
+          hasCoolingDownPeers = true;
+          continue;
+        }
+
+        timeout = coolDownTimeout;
       }
 
       if (isForkPostFulu(batch.forkName) && this.syncType === RangeSyncType.Head) {
@@ -172,13 +194,16 @@ export class ChainPeersBalancer {
 
       if (columns.length > 0) {
         eligiblePeers.push({
-          syncInfo: peer,
+          syncInfo: {...peer, timeout},
           columns: columns.length,
           hasEarliestAvailableSlots: earliestAvailableSlot != null,
         });
       }
     }
 
+    if (eligiblePeers.length === 0 && hasCoolingDownPeers && !allowRateLimited) {
+      return this.filterPeers(batch, requestColumns, noActiveRequest, true);
+    }
     return eligiblePeers;
   }
 }
