@@ -105,6 +105,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   }
 
   abstract addBlock(props: AddBlock<F>): void;
+  abstract getSerializedCacheKeys(): object[];
 
   hasBlock(): boolean {
     return this.state.hasBlock;
@@ -242,6 +243,10 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
         "Cannot addBlock to BlockInputPreData"
       );
     }
+  }
+
+  getSerializedCacheKeys(): object[] {
+    return [this.state.block];
   }
 }
 
@@ -525,6 +530,20 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 
   getBlobs(): deneb.BlobSidecars {
     return this.getAllBlobsWithSource().map(({blobSidecar}) => blobSidecar);
+  }
+
+  getSerializedCacheKeys(): object[] {
+    const objects: object[] = [];
+
+    if (this.state.hasBlock) {
+      objects.push(this.state.block);
+    }
+
+    for (const {blobSidecar} of this.blobsCache.values()) {
+      objects.push(blobSidecar);
+    }
+
+    return objects;
   }
 }
 
@@ -906,6 +925,18 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     }
     return Promise.resolve(this.getSampledColumns());
   }
+
+  getSerializedCacheKeys(): object[] {
+    const objects: object[] = [];
+
+    if (this.state.hasBlock) {
+      objects.push(this.state.block);
+    }
+
+    objects.push(...this.getAllColumns());
+
+    return objects;
+  }
 }
 
 type BlockInputNoDataState = {
@@ -966,5 +997,9 @@ export class BlockInputNoData extends AbstractBlockInput<ForkPostGloas, null> {
   getBlobKzgCommitments(): deneb.BlobKzgCommitments {
     return (this.state.block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
       .blobKzgCommitments;
+  }
+
+  getSerializedCacheKeys(): object[] {
+    return [this.state.block];
   }
 }

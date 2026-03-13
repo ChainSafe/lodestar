@@ -2,13 +2,13 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
+import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {ReorgEventData} from "../../../src/chain/emitter.js";
 import {TimelinessForkChoice} from "../../mocks/fork-choice/timeliness.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
-import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 

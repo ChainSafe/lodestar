@@ -6,11 +6,11 @@ import {BeaconConfig, ChainConfig} from "@lodestar/config";
 import {Lightclient} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {TimestampFormatCode} from "@lodestar/logger";
+import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {LightClientHeader} from "@lodestar/types";
 import {HeadEventData} from "../../../src/chain/index.js";
-import {LogLevel, TestLoggerOpts, testLogger} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 

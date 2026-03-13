@@ -604,10 +604,14 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   //
   // see: https://github.com/ethereum/consensus-specs/pull/3360
   if (ForkSeq[fork] < ForkSeq.deneb) {
+    const currentSlot = chain.clock.currentSlot;
+    const withinPastDisparity = currentSlot > 0 && chain.clock.isCurrentSlotGivenGossipDisparity(currentSlot - 1);
     const earliestPermissibleSlot = Math.max(
-      // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY
-      chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000) -
-        chain.config.ATTESTATION_PROPAGATION_SLOT_RANGE,
+      // Pre-Deneb propagation is time-bounded: an attestation remains valid at the exact old
+      // boundary `compute_time_at_slot(slot + range + 1) + MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+      // Model that boundary by extending the lower slot bound by one additional slot only while
+      // the clock still considers the previous slot current given gossip disparity.
+      currentSlot - chain.config.ATTESTATION_PROPAGATION_SLOT_RANGE - (withinPastDisparity ? 1 : 0),
       0
     );
 

@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {ForkSeq} from "@lodestar/params";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
-import {numValidators} from "../../perf/util.js";
+import {numValidators} from "../../../src/testUtils/util.js";
 import {beforeValue} from "../../utils/beforeValue.js";
 import {WithdrawalOpts, getExpectedWithdrawalsTestData} from "../../utils/capella.js";
 

@@ -1,7 +1,8 @@
+import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {bitCount, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
@@ -60,14 +61,14 @@ export class ProtoArray {
   private previousProposerBoost: ProposerBoost | null = null;
 
   /**
-   * PTC (Payload Timeliness Committee) votes per block
-   * Maps block root to boolean array of size PTC_SIZE (from params: 512 mainnet, 2 minimal)
+   * PTC (Payload Timeliness Committee) votes per block as bitvectors
+   * Maps block root to BitArray of PTC_SIZE bits (512 mainnet, 2 minimal)
    * Spec: gloas/fork-choice.md#modified-store (line 148)
    *
-   * ptcVotes[blockRoot][i] = true if PTC member i voted payload_present=true
+   * Bit i is set if PTC member i voted payload_present=true
    * Used by is_payload_timely() to determine if payload is timely
    */
-  private ptcVotes = new Map<RootHex, boolean[]>();
+  private ptcVotes = new Map<RootHex, BitArray>();
 
   constructor({
     pruneThreshold,
@@ -166,6 +167,26 @@ export class ProtoArray {
 
     // Gloas: multiple variants exist, PENDING is canonical
     return PayloadStatus.PENDING;
+  }
+
+  /**
+   * Get the node index for the default/canonical variant in a single hash lookup.
+   * - Pre-Gloas blocks: returns the FULL variant index
+   * - Gloas blocks: returns the PENDING variant index
+   */
+  getDefaultNodeIndex(blockRoot: RootHex): number | undefined {
+    const variantOrArr = this.indices.get(blockRoot);
+    if (variantOrArr == null) {
+      return undefined;
+    }
+
+    // Pre-Gloas: value is the index directly
+    if (!Array.isArray(variantOrArr)) {
+      return variantOrArr;
+    }
+
+    // Gloas: PENDING is the canonical variant
+    return variantOrArr[PayloadStatus.PENDING];
   }
 
   /**
@@ -476,7 +497,7 @@ export class ProtoArray {
 
       // Initialize PTC votes for this block (all false initially)
       // Spec: gloas/fork-choice.md#modified-on_block (line 645)
-      this.ptcVotes.set(block.blockRoot, new Array(PTC_SIZE).fill(false));
+      this.ptcVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
     } else {
       // Pre-Gloas: Only create FULL node (payload embedded in block)
       const node: ProtoNode = {
@@ -605,8 +626,7 @@ export class ProtoArray {
         throw new Error(`Invalid PTC index: ${ptcIndex}, must be 0..${PTC_SIZE - 1}`);
       }
 
-      // Update the vote
-      votes[ptcIndex] = payloadPresent;
+      votes.set(ptcIndex, payloadPresent);
     }
   }
 
@@ -636,7 +656,7 @@ export class ProtoArray {
     }
 
     // Count votes for payload_present=true
-    const yesVotes = votes.filter((v) => v).length;
+    const yesVotes = bitCount(votes.uint8Array);
     return yesVotes > PAYLOAD_TIMELY_THRESHOLD;
   }
 
@@ -676,8 +696,8 @@ export class ProtoArray {
 
     // Get proposer boost block
     // We don't care about variant here, just need proposer boost block info
-    const defaultStatus = this.getDefaultVariant(proposerBoostRoot);
-    const proposerBoostBlock = defaultStatus !== undefined ? this.getNode(proposerBoostRoot, defaultStatus) : undefined;
+    const proposerBoostIndex = this.getDefaultNodeIndex(proposerBoostRoot);
+    const proposerBoostBlock = proposerBoostIndex !== undefined ? this.getNodeByIndex(proposerBoostIndex) : undefined;
     if (!proposerBoostBlock) {
       // Proposer boost block not found, default to extending payload
       return true;
@@ -745,12 +765,8 @@ export class ProtoArray {
       // if its in fcU.
       //
       const {invalidateFromParentBlockRoot, latestValidExecHash} = execResponse;
-      // TODO GLOAS: verify if getting default variant is correct here
-      const defaultStatus = this.getDefaultVariant(invalidateFromParentBlockRoot);
-      const invalidateFromParentIndex =
-        defaultStatus !== undefined
-          ? this.getNodeIndexByRootAndStatus(invalidateFromParentBlockRoot, defaultStatus)
-          : undefined;
+      // TODO GLOAS: verify if getting the default/canonical node index is correct here
+      const invalidateFromParentIndex = this.getDefaultNodeIndex(invalidateFromParentBlockRoot);
       if (invalidateFromParentIndex === undefined) {
         throw Error(`Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} in forkChoice`);
       }
@@ -963,9 +979,7 @@ export class ProtoArray {
     }
 
     // Get canonical node: FULL for pre-Gloas, PENDING for Gloas
-    const defaultStatus = this.getDefaultVariant(justifiedRoot);
-    const justifiedIndex =
-      defaultStatus !== undefined ? this.getNodeIndexByRootAndStatus(justifiedRoot, defaultStatus) : undefined;
+    const justifiedIndex = this.getDefaultNodeIndex(justifiedRoot);
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN,
@@ -1654,12 +1668,7 @@ export class ProtoArray {
    * Uses default variant (PENDING for Gloas, FULL for pre-Gloas)
    */
   hasBlock(blockRoot: RootHex): boolean {
-    const defaultVariant = this.getDefaultVariant(blockRoot);
-    if (defaultVariant === undefined) {
-      return false;
-    }
-    const index = this.getNodeIndexByRootAndStatus(blockRoot, defaultVariant);
-    return index !== undefined;
+    return this.getDefaultNodeIndex(blockRoot) !== undefined;
   }
 
   /**

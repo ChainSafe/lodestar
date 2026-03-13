@@ -151,6 +151,11 @@ export interface IBlockInput<F extends ForkName = ForkName, TData extends DAData
 
   /** Only safe to call when `hasBlockAndAllData` is true */
   getTimeComplete(): number;
+  /**
+   * Return object references used as keys in `SerializedCache` that can be safely removed
+   * once this block input lifecycle has completed.
+   */
+  getSerializedCacheKeys(): object[];
 
   waitForBlock(timeout: number, signal?: AbortSignal): Promise<SignedBeaconBlock<F>>;
   waitForAllData(timeout: number, signal?: AbortSignal): Promise<TData>;
