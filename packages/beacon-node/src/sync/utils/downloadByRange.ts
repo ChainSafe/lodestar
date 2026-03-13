@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
+import {RequestErrorCode} from "@lodestar/reqresp";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
@@ -207,6 +208,13 @@ export async function downloadByRange({
       columnsRequest,
     });
   } catch (err) {
+    const errCode = (err as LodestarError<{code: string}>).type?.code;
+    // Let rate-limit errors propagate with original reqresp code so chain.ts
+    // can detect them via isRateLimitRequestError without code remapping.
+    if (isRateLimitRequestError(errCode)) {
+      throw err;
+    }
+
     throw new DownloadByRangeError({
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR,
       reason: (err as Error).message,
@@ -840,6 +848,17 @@ function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: Download
     logMeta.columnCount = columnsRequest.count;
   }
   return logMeta;
+}
+
+/**
+ * Check whether a reqresp error code indicates the request was rate-limited.
+ */
+export function isRateLimitRequestError(code: string | undefined): boolean {
+  return (
+    code === RequestErrorCode.REQUEST_RATE_LIMITED ||
+    code === RequestErrorCode.REQUEST_SELF_RATE_LIMITED ||
+    code === RequestErrorCode.RESP_RATE_LIMITED
+  );
 }
 
 export enum DownloadByRangeErrorCode {
