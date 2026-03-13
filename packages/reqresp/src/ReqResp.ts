@@ -4,7 +4,7 @@ import type {Libp2p} from "libp2p";
 import {Logger, MetricsRegisterExtra} from "@lodestar/utils";
 import {Metrics, getMetrics} from "./metrics.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
-import {SelfRateLimiter} from "./rate_limiter/selfRateLimiter.js";
+import {SelfRateLimiter} from "./rate_limiter/selfRateLimiter.ts";
 import {RequestError, RequestErrorCode, SendRequestOpts, sendRequest} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
 import {
@@ -176,8 +176,8 @@ export class ReqResp {
 
       if (!this.selfRateLimiter.allows(peerIdStr, protocolID, requestId)) {
         // we technically don't send request in this case but would be nice just to track this in the same `outgoingErrorReasons` metric
-        this.metrics?.outgoingErrorReasons.inc({reason: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
-        throw new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
+        this.metrics?.outgoingErrorReasons.inc({reason: RequestErrorCode.OUTGOING_REQUEST_SELF_RATE_LIMITED});
+        throw new RequestError({code: RequestErrorCode.OUTGOING_REQUEST_SELF_RATE_LIMITED});
         // don't call this.onOutgoingRequestError() to penalize peer
       }
 

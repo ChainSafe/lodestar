@@ -3,7 +3,7 @@ import {
   CHECK_DISCONNECTED_PEERS_INTERVAL_MS,
   REQUEST_TIMEOUT_MS,
   SelfRateLimiter,
-} from "../../../src/rate_limiter/selfRateLimiter.js";
+} from "../../../src/rate_limiter/selfRateLimiter.ts";
 
 describe("SelfRateLimiter", () => {
   let selfRateLimiter: SelfRateLimiter;

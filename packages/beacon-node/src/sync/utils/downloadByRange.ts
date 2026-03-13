@@ -855,9 +855,8 @@ function requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}: Download
  */
 export function isRateLimitRequestError(code: string | undefined): boolean {
   return (
-    code === RequestErrorCode.REQUEST_RATE_LIMITED ||
-    code === RequestErrorCode.REQUEST_SELF_RATE_LIMITED ||
-    code === RequestErrorCode.RESP_RATE_LIMITED
+    code === RequestErrorCode.OUTGOING_REQUEST_SELF_RATE_LIMITED ||
+    code === RequestErrorCode.RESPONSE_ERROR_RATE_LIMITED
   );
 }
 

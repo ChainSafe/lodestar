@@ -64,6 +64,6 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
     }
   }
 
-  // other errors like RequestErrorCode.RESP_RATE_LIMITED could come from ourself, not the peer so we should not penalize them
+  // other errors like RequestErrorCode.OUTGOING_REQUEST_SELF_RATE_LIMITED comes from us, not the peer so we should not penalize them
   return null;
 }

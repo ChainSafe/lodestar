@@ -93,7 +93,7 @@ export async function handleRequest({
           const requestCount = protocol?.inboundRateLimits?.getRequestCount?.(requestBody) ?? 1;
 
           if (!rateLimiter.allows(peerId, protocolID, requestCount)) {
-            throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED});
+            throw new RequestError({code: RequestErrorCode.INCOMING_REQUEST_RATE_LIMITED});
           }
 
           const requestChunk: ReqRespRequest = {

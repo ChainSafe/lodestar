@@ -517,7 +517,7 @@ export class SyncChain {
             this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
         }
         // Not sure if we should be penalizing here so going with high tolerance error penalty
-        if (errCode === RequestErrorCode.RESP_RATE_LIMITED) {
+        if (errCode === RequestErrorCode.RESPONSE_ERROR_RATE_LIMITED) {
           this.reportPeer(peer.peerId, PeerAction.HighToleranceError, res.err.message);
         }
 
