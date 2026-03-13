@@ -330,7 +330,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_seen_block_input_cache_duplicate_block_count[$rate_interval]) * 12",
+          "expr": "rate(lodestar_seen_block_input_cache_duplicate_block_total[$rate_interval]) * 12",
           "hide": false,
           "instant": false,
           "legendFormat": "duplicate_block_{{source}}",
@@ -343,7 +343,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_seen_block_input_cache_duplicate_blob_count[$rate_interval]) * 12",
+          "expr": "rate(lodestar_seen_block_input_cache_duplicate_blob_total[$rate_interval]) * 12",
           "hide": false,
           "instant": false,
           "legendFormat": "duplicate_blob_{{source}}",
@@ -356,7 +356,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_seen_block_input_cache_duplicate_column_count[$rate_interval]) * 12",
+          "expr": "rate(lodestar_seen_block_input_cache_duplicate_column_total[$rate_interval]) * 12",
           "hide": false,
           "instant": false,
           "legendFormat": "duplicate_columns_{{source}}",
@@ -369,7 +369,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_seen_block_input_cache_items_created_by_block[$rate_interval]) * 12",
+          "expr": "rate(lodestar_seen_block_input_cache_items_created_by_block_total[$rate_interval]) * 12",
           "hide": false,
           "instant": false,
           "legendFormat": "created_by_block",
@@ -382,7 +382,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_seen_block_input_cache_items_created_by_blob[$rate_interval]) * 12",
+          "expr": "rate(lodestar_seen_block_input_cache_items_created_by_blob_total[$rate_interval]) * 12",
           "hide": false,
           "instant": false,
           "legendFormat": "created_by_blob",
@@ -395,11 +395,24 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "lodestar_seen_block_input_cache_serialized_object_count",
+          "expr": "rate(lodestar_seen_block_input_cache_items_created_by_column_total[$rate_interval]) * 12",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "created_by_column",
+          "range": true,
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_seen_block_input_cache_serialized_object_refs",
           "instant": false,
           "legendFormat": "serialized_objects",
           "range": true,
-          "refId": "G"
+          "refId": "H"
         }
       ],
       "title": "Block Input",
