@@ -661,6 +661,8 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
       }
 
+      await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       let dataColumnSidecars: gloas.DataColumnSidecars = [];
 
@@ -694,8 +696,6 @@ export function getBeaconBlockApi({
         // TODO GLOAS: will this api be used by builders or only for self-building?
       }
 
-      await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
-
       // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
@@ -725,15 +725,6 @@ export function getBeaconBlockApi({
         }
       }
 
-      // TODO GLOAS: Unlike publishBlock which gossips and imports in parallel, we import before gossip here.
-      // The publishExecutionPayloadEnvelope spec says success = "gossip validation + broadcast", so we may
-      // want to gossip first. Need spec clarification on whether import failure should prevent broadcast.
-      if (payloadInput.shouldImport()) {
-        // Signature already verified in validateApiExecutionPayloadEnvelope
-        // TODO GLOAS: Emit execution_payload_gossip event for gossip receipt.
-        chain.processExecutionPayload(payloadInput, {validSignature: true});
-      }
-
       const valLogMeta = {
         slot,
         blockRoot: blockRootHex,
@@ -748,12 +739,18 @@ export function getBeaconBlockApi({
 
       chain.logger.info("Publishing execution payload envelope", valLogMeta);
 
-      // Publish envelope and data columns
       const publishPromises = [
         // Gossip the signed execution payload envelope first
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // For self-builds, publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
+        // Import execution payload. Signature already verified above
+        () => {
+          if (payloadInput.shouldImport()) {
+            chain.processExecutionPayload(payloadInput, {validSignature: true});
+          }
+          return Promise.resolve();
+        },
       ];
 
       const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
