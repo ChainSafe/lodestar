@@ -171,7 +171,11 @@ export class ChainPeersBalancer {
 
       if (!isForkPostFulu(batch.forkName)) {
         // pre-fulu logic, we don't care columns and earliestAvailableSlot
-        eligiblePeers.push({syncInfo: peer, columns: 0, hasEarliestAvailableSlots: false});
+        eligiblePeers.push({
+          syncInfo: {...peer, timeout},
+          columns: 0,
+          hasEarliestAvailableSlots: false,
+        });
         continue;
       }
 

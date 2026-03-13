@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {RequestErrorCode} from "@lodestar/reqresp";
 import {Epoch, Root, Slot} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
@@ -515,6 +516,10 @@ export class SyncChain {
           case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
             this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
         }
+        // Not sure if we should be penalizing here so going with high tolerance error penalty
+        if (errCode === RequestErrorCode.RESP_RATE_LIMITED) {
+          this.reportPeer(peer.peerId, PeerAction.HighToleranceError, res.err.message);
+        }
 
         const isRateLimited = isRateLimitRequestError(errCode);
         if (isRateLimited) {
@@ -529,6 +534,7 @@ export class SyncChain {
               coolDownMs,
             });
             // No batch downloadingError in this case. Allow to fall through and get picked up by another peer
+            batch.retryDownload();
           } else {
             this.logger.debug("Batch download rate limited, max retries exhausted", {
               id: this.logId,

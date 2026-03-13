@@ -75,7 +75,7 @@ export type BatchMetadata = {
   status: BatchStatus;
 };
 
-export type RateLimitMeta = {timeout: number; retries: number};
+export type RateLimitMeta = {timeout: number; count: number};
 
 /**
  * Batches are downloaded at the first block of the epoch.
@@ -363,7 +363,18 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.RateLimited));
     }
 
-    this.rateLimitedPeers.delete(peer);
+    const rateLimit = this.rateLimitedPeers.get(peer);
+    if (rateLimit) {
+      rateLimit.timeout = 0;
+    }
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
+  }
+
+  retryDownload(): void {
+    if (this.state.status !== BatchStatus.Downloading) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
+    }
+
     this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
   }
 
@@ -375,23 +386,22 @@ export class Batch {
    * error occurred.
    */
   coolDownPeer(peer: PeerIdStr): number {
-    const rateLimit = this.rateLimitedPeers.get(peer) ?? {retries: 0, timeout: 0};
+    const rateLimit = this.rateLimitedPeers.get(peer) ?? {count: 0, timeout: 0};
 
     // check if timeout has already passed and reset as necessary
     const now = Date.now();
     if (rateLimit.timeout < now) {
-      rateLimit.retries = 0;
       rateLimit.timeout = 0;
     }
 
     // TODO: should we apply and additional delay here so if the batch is picked up after the error
     //       there is an enforced minimum wait (potentially the RATE_LIMITED_MAX_DELAY_MS).
-    if (rateLimit.retries >= MAX_RATE_LIMITED_RETRIES) {
+    if (rateLimit.count >= MAX_RATE_LIMITED_RETRIES) {
       return 0;
     }
 
-    const delayMs = Math.min(RATE_LIMITED_INITIAL_DELAY_MS * 2 ** rateLimit.retries, RATE_LIMITED_MAX_DELAY_MS);
-    rateLimit.retries++;
+    const delayMs = Math.min(RATE_LIMITED_INITIAL_DELAY_MS * 2 ** rateLimit.count, RATE_LIMITED_MAX_DELAY_MS);
+    rateLimit.count++;
     rateLimit.timeout = now + delayMs;
     this.rateLimitedPeers.set(peer, rateLimit);
 
@@ -402,7 +412,7 @@ export class Batch {
    * Returns the unix time for when the timeout expires.  If the timeout has passed delete the
    * entry.  If there is not a rate-limit return epoch time of 0.
    */
-  getPeerCoolTimeout(peer: PeerIdStr): number {
+  getPeerCoolDownTimeout(peer: PeerIdStr): number {
     const rateLimit = this.rateLimitedPeers.get(peer);
     if (!rateLimit) {
       return 0;
@@ -411,7 +421,7 @@ export class Batch {
     // check if timeout has already passed and delete
     const coolDownMs = rateLimit.timeout - Date.now();
     if (coolDownMs < 1) {
-      this.rateLimitedPeers.delete(peer);
+      rateLimit.timeout = 0;
       return 0;
     }
 
