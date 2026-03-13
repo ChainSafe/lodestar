@@ -383,7 +383,7 @@ export class Batch {
   /**
    * Apply a cool down to the peer that rate-limit errored, either inbound or outbound, so that we
    * do not retry that peer until cool down expires in the SyncChain.  Will return the delay to the
-   * caller and can piggy back on that to signal if the MAX_RATE_LIMIT_RETRIES has been exceeded.
+   * caller and can piggy back on that to signal if the MAX_RATE_LIMITED_RETRIES has been exceeded.
    * Should be a delay returned and if delay is 0 it means that the limit was hit and a download
    * error occurred.
    */
@@ -396,9 +396,10 @@ export class Batch {
       rateLimit.timeout = 0;
     }
 
-    // TODO: should we apply and additional delay here so if the batch is picked up after the error
-    //       there is an enforced minimum wait (potentially the RATE_LIMITED_MAX_DELAY_MS).
+    // Apply max delay here so if the batch is picked up after a retry error there is an enforced
+    // minimum wait on the next download attempt
     if (rateLimit.count >= MAX_RATE_LIMITED_RETRIES) {
+      rateLimit.timeout = RATE_LIMITED_MAX_DELAY_MS;
       return 0;
     }
 
@@ -420,7 +421,7 @@ export class Batch {
       return 0;
     }
 
-    // check if timeout has already passed and delete
+    // check if timeout has already passed and reset timeout
     const coolDownMs = rateLimit.timeout - Date.now();
     if (coolDownMs < 1) {
       rateLimit.timeout = 0;
