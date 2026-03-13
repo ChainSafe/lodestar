@@ -7,10 +7,17 @@ import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
+import {prettyPrintPeerIdStr} from "../../network/util.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
+import {
+  MAX_BATCH_DOWNLOAD_ATTEMPTS,
+  MAX_BATCH_PROCESSING_ATTEMPTS,
+  MAX_RATE_LIMITED_RETRIES,
+  RATE_LIMITED_INITIAL_DELAY_MS,
+  RATE_LIMITED_MAX_DELAY_MS,
+} from "../constants.js";
 import {DownloadByRangeRequests} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
@@ -22,6 +29,8 @@ export enum BatchStatus {
   AwaitingDownload = "AwaitingDownload",
   /** The batch is being downloaded. */
   Downloading = "Downloading",
+  /** The batch download was rate-limited and is waiting for cooldown before retrying. */
+  RateLimited = "RateLimited",
   /** The batch has been completely downloaded and is ready for processing. */
   AwaitingProcessing = "AwaitingProcessing",
   /** The batch is being processed. */
@@ -56,6 +65,7 @@ export type DownloadSuccessState = {
 export type BatchState =
   | AwaitingDownloadState
   | {status: BatchStatus.Downloading; peer: PeerIdStr; blocks: IBlockInput[]}
+  | {status: BatchStatus.RateLimited; blocks: IBlockInput[]}
   | DownloadSuccessState
   | {status: BatchStatus.Processing; blocks: IBlockInput[]; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; blocks: IBlockInput[]; attempt: Attempt};
@@ -64,6 +74,8 @@ export type BatchMetadata = {
   startEpoch: Epoch;
   status: BatchStatus;
 };
+
+export type RateLimitMeta = {timeout: number; retries: number};
 
 /**
  * Batches are downloaded at the first block of the epoch.
@@ -94,6 +106,8 @@ export class Batch {
   readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
+  /** Peers that are rate-limited (inbound or outbound) during download attempts */
+  readonly rateLimitedPeers = new Map<PeerIdStr, RateLimitMeta>();
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
@@ -329,6 +343,73 @@ export class Batch {
     }
 
     this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
+  }
+
+  rateLimitDownload(): void {
+    if (this.state.status !== BatchStatus.AwaitingDownload) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
+    }
+
+    this.state = {status: BatchStatus.RateLimited, blocks: this.state.blocks};
+  }
+
+  rateLimitExpired(): void {
+    if (this.state.status !== BatchStatus.RateLimited) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.RateLimited));
+    }
+
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
+  }
+
+  /**
+   * Apply a cool down to the peer that rate-limit errored, either inbound or outbound, so that we
+   * do not retry that peer until cool down expires in the SyncChain.  Will return the delay to the
+   * caller and can piggy back on that to signal if the MAX_RATE_LIMIT_RETRIES has been exceeded.
+   * Should be a delay returned and if delay is 0 it means that the limit was hit and a download
+   * error occurred.
+   */
+  coolDownPeer(peer: PeerIdStr): number {
+    const rateLimit = this.rateLimitedPeers.get(peer) ?? {retries: 0, timeout: 0};
+
+    // check if timeout has already passed and reset as necessary
+    const now = Date.now();
+    if (rateLimit.timeout < now) {
+      rateLimit.retries = 0;
+      rateLimit.timeout = 0;
+    }
+
+    // TODO: should we apply and additional delay here so if the batch is picked up after the error
+    //       there is an enforced minimum wait (potentially the RATE_LIMITED_MAX_DELAY_MS).
+    if (rateLimit.retries >= MAX_RATE_LIMITED_RETRIES) {
+      return 0;
+    }
+
+    const delayMs = Math.min(RATE_LIMITED_INITIAL_DELAY_MS * 2 ** rateLimit.retries, RATE_LIMITED_MAX_DELAY_MS);
+    rateLimit.retries++;
+    rateLimit.timeout = now + delayMs;
+    this.rateLimitedPeers.set(peer, rateLimit);
+
+    return delayMs;
+  }
+
+  /**
+   * Returns the unix time for when the timeout expires.  If the timeout has passed delete the
+   * entry.  If there is not a rate-limit return epoch time of 0.
+   */
+  getPeerCoolTimeout(peer: PeerIdStr): number {
+    const rateLimit = this.rateLimitedPeers.get(peer);
+    if (!rateLimit) {
+      return 0;
+    }
+
+    // check if timeout has already passed and delete
+    const coolDownMs = rateLimit.timeout - Date.now();
+    if (coolDownMs < 1) {
+      this.rateLimitedPeers.delete(peer);
+      return 0;
+    }
+
+    return rateLimit.timeout;
   }
 
   /**

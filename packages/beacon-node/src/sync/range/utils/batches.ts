@@ -7,7 +7,7 @@ import {Batch, BatchStatus} from "../batch.js";
 /**
  * Validates that the status and ordering of batches is valid
  * ```
- * [AwaitingValidation]* [Processing]? [AwaitingDownload,Downloading,AwaitingProcessing]*
+ * [AwaitingValidation]* [Processing]? [AwaitingDownload,Downloading,RateLimited,AwaitingProcessing]*
  * ```
  */
 export function validateBatchesStatus(batches: Batch[]): void {
@@ -29,6 +29,7 @@ export function validateBatchesStatus(batches: Batch[]): void {
 
       case BatchStatus.AwaitingDownload:
       case BatchStatus.Downloading:
+      case BatchStatus.RateLimited:
       case BatchStatus.AwaitingProcessing:
         preProcessing++;
         break;
@@ -56,6 +57,7 @@ export function getNextBatchToProcess(batches: Batch[]): Batch | null {
       // There MUST be no AwaitingProcessing state after AwaitingDownload, Downloading, Processing
       case BatchStatus.AwaitingDownload:
       case BatchStatus.Downloading:
+      case BatchStatus.RateLimited:
       case BatchStatus.Processing:
         return null;
     }
