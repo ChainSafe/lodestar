@@ -2,11 +2,11 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {multiaddr} from "@multiformats/multiaddr";
 import {describe, expect, it} from "vitest";
 import {type ENR, SignableENR} from "@chainsafe/enr";
+import {config} from "@lodestar/config/test-utils";
 import {ssz} from "@lodestar/types";
 import {ENRRelevance, enrRelevance} from "../../../../src/network/discv5/utils.js";
 import {ENRKey, getENRForkID} from "../../../../src/network/metadata.js";
 import {ClockStatic} from "../../../utils/clock.js";
-import {config} from "@lodestar/config/test-utils";
 
 describe("network / discv5 / enrRelevance", () => {
   const clock = new ClockStatic(0);
