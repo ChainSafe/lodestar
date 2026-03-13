@@ -7,6 +7,7 @@ import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
+import {prettyPrintPeerIdStr} from "../../network/util.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -74,6 +75,8 @@ export type BatchMetadata = {
   status: BatchStatus;
 };
 
+export type RateLimitMeta = {timeout: number; retries: number};
+
 /**
  * Batches are downloaded at the first block of the epoch.
  *
@@ -103,10 +106,8 @@ export class Batch {
   readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
-  /** Peers that rate-limited us during download attempts. Reset when a download attempt does not fail due to rate limiting (e.g. on successful downloads or non-rate-limit errors). Used by peerBalancer to prefer alternative peers. */
-  readonly rateLimitedPeers: PeerIdStr[] = [];
-  /** Cooldown deadline for peers in `rateLimitedPeers`. While active, retries to those peers should be delayed. */
-  private rateLimitCoolDownUntilMs = 0;
+  /** Peers that are rate-limited (inbound or outbound) during download attempts */
+  readonly rateLimitedPeers = new Map<PeerIdStr, RateLimitMeta>();
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
@@ -268,26 +269,8 @@ export class Batch {
     return [
       ...this.failedDownloadAttempts,
       ...this.failedProcessingAttempts.flatMap((a) => a.peers),
-      ...this.rateLimitedPeers,
+      ...this.rateLimitedPeers.keys(),
     ];
-  }
-
-  /**
-   * Remaining cooldown for a rate-limited peer. Returns 0 when:
-   * - batch is not in RateLimited state,
-   * - peer is not part of current rate-limit streak,
-   * - or cooldown already elapsed.
-   */
-  getRateLimitCoolDownRemainingMs(peer: PeerIdStr): number {
-    if (this.state.status !== BatchStatus.RateLimited) {
-      return 0;
-    }
-
-    if (!this.rateLimitedPeers.includes(peer)) {
-      return 0;
-    }
-
-    return Math.max(this.rateLimitCoolDownUntilMs - Date.now(), 0);
   }
 
   getMetadata(): BatchMetadata {
@@ -320,8 +303,6 @@ export class Batch {
     // ensure that blocks are always sorted before getting stored on the batch.state or being used to getRequests
     blocks.sort((a, b) => a.slot - b.slot);
 
-    this.rateLimitedPeers.length = 0; // Reset rate-limit streak on successful download
-    this.rateLimitCoolDownUntilMs = 0;
     this.goodPeers.push(peer);
 
     let allComplete = true;
@@ -360,8 +341,6 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    this.rateLimitedPeers.length = 0; // Reset rate-limit streak on a non-rate-limit error
-    this.rateLimitCoolDownUntilMs = 0;
     this.failedDownloadAttempts.push(peer);
     if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
@@ -376,39 +355,64 @@ export class Batch {
    * Returns the cooldown delay in ms. If 0, max retries exhausted and state has been
    * transitioned via downloadingError() — caller should NOT call endCoolDown().
    */
-  downloadingRateLimited(peer: PeerIdStr): number {
-    if (this.state.status !== BatchStatus.Downloading) {
-      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
+  downloadingRateLimited(): void {
+    if (this.state.status !== BatchStatus.AwaitingDownload) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }
 
-    if (this.rateLimitedPeers.length >= MAX_RATE_LIMITED_RETRIES) {
+    this.state = {status: BatchStatus.RateLimited, blocks: this.state.blocks};
+  }
+
+  rateLimitEnded(): void {
+    if (this.state.status !== BatchStatus.RateLimited) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.RateLimited));
+    }
+
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
+  }
+
+  rateLimitPeer(peer: PeerIdStr): number {
+    const rateLimit = this.rateLimitedPeers.get(peer) ?? {retries: 0, timeout: 0};
+
+    // check if timeout has already passed and reset as necessary
+    const now = Date.now();
+    if (rateLimit.timeout < now) {
+      rateLimit.retries = 0;
+      rateLimit.timeout = 0;
+    }
+
+    if (rateLimit && rateLimit.retries >= MAX_RATE_LIMITED_RETRIES) {
       // After exhausting rate-limit retries, fall through to regular download error handling.
       // downloadingError() will reset the rate-limit counter and handle attempt tracking.
       this.downloadingError(peer);
       return 0;
     }
 
-    this.rateLimitedPeers.push(peer);
+    const delayMs = Math.min(RATE_LIMITED_INITIAL_DELAY_MS * 2 ** rateLimit.retries, RATE_LIMITED_MAX_DELAY_MS);
+    rateLimit.retries++;
+    rateLimit.timeout = now + delayMs;
+    this.rateLimitedPeers.set(peer, rateLimit);
 
-    const delayMs = Math.min(
-      RATE_LIMITED_INITIAL_DELAY_MS * 2 ** (this.rateLimitedPeers.length - 1),
-      RATE_LIMITED_MAX_DELAY_MS
-    );
-
-    this.rateLimitCoolDownUntilMs = Date.now() + delayMs;
-    this.state = {status: BatchStatus.RateLimited, blocks: this.state.blocks};
     return delayMs;
   }
 
   /**
    * RateLimited -> AwaitingDownload
    */
-  endCoolDown(): void {
-    if (this.state.status !== BatchStatus.RateLimited) {
-      throw new BatchError(this.wrongStatusErrorType(BatchStatus.RateLimited));
+  endCoolDown(peer: PeerIdStr): void {
+    const rateLimit = this.rateLimitedPeers.get(peer);
+    const timeRemaining = (rateLimit?.timeout ?? 0) - Date.now();
+    if (timeRemaining > 0) {
+      throw new BatchError({
+        code: BatchErrorCode.CANNOT_CLEAR_RATE_LIMIT,
+        startEpoch: this.startEpoch,
+        status: this.state.status,
+        peer: prettyPrintPeerIdStr(peer),
+        timeRemaining,
+      });
     }
+    this.rateLimitedPeers.delete(peer);
 
-    this.rateLimitCoolDownUntilMs = 0;
     this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
   }
 
@@ -519,6 +523,7 @@ export enum BatchErrorCode {
   MAX_DOWNLOAD_ATTEMPTS = "BATCH_ERROR_MAX_DOWNLOAD_ATTEMPTS",
   MAX_PROCESSING_ATTEMPTS = "BATCH_ERROR_MAX_PROCESSING_ATTEMPTS",
   MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS = "MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS",
+  CANNOT_CLEAR_RATE_LIMIT = "CANNOT_CLEAR_RATE_LIMIT",
 }
 
 type BatchErrorType =
@@ -526,7 +531,8 @@ type BatchErrorType =
   | {code: BatchErrorCode.INVALID_COUNT; count: number; expected: number}
   | {code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}
   | {code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}
-  | {code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS};
+  | {code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS}
+  | {code: BatchErrorCode.CANNOT_CLEAR_RATE_LIMIT; peer: string; timeRemaining: number};
 
 type BatchErrorMetadata = {
   startEpoch: number;

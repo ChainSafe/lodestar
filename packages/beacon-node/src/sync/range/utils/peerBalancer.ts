@@ -11,9 +11,14 @@ import {ChainTarget} from "./chainTarget.js";
 
 export type PeerSyncInfo = PeerSyncMeta & {
   target: ChainTarget;
+  timeout?: number;
 };
 
-type PeerInfoColumn = {syncInfo: PeerSyncInfo; columns: number; hasEarliestAvailableSlots: boolean};
+type PeerInfoColumn = {
+  syncInfo: PeerSyncInfo;
+  columns: number;
+  hasEarliestAvailableSlots: boolean;
+};
 
 /**
  * Balance and organize peers to perform requests with a SyncChain
@@ -54,7 +59,7 @@ export class ChainPeersBalancer {
    * Return the most suitable peer to retry
    * Sort peers by (1) no failed request (2) less active requests, then pick first
    */
-  bestPeerToRetryBatch(batch: Batch): PeerSyncMeta | undefined {
+  bestPeerToRetryBatch(batch: Batch): PeerSyncInfo | undefined {
     if (batch.state.status !== BatchStatus.AwaitingDownload && batch.state.status !== BatchStatus.RateLimited) {
       return;
     }
@@ -110,13 +115,20 @@ export class ChainPeersBalancer {
     return undefined;
   }
 
-  private filterPeers(batch: Batch, requestColumns: number[], noActiveRequest: boolean): PeerInfoColumn[] {
+  private filterPeers(
+    batch: Batch,
+    requestColumns: number[],
+    noActiveRequest: boolean,
+    allowRateLimited = false
+  ): PeerInfoColumn[] {
     const eligiblePeers: PeerInfoColumn[] = [];
+    let hasCoolingDownPeers = false;
 
     if (batch.state.status !== BatchStatus.AwaitingDownload && batch.state.status !== BatchStatus.RateLimited) {
       return eligiblePeers;
     }
 
+    const now = Date.now();
     for (const peer of this.peers) {
       const {earliestAvailableSlot, target, peerId} = peer;
 
@@ -133,6 +145,21 @@ export class ChainPeersBalancer {
 
       if (target.slot < batch.startSlot) {
         continue;
+      }
+
+      let timeout: undefined | number;
+      const rateLimit = batch.rateLimitedPeers.get(peer.peerId);
+      if (rateLimit) {
+        if (rateLimit.timeout < now) {
+          batch.endCoolDown(peer.peerId);
+        }
+
+        if (allowRateLimited) {
+          timeout = rateLimit.timeout;
+        } else {
+          hasCoolingDownPeers = true;
+          continue;
+        }
       }
 
       if (isForkPostFulu(batch.forkName) && this.syncType === RangeSyncType.Head) {
@@ -172,13 +199,16 @@ export class ChainPeersBalancer {
 
       if (columns.length > 0) {
         eligiblePeers.push({
-          syncInfo: peer,
+          syncInfo: {...peer, timeout},
           columns: columns.length,
           hasEarliestAvailableSlots: earliestAvailableSlot != null,
         });
       }
     }
 
+    if (eligiblePeers.length === 0 && hasCoolingDownPeers && !allowRateLimited) {
+      return this.filterPeers(batch, requestColumns, noActiveRequest, true);
+    }
     return eligiblePeers;
   }
 }

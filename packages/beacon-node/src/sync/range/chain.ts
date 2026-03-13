@@ -132,8 +132,6 @@ export class SyncChain {
   private readonly batchProcessor = new ItTrigger();
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
-  /** One-shot timers used to wake downloader when a batch cooldown elapses. */
-  private readonly batchCoolDownTimeouts = new Map<Epoch, ReturnType<typeof setTimeout>>();
   private readonly peerset = new Map<PeerIdStr, ChainTarget>();
 
   private readonly logger: Logger;
@@ -223,7 +221,6 @@ export class SyncChain {
    * Permanently remove this chain. Throws the main AsyncIterable
    */
   remove(): void {
-    this.clearAllBatchCoolDownWakeups();
     this.batchProcessor.end(new ErrorAborted("SyncChain"));
   }
 
@@ -294,35 +291,6 @@ export class SyncChain {
     }
   }
 
-  private scheduleBatchCoolDownWakeup(startEpoch: Epoch, delayMs: number): void {
-    const existing = this.batchCoolDownTimeouts.get(startEpoch);
-    if (existing) {
-      clearTimeout(existing);
-    }
-
-    const timeout = setTimeout(() => {
-      this.batchCoolDownTimeouts.delete(startEpoch);
-      this.triggerBatchDownloader();
-    }, delayMs);
-
-    this.batchCoolDownTimeouts.set(startEpoch, timeout);
-  }
-
-  private clearBatchCoolDownWakeup(startEpoch: Epoch): void {
-    const timeout = this.batchCoolDownTimeouts.get(startEpoch);
-    if (timeout) {
-      clearTimeout(timeout);
-      this.batchCoolDownTimeouts.delete(startEpoch);
-    }
-  }
-
-  private clearAllBatchCoolDownWakeups(): void {
-    for (const timeout of this.batchCoolDownTimeouts.values()) {
-      clearTimeout(timeout);
-    }
-    this.batchCoolDownTimeouts.clear();
-  }
-
   /**
    * Main Promise that handles the sync process. Will resolve when initial sync completes
    * i.e. when it successfully processes a epoch >= than this chain `targetEpoch`
@@ -348,7 +316,6 @@ export class SyncChain {
         if (batch) await this.processBatch(batch);
       }
 
-      this.clearAllBatchCoolDownWakeups();
       this.status = SyncChainStatus.Done;
       this.logger.verbose("SyncChain Done", {id: this.logId});
     } catch (e) {
@@ -360,7 +327,6 @@ export class SyncChain {
         this.pruneBlockInputs(batch.getBlocks());
       }
 
-      this.clearAllBatchCoolDownWakeups();
       this.status = SyncChainStatus.Error;
       this.logger.verbose("SyncChain Error", {id: this.logId}, e as Error);
 
@@ -430,18 +396,6 @@ export class SyncChain {
         continue;
       }
 
-      if (batch.state.status === BatchStatus.RateLimited) {
-        const remainingCoolDownMs = batch.getRateLimitCoolDownRemainingMs(peer.peerId);
-        if (remainingCoolDownMs > 0) {
-          this.scheduleBatchCoolDownWakeup(batch.startEpoch, remainingCoolDownMs);
-          continue;
-        }
-
-        // Cooldown elapsed (or selected peer is not part of the rate-limited set), resume normal retry flow.
-        batch.endCoolDown();
-      }
-
-      this.clearBatchCoolDownWakeup(batch.startEpoch);
       void this.sendBatch(batch, peer);
     }
 
@@ -509,15 +463,26 @@ export class SyncChain {
   /**
    * Requests the batch assigned to the given id from a given peer.
    */
-  private async sendBatch(batch: Batch, peer: PeerSyncMeta): Promise<void> {
+  private async sendBatch(batch: Batch, peer: PeerSyncInfo): Promise<void> {
     this.logger.verbose("Downloading batch", {
       id: this.logId,
       ...batch.getMetadata(),
       peer: prettyPrintPeerIdStr(peer.peerId),
     });
-    this.clearBatchCoolDownWakeup(batch.startEpoch);
 
     try {
+      if (peer.timeout !== undefined) {
+        const now = Date.now();
+        if (peer.timeout < now) {
+          batch.endCoolDown(peer.peerId);
+        } else {
+          batch.downloadingRateLimited();
+          const waitTime = now - peer.timeout;
+          await new Promise((res) => setTimeout(res, waitTime));
+          batch.rateLimitEnded();
+        }
+      }
+
       batch.startDownloading(peer.peerId);
 
       // wrapError ensures to never call both batch success() and batch error()
@@ -532,22 +497,23 @@ export class SyncChain {
         // The peer is healthy but throttling us — penalizing it would make things worse.
         const isRateLimited = isRateLimitRequestError(errCode);
         if (isRateLimited) {
-          const delayMs = batch.downloadingRateLimited(peer.peerId);
+          const delayMs = batch.rateLimitPeer(peer.peerId);
+
+          const rateLimitedPeers = [...batch.rateLimitedPeers.keys()].map(prettyPrintPeerIdStr).join(", ");
           if (delayMs > 0) {
-            const uniqueRateLimitedPeers = [...new Set(batch.rateLimitedPeers)];
             this.logger.debug("Batch download rate limited", {
               id: this.logId,
               ...batch.getMetadata(),
               peer: prettyPrintPeerIdStr(peer.peerId),
-              rateLimitedPeers: uniqueRateLimitedPeers.map((peerId) => prettyPrintPeerIdStr(peerId)).join(", "),
+              rateLimitedPeers: `[ ${rateLimitedPeers} ]`,
               delayMs,
             });
-            this.scheduleBatchCoolDownWakeup(batch.startEpoch, delayMs);
           } else {
             this.logger.debug("Batch download rate limited, max retries exhausted", {
               id: this.logId,
               ...batch.getMetadata(),
               peer: prettyPrintPeerIdStr(peer.peerId),
+              rateLimitedPeers: `[ ${rateLimitedPeers} ]`,
             });
           }
         }
@@ -588,8 +554,8 @@ export class SyncChain {
             {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
             res.err
           );
-          batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
         }
+        batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
       } else {
         this.logger.verbose("Batch download success", {
           id: this.logId,
@@ -713,7 +679,6 @@ export class SyncChain {
     for (const [batchKey, batch] of this.batches.entries()) {
       if (batch.startEpoch < newLastEpochWithProcessBlocks) {
         this.batches.delete(batchKey);
-        this.clearBatchCoolDownWakeup(batchKey);
         this.validatedEpochs += EPOCHS_PER_BATCH;
 
         // The last batch attempt is right, all others are wrong. Penalize other peers
@@ -792,6 +757,7 @@ export function shouldReportPeerOnBatchError(
     case BatchErrorCode.INVALID_COUNT:
     case BatchErrorCode.WRONG_STATUS:
     case BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS:
+    case BatchErrorCode.CANNOT_CLEAR_RATE_LIMIT:
       return null;
   }
 }
