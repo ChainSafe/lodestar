@@ -1,9 +1,40 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {PayloadStatus} from "@lodestar/fork-choice";
+import {getStateResponseWithRegen, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
 describe("beacon state api utils", () => {
+  describe("getStateResponseWithRegen", () => {
+    it("uses the block-state variant for post-Gloas finalized checkpoints", async () => {
+      const config = {getForkName: () => "gloas"};
+      const checkpoint = {
+        epoch: 3,
+        root: Buffer.alloc(32, 0x11),
+        rootHex: "0x" + Buffer.alloc(32, 0x11).toString("hex"),
+        payloadStatus: PayloadStatus.FULL,
+      };
+      const response = {state: new Uint8Array([1, 2, 3]), executionOptimistic: false, finalized: true};
+      const getStateOrBytesByCheckpoint = vi.fn().mockResolvedValue(response);
+
+      const chain = {
+        config,
+        forkChoice: {
+          getFinalizedCheckpoint: () => checkpoint,
+          getFinalizedBlock: () => ({slot: 0}),
+        },
+        getStateOrBytesByCheckpoint,
+        getStateByStateRoot: vi.fn(),
+        getStateBySlot: vi.fn(),
+        getHistoricalStateBySlot: vi.fn(),
+        clock: {currentSlot: 0},
+      };
+
+      await expect(getStateResponseWithRegen(chain as any, "finalized")).resolves.toEqual(response);
+      expect(getStateOrBytesByCheckpoint).toHaveBeenCalledWith({...checkpoint, payloadStatus: PayloadStatus.EMPTY});
+    });
+  });
+
   describe("getStateValidatorIndex", () => {
     const state = generateCachedAltairState();
     const pubkey2index = state.epochCtx.pubkey2index;

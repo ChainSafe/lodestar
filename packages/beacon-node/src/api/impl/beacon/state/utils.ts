@@ -1,8 +1,8 @@
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
-import {CheckpointWithPayload, IForkChoice} from "@lodestar/fork-choice";
-import {GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {CheckpointWithPayload, IForkChoice, PayloadStatus} from "@lodestar/fork-choice";
+import {GENESIS_SLOT, isForkPostGloas} from "@lodestar/params";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
@@ -41,11 +41,28 @@ export function resolveStateId(
   return blockSlot;
 }
 
+function getCanonicalCheckpointStateId(
+  chain: IBeaconChain,
+  inStateId: routes.beacon.StateId,
+  stateId: RootHex | Slot | CheckpointWithPayload
+): RootHex | Slot | CheckpointWithPayload {
+  if (inStateId !== "finalized" || typeof stateId === "string" || typeof stateId === "number") {
+    return stateId;
+  }
+
+  const checkpointSlot = computeStartSlotAtEpoch(stateId.epoch);
+  if (!isForkPostGloas(chain.config.getForkName(checkpointSlot))) {
+    return stateId;
+  }
+
+  return {...stateId, payloadStatus: PayloadStatus.EMPTY};
+}
+
 export async function getStateResponseWithRegen(
   chain: IBeaconChain,
   inStateId: routes.beacon.StateId
 ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
-  const stateId = resolveStateId(chain.forkChoice, inStateId);
+  const stateId = getCanonicalCheckpointStateId(chain, inStateId, resolveStateId(chain.forkChoice, inStateId));
 
   const res =
     typeof stateId === "string"

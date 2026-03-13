@@ -1,5 +1,6 @@
+import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithPayload} from "@lodestar/fork-choice";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -34,6 +35,7 @@ export enum FrequencyStateArchiveStep {
  */
 export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
   constructor(
+    private readonly config: BeaconConfig,
     private readonly regen: IStateRegenerator,
     private readonly db: IBeaconDb,
     private readonly logger: Logger,
@@ -109,7 +111,11 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
     // starting from Mar 2024, the finalized state could be from disk or in memory
     let timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
     // Convert fork-choice checkpoint to beacon-node checkpoint with payloadPresent
-    const finalizedHexPayload = fcCheckpointToHexPayload(finalized);
+    const finalizedSlot = computeStartSlotAtEpoch(finalized.epoch);
+    const finalizedHexPayload = fcCheckpointToHexPayload(
+      finalized,
+      isForkPostGloas(this.config.getForkName(finalizedSlot)) ? false : undefined
+    );
     const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalizedHexPayload);
     timer?.({step: FrequencyStateArchiveStep.GetFinalizedState});
 

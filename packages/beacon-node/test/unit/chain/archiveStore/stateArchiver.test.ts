@@ -1,8 +1,40 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {computeStateSlotsToDelete} from "../../../../src/chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
+import {ArchiveMode} from "../../../../src/chain/archiveStore/interface.js";
+import {
+  FrequencyStateArchiveStrategy,
+  computeStateSlotsToDelete,
+} from "../../../../src/chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
+import {testLogger} from "../../../utils/logger.js";
 
 describe("state archiver task", () => {
+  describe("archiveState", () => {
+    it("reloads the block-state variant for post-Gloas finalized checkpoints", async () => {
+      const config = {getForkName: () => "gloas"};
+      const regen = {getCheckpointStateOrBytes: vi.fn().mockResolvedValue(new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0]))};
+      const db = {stateArchive: {putBinary: vi.fn().mockResolvedValue(undefined)}};
+      const strategy = new FrequencyStateArchiveStrategy(config, regen as any, db as any, testLogger(), {
+        archiveMode: ArchiveMode.Frequency,
+        archiveStateEpochFrequency: 1,
+      });
+      const checkpoint = {
+        epoch: 2,
+        root: Buffer.alloc(32, 0x22),
+        rootHex: "0x" + Buffer.alloc(32, 0x22).toString("hex"),
+        payloadStatus: PayloadStatus.FULL,
+      };
+
+      await strategy.archiveState(checkpoint);
+
+      expect(regen.getCheckpointStateOrBytes).toHaveBeenCalledWith({
+        epoch: checkpoint.epoch,
+        rootHex: checkpoint.rootHex,
+        payloadPresent: false,
+      });
+    });
+  });
+
   describe("computeStateSlotsToDelete", () => {
     const testCases: {
       id: string;

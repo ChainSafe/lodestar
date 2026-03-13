@@ -878,7 +878,18 @@ export function toCheckpointHexPayload(checkpoint: phase0.Checkpoint, payloadPre
  * Maps PayloadStatus enum to boolean payloadPresent.
  * @throws Error if checkpoint has PENDING payload status (ambiguous which variant to use)
  */
-export function fcCheckpointToHexPayload(checkpoint: CheckpointWithPayload): CheckpointHexPayload {
+export function fcCheckpointToHexPayload(
+  checkpoint: CheckpointWithPayload,
+  payloadPresentOverride?: boolean
+): CheckpointHexPayload {
+  if (payloadPresentOverride !== undefined) {
+    return {
+      epoch: checkpoint.epoch,
+      rootHex: checkpoint.rootHex,
+      payloadPresent: payloadPresentOverride,
+    };
+  }
+
   const PayloadStatus = {PENDING: 0, EMPTY: 1, FULL: 2} as const;
 
   if (checkpoint.payloadStatus === PayloadStatus.PENDING) {
