@@ -75,7 +75,7 @@ export function computeEnvelopeStateRoot(
   const processEnvelopeTimer = metrics?.blockPayload.executionPayloadEnvelopeProcessingTime.startTimer();
   const postEnvelopeState = processExecutionPayloadEnvelope(postBlockState, signedEnvelope, {
     verifySignature: false,
-    verifyStateRoot: true,
+    verifyStateRoot: false,
     dontTransferCache: true,
   });
   processEnvelopeTimer?.();

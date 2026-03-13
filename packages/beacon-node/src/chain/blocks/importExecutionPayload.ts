@@ -218,7 +218,7 @@ export async function importExecutionPayload(
 
   this.logger.verbose("Execution payload imported", {
     slot: payloadInput.slot,
-    beaconBlockRoot: blockRootHex,
+    root: blockRootHex,
     blockHash: payloadInput.getBlockHashHex(),
   });
 
