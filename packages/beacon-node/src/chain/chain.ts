@@ -1367,6 +1367,10 @@ export class BeaconChain implements IBeaconChain {
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
 
+    if (epoch === this.config.GLOAS_FORK_EPOCH) {
+      this.regen.upgradeForGloas();
+    }
+
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);
     this.seenPayloadAttesters.prune(epoch);

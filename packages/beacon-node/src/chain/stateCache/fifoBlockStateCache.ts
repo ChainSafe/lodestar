@@ -1,5 +1,4 @@
 import {routes} from "@lodestar/api";
-import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -47,17 +46,7 @@ export const DEFAULT_MAX_BLOCK_STATES_GLOAS = 128;
  * The maintained key order would be: 11 -> 13 -> 12 -> 10, and state 10 will be pruned first.
  */
 export class FIFOBlockStateCache implements BlockStateCache {
-  /**
-   * Max number of states allowed in the cache.
-   * Dynamically increases from DEFAULT_MAX_BLOCK_STATES to DEFAULT_MAX_BLOCK_STATES_GLOAS
-   * when Gloas fork is reached.
-   */
   private maxStates: number;
-  /**
-   * Flag to track if maxStates has been upgraded for Gloas.
-   * Once upgraded, no need to check again.
-   */
-  private gloasMaxStatesActive = false;
 
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /**
@@ -124,13 +113,6 @@ export class FIFOBlockStateCache implements BlockStateCache {
    * In importBlock() steps, normally it'll call add() with isHead = false first. Then call setHeadState() to set the head.
    */
   add(item: CachedBeaconStateAllForks, isHead = false): void {
-    // Dynamically upgrade maxStates when Gloas fork is reached
-    // Gloas blocks can have two states (block state and payload state), so we need 2x capacity
-    if (!this.gloasMaxStatesActive && item.config.getForkSeq(item.slot) >= ForkSeq.gloas) {
-      this.maxStates = DEFAULT_MAX_BLOCK_STATES_GLOAS;
-      this.gloasMaxStatesActive = true;
-    }
-
     const key = toRootHex(item.hashTreeRoot());
     if (this.cache.get(key) != null) {
       if (!this.keyOrder.has(key)) {
@@ -188,6 +170,10 @@ export class FIFOBlockStateCache implements BlockStateCache {
       this.keyOrder.pop();
       this.cache.delete(key);
     }
+  }
+
+  upgradeToGloas(): void {
+    this.maxStates = DEFAULT_MAX_BLOCK_STATES_GLOAS;
   }
 
   /**

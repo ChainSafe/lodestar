@@ -230,6 +230,11 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.checkpointStateCache.updatePreComputedCheckpoint(rootHex, epoch, payloadPresent);
   }
 
+  upgradeForGloas(): void {
+    this.logger.info("Upgrading block state cache for Gloas fork");
+    this.blockStateCache.upgradeToGloas();
+  }
+
   /**
    * Get the state to run with `block`.
    * - State after `block.parentRoot` dialed forward to block.slot
