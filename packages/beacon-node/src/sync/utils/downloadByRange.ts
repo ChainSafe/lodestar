@@ -12,6 +12,7 @@ import {
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
+import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {INetwork} from "../../network/index.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -35,6 +36,7 @@ export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   logger: Logger;
   peerIdStr: string;
   batchBlocks?: IBlockInput[];
+  peerDasMetrics?: BeaconMetrics["peerDas"] | null;
 };
 
 export type CacheByRangeResponsesProps = {
@@ -196,6 +198,7 @@ export async function downloadByRange({
   blocksRequest,
   blobsRequest,
   columnsRequest,
+  peerDasMetrics,
 }: DownloadAndCacheByRangeProps): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   let response: DownloadByRangeResponses;
   try {
@@ -220,6 +223,7 @@ export async function downloadByRange({
     blocksRequest,
     blobsRequest,
     columnsRequest,
+    peerDasMetrics,
     ...response,
   });
 
@@ -290,10 +294,12 @@ export async function validateResponses({
   blocks,
   blobSidecars,
   columnSidecars,
+  peerDasMetrics,
 }: DownloadByRangeRequests &
   DownloadByRangeResponses & {
     config: ChainForkConfig;
     batchBlocks?: IBlockInput[];
+    peerDasMetrics?: BeaconMetrics["peerDas"] | null;
   }): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   // Blocks are always required for blob/column validation
   // If a blocksRequest is provided, blocks have just been downloaded
@@ -372,7 +378,8 @@ export async function validateResponses({
       config,
       columnsRequest,
       blocksForDataValidation,
-      columnSidecars
+      columnSidecars,
+      peerDasMetrics
     );
     validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
     warnings = validatedColumnSidecarsResult.warnings;
@@ -608,7 +615,8 @@ export async function validateColumnsByRangeResponse(
   config: ChainForkConfig,
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedBlock[],
-  columnSidecars: fulu.DataColumnSidecars
+  columnSidecars: fulu.DataColumnSidecars,
+  peerDasMetrics?: BeaconMetrics["peerDas"] | null
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
 
@@ -760,12 +768,12 @@ export async function validateColumnsByRangeResponse(
 
     validationPromises.push(
       validateBlockDataColumnSidecars(
-        // Todo: need to pass chain to update fulu metrics
         null, // do not pass chain here so we do not validate header signature
         slot,
         blockRoot,
         blobCount,
-        columnSidecars
+        columnSidecars,
+        peerDasMetrics
       ).then(() => ({
         blockRoot,
         columnSidecars,

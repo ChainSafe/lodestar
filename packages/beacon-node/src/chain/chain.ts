@@ -312,7 +312,7 @@ export class BeaconChain implements IBeaconChain {
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
     this.metrics?.peerDas.custodyGroupCount.set(initialCustodyGroupCount);
-    // Todo: backfill not implemented yet
+    // TODO: backfill not implemented yet
     this.metrics?.peerDas.custodyGroupsBackfilled.set(0);
     this.custodyConfig = new CustodyConfig({
       nodeId,

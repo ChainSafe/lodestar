@@ -13,6 +13,7 @@ import {
 import {DataColumnSidecar, Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {kzg} from "../../util/kzg.js";
 import {
   DataColumnSidecarErrorCode,
@@ -298,10 +299,11 @@ export async function validateBlockDataColumnSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
-  dataColumnSidecars: fulu.DataColumnSidecars
+  dataColumnSidecars: fulu.DataColumnSidecars,
+  metrics?: BeaconMetrics["peerDas"] | null
 ): Promise<void> {
-  chain?.metrics?.peerDas.dataColumnSidecarProcessingRequests.inc(dataColumnSidecars.length);
-  const verificationTimer = chain?.metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
+  metrics?.dataColumnSidecarProcessingRequests.inc(dataColumnSidecars.length);
+  const verificationTimer = metrics?.dataColumnSidecarGossipVerificationTime.startTimer();
   try {
     if (dataColumnSidecars.length === 0) {
       return;
@@ -422,7 +424,7 @@ export async function validateBlockDataColumnSidecars(
         });
       }
 
-      const inclusionProofTimer = chain?.metrics?.peerDas.dataColumnSidecarInclusionProofVerificationTime.startTimer();
+      const inclusionProofTimer = metrics?.dataColumnSidecarInclusionProofVerificationTime.startTimer();
       const validInclusionProof = verifyDataColumnSidecarInclusionProof(columnSidecar);
       inclusionProofTimer?.();
       if (!validInclusionProof) {
@@ -443,9 +445,8 @@ export async function validateBlockDataColumnSidecars(
     }
 
     let reason: string | undefined;
-    // Todo: what to do when chain is not passed
     // batch verification for the cases: downloadByRange and downloadByRoot
-    const kzgVerificationTimer = chain?.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
+    const kzgVerificationTimer = metrics?.kzgVerificationDataColumnBatchTime.startTimer();
     try {
       const valid = await kzg.asyncVerifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
       if (!valid) {
@@ -466,7 +467,7 @@ export async function validateBlockDataColumnSidecars(
         "DataColumnSidecar has invalid KZG proof batch"
       );
     }
-    chain?.metrics?.peerDas.dataColumnSidecarProcessingSuccesses.inc();
+    metrics?.dataColumnSidecarProcessingSuccesses.inc();
   } finally {
     verificationTimer?.();
   }
