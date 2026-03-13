@@ -58,7 +58,7 @@ export async function getStateResponseWithRegen(
         : stateId
       : null;
 
-  let res =
+  const res =
     typeof stateId === "string"
       ? await chain.getStateByStateRoot(stateId, {allowRegen: true})
       : typeof stateId === "number"
@@ -69,26 +69,12 @@ export async function getStateResponseWithRegen(
             : await chain.getHistoricalStateBySlot(stateId)
         : await chain.getStateOrBytesByCheckpoint(checkpointStateId ?? stateId);
 
-  // Defensive fallback: if post-Gloas checkpoint normalization prefers EMPTY but that
-  // variant is unavailable, retry original checkpoint status and then the opposite
-  // variant before returning 404.
-  // This handles the missed-slot-0 edge case where:
-  // - Fork choice correctly reports EMPTY for the missed epoch boundary slot
-  // - But the cache only has the FULL variant (populated by prepareNextSlot using the
-  //   head block's FULL payload status)
-  // - Both the forced EMPTY and the original (also EMPTY) lookups miss
-  // - Trying the opposite (FULL) variant finds the cached state
-  if (!res && checkpointStateId) {
-    res = await chain.getStateOrBytesByCheckpoint(stateId as CheckpointWithPayload);
-  }
-  if (!res && checkpointStateId) {
-    const oppositeStatus =
-      checkpointStateId.payloadStatus === PayloadStatus.EMPTY ? PayloadStatus.FULL : PayloadStatus.EMPTY;
-    res = await chain.getStateOrBytesByCheckpoint({
-      ...checkpointStateId,
-      payloadStatus: oppositeStatus,
-    } as CheckpointWithPayload);
-  }
+  // No fallback to FULL variant: for finalized/justified on post-Gloas, we must
+  // always serve the post-CL state (EMPTY). Serving a post-payload (FULL) state
+  // would break checkpoint sync for other clients. The regen fix in
+  // processSlotsToNearestCheckpoint ensures the EMPTY variant is always cached,
+  // so this lookup should always succeed. If it doesn't, 404 is the correct
+  // response — the client will retry with another server.
 
   if (!res) {
     throw new ApiError(404, `State not found for id '${inStateId}'`);

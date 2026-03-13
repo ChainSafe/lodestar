@@ -1,0 +1,244 @@
+# Mainnet config
+
+# Extends the mainnet preset
+PRESET_BASE: 'mainnet'
+
+# Free-form short name of the network that this configuration applies to - known
+# canonical network names include:
+# * 'mainnet' - there can be only one
+# * 'sepolia' - testnet
+# * 'holesky' - testnet
+# * 'hoodi' - testnet
+# Must match the regex: [a-z0-9\-]
+CONFIG_NAME: 'testnet' # needs to exist because of Prysm. Otherwise it conflicts with mainnet genesis
+
+# Transition
+# ---------------------------------------------------------------
+# Estimated on Sept 15, 2022
+TERMINAL_TOTAL_DIFFICULTY: 0
+# By default, don't use these params
+TERMINAL_BLOCK_HASH: 0x0000000000000000000000000000000000000000000000000000000000000000
+TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: 18446744073709551615
+
+# Genesis
+# ---------------------------------------------------------------
+# `2**14` (= 16,384)
+MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1900
+# 2026-Mar-04 02:30:59 PM UTC
+MIN_GENESIS_TIME: 1772634659
+# Mainnet initial fork version, recommend altering for testnets
+GENESIS_FORK_VERSION: 0x10898744
+# Some seconds
+GENESIS_DELAY: 60
+
+# Forking
+# ---------------------------------------------------------------
+# Some forks are disabled for now:
+#  - These may be re-assigned to another fork-version later
+#  - Temporarily set to max uint64 value: 2**64 - 1
+
+# Altair
+ALTAIR_FORK_VERSION: 0x20898744
+ALTAIR_FORK_EPOCH: 0
+# Merge
+BELLATRIX_FORK_VERSION: 0x30898744
+BELLATRIX_FORK_EPOCH: 0
+# Capella
+CAPELLA_FORK_VERSION: 0x40898744
+CAPELLA_FORK_EPOCH: 0
+# Deneb
+DENEB_FORK_VERSION: 0x50898744
+DENEB_FORK_EPOCH: 0
+# Electra
+ELECTRA_FORK_VERSION: 0x60898744
+ELECTRA_FORK_EPOCH: 0
+# Fulu
+FULU_FORK_VERSION: 0x70898744
+FULU_FORK_EPOCH: 0
+# GLOAS
+GLOAS_FORK_VERSION: 0x80898744
+GLOAS_FORK_EPOCH: 5
+# EIP7441
+EIP7441_FORK_VERSION: 0xa0000000
+EIP7441_FORK_EPOCH: 18446744073709551615
+# Heze
+HEZE_FORK_VERSION: 0x90000000
+HEZE_FORK_EPOCH: 18446744073709551615
+# EIP7928
+EIP7928_FORK_VERSION: 
+EIP7928_FORK_EPOCH: 
+
+# Time parameters
+# ---------------------------------------------------------------
+# 12 seconds (*deprecated*)
+SECONDS_PER_SLOT: 12
+# 12000 milliseconds
+SLOT_DURATION_MS: 12000
+# 14 (estimate from Eth1 mainnet)
+SECONDS_PER_ETH1_BLOCK: 12
+# 2**8 (= 256) epochs ~27 hours
+MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256
+# 2**8 (= 256) epochs ~27 hours
+SHARD_COMMITTEE_PERIOD: 256
+# 2**11 (= 2,048) Eth1 blocks ~8 hours
+ETH1_FOLLOW_DISTANCE: 2048
+# 1667 basis points, ~17% of SLOT_DURATION_MS
+PROPOSER_REORG_CUTOFF_BPS: 1667
+# 3333 basis points, ~33% of SLOT_DURATION_MS
+ATTESTATION_DUE_BPS: 3333
+# 6667 basis points, ~67% of SLOT_DURATION_MS
+AGGREGATE_DUE_BPS: 6667
+
+# Altair
+# 3333 basis points, ~33% of SLOT_DURATION_MS
+SYNC_MESSAGE_DUE_BPS: 3333
+# 6667 basis points, ~67% of SLOT_DURATION_MS
+CONTRIBUTION_DUE_BPS: 6667
+
+# Gloas
+# 2**12 (= 4,096) epochs
+MIN_BUILDER_WITHDRAWABILITY_DELAY: 4096
+# 2500 basis points, 25% of SLOT_DURATION_MS
+ATTESTATION_DUE_BPS_GLOAS: 2500
+# 5000 basis points, 50% of SLOT_DURATION_MS
+AGGREGATE_DUE_BPS_GLOAS: 5000
+# 2500 basis points, 25% of SLOT_DURATION_MS
+SYNC_MESSAGE_DUE_BPS_GLOAS: 2500
+# 5000 basis points, 50% of SLOT_DURATION_MS
+CONTRIBUTION_DUE_BPS_GLOAS: 5000
+# 7500 basis points, 75% of SLOT_DURATION_MS
+PAYLOAD_ATTESTATION_DUE_BPS: 7500
+
+# Heze
+# 7500 basis points, 75% of SLOT_DURATION_MS
+VIEW_FREEZE_CUTOFF_BPS: 7500
+# 6667 basis points, ~67% of SLOT_DURATION_MS
+INCLUSION_LIST_SUBMISSION_DUE_BPS: 6667
+# 9167 basis points, ~92% of SLOT_DURATION_MS
+PROPOSER_INCLUSION_LIST_CUTOFF_BPS: 9167
+
+# Validator cycle
+# ---------------------------------------------------------------
+# 2**2 (= 4)
+INACTIVITY_SCORE_BIAS: 4
+# 2**4 (= 16)
+INACTIVITY_SCORE_RECOVERY_RATE: 16
+# 2**4 * 10**9 (= 16,000,000,000) Gwei
+EJECTION_BALANCE: 16000000000
+# 2**2 (= 4)
+MIN_PER_EPOCH_CHURN_LIMIT: 4
+# 2**16 (= 65,536)
+CHURN_LIMIT_QUOTIENT: 65536
+
+# Deneb
+# 2**3 (= 8) (*deprecated*)
+MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 8
+
+# Electra
+# 2**7 * 10**9 (= 128,000,000,000) Gwei
+MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000
+# 2**8 * 10**9 (= 256,000,000,000) Gwei
+MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 256000000000
+
+# Fork choice
+# ---------------------------------------------------------------
+# 40%
+PROPOSER_SCORE_BOOST: 40
+# 20%
+REORG_HEAD_WEIGHT_THRESHOLD: 20
+# 160%
+REORG_PARENT_WEIGHT_THRESHOLD: 160
+# `2` epochs
+REORG_MAX_EPOCHS_SINCE_FINALIZATION: 2
+
+# Deposit contract
+# ---------------------------------------------------------------
+# Ethereum PoW Mainnet
+DEPOSIT_CHAIN_ID: 7055777152
+DEPOSIT_NETWORK_ID: 7055777152
+DEPOSIT_CONTRACT_ADDRESS: 0x00000000219ab540356cBB839Cbe05303d7705Fa
+
+# Networking
+# ---------------------------------------------------------------
+# `10 * 2**20` (= 10485760, 10 MiB)
+MAX_PAYLOAD_SIZE: 10485760
+# 2**10 (= 1,024) blocks
+MAX_REQUEST_BLOCKS: 1024
+# 2**8 (= 256) epochs
+EPOCHS_PER_SUBNET_SUBSCRIPTION: 256
+# MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2 (= 33,024) epochs
+MIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024
+# 2**5 (= 32) slots
+ATTESTATION_PROPAGATION_SLOT_RANGE: 32
+# 500ms
+MAXIMUM_GOSSIP_CLOCK_DISPARITY: 500
+MESSAGE_DOMAIN_INVALID_SNAPPY: 0x00000000
+MESSAGE_DOMAIN_VALID_SNAPPY: 0x01000000
+# 2 subnets per node
+SUBNETS_PER_NODE: 2
+# 2**6 (= 64) subnets
+ATTESTATION_SUBNET_COUNT: 64
+# 0 bits
+ATTESTATION_SUBNET_EXTRA_BITS: 0
+# ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS (= 6 + 0) bits
+ATTESTATION_SUBNET_PREFIX_BITS: 6
+
+# Deneb
+# 2**7 (= 128) blocks
+MAX_REQUEST_BLOCKS_DENEB: 128
+# 2**12 (= 4,096) epochs
+MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096
+# 6 subnets
+BLOB_SIDECAR_SUBNET_COUNT: 6
+# 6 blobs
+MAX_BLOBS_PER_BLOCK: 6
+# MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK (= 128 * 6) sidecars
+MAX_REQUEST_BLOB_SIDECARS: 768
+
+# Electra
+# 9 subnets
+BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: 9
+# 9 blobs
+MAX_BLOBS_PER_BLOCK_ELECTRA: 9
+# MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
+MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152
+
+# Fulu
+# 2**7 (= 128) groups
+NUMBER_OF_CUSTODY_GROUPS: 128
+# 2**7 (= 128) subnets
+DATA_COLUMN_SIDECAR_SUBNET_COUNT: 128
+# MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS (= 128 * 128) sidecars
+MAX_REQUEST_DATA_COLUMN_SIDECARS: 16384
+# 2**3 (= 8) samples
+SAMPLES_PER_SLOT: 8
+# 2**2 (= 4) sidecars
+CUSTODY_REQUIREMENT: 4
+# 2**3 (= 8) sidecars
+VALIDATOR_CUSTODY_REQUIREMENT: 8
+# 2**5 * 10**9 (= 32,000,000,000) Gwei
+BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: 32000000000
+# 2**12 (= 4,096) epochs
+MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096
+
+# Gloas
+# 2**7 (= 128) payloads
+MAX_REQUEST_PAYLOADS: 128
+
+# EIP7441
+# 2**8 (= 256) epochs
+EPOCHS_PER_SHUFFLING_PHASE: 256
+# 2**1 (= 2) epochs
+PROPOSER_SELECTION_GAP: 2
+
+# Heze
+# 2**4 (= 16) inclusion lists
+MAX_REQUEST_INCLUSION_LIST: 16
+# 2**13 (= 8,192) bytes
+MAX_BYTES_PER_INCLUSION_LIST: 8192
+
+# Blob Scheduling
+# ---------------------------------------------------------------
+
+
+BLOB_SCHEDULE: []

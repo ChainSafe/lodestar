@@ -62,7 +62,7 @@ describe("beacon state api utils", () => {
 });
 
 describe("getStateResponseWithRegen", () => {
-  it("falls back to original checkpoint payload status if forced EMPTY lookup misses", async () => {
+  it("returns 404 if forced EMPTY lookup misses — no fallback to FULL", async () => {
     const finalizedCheckpoint = {
       epoch: 123,
       rootHex: "0xabc",
@@ -70,13 +70,7 @@ describe("getStateResponseWithRegen", () => {
       payloadPresent: true,
     };
 
-    const expectedResponse = {
-      state: new Uint8Array([1, 2, 3]),
-      executionOptimistic: false,
-      finalized: true,
-    };
-
-    const getStateOrBytesByCheckpointFn = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(expectedResponse);
+    const getStateOrBytesByCheckpointFn = vi.fn().mockResolvedValue(null);
 
     const chain = {
       forkChoice: {
@@ -94,14 +88,14 @@ describe("getStateResponseWithRegen", () => {
       getStateOrBytesByCheckpoint: getStateOrBytesByCheckpointFn,
     } as never;
 
-    const response = await getStateResponseWithRegen(chain, "finalized");
-
-    expect(response).toBe(expectedResponse);
-    expect(getStateOrBytesByCheckpointFn).toHaveBeenNthCalledWith(1, {
+    // Should 404 — never fall back to FULL variant
+    await expect(getStateResponseWithRegen(chain, "finalized")).rejects.toThrow("State not found");
+    // Only tried EMPTY, no fallback
+    expect(getStateOrBytesByCheckpointFn).toHaveBeenCalledTimes(1);
+    expect(getStateOrBytesByCheckpointFn).toHaveBeenCalledWith({
       ...finalizedCheckpoint,
       payloadStatus: PayloadStatus.EMPTY,
     });
-    expect(getStateOrBytesByCheckpointFn).toHaveBeenNthCalledWith(2, finalizedCheckpoint);
   });
 });
 
@@ -120,24 +114,14 @@ describe("getStateResponseWithRegen — post-Gloas missed-slot checkpoint servin
    *
    * Fix: fallback should also try the OPPOSITE payload variant (FULL when EMPTY misses).
    */
-  it("serves finalized state when slot-0 is missed and only FULL variant exists in cache", async () => {
+  it("returns 404 when only FULL variant exists — never serves post-payload state", async () => {
     const finalizedCheckpoint = {
       epoch: 100,
       rootHex: "0xabc",
       payloadStatus: PayloadStatus.EMPTY, // correct for missed slot - processSlot cleared the bit
     };
 
-    const expectedResponse = {
-      state: new Uint8Array([1, 2, 3]),
-      executionOptimistic: false,
-      finalized: true,
-    };
-
-    const getStateOrBytesByCheckpoint = vi
-      .fn()
-      .mockResolvedValueOnce(null) // EMPTY lookup
-      .mockResolvedValueOnce(null) // fallback to original (also EMPTY)
-      .mockResolvedValueOnce(expectedResponse); // FULL variant
+    const getStateOrBytesByCheckpoint = vi.fn().mockResolvedValue(null); // EMPTY lookup misses (only FULL in cache)
 
     const chain = {
       forkChoice: {
@@ -156,11 +140,10 @@ describe("getStateResponseWithRegen — post-Gloas missed-slot checkpoint servin
       getStateOrBytesByCheckpoint,
     } as never;
 
-    const response = await getStateResponseWithRegen(chain, "finalized");
-
-    expect(response).toBe(expectedResponse);
-    // Should have tried: EMPTY, original EMPTY, then FULL as last resort
-    expect(getStateOrBytesByCheckpoint).toHaveBeenCalledTimes(3);
+    // Should 404 — never fall back to FULL variant
+    await expect(getStateResponseWithRegen(chain, "finalized")).rejects.toThrow("State not found");
+    // Only tried EMPTY, no FULL fallback
+    expect(getStateOrBytesByCheckpoint).toHaveBeenCalledTimes(1);
   });
 
   it("serves finalized state when slot-0 has a block (normal case, EMPTY variant exists)", async () => {

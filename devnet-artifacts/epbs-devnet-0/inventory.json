@@ -1,0 +1,172 @@
+{
+  "ethereum_pairs": {
+                                                                                                                                                                                                                                                                                                                      "bootnode-1": {
+        "consensus": {
+          "client": "teku",
+          "image": "ethpandaops/teku:StefanBratanov-devnet-0-changes",
+          "enr": "enr:-MG4QHR7kSe_VE9X3ru-PIUOUOeGzVYnl7NItDHjT2iGiaBZWOl-kSleUXWmoZvPx-odXBwtBwi_ACGZ5rbThXC4NN8Hh2F0dG5ldHOIAAAAAAAAAAODY2djgYCEZXRoMpBc24kWgImHRAUAAAAAAAAAgmlkgnY0gmlwhFti6eWDbmZkhNvUtIGJc2VjcDI1NmsxoQP-iW9PCj8X-TBQ7aMwthMb33i-_W7-tT9-e4Anpjj8poN0Y3CCIyiDdWRwgiMo",
+          "peer_id": "16Uiu2HAmVnbTH9e82S9CD75a3DwWWVW6GojphSLaVxer3XwYYo65",
+          "beacon_uri": "https://bn-bootnode-1.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-bootnode-1.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "lighthouse-geth-1": {
+        "consensus": {
+          "client": "lighthouse",
+          "image": "ethpandaops/lighthouse:epbs-devnet-0",
+          "enr": "enr:-QEauEDn-F28-X6pHHjNi7t83NmwfD52JdDuRlp9B7QByV6V-S19pIybmZsCEcEw_2Xpx8_-4b-e38K93NVMG8CFNhLjA4dhdHRuZXRziAAAABgAAAAAg2NnY4GAhmNsaWVudNGKTGlnaHRob3VzZYU4LjEuMYRldGgykFzbiRaAiYdEBQAAAAAAAACCaWSCdjSCaXCEsmgQG4NpcDaQKgEE-BwZj3EAAAAAAAAAAYNuZmSE29S0gYRxdWljgiMphXF1aWM2giMpiXNlY3AyNTZrMaECH5GVSllBpUR_I5UNncsmj0scOJAhOpD0QzkgqNcHN3CIc3luY25ldHMAg3RjcIIjKIR0Y3A2giMog3VkcIIjKIR1ZHA2giMo",
+          "peer_id": "16Uiu2HAkwYuNbS9bPxFLJRrZ5zHhRaHyrg7DXktEMjm2ibBZSCpP",
+          "beacon_uri": "https://bn-lighthouse-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-lighthouse-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "lighthouse-geth-2": {
+        "consensus": {
+          "client": "lighthouse",
+          "image": "ethpandaops/lighthouse:epbs-devnet-0",
+          "enr": "enr:-QEauEAfSNLlfe8SKALjGajfgcUyI_bgEFJejlHyGZIwuSvzBC_GPIcGfPjYCLKhtJXoBs44JQaoCuWK9fe1ZwC3yX8uA4dhdHRuZXRziAAAYAAAAAAAg2NnY4GAhmNsaWVudNGKTGlnaHRob3VzZYU4LjEuMYRldGgykFzbiRaAiYdEBQAAAAAAAACCaWSCdjSCaXCEQRX1DINpcDaQKgEE-cAU3K8AAAAAAAAAAYNuZmSE29S0gYRxdWljgiMphXF1aWM2giMpiXNlY3AyNTZrMaEDpz7nEfcmoIFmCuXPP3PiDjZM2MlmYNx_5FJ33mx7SYyIc3luY25ldHMAg3RjcIIjKIR0Y3A2giMog3VkcIIjKIR1ZHA2giMo",
+          "peer_id": "16Uiu2HAmPur4sV9FgxuXt8dU63vgTMs79f4t9izog7T1GUkXG5f9",
+          "beacon_uri": "https://bn-lighthouse-geth-2.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-lighthouse-geth-2.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "lighthouse-geth-3": {
+        "consensus": {
+          "client": "lighthouse",
+          "image": "ethpandaops/lighthouse:epbs-devnet-0",
+          "enr": "enr:-QEauEDaKAXzPfrHfpEHh6MrMahR8Mk12mGQcmEf5pwePIRvvFEgqavKzUZvXFO4DtwWzL88SwpIqSmIb1rbTwGyRsDFA4dhdHRuZXRziAAAAAAAwAAAg2NnY4GAhmNsaWVudNGKTGlnaHRob3VzZYU4LjEuMYRldGgykFzbiRaAiYdEBQAAAAAAAACCaWSCdjSCaXCEw8kn1YNpcDaQKgEE-BwZ0f4AAAAAAAAAAYNuZmSE29S0gYRxdWljgiMphXF1aWM2giMpiXNlY3AyNTZrMaEDkSg2dXfySbaW9jF5XzxwmqURiAShKJ9gjLNVn_8Z1fWIc3luY25ldHMAg3RjcIIjKIR0Y3A2giMog3VkcIIjKIR1ZHA2giMo",
+          "peer_id": "16Uiu2HAmNRd2m2YWPRYAiJ75HGMhMWF5ZhBXPGtUsHw4qaswERWU",
+          "beacon_uri": "https://bn-lighthouse-geth-3.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-lighthouse-geth-3.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "lodestar-geth-1": {
+        "consensus": {
+          "client": "lodestar",
+          "image": "ethpandaops/lodestar:epbs-devnet-0",
+          "enr": "enr:-PC4QGXuFVSUfky78yA9ej4EiotuJMyFD0cGjwl6p_GrhicHQXNxuCKg-y8VTJsnwDXv7YKPhpTevlBAiphteK8X1JAGh2F0dG5ldHOIAAAAAABgAACDY2djgYCEZXRoMpBc24kWgImHRAUAAAAAAAAAgmlkgnY0gmlwhICMRSeDaXA2kCoBBPgcGVcgAAAAAAAAAAGDbmZkhNvUtIGJc2VjcDI1NmsxoQIkDXpY-dT2HMMyReQlG-oehqFIsmOJX3YjgHlbvxscOIhzeW5jbmV0cwCDdGNwgiMohHRjcDaCIyqDdWRwgiMohHVkcDaCIyo",
+          "peer_id": "16Uiu2HAkwrQaRVHAWah1Csf33wbUKRRghieAyBJkKJAZ2JYrHaXR",
+          "beacon_uri": "https://bn-lodestar-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-lodestar-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "lodestar-geth-2": {
+        "consensus": {
+          "client": "lodestar",
+          "image": "ethpandaops/lodestar:epbs-devnet-0",
+          "enr": "enr:-PC4QJvQnJuoibj06qiVtYi32kHiF7cEVIFY472Ak8eKOdbCAZcsRjWLVJSO3ExcZZ-mQPXfl3IVVocajs90NEwaLtUGh2F0dG5ldHOIAAAAAACAAQCDY2djgYCEZXRoMpBc24kWgImHRAUAAAAAAAAAgmlkgnY0gmlwhFmndwODaXA2kCoBBPnAFOy4AAAAAAAAAAGDbmZkhNvUtIGJc2VjcDI1NmsxoQNuvD5NQ7j6vuvafukn0b2uUbynq14-sLZegdf3YYI6nIhzeW5jbmV0cwCDdGNwgiMohHRjcDaCIyqDdWRwgiMohHVkcDaCIyo",
+          "peer_id": "16Uiu2HAmL7FgSMvsXC3maftW4hdoxpVDrMUpNhWt173RxBuDPyTh",
+          "beacon_uri": "https://bn-lodestar-geth-2.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-lodestar-geth-2.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "lodestar-geth-3": {
+        "consensus": {
+          "client": "lodestar",
+          "image": "ethpandaops/lodestar:epbs-devnet-0",
+          "enr": "enr:-PC4QOY7U9TT5kOekgrXqWkRBIt-ZRWlUL-cLSGkUFuajIS6EmJztY1SwgnfyW6wYvB0KLP3oHWtPTpXGff-rFjPrMUGh2F0dG5ldHOIAAAAAAADAACDY2djgYCEZXRoMpBc24kWgImHRAUAAAAAAAAAgmlkgnY0gmlwhFtr6uqDaXA2kCoBBPgcHsYyAAAAAAAAAAGDbmZkhNvUtIGJc2VjcDI1NmsxoQOJmG25i3P4vfdanNq6mU0B3NwcXcbt4lqhgwADY0ero4hzeW5jbmV0cwCDdGNwgiMohHRjcDaCIyqDdWRwgiMohHVkcDaCIyo",
+          "peer_id": "16Uiu2HAmMv71kshGFMBUtv9yUgntgKysockFZezsYRMTFpAwjwMt",
+          "beacon_uri": "https://bn-lodestar-geth-3.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-lodestar-geth-3.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "nimbus-geth-1": {
+        "consensus": {
+          "client": "nimbus",
+          "image": "ethpandaops/nimbus-eth2:epbs-devnet-0",
+          "enr": "enr:-MG4QF5Z9H1_37OhPdyTiAm_B3QIeuE4XHFL_i9EeD7-NDtiUdbtgApc8ZdEcIaWZ19POrTEGpEY9jEOQLOhaIcCwrwEh2F0dG5ldHOIAAAAwAAAAACDY2djBIRldGgykFzbiRZwiYdE__________-CaWSCdjSCaXCEdMsoD4lzZWNwMjU2azGhAwl_Df6JgFh8WR9-cWMcukVNBttScNErxwrP3vM_PZiRiHN5bmNuZXRzD4N0Y3CCIyiDdWRwgiMo",
+          "peer_id": "16Uiu2HAmDJ4PSUAWayzhM3JZ3yfT2u5n84jmtFsJP1nxeh2R8yqS",
+          "beacon_uri": "https://bn-nimbus-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-nimbus-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "prysm-geth-1": {
+        "consensus": {
+          "client": "prysm",
+          "image": "ethpandaops/prysm-beacon-chain:epbs-devnet-0",
+          "enr": "enr:-Nm4QGOQlu05rv3xfKt9sdQ3P9ObFxmf5F67eUXxSTAJixEjIdrOWulXgAWBsG9zPo1sIGvhfQC7kDFHTUVnFI7sc6WGAZy5IgzPh2F0dG5ldHOI__________-DY2djgYCEZXRoMpBc24kWgImHRAUAAAAAAAAAgmlkgnY0gmlwhLJoBX-DbmZkhNvUtIGEcXVpY4IyyIlzZWNwMjU2azGhA9EkSYB_0GSgXJyEGgqTDz2HSlKl74wWJ_qEvk8QWqYZiHN5bmNuZXRzAIN0Y3CCIyiDdWRwgiMo",
+          "peer_id": "16Uiu2HAmSjPemUuCRiB5gmQwscRGjapc6zaWmfpBjjyN8sSRazNC",
+          "beacon_uri": "https://bn-prysm-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-prysm-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "prysm-geth-2": {
+        "consensus": {
+          "client": "prysm",
+          "image": "ethpandaops/prysm-beacon-chain:epbs-devnet-0",
+          "enr": "enr:-Nm4QKW0bAT2lYB5QccFAv9Dc9iLmWkI0JBxdBs7k0pUHyelOOvoyfenJWVidYiC9GbTGkV9D11zJD8qx5YEqEqTyb6GAZy5Iiyuh2F0dG5ldHOI__________-DY2djgYCEZXRoMpBc24kWgImHRAUAAAAAAAAAgmlkgnY0gmlwhFmnc0GDbmZkhNvUtIGEcXVpY4IyyIlzZWNwMjU2azGhAqrx3TjymufUPEGynL92VfWkhg3euJEZsaR-tyrKTw74iHN5bmNuZXRzAIN0Y3CCIyiDdWRwgiMo",
+          "peer_id": "16Uiu2HAm6vyCEZAG7ohMiUseEmEzRiX4Ufhb1ntArtJo8NsT7mn7",
+          "beacon_uri": "https://bn-prysm-geth-2.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-prysm-geth-2.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "prysm-geth-3": {
+        "consensus": {
+          "client": "prysm",
+          "image": "ethpandaops/prysm-beacon-chain:epbs-devnet-0",
+          "enr": "enr:-Nm4QNNweqfvxo3wQwJxqhkkjVF6zjeWAdZpY-ttVuTHusxLGsN-wQkMZDIACSx5h1J5q6rJXCp959boacRKW8IsYU6GAZy5IhRth2F0dG5ldHOI__________-DY2djgYCEZXRoMpBc24kWgImHRAUAAAAAAAAAgmlkgnY0gmlwhICMD8SDbmZkhNvUtIGEcXVpY4IyyIlzZWNwMjU2azGhA8dyl64OOyjKCOnX4iNfVQc4Xn9RgAnS_JocjEKNqFRTiHN5bmNuZXRzAIN0Y3CCIyiDdWRwgiMo",
+          "peer_id": "16Uiu2HAmS5Yq1u9CZPbzXubtRBJvtqJn38kuScPVjJATkeWo55e2",
+          "beacon_uri": "https://bn-prysm-geth-3.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-prysm-geth-3.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      },          "teku-geth-1": {
+        "consensus": {
+          "client": "teku",
+          "image": "ethpandaops/teku:StefanBratanov-devnet-0-changes",
+          "enr": "enr:-MC4QFMxtcgB9gZ-p3kSq1vVBdWxPRwMMyUoK44i97DOWSJMYBL8b20HtKqR1MVQUjZmzcJ9BueCkpvAUtv2C3lYRNMHh2F0dG5ldHOIMAAAAAAAAACDY2djBIRldGgykFzbiRaAiYdEBQAAAAAAAACCaWSCdjSCaXCEdMs-ZYNuZmSE29S0gYlzZWNwMjU2azGhAmcwAJUTSDksH_Rp3r7P4b2JYHtT-1Ehu0kGSwGKSpKpg3RjcIIjKIN1ZHCCIyg",
+          "peer_id": "16Uiu2HAm2NURgQurfHHwXLP8XAFJsFb5R7LVGhtDdjAQiCbdK4Cp",
+          "beacon_uri": "https://bn-teku-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        },
+        "execution": {
+          "client": "geth",
+          "image": "ethpandaops/geth:epbs-devnet-0",
+          "enode": "{'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'ethereum_node_el in ["ethereumjs"]'}",
+          "rpc_uri": "https://rpc-teku-geth-1.srv.epbs-devnet-0.ethpandaops.io"
+        }
+      }      }
+}
