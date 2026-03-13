@@ -24,8 +24,8 @@ export type NetworkArgs = {
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty?: number;
   disablePeerScoring?: boolean;
-  disableQuic?: boolean;
-  disableTcp?: boolean;
+  quic?: boolean;
+  tcp?: boolean;
   mdns?: boolean;
   directPeers?: string[];
   "network.maxPeers"?: number;
@@ -112,14 +112,14 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     validateMultiaddrArg(muArgs, key);
   }
 
-  const disableQuic = args.disableQuic;
-  const disableTcp = args.disableTcp;
+  const quic = args.quic ?? false;
+  const tcp = args.tcp ?? true;
 
-  if (disableQuic && disableTcp) {
+  if (!quic && !tcp) {
     throw new YargsError("Cannot disable both TCP and QUIC transports");
   }
 
-  if (!disableQuic) {
+  if (quic) {
     if (discoveryPort !== undefined && quicPort !== undefined && discoveryPort === quicPort) {
       throw new YargsError(
         `discoveryPort and quicPort must not collide, both are UDP. Got discoveryPort=${discoveryPort} quicPort=${quicPort}`
@@ -133,11 +133,11 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   }
 
   const bindMu = listenAddress ? `${muArgs.listenAddress}${muArgs.discoveryPort}` : undefined;
-  const localMu = listenAddress && !disableTcp ? `${muArgs.listenAddress}${muArgs.port}` : undefined;
-  const quicMu = listenAddress && !disableQuic ? `${muArgs.listenAddress}${muArgs.quicPort}` : undefined;
+  const localMu = listenAddress && tcp ? `${muArgs.listenAddress}${muArgs.port}` : undefined;
+  const quicMu = listenAddress && quic ? `${muArgs.listenAddress}${muArgs.quicPort}` : undefined;
   const bindMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.discoveryPort6}` : undefined;
-  const localMu6 = listenAddress6 && !disableTcp ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
-  const quicMu6 = listenAddress6 && !disableQuic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
+  const localMu6 = listenAddress6 && tcp ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
+  const quicMu6 = listenAddress6 && quic ? `${muArgs.listenAddress6}${muArgs.quicPort6}` : undefined;
 
   const targetPeers = args.targetPeers;
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
@@ -178,8 +178,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     slotsToSubscribeBeforeAggregatorDuty:
       args.slotsToSubscribeBeforeAggregatorDuty ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
     disablePeerScoring: args.disablePeerScoring,
-    disableQuic,
-    disableTcp,
+    quic,
+    tcp,
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
@@ -306,18 +306,18 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
   },
 
-  disableQuic: {
+  quic: {
     type: "boolean",
-    description: "Disable QUIC transport",
-    defaultDescription: String(defaultOptions.network.disableQuic === true),
+    description: "Enable QUIC transport",
+    default: false,
     group: "network",
   },
 
-  disableTcp: {
+  tcp: {
     hidden: true,
     type: "boolean",
-    description: "Disable TCP transport",
-    defaultDescription: String(defaultOptions.network.disableTcp === true),
+    description: "Enable TCP transport",
+    default: true,
     group: "network",
   },
 

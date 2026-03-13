@@ -22,12 +22,12 @@ export type NodeJsLibp2pOpts = {
   metricsRegistry?: Registry;
 };
 
-export async function getDiscv5Multiaddrs(bootEnrs: string[], disableQuic?: boolean): Promise<string[]> {
+export async function getDiscv5Multiaddrs(bootEnrs: string[], quicEnabled?: boolean): Promise<string[]> {
   const bootMultiaddrs = [];
   for (const enrStr of bootEnrs) {
     const enr = ENR.decodeTxt(enrStr);
     // Prefer QUIC over TCP when available
-    const quicMultiaddr = !disableQuic ? (await enr.getFullMultiaddr("quic"))?.toString() : undefined;
+    const quicMultiaddr = quicEnabled ? (await enr.getFullMultiaddr("quic"))?.toString() : undefined;
     const tcpMultiaddr = (await enr.getFullMultiaddr("tcp"))?.toString();
     const multiaddrWithPeerId = quicMultiaddr ?? tcpMultiaddr;
     if (multiaddrWithPeerId) {
@@ -58,7 +58,7 @@ export async function createNodeJsLibp2p(
       ...(networkOpts.bootMultiaddrs ?? defaultNetworkOptions.bootMultiaddrs ?? []),
       // Append discv5.bootEnrs to bootMultiaddrs if requested
       ...(networkOpts.connectToDiscv5Bootnodes
-        ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? [], networkOpts.disableQuic)
+        ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? [], networkOpts.quic)
         : []),
     ];
 
@@ -71,7 +71,7 @@ export async function createNodeJsLibp2p(
     }
   }
   const transports: Libp2pInit["transports"] = [];
-  if (!networkOpts.disableTcp) {
+  if (networkOpts.tcp ?? true) {
     transports.unshift(
       tcp({
         // Reject connections when the server's connection count gets high
@@ -87,7 +87,7 @@ export async function createNodeJsLibp2p(
       })
     );
   }
-  if (!networkOpts.disableQuic) {
+  if (networkOpts.quic) {
     transports.unshift(
       quic({
         handshakeTimeout: 5_000,

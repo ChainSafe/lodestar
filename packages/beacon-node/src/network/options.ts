@@ -47,15 +47,15 @@ export interface NetworkOptions
    * We need to increase this only for the testing purpose
    */
   disconnectThreshold?: number;
-  disableQuic?: boolean;
-  disableTcp?: boolean;
+  quic?: boolean;
+  tcp?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
   maxPeers: 210, // Allow some room above targetPeers for new inbound peers
   targetPeers: 200,
   // this default is never used, in practice, it is always overridden by the cli
-  localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000", "/ip6/::/tcp/9000", "/ip4/0.0.0.0/udp/9001/quic-v1"],
+  localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000", "/ip6/::/tcp/9000"],
   bootMultiaddrs: [],
   /** disabled by default */
   discv5: null,
@@ -69,10 +69,8 @@ export const defaultNetworkOptions: NetworkOptions = {
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // This will enable the light client server by default
   disableLightClientServer: false,
-  // enable quic by default
-  disableQuic: false,
-  // enable tcp by default
-  disableTcp: false,
+  quic: false,
+  tcp: true,
   // specific option for fulu
   //   - this is the same to TARGET_SUBNET_PEERS
   //   - for fusaka-devnets, we have 25-30 peers per subnet

@@ -17,24 +17,25 @@ describe("network / libp2p / getDiscv5Multiaddrs", () => {
     return enr.encodeTxt();
   }
 
-  it("should prefer quic multiaddr over tcp when both available", async () => {
+  it("should prefer quic multiaddr over tcp when quic is enabled", async () => {
     const enrTxt = await createEnrTxt({tcp: true, quic: true});
-    const result = await getDiscv5Multiaddrs([enrTxt]);
+    const result = await getDiscv5Multiaddrs([enrTxt], true);
     expect(result).toHaveLength(1);
     expect(result[0]).toContain("/quic-v1");
     expect(result[0]).not.toContain("/tcp/");
   });
 
-  it("should fall back to tcp when quic is not advertised", async () => {
-    const enrTxt = await createEnrTxt({tcp: true});
+  it("should return tcp by default (quic disabled)", async () => {
+    const enrTxt = await createEnrTxt({tcp: true, quic: true});
     const result = await getDiscv5Multiaddrs([enrTxt]);
     expect(result).toHaveLength(1);
     expect(result[0]).toContain("/tcp/");
+    expect(result[0]).not.toContain("/quic-v1");
   });
 
-  it("should return tcp when disableQuic is true even if quic is available", async () => {
+  it("should return tcp when quic is explicitly disabled", async () => {
     const enrTxt = await createEnrTxt({tcp: true, quic: true});
-    const result = await getDiscv5Multiaddrs([enrTxt], true);
+    const result = await getDiscv5Multiaddrs([enrTxt], false);
     expect(result).toHaveLength(1);
     expect(result[0]).toContain("/tcp/");
     expect(result[0]).not.toContain("/quic-v1");
@@ -46,9 +47,9 @@ describe("network / libp2p / getDiscv5Multiaddrs", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("should return quic-only ENR even without tcp", async () => {
+  it("should return quic-only ENR when quic is enabled", async () => {
     const enrTxt = await createEnrTxt({quic: true});
-    const result = await getDiscv5Multiaddrs([enrTxt]);
+    const result = await getDiscv5Multiaddrs([enrTxt], true);
     expect(result).toHaveLength(1);
     expect(result[0]).toContain("/quic-v1");
   });

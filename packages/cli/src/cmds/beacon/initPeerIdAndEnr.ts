@@ -67,15 +67,17 @@ export function overwriteEnrWithCliArgs(
 ): void {
   const preSeq = enr.seq;
   const {port, discoveryPort, quicPort, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
+  const tcp = args.tcp ?? true;
+  const quic = args.quic ?? false;
   maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
   maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
   maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
   maybeUpdateEnr(enr, "udp6", args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6);
   if (!opts?.bootnode) {
-    maybeUpdateEnr(enr, "tcp", args.disableTcp ? undefined : (args["enr.tcp"] ?? port ?? enr.tcp));
-    maybeUpdateEnr(enr, "tcp6", args.disableTcp ? undefined : (args["enr.tcp6"] ?? port6 ?? enr.tcp6));
-    maybeUpdateEnr(enr, "quic", args.disableQuic ? undefined : (args["enr.quic"] ?? quicPort ?? enr.quic));
-    maybeUpdateEnr(enr, "quic6", args.disableQuic ? undefined : (args["enr.quic6"] ?? quicPort6 ?? enr.quic6));
+    maybeUpdateEnr(enr, "tcp", tcp ? (args["enr.tcp"] ?? port ?? enr.tcp) : undefined);
+    maybeUpdateEnr(enr, "tcp6", tcp ? (args["enr.tcp6"] ?? port6 ?? enr.tcp6) : undefined);
+    maybeUpdateEnr(enr, "quic", quic ? (args["enr.quic"] ?? quicPort ?? enr.quic) : undefined);
+    maybeUpdateEnr(enr, "quic6", quic ? (args["enr.quic6"] ?? quicPort6 ?? enr.quic6) : undefined);
   }
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {

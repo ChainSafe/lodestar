@@ -9,7 +9,7 @@ import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {testLogger} from "../../utils.js";
 
 describe("overwriteEnrWithCliArgs", () => {
-  it("should set tcp and quic fields by default", async () => {
+  it("should set tcp but not quic fields by default", async () => {
     const privateKey = await generateKeyPair("secp256k1");
     const enr = SignableENR.createFromPrivateKey(privateKey);
     const logger = testLogger();
@@ -17,17 +17,32 @@ describe("overwriteEnrWithCliArgs", () => {
     overwriteEnrWithCliArgs(enr, {listenAddress: "0.0.0.0", port: 9000, nat: true} as unknown as BeaconArgs, logger);
 
     expect(enr.tcp).toBe(9000);
-    expect(enr.quic).toBe(9001);
+    expect(enr.quic).toBeUndefined();
   });
 
-  it("should not set tcp fields when disableTcp is true", async () => {
+  it("should set both tcp and quic fields when quic is true", async () => {
     const privateKey = await generateKeyPair("secp256k1");
     const enr = SignableENR.createFromPrivateKey(privateKey);
     const logger = testLogger();
 
     overwriteEnrWithCliArgs(
       enr,
-      {listenAddress: "0.0.0.0", port: 9000, disableTcp: true, nat: true} as unknown as BeaconArgs,
+      {listenAddress: "0.0.0.0", port: 9000, quic: true, nat: true} as unknown as BeaconArgs,
+      logger
+    );
+
+    expect(enr.tcp).toBe(9000);
+    expect(enr.quic).toBe(9001);
+  });
+
+  it("should not set tcp fields when tcp is false", async () => {
+    const privateKey = await generateKeyPair("secp256k1");
+    const enr = SignableENR.createFromPrivateKey(privateKey);
+    const logger = testLogger();
+
+    overwriteEnrWithCliArgs(
+      enr,
+      {listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: true, nat: true} as unknown as BeaconArgs,
       logger
     );
 
@@ -36,14 +51,14 @@ describe("overwriteEnrWithCliArgs", () => {
     expect(enr.quic).toBe(9001);
   });
 
-  it("should not set quic fields when disableQuic is true", async () => {
+  it("should not set quic fields when quic is false", async () => {
     const privateKey = await generateKeyPair("secp256k1");
     const enr = SignableENR.createFromPrivateKey(privateKey);
     const logger = testLogger();
 
     overwriteEnrWithCliArgs(
       enr,
-      {listenAddress: "0.0.0.0", port: 9000, disableQuic: true, nat: true} as unknown as BeaconArgs,
+      {listenAddress: "0.0.0.0", port: 9000, quic: false, nat: true} as unknown as BeaconArgs,
       logger
     );
 
@@ -52,7 +67,7 @@ describe("overwriteEnrWithCliArgs", () => {
     expect(enr.quic6).toBeUndefined();
   });
 
-  it("should clear pre-existing tcp fields when disableTcp is true", async () => {
+  it("should clear pre-existing tcp fields when tcp is false", async () => {
     const privateKey = await generateKeyPair("secp256k1");
     const enr = SignableENR.createFromPrivateKey(privateKey);
     enr.tcp = 9000;
@@ -60,7 +75,7 @@ describe("overwriteEnrWithCliArgs", () => {
 
     overwriteEnrWithCliArgs(
       enr,
-      {listenAddress: "0.0.0.0", port: 9000, disableTcp: true, nat: true} as unknown as BeaconArgs,
+      {listenAddress: "0.0.0.0", port: 9000, tcp: false, nat: true} as unknown as BeaconArgs,
       logger
     );
 
@@ -76,7 +91,11 @@ describe("overwriteEnrWithCliArgs", () => {
     const logger = testLogger();
 
     // No quicPort arg, no enr.quic arg — should fall back to existing enr value
-    overwriteEnrWithCliArgs(enr, {listenAddress: "0.0.0.0", port: 9000, nat: true} as unknown as BeaconArgs, logger);
+    overwriteEnrWithCliArgs(
+      enr,
+      {listenAddress: "0.0.0.0", port: 9000, quic: true, nat: true} as unknown as BeaconArgs,
+      logger
+    );
 
     expect(enr.quic).toBe(9001);
     expect(enr.quic6).toBe(9002);

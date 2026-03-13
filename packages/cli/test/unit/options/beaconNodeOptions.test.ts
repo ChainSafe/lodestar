@@ -180,7 +180,7 @@ describe("options / beaconNodeOptions", () => {
         },
         maxPeers: 30,
         targetPeers: 25,
-        localMultiaddrs: ["/ip4/127.0.0.1/udp/9003/quic-v1", "/ip4/127.0.0.1/tcp/9001"],
+        localMultiaddrs: ["/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
         slotsToSubscribeBeforeAggregatorDuty: 1,
         disablePeerScoring: true,
@@ -193,11 +193,13 @@ describe("options / beaconNodeOptions", () => {
         gossipsubDHigh: 6,
         gossipsubAwaitHandler: true,
         mdns: false,
+        quic: false,
         rateLimitMultiplier: 1,
         maxGossipTopicConcurrency: 64,
         useWorker: true,
         maxYoungGenerationSizeMb: 152,
         targetGroupPeers: 12,
+        tcp: true,
         directPeers: ["/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu"],
       },
       sync: {
@@ -214,35 +216,42 @@ describe("options / beaconNodeOptions", () => {
   });
 });
 
-describe("options / network / disableTcp and disableQuic", () => {
-  it("should include both tcp and quic multiaddrs by default", () => {
+describe("options / network / tcp and quic flags", () => {
+  it("should include only tcp multiaddrs by default", () => {
     const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000} as NetworkArgs);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
+    expect(result.localMultiaddrs).not.toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+  });
+
+  it("should include both tcp and quic multiaddrs when quic is true", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, quic: true} as NetworkArgs);
     expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
     expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
   });
 
-  it("should exclude tcp multiaddrs when disableTcp is true", () => {
-    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, disableTcp: true} as NetworkArgs);
+  it("should exclude tcp multiaddrs when tcp is false", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: true} as NetworkArgs);
     const tcpAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/tcp/"));
     expect(tcpAddrs).toHaveLength(0);
     expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
-    expect(result.disableTcp).toBe(true);
+    expect(result.tcp).toBe(false);
   });
 
-  it("should exclude quic multiaddrs when disableQuic is true", () => {
-    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, disableQuic: true} as NetworkArgs);
+  it("should exclude quic multiaddrs when quic is false", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, quic: false} as NetworkArgs);
     const quicAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/quic"));
     expect(quicAddrs).toHaveLength(0);
     expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
-    expect(result.disableQuic).toBe(true);
+    expect(result.quic).toBe(false);
   });
 
-  it("should exclude ipv6 tcp multiaddrs when disableTcp is true", () => {
+  it("should exclude ipv6 tcp multiaddrs when tcp is false", () => {
     const result = parseNetworkArgs({
       listenAddress: "0.0.0.0",
       listenAddress6: "::",
       port: 9000,
-      disableTcp: true,
+      tcp: false,
+      quic: true,
     } as NetworkArgs);
     const tcpAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/tcp/"));
     expect(tcpAddrs).toHaveLength(0);
@@ -251,32 +260,38 @@ describe("options / network / disableTcp and disableQuic", () => {
     expect(quicAddrs).toHaveLength(2);
   });
 
-  it("should pass disableTcp through to network options", () => {
-    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, disableTcp: true} as NetworkArgs);
-    expect(result.disableTcp).toBe(true);
+  it("should pass tcp through to network options", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: true} as NetworkArgs);
+    expect(result.tcp).toBe(false);
   });
 
   it("should throw when both TCP and QUIC are disabled", () => {
     expect(() =>
-      parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, disableTcp: true, disableQuic: true} as NetworkArgs)
+      parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: false} as NetworkArgs)
     ).toThrow("Cannot disable both TCP and QUIC transports");
   });
 
   it("should throw when discoveryPort and quicPort collide", () => {
     expect(() =>
-      parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, discoveryPort: 9001, quicPort: 9001} as NetworkArgs)
+      parseNetworkArgs({
+        listenAddress: "0.0.0.0",
+        port: 9000,
+        discoveryPort: 9001,
+        quicPort: 9001,
+        quic: true,
+      } as NetworkArgs)
     ).toThrow(/discoveryPort and quicPort must not collide/);
   });
 
-  it("should not throw on port collision when quic is disabled", () => {
+  it("should not throw on port collision when quic is false", () => {
     const result = parseNetworkArgs({
       listenAddress: "0.0.0.0",
       port: 9000,
       discoveryPort: 9001,
       quicPort: 9001,
-      disableQuic: true,
+      quic: false,
     } as NetworkArgs);
-    expect(result.disableQuic).toBe(true);
+    expect(result.quic).toBe(false);
   });
 
   it("should throw when discoveryPort6 and quicPort6 collide", () => {
@@ -286,6 +301,7 @@ describe("options / network / disableTcp and disableQuic", () => {
         port6: 9000,
         discoveryPort6: 9001,
         quicPort6: 9001,
+        quic: true,
       } as NetworkArgs)
     ).toThrow(/discoveryPort6 and quicPort6 must not collide/);
   });
