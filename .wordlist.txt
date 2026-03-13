@@ -98,6 +98,7 @@ SSZ
 Somer
 Stakehouse
 TOC
+TLS
 TTD
 Teku
 TypeScript
