@@ -54,7 +54,7 @@ export interface NetworkOptions
 export const defaultNetworkOptions: NetworkOptions = {
   maxPeers: 210, // Allow some room above targetPeers for new inbound peers
   targetPeers: 200,
-  // this default is never used, in practice, it is always overridden by the cli
+  // In CLI usage this is typically overridden; when unset it serves as a fallback default (e.g. programmatic usage/tests)
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000", "/ip6/::/tcp/9000"],
   bootMultiaddrs: [],
   /** disabled by default */
