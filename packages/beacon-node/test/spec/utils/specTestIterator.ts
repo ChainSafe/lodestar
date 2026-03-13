@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {describe, it} from "vitest";
-import {ForkName, forkAll} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {RunnerType, TestRunner} from "./types.js";
 
