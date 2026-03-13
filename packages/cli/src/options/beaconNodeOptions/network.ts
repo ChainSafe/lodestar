@@ -87,6 +87,13 @@ export function parseListenArgs(args: NetworkArgs) {
 export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const {listenAddress, port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6} =
     parseListenArgs(args);
+  const quic = args.quic ?? false;
+  const tcp = args.tcp ?? true;
+
+  if (!quic && !tcp) {
+    throw new YargsError("Cannot disable both TCP and QUIC transports");
+  }
+
   // validate ip, ip6, ports
   const muArgs = {
     listenAddress: listenAddress ? `/ip4/${listenAddress}` : undefined,
@@ -99,24 +106,22 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     quicPort6: listenAddress6 ? `/udp/${quicPort6}/quic-v1` : undefined,
   };
 
-  for (const key of [
+  const keysToValidate: (keyof typeof muArgs)[] = [
     "listenAddress",
     "port",
     "discoveryPort",
-    "quicPort",
     "listenAddress6",
     "port6",
     "discoveryPort6",
-    "quicPort6",
-  ] as (keyof typeof muArgs)[]) {
-    validateMultiaddrArg(muArgs, key);
+  ];
+
+  if (quic) {
+    keysToValidate.push("quicPort");
+    keysToValidate.push("quicPort6");
   }
 
-  const quic = args.quic ?? false;
-  const tcp = args.tcp ?? true;
-
-  if (!quic && !tcp) {
-    throw new YargsError("Cannot disable both TCP and QUIC transports");
+  for (const key of keysToValidate) {
+    validateMultiaddrArg(muArgs, key);
   }
 
   if (quic) {

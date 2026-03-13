@@ -245,6 +245,22 @@ describe("options / network / tcp and quic flags", () => {
     expect(result.quic).toBe(false);
   });
 
+  it("should not validate derived quicPort when quic is false", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 65535, quic: false} as NetworkArgs);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/65535");
+    expect(result.localMultiaddrs).not.toContain("/ip4/0.0.0.0/udp/65536/quic-v1");
+  });
+
+  it("should not validate explicit quicPort when quic is false", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      port: 9000,
+      quic: false,
+      quicPort: 65536,
+    } as NetworkArgs);
+    expect(result.quic).toBe(false);
+  });
+
   it("should exclude ipv6 tcp multiaddrs when tcp is false", () => {
     const result = parseNetworkArgs({
       listenAddress: "0.0.0.0",
