@@ -70,9 +70,24 @@ export async function getStateResponseWithRegen(
         : await chain.getStateOrBytesByCheckpoint(checkpointStateId ?? stateId);
 
   // Defensive fallback: if post-Gloas checkpoint normalization prefers EMPTY but that
-  // variant is unavailable, retry original checkpoint status before returning 404.
+  // variant is unavailable, retry original checkpoint status and then the opposite
+  // variant before returning 404.
+  // This handles the missed-slot-0 edge case where:
+  // - Fork choice correctly reports EMPTY for the missed epoch boundary slot
+  // - But the cache only has the FULL variant (populated by prepareNextSlot using the
+  //   head block's FULL payload status)
+  // - Both the forced EMPTY and the original (also EMPTY) lookups miss
+  // - Trying the opposite (FULL) variant finds the cached state
   if (!res && checkpointStateId) {
     res = await chain.getStateOrBytesByCheckpoint(stateId as CheckpointWithPayload);
+  }
+  if (!res && checkpointStateId) {
+    const oppositeStatus =
+      checkpointStateId.payloadStatus === PayloadStatus.EMPTY ? PayloadStatus.FULL : PayloadStatus.EMPTY;
+    res = await chain.getStateOrBytesByCheckpoint({
+      ...checkpointStateId,
+      payloadStatus: oppositeStatus,
+    } as CheckpointWithPayload);
   }
 
   if (!res) {
