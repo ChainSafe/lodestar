@@ -358,11 +358,12 @@ export class Batch {
     this.state = {status: BatchStatus.RateLimited, blocks: this.state.blocks};
   }
 
-  rateLimitExpired(): void {
+  rateLimitExpired(peer: PeerIdStr): void {
     if (this.state.status !== BatchStatus.RateLimited) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.RateLimited));
     }
 
+    this.rateLimitedPeers.delete(peer);
     this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
   }
 

@@ -15,7 +15,7 @@ import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
-import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
+import {DownloadByRangeError, DownloadByRangeErrorCode, isRateLimitRequestError} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -420,7 +420,11 @@ export class SyncChain {
     // Note: Don't count batches in the AwaitingValidation state, to prevent stalling sync
     // if the current processing window is contained in a long range of skip slots.
     const batchesInBuffer = batches.filter((batch) => {
-      return batch.state.status === BatchStatus.Downloading || batch.state.status === BatchStatus.AwaitingProcessing;
+      return (
+        batch.state.status === BatchStatus.RateLimited ||
+        batch.state.status === BatchStatus.Downloading ||
+        batch.state.status === BatchStatus.AwaitingProcessing
+      );
     });
     if (batchesInBuffer.length > BATCH_BUFFER_SIZE) {
       return null;
@@ -457,13 +461,22 @@ export class SyncChain {
   /**
    * Requests the batch assigned to the given id from a given peer.
    */
-  private async sendBatch(batch: Batch, peer: PeerSyncMeta): Promise<void> {
+  private async sendBatch(batch: Batch, peer: PeerSyncInfo): Promise<void> {
     this.logger.verbose("Downloading batch", {
       id: this.logId,
       ...batch.getMetadata(),
       peer: prettyPrintPeerIdStr(peer.peerId),
     });
     try {
+      if (peer.timeout !== undefined) {
+        batch.rateLimitDownload();
+
+        const coolDownMs = peer.timeout - Date.now();
+        await new Promise((res) => setTimeout(res, coolDownMs));
+
+        batch.rateLimitExpired(peer.peerId);
+      }
+
       batch.startDownloading(peer.peerId);
 
       // wrapError ensures to never call both batch success() and batch error()
@@ -502,12 +515,37 @@ export class SyncChain {
           case DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID:
             this.reportPeer(peer.peerId, PeerAction.LowToleranceError, res.err.message);
         }
-        this.logger.verbose(
-          "Batch download error",
-          {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
-          res.err
-        );
-        batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
+
+        const isRateLimited = isRateLimitRequestError(errCode);
+        if (isRateLimited) {
+          const coolDownMs = batch.coolDownPeer(peer.peerId);
+          const rateLimitedPeers = `[ ${[...batch.rateLimitedPeers.keys()].map(prettyPrintPeerIdStr).join(", ")} ]`;
+          if (coolDownMs > 0) {
+            this.logger.debug("Batch download rate limited", {
+              id: this.logId,
+              ...batch.getMetadata(),
+              peer: prettyPrintPeerIdStr(peer.peerId),
+              rateLimitedPeers,
+              coolDownMs,
+            });
+            // No batch downloadingError in this case. Allow to fall through and get picked up by another peer
+          } else {
+            this.logger.debug("Batch download rate limited, max retries exhausted", {
+              id: this.logId,
+              ...batch.getMetadata(),
+              peer: prettyPrintPeerIdStr(peer.peerId),
+              rateLimitedPeers,
+            });
+            batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
+          }
+        } else {
+          this.logger.verbose(
+            "Batch download error",
+            {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
+            res.err
+          );
+          batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
+        }
       } else {
         this.logger.verbose("Batch download success", {
           id: this.logId,
