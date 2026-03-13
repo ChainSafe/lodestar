@@ -4,7 +4,7 @@
   "engines": {
     "node": "^24.13.0"
   },
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a",
   "workspaces": [
     "packages/*"
   ],
@@ -64,7 +64,7 @@
     "https-browserify": "^1.0.0",
     "inquirer": "^9.1.5",
     "jsdom": "^23.0.1",
-    "libp2p": "2.9.0",
+    "libp2p": "3.1.5",
     "node-gyp": "^9.4.0",
     "npm-run-all": "^4.1.5",
     "path-browserify": "^1.0.1",
@@ -77,8 +77,9 @@
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
     "supertest": "^6.3.3",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.2",
+    "ts-node": "^11.0.0-beta.1",
+    "typescript": "^6.0.1-rc",
+    "@typescript/native-preview": "7.0.0-dev.20260303.1",
     "vite": "^6.0.11",
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-node-polyfills": "^0.24.0",

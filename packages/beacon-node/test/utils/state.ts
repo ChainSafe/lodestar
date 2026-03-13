@@ -1,8 +1,8 @@
 import {SecretKey} from "@chainsafe/blst";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {getConfig} from "@lodestar/config/test-utils";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -13,10 +13,10 @@ import {
   CachedBeaconStateElectra,
   DataAvailabilityStatus,
   createCachedBeaconState,
+  createPubkeyCache,
 } from "@lodestar/state-transition";
 import {BeaconState, altair, bellatrix, electra, ssz} from "@lodestar/types";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
-import {getConfig} from "./config.js";
 import {generateValidator, generateValidators} from "./validator.js";
 
 /**
@@ -114,8 +114,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
-    pubkey2index: new PubkeyIndexMap(),
-    index2pubkey: [],
+    pubkeyCache: createPubkeyCache(),
   });
 }
 
@@ -128,8 +127,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
-    pubkey2index: new PubkeyIndexMap(),
-    index2pubkey: [],
+    pubkeyCache: createPubkeyCache(),
   });
 }
 
@@ -142,8 +140,7 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
-    pubkey2index: new PubkeyIndexMap(),
-    index2pubkey: [],
+    pubkeyCache: createPubkeyCache(),
   });
 }
 
@@ -155,8 +152,7 @@ export function generateCachedElectraState(opts?: TestBeaconState, electraForkEp
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateElectra, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkey2index: new PubkeyIndexMap(),
-    index2pubkey: [],
+    pubkeyCache: createPubkeyCache(),
   });
 }
 export const zeroProtoBlock: ProtoBlock = {
@@ -179,4 +175,8 @@ export const zeroProtoBlock: ProtoBlock = {
 
   ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+  payloadStatus: PayloadStatus.FULL,
+  builderIndex: null,
+  blockHashFromBid: null,
+  parentBlockHash: null,
 };

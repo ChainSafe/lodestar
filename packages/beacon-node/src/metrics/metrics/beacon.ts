@@ -144,6 +144,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Time for preparing payload in advance",
         buckets: [0.1, 1, 3, 5, 10],
       }),
+      executionPayloadEnvelopeProcessingTime: register.histogram({
+        name: "beacon_block_payload_envelope_processing_seconds",
+        help: "Time to process execution payload envelope during block production",
+        buckets: [0.005, 0.01, 0.05, 0.1, 0.2, 0.5, 1],
+      }),
       payloadFetchedTime: register.histogram<{prepType: PayloadPreparationType}>({
         name: "beacon_block_payload_fetched_time",
         help: "Time to fetch the payload from EL",

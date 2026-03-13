@@ -10,7 +10,7 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
+import {DataColumnSidecar, Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
@@ -73,7 +73,7 @@ export async function validateGossipDataColumnSidecar(
   // 6) [IGNORE] The sidecar's block's parent (defined by block_header.parent_root) has been seen (via gossip
   //             or non-gossip sources)
   const parentRoot = toRootHex(blockHeader.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
@@ -476,9 +476,6 @@ export async function validateBlockDataColumnSidecars(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#compute_subnet_for_data_column_sidecar
  */
-export function computeSubnetForDataColumnSidecar(
-  config: ChainConfig,
-  columnSidecar: fulu.DataColumnSidecar
-): SubnetID {
+export function computeSubnetForDataColumnSidecar(config: ChainConfig, columnSidecar: DataColumnSidecar): SubnetID {
   return columnSidecar.index % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
 }

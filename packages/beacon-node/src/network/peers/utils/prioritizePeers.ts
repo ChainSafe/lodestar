@@ -1,4 +1,4 @@
-import {Direction, PeerId} from "@libp2p/interface";
+import type {MessageStreamDirection, PeerId} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -95,7 +95,7 @@ function computeStatusScore(ours: Status, theirs: Status | null, opts: Prioritiz
 
 type PeerInfo = {
   id: PeerId;
-  direction: Direction | null;
+  direction: MessageStreamDirection | null;
   statusScore: StatusScore;
   attnets: phase0.AttestationSubnets;
   syncnets: altair.SyncSubnets;
@@ -137,7 +137,7 @@ export enum ExcessPeerDisconnectReason {
 export function prioritizePeers(
   connectedPeersInfo: {
     id: PeerId;
-    direction: Direction | null;
+    direction: MessageStreamDirection | null;
     status: Status | null;
     attnets: phase0.AttestationSubnets | null;
     syncnets: altair.SyncSubnets | null;

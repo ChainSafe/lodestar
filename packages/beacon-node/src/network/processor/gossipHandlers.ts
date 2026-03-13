@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {
   ForkName,
+  ForkPostDeneb,
   ForkPostElectra,
   ForkPreElectra,
   ForkSeq,
@@ -70,6 +71,7 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -417,9 +419,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.getBlobsTracker.triggerGetBlobs(blockInput);
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
-      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
-        (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
-      );
+      const blobCount = getBlobKzgCommitments(
+        blockInput.forkName,
+        signedBlock as SignedBeaconBlock<ForkPostDeneb>
+      ).length;
+      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blobCount);
     }
 
     chain
@@ -548,7 +552,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
       const {serializedData} = gossipData;
-      const dataColumnSidecar = sszDeserialize(topic, serializedData);
+      // TODO GLOAS: handle gloas.DataColumnSidecar
+      const dataColumnSidecar = sszDeserialize(topic, serializedData) as fulu.DataColumnSidecar;
       const dataColumnSlot = dataColumnSidecar.signedBlockHeader.message.slot;
       const index = dataColumnSidecar.index;
 
@@ -821,10 +826,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     [GossipType.execution_payload]: async ({
       gossipData,
       topic,
+      seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+
+      const slot = executionPayloadEnvelope.message.slot;
+      const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
+      metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
 
       // TODO GLOAS: Handle valid envelope. Need an import flow that calls `processExecutionPayloadEnvelope` and fork choice
     },
@@ -846,6 +856,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       } catch (e) {
         logger.error("Error adding to payloadAttestation pool", {}, e as Error);
       }
+      chain.forkChoice.notifyPtcMessages(
+        toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+        [validationResult.validatorCommitteeIndex],
+        payloadAttestationMessage.data.payloadPresent
+      );
     },
     [GossipType.execution_payload_bid]: async ({
       gossipData,

@@ -1,5 +1,4 @@
 import {PublicKey} from "@chainsafe/blst";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -56,7 +55,7 @@ import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../ut
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
-import {Index2PubkeyCache, syncPubkeys} from "./pubkeyCache.js";
+import {PubkeyCache, createPubkeyCache, syncPubkeys} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateFulu} from "./stateCache.js";
 import {
   SyncCommitteeCache,
@@ -71,8 +70,7 @@ export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PR
 
 export type EpochCacheImmutableData = {
   config: BeaconConfig;
-  pubkey2index: PubkeyIndexMap;
-  index2pubkey: Index2PubkeyCache;
+  pubkeyCache: PubkeyCache;
 };
 
 export type EpochCacheOpts = {
@@ -111,15 +109,9 @@ export class EpochCache {
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
-   * $VALIDATOR_COUNT x 192 char String -> Number Map
+   * Couples both index→pubkey and pubkey→index lookups, keeping them in sync atomically.
    */
-  pubkey2index: PubkeyIndexMap;
-  /**
-   * Unique globally shared pubkey registry. There should only exist one for the entire application.
-   *
-   * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
-   */
-  index2pubkey: Index2PubkeyCache;
+  pubkeyCache: PubkeyCache;
   /**
    * Indexes of the block proposers for the current epoch.
    * For pre-fulu, this is computed and cached from the current shuffling.
@@ -234,7 +226,9 @@ export class EpochCache {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
-  // TODO GLOAS: See if we need to cached PTC for prev/next epoch
+  // TODO GLOAS: See if we need to cache PTC for next epoch
+  // PTC for previous epoch, required for slot N block validating slot N-1 attestations
+  previousPayloadTimelinessCommittees: Uint32Array[];
   // PTC for current epoch, computed eagerly at epoch transition
   payloadTimelinessCommittees: Uint32Array[];
 
@@ -249,8 +243,7 @@ export class EpochCache {
 
   constructor(data: {
     config: BeaconConfig;
-    pubkey2index: PubkeyIndexMap;
-    index2pubkey: Index2PubkeyCache;
+    pubkeyCache: PubkeyCache;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
@@ -275,13 +268,13 @@ export class EpochCache {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
+    previousPayloadTimelinessCommittees: Uint32Array[];
     payloadTimelinessCommittees: Uint32Array[];
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
     this.config = data.config;
-    this.pubkey2index = data.pubkey2index;
-    this.index2pubkey = data.index2pubkey;
+    this.pubkeyCache = data.pubkeyCache;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
@@ -306,6 +299,7 @@ export class EpochCache {
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
+    this.previousPayloadTimelinessCommittees = data.previousPayloadTimelinessCommittees;
     this.payloadTimelinessCommittees = data.payloadTimelinessCommittees;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
@@ -319,7 +313,7 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
+    {config, pubkeyCache}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
     const currentEpoch = computeEpochAtSlot(state.slot);
@@ -335,9 +329,9 @@ export class EpochCache {
     const validatorCount = validators.length;
 
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
-    // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
+    // - computeSyncCommitteeCache() needs a fully populated pubkeyCache
     if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(validators, pubkey2index, index2pubkey);
+      syncPubkeys(pubkeyCache, validators);
     }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
@@ -450,14 +444,15 @@ export class EpochCache {
     // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
     if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
       const altairState = state as BeaconStateAltair;
-      currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkey2index);
-      nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkey2index);
+      currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkeyCache);
+      nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkeyCache);
     } else {
       currentSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
     }
 
-    // Compute PTC eagerly for all slots in the epoch
+    // Compute PTC for all slots in the prev/current epoch
+    let previousPayloadTimelinessCommittees: Uint32Array[] = [];
     let payloadTimelinessCommittees: Uint32Array[] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
       payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
@@ -466,6 +461,15 @@ export class EpochCache {
         currentShuffling.committees,
         effectiveBalanceIncrements
       );
+
+      if (!isGenesis && previousEpoch >= config.GLOAS_FORK_EPOCH) {
+        previousPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
+          state,
+          previousEpoch,
+          previousShuffling.committees,
+          effectiveBalanceIncrements
+        );
+      }
     }
 
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
@@ -514,8 +518,7 @@ export class EpochCache {
 
     return new EpochCache({
       config,
-      pubkey2index,
-      index2pubkey,
+      pubkeyCache,
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
@@ -541,6 +544,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
+      previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
@@ -557,8 +561,7 @@ export class EpochCache {
     return new EpochCache({
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
-      pubkey2index: this.pubkey2index,
-      index2pubkey: this.index2pubkey,
+      pubkeyCache: this.pubkeyCache,
       // Immutable data
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,
@@ -587,6 +590,7 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
+      previousPayloadTimelinessCommittees: this.previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees: this.payloadTimelinessCommittees,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
@@ -698,6 +702,8 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
+      // Shift and compute current epoch PTC eagerly for all slots
+      this.previousPayloadTimelinessCommittees = this.payloadTimelinessCommittees;
       this.payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
         upcomingEpoch,
@@ -882,16 +888,15 @@ export class EpochCache {
    * Return pubkey given the validator index.
    */
   getPubkey(index: ValidatorIndex): PublicKey | undefined {
-    return this.index2pubkey[index];
+    return this.pubkeyCache.get(index);
   }
 
   getValidatorIndex(pubkey: Uint8Array): ValidatorIndex | null {
-    return this.pubkey2index.get(pubkey);
+    return this.pubkeyCache.getIndex(pubkey);
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.pubkey2index.set(pubkey, index);
-    this.index2pubkey[index] = PublicKey.fromBytes(pubkey); // Optimize for aggregation
+    this.pubkeyCache.set(index, pubkey);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
@@ -1029,11 +1034,15 @@ export class EpochCache {
       throw new Error("Payload Timeliness Committee is not available before gloas fork");
     }
 
-    if (epoch !== this.epoch) {
-      throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
+    if (epoch === this.epoch) {
+      return this.payloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
     }
 
-    return this.payloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
+    if (epoch === this.epoch - 1 && this.previousPayloadTimelinessCommittees.length > 0) {
+      return this.previousPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
+    }
+
+    throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
   }
 
   getIndexedPayloadAttestation(
@@ -1099,7 +1108,6 @@ export function createEmptyEpochCacheImmutableData(
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
     // This is a test state, there's no need to have a global shared cache of keys
-    pubkey2index: new PubkeyIndexMap(),
-    index2pubkey: [],
+    pubkeyCache: createPubkeyCache(),
   };
 }

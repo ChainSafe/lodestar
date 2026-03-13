@@ -18,7 +18,7 @@ import {byteArrayEquals, intSqrt} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
 import {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
-import {isAttestationSameSlot, isAttestationSameSlotRootCache} from "../util/gloas.ts";
+import {isAttestationSameSlot, isAttestationSameSlotRootCache} from "../util/gloas.js";
 import {increaseBalance, verifySignatureSet} from "../util/index.js";
 import {RootCache} from "../util/rootCache.js";
 import {checkpointToStr, isTimelyTarget, validateAttestation} from "./processAttestationPhase0.js";
@@ -64,7 +64,7 @@ export function processAttestationsAltair(
     // we can verify only that and nothing else.
     if (verifySignature) {
       const sigSet = getAttestationWithIndicesSignatureSet(state.config, state.slot, attestation, attestingIndices);
-      if (!verifySignatureSet(sigSet, state.epochCtx.index2pubkey)) {
+      if (!verifySignatureSet(sigSet, state.epochCtx.pubkeyCache)) {
         throw new Error("Attestation signature is not valid");
       }
     }

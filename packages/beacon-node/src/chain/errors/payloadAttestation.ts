@@ -1,5 +1,5 @@
 import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
-import {GossipActionError} from "./gossipValidation.ts";
+import {GossipActionError} from "./gossipValidation.js";
 
 export enum PayloadAttestationErrorCode {
   NOT_CURRENT_SLOT = "PAYLOAD_ATTESTATION_ERROR_NOT_CURRENT_SLOT",

@@ -6,6 +6,7 @@ import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_APPLICATION_BUILDER,
   DOMAIN_BEACON_ATTESTER,
+  DOMAIN_BEACON_BUILDER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
   DOMAIN_RANDAO,
@@ -39,6 +40,7 @@ import {
   ValidatorIndex,
   altair,
   bellatrix,
+  gloas,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -487,6 +489,38 @@ export class ValidatorStore {
     } as SignedBeaconBlock | SignedBlindedBeaconBlock;
   }
 
+  async signExecutionPayloadEnvelope(
+    pubkey: BLSPubkey,
+    envelope: gloas.ExecutionPayloadEnvelope,
+    currentSlot: Slot,
+    logger?: LoggerVc
+  ): Promise<gloas.SignedExecutionPayloadEnvelope> {
+    // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
+    if (envelope.slot > currentSlot) {
+      throw Error(`Not signing envelope with slot ${envelope.slot} greater than current slot ${currentSlot}`);
+    }
+
+    const signingSlot = envelope.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
+    const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
+
+    logger?.debug("Signing execution payload envelope", {
+      slot: signingSlot,
+      beaconBlockRoot: toRootHex(envelope.beaconBlockRoot),
+      signingRoot: toRootHex(signingRoot),
+    });
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE,
+      data: envelope,
+    };
+
+    return {
+      message: envelope,
+      signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const signingSlot = slot;
     const domain = this.config.getDomain(slot, DOMAIN_RANDAO);
@@ -797,13 +831,21 @@ export class ValidatorStore {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
 
-    const isPostElectra = this.config.getForkSeq(data.slot) >= ForkSeq.electra;
+    const forkSeq = this.config.getForkSeq(data.slot);
+    const isPostElectra = forkSeq >= ForkSeq.electra;
+    const isPostGloas = forkSeq >= ForkSeq.gloas;
+
     if (!isPostElectra && duty.committeeIndex !== data.index) {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
     }
-    if (isPostElectra && data.index !== 0) {
+    if (isPostGloas) {
+      // After Gloas, data.index signals payload status: 0 (EMPTY) or 1 (FULL)
+      if (data.index !== 0 && data.index !== 1) {
+        throw Error(`Invalid payload status index post-gloas during signing: data.index=${data.index}`);
+      }
+    } else if (isPostElectra && data.index !== 0) {
       throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
     }
   }

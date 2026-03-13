@@ -66,6 +66,7 @@ export function computeDeltas(
   for (let vIndex = 0; vIndex < voteNextIndices.length; vIndex++) {
     currentIndex = voteCurrentIndices[vIndex];
     nextIndex = voteNextIndices[vIndex];
+
     // There is no need to create a score change if the validator has never voted or both of their
     // votes are for the zero hash (genesis block)
     if (currentIndex === NULL_VOTE_INDEX && nextIndex === NULL_VOTE_INDEX) {
@@ -106,6 +107,9 @@ export function computeDeltas(
       continue;
     }
 
+    // Deduct old balance from current index, add new balance to next index
+    // currentIndex and nextIndex already point to the correct node variants
+    // Note: If a validator changes from EMPTY to FULL variant of the same block, indexChanged will be true
     if (currentIndex !== nextIndex || oldBalance !== newBalance) {
       // We ignore the vote if it is not known in `indices .
       // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
@@ -116,6 +120,7 @@ export function computeDeltas(
             index: currentIndex,
           });
         }
+
         deltas[currentIndex] -= oldBalance;
       }
 
@@ -128,6 +133,7 @@ export function computeDeltas(
             index: nextIndex,
           });
         }
+
         deltas[nextIndex] += newBalance;
       }
       voteCurrentIndices[vIndex] = nextIndex;

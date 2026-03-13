@@ -21,7 +21,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
+import {isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
@@ -51,7 +51,8 @@ type VerifyBlockExecutionResponse =
   | VerifyExecutionErrorResponse
   | {executionStatus: ExecutionStatus.Valid; lvhResponse: LVHValidResponse; execError: null}
   | {executionStatus: ExecutionStatus.Syncing; lvhResponse?: LVHValidResponse; execError: null}
-  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null};
+  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null}
+  | {executionStatus: ExecutionStatus.PayloadSeparated; lvhResponse: undefined; execError: null};
 
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
@@ -148,6 +149,12 @@ export async function verifyBlockExecutionPayload(
   preState0: CachedBeaconStateAllForks
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
+
+  // Gloas block doesn't have execution payload. Return right away
+  if (isBlockInputNoData(blockInput)) {
+    return {executionStatus: ExecutionStatus.PayloadSeparated, lvhResponse: undefined, execError: null};
+  }
+
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
     isExecutionStateType(preState0) &&
