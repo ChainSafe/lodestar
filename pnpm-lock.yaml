@@ -7905,7 +7905,7 @@ snapshots:
       '@libp2p/crypto': 5.1.13
       '@libp2p/interface': 3.1.0
       '@libp2p/peer-id': 6.0.4
-      '@libp2p/utils': 7.0.12
+      '@libp2p/utils': 7.0.13
       '@multiformats/multiaddr': 13.0.1
       '@multiformats/multiaddr-matcher': 3.0.1
       race-signal: 1.1.3
