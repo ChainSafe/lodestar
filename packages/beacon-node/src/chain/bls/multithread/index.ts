@@ -1,21 +1,21 @@
 import path from "node:path";
-import {Worker, spawn} from "@chainsafe/threads";
+import { Worker, spawn } from "@chainsafe/threads";
 
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // @ts-expect-error
 // biome-ignore lint/suspicious/noGlobalAssign: We need the global `self` to reassign module properties later
 self = undefined;
 
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
-import {ISignatureSet, PubkeyCache} from "@lodestar/state-transition";
-import {Logger} from "@lodestar/utils";
-import {Metrics} from "../../../metrics/index.js";
-import {LinkedList} from "../../../util/array.js";
-import {callInNextEventLoop} from "../../../util/eventLoop.js";
-import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
-import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
-import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
-import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
+import { PublicKey } from "@chainsafe/lodestar-z/blst";
+import { ISignatureSet, PubkeyCache } from "@lodestar/state-transition";
+import { Logger } from "@lodestar/utils";
+import { Metrics } from "../../../metrics/index.js";
+import { LinkedList } from "../../../util/array.js";
+import { callInNextEventLoop } from "../../../util/eventLoop.js";
+import { QueueError, QueueErrorCode } from "../../../util/queue/index.js";
+import { IBlsVerifier, VerifySignatureOpts } from "../interface.js";
+import { verifySignatureSetsMaybeBatch } from "../maybeBatch.js";
+import { getAggregatedPubkey, getAggregatedPubkeysCount } from "../utils.js";
 import {
   JobQueueItem,
   JobQueueItemSameMessage,
@@ -24,9 +24,9 @@ import {
   jobItemSigSets,
   jobItemWorkReq,
 } from "./jobItem.js";
-import {defaultPoolSize} from "./poolSize.js";
-import {BlsWorkReq, BlsWorkResult, WorkResultCode, WorkResultError, WorkerData} from "./types.js";
-import {chunkifyMaximizeChunkSize} from "./utils.js";
+import { defaultPoolSize } from "./poolSize.js";
+import { BlsWorkReq, BlsWorkResult, WorkResultCode, WorkResultError, WorkerData } from "./types.js";
+import { chunkifyMaximizeChunkSize } from "./utils.js";
 
 // Worker constructor consider the path relative to the current working directory
 const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";
@@ -41,10 +41,10 @@ export type BlsMultiThreadWorkerPoolOptions = {
   blsVerifyAllMultiThread?: boolean;
 };
 
-export type {JobQueueItemType};
+export type { JobQueueItemType };
 
 // 1 worker for the main thread
-const blsPoolSize = Math.max(defaultPoolSize - 1, 1);
+const blsPoolSize = 1;
 
 /**
  * Split big signature sets into smaller sets so they can be sent to multiple workers.
@@ -92,11 +92,11 @@ enum WorkerStatusCode {
 }
 
 type WorkerStatus =
-  | {code: WorkerStatusCode.notInitialized}
-  | {code: WorkerStatusCode.initializing; initPromise: Promise<WorkerApi>}
-  | {code: WorkerStatusCode.initializationError; error: Error}
-  | {code: WorkerStatusCode.idle; workerApi: WorkerApi}
-  | {code: WorkerStatusCode.running; workerApi: WorkerApi};
+  | { code: WorkerStatusCode.notInitialized }
+  | { code: WorkerStatusCode.initializing; initPromise: Promise<WorkerApi> }
+  | { code: WorkerStatusCode.initializationError; error: Error }
+  | { code: WorkerStatusCode.idle; workerApi: WorkerApi }
+  | { code: WorkerStatusCode.running; workerApi: WorkerApi };
 
 type WorkerDescriptor = {
   worker: Worker;
@@ -130,7 +130,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private workersBusy = 0;
 
   constructor(options: BlsMultiThreadWorkerPoolOptions, modules: BlsMultiThreadWorkerPoolModules) {
-    const {logger, metrics, pubkeyCache} = modules;
+    const { logger, metrics, pubkeyCache } = modules;
     this.logger = logger;
     this.metrics = metrics;
     this.pubkeyCache = pubkeyCache;
@@ -213,7 +213,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    * Verify signature sets of the same message, only supports worker verification.
    */
   async verifySignatureSetsSameMessage(
-    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    sets: { publicKey: PublicKey; signature: Uint8Array }[],
     message: Uint8Array,
     opts: Omit<VerifySignatureOpts, "verifyOnMainThread"> = {}
   ): Promise<boolean[]> {
@@ -245,7 +245,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     // Abort all jobs
     for (const job of this.jobs) {
-      job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
+      job.reject(new QueueError({ code: QueueErrorCode.QUEUE_ABORTED }));
     }
     this.jobs.clear();
 
@@ -255,7 +255,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         // NOTE: 'threads' has not yet updated types, and NodeJS complains with
         // [DEP0132] DeprecationWarning: Passing a callback to worker.terminate() is deprecated. It returns a Promise instead.
         (worker.worker.terminate() as unknown as Promise<void>).catch((e: Error) => {
-          this.logger.error("Error terminating worker", {id}, e);
+          this.logger.error("Error terminating worker", { id }, e);
         })
       )
     );
@@ -265,7 +265,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     const workers: WorkerDescriptor[] = [];
 
     for (let i = 0; i < poolSize; i++) {
-      const workerData: WorkerData = {workerId: i};
+      const workerData: WorkerData = { workerId: i };
       const worker = new Worker(path.join(workerDir, "worker.js"), {
         suppressTranspileTS: Boolean(globalThis.Bun),
         workerData,
@@ -273,7 +273,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
       const workerDescriptor: WorkerDescriptor = {
         worker,
-        status: {code: WorkerStatusCode.notInitialized},
+        status: { code: WorkerStatusCode.notInitialized },
       };
       workers.push(workerDescriptor);
 
@@ -284,16 +284,16 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         timeout: 5 * 60 * 1000,
       });
 
-      workerDescriptor.status = {code: WorkerStatusCode.initializing, initPromise};
+      workerDescriptor.status = { code: WorkerStatusCode.initializing, initPromise };
 
       initPromise
         .then((workerApi) => {
-          workerDescriptor.status = {code: WorkerStatusCode.idle, workerApi};
+          workerDescriptor.status = { code: WorkerStatusCode.idle, workerApi };
           // Potentially run jobs that were queued before initialization of the first worker
           setTimeout(this.runJob, 0);
         })
         .catch((error: Error) => {
-          workerDescriptor.status = {code: WorkerStatusCode.initializationError, error};
+          workerDescriptor.status = { code: WorkerStatusCode.initializationError, error };
         });
     }
 
@@ -305,7 +305,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    */
   private queueBlsWork(job: JobQueueItem): void {
     if (this.closed) {
-      throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
+      throw new QueueError({ code: QueueErrorCode.QUEUE_ABORTED });
     }
 
     // TODO: Consider if limiting queue size is necessary here.
@@ -380,7 +380,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // Maybe it's not useful since all data referenced in jobs is likely referenced by others
 
     const workerApi = worker.status.workerApi;
-    worker.status = {code: WorkerStatusCode.running, workerApi};
+    worker.status = { code: WorkerStatusCode.running, workerApi };
     this.workersBusy++;
 
     try {
@@ -400,7 +400,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           // Pubkey and signature aggregation is defered here
           workReq = await jobItemWorkReq(job, this.pubkeyCache, this.metrics);
         } catch (e) {
-          this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
+          this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({ type: job.type });
 
           switch (job.type) {
             case JobQueueItemType.default:
@@ -430,10 +430,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
       const startedSigSets = startedSetsDefault + startedSetsSameMessage;
       this.metrics?.blsThreadPool.totalJobsGroupsStarted.inc(1);
-      this.metrics?.blsThreadPool.totalJobsStarted.inc({type: JobQueueItemType.default}, startedJobsDefault);
-      this.metrics?.blsThreadPool.totalJobsStarted.inc({type: JobQueueItemType.sameMessage}, startedJobsSameMessage);
-      this.metrics?.blsThreadPool.totalSigSetsStarted.inc({type: JobQueueItemType.default}, startedSetsDefault);
-      this.metrics?.blsThreadPool.totalSigSetsStarted.inc({type: JobQueueItemType.sameMessage}, startedSetsSameMessage);
+      this.metrics?.blsThreadPool.totalJobsStarted.inc({ type: JobQueueItemType.default }, startedJobsDefault);
+      this.metrics?.blsThreadPool.totalJobsStarted.inc({ type: JobQueueItemType.sameMessage }, startedJobsSameMessage);
+      this.metrics?.blsThreadPool.totalSigSetsStarted.inc({ type: JobQueueItemType.default }, startedSetsDefault);
+      this.metrics?.blsThreadPool.totalSigSetsStarted.inc({ type: JobQueueItemType.sameMessage }, startedSetsSameMessage);
 
       // Send work package to the worker
       // If the job, metrics or any code below throws: the job will reject never going stale.
@@ -442,7 +442,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
       const [jobEndSec, jobEndNs] = process.hrtime();
-      const {workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results} = workResult;
+      const { workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results } = workResult;
 
       const [workerStartSec, workerStartNs] = workerStartTime;
       const [workerEndSec, workerEndNs] = workerEndTime;
@@ -492,7 +492,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
 
       this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
-      this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
+      this.metrics?.blsThreadPool.jobsWorkerTime.inc({ workerId }, workerJobTimeSec);
       this.metrics?.blsThreadPool.latencyToWorker.observe(latencyToWorkerSec);
       this.metrics?.blsThreadPool.latencyFromWorker.observe(latencyFromWorkerSec);
       this.metrics?.blsThreadPool.successJobsSignatureSetsCount.inc(successCount);
@@ -510,7 +510,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       }
     }
 
-    worker.status = {code: WorkerStatusCode.idle, workerApi};
+    worker.status = { code: WorkerStatusCode.idle, workerApi };
     this.workersBusy--;
 
     // Potentially run a new job
