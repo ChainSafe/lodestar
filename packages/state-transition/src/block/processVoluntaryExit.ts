@@ -34,12 +34,6 @@ export function processVoluntaryExit(
   verifySignature = true
 ): void {
   const voluntaryExit = signedVoluntaryExit.message;
-  const currentEpoch = getCurrentEpoch(state);
-
-  // Exits must specify an epoch when they become valid; they are not valid before then
-  if (currentEpoch < voluntaryExit.epoch) {
-    throw Error(`Voluntary exit epoch ${voluntaryExit.epoch} is after current epoch ${currentEpoch}`);
-  }
 
   const validity = getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
   if (validity !== VoluntaryExitValidity.valid) {
