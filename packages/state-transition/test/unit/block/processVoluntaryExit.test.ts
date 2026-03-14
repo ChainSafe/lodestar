@@ -142,9 +142,9 @@ describe("processVoluntaryExit Gloas builder helpers", () => {
       },
     } as unknown as CachedBeaconStateAllForks;
 
-    expect(
-      getVoluntaryExitValidity(ForkSeq.gloas, stateWithPendingWithdrawals, signedVoluntaryExit, false)
-    ).toBe(VoluntaryExitValidity.pendingWithdrawals);
+    expect(getVoluntaryExitValidity(ForkSeq.gloas, stateWithPendingWithdrawals, signedVoluntaryExit, false)).toBe(
+      VoluntaryExitValidity.pendingWithdrawals
+    );
   });
 
   it("rejects exit for non-existent builder", () => {
@@ -159,9 +159,9 @@ describe("processVoluntaryExit Gloas builder helpers", () => {
     } as unknown as CachedBeaconStateAllForks;
 
     // Non-existent builder has undefined withdrawableEpoch which !== FAR_FUTURE_EPOCH, treated as already exited
-    expect(
-      getVoluntaryExitValidity(ForkSeq.gloas, stateNoBuilders, signedVoluntaryExit, false)
-    ).toBe(VoluntaryExitValidity.alreadyExited);
+    expect(getVoluntaryExitValidity(ForkSeq.gloas, stateNoBuilders, signedVoluntaryExit, false)).toBe(
+      VoluntaryExitValidity.alreadyExited
+    );
   });
 
   it("rejects exit for already exited builder", () => {
@@ -180,9 +180,9 @@ describe("processVoluntaryExit Gloas builder helpers", () => {
       },
     } as unknown as CachedBeaconStateAllForks;
 
-    expect(
-      getVoluntaryExitValidity(ForkSeq.gloas, stateExitedBuilder, signedVoluntaryExit, false)
-    ).toBe(VoluntaryExitValidity.alreadyExited);
+    expect(getVoluntaryExitValidity(ForkSeq.gloas, stateExitedBuilder, signedVoluntaryExit, false)).toBe(
+      VoluntaryExitValidity.alreadyExited
+    );
   });
 
   it("accepts a validator exit at gloas fork", () => {
@@ -194,7 +194,12 @@ describe("processVoluntaryExit Gloas builder helpers", () => {
       ...state,
       slot: highSlot,
       epochCtx: {...state.epochCtx, epoch: highEpoch},
-      builders: {length: 0, getReadonly: () => { throw Error("unused"); }},
+      builders: {
+        length: 0,
+        getReadonly: () => {
+          throw Error("unused");
+        },
+      },
       validators: {
         length: 1,
         getReadonly: () => ({
@@ -212,8 +217,8 @@ describe("processVoluntaryExit Gloas builder helpers", () => {
       signature: Buffer.alloc(96, 0),
     };
 
-    expect(
-      getVoluntaryExitValidity(ForkSeq.gloas, stateWithValidator, validatorExit, false)
-    ).toBe(VoluntaryExitValidity.valid);
+    expect(getVoluntaryExitValidity(ForkSeq.gloas, stateWithValidator, validatorExit, false)).toBe(
+      VoluntaryExitValidity.valid
+    );
   });
 });

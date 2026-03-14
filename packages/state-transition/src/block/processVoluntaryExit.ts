@@ -9,7 +9,7 @@ import {
   isActiveBuilder,
   isBuilderIndex,
 } from "../util/gloas.js";
-import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
+import {getPendingBalanceToWithdraw, isActiveValidator, isGloasCachedStateType} from "../util/index.js";
 import {initiateValidatorExit} from "./index.js";
 
 export enum VoluntaryExitValidity {
@@ -40,11 +40,8 @@ export function processVoluntaryExit(
     throw Error(`Invalid voluntary exit at forkSeq=${fork} reason=${validity}`);
   }
 
-  if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
-    initiateBuilderExit(
-      state as CachedBeaconStateGloas,
-      convertValidatorIndexToBuilderIndex(voluntaryExit.validatorIndex)
-    );
+  if (isGloasCachedStateType(state) && isBuilderIndex(voluntaryExit.validatorIndex)) {
+    initiateBuilderExit(state, convertValidatorIndexToBuilderIndex(voluntaryExit.validatorIndex));
     return;
   }
 
@@ -67,8 +64,8 @@ export function getVoluntaryExitValidity(
   }
 
   // Check if this is a builder exit
-  if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
-    return getBuilderVoluntaryExitValidity(state as CachedBeaconStateGloas, signedVoluntaryExit, verifySignature);
+  if (isGloasCachedStateType(state) && isBuilderIndex(voluntaryExit.validatorIndex)) {
+    return getBuilderVoluntaryExitValidity(state, signedVoluntaryExit, verifySignature);
   }
 
   return getValidatorVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
@@ -134,7 +131,7 @@ function getValidatorVoluntaryExitValidity(
   }
 
   // verify the validator had been active long enough
-  if (epochCtx.epoch < validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD) {
+  if (currentEpoch < validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD) {
     return VoluntaryExitValidity.shortTimeActive;
   }
 
