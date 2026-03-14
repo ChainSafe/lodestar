@@ -77,11 +77,11 @@ function getBuilderVoluntaryExitValidity(
   verifySignature: boolean
 ): VoluntaryExitValidity {
   const builderIndex = convertValidatorIndexToBuilderIndex(signedVoluntaryExit.message.validatorIndex);
-  const builder = builderIndex < state.builders.length ? state.builders.getReadonly(builderIndex) : undefined;
+  const builder = state.builders.getReadonly(builderIndex);
 
   // Verify the builder is active
-  if (builder === undefined || !isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
-    return builder?.withdrawableEpoch !== FAR_FUTURE_EPOCH
+  if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
+    return builder.withdrawableEpoch !== FAR_FUTURE_EPOCH
       ? VoluntaryExitValidity.alreadyExited
       : VoluntaryExitValidity.inactive;
   }
@@ -111,14 +111,7 @@ function getValidatorVoluntaryExitValidity(
   const {config, epochCtx} = state;
   const voluntaryExit = signedVoluntaryExit.message;
   const currentEpoch = epochCtx.epoch;
-  const validator =
-    voluntaryExit.validatorIndex < state.validators.length
-      ? state.validators.getReadonly(voluntaryExit.validatorIndex)
-      : undefined;
-
-  if (validator === undefined) {
-    return VoluntaryExitValidity.inactive;
-  }
+  const validator = state.validators.getReadonly(voluntaryExit.validatorIndex);
 
   // verify the validator is active
   if (!isActiveValidator(validator, currentEpoch)) {
