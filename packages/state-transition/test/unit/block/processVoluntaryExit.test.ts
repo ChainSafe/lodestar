@@ -132,4 +132,88 @@ describe("processVoluntaryExit Gloas builder helpers", () => {
       )
     ).toBe(VoluntaryExitValidity.earlyEpoch);
   });
+
+  it("rejects a builder exit with pending withdrawals", () => {
+    const stateWithPendingWithdrawals = {
+      ...state,
+      builderPendingWithdrawals: {
+        length: 1,
+        getReadonly: () => ({builderIndex: 0, amount: 1000}),
+      },
+    } as unknown as CachedBeaconStateAllForks;
+
+    expect(
+      getVoluntaryExitValidity(ForkSeq.gloas, stateWithPendingWithdrawals, signedVoluntaryExit, false)
+    ).toBe(VoluntaryExitValidity.pendingWithdrawals);
+  });
+
+  it("rejects exit for non-existent builder", () => {
+    const stateNoBuilders = {
+      ...state,
+      builders: {
+        length: 0,
+        getReadonly: () => {
+          throw Error("Should not be called");
+        },
+      },
+    } as unknown as CachedBeaconStateAllForks;
+
+    // Non-existent builder has undefined withdrawableEpoch which !== FAR_FUTURE_EPOCH, treated as already exited
+    expect(
+      getVoluntaryExitValidity(ForkSeq.gloas, stateNoBuilders, signedVoluntaryExit, false)
+    ).toBe(VoluntaryExitValidity.alreadyExited);
+  });
+
+  it("rejects exit for already exited builder", () => {
+    const stateExitedBuilder = {
+      ...state,
+      builders: {
+        length: 1,
+        getReadonly: () => ({
+          pubkey: builderPubkey,
+          version: 1,
+          executionAddress: Buffer.alloc(20, 1),
+          balance: 32e9,
+          depositEpoch: 0,
+          withdrawableEpoch: 100,
+        }),
+      },
+    } as unknown as CachedBeaconStateAllForks;
+
+    expect(
+      getVoluntaryExitValidity(ForkSeq.gloas, stateExitedBuilder, signedVoluntaryExit, false)
+    ).toBe(VoluntaryExitValidity.alreadyExited);
+  });
+
+  it("accepts a validator exit at gloas fork", () => {
+    const validatorIndex = 0;
+    // Use a high enough epoch so SHARD_COMMITTEE_PERIOD (256) is satisfied
+    const highEpoch = 300;
+    const highSlot = highEpoch * SLOTS_PER_EPOCH;
+    const stateWithValidator = {
+      ...state,
+      slot: highSlot,
+      epochCtx: {...state.epochCtx, epoch: highEpoch},
+      builders: {length: 0, getReadonly: () => { throw Error("unused"); }},
+      validators: {
+        length: 1,
+        getReadonly: () => ({
+          activationEpoch: 0,
+          exitEpoch: FAR_FUTURE_EPOCH,
+          withdrawableEpoch: FAR_FUTURE_EPOCH,
+          slashed: false,
+        }),
+      },
+      pendingPartialWithdrawals: {getAllReadonly: () => []},
+    } as unknown as CachedBeaconStateAllForks;
+
+    const validatorExit: phase0.SignedVoluntaryExit = {
+      message: {epoch: 0, validatorIndex},
+      signature: Buffer.alloc(96, 0),
+    };
+
+    expect(
+      getVoluntaryExitValidity(ForkSeq.gloas, stateWithValidator, validatorExit, false)
+    ).toBe(VoluntaryExitValidity.valid);
+  });
 });

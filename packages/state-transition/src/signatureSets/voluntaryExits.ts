@@ -2,7 +2,7 @@ import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {PubkeyCache} from "../cache/pubkeyCache.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.ts";
+import {CachedBeaconStateAllForks} from "../types.js";
 import {
   ISignatureSet,
   SignatureSetType,
@@ -10,6 +10,7 @@ import {
   computeStartSlotAtEpoch,
   convertValidatorIndexToBuilderIndex,
   isBuilderIndex,
+  isGloasCachedStateType,
   verifySignatureSet,
 } from "../util/index.js";
 
@@ -30,11 +31,21 @@ export function getVoluntaryExitSignatureSet(
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
-  if (isBuilderVoluntaryExit(state, signedVoluntaryExit)) {
+  if (isBuilderVoluntaryExit(signedVoluntaryExit)) {
     return getBuilderVoluntaryExitSignatureSet(config, state, signedVoluntaryExit);
   }
 
   return getValidatorVoluntaryExitSignatureSet(config, state, signedVoluntaryExit);
+}
+
+export function getVoluntaryExitsSignatureSets(
+  config: BeaconConfig,
+  state: CachedBeaconStateAllForks,
+  signedBlock: SignedBeaconBlock
+): ISignatureSet[] {
+  return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
+    getVoluntaryExitSignatureSet(config, state, voluntaryExit)
+  );
 }
 
 export function getValidatorVoluntaryExitSignatureSet(
@@ -55,9 +66,13 @@ export function getValidatorVoluntaryExitSignatureSet(
 
 export function getBuilderVoluntaryExitSignatureSet(
   config: BeaconConfig,
-  state: CachedBeaconStateGloas,
+  state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
+  if (!isGloasCachedStateType(state)) {
+    throw Error("Invalid state for builder voluntary exit");
+  }
+
   const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
   const domain = config.getDomainForVoluntaryExit(state.slot, messageSlot);
   const builderIndex = convertValidatorIndexToBuilderIndex(signedVoluntaryExit.message.validatorIndex);
@@ -71,22 +86,6 @@ export function getBuilderVoluntaryExitSignatureSet(
   };
 }
 
-export function isBuilderVoluntaryExit(
-  state: CachedBeaconStateAllForks,
-  signedVoluntaryExit: phase0.SignedVoluntaryExit
-): state is CachedBeaconStateGloas {
-  return (
-    (state as CachedBeaconStateGloas).builders !== undefined &&
-    isBuilderIndex(signedVoluntaryExit.message.validatorIndex)
-  );
-}
-
-export function getVoluntaryExitsSignatureSets(
-  config: BeaconConfig,
-  state: CachedBeaconStateAllForks,
-  signedBlock: SignedBeaconBlock
-): ISignatureSet[] {
-  return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
-    getVoluntaryExitSignatureSet(config, state, voluntaryExit)
-  );
+export function isBuilderVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit): boolean {
+  return isBuilderIndex(signedVoluntaryExit.message.validatorIndex);
 }

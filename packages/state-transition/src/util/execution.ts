@@ -20,6 +20,7 @@ import {
   BeaconStateExecutions,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
+  CachedBeaconStateGloas,
 } from "../types.js";
 
 /**
@@ -69,6 +70,11 @@ export function isCapellaStateType(state: BeaconStateAllForks): state is BeaconS
     (state as BeaconStateCapella).latestExecutionPayloadHeader !== undefined &&
     (state as BeaconStateCapella).latestExecutionPayloadHeader.withdrawalsRoot !== undefined
   );
+}
+
+/** Type guard for gloas.CachedBeaconState */
+export function isGloasCachedStateType(state: CachedBeaconStateAllForks): state is CachedBeaconStateGloas {
+  return (state as CachedBeaconStateGloas).builders !== undefined;
 }
 
 /** Type guard for bellatrix.CachedBeaconState */
