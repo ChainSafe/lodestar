@@ -9,7 +9,7 @@ jobs:
   test:
     timeout-minutes: 60
     name: Build and run Kurtosis
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
