@@ -1,6 +1,5 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {
@@ -10,7 +9,7 @@ import {
   isActiveBuilder,
   isBuilderIndex,
 } from "../util/gloas.js";
-import {computeSigningRoot, getCurrentEpoch, getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
+import {getCurrentEpoch, getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
 import {initiateValidatorExit} from "./index.js";
 
 export enum VoluntaryExitValidity {
@@ -42,48 +41,17 @@ export function processVoluntaryExit(
     throw Error(`Voluntary exit epoch ${voluntaryExit.epoch} is after current epoch ${currentEpoch}`);
   }
 
-  // Check if this is a builder exit
-  if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
-    const stateGloas = state as CachedBeaconStateGloas;
-    const builderIndex = convertValidatorIndexToBuilderIndex(voluntaryExit.validatorIndex);
-    const builder = stateGloas.builders.getReadonly(builderIndex);
-
-    // Verify the builder is active
-    if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
-      throw Error(`Builder ${builderIndex} is not active`);
-    }
-
-    // Only exit builder if it has no pending withdrawals in the queue
-    if (getPendingBalanceToWithdrawForBuilder(stateGloas, builderIndex) !== 0) {
-      throw Error(`Builder ${builderIndex} has pending withdrawals`);
-    }
-
-    // Verify signature
-    if (verifySignature) {
-      const domain = state.config.getDomainForVoluntaryExit(state.slot);
-      const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
-
-      try {
-        const publicKey = PublicKey.fromBytes(builder.pubkey);
-        const signature = Signature.fromBytes(signedVoluntaryExit.signature, true);
-
-        if (!verify(signingRoot, publicKey, signature)) {
-          throw Error("BLS verify failed");
-        }
-      } catch (e) {
-        throw Error(`Builder ${builderIndex} invalid exit signature reason=${(e as Error).message}`);
-      }
-    }
-
-    // Initiate builder exit
-    initiateBuilderExit(stateGloas, builderIndex);
-    return;
-  }
-
-  // Handle validator exit
   const validity = getVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
   if (validity !== VoluntaryExitValidity.valid) {
     throw Error(`Invalid voluntary exit at forkSeq=${fork} reason=${validity}`);
+  }
+
+  if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
+    initiateBuilderExit(
+      state as CachedBeaconStateGloas,
+      convertValidatorIndexToBuilderIndex(voluntaryExit.validatorIndex)
+    );
+    return;
   }
 
   const validator = state.validators.get(signedVoluntaryExit.message.validatorIndex);
@@ -96,10 +64,65 @@ export function getVoluntaryExitValidity(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): VoluntaryExitValidity {
+  const currentEpoch = state.epochCtx.epoch;
+  const voluntaryExit = signedVoluntaryExit.message;
+
+  if (currentEpoch < voluntaryExit.epoch) {
+    return VoluntaryExitValidity.earlyEpoch;
+  }
+
+  if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
+    return getBuilderVoluntaryExitValidity(state as CachedBeaconStateGloas, signedVoluntaryExit, verifySignature);
+  }
+
+  return getValidatorVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
+}
+
+function getBuilderVoluntaryExitValidity(
+  state: CachedBeaconStateGloas,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  verifySignature: boolean
+): VoluntaryExitValidity {
+  const builderIndex = convertValidatorIndexToBuilderIndex(signedVoluntaryExit.message.validatorIndex);
+  const builder = builderIndex < state.builders.length ? state.builders.getReadonly(builderIndex) : undefined;
+
+  if (builder === undefined || !isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
+    return builder?.withdrawableEpoch !== FAR_FUTURE_EPOCH
+      ? VoluntaryExitValidity.alreadyExited
+      : VoluntaryExitValidity.inactive;
+  }
+
+  if (getPendingBalanceToWithdrawForBuilder(state, builderIndex) !== 0) {
+    return VoluntaryExitValidity.pendingWithdrawals;
+  }
+
+  if (
+    verifySignature &&
+    !verifyVoluntaryExitSignature(state.config, state.epochCtx.pubkeyCache, state, signedVoluntaryExit)
+  ) {
+    return VoluntaryExitValidity.invalidSignature;
+  }
+
+  return VoluntaryExitValidity.valid;
+}
+
+function getValidatorVoluntaryExitValidity(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  verifySignature: boolean
+): VoluntaryExitValidity {
   const {config, epochCtx} = state;
   const voluntaryExit = signedVoluntaryExit.message;
-  const validator = state.validators.get(voluntaryExit.validatorIndex);
   const currentEpoch = epochCtx.epoch;
+  const validator =
+    voluntaryExit.validatorIndex < state.validators.length
+      ? state.validators.getReadonly(voluntaryExit.validatorIndex)
+      : undefined;
+
+  if (validator === undefined) {
+    return VoluntaryExitValidity.inactive;
+  }
 
   // verify the validator is active
   if (!isActiveValidator(validator, currentEpoch)) {
@@ -111,13 +134,8 @@ export function getVoluntaryExitValidity(
     return VoluntaryExitValidity.alreadyExited;
   }
 
-  // exits must specify an epoch when they become valid; they are not valid before then
-  if (currentEpoch < voluntaryExit.epoch) {
-    return VoluntaryExitValidity.earlyEpoch;
-  }
-
   // verify the validator had been active long enough
-  if (currentEpoch < validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD) {
+  if (epochCtx.epoch < validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD) {
     return VoluntaryExitValidity.shortTimeActive;
   }
 
@@ -131,7 +149,7 @@ export function getVoluntaryExitValidity(
 
   if (
     verifySignature &&
-    !verifyVoluntaryExitSignature(state.config, epochCtx.pubkeyCache, state.slot, signedVoluntaryExit)
+    !verifyVoluntaryExitSignature(state.config, state.epochCtx.pubkeyCache, state, signedVoluntaryExit)
   ) {
     return VoluntaryExitValidity.invalidSignature;
   }
