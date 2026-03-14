@@ -1,7 +1,7 @@
 import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
 import {
   ISignatureSet,
@@ -16,11 +16,11 @@ import {
 
 export function verifyVoluntaryExitSignature(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
+  index2pubkey: Index2PubkeyCache,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit), pubkeyCache);
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit), index2pubkey);
 }
 
 /**

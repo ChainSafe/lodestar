@@ -98,7 +98,7 @@ function getBuilderVoluntaryExitValidity(
   }
 
   // Verify signature
-  if (verifySignature && !verifyVoluntaryExitSignature(config, epochCtx.pubkeyCache, state, signedVoluntaryExit)) {
+  if (verifySignature && !verifyVoluntaryExitSignature(config, epochCtx.index2pubkey, state, signedVoluntaryExit)) {
     return VoluntaryExitValidity.invalidSignature;
   }
 
@@ -145,7 +145,7 @@ function getValidatorVoluntaryExitValidity(
   }
 
   // Verify signature
-  if (verifySignature && !verifyVoluntaryExitSignature(config, epochCtx.pubkeyCache, state, signedVoluntaryExit)) {
+  if (verifySignature && !verifyVoluntaryExitSignature(config, epochCtx.index2pubkey, state, signedVoluntaryExit)) {
     return VoluntaryExitValidity.invalidSignature;
   }
 
