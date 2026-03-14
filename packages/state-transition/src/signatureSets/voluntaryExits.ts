@@ -31,7 +31,7 @@ export function getVoluntaryExitSignatureSet(
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
-  if (isBuilderVoluntaryExit(signedVoluntaryExit)) {
+  if (isGloasCachedStateType(state) && isBuilderVoluntaryExit(signedVoluntaryExit)) {
     return getBuilderVoluntaryExitSignatureSet(config, state, signedVoluntaryExit);
   }
 
