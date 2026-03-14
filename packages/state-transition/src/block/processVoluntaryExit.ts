@@ -110,8 +110,8 @@ function getValidatorVoluntaryExitValidity(
 ): VoluntaryExitValidity {
   const {config, epochCtx} = state;
   const voluntaryExit = signedVoluntaryExit.message;
-  const currentEpoch = epochCtx.epoch;
   const validator = state.validators.getReadonly(voluntaryExit.validatorIndex);
+  const currentEpoch = epochCtx.epoch;
 
   // verify the validator is active
   if (!isActiveValidator(validator, currentEpoch)) {
@@ -139,7 +139,7 @@ function getValidatorVoluntaryExitValidity(
   // Verify signature
   if (
     verifySignature &&
-    !verifyVoluntaryExitSignature(state.config, state.epochCtx.pubkeyCache, state, signedVoluntaryExit)
+    !verifyVoluntaryExitSignature(state.config, epochCtx.pubkeyCache, state, signedVoluntaryExit)
   ) {
     return VoluntaryExitValidity.invalidSignature;
   }
