@@ -76,6 +76,7 @@ function getBuilderVoluntaryExitValidity(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature: boolean
 ): VoluntaryExitValidity {
+  const {config, epochCtx} = state;
   const builderIndex = convertValidatorIndexToBuilderIndex(signedVoluntaryExit.message.validatorIndex);
   const builder = state.builders.getReadonly(builderIndex);
 
@@ -92,10 +93,7 @@ function getBuilderVoluntaryExitValidity(
   }
 
   // Verify signature
-  if (
-    verifySignature &&
-    !verifyVoluntaryExitSignature(state.config, state.epochCtx.pubkeyCache, state, signedVoluntaryExit)
-  ) {
+  if (verifySignature && !verifyVoluntaryExitSignature(config, epochCtx.pubkeyCache, state, signedVoluntaryExit)) {
     return VoluntaryExitValidity.invalidSignature;
   }
 
@@ -137,10 +135,7 @@ function getValidatorVoluntaryExitValidity(
   }
 
   // Verify signature
-  if (
-    verifySignature &&
-    !verifyVoluntaryExitSignature(state.config, epochCtx.pubkeyCache, state, signedVoluntaryExit)
-  ) {
+  if (verifySignature && !verifyVoluntaryExitSignature(config, epochCtx.pubkeyCache, state, signedVoluntaryExit)) {
     return VoluntaryExitValidity.invalidSignature;
   }
 
