@@ -2,7 +2,7 @@ import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {PubkeyCache} from "../cache/pubkeyCache.js";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
 import {
   ISignatureSet,
   SignatureSetType,
@@ -66,13 +66,9 @@ export function getValidatorVoluntaryExitSignatureSet(
 
 export function getBuilderVoluntaryExitSignatureSet(
   config: BeaconConfig,
-  state: CachedBeaconStateAllForks,
+  state: CachedBeaconStateGloas,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
-  if (!isGloasCachedStateType(state)) {
-    throw Error("Invalid state for builder voluntary exit");
-  }
-
   const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
   const domain = config.getDomainForVoluntaryExit(state.slot, messageSlot);
   const builderIndex = convertValidatorIndexToBuilderIndex(signedVoluntaryExit.message.validatorIndex);
