@@ -9,7 +9,7 @@ import {
   isActiveBuilder,
   isBuilderIndex,
 } from "../util/gloas.js";
-import {getCurrentEpoch, getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
+import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
 import {initiateValidatorExit} from "./index.js";
 
 export enum VoluntaryExitValidity {
@@ -61,10 +61,12 @@ export function getVoluntaryExitValidity(
   const currentEpoch = state.epochCtx.epoch;
   const voluntaryExit = signedVoluntaryExit.message;
 
+  // Exits must specify an epoch when they become valid; they are not valid before then
   if (currentEpoch < voluntaryExit.epoch) {
     return VoluntaryExitValidity.earlyEpoch;
   }
 
+  // Check if this is a builder exit
   if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
     return getBuilderVoluntaryExitValidity(state as CachedBeaconStateGloas, signedVoluntaryExit, verifySignature);
   }
@@ -80,16 +82,19 @@ function getBuilderVoluntaryExitValidity(
   const builderIndex = convertValidatorIndexToBuilderIndex(signedVoluntaryExit.message.validatorIndex);
   const builder = builderIndex < state.builders.length ? state.builders.getReadonly(builderIndex) : undefined;
 
+  // Verify the builder is active
   if (builder === undefined || !isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
     return builder?.withdrawableEpoch !== FAR_FUTURE_EPOCH
       ? VoluntaryExitValidity.alreadyExited
       : VoluntaryExitValidity.inactive;
   }
 
+  // Only exit builder if it has no pending withdrawals in the queue
   if (getPendingBalanceToWithdrawForBuilder(state, builderIndex) !== 0) {
     return VoluntaryExitValidity.pendingWithdrawals;
   }
 
+  // Verify signature
   if (
     verifySignature &&
     !verifyVoluntaryExitSignature(state.config, state.epochCtx.pubkeyCache, state, signedVoluntaryExit)
@@ -141,6 +146,7 @@ function getValidatorVoluntaryExitValidity(
     return VoluntaryExitValidity.pendingWithdrawals;
   }
 
+  // Verify signature
   if (
     verifySignature &&
     !verifyVoluntaryExitSignature(state.config, state.epochCtx.pubkeyCache, state, signedVoluntaryExit)
