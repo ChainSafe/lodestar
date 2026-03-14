@@ -214,7 +214,7 @@
         "x": 12,
         "y": 1
       },
-      "id": 28,
+      "id": 40,
       "options": {
         "legend": {
           "calcs": [],
@@ -223,7 +223,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -233,14 +233,28 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": false,
-          "expr": "libp2p_connection_manager_protocol_streams_per_connection_90th_percentile",
-          "interval": "",
-          "legendFormat": "{{protocol}}",
+          "editorMode": "code",
+          "expr": "libp2p_tcp_inbound_connections_total",
+          "instant": false,
+          "legendFormat": "tcp",
+          "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "libp2p_quic_inbound_connections_total",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "quic",
+          "range": true,
+          "refId": "B"
         }
       ],
-      "title": "Streams Per Connection (90th percentile)",
+      "title": "Inbound Connections by Transport",
       "type": "timeseries"
     },
     {
@@ -367,8 +381,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "unit": "none"
+          "mappings": []
         },
         "overrides": []
       },
@@ -378,7 +391,7 @@
         "x": 12,
         "y": 9
       },
-      "id": 30,
+      "id": 28,
       "options": {
         "legend": {
           "calcs": [],
@@ -397,16 +410,14 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "editorMode": "code",
           "exemplar": false,
-          "expr": "libp2p_protocol_streams_total",
+          "expr": "libp2p_connection_manager_protocol_streams_per_connection_90th_percentile",
           "interval": "",
           "legendFormat": "{{protocol}}",
-          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Total Streams",
+      "title": "Streams Per Connection (90th percentile)",
       "type": "timeseries"
     },
     {
@@ -491,6 +502,90 @@
         }
       ],
       "title": "Total Bandwidth",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "id": 30,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "libp2p_protocol_streams_total",
+          "interval": "",
+          "legendFormat": "{{protocol}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total Streams",
       "type": "timeseries"
     },
     {
