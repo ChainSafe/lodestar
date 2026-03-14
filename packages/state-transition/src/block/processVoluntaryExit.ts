@@ -78,6 +78,11 @@ function getBuilderVoluntaryExitValidity(
 ): VoluntaryExitValidity {
   const {config, epochCtx} = state;
   const builderIndex = convertValidatorIndexToBuilderIndex(signedVoluntaryExit.message.validatorIndex);
+
+  if (builderIndex >= state.builders.length) {
+    return VoluntaryExitValidity.inactive;
+  }
+
   const builder = state.builders.getReadonly(builderIndex);
 
   // Verify the builder is active
@@ -108,6 +113,11 @@ function getValidatorVoluntaryExitValidity(
 ): VoluntaryExitValidity {
   const {config, epochCtx} = state;
   const voluntaryExit = signedVoluntaryExit.message;
+
+  if (voluntaryExit.validatorIndex >= state.validators.length) {
+    return VoluntaryExitValidity.inactive;
+  }
+
   const validator = state.validators.getReadonly(voluntaryExit.validatorIndex);
   const currentEpoch = epochCtx.epoch;
 
