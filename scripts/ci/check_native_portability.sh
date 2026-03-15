@@ -10,6 +10,11 @@
 
 set -euo pipefail
 
+if ! command -v objdump > /dev/null 2>&1; then
+  echo "warning: objdump not found, skipping CPU portability check."
+  exit 0
+fi
+
 EXIT_CODE=0
 
 echo "Checking native modules for CPU portability..."
@@ -21,19 +26,25 @@ while IFS= read -r node_file; do
   # Relative path from node_modules for readable output
   name=$(echo "$node_file" | sed 's|.*node_modules/||;s|/[^/]*\.node$||')
 
-  # Count AVX instructions (YMM register = 256-bit AVX)
-  ymm_count=$(objdump -d "$node_file" 2>/dev/null | grep -c "ymm" || true)
+  # Disassemble once, then grep for AVX indicators and CPUID calls
+  dump=$(objdump -d "$node_file" 2>/dev/null || true)
 
+  # Count 256-bit AVX (YMM registers)
+  ymm_count=$(echo "$dump" | grep -c "ymm" || true)
+  # Count VEX-encoded instructions (v-prefixed SIMD mnemonics like vmovaps, vzeroupper)
+  # These also require AVX support and will SIGILL on non-AVX CPUs
+  vex_count=$(echo "$dump" | grep -cE "\b(vmov|vadd|vsub|vmul|vdiv|vxor|vpxor|vpand|vpor|vpcmp|vshuf|vperm|vbroadcast|vinsert|vextract|vzero|vfmadd|vfmsub|vfnmadd|vfnmsub|vcvt|vpack|vpunpck|vpalign|vblend|vround|vtest|vptest)[a-z]*\b" || true)
+  avx_count=$((ymm_count + vex_count))
   # Count CPUID calls (runtime CPU feature detection)
-  cpuid_count=$(objdump -d "$node_file" 2>/dev/null | grep -c "cpuid" || true)
+  cpuid_count=$(echo "$dump" | grep -c "cpuid" || true)
 
-  if [ "$ymm_count" -gt 0 ] && [ "$cpuid_count" -eq 0 ]; then
+  if [ "$avx_count" -gt 0 ] && [ "$cpuid_count" -eq 0 ]; then
     echo "FAIL: $name"
-    echo "   $ymm_count AVX instructions, 0 CPUID dispatch calls"
+    echo "   $avx_count AVX instructions ($ymm_count ymm, $vex_count vex-encoded), 0 CPUID dispatch calls"
     echo "   Binary will crash with SIGILL on CPUs without AVX (e.g. Celeron N5105)"
     EXIT_CODE=1
-  elif [ "$ymm_count" -gt 0 ]; then
-    echo "OK:   $name ($ymm_count AVX insns, $cpuid_count CPUID calls)"
+  elif [ "$avx_count" -gt 0 ]; then
+    echo "OK:   $name ($avx_count AVX insns, $cpuid_count CPUID calls)"
   else
     echo "OK:   $name (no AVX)"
   fi
