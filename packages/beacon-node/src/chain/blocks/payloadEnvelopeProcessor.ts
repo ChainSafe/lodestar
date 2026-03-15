@@ -41,6 +41,13 @@ export class PayloadEnvelopeProcessor {
       return;
     }
 
+    await this.jobQueue.waitForSpace();
+
+    // Re-check after await, as another call may have queued this payload.
+    if (this.importStatus.get(payloadInput) !== undefined) {
+      return;
+    }
+
     this.importStatus.set(payloadInput, PayloadEnvelopeImportStatus.queued);
 
     try {
