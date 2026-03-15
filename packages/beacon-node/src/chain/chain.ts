@@ -85,7 +85,7 @@ import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/bloc
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
-import {persistBlockInput} from "./blocks/writeBlockInputToDb.ts";
+import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";

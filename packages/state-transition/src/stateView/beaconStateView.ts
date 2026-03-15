@@ -28,6 +28,7 @@ import {
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {processExecutionPayloadEnvelope} from "../block/index.js";
+import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.ts";
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
@@ -761,12 +762,15 @@ export class BeaconStateView implements IBeaconStateView {
     return new BeaconStateView(newState);
   }
 
-  processExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope, verify: boolean): void {
+  processExecutionPayloadEnvelope(
+    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    opts?: ProcessExecutionPayloadEnvelopeOpts
+  ): void {
     const fork = this.config.getForkName(this.cachedState.slot);
     if (!isForkPostGloas(fork)) {
       throw Error(`processExecutionPayloadEnvelope is only available for gloas+ forks, got fork=${fork}`);
     }
-    processExecutionPayloadEnvelope(this.cachedState as CachedBeaconStateGloas, signedEnvelope, verify);
+    processExecutionPayloadEnvelope(this.cachedState as CachedBeaconStateGloas, signedEnvelope, opts);
   }
 }
 

@@ -22,13 +22,13 @@ export function getExecutionPayloadEnvelopeSignatureSet(
   proposerIndex: ValidatorIndex
 ): SingleSignatureSet {
   const envelope = signedEnvelope.message;
-  const builderPubkey =
+  const pubkey =
     envelope.builderIndex === BUILDER_INDEX_SELF_BUILD
       ? state.epochCtx.pubkeyCache.getOrThrow(proposerIndex)
       : PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey);
 
   return createSingleSignatureSetFromComponents(
-    builderPubkey,
+    pubkey,
     getExecutionPayloadEnvelopeSigningRoot(config, envelope),
     signedEnvelope.signature
   );
