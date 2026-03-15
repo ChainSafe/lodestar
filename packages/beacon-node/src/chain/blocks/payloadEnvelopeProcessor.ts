@@ -8,15 +8,23 @@ import {ImportPayloadOpts} from "./types.js";
 // Set to be equal to DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES for now
 const QUEUE_MAX_LENGTH = 16;
 
+enum PayloadEnvelopeImportStatus {
+  queued = "queued",
+  importing = "importing",
+  imported = "imported",
+}
+
 /**
  * PayloadEnvelopeProcessor processes payload envelope jobs in a queued fashion, one after the other.
  */
 export class PayloadEnvelopeProcessor {
   readonly jobQueue: JobItemQueue<[PayloadEnvelopeInput, ImportPayloadOpts], void>;
+  private readonly importStatus = new WeakMap<PayloadEnvelopeInput, PayloadEnvelopeImportStatus>();
 
   constructor(chain: BeaconChain, metrics: Metrics | null, signal: AbortSignal) {
     this.jobQueue = new JobItemQueue<[PayloadEnvelopeInput, ImportPayloadOpts], void>(
       (payloadInput, opts) => {
+        this.importStatus.set(payloadInput, PayloadEnvelopeImportStatus.importing);
         return importExecutionPayload.call(chain, payloadInput, opts);
       },
       {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
@@ -25,6 +33,22 @@ export class PayloadEnvelopeProcessor {
   }
 
   async processPayloadEnvelopeJob(payloadInput: PayloadEnvelopeInput, opts: ImportPayloadOpts = {}): Promise<void> {
-    await this.jobQueue.push(payloadInput, opts);
+    if (!payloadInput.isComplete()) {
+      return;
+    }
+
+    if (this.importStatus.get(payloadInput) !== undefined) {
+      return;
+    }
+
+    this.importStatus.set(payloadInput, PayloadEnvelopeImportStatus.queued);
+
+    try {
+      await this.jobQueue.push(payloadInput, opts);
+      this.importStatus.set(payloadInput, PayloadEnvelopeImportStatus.imported);
+    } catch (e) {
+      this.importStatus.delete(payloadInput);
+      throw e;
+    }
   }
 }
