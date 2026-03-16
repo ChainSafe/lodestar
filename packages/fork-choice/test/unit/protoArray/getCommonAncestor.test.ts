@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, PayloadStatus, ProtoArray} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [
@@ -45,6 +45,11 @@ describe("getCommonAncestor", () => {
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
+      builderIndex: null,
+      blockHashFromBid: null,
     },
     0
   );
@@ -71,15 +76,25 @@ describe("getCommonAncestor", () => {
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
+        builderIndex: null,
+        blockHashFromBid: null,
       },
-      block.slot
+      block.slot,
+      null
     );
   }
 
   for (const {nodeA, nodeB, ancestor} of testCases) {
     it(`${nodeA} & ${nodeB} -> ${ancestor}`, () => {
+      const defaultStatusA = fc.getDefaultVariant(nodeA);
+      const defaultStatusB = fc.getDefaultVariant(nodeB);
+      const nodeAResult = defaultStatusA !== undefined ? fc.getNode(nodeA, defaultStatusA) : undefined;
+      const nodeBResult = defaultStatusB !== undefined ? fc.getNode(nodeB, defaultStatusB) : undefined;
       // biome-ignore lint/style/noNonNullAssertion: We know the node can not be null here
-      const ancestorNode = fc.getCommonAncestor(fc.getNode(nodeA)!, fc.getNode(nodeB)!);
+      const ancestorNode = fc.getCommonAncestor(nodeAResult!, nodeBResult!);
       if (ancestor) {
         expect(ancestorNode?.blockRoot).toBe(ancestor);
       } else {

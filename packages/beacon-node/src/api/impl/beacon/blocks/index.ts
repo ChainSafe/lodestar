@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkPostBellatrix,
@@ -205,7 +206,7 @@ export function getBeaconBlockApi({
       case routes.beacon.BroadcastValidation.consensus: {
         // check if this beacon node produced the block else run validations
         if (!blockLocallyProduced) {
-          const parentBlock = chain.forkChoice.getBlock(signedBlock.message.parentRoot);
+          const parentBlock = chain.forkChoice.getBlockDefaultStatus(signedBlock.message.parentRoot);
           if (parentBlock === null) {
             chain.emitter.emit(ChainEvent.unknownParent, {
               blockInput: blockForImport,
@@ -650,7 +651,7 @@ export function getBeaconBlockApi({
       }
 
       // TODO GLOAS: review checks, do we want to implement `broadcast_validation`?
-      const block = chain.forkChoice.getBlockHex(blockRootHex);
+      const block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
       if (block === null) {
         throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
       }

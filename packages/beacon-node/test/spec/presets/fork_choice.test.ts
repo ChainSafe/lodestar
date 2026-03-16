@@ -3,7 +3,9 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
   ForkPostDeneb,
@@ -52,8 +54,6 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {getConfig} from "../../utils/config.js";
-import {testLogger} from "../../utils/logger.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -416,7 +416,7 @@ const forkChoiceTest =
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
-                  head.blockRoot,
+                  head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );

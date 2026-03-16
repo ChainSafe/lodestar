@@ -30,7 +30,7 @@ export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
 export function getSafeExecutionBlockHash(forkChoice: IForkChoice): RootHex {
   const confirmedRoot = forkChoice.getConfirmedRoot?.();
   if (confirmedRoot) {
-    const confirmedBlock = forkChoice.getBlockHex(confirmedRoot);
+    const confirmedBlock = forkChoice.getBlockHexDefaultStatus(confirmedRoot);
     if (confirmedBlock?.executionPayloadBlockHash) {
       return confirmedBlock.executionPayloadBlockHash;
     }

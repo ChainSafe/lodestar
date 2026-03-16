@@ -9,8 +9,8 @@ import {
   PresetName,
 } from "@lodestar/params";
 import {DataAvailabilityStatus, ExecutionPayloadStatus, stateTransition} from "../../../src/index.js";
+import {generatePerfTestCachedStatePhase0, perfStateId} from "../../../src/testUtils/util.js";
 import {StateBlock} from "../types.js";
-import {generatePerfTestCachedStatePhase0, perfStateId} from "../util.js";
 import {BlockOpts, getBlockPhase0} from "./util.js";
 
 // As of Jun 12 2021

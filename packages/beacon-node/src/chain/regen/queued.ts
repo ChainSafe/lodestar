@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
+import {BeaconBlock, Epoch, RootHex, Slot, isGloasBeaconBlock, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
@@ -88,7 +88,12 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    */
   getPreStateSync(block: BeaconBlock): CachedBeaconStateAllForks | null {
     const parentRoot = toRootHex(block.parentRoot);
-    const parentBlock = this.forkChoice.getBlockHex(parentRoot);
+    const parentBlock = isGloasBeaconBlock(block)
+      ? this.forkChoice.getBlockHexAndBlockHash(
+          parentRoot,
+          toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
+        )
+      : this.forkChoice.getBlockHexDefaultStatus(parentRoot);
     if (!parentBlock) {
       throw new RegenError({
         code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,

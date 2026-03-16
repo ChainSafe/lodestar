@@ -186,7 +186,7 @@ export async function validateGossipAttestationsSameAttData(
       chain.seenAttesters.add(targetEpoch, validatorIndex);
     } else {
       step0ResultOrErrors[oldIndex] = {
-        err: new AttestationError(GossipAction.IGNORE, {
+        err: new AttestationError(GossipAction.REJECT, {
           code: AttestationErrorCode.INVALID_SIGNATURE,
         }),
       };
@@ -307,7 +307,7 @@ async function validateAttestationNoSignatureCheck(
         }
 
         // [REJECT] `attestation.data.index == 0` if `block.slot == attestation.data.slot`.
-        const block = chain.forkChoice.getBlock(attData.beaconBlockRoot);
+        const block = chain.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
 
         // block being null will be handled by `verifyHeadBlockAndTargetRoot`
         if (block !== null && block.slot === attSlot && attData.index !== 0) {
@@ -604,10 +604,14 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   //
   // see: https://github.com/ethereum/consensus-specs/pull/3360
   if (ForkSeq[fork] < ForkSeq.deneb) {
+    const currentSlot = chain.clock.currentSlot;
+    const withinPastDisparity = currentSlot > 0 && chain.clock.isCurrentSlotGivenGossipDisparity(currentSlot - 1);
     const earliestPermissibleSlot = Math.max(
-      // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY
-      chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000) -
-        chain.config.ATTESTATION_PROPAGATION_SLOT_RANGE,
+      // Pre-Deneb propagation is time-bounded: an attestation remains valid at the exact old
+      // boundary `compute_time_at_slot(slot + range + 1) + MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+      // Model that boundary by extending the lower slot bound by one additional slot only while
+      // the clock still considers the previous slot current given gossip disparity.
+      currentSlot - chain.config.ATTESTATION_PROPAGATION_SLOT_RANGE - (withinPastDisparity ? 1 : 0),
       0
     );
 
@@ -756,7 +760,7 @@ export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0
 function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): ProtoBlock {
   // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
-  const headBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+  const headBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,

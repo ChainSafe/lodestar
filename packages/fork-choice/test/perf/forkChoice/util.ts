@@ -3,7 +3,14 @@ import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {computeTotalBalance} from "../../../src/forkChoice/store.js";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
+import {
+  ExecutionStatus,
+  ForkChoice,
+  IForkChoiceStore,
+  PayloadStatus,
+  ProtoArray,
+  ProtoBlock,
+} from "../../../src/index.js";
 
 const genesisSlot = 0;
 const genesisEpoch = 0;
@@ -50,16 +57,36 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot,
     justified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisRoot),
+        rootHex: genesisRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances,
       totalBalance: computeTotalBalance(balances),
     },
     unrealizedJustified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisRoot),
+        rootHex: genesisRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances,
     },
-    finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
-    unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
+    finalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisRoot),
+      rootHex: genesisRoot,
+      payloadStatus: PayloadStatus.FULL,
+    },
+    unrealizedFinalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisRoot),
+      rootHex: genesisRoot,
+      payloadStatus: PayloadStatus.FULL,
+    },
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
     confirmedRoot: confirmedBlockRoot,
@@ -113,9 +140,14 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
 
       timeliness: false,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
+      builderIndex: null,
+      blockHashFromBid: null,
     };
 
-    protoArr.onBlock(block, block.slot);
+    protoArr.onBlock(block, block.slot, null);
     parentBlockRoot = blockRoot;
   }
 

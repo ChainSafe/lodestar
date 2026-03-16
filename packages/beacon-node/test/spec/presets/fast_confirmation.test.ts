@@ -52,8 +52,8 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.ts";
 import {ClockStopped} from "../../mocks/clock.ts";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.ts";
-import {getConfig} from "../../utils/config.ts";
-import {testLogger} from "../../utils/logger.ts";
+import {getConfig} from "@lodestar/config/test-utils";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {assertCorrectProgressiveBalances} from "../config.ts";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.ts";
 import {specTestIterator} from "../utils/specTestIterator.ts";
@@ -449,7 +449,7 @@ const fastConfirmationTest =
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
-                  head.blockRoot,
+                  head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );

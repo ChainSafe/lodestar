@@ -4,9 +4,15 @@ import {
   EffectiveBalanceIncrements,
 } from "@lodestar/state-transition";
 import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
-import {LVHExecResponse, MaybeValidExecutionStatus, ProtoBlock, ProtoNode} from "../protoArray/interface.js";
+import {
+  LVHExecResponse,
+  MaybeValidExecutionStatus,
+  PayloadStatus,
+  ProtoBlock,
+  ProtoNode,
+} from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
-import {CheckpointWithHex} from "./store.js";
+import {CheckpointWithHex, CheckpointWithPayloadStatus} from "./store.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -18,12 +24,12 @@ export type CheckpointsWithHex = {
   finalizedCheckpoint: CheckpointWithHex;
 };
 
-export type CheckpointHexWithBalance = {
-  checkpoint: CheckpointWithHex;
+export type CheckpointWithPayloadAndBalance = {
+  checkpoint: CheckpointWithPayloadStatus;
   balances: EffectiveBalanceIncrements;
 };
 
-export type CheckpointHexWithTotalBalance = CheckpointHexWithBalance & {
+export type CheckpointWithPayloadAndTotalBalance = CheckpointWithPayloadAndBalance & {
   totalBalance: number;
 };
 
@@ -72,16 +78,18 @@ export interface IForkChoice {
   irrecoverableError?: Error;
 
   /**
-   * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
+   * Returns the ancestor node of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
    *
    * ## Specification
    *
-   * Equivalent to:
+   * Modified for Gloas to return ProtoNode instead of just root:
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#modified-get_ancestor
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_ancestor
+   * Pre-Gloas: Returns (root, PAYLOAD_STATUS_FULL)
+   * Gloas: Returns (root, payloadStatus) based on actual node state
    */
-  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex;
+  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): ProtoNode;
   /**
    * Run the fork choice rule to determine the head.
    *
@@ -106,7 +114,7 @@ export interface IForkChoice {
    * called by `predictProposerHead()` during `prepareNextSlot()`.
    */
   shouldOverrideForkChoiceUpdate(
-    blockRoot: RootHex,
+    headBlock: ProtoBlock,
     secFromSlot: number,
     currentSlot: Slot
   ): ShouldOverrideForkChoiceUpdateResult;
@@ -118,8 +126,8 @@ export interface IForkChoice {
    * Retrieve all nodes for the debug API.
    */
   getAllNodes(): ProtoNode[];
-  getFinalizedCheckpoint(): CheckpointWithHex;
-  getJustifiedCheckpoint(): CheckpointWithHex;
+  getFinalizedCheckpoint(): CheckpointWithPayloadStatus;
+  getJustifiedCheckpoint(): CheckpointWithPayloadStatus;
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -172,6 +180,38 @@ export interface IForkChoice {
    */
   onAttesterSlashing(slashing: AttesterSlashing): void;
   /**
+   * Process PTC (Payload Timeliness Committee) messages from a block
+   * Updates the PTC votes for the attested beacon block
+   *
+   * ## Specification
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/gloas/fork-choice.md#new-notify_ptc_messages
+   *
+   * @param blockRoot - The beacon block root being attested
+   * @param ptcIndices - Array of PTC committee indices that voted
+   * @param payloadPresent - Whether validators attest the payload is present
+   */
+  notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void;
+  /**
+   * Notify fork choice that an execution payload has arrived (Gloas fork)
+   * Creates the FULL variant of a Gloas block when the payload becomes available
+   *
+   * ## Specification
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-on_execution_payload
+   *
+   * @param blockRoot - The beacon block root for which the payload arrived
+   * @param executionPayloadBlockHash - The block hash of the execution payload
+   * @param executionPayloadNumber - The block number of the execution payload
+   * @param executionPayloadStateRoot - The execution payload state root ie. the root of post-state after processExecutionPayloadEnvelope()
+   */
+  onExecutionPayload(
+    blockRoot: RootHex,
+    executionPayloadBlockHash: RootHex,
+    executionPayloadNumber: number,
+    executionPayloadStateRoot: RootHex
+  ): void;
+  /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
   updateTime(currentSlot: Slot): void;
@@ -194,8 +234,11 @@ export interface IForkChoice {
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
-  getBlock(blockRoot: Root): ProtoBlock | null;
-  getBlockHex(blockRoot: RootHex): ProtoBlock | null;
+  getBlock(blockRoot: Root, payloadStatus: PayloadStatus): ProtoBlock | null;
+  getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null;
+  getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
+  getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
+  getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;
@@ -205,7 +248,12 @@ export interface IForkChoice {
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
    */
-  isDescendant(ancestorRoot: RootHex, descendantRoot: RootHex): boolean;
+  isDescendant(
+    ancestorRoot: RootHex,
+    ancestorPayloadStatus: PayloadStatus,
+    descendantRoot: RootHex,
+    descendantPayloadStatus: PayloadStatus
+  ): boolean;
   /**
    * Prune items up to a finalized root.
    */
@@ -214,16 +262,20 @@ export interface IForkChoice {
   /**
    * Iterates backwards through ancestor block summaries, starting from a block root
    */
-  iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<ProtoBlock>;
-  getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  iterateAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock>;
+  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
   /**
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
+  getAllNonAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
   /**
    * Returns both ancestor and non-ancestor blocks in a single traversal.
    */
-  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
+  getAllAncestorAndNonAncestorBlocks(
+    blockRoot: RootHex,
+    payloadStatus: PayloadStatus
+  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
   /**
@@ -233,7 +285,7 @@ export interface IForkChoice {
   /**
    * Iterates forward descendants of blockRoot. Does not yield blockRoot itself
    */
-  forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock>;
+  forwardIterateDescendants(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock>;
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */

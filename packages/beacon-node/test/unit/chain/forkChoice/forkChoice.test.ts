@@ -1,7 +1,7 @@
 import {beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice, PayloadStatus} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -201,21 +201,21 @@ describe("LodestarForkChoice", () => {
       forkChoice.onBlock(block20.message, state20, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
       forkChoice.onBlock(block24.message, state24, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
       forkChoice.onBlock(block28.message, state28, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message))).toHaveLength(3);
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message))).toHaveLength(5);
-      expect(forkChoice.getBlockHex(hashBlock(block08.message))).not.toBeNull();
-      expect(forkChoice.getBlockHex(hashBlock(block12.message))).not.toBeNull();
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message), PayloadStatus.FULL)).toHaveLength(3);
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message), PayloadStatus.FULL)).toHaveLength(5);
+      expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block08.message))).not.toBeNull();
+      expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block12.message))).not.toBeNull();
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(true);
       expect(forkChoice.hasBlockHex(hashBlock(block12.message))).toBe(true);
       forkChoice.onBlock(block32.message, state32, blockDelaySec, currentSlot, executionStatus, dataAvailabilityStatus);
       forkChoice.prune(hashBlock(block16.message));
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).toBeWithMessage(
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message), PayloadStatus.FULL).length).toBeWithMessage(
         0,
         "getAllAncestorBlocks should not return finalized block"
       );
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message))).toHaveLength(2);
-      expect(forkChoice.getBlockHex(hashBlock(block08.message))).toBe(null);
-      expect(forkChoice.getBlockHex(hashBlock(block12.message))).toBe(null);
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message), PayloadStatus.FULL)).toHaveLength(2);
+      expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block08.message))).toBe(null);
+      expect(forkChoice.getBlockHexDefaultStatus(hashBlock(block12.message))).toBe(null);
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(false);
       expect(forkChoice.hasBlockHex(hashBlock(block12.message))).toBe(false);
     });
@@ -275,10 +275,11 @@ describe("LodestarForkChoice", () => {
         .forwarditerateAncestorBlocks()
         .filter(
           (summary) =>
-            summary.slot < childBlock.message.slot && !forkChoice.isDescendant(summary.blockRoot, childBlockRoot)
+            summary.slot < childBlock.message.slot &&
+            !forkChoice.isDescendant(summary.blockRoot, summary.payloadStatus, childBlockRoot, PayloadStatus.FULL)
         );
       // compare to getAllNonAncestorBlocks api
-      expect(forkChoice.getAllNonAncestorBlocks(childBlockRoot)).toEqual(nonCanonicalSummaries);
+      expect(forkChoice.getAllNonAncestorBlocks(childBlockRoot, PayloadStatus.FULL)).toEqual(nonCanonicalSummaries);
     });
 
     /**

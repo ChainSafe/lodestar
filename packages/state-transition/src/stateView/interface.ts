@@ -55,11 +55,27 @@ export interface IBeaconStateView {
   getRandaoMix(epoch: Epoch): Bytes32;
 
   // altair
-  previousEpochParticipation: number[];
-  currentEpochParticipation: number[];
+  previousEpochParticipation: Uint8Array;
+  currentEpochParticipation: Uint8Array;
+  getPreviousEpochParticipation(validatorIndex: ValidatorIndex): number;
+  getCurrentEpochParticipation(validatorIndex: ValidatorIndex): number;
 
   // bellatrix
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
+  /**
+   * Cross-fork accessor for the execution block hash of the most recently included payload.
+   * Pre-gloas: returns latestExecutionPayloadHeader.blockHash (bellatrix–fulu).
+   * Gloas+: returns the dedicated latestBlockHash state field (EIP-7732).
+   * Throws before bellatrix.
+   */
+  latestBlockHash: Bytes32;
+  /**
+   * The execution block number of the most recently included payload.
+   * Named payloadBlockNumber (not latestBlockNumber) to mirror ExecutionPayloadHeader.blockNumber pre-gloas.
+   * Only available from bellatrix through fulu — not tracked on BeaconState in gloas+ (EIP-7732).
+   * Throws before bellatrix and from gloas onwards.
+   */
+  payloadBlockNumber: number;
 
   // capella
   historicalSummaries: capella.HistoricalSummaries;
@@ -193,4 +209,5 @@ export interface IBeaconStateView {
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
     modules?: StateTransitionModules
   ): IBeaconStateView;
+  processExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope, verify: boolean): void;
 }

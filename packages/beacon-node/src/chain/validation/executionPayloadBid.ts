@@ -113,8 +113,7 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon
   // block in fork choice.
-  const block = chain.forkChoice.getBlock(bid.parentBlockRoot);
-  if (block === null) {
+  if (!chain.forkChoice.hasBlock(bid.parentBlockRoot)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
       parentBlockRoot: parentBlockRootHex,

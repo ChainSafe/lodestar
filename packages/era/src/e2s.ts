@@ -1,7 +1,7 @@
 import type {FileHandle} from "node:fs/promises";
 import {Slot} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
-import {readInt48, readUint16, readUint32, writeInt48, writeUint16, writeUint32} from "./util.ts";
+import {readInt48, readUint16, readUint32, writeInt48, writeUint16, writeUint32} from "./util.js";
 
 /**
  * Known entry types in an E2Store (.e2s) file along with their exact 2-byte codes.

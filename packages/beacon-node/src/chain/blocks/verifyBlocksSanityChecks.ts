@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, Slot} from "@lodestar/types";
+import {RootHex, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -90,7 +90,12 @@ export function verifyBlocksSanityChecks(
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toRootHex(block.message.parentRoot);
-      parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+      parentBlock = isGloasBeaconBlock(block.message)
+        ? chain.forkChoice.getBlockHexAndBlockHash(
+            parentRoot,
+            toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+          )
+        : chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
       if (!parentBlock) {
         throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
       }
