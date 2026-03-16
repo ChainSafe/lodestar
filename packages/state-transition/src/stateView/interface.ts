@@ -23,6 +23,7 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
+import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.ts";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
@@ -109,12 +110,11 @@ export interface IBeaconStateView {
   getCurrentShuffling(): EpochShuffling;
   getNextShuffling(): EpochShuffling;
 
-  // utils: proposers, anchor checkpoint
+  // Proposer shuffling
   previousProposers: ValidatorIndex[] | null;
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
-  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader};
 
   // Sync committees
   currentSyncCommittee: altair.SyncCommittee;
@@ -179,6 +179,7 @@ export interface IBeaconStateView {
     justifiedCheckpoint: phase0.Checkpoint;
     finalizedCheckpoint: phase0.Checkpoint;
   };
+  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader};
 
   // this is for backward compatible
   clonedCount: number;
@@ -209,5 +210,9 @@ export interface IBeaconStateView {
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
     modules?: StateTransitionModules
   ): IBeaconStateView;
-  processExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope, verify: boolean): void;
+  processExecutionPayloadEnvelope(
+    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    verify: boolean,
+    opts?: ProcessExecutionPayloadEnvelopeOpts
+  ): IBeaconStateView;
 }

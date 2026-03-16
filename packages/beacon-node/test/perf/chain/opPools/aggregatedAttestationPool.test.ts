@@ -4,6 +4,7 @@ import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, PayloadStatus, ProtoArray} from "@lodestar/fork-choice";
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
+  BeaconStateView,
   CachedBeaconStateAltair,
   DataAvailabilityStatus,
   computeAnchorCheckpoint,
@@ -187,16 +188,20 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         state.previousEpochParticipation = ssz.altair.EpochParticipation.toViewDU(previousParticipation);
         state.currentEpochParticipation = ssz.altair.EpochParticipation.toViewDU(currentParticipation);
         state.commit();
-        return state;
+        return new BeaconStateView(state);
       },
       beforeEach: (state) => {
-        const pool = getAggregatedAttestationPool(state, numMissedVotes, numBadVotes);
+        const pool = getAggregatedAttestationPool(
+          state.cachedState as CachedBeaconStateAltair,
+          numMissedVotes,
+          numBadVotes
+        );
         const shufflingCache = new ShufflingCache();
         shufflingCache.processState(state);
         return {state, pool, shufflingCache};
       },
       fn: ({state, pool, shufflingCache}) => {
-        pool.getAttestationsForBlock(state.config.getForkName(state.slot), forkchoice, shufflingCache, state);
+        pool.getAttestationsForBlock(originalState.config.getForkName(state.slot), forkchoice, shufflingCache, state);
       },
     });
   }
