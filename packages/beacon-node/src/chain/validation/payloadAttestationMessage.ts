@@ -1,5 +1,4 @@
 import {
-  CachedBeaconStateGloas,
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
@@ -66,7 +65,7 @@ async function validatePayloadAttestationMessage(
     });
   }
 
-  const state = chain.getHeadState() as CachedBeaconStateGloas;
+  const state = chain.getHeadState();
 
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
@@ -75,8 +74,7 @@ async function validatePayloadAttestationMessage(
   // [REJECT] The message's validator index is within the payload committee in
   // `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
   // processing the block up to the current slot as determined by the fork choice.
-  const ptc = state.epochCtx.getPayloadTimelinessCommittee(data.slot);
-  const validatorCommitteeIndex = ptc.indexOf(validatorIndex);
+  const validatorCommitteeIndex = state.validatorPTCCommitteeIndex(validatorIndex, data.slot);
 
   if (validatorCommitteeIndex === -1) {
     throw new PayloadAttestationError(GossipAction.REJECT, {

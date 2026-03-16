@@ -2,14 +2,12 @@ import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
+  IBeaconStateView,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  processSlots,
-  stateTransition,
 } from "@lodestar/state-transition";
 import {BeaconBlock, RootHex, SignedBeaconBlock, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
@@ -57,7 +55,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     block: BeaconBlock,
     opts: StateRegenerationOpts,
     regenCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks> {
+  ): Promise<IBeaconStateView> {
     const parentRoot = toRootHex(block.parentRoot);
     const parentBlock = isGloasBeaconBlock(block)
       ? this.modules.forkChoice.getBlockHexAndBlockHash(
@@ -99,7 +97,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     opts: StateRegenerationOpts,
     regenCaller: RegenCaller,
     allowDiskReload = false
-  ): Promise<CachedBeaconStateAllForks> {
+  ): Promise<IBeaconStateView> {
     if (slot < block.slot) {
       throw new RegenError({
         code: RegenErrorCode.SLOT_BEFORE_BLOCK_SLOT,
@@ -149,7 +147,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     caller: RegenCaller,
     // internal option, don't want to expose to external caller
     allowDiskReload = false
-  ): Promise<CachedBeaconStateAllForks> {
+  ): Promise<IBeaconStateView> {
     // Trivial case, state at stateRoot is already cached
     const cachedStateCtx = this.modules.blockStateCache.get(stateRoot);
     if (cachedStateCtx) {
@@ -164,7 +162,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // blocks to replay, ordered highest to lowest
     // gets reversed when replayed
     const blocksToReplay = [block];
-    let state: CachedBeaconStateAllForks | null = null;
+    let state: IBeaconStateView | null = null;
     const {checkpointStateCache} = this.modules;
 
     const getSeedStateTimer = this.modules.metrics?.regenGetState.getSeedState.startTimer({caller});
@@ -260,8 +258,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         // Only advances state trusting block's signture and hashes.
         // We are only running the state transition to get a specific state's data.
         // stateTransition() does the clone() inside, transfer cache to make the regen faster
-        state = stateTransition(
-          state,
+        state = state.stateTransition(
           block,
           {
             // Replay previously imported blocks, assume valid and available
@@ -333,16 +330,17 @@ async function processSlotsByCheckpoint(
     metrics: Metrics | null;
     validatorMonitor: ValidatorMonitor | null;
     emitter: ChainEventEmitter;
+    config: ChainForkConfig;
     logger: Logger;
   },
-  preState: CachedBeaconStateAllForks,
+  preState: IBeaconStateView,
   slot: Slot,
   regenCaller: RegenCaller,
   opts: StateRegenerationOpts
-): Promise<CachedBeaconStateAllForks> {
+): Promise<IBeaconStateView> {
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
   if (postState.slot < slot) {
-    postState = processSlots(postState, slot, opts, modules);
+    postState = postState.processSlots(slot, opts, modules);
   }
   return postState;
 }
@@ -365,18 +363,19 @@ export async function processSlotsToNearestCheckpoint(
     metrics: Metrics | null;
     validatorMonitor: ValidatorMonitor | null;
     emitter: ChainEventEmitter | null;
+    config: ChainForkConfig;
     logger: Logger | null;
   },
-  preState: CachedBeaconStateAllForks,
+  preState: IBeaconStateView,
   slot: Slot,
   regenCaller: RegenCaller,
   opts: StateRegenerationOpts
-): Promise<CachedBeaconStateAllForks> {
+): Promise<IBeaconStateView> {
   const preSlot = preState.slot;
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState;
-  const {checkpointStateCache, emitter, metrics, logger} = modules;
+  const {config, checkpointStateCache, emitter, metrics, logger} = modules;
   let count = 0;
 
   for (
@@ -391,7 +390,7 @@ export async function processSlotsToNearestCheckpoint(
       caller: regenCaller,
     });
     // processSlots calls .clone() before mutating
-    postState = processSlots(postState, nextEpochSlot, opts, modules);
+    postState = postState.processSlots(nextEpochSlot, opts, modules);
     metrics?.epochTransitionByCaller.inc({caller: regenCaller});
 
     // this is usually added when we prepare for next slot or validate gossip block
@@ -403,7 +402,7 @@ export async function processSlotsToNearestCheckpoint(
     // processSlots() only does epoch transitions, never processes payloads
     // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
     // Post-Gloas: result is a block state (payloadPresent=false)
-    const isPayloadPresent = checkpointState.config.getForkSeq(checkpointState.slot) < ForkSeq.gloas;
+    const isPayloadPresent = config.getForkSeq(checkpointState.slot) < ForkSeq.gloas;
     checkpointStateCache.add(cp, checkpointState, isPayloadPresent);
     // consumers should not mutate state ever
     emitter?.emit(ChainEvent.checkpoint, cp, checkpointState);

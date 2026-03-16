@@ -8,12 +8,7 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  isExecutionBlockBodyType,
-  isExecutionEnabled,
-  isExecutionStateType,
-} from "@lodestar/state-transition";
+import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
@@ -63,7 +58,7 @@ export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
-  preState0: CachedBeaconStateAllForks,
+  preState0: IBeaconStateView,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
@@ -146,7 +141,7 @@ export async function verifyBlocksExecutionPayload(
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   blockInput: IBlockInput,
-  preState0: CachedBeaconStateAllForks
+  preState0: IBeaconStateView
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
 
@@ -157,9 +152,9 @@ export async function verifyBlockExecutionPayload(
 
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
-    isExecutionStateType(preState0) &&
+    preState0.isExecutionStateType &&
     isExecutionBlockBodyType(block.message.body) &&
-    isExecutionEnabled(preState0, block.message)
+    preState0.isExecutionEnabled(block.message)
       ? block.message.body.executionPayload
       : null;
 

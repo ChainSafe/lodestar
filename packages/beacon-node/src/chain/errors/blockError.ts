@@ -1,4 +1,4 @@
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
@@ -91,13 +91,13 @@ export type BlockErrorType =
   | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; blockSlot: Slot}
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposerIndex: ValidatorIndex}
-  | {code: BlockErrorCode.INVALID_SIGNATURE; state: CachedBeaconStateAllForks}
+  | {code: BlockErrorCode.INVALID_SIGNATURE; state: IBeaconStateView}
   | {
       code: BlockErrorCode.INVALID_STATE_ROOT;
       root: Uint8Array;
       expectedRoot: Uint8Array;
-      preState: CachedBeaconStateAllForks;
-      postState: CachedBeaconStateAllForks;
+      preState: IBeaconStateView;
+      postState: IBeaconStateView;
     }
   | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
   | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}

@@ -1,7 +1,7 @@
 import type {ChainForkConfig} from "@lodestar/config";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {CachedBeaconStateAllForks, DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
 
@@ -93,7 +93,7 @@ export type ImportBlockOpts = {
  */
 export type FullyVerifiedBlock = {
   blockInput: IBlockInput;
-  postState: CachedBeaconStateAllForks;
+  postState: IBeaconStateView;
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;
   /**
