@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
@@ -80,7 +81,7 @@ export function processAttestationsAltair(
       stateSlot - data.slot,
       epochCtx.epoch,
       rootCache,
-      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability.toBoolArray() : null
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability : null
     );
 
     // For each participant, update their participation
@@ -177,7 +178,7 @@ export function getAttestationParticipationStatus(
   inclusionDelay: number,
   currentEpoch: Epoch,
   rootCache: RootCache,
-  executionPayloadAvailability: boolean[] | null
+  executionPayloadAvailability: BitArray | null
 ): number {
   const justifiedCheckpoint =
     data.target.epoch === currentEpoch ? rootCache.currentJustifiedCheckpoint : rootCache.previousJustifiedCheckpoint;
@@ -221,7 +222,8 @@ export function getAttestationParticipationStatus(
         throw new Error(`data index must be 0 or 1 index=${data.index}`);
       }
 
-      isMatchingPayload = Boolean(data.index) === executionPayloadAvailability[data.slot % SLOTS_PER_HISTORICAL_ROOT];
+      isMatchingPayload =
+        Boolean(data.index) === executionPayloadAvailability.get(data.slot % SLOTS_PER_HISTORICAL_ROOT);
     }
 
     isMatchingHead = isMatchingHead && isMatchingPayload;
