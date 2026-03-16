@@ -25,6 +25,8 @@ import {type CustodyGroupQueries} from "./utils/prioritizePeers.js";
 const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
+/** Max number of discovered ENR texts to retain for API responses */
+const MAX_DISCOVERED_ENRS = 500;
 
 export type PeerDiscoveryOpts = {
   discv5FirstQueryDelayMs: number;
@@ -110,6 +112,8 @@ export class PeerDiscovery {
   private logger: LoggerNode;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
+  /** Persistent cache of discovered ENR texts, keyed by PeerId. Survives dial lifecycle for API use. */
+  private discoveredEnrs = new Map<PeerIdStr, string>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
   private subnetRequests: Record<SubnetType, Map<number, SubnetRequestInfo>> = {
@@ -207,6 +211,11 @@ export class PeerDiscovery {
     });
 
     return new PeerDiscovery(modules, opts, discv5);
+  }
+
+  /** Get cached ENR texts for connected peers API */
+  getDiscoveredEnrs(): Map<PeerIdStr, string> {
+    return this.discoveredEnrs;
   }
 
   async stop(): Promise<void> {
@@ -407,6 +416,9 @@ export class PeerDiscovery {
       this.randomNodeQuery.count++;
     }
     const peerId = enr.peerId;
+    // Cache ENR text for API responses (/eth/v1/node/peers)
+    this.discoveredEnrs.set(peerId.toString(), enr.encodeTxt());
+    pruneSetToMax(this.discoveredEnrs, MAX_DISCOVERED_ENRS);
     // At least one transport is known to be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     const multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);

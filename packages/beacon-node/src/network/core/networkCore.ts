@@ -509,6 +509,18 @@ export class NetworkCore implements INetworkCore {
    */
   private async getPeerEnrMap(): Promise<Map<string, string>> {
     const enrMap = new Map<string, string>();
+
+    // First, populate from discovery cache (covers most outbound peers discovered via discv5)
+    // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
+    const discoveredEnrs = this.peerManager["discovery"]?.getDiscoveredEnrs();
+    if (discoveredEnrs) {
+      for (const [peerIdStr, enrTxt] of discoveredEnrs) {
+        enrMap.set(peerIdStr, enrTxt);
+      }
+    }
+
+    // Then, overlay with kadValues for the freshest ENR versions (routing table may have
+    // updated ENRs with newer seq numbers) and to cover inbound peers not in discovery cache
     try {
       // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
       const enrs = await this.peerManager["discovery"]?.discv5?.kadValues();
@@ -524,6 +536,7 @@ export class NetworkCore implements INetworkCore {
     } catch (e) {
       this.logger.debug("Could not fetch ENRs from discv5", {}, e as Error);
     }
+
     return enrMap;
   }
 
