@@ -267,16 +267,18 @@ export function estimateCommitteeWeightBetweenSlots(
 
   const numSlotsInStartEpoch = SLOTS_PER_EPOCH - computeSlotsSinceEpochStart(startSlot);
   const numSlotsInEndEpoch = computeSlotsSinceEpochStart(endSlot) + 1;
+  const remainingSlotsInEndEpoch = SLOTS_PER_EPOCH - numSlotsInEndEpoch;
 
-  const startEpochWeightEstimate = committeeWeightPerSlot * numSlotsInStartEpoch;
-  const endEpochWeightEstimate = committeeWeightPerSlot * numSlotsInEndEpoch;
+  const startEpochWeight = committeeWeightPerSlot * numSlotsInStartEpoch;
+  const endEpochWeight = committeeWeightPerSlot * numSlotsInEndEpoch;
+  // For ranges that cross exactly one epoch boundary without covering a full epoch,
+  // the spec models overlap as:
+  //   startEpochWeightProRated = startEpochWeight * (1 - numSlotsInEndEpoch / SLOTS_PER_EPOCH)
+  //                            = startEpochWeight * remainingSlotsInEndEpoch / SLOTS_PER_EPOCH
+  // We keep the spec's "pro-rate the start epoch" form so integer rounding matches it exactly.
+  const startEpochWeightProRated = Math.floor(startEpochWeight / SLOTS_PER_EPOCH) * remainingSlotsInEndEpoch;
 
-  const numCompleteEpochs = Math.max(0, endEpoch - startEpoch - 1);
-  const completeEpochsWeight = totalActiveBalance * numCompleteEpochs;
-
-  return adjustCommitteeWeightEstimateToEnsureSafety(
-    startEpochWeightEstimate + completeEpochsWeight + endEpochWeightEstimate
-  );
+  return adjustCommitteeWeightEstimateToEnsureSafety(startEpochWeightProRated + endEpochWeight);
 }
 
 export function adjustCommitteeWeightEstimateToEnsureSafety(estimate: number): number {
@@ -500,22 +502,44 @@ export function getSupportDiscount(
   return computeEmptySlotSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
 }
 
-export function isOneConfirmed(
+export function computeSafetyThreshold(
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
   balanceSource: FastConfirmationBalanceSource,
-  blockRoot: RootHex,
-  sourceKey: "current" | "previous"
-): boolean {
+  blockRoot: RootHex
+): {
+  threshold: number;
+  proposerScore: number;
+  maximumSupport: number;
+  supportDiscount: number;
+  adversarialWeight: number;
+} {
   const currentSlot = ctx.getCurrentSlot();
-  if (currentSlot === 0) return false;
   const block = getBlock(ctx, cache, blockRoot);
-  if (!block) return false;
+  if (!block) {
+    return {
+      threshold: Number.POSITIVE_INFINITY,
+      proposerScore: 0,
+      maximumSupport: 0,
+      supportDiscount: 0,
+      adversarialWeight: 0,
+    };
+  }
   const parentBlock = getBlock(ctx, cache, block.parentRoot);
-  if (!parentBlock) return false;
+  if (!parentBlock) {
+    return {
+      threshold: Number.POSITIVE_INFINITY,
+      proposerScore: 0,
+      maximumSupport: 0,
+      supportDiscount: 0,
+      adversarialWeight: 0,
+    };
+  }
 
-  const support = getAttestationScore(ctx, cache, balanceSource, blockRoot, sourceKey);
+  // Spec: compute_safety_threshold(store, block_root, balance_source)
+  // Build the threshold from the same terms used in the paper/spec:
+  // max possible committee support, proposer boost, empty-slot discount, and adversarial budget.
   const proposerScore = computeProposerScore(ctx, balanceSource);
   const maximumSupport = estimateCommitteeWeightBetweenSlots(
     balanceSource,
@@ -523,9 +547,59 @@ export function isOneConfirmed(
     (currentSlot - 1) as Slot
   );
   const supportDiscount = getSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
-  const adversarialWeightBase = getAdversarialWeight(ctx, store, cache, balanceSource, blockRoot);
+  const adversarialWeight = getAdversarialWeight(ctx, store, cache, balanceSource, blockRoot);
 
-  return 2 * support + supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeightBase;
+  // Spec underflow guard:
+  // if the discount alone already exceeds the threshold budget, the safety threshold is zero.
+  const threshold =
+    supportDiscount > maximumSupport + proposerScore + 2 * adversarialWeight
+      ? 0
+      : Math.floor((maximumSupport + proposerScore + 2 * adversarialWeight - supportDiscount) / 2);
+
+  return {threshold, proposerScore, maximumSupport, supportDiscount, adversarialWeight};
+}
+
+export function isOneConfirmed(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
+  blockRoot: RootHex,
+  sourceKey: "current" | "previous",
+  logger?: Logger
+): boolean {
+  const currentSlot = ctx.getCurrentSlot();
+  if (currentSlot === 0) return false;
+  const block = getBlock(ctx, cache, blockRoot);
+  if (!block) return false;
+
+  // Spec: is_one_confirmed(store, balance_source, block_root)
+  // Compare actual support for this block against the computed LMD-GHOST safety threshold.
+  const support = getAttestationScore(ctx, cache, balanceSource, blockRoot, sourceKey);
+  const {threshold, proposerScore, maximumSupport, supportDiscount, adversarialWeight} = computeSafetyThreshold(
+    ctx,
+    store,
+    cache,
+    balanceSource,
+    blockRoot
+  );
+  const isConfirmed = support > threshold;
+
+  logger?.debug("Fast confirmation one-confirmed evaluation", {
+    blockRoot,
+    blockSlot: block.slot,
+    currentSlot,
+    sourceKey,
+    support,
+    threshold,
+    proposerScore,
+    maximumSupport,
+    supportDiscount,
+    adversarialWeight,
+    isConfirmed,
+  });
+
+  return isConfirmed;
 }
 
 export function getCurrentTarget(ctx: FastConfirmationContext): CheckpointWithHex | null {
@@ -697,7 +771,7 @@ export function isConfirmedChainSafe(
   const chainRoots = getAncestorRoots(ctx, cache, confirmedRoot, startRoot);
   const previousBalanceSource = getPreviousBalanceSource(store, cache);
   for (const root of chainRoots) {
-    if (!isOneConfirmed(ctx, store, cache, previousBalanceSource, root, "previous")) {
+    if (!isOneConfirmed(ctx, store, cache, previousBalanceSource, root, "previous", logger)) {
       logger?.debug("Fast confirmation chain-safety failed", {
         confirmedRoot,
         reason: "unconfirmed_block_in_chain",
@@ -764,7 +838,7 @@ export function findLatestConfirmedDescendant(
         });
         break;
       }
-      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, "current");
+      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, "current", logger);
       if (!isConfirmed) {
         logger?.debug("Fast confirmation previous-epoch loop stopped", {
           reason: "block_not_one_confirmed",
@@ -802,7 +876,7 @@ export function findLatestConfirmedDescendant(
         break;
       }
 
-      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, "current");
+      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, "current", logger);
       if (!isConfirmed) {
         logger?.debug("Fast confirmation current-epoch loop stopped", {
           reason: "block_not_one_confirmed",
