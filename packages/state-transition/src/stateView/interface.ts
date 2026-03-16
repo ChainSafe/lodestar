@@ -148,6 +148,7 @@ export interface IBeaconStateView {
     expectedWithdrawals: capella.Withdrawal[];
     processedBuilderWithdrawalsCount: number;
     processedPartialWithdrawalsCount: number;
+    processedBuildersSweepCount: number;
     processedValidatorSweepCount: number;
   };
 
