@@ -217,7 +217,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    */
   async getOrReload(cp: CheckpointHexPayload): Promise<IBeaconStateView | null> {
     const stateOrStateBytesData = await this.getStateOrLoadDb(cp);
-    if (stateOrStateBytesData === null || isCachedBeaconState(stateOrStateBytesData)) {
+    if (stateOrStateBytesData === null || isBeaconStateView(stateOrStateBytesData)) {
       return stateOrStateBytesData ?? null;
     }
     const {persistedKey, stateBytes} = stateOrStateBytesData;
@@ -278,7 +278,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    */
   async getStateOrBytes(cp: CheckpointHexPayload): Promise<IBeaconStateView | Uint8Array | null> {
     const stateOrLoadedState = await this.getStateOrLoadDb(cp);
-    if (stateOrLoadedState === null || isCachedBeaconState(stateOrLoadedState)) {
+    if (stateOrLoadedState === null || isBeaconStateView(stateOrLoadedState)) {
       return stateOrLoadedState;
     }
     return stateOrLoadedState.stateBytes;
@@ -970,7 +970,7 @@ function fromCacheKey(key: CacheKey): CheckpointHexPayload {
   };
 }
 
-function isCachedBeaconState(stateOrBytes: IBeaconStateView | LoadedStateBytesData): stateOrBytes is IBeaconStateView {
+function isBeaconStateView(stateOrBytes: IBeaconStateView | LoadedStateBytesData): stateOrBytes is IBeaconStateView {
   return (stateOrBytes as IBeaconStateView).slot !== undefined;
 }
 
