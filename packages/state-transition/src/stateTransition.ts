@@ -29,8 +29,8 @@ import {
   CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "./types.js";
-import {computeEpochAtSlot} from "./util/index.js";
 import {rotatePayloadTimelinessCommittees} from "./util/gloas.js";
+import {computeEpochAtSlot} from "./util/index.js";
 
 // Multifork capable state transition
 

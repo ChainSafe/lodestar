@@ -14,8 +14,8 @@ import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
-import {computePayloadTimelinessCommitteeAtSlot} from "./seed.js";
 import {RootCache} from "./rootCache.js";
+import {computePayloadTimelinessCommitteeAtSlot} from "./seed.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
@@ -181,7 +181,7 @@ export function computePayloadTimelinessCommittee(state: CachedBeaconStateGloas)
   );
 }
 
-function updatePayloadTimelinessCommittee(
+function setPayloadTimelinessCommitteeValues(
   committeeView: CachedBeaconStateGloas["currentPtc"],
   committee: ArrayLike<number>
 ): void {
@@ -190,13 +190,17 @@ function updatePayloadTimelinessCommittee(
   }
 }
 
+function updateCurrentPayloadTimelinessCommitteeFromEpochCache(state: CachedBeaconStateGloas): void {
+  setPayloadTimelinessCommitteeValues(state.currentPtc, state.epochCtx.getPayloadTimelinessCommittee(state.slot));
+}
+
 export function initializePayloadTimelinessCommittee(state: CachedBeaconStateGloas): void {
-  updatePayloadTimelinessCommittee(state.currentPtc, computePayloadTimelinessCommittee(state));
+  setPayloadTimelinessCommitteeValues(state.currentPtc, computePayloadTimelinessCommittee(state));
 }
 
 export function rotatePayloadTimelinessCommittees(state: CachedBeaconStateGloas): void {
-  updatePayloadTimelinessCommittee(state.previousPtc, state.currentPtc.getAll());
-  updatePayloadTimelinessCommittee(state.currentPtc, computePayloadTimelinessCommittee(state));
+  setPayloadTimelinessCommitteeValues(state.previousPtc, state.currentPtc.getAll());
+  updateCurrentPayloadTimelinessCommitteeFromEpochCache(state);
 }
 
 export function getPayloadTimelinessCommittee(state: CachedBeaconStateGloas, slot: Slot): Uint32Array {

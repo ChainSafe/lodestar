@@ -83,7 +83,7 @@ describe("upgradeState", () => {
 
     expect(Array.from(getPayloadTimelinessCommittee(postState, postState.slot - 1))).toEqual(previousCurrentPtc);
     expect(Array.from(getPayloadTimelinessCommittee(postState, postState.slot))).toEqual(
-      Array.from(computePayloadTimelinessCommittee(postState))
+      Array.from(postState.epochCtx.getPayloadTimelinessCommittee(postState.slot))
     );
   });
 
@@ -95,7 +95,7 @@ describe("upgradeState", () => {
 
     expect(Array.from(getPayloadTimelinessCommittee(postState, postState.slot - 1))).toEqual(previousCurrentPtc);
     expect(Array.from(getPayloadTimelinessCommittee(postState, postState.slot))).toEqual(
-      Array.from(computePayloadTimelinessCommittee(postState))
+      Array.from(postState.epochCtx.getPayloadTimelinessCommittee(postState.slot))
     );
   });
 });
