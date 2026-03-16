@@ -1,4 +1,5 @@
 import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {Logger} from "@lodestar/utils";
 import {equalCheckpointWithHex} from "../store.ts";
 import {
   FastConfirmationCache,
@@ -18,7 +19,7 @@ const resetIfConfirmedUnavailable: FastConfirmationRule = (snapshot, ctx, _store
   return decision;
 };
 
-const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (snapshot, ctx, store, cache, decision) => {
+const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (snapshot, ctx, store, cache, decision, logger) => {
   const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
   if (!confirmedBlock) return decision;
   const confirmedEpoch = computeEpochAtSlot(confirmedBlock.slot);
@@ -26,7 +27,8 @@ const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (snapshot, ctx,
   const confirmedEpochBehindHead = confirmedEpoch + 1 < snapshot.currentEpoch;
   const notAncestorOfHead = !isAncestor(ctx, cache, snapshot.headRoot, decision.confirmedRoot);
   const allChildrenNotConfirmed =
-    isStartSlotOfEpoch(snapshot.currentSlot) && !isConfirmedChainSafe(ctx, store, cache, decision.confirmedRoot);
+    isStartSlotOfEpoch(snapshot.currentSlot) &&
+    !isConfirmedChainSafe(ctx, store, cache, decision.confirmedRoot, logger);
 
   if (confirmedEpochBehindHead || notAncestorOfHead || allChildrenNotConfirmed) {
     const didReset = decision.didReset || decision.confirmedRoot !== snapshot.finalizedRoot;
@@ -53,11 +55,11 @@ const advanceIfObservedJustified: FastConfirmationRule = (snapshot, ctx, store, 
   return decision;
 };
 
-const advanceToLatestConfirmedDescendant: FastConfirmationRule = (snapshot, ctx, store, cache, decision) => {
+const advanceToLatestConfirmedDescendant: FastConfirmationRule = (snapshot, ctx, store, cache, decision, logger) => {
   const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
   const confirmedEpoch = confirmedBlock ? computeEpochAtSlot(confirmedBlock.slot) : null;
   if (confirmedEpoch !== null && confirmedEpoch + 1 >= snapshot.currentEpoch) {
-    const newConfirmed = findLatestConfirmedDescendant(snapshot, ctx, store, cache, decision.confirmedRoot);
+    const newConfirmed = findLatestConfirmedDescendant(snapshot, ctx, store, cache, decision.confirmedRoot, logger);
     return {
       ...decision,
       confirmedRoot: newConfirmed,
@@ -78,12 +80,13 @@ export function runFastConfirmationRules(
   snapshot: FastConfirmationSnapshot,
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
-  cache: FastConfirmationCache
+  cache: FastConfirmationCache,
+  logger?: Logger
 ): FastConfirmationDecision {
   let decision: FastConfirmationDecision = {confirmedRoot: snapshot.confirmedRoot, didReset: false};
 
   for (const rule of FAST_CONFIRMATION_RULES) {
-    decision = rule(snapshot, ctx, store, cache, decision);
+    decision = rule(snapshot, ctx, store, cache, decision, logger);
     if (decision.stop) break;
   }
   return decision;

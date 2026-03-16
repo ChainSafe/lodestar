@@ -63,7 +63,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
 
     const {confirmedRoot, didReset, reason} = withObservedDuration(
       this.metrics?.fastConfirmation.stepsDuration.startTimer({step: FastConfirmationSteps.runRules}),
-      () => runFastConfirmationRules(snapshot, ctx, this.store, cache)
+      () => runFastConfirmationRules(snapshot, ctx, this.store, cache, this.logger)
     );
 
     const changed = confirmedRoot !== previousConfirmedRoot;
