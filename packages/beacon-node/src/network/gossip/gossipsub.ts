@@ -1,6 +1,8 @@
 import {
   type GossipSub,
   type GossipSubEvents,
+  type PartialMessage,
+  type PartialSubscriptionOpts,
   type PublishResult,
   StrictNoSign,
   type TopicValidatorResult,
@@ -17,7 +19,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
-import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
+import {Logger, Map2d, Map2dArr, toHex} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
@@ -93,6 +95,8 @@ type GossipSubInternal = GossipSub & {
   dumpPeerScoreStats: () => PeerScoreStatsDump;
   getScore: (peerIdStr: string) => number;
   reportMessageValidationResult: (msgId: string, propagationSource: string, acceptance: TopicValidatorResult) => void;
+  subscribePartial: (topic: TopicStr, opts: PartialSubscriptionOpts) => void;
+  publishPartial: (partialMsg: PartialMessage) => void;
 };
 
 /**
@@ -116,6 +120,7 @@ export class Eth2Gossipsub {
   private readonly events: NetworkEventBus;
   private readonly libp2p: Libp2p;
   private readonly gossipsub: GossipSubInternal;
+  private readonly networkConfig: NetworkConfig;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
@@ -192,9 +197,15 @@ export class Eth2Gossipsub {
     this.events = events;
     this.libp2p = modules.libp2p;
     this.gossipTopicCache = gossipTopicCache;
+    this.networkConfig = networkConfig;
 
     this.gossipsub.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
+
+    // Listen for partial messages when feature is enabled
+    if (networkConfig.enablePartialColumns) {
+      this.gossipsub.addEventListener("gossipsub:partial-message", this.onPartialMessage.bind(this));
+    }
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
@@ -245,6 +256,15 @@ export class Eth2Gossipsub {
 
     this.logger.verbose("Subscribe to gossipsub topic", {topic: topicStr});
     this.gossipsub.subscribe(topicStr);
+
+    // Subscribe with partial message support for data column topics when enabled
+    if (this.networkConfig.enablePartialColumns && topic.type === GossipType.data_column_sidecar) {
+      this.gossipsub.subscribePartial(topicStr, {
+        requestsPartial: true,
+        supportsSendingPartial: true,
+      });
+      this.logger.verbose("Subscribed with partial message support", {topic: topicStr});
+    }
   }
 
   /**
@@ -403,6 +423,44 @@ export class Eth2Gossipsub {
     callInNextEventLoop(() => {
       this.gossipsub.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
     });
+  }
+
+  private onPartialMessage(event: GossipSubEvents["gossipsub:partial-message"]): void {
+    const {topic: topicStr, groupID, partialMessage} = event.detail;
+
+    // Parse the base topic to check it's a data column sidecar topic
+    const baseTopic = this.gossipTopicCache.getTopic(topicStr);
+    if (baseTopic.type !== GossipType.data_column_sidecar) {
+      return;
+    }
+
+    // Re-type topic as partial for routing to the partial handler
+    const partialTopic: GossipTopic = {
+      ...baseTopic,
+      type: GossipType.partial_data_column_sidecar,
+    };
+
+    const seenTimestampSec = Date.now() / 1000;
+
+    // Route partial message data through the standard gossip pipeline
+    if (partialMessage !== undefined && partialMessage.length > 0) {
+      callInNextEventLoop(() => {
+        this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+          topic: partialTopic,
+          msg: {topic: topicStr, data: partialMessage, type: "unsigned"},
+          msgId: toHex(groupID),
+          propagationSource: "partial",
+          clientVersion: "",
+          clientAgent: "",
+          seenTimestampSec,
+          startProcessUnixSec: null,
+        });
+      });
+    }
+  }
+
+  publishPartialMessage(partialMsg: PartialMessage): void {
+    this.gossipsub.publishPartial(partialMsg);
   }
 
   /**
