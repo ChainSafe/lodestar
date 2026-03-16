@@ -8,12 +8,13 @@ import {
   MIN_DEPOSIT_AMOUNT,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {BuilderIndex, Epoch, ValidatorIndex, gloas} from "@lodestar/types";
+import {BuilderIndex, Epoch, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
+import {computePayloadTimelinessCommitteeAtSlot} from "./seed.js";
 import {RootCache} from "./rootCache.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
@@ -169,4 +170,59 @@ export function isAttestationSameSlotRootCache(rootCache: RootCache, data: Attes
 
 export function isParentBlockFull(state: CachedBeaconStateGloas): boolean {
   return byteArrayEquals(state.latestExecutionPayloadBid.blockHash, state.latestBlockHash);
+}
+
+export function computePayloadTimelinessCommittee(state: CachedBeaconStateGloas): Uint32Array {
+  return computePayloadTimelinessCommitteeAtSlot(
+    state,
+    state.slot,
+    state.epochCtx.currentShuffling.committees[state.slot % SLOTS_PER_EPOCH],
+    state.epochCtx.effectiveBalanceIncrements
+  );
+}
+
+function updatePayloadTimelinessCommittee(
+  committeeView: CachedBeaconStateGloas["currentPtc"],
+  committee: ArrayLike<number>
+): void {
+  for (let i = 0; i < committeeView.length; i++) {
+    committeeView.set(i, committee[i]);
+  }
+}
+
+export function initializePayloadTimelinessCommittee(state: CachedBeaconStateGloas): void {
+  updatePayloadTimelinessCommittee(state.currentPtc, computePayloadTimelinessCommittee(state));
+}
+
+export function rotatePayloadTimelinessCommittees(state: CachedBeaconStateGloas): void {
+  updatePayloadTimelinessCommittee(state.previousPtc, state.currentPtc.getAll());
+  updatePayloadTimelinessCommittee(state.currentPtc, computePayloadTimelinessCommittee(state));
+}
+
+export function getPayloadTimelinessCommittee(state: CachedBeaconStateGloas, slot: Slot): Uint32Array {
+  if (slot === state.slot) {
+    return Uint32Array.from(state.currentPtc.getAll());
+  }
+
+  if (slot + 1 === state.slot) {
+    return Uint32Array.from(state.previousPtc.getAll());
+  }
+
+  throw new Error(
+    `Payload Timeliness Committee is only available for current or previous slot, state.slot=${state.slot}, requested=${slot}`
+  );
+}
+
+export function getIndexedPayloadAttestation(
+  state: CachedBeaconStateGloas,
+  payloadAttestation: gloas.PayloadAttestation
+): gloas.IndexedPayloadAttestation {
+  const ptc = getPayloadTimelinessCommittee(state, payloadAttestation.data.slot);
+  const attestingIndices = payloadAttestation.aggregationBits.intersectValues(ptc);
+
+  return {
+    attestingIndices: attestingIndices.sort((a, b) => a - b),
+    data: payloadAttestation.data,
+    signature: payloadAttestation.signature,
+  };
 }

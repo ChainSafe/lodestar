@@ -5,7 +5,7 @@ import {isValidDepositSignature} from "../block/processDeposit.js";
 import {applyDepositForBuilder} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {initializePayloadTimelinessCommittee, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 
 /**
@@ -71,6 +71,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 
   // Process pending builder deposits at the fork boundary
   onboardBuildersFromPendingDeposits(stateGloas);
+  initializePayloadTimelinessCommittee(stateGloas);
 
   stateGloas.commit();
   // Clear cache to ensure the cache of fulu fields is not used by new gloas fields

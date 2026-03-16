@@ -3465,8 +3465,8 @@
 
 - name: get_indexed_payload_attestation#gloas
   sources:
-    - file: packages/state-transition/src/cache/epochCache.ts
-      search: '^\s+getIndexedPayloadAttestation\('
+    - file: packages/state-transition/src/util/gloas.ts
+      search: '^export function getIndexedPayloadAttestation\('
       regex: true
   spec: |
     <spec fn="get_indexed_payload_attestation" fork="gloas" hash="0e516ffb">
@@ -4054,48 +4054,41 @@
 
 - name: get_ptc#gloas
   sources:
-    - file: packages/state-transition/src/cache/epochCache.ts
-      search: '^\s+getPayloadTimelinessCommittee\('
+    - file: packages/state-transition/src/util/gloas.ts
+      search: '^export function getPayloadTimelinessCommittee\('
       regex: true
   spec: |
-    <spec fn="get_ptc" fork="gloas" hash="ae15f761">
+    <spec fn="get_ptc" fork="gloas" hash="ca84b30e">
     def get_ptc(state: BeaconState, slot: Slot) -> Vector[ValidatorIndex, PTC_SIZE]:
         """
         Get the payload timeliness committee for the given ``slot``.
         """
-        epoch = compute_epoch_at_slot(slot)
-        seed = hash(get_seed(state, epoch, DOMAIN_PTC_ATTESTER) + uint_to_bytes(slot))
+        assert slot == state.slot or slot + 1 == state.slot
+        return state.current_ptc if slot == state.slot else state.previous_ptc
+    </spec>
+
+- name: compute_ptc#gloas
+  sources:
+    - file: packages/state-transition/src/util/gloas.ts
+      search: '^export function computePayloadTimelinessCommittee\('
+      regex: true
+  spec: |
+    <spec fn="compute_ptc" fork="gloas" hash="ca84b30e">
+    def compute_ptc(state: BeaconState) -> Vector[ValidatorIndex, PTC_SIZE]:
+        """
+        Get the payload timeliness committee for the current slot.
+        """
+        epoch = get_current_epoch(state)
+        seed = hash(get_seed(state, epoch, DOMAIN_PTC_ATTESTER) + uint_to_bytes(state.slot))
         indices: List[ValidatorIndex] = []
-        # Concatenate all committees for this slot in order
+        # Concatenate all committees for the current slot in order
         committees_per_slot = get_committee_count_per_slot(state, epoch)
         for i in range(committees_per_slot):
-            committee = get_beacon_committee(state, slot, CommitteeIndex(i))
+            committee = get_beacon_committee(state, state.slot, CommitteeIndex(i))
             indices.extend(committee)
         return compute_balance_weighted_selection(
             state, indices, seed, size=PTC_SIZE, shuffle_indices=False
         )
-    </spec>
-
-- name: get_ptc_assignment#gloas
-  sources: []
-  spec: |
-    <spec fn="get_ptc_assignment" fork="gloas" hash="7fd50097">
-    def get_ptc_assignment(
-        state: BeaconState, epoch: Epoch, validator_index: ValidatorIndex
-    ) -> Optional[Slot]:
-        """
-        Returns the slot during the requested epoch in which the validator with
-        index ``validator_index`` is a member of the PTC. Returns None if no
-        assignment is found.
-        """
-        next_epoch = Epoch(get_current_epoch(state) + 1)
-        assert epoch <= next_epoch
-
-        start_slot = compute_start_slot_at_epoch(epoch)
-        for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH):
-            if validator_index in get_ptc(state, Slot(slot)):
-                return Slot(slot)
-        return None
     </spec>
 
 - name: get_randao_mix#phase0

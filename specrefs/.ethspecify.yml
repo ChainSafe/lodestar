@@ -246,6 +246,7 @@ exceptions:
     - compute_balance_weighted_acceptance#gloas
     - compute_balance_weighted_selection#gloas
     - compute_fork_version#gloas
+    - compute_ptc#gloas
     - compute_proposer_indices#gloas
     - get_ancestor#gloas
     - get_attestation_participation_flag_indices#gloas
@@ -269,7 +270,6 @@ exceptions:
     - get_payload_status_tiebreaker#gloas
     - get_pending_balance_to_withdraw#gloas
     - get_proposer_preferences_signature#gloas
-    - get_ptc_assignment#gloas
     - get_upcoming_proposal_slots#gloas
     - get_weight#gloas
     - has_compounding_withdrawal_credential#gloas

@@ -1,4 +1,4 @@
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
@@ -26,9 +26,11 @@ import {
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
+import {rotatePayloadTimelinessCommittees} from "./util/gloas.js";
 
 // Multifork capable state transition
 
@@ -287,6 +289,10 @@ function processSlotsWithTransientCache(
         timer?.();
       }
 
+      if (fork >= ForkSeq.gloas) {
+        rotatePayloadTimelinessCommittees(postState as CachedBeaconStateGloas);
+      }
+
       // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
       // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.
       {
@@ -299,6 +305,9 @@ function processSlotsWithTransientCache(
       epochTransitionTimer?.();
     } else {
       postState.slot++;
+      if (fork >= ForkSeq.gloas) {
+        rotatePayloadTimelinessCommittees(postState as CachedBeaconStateGloas);
+      }
     }
   }
 

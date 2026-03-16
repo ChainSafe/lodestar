@@ -18,7 +18,7 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {Bytes32, DomainType, Epoch, ValidatorIndex} from "@lodestar/types";
+import {Bytes32, DomainType, Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
@@ -269,6 +269,27 @@ export function getNextSyncCommitteeIndices(
 }
 
 /**
+ * Compute PTC for a single slot.
+ */
+export function computePayloadTimelinessCommitteeAtSlot(
+  state: BeaconStateAllForks,
+  slot: Slot,
+  slotCommittees: Uint32Array[],
+  effectiveBalanceIncrements: EffectiveBalanceIncrements
+): Uint32Array {
+  const epoch = computeEpochAtSlot(slot);
+  const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
+  const slotSeedInput = new Uint8Array(epochSeed.length + 8);
+  slotSeedInput.set(epochSeed, 0);
+  const slotSeedView = new DataView(slotSeedInput.buffer, slotSeedInput.byteOffset, slotSeedInput.byteLength);
+
+  slotSeedView.setUint32(epochSeed.length, slot, true);
+  slotSeedView.setUint32(epochSeed.length + 4, 0, true);
+
+  return computePayloadTimelinessCommitteeForSlot(digest(slotSeedInput), slotCommittees, effectiveBalanceIncrements);
+}
+
+/**
  * Compute PTC for all slots in an epoch eagerly.
  */
 export function computePayloadTimelinessCommitteesForEpoch(
@@ -277,23 +298,12 @@ export function computePayloadTimelinessCommitteesForEpoch(
   committees: Uint32Array[][],
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array[] {
-  const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
   const startSlot = epoch * SLOTS_PER_EPOCH;
   const result: Uint32Array[] = new Array(SLOTS_PER_EPOCH);
 
-  // Pre-allocate slot seed buffer once, reuse across all slots
-  const slotSeedInput = new Uint8Array(epochSeed.length + 8);
-  slotSeedInput.set(epochSeed, 0);
-  const slotSeedView = new DataView(slotSeedInput.buffer, slotSeedInput.byteOffset, slotSeedInput.byteLength);
-
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
     const slot = startSlot + i;
-    // Write slot as little-endian uint64 (fits in uint32 range)
-    slotSeedView.setUint32(epochSeed.length, slot, true);
-    slotSeedView.setUint32(epochSeed.length + 4, 0, true);
-    const slotSeed = digest(slotSeedInput);
-
-    result[i] = computePayloadTimelinessCommitteeForSlot(slotSeed, committees[i], effectiveBalanceIncrements);
+    result[i] = computePayloadTimelinessCommitteeAtSlot(state, slot, committees[i], effectiveBalanceIncrements);
   }
   return result;
 }
