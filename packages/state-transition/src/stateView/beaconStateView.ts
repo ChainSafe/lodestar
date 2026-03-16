@@ -343,7 +343,7 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   /**
-   * Return the index of the validator in the current epoch PTC for the given slot.
+   * Return the index of the validator in the PTC committee for the given slot.
    * return -1 if validator is not in the PTC committee for the given slot.
    */
   validatorPTCCommitteeIndex(validatorIndex: ValidatorIndex, slot: Slot): number {
