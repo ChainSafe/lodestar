@@ -6,8 +6,7 @@ linkWorkspacePackages: true
 minimumReleaseAge: 2880
 
 minimumReleaseAgeExclude:
-  - "@chainsafe/discv5"
-  - "@chainsafe/enr"
+  - "@chainsafe/*"
   - "@libp2p/*"
   - "libp2p"
 
