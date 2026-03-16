@@ -40,11 +40,13 @@ export class DbCPStateDatastore implements CPStateDatastore {
   }
 }
 
-export function datastoreKeyToCheckpoint(key: DatastoreKey): phase0.Checkpoint {
-  // fixedSize is null for variable length types, but Checkpoint is fixed length so we can safely use its minSize because minSize === fixedSize
+function extractCheckpointBytes(key: DatastoreKey): Uint8Array {
   const fixedSize = ssz.phase0.Checkpoint.minSize;
-  const cpBytes = key.length > fixedSize ? key.subarray(0, fixedSize) : key;
-  return ssz.phase0.Checkpoint.deserialize(cpBytes);
+  return key.subarray(0, fixedSize);
+}
+
+export function datastoreKeyToCheckpoint(key: DatastoreKey): phase0.Checkpoint {
+  return ssz.phase0.Checkpoint.deserialize(extractCheckpointBytes(key));
 }
 
 export function checkpointToDatastoreKey(cp: phase0.Checkpoint, payloadPresent: boolean): DatastoreKey {
@@ -80,6 +82,15 @@ export async function getLatestSafeDatastoreKey(
     // only consider epochs with a single checkpoint to avoid ambiguity from forks
     if (keys.length === 1) {
       dataStoreKeyByEpoch.set(epoch, keys[0]);
+    } else if (keys.length === 2) {
+      // Two keys for the same checkpoint with different payloadPresent suffix (FULL/EMPTY)
+      // TODO GLOAS: Here we pick FULL key. Probably wrong, need to review this
+      const cp0 = extractCheckpointBytes(keys[0]);
+      const cp1 = extractCheckpointBytes(keys[1]);
+      if (Buffer.from(cp0).equals(Buffer.from(cp1))) {
+        const fullKey = keys[0][cp0.length] === 1 ? keys[0] : keys[1];
+        dataStoreKeyByEpoch.set(epoch, fullKey);
+      }
     }
   }
 
