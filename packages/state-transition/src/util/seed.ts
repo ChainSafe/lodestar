@@ -298,12 +298,23 @@ export function computePayloadTimelinessCommitteesForEpoch(
   committees: Uint32Array[][],
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array[] {
+  const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
   const startSlot = epoch * SLOTS_PER_EPOCH;
   const result: Uint32Array[] = new Array(SLOTS_PER_EPOCH);
 
+  // Pre-allocate slot seed buffer once, reuse across all slots
+  const slotSeedInput = new Uint8Array(epochSeed.length + 8);
+  slotSeedInput.set(epochSeed, 0);
+  const slotSeedView = new DataView(slotSeedInput.buffer, slotSeedInput.byteOffset, slotSeedInput.byteLength);
+
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
     const slot = startSlot + i;
-    result[i] = computePayloadTimelinessCommitteeAtSlot(state, slot, committees[i], effectiveBalanceIncrements);
+    // Write slot as little-endian uint64 (fits in uint32 range)
+    slotSeedView.setUint32(epochSeed.length, slot, true);
+    slotSeedView.setUint32(epochSeed.length + 4, 0, true);
+    const slotSeed = digest(slotSeedInput);
+
+    result[i] = computePayloadTimelinessCommitteeForSlot(slotSeed, committees[i], effectiveBalanceIncrements);
   }
   return result;
 }

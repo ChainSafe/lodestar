@@ -1015,11 +1015,11 @@ export class EpochCache {
       throw new Error("Payload Timeliness Committee is not available before gloas fork");
     }
 
-    if (epoch === this.epoch) {
-      return this.payloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
+    if (epoch !== this.epoch) {
+      throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
     }
 
-    throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);
+    return this.payloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
   }
 }
 
