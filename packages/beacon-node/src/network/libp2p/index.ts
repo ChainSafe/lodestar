@@ -5,11 +5,12 @@ import {mdns} from "@libp2p/mdns";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
-import {createLibp2p} from "libp2p";
+import {Libp2pInit, createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
 import {noise} from "@chainsafe/libp2p-noise";
 import {asCrypto, defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
+import {quic} from "@chainsafe/libp2p-quic";
 import {Libp2p, LodestarComponents} from "../interface.js";
 import {NetworkOptions, defaultNetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
@@ -21,11 +22,14 @@ export type NodeJsLibp2pOpts = {
   metricsRegistry?: Registry;
 };
 
-export async function getDiscv5Multiaddrs(bootEnrs: string[]): Promise<string[]> {
+export async function getDiscv5Multiaddrs(bootEnrs: string[], quicEnabled?: boolean): Promise<string[]> {
   const bootMultiaddrs = [];
   for (const enrStr of bootEnrs) {
     const enr = ENR.decodeTxt(enrStr);
-    const multiaddrWithPeerId = (await enr.getFullMultiaddr("tcp"))?.toString();
+    // Prefer QUIC over TCP when available
+    const quicMultiaddr = quicEnabled ? (await enr.getFullMultiaddr("quic"))?.toString() : undefined;
+    const tcpMultiaddr = (await enr.getFullMultiaddr("tcp"))?.toString();
+    const multiaddrWithPeerId = quicMultiaddr ?? tcpMultiaddr;
     if (multiaddrWithPeerId) {
       bootMultiaddrs.push(multiaddrWithPeerId);
     }
@@ -53,7 +57,9 @@ export async function createNodeJsLibp2p(
     const bootMultiaddrs = [
       ...(networkOpts.bootMultiaddrs ?? defaultNetworkOptions.bootMultiaddrs ?? []),
       // Append discv5.bootEnrs to bootMultiaddrs if requested
-      ...(networkOpts.connectToDiscv5Bootnodes ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? []) : []),
+      ...(networkOpts.connectToDiscv5Bootnodes
+        ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? [], networkOpts.quic)
+        : []),
     ];
 
     if ((bootMultiaddrs.length ?? 0) > 0) {
@@ -63,6 +69,35 @@ export async function createNodeJsLibp2p(
     if (networkOpts.mdns) {
       peerDiscovery.push(mdns());
     }
+  }
+  const transports: Libp2pInit["transports"] = [];
+  if (networkOpts.tcp ?? true) {
+    transports.unshift(
+      tcp({
+        // Reject connections when the server's connection count gets high
+        maxConnections: networkOpts.maxPeers,
+        // socket option: the maximum length of the queue of pending connections
+        // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
+        // it's not safe if we increase this number
+        backlog: 5,
+        closeServerOnMaxConnections: {
+          closeAbove: networkOpts.maxPeers ?? Infinity,
+          listenBelow: networkOpts.maxPeers ?? Infinity,
+        },
+      })
+    );
+  }
+  if (networkOpts.quic) {
+    transports.unshift(
+      quic({
+        handshakeTimeout: 5_000,
+        maxIdleTimeout: 10_000,
+        keepAliveInterval: 5_000,
+        maxConcurrentStreamLimit: 256,
+        maxStreamData: 10_000_000,
+        maxConnectionData: 15_000_000,
+      })
+    );
   }
 
   const noiseCrypto = {
@@ -85,20 +120,7 @@ export async function createNodeJsLibp2p(
       announce: [],
     },
     connectionEncrypters: [noise({crypto: noiseCrypto})],
-    // Reject connections when the server's connection count gets high
-    transports: [
-      tcp({
-        maxConnections: networkOpts.maxPeers,
-        // socket option: the maximum length of the queue of pending connections
-        // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
-        // it's not safe if we increase this number
-        backlog: 5,
-        closeServerOnMaxConnections: {
-          closeAbove: networkOpts.maxPeers ?? Infinity,
-          listenBelow: networkOpts.maxPeers ?? Infinity,
-        },
-      }),
-    ],
+    transports,
     streamMuxers: [mplex({disconnectThreshold})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics

@@ -1,7 +1,7 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
 import {ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -27,6 +27,7 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
+import {processExecutionPayloadEnvelope} from "../block/index.js";
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
@@ -75,10 +76,12 @@ export class BeaconStateView implements IBeaconStateView {
   // altair
   private _currentSyncCommittee: SyncCommittee | null = null;
   private _nextSyncCommittee: SyncCommittee | null = null;
-  private _previousEpochParticipation: number[] | null = null;
-  private _currentEpochParticipation: number[] | null = null;
+  private _previousEpochParticipation: Uint8Array | null = null;
+  private _currentEpochParticipation: Uint8Array | null = null;
   // bellatrix
   private _latestExecutionPayloadHeader: ExecutionPayloadHeader | null = null;
+  // Caches the cross-fork latestBlockHash value
+  private _latestBlockHash: Bytes32 | null = null;
   // capella
   private _historicalSummaries: capella.HistoricalSummaries | null = null;
   // electra
@@ -159,7 +162,7 @@ export class BeaconStateView implements IBeaconStateView {
     return getRandaoMix(this.cachedState, epoch);
   }
 
-  get previousEpochParticipation(): number[] {
+  get previousEpochParticipation(): Uint8Array {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
       throw new Error("previousEpochParticipation is not available before Altair");
     }
@@ -167,7 +170,7 @@ export class BeaconStateView implements IBeaconStateView {
     if (this._previousEpochParticipation === null) {
       this._previousEpochParticipation = (
         this.cachedState as CachedBeaconStateAltair
-      ).previousEpochParticipation.toValue();
+      ).previousEpochParticipation.serialize();
     }
 
     return this._previousEpochParticipation;
@@ -175,7 +178,7 @@ export class BeaconStateView implements IBeaconStateView {
 
   // altair
 
-  get currentEpochParticipation(): number[] {
+  get currentEpochParticipation(): Uint8Array {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
       throw new Error("currentEpochParticipation is not available before Altair");
     }
@@ -183,10 +186,24 @@ export class BeaconStateView implements IBeaconStateView {
     if (this._currentEpochParticipation === null) {
       this._currentEpochParticipation = (
         this.cachedState as CachedBeaconStateAltair
-      ).currentEpochParticipation.toValue();
+      ).currentEpochParticipation.serialize();
     }
 
     return this._currentEpochParticipation;
+  }
+
+  getPreviousEpochParticipation(validatorIndex: ValidatorIndex): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
+      throw new Error("previousEpochParticipation is not available before Altair");
+    }
+    return (this.cachedState as CachedBeaconStateAltair).previousEpochParticipation.get(validatorIndex);
+  }
+
+  getCurrentEpochParticipation(validatorIndex: ValidatorIndex): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.altair) {
+      throw new Error("currentEpochParticipation is not available before Altair");
+    }
+    return (this.cachedState as CachedBeaconStateAltair).currentEpochParticipation.get(validatorIndex);
   }
 
   // bellatrix
@@ -203,6 +220,46 @@ export class BeaconStateView implements IBeaconStateView {
     }
 
     return this._latestExecutionPayloadHeader;
+  }
+
+  /**
+   * Cross-fork accessor for the execution block hash of the most recently included payload.
+   * Pre-gloas: reads from latestExecutionPayloadHeader.blockHash.
+   * Gloas+: reads the dedicated latestBlockHash field (EIP-7732).
+   */
+  get latestBlockHash(): Bytes32 {
+    const forkSeq = this.config.getForkSeq(this.cachedState.slot);
+    if (forkSeq < ForkSeq.bellatrix) {
+      throw new Error("latestBlockHash is not available before Bellatrix");
+    }
+
+    if (this._latestBlockHash === null) {
+      if (forkSeq >= ForkSeq.gloas) {
+        this._latestBlockHash = (this.cachedState as CachedBeaconStateGloas).latestBlockHash;
+      } else {
+        this._latestBlockHash = (
+          this.cachedState as CachedBeaconStateExecutions
+        ).latestExecutionPayloadHeader.blockHash;
+      }
+    }
+
+    return this._latestBlockHash;
+  }
+
+  /**
+   * The execution block number of the most recently included payload.
+   * Named payloadBlockNumber (not latestBlockNumber) to mirror ExecutionPayloadHeader.blockNumber pre-gloas.
+   * Only available from bellatrix through fulu — not tracked on BeaconState in gloas+ (EIP-7732).
+   */
+  get payloadBlockNumber(): number {
+    const forkSeq = this.config.getForkSeq(this.cachedState.slot);
+    if (forkSeq < ForkSeq.bellatrix) {
+      throw new Error("payloadBlockNumber is not available before Bellatrix");
+    }
+    if (forkSeq >= ForkSeq.gloas) {
+      throw new Error("payloadBlockNumber is not available post-gloas");
+    }
+    return (this.cachedState as CachedBeaconStateExecutions).latestExecutionPayloadHeader.blockNumber;
   }
 
   // capella
@@ -702,6 +759,14 @@ export class BeaconStateView implements IBeaconStateView {
   ): IBeaconStateView {
     const newState = processSlots(this.cachedState, slot, epochTransitionCacheOpts, modules);
     return new BeaconStateView(newState);
+  }
+
+  processExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope, verify: boolean): void {
+    const fork = this.config.getForkName(this.cachedState.slot);
+    if (!isForkPostGloas(fork)) {
+      throw Error(`processExecutionPayloadEnvelope is only available for gloas+ forks, got fork=${fork}`);
+    }
+    processExecutionPayloadEnvelope(this.cachedState as CachedBeaconStateGloas, signedEnvelope, verify);
   }
 }
 
