@@ -1,5 +1,5 @@
 import {ForkName, ForkPostFulu, ForkPostGloas, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
+import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -8,9 +8,12 @@ import {
   AddBlob,
   AddBlock,
   AddColumn,
+  AddPartialHeader,
   BlobMeta,
   BlobWithSource,
   BlockInputInit,
+  BlockInputSource,
+  CellWithProof,
   ColumnWithSource,
   CreateBlockInputMeta,
   DAData,
@@ -623,6 +626,13 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   state: BlockInputColumnsState;
 
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
+  /** Validated PartialDataColumnHeader, shared across all subnets for this block */
+  private partialHeader: fulu.PartialDataColumnHeader | null = null;
+  /**
+   * Accumulates individual cells per column index before a full column is available.
+   * When all cells for a column arrive, auto-promotes to a full DataColumnSidecar in columnsCache.
+   */
+  private cellsCache = new Map<ColumnIndex, Map<BlobIndex, CellWithProof>>();
   private readonly sampledColumns: ColumnIndex[];
   private readonly custodyColumns: ColumnIndex[];
   /**
@@ -924,6 +934,157 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       return withTimeout(() => this.computedDataPromise.promise, timeout, signal);
     }
     return Promise.resolve(this.getSampledColumns());
+  }
+
+  // Partial column support
+
+  addPartialHeader(header: fulu.PartialDataColumnHeader): void {
+    if (this.partialHeader !== null) {
+      // Spec: [REJECT] If a valid header was previously received, the received header MUST equal it
+      const existingRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(
+        this.partialHeader.signedBlockHeader.message
+      );
+      const newRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.signedBlockHeader.message);
+      if (!byteArrayEquals(existingRoot, newRoot)) {
+        throw new BlockInputError(
+          {
+            code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+            blockRoot: this.blockRootHex,
+          },
+          "Received PartialDataColumnHeader does not match previously stored header"
+        );
+      }
+      return;
+    }
+    this.partialHeader = header;
+  }
+
+  getPartialHeader(): fulu.PartialDataColumnHeader | null {
+    return this.partialHeader;
+  }
+
+  hasPartialHeader(): boolean {
+    return this.partialHeader !== null;
+  }
+
+  /**
+   * Add validated cells for a column. When all cells arrive, reconstructs a full
+   * DataColumnSidecar and adds it to columnsCache.
+   *
+   * @returns The completed DataColumnSidecar if the column is now complete, null otherwise
+   */
+  addCells(
+    columnIndex: ColumnIndex,
+    cellsPresentBitmap: boolean[],
+    cells: Uint8Array[],
+    proofs: Uint8Array[],
+    source: BlockInputSource,
+    seenTimestampSec: number,
+    peerIdStr: string
+  ): fulu.DataColumnSidecar | null {
+    if (this.partialHeader === null) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addCells without a stored PartialDataColumnHeader"
+      );
+    }
+
+    // Skip if we already have a full column for this index
+    if (this.columnsCache.has(columnIndex)) {
+      return null;
+    }
+
+    let cellMap = this.cellsCache.get(columnIndex);
+    if (cellMap === undefined) {
+      cellMap = new Map();
+      this.cellsCache.set(columnIndex, cellMap);
+    }
+
+    // Add cells from bitmap
+    let cellIdx = 0;
+    for (let blobIdx = 0; blobIdx < cellsPresentBitmap.length; blobIdx++) {
+      if (cellsPresentBitmap[blobIdx]) {
+        if (!cellMap.has(blobIdx)) {
+          cellMap.set(blobIdx, {cell: cells[cellIdx], proof: proofs[cellIdx]});
+        }
+        cellIdx++;
+      }
+    }
+
+    // Check if column is complete
+    const expectedCellCount = this.partialHeader.kzgCommitments.length;
+    if (cellMap.size < expectedCellCount) {
+      return null;
+    }
+
+    // Reconstruct full DataColumnSidecar
+    const column: Uint8Array[] = [];
+    const kzgProofs: Uint8Array[] = [];
+    for (let i = 0; i < expectedCellCount; i++) {
+      const cellWithProof = cellMap.get(i);
+      if (cellWithProof === undefined) {
+        return null;
+      }
+      column.push(cellWithProof.cell);
+      kzgProofs.push(cellWithProof.proof);
+    }
+
+    const columnSidecar: fulu.DataColumnSidecar = {
+      index: columnIndex,
+      column,
+      kzgCommitments: this.partialHeader.kzgCommitments,
+      kzgProofs,
+      signedBlockHeader: this.partialHeader.signedBlockHeader,
+      kzgCommitmentsInclusionProof: this.partialHeader.kzgCommitmentsInclusionProof,
+    };
+
+    // Clean up cellsCache for this column
+    this.cellsCache.delete(columnIndex);
+
+    // Add to columnsCache via existing addColumn (triggers data promise resolution)
+    this.addColumn(
+      {
+        blockRootHex: this.blockRootHex,
+        columnSidecar,
+        source,
+        seenTimestampSec,
+        peerIdStr,
+      },
+      {throwOnDuplicateAdd: false}
+    );
+
+    return columnSidecar;
+  }
+
+  getCellCount(columnIndex: ColumnIndex): number {
+    return this.cellsCache.get(columnIndex)?.size ?? 0;
+  }
+
+  static createFromPartialHeader(
+    props: AddPartialHeader &
+      CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
+  ): BlockInputColumns {
+    const blockHeader = props.partialHeader.signedBlockHeader.message;
+    const state: BlockInputColumnsState = {
+      hasBlock: false,
+      hasAllData: false,
+      hasComputedAllData: false,
+      versionedHashes: props.partialHeader.kzgCommitments.map(kzgCommitmentToVersionedHash),
+    };
+    const init: BlockInputInit = {
+      daOutOfRange: false,
+      timeCreated: props.seenTimestampSec,
+      forkName: props.forkName,
+      blockRootHex: props.blockRootHex,
+      parentRootHex: toRootHex(blockHeader.parentRoot),
+      slot: blockHeader.slot,
+    };
+    const blockInput = new BlockInputColumns(init, state, props.sampledColumns, props.custodyColumns);
+    blockInput.partialHeader = props.partialHeader;
+    return blockInput;
   }
 
   getSerializedCacheKeys(): object[] {

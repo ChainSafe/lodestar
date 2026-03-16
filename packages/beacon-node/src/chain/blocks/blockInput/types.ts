@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {ColumnIndex, DataColumnSidecars, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {BlobIndex, ColumnIndex, DataColumnSidecars, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
@@ -88,6 +88,19 @@ export type AddBlob = BlobWithSource & {
 
 export type AddColumn = ColumnWithSource & {
   blockRootHex: RootHex;
+};
+
+export type CellWithProof = {
+  cell: Uint8Array;
+  proof: Uint8Array;
+};
+
+export type AddPartialHeader = {
+  blockRootHex: string;
+  partialHeader: fulu.PartialDataColumnHeader;
+  source: BlockInputSource;
+  seenTimestampSec: number;
+  peerIdStr: string;
 };
 
 export type BlobMeta = {
