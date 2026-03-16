@@ -1879,7 +1879,7 @@ export function getCheckpointPayloadStatus(
   // For Gloas, check state.execution_payload_availability
   // - For non-skipped slots at checkpoint: returns false (EMPTY) since payload hasn't arrived yet
   // - For skipped slots at checkpoint: returns the actual availability status from state
-  const payloadAvailable = state.executionPayloadAvailability[checkpointSlot % SLOTS_PER_HISTORICAL_ROOT];
+  const payloadAvailable = state.executionPayloadAvailability.get(checkpointSlot % SLOTS_PER_HISTORICAL_ROOT);
 
   return payloadAvailable ? PayloadStatus.FULL : PayloadStatus.EMPTY;
 }
