@@ -69,7 +69,8 @@
     "@vekexasia/bigint-buffer2": "^1.1.0"
   },
   "devDependencies": {
-    "@lodestar/api": "workspace:^"
+    "@lodestar/api": "workspace:^",
+    "@lodestar/era": "workspace:^"
   },
   "keywords": [
     "ethereum",
