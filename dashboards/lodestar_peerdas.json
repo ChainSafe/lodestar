@@ -1,4 +1,14 @@
 {
+  "__inputs": [
+    {
+      "description": "",
+      "label": "Prometheus",
+      "name": "DS_PROMETHEUS",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus",
+      "type": "datasource"
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -25,7 +35,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 38,
+  "id": null,
   "links": [
     {
       "asDropdown": true,
@@ -69,20 +79,7 @@
             "fixedColor": "green",
             "mode": "thresholds"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -139,23 +136,6 @@
             "mode": "thresholds"
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
-            ]
-          },
           "unit": "short"
         },
         "overrides": []
@@ -204,20 +184,7 @@
             "fixedColor": "green",
             "mode": "thresholds"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -303,20 +270,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -391,19 +345,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -583,20 +524,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -680,19 +608,6 @@
           },
           "decimals": 2,
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -824,19 +739,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -922,19 +824,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -1117,19 +1006,6 @@
           },
           "decimals": 0,
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "ops"
         },
         "overrides": []
@@ -1232,19 +1108,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1330,19 +1193,6 @@
           },
           "decimals": 1,
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percent"
         },
         "overrides": []
@@ -1431,19 +1281,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "short"
         },
         "overrides": []
@@ -1532,19 +1369,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1628,19 +1452,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1723,19 +1534,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1833,19 +1631,6 @@
           },
           "decimals": 0,
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -1932,19 +1717,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -2029,19 +1801,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "short"
         },
         "overrides": []
@@ -2123,20 +1882,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -2284,7 +2030,14 @@
           "type": "prometheus",
           "uid": "prometheus_local"
         },
-        "filters": [],
+        "filters": [
+          {
+            "condition": "",
+            "key": "instance",
+            "operator": "=",
+            "value": "unstable-super"
+          }
+        ],
         "hide": 0,
         "name": "Filters",
         "skipUrlSync": false,
