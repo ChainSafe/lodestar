@@ -1017,7 +1017,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Add validated cells to BlockInput
         const completedColumn = blockInput.addCells(
           columnIndex,
-          Array.from(partialSidecar.cellsPresentBitmap),
+          partialSidecar.cellsPresentBitmap.toBoolArray(),
           Array.from(partialSidecar.partialColumn),
           Array.from(partialSidecar.kzgProofs),
           BlockInputSource.gossip,
@@ -1034,6 +1034,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
           }
         }
+      }
+
+      // Trigger data availability cutoff if block input is still incomplete
+      if (!blockInput.hasBlockAndAllData()) {
+        const slot = blockInput.slot;
+        const cutoffTimeMs = getCutoffTimeMs(chain, slot, BLOCK_AVAILABILITY_CUTOFF_MS);
+        blockInput.waitForBlockAndAllData(cutoffTimeMs).catch((_e) => {
+          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+            blockInput,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+          });
+        });
       }
     },
   };
