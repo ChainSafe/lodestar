@@ -41,8 +41,9 @@ export class DbCPStateDatastore implements CPStateDatastore {
 }
 
 export function datastoreKeyToCheckpoint(key: DatastoreKey): phase0.Checkpoint {
-  // Strip the payloadPresent suffix byte if present
-  const cpBytes = key.length === 41 ? key.subarray(0, 40) : key;
+  // fixedSize is null for variable length types, but Checkpoint is fixed length so we can safely use its minSize because minSize === fixedSize
+  const fixedSize = ssz.phase0.Checkpoint.minSize;
+  const cpBytes = key.length > fixedSize ? key.subarray(0, fixedSize) : key;
   return ssz.phase0.Checkpoint.deserialize(cpBytes);
 }
 

@@ -400,11 +400,15 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   const envelopeEntries: KeyValue<Slot, Uint8Array>[] = [];
   const migratedRoots: Uint8Array[] = [];
 
-  for (const block of gloasBlocks) {
-    const bytes = await db.executionPayloadEnvelope.getBinary(block.root);
+  const envelopeBytesArray = await Promise.all(
+    gloasBlocks.map((block) => db.executionPayloadEnvelope.getBinary(block.root))
+  );
+
+  for (let i = 0; i < gloasBlocks.length; i++) {
+    const bytes = envelopeBytesArray[i];
     if (bytes !== null) {
-      envelopeEntries.push({key: block.slot, value: bytes});
-      migratedRoots.push(block.root);
+      envelopeEntries.push({key: gloasBlocks[i].slot, value: bytes});
+      migratedRoots.push(gloasBlocks[i].root);
     }
     // If bytes is null, it is fine because not all blocks have execution payload envelopes
   }

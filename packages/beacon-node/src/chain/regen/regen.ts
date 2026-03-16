@@ -115,8 +115,9 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // Convert PayloadStatus to payloadPresent boolean
     if (block.payloadStatus === PayloadStatus.PENDING) {
       throw new RegenError({
-        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
+        code: RegenErrorCode.UNEXPECTED_PAYLOAD_STATUS,
         blockRoot: fromHex(blockRoot),
+        payloadStatus: block.payloadStatus,
       });
     }
     const payloadPresent = block.payloadStatus === PayloadStatus.FULL;

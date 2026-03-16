@@ -121,7 +121,7 @@ export async function importBlock(
   // Post-Gloas: blockSummary.payloadStatus is always PENDING, so payloadPresent = false (block state only, no payload processing yet)
   const payloadPresent = !isGloasBlock(blockSummary);
   // processState manages both block state and payload state variants together for memory/disk management
-  this.regen.processState(blockRootHex, postState);
+  this.regen.processBlockState(blockRootHex, postState);
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});

@@ -43,7 +43,7 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   pruneOnFinalized(finalizedEpoch: Epoch): void;
-  processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void;
+  processBlockState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void;
   processPayloadState(payloadState: CachedBeaconStateAllForks): void;
   /**
    * payloadPresent is true if this is payload state, false if block state.

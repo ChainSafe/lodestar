@@ -107,8 +107,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     // Convert PayloadStatus to payloadPresent boolean
     if (parentBlock.payloadStatus === PayloadStatus.PENDING) {
       throw new RegenError({
-        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
+        code: RegenErrorCode.UNEXPECTED_PAYLOAD_STATUS,
         blockRoot: block.parentRoot,
+        payloadStatus: parentBlock.payloadStatus,
       });
     }
     const payloadPresent = parentBlock.payloadStatus === PayloadStatus.FULL;
@@ -152,8 +153,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     // Convert PayloadStatus to payloadPresent boolean
     if (head.payloadStatus === PayloadStatus.PENDING) {
       throw new RegenError({
-        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
+        code: RegenErrorCode.UNEXPECTED_PAYLOAD_STATUS,
         blockRoot: fromHex(head.blockRoot),
+        payloadStatus: head.payloadStatus,
       });
     }
     const payloadPresent = head.payloadStatus === PayloadStatus.FULL;
@@ -173,7 +175,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
   }
 
-  processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void {
+  processBlockState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void {
     this.blockStateCache.add(postState);
     this.checkpointStateCache.processState(blockRootHex, postState).catch((e) => {
       this.logger.debug("Error processing block state", {blockRootHex, slot: postState.slot}, e);

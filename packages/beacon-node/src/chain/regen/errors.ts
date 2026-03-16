@@ -1,3 +1,4 @@
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {Root, RootHex, Slot} from "@lodestar/types";
 
 export enum RegenErrorCode {
@@ -9,6 +10,7 @@ export enum RegenErrorCode {
   BLOCK_NOT_IN_DB = "REGEN_ERROR_BLOCK_NOT_IN_DB",
   STATE_TRANSITION_ERROR = "REGEN_ERROR_STATE_TRANSITION_ERROR",
   INVALID_STATE_ROOT = "REGEN_ERROR_INVALID_STATE_ROOT",
+  UNEXPECTED_PAYLOAD_STATUS = "REGEN_ERROR_UNEXPECTED_PAYLOAD_STATUS",
   INTERNAL_ERROR = "REGEN_ERROR_INTERNAL_ERROR",
 }
 
@@ -21,6 +23,7 @@ export type RegenErrorType =
   | {code: RegenErrorCode.BLOCK_NOT_IN_DB; blockRoot: RootHex | Root}
   | {code: RegenErrorCode.STATE_TRANSITION_ERROR; error: Error}
   | {code: RegenErrorCode.INVALID_STATE_ROOT; slot: Slot; expected: RootHex; actual: RootHex}
+  | {code: RegenErrorCode.UNEXPECTED_PAYLOAD_STATUS; blockRoot: RootHex | Root; payloadStatus: PayloadStatus}
   | {code: RegenErrorCode.INTERNAL_ERROR; message: string};
 
 export class RegenError extends Error {

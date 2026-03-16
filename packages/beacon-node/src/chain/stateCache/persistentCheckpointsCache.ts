@@ -56,7 +56,7 @@ type CacheItem = InMemoryCacheItem | PersistedCacheItem;
 type LoadedStateBytesData = {persistedKey: DatastoreKey; stateBytes: Uint8Array};
 
 /** Bitmask for tracking which payload variants exist per root in the epochIndex */
-const enum PayloadAvailability {
+enum PayloadAvailability {
   NOT_PRESENT = 1,
   PRESENT = 2,
 }
