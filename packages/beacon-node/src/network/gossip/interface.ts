@@ -15,6 +15,7 @@ import {
   altair,
   capella,
   deneb,
+  fulu,
   gloas,
   phase0,
 } from "@lodestar/types";
@@ -41,6 +42,7 @@ export enum GossipType {
   execution_payload = "execution_payload",
   payload_attestation_message = "payload_attestation_message",
   execution_payload_bid = "execution_payload_bid",
+  partial_data_column_sidecar = "partial_data_column_sidecar",
 }
 
 export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
@@ -78,6 +80,7 @@ export type GossipTopicTypeMap = {
   [GossipType.execution_payload]: {type: GossipType.execution_payload};
   [GossipType.payload_attestation_message]: {type: GossipType.payload_attestation_message};
   [GossipType.execution_payload_bid]: {type: GossipType.execution_payload_bid};
+  [GossipType.partial_data_column_sidecar]: {type: GossipType.partial_data_column_sidecar; subnet: SubnetID};
 };
 
 export type GossipTopicMap = {
@@ -110,6 +113,7 @@ export type GossipTypeMap = {
   [GossipType.execution_payload]: gloas.SignedExecutionPayloadEnvelope;
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
+  [GossipType.partial_data_column_sidecar]: fulu.PartialDataColumnSidecar;
 };
 
 export type GossipFnByType = {
@@ -141,6 +145,9 @@ export type GossipFnByType = {
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ) => Promise<void> | void;
   [GossipType.execution_payload_bid]: (executionPayloadBid: gloas.SignedExecutionPayloadBid) => Promise<void> | void;
+  [GossipType.partial_data_column_sidecar]: (
+    partialSidecar: fulu.PartialDataColumnSidecar
+  ) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];
