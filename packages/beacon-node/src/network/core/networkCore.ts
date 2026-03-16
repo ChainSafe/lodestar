@@ -517,12 +517,12 @@ export class NetworkCore implements INetworkCore {
           try {
             enrMap.set(enr.peerId.toString(), enr.encodeTxt());
           } catch (e) {
-            this.logger.debug("Failed to extract peerId from ENR, skipping", {error: (e as Error).message});
+            this.logger.debug("Failed to extract peerId from ENR, skipping", {}, e as Error);
           }
         }
       }
     } catch (e) {
-      this.logger.debug("Could not fetch ENRs from discv5", {error: (e as Error).message});
+      this.logger.debug("Could not fetch ENRs from discv5", {}, e as Error);
     }
     return enrMap;
   }
