@@ -93,7 +93,10 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "Advanced Topics",
-          items: ["contribution/advanced-topics/setting-up-a-testnet"],
+          items: [
+            "contribution/advanced-topics/setting-up-a-testnet",
+            "contribution/advanced-topics/fast-confirmation",
+          ],
         },
         "contribution/depgraph",
         {
