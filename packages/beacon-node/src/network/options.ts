@@ -49,6 +49,10 @@ export interface NetworkOptions
   disconnectThreshold?: number;
   quic?: boolean;
   tcp?: boolean;
+  /** Enable cell-level DAS via gossipsub partial messages extension */
+  enablePartialColumns?: boolean;
+  /** When publishing partial columns, eagerly include all cells (not just header) */
+  eagerlyPublishCells?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -84,4 +88,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   // Keep this high enough for normal req/resp bursts on stable connections.
   // libp2p-mplex default (5) is too low and can cause frequent connection resets.
   disconnectThreshold: 50,
+  enablePartialColumns: false,
+  eagerlyPublishCells: true,
 };
