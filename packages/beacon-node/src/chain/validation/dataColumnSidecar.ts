@@ -12,8 +12,8 @@ import {
 } from "@lodestar/state-transition";
 import {DataColumnSidecar, Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {kzg} from "../../util/kzg.js";
 import {
   DataColumnSidecarErrorCode,
