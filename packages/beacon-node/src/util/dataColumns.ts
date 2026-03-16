@@ -463,7 +463,7 @@ export async function recoverDataColumnSidecars(
   metrics?.peerDas.reconstructedColumns.inc(sidecarsToPublish.length);
   metrics?.dataColumns.bySource.inc({source: BlockInputSource.recovery}, sidecarsToPublish.length);
   emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);
-  // Todo: Can we record dataColumns.sentPeersPerSubnet metric somehow
+  // TODO: Can we record dataColumns.sentPeersPerSubnet metric somehow
   return DataColumnReconstructionCode.SuccessResolved;
 }
 

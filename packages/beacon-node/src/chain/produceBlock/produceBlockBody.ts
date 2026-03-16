@@ -516,9 +516,11 @@ export async function produceBlockBody<T extends BlockType>(
           timer?.();
           if (this.opts.sanityCheckExecutionEngineBlobs) {
             const validationTimer = this.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
-            await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells).finally(() =>
-              validationTimer?.()
-            );
+            try {
+              await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+            } finally {
+              validationTimer?.();
+            }
           }
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
