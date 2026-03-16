@@ -1,8 +1,8 @@
 import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {ForkChoiceStateGetter, IFastConfirmationStore} from "./fastConfirmation/types.ts";
 import {PayloadStatus} from "../protoArray/interface.js";
+import {ForkChoiceStateGetter, IFastConfirmationStore} from "./fastConfirmation/types.ts";
 import {CheckpointWithPayloadAndBalance, CheckpointWithPayloadAndTotalBalance} from "./interface.js";
 
 /**
@@ -101,7 +101,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
     private readonly events?: {
       onJustified: (cp: CheckpointWithPayloadStatus) => void;
       onFinalized: (cp: CheckpointWithPayloadStatus) => void;
-    },
+    }
   ) {
     this.justifiedBalancesGetter = justifiedBalancesGetter;
     this.currentSlot = currentSlot;
