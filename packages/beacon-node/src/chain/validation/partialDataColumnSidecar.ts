@@ -38,8 +38,8 @@ export async function verifyPartialDataColumnSidecarKzgProofs(
   columnIndex: ColumnIndex
 ): Promise<void> {
   const blobIndices: number[] = [];
-  for (let i = 0; i < sidecar.cellsPresentBitmap.length; i++) {
-    if (sidecar.cellsPresentBitmap[i]) {
+  for (let i = 0; i < sidecar.cellsPresentBitmap.bitLen; i++) {
+    if (sidecar.cellsPresentBitmap.get(i)) {
       blobIndices.push(i);
     }
   }
@@ -211,7 +211,7 @@ export async function validateGossipPartialDataColumnCells(
   metrics: Metrics | null
 ): Promise<void> {
   // [REJECT] bitmap length equals number of commitments
-  if (sidecar.cellsPresentBitmap.length !== header.kzgCommitments.length) {
+  if (sidecar.cellsPresentBitmap.bitLen !== header.kzgCommitments.length) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.PARTIAL_BITMAP_LENGTH_MISMATCH,
       slot: header.signedBlockHeader.message.slot,
@@ -230,8 +230,8 @@ export async function validateGossipPartialDataColumnCells(
 
   // [REJECT] Number of cells matches bitmap popcount
   let bitmapPopcount = 0;
-  for (const bit of sidecar.cellsPresentBitmap) {
-    if (bit) bitmapPopcount++;
+  for (let i = 0; i < sidecar.cellsPresentBitmap.bitLen; i++) {
+    if (sidecar.cellsPresentBitmap.get(i)) bitmapPopcount++;
   }
   if (sidecar.partialColumn.length !== bitmapPopcount) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
