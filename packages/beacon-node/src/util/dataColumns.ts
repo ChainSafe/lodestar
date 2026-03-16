@@ -475,3 +475,57 @@ export enum DataColumnReconstructionCode {
   SuccessResolved = "success_resolved",
   Failed = "failed",
 }
+
+// Partial column helpers for cell-level dissemination
+
+/**
+ * Construct a PartialDataColumnSidecar from a full DataColumnSidecar.
+ * Includes all cells and optionally the header.
+ */
+export function dataColumnToPartialSidecar(
+  columnSidecar: fulu.DataColumnSidecar,
+  includeHeader: boolean
+): fulu.PartialDataColumnSidecar {
+  const cellCount = columnSidecar.column.length;
+  const bitmap = Array.from({length: cellCount}, () => true);
+
+  const header: fulu.PartialDataColumnHeader[] = includeHeader
+    ? [
+        {
+          kzgCommitments: columnSidecar.kzgCommitments,
+          signedBlockHeader: columnSidecar.signedBlockHeader,
+          kzgCommitmentsInclusionProof: columnSidecar.kzgCommitmentsInclusionProof,
+        },
+      ]
+    : [];
+
+  return {
+    cellsPresentBitmap: bitmap,
+    partialColumn: columnSidecar.column,
+    kzgProofs: columnSidecar.kzgProofs,
+    header,
+  };
+}
+
+/**
+ * Compute the partial message group ID for a block root.
+ * Per spec: version byte (0x00) + block root.
+ */
+export function computePartialMessageGroupId(blockRoot: Uint8Array): Uint8Array {
+  const groupId = new Uint8Array(1 + blockRoot.length);
+  groupId[0] = 0x00;
+  groupId.set(blockRoot, 1);
+  return groupId;
+}
+
+/**
+ * Construct PartialDataColumnPartsMetadata from a bitmap of available cells.
+ * Returns the SSZ serialized metadata bytes for the gossipsub partial message.
+ */
+export function buildPartsMetadataBytes(cellsPresentBitmap: boolean[]): Uint8Array {
+  const metadata: fulu.PartialDataColumnPartsMetadata = {
+    available: cellsPresentBitmap,
+    requests: Array.from({length: cellsPresentBitmap.length}, () => false),
+  };
+  return ssz.fulu.PartialDataColumnPartsMetadata.serialize(metadata);
+}
