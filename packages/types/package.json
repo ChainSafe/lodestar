@@ -49,6 +49,11 @@
       "types": "./lib/fulu/index.d.ts",
       "import": "./lib/fulu/index.js"
     },
+    "./gloas": {
+      "bun": "./src/gloas/index.ts",
+      "types": "./lib/gloas/index.d.ts",
+      "import": "./lib/gloas/index.js"
+    },
     "./phase0": {
       "bun": "./src/phase0/index.ts",
       "types": "./lib/phase0/index.d.ts",

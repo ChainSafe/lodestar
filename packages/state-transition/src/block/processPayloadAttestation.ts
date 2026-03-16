@@ -1,8 +1,8 @@
 import {gloas} from "@lodestar/types";
 import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
-import {isValidIndexedPayloadAttestation} from "./isValidIndexedPayloadAttestation.js";
 import {getIndexedPayloadAttestation} from "../util/gloas.js";
+import {isValidIndexedPayloadAttestation} from "./isValidIndexedPayloadAttestation.js";
 
 export function processPayloadAttestation(
   state: CachedBeaconStateGloas,

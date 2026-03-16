@@ -8,7 +8,7 @@ import {
   MIN_DEPOSIT_AMOUNT,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {BuilderIndex, Epoch, Slot, ValidatorIndex, gloas} from "@lodestar/types";
+import {BuilderIndex, Epoch, Slot, ValidatorIndex, gloas, ssz} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
@@ -181,26 +181,17 @@ export function computePayloadTimelinessCommittee(state: CachedBeaconStateGloas)
   );
 }
 
-function setPayloadTimelinessCommitteeValues(
-  committeeView: CachedBeaconStateGloas["currentPtc"],
-  committee: ArrayLike<number>
-): void {
-  for (let i = 0; i < committeeView.length; i++) {
-    committeeView.set(i, committee[i]);
-  }
-}
-
-function updateCurrentPayloadTimelinessCommitteeFromEpochCache(state: CachedBeaconStateGloas): void {
-  setPayloadTimelinessCommitteeValues(state.currentPtc, state.epochCtx.getPayloadTimelinessCommittee(state.slot));
-}
-
 export function initializePayloadTimelinessCommittee(state: CachedBeaconStateGloas): void {
-  setPayloadTimelinessCommitteeValues(state.currentPtc, computePayloadTimelinessCommittee(state));
+  state.currentPtc = ssz.gloas.PayloadTimelinessCommittee.toViewDU(
+    Array.from(computePayloadTimelinessCommittee(state))
+  );
 }
 
 export function rotatePayloadTimelinessCommittees(state: CachedBeaconStateGloas): void {
-  setPayloadTimelinessCommitteeValues(state.previousPtc, state.currentPtc.getAll());
-  updateCurrentPayloadTimelinessCommitteeFromEpochCache(state);
+  state.previousPtc = ssz.gloas.PayloadTimelinessCommittee.toViewDU(state.currentPtc.getAll());
+  state.currentPtc = ssz.gloas.PayloadTimelinessCommittee.toViewDU(
+    Array.from(state.epochCtx.getPayloadTimelinessCommittee(state.slot))
+  );
 }
 
 export function getPayloadTimelinessCommittee(state: CachedBeaconStateGloas, slot: Slot): Uint32Array {

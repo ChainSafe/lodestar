@@ -11,16 +11,12 @@ import {
 import {ssz} from "@lodestar/types";
 import {createPubkeyCache} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
-import {processSlots} from "../../src/stateTransition.js";
-import {
-  computePayloadTimelinessCommittee,
-  getPayloadTimelinessCommittee,
-  initializePayloadTimelinessCommittee,
-} from "../../src/util/gloas.js";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
 import {upgradeStateToGloas} from "../../src/slot/upgradeStateToGloas.js";
+import {processSlots} from "../../src/stateTransition.js";
 import {BeaconStateFulu, BeaconStateGloas, CachedBeaconStateFulu, CachedBeaconStateGloas} from "../../src/types.js";
+import {computePayloadTimelinessCommittee, initializePayloadTimelinessCommittee} from "../../src/util/gloas.js";
 import {generateState} from "../utils/state.js";
 import {generateValidators} from "../utils/validator.js";
 
@@ -70,31 +66,29 @@ describe("upgradeState", () => {
     const newState = upgradeStateToGloas(stateView as CachedBeaconStateFulu);
 
     expect(() => newState.toValue()).not.toThrow();
-    expect(Array.from(getPayloadTimelinessCommittee(newState, newState.slot))).toEqual(
-      Array.from(computePayloadTimelinessCommittee(newState))
-    );
+    expect(Array.from(newState.currentPtc.getAll())).toEqual(Array.from(computePayloadTimelinessCommittee(newState)));
   });
 
   it("processSlots rotates previous/current PTC within an epoch", () => {
     const state = getInitializedGloasState();
-    const previousCurrentPtc = Array.from(getPayloadTimelinessCommittee(state, state.slot));
+    const previousCurrentPtc = Array.from(state.currentPtc.getAll());
 
     const postState = processSlots(state, state.slot + 1) as CachedBeaconStateGloas;
 
-    expect(Array.from(getPayloadTimelinessCommittee(postState, postState.slot - 1))).toEqual(previousCurrentPtc);
-    expect(Array.from(getPayloadTimelinessCommittee(postState, postState.slot))).toEqual(
+    expect(Array.from(postState.previousPtc.getAll())).toEqual(previousCurrentPtc);
+    expect(Array.from(postState.currentPtc.getAll())).toEqual(
       Array.from(postState.epochCtx.getPayloadTimelinessCommittee(postState.slot))
     );
   });
 
   it("processSlots rotates previous/current PTC across an epoch boundary", () => {
     const state = getInitializedGloasState(SLOTS_PER_EPOCH - 1);
-    const previousCurrentPtc = Array.from(getPayloadTimelinessCommittee(state, state.slot));
+    const previousCurrentPtc = Array.from(state.currentPtc.getAll());
 
     const postState = processSlots(state, state.slot + 1) as CachedBeaconStateGloas;
 
-    expect(Array.from(getPayloadTimelinessCommittee(postState, postState.slot - 1))).toEqual(previousCurrentPtc);
-    expect(Array.from(getPayloadTimelinessCommittee(postState, postState.slot))).toEqual(
+    expect(Array.from(postState.previousPtc.getAll())).toEqual(previousCurrentPtc);
+    expect(Array.from(postState.currentPtc.getAll())).toEqual(
       Array.from(postState.epochCtx.getPayloadTimelinessCommittee(postState.slot))
     );
   });
