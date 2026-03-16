@@ -569,6 +569,8 @@ export class BlockInputSync {
           downloadByRootMetrics?.error.inc({code: "req_resp", client: peerClient});
           switch (e.type.code) {
             case RequestErrorCode.REQUEST_RATE_LIMITED:
+            case RequestErrorCode.RESP_RATE_LIMITED:
+            case RequestErrorCode.REQUEST_SELF_RATE_LIMITED:
             case RequestErrorCode.REQUEST_TIMEOUT:
               // do not exclude peer for these errors
               break;
