@@ -166,6 +166,8 @@ export class NetworkCore implements INetworkCore {
       nodeId,
       config,
       custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
+      enablePartialColumns: opts.enablePartialColumns ?? false,
+      eagerlyPublishCells: opts.eagerlyPublishCells ?? true,
     };
     const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
 
