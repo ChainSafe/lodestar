@@ -183,6 +183,7 @@ export function computePayloadTimelinessCommittee(state: CachedBeaconStateGloas)
 
 export function initializePayloadTimelinessCommittee(state: CachedBeaconStateGloas): void {
   state.currentPtc = ssz.gloas.PayloadTimelinessCommittee.toViewDU(
+    // TODO: Array.from shouldn't be required here
     Array.from(computePayloadTimelinessCommittee(state))
   );
 }
@@ -194,17 +195,17 @@ export function rotatePayloadTimelinessCommittees(state: CachedBeaconStateGloas)
   );
 }
 
-export function getPayloadTimelinessCommittee(state: CachedBeaconStateGloas, slot: Slot): Uint32Array {
+export function getPayloadTimelinessCommittee(state: CachedBeaconStateGloas, slot: Slot): number[] {
   if (slot === state.slot) {
-    return new Uint32Array(state.currentPtc.getAll());
+    return state.currentPtc.getAll();
   }
 
   if (slot + 1 === state.slot) {
-    return new Uint32Array(state.previousPtc.getAll());
+    return state.previousPtc.getAll();
   }
 
   throw new Error(
-    `Payload Timeliness Committee is only available for current or previous slot, state.slot=${state.slot}, requested=${slot}`
+    `Payload Timeliness Committee is only available for current or previous slot, state.slot=${state.slot}, slot=${slot}`
   );
 }
 
