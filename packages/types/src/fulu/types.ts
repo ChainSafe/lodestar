@@ -13,6 +13,9 @@ export type ExtendedMatrix = ValueOf<typeof ssz.ExtendedMatrix>;
 export type KzgCommitmentsInclusionProof = ValueOf<typeof ssz.KzgCommitmentsInclusionProof>;
 export type DataColumnSidecar = ValueOf<typeof ssz.DataColumnSidecar>;
 export type DataColumnSidecars = ValueOf<typeof ssz.DataColumnSidecars>;
+export type PartialDataColumnHeader = ValueOf<typeof ssz.PartialDataColumnHeader>;
+export type PartialDataColumnSidecar = ValueOf<typeof ssz.PartialDataColumnSidecar>;
+export type PartialDataColumnPartsMetadata = ValueOf<typeof ssz.PartialDataColumnPartsMetadata>;
 export type MatrixEntry = ValueOf<typeof ssz.MatrixEntry>;
 
 export type ProposerLookahead = ValueOf<typeof ssz.ProposerLookahead>;
