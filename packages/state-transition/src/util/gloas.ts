@@ -188,7 +188,7 @@ export function initializePayloadTimelinessCommittee(state: CachedBeaconStateGlo
 }
 
 export function rotatePayloadTimelinessCommittees(state: CachedBeaconStateGloas): void {
-  state.previousPtc = ssz.gloas.PayloadTimelinessCommittee.toViewDU(state.currentPtc.getAll());
+  state.previousPtc = state.currentPtc;
   state.currentPtc = ssz.gloas.PayloadTimelinessCommittee.toViewDU(
     Array.from(state.epochCtx.getPayloadTimelinessCommittee(state.slot))
   );
@@ -196,11 +196,11 @@ export function rotatePayloadTimelinessCommittees(state: CachedBeaconStateGloas)
 
 export function getPayloadTimelinessCommittee(state: CachedBeaconStateGloas, slot: Slot): Uint32Array {
   if (slot === state.slot) {
-    return Uint32Array.from(state.currentPtc.getAll());
+    return new Uint32Array(state.currentPtc.getAll());
   }
 
   if (slot + 1 === state.slot) {
-    return Uint32Array.from(state.previousPtc.getAll());
+    return new Uint32Array(state.previousPtc.getAll());
   }
 
   throw new Error(

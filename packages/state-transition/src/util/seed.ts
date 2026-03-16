@@ -286,7 +286,8 @@ export function computePayloadTimelinessCommitteeAtSlot(
   slotSeedView.setUint32(epochSeed.length, slot, true);
   slotSeedView.setUint32(epochSeed.length + 4, 0, true);
 
-  return computePayloadTimelinessCommitteeForSlot(digest(slotSeedInput), slotCommittees, effectiveBalanceIncrements);
+  const allIndices = concatSlotCommittees(slotCommittees);
+  return computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, allIndices, digest(slotSeedInput));
 }
 
 /**
@@ -312,22 +313,14 @@ export function computePayloadTimelinessCommitteesForEpoch(
     // Write slot as little-endian uint64 (fits in uint32 range)
     slotSeedView.setUint32(epochSeed.length, slot, true);
     slotSeedView.setUint32(epochSeed.length + 4, 0, true);
-    const slotSeed = digest(slotSeedInput);
 
-    result[i] = computePayloadTimelinessCommitteeForSlot(slotSeed, committees[i], effectiveBalanceIncrements);
+    const allIndices = concatSlotCommittees(committees[i]);
+    result[i] = computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, allIndices, digest(slotSeedInput));
   }
   return result;
 }
 
-/**
- * Compute PTC for a single slot.
- */
-export function computePayloadTimelinessCommitteeForSlot(
-  slotSeed: Uint8Array,
-  slotCommittees: Uint32Array[],
-  effectiveBalanceIncrements: EffectiveBalanceIncrements
-): Uint32Array {
-  // Concatenate all committee Uint32Arrays for this slot
+function concatSlotCommittees(slotCommittees: Uint32Array[]): Uint32Array {
   const totalLen = slotCommittees.reduce((sum, c) => sum + c.length, 0);
   const allIndices = new Uint32Array(totalLen);
   let offset = 0;
@@ -335,7 +328,7 @@ export function computePayloadTimelinessCommitteeForSlot(
     allIndices.set(c, offset);
     offset += c.length;
   }
-  return computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, allIndices, slotSeed);
+  return allIndices;
 }
 
 /**
