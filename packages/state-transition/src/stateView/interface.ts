@@ -1,5 +1,5 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
-import {ByteViews} from "@chainsafe/ssz";
+import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -93,7 +93,7 @@ export interface IBeaconStateView {
   proposerLookahead: fulu.ProposerLookahead;
 
   // gloas
-  executionPayloadAvailability: boolean[];
+  executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;

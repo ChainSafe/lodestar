@@ -1,5 +1,5 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
-import {ByteViews} from "@chainsafe/ssz";
+import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
 import {
@@ -92,7 +92,7 @@ export class BeaconStateView implements IBeaconStateView {
   // fulu
   private _proposerLookahead: fulu.ProposerLookahead | null = null;
   // gloas
-  private _executionPayloadAvailability: boolean[] | null = null;
+  private _executionPayloadAvailability: BitArray | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
@@ -357,15 +357,15 @@ export class BeaconStateView implements IBeaconStateView {
 
   // gloas
 
-  get executionPayloadAvailability(): boolean[] {
+  get executionPayloadAvailability(): BitArray {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("executionPayloadAvailability is not available before GLOAS");
     }
 
     if (this._executionPayloadAvailability === null) {
-      this._executionPayloadAvailability = (this.cachedState as CachedBeaconStateGloas).executionPayloadAvailability
-        .toValue()
-        .toBoolArray();
+      this._executionPayloadAvailability = (
+        this.cachedState as CachedBeaconStateGloas
+      ).executionPayloadAvailability.toValue();
     }
 
     return this._executionPayloadAvailability;
