@@ -14,7 +14,10 @@ import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processExecutionPayloadBid} from "./processExecutionPayloadBid.js";
-import {processExecutionPayloadEnvelope} from "./processExecutionPayloadEnvelope.js";
+import {
+  processExecutionPayloadEnvelope,
+  verifyExecutionPayloadEnvelopeSignature,
+} from "./processExecutionPayloadEnvelope.js";
 import {processOperations} from "./processOperations.js";
 import {processPayloadAttestation} from "./processPayloadAttestation.js";
 import {processRandao} from "./processRandao.js";
@@ -33,6 +36,7 @@ export {
   processExecutionPayloadBid,
   processPayloadAttestation,
   processExecutionPayloadEnvelope,
+  verifyExecutionPayloadEnvelopeSignature,
 };
 
 export * from "./externalData.js";

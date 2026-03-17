@@ -156,7 +156,7 @@ function validateExecutionPayloadEnvelope(
   // Skipped: Verify the execution payload is valid
 }
 
-function verifyExecutionPayloadEnvelopeSignature(
+export function verifyExecutionPayloadEnvelopeSignature(
   state: CachedBeaconStateGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): boolean {

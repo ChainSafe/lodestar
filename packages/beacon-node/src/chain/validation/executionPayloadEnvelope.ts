@@ -1,10 +1,5 @@
-import {PublicKey} from "@chainsafe/blst";
-import {
-  CachedBeaconStateGloas,
-  computeStartSlotAtEpoch,
-  createSingleSignatureSetFromComponents,
-  getExecutionPayloadEnvelopeSigningRoot,
-} from "@lodestar/state-transition";
+import {CachedBeaconStateGloas, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {verifyExecutionPayloadEnvelopeSignature} from "@lodestar/state-transition/block";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
@@ -105,15 +100,9 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
+  // [REJECT] `signed_execution_payload_envelope.signature` is valid as verified by `verify_execution_payload_envelope_signature`.
   const state = chain.getHeadState() as CachedBeaconStateGloas;
-  const signatureSet = createSingleSignatureSetFromComponents(
-    PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey),
-    getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
-    executionPayloadEnvelope.signature
-  );
-
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+  if (!verifyExecutionPayloadEnvelopeSignature(state, executionPayloadEnvelope)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
     });
