@@ -9,6 +9,7 @@ import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {RegenCaller} from "../regen/index.js";
 
 export type PayloadAttestationValidationResult = {
   attDataRootHex: RootHex;
@@ -67,7 +68,10 @@ async function validatePayloadAttestationMessage(
     });
   }
 
-  const state = chain.getHeadState() as CachedBeaconStateGloas;
+  const state = (await chain.getHeadStateAtSlot(
+    data.slot,
+    RegenCaller.validateGossipPayloadAttestation
+  )) as CachedBeaconStateGloas;
 
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,

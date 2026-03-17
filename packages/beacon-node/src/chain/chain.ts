@@ -532,6 +532,16 @@ export class BeaconChain implements IBeaconChain {
     return headState;
   }
 
+  async getHeadStateAtSlot(slot: Slot, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+    const headState = this.getHeadState();
+    if (slot <= headState.slot) {
+      return headState;
+    }
+
+    const head = this.forkChoice.getHead();
+    return this.regen.getBlockSlotState(head, slot, {dontTransferCache: true}, regenCaller);
+  }
+
   async getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
     return this.getHeadStateAtEpoch(this.clock.currentEpoch, regenCaller);
   }
