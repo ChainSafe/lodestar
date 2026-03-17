@@ -154,8 +154,13 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           ...justifiedCheckpoint,
           rootHex: toHexString(justifiedCheckpoint.root),
         },
+        previousEpochGreatestUnrealizedCheckpoint: {
+          ...justifiedCheckpoint,
+          rootHex: toHexString(justifiedCheckpoint.root),
+        },
         previousEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
         currentEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
+        previousEpochGreatestUnrealizedBalances: originalState.epochCtx.effectiveBalanceIncrements,
         previousSlotHead: toHexString(finalizedCheckpoint.root),
         currentSlotHead: toHexString(finalizedCheckpoint.root),
         stateGetter: () => null,
