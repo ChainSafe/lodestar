@@ -538,6 +538,11 @@ export class BeaconChain implements IBeaconChain {
       return headState;
     }
 
+    if (slot < headState.slot) {
+      const block = this.forkChoice.getCanonicalBlockClosestLteSlot(slot) ?? this.forkChoice.getFinalizedBlock();
+      return this.regen.getBlockSlotState(block, slot, {dontTransferCache: true}, regenCaller);
+    }
+
     const head = this.forkChoice.getHead();
     return this.regen.getBlockSlotState(head, slot, {dontTransferCache: true}, regenCaller);
   }
