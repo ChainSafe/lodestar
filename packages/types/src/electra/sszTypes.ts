@@ -286,7 +286,7 @@ export const PendingDeposit = new ContainerNodeStructType(
 
 export const PendingDeposits = new ListCompositeType(PendingDeposit, PENDING_DEPOSITS_LIMIT);
 
-export const PendingPartialWithdrawal = new ContainerType(
+export const PendingPartialWithdrawal = new ContainerNodeStructType(
   {
     validatorIndex: ValidatorIndex,
     amount: Gwei,
@@ -300,7 +300,7 @@ export const PendingPartialWithdrawals = new ListCompositeType(
   PENDING_PARTIAL_WITHDRAWALS_LIMIT
 );
 
-export const PendingConsolidation = new ContainerType(
+export const PendingConsolidation = new ContainerNodeStructType(
   {
     sourceIndex: ValidatorIndex,
     targetIndex: ValidatorIndex,
