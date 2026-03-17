@@ -836,19 +836,22 @@ export function createLodestarMetrics(
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
-    recoverDataColumnSidecars: {
-      recoverTime: register.histogram({
-        name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
-        help: "Time elapsed to recover data column sidecar",
-        buckets: [0.5, 1.0, 1.5, 2],
+    // recovery in the case of specific blob rows required
+    recoverBlobSidecars: {
+      blobsReconstructed: register.counter({
+        name: "lodestar_blobs_reconstructed_total",
+        help: "Total count of reconstructed blobs",
       }),
+      reconstructionTime: register.histogram({
+        name: "lodestar_blob_reconstruction_seconds",
+        help: "Time taken to reconstruct blobs",
+        buckets: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 2, 5],
+      }),
+    },
+    recoverDataColumnSidecars: {
       custodyBeforeReconstruction: register.gauge({
         name: "lodestar_data_columns_in_custody_before_reconstruction",
         help: "Number of data columns in custody before reconstruction",
-      }),
-      numberOfColumnsRecovered: register.gauge({
-        name: "lodestar_recover_data_column_sidecar_recovered_columns_total",
-        help: "Total number of columns that were recovered",
       }),
       reconstructionResult: register.counter<{result: DataColumnReconstructionCode}>({
         name: "lodestar_data_column_sidecars_reconstruction_result",
@@ -857,6 +860,10 @@ export function createLodestarMetrics(
       }),
     },
     dataColumns: {
+      alreadyAdded: register.counter({
+        name: "lodestar_data_column_sidecar_already_added",
+        help: "Total number of columns that were already added by other sources while waiting",
+      }),
       bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_data_columns_by_source",
         help: "Number of received data columns by source",
@@ -911,11 +918,6 @@ export function createLodestarMetrics(
         name: "lodestar_import_blobs_by_source_total",
         help: "Total number of imported blobs by source",
         labelNames: ["blobsSource"],
-      }),
-      columnsBySource: register.gauge<{source: BlockInputSource}>({
-        name: "lodestar_import_columns_by_source_total",
-        help: "Total number of imported columns (sampled columns) by source",
-        labelNames: ["source"],
       }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "lodestar_import_block_not_override_fcu_reason_total",

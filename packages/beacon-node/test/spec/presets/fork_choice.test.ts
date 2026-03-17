@@ -245,7 +245,8 @@ const forkChoiceTest =
                     blockRoot,
                     (signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments
                       .length,
-                    columns
+                    columns,
+                    chain.metrics?.peerDas
                   );
 
                   blockImport = BlockInputColumns.createFromBlock({

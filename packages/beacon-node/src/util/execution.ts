@@ -173,16 +173,21 @@ export async function getDataColumnSidecarsFromExecution(
   }
 
   let dataColumnSidecars: fulu.DataColumnSidecars;
-  const cellsAndProofs = await getCellsAndProofs(blobs);
-  if (blockInput.hasBlock()) {
-    dataColumnSidecars = getDataColumnSidecarsFromBlock(
-      config,
-      blockInput.getBlock() as fulu.SignedBeaconBlock,
-      cellsAndProofs
-    );
-  } else {
-    const firstSidecar = blockInput.getAllColumns()[0];
-    dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar, cellsAndProofs);
+  const compTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+  try {
+    const cellsAndProofs = await getCellsAndProofs(blobs);
+    if (blockInput.hasBlock()) {
+      dataColumnSidecars = getDataColumnSidecarsFromBlock(
+        config,
+        blockInput.getBlock() as fulu.SignedBeaconBlock,
+        cellsAndProofs
+      );
+    } else {
+      const firstSidecar = blockInput.getAllColumns()[0];
+      dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar, cellsAndProofs);
+    }
+  } finally {
+    compTimer?.();
   }
 
   // Publish columns if and only if subscribed to them
@@ -191,13 +196,15 @@ export async function getDataColumnSidecarsFromExecution(
 
   // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
   emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
+  // TODO: Can we record dataColumns.sentPeersPerSubnet metric here somehow
 
   // add all sampled columns to the block input, even if we didn't sample them
   const seenTimestampSec = Date.now() / 1000;
+  let alreadyAddedColumnsCount = 0;
   for (const columnSidecar of sampledColumns) {
     if (blockInput.hasColumn(columnSidecar.index)) {
       // columns may have been added while waiting
-      // TODO(fulu): add metrics for this condition
+      alreadyAddedColumnsCount++;
       continue;
     }
 
@@ -217,7 +224,11 @@ export async function getDataColumnSidecarsFromExecution(
       });
     }
   }
+  metrics?.dataColumns.alreadyAdded.inc(alreadyAddedColumnsCount);
 
-  metrics?.dataColumns.bySource.inc({source: BlockInputSource.engine}, previouslyMissingColumns.length);
+  metrics?.dataColumns.bySource.inc(
+    {source: BlockInputSource.engine},
+    previouslyMissingColumns.length - alreadyAddedColumnsCount
+  );
   return DataColumnEngineResult.SuccessResolved;
 }

@@ -84,6 +84,7 @@ PRs
 Plaintext
 PoS
 Prysm
+QUIC
 Quickstart
 README
 READMEs
@@ -96,6 +97,7 @@ SSD
 SSZ
 Somer
 Stakehouse
+TLS
 TOC
 TTD
 Teku

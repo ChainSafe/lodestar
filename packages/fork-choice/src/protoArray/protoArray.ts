@@ -391,6 +391,7 @@ export class ProtoArray {
     // We _must_ perform these functions separate from the weight-updating loop above to ensure
     // that we have a fully coherent set of weights before updating parent
     // best-child/descendant.
+    const proposerBoostRoot = proposerBoost?.root ?? null;
     for (let nodeIndex = this.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
       const node = this.nodes[nodeIndex];
       if (node === undefined) {
@@ -403,7 +404,7 @@ export class ProtoArray {
       // If the node has a parent, try to update its best-child and best-descendant.
       const parentIndex = node.parent;
       if (parentIndex !== undefined) {
-        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, proposerBoost?.root ?? null);
+        this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot, proposerBoostRoot);
       }
     }
     // Update the previous proposer boost

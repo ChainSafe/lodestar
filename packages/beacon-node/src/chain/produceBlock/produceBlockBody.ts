@@ -511,9 +511,16 @@ export async function produceBlockBody<T extends BlockType>(
           // NOTE: Even though the fulu.BlobsBundle type is superficially the same as deneb.BlobsBundle, it is NOT.
           // In fulu, proofs are _cell_ proofs, vs in deneb they are _blob_ proofs.
 
+          const timer = this?.metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
           const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
+          timer?.();
           if (this.opts.sanityCheckExecutionEngineBlobs) {
-            await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+            const validationTimer = this.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
+            try {
+              await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+            } finally {
+              validationTimer?.();
+            }
           }
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
