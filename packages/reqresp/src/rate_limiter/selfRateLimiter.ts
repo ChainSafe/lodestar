@@ -47,6 +47,9 @@ type RequestIdMs = number;
  * Simple rate limiter that allows a maximum of 2 concurrent requests per protocol per peer.
  * Also tracks when a peer has rate-limited us and enforces a backoff period before allowing new requests.
  * The consumer should either prevent requests from being sent when the limit is reached or handle the case when the request is not allowed.
+ *
+ * Note: SyncChain maintains its own rate-limit backoff map to avoid assigning batches to backed-off
+ * peers. This class acts as the authoritative safety net at the protocol level.
  */
 export class SelfRateLimiter {
   private readonly rateLimitersPerPeer: MapDef<PeerIdStr, MapDef<ProtocolID, Map<RequestId, RequestIdMs>>>;

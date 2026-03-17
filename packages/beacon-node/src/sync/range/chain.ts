@@ -134,7 +134,11 @@ export class SyncChain {
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
   private readonly peerset = new Map<PeerIdStr, ChainTarget>();
-  /** Tracks peers that have rate-limited us, mapped to the timestamp (ms) until which we should avoid them */
+  /**
+   * Tracks peers that have rate-limited us, mapped to the timestamp (ms) until which we should avoid them.
+   * This is a sync-layer optimization to avoid assigning batches to backed-off peers.
+   * The reqresp SelfRateLimiter independently enforces backoff at the protocol level as a safety net.
+   */
   private readonly rateLimitedPeers = new Map<PeerIdStr, number>();
 
   private readonly logger: Logger;
@@ -242,6 +246,7 @@ export class SyncChain {
    */
   removePeer(peerId: PeerIdStr): boolean {
     const deleted = this.peerset.delete(peerId);
+    this.rateLimitedPeers.delete(peerId);
     this.computeTarget();
     return deleted;
   }

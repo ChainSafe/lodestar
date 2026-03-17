@@ -91,7 +91,7 @@ export function responseStatusErrorToRequestError(e: ResponseError): RequestErro
   // Debug format for Duration. Lighthouse removed this in April 2025, switching to silent
   // response throttling, but Grandine still sends it.
   // See https://github.com/ChainSafe/lodestar/issues/8110
-  if (errorMessageLowercase.includes("wait ")) {
+  if (errorMessageLowercase.startsWith("wait ")) {
     return {code: RequestErrorCode.RESP_RATE_LIMITED, backoffMs: parseBackoffSeconds(errorMessageLowercase)};
   }
 
