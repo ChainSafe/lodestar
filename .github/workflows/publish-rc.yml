@@ -109,7 +109,7 @@ jobs:
       - name: Publish to npm registry
         run: pnpm run release:publish --dist-tag rc
 
-      - name: Publish release (undraft after successful npm publish)
+      - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release edit ${{ needs.tag.outputs.tag }} --draft=false
