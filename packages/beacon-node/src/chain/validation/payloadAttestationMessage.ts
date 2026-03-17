@@ -4,6 +4,7 @@ import {
   createSingleSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
   getPayloadTimelinessCommittee,
+  getPtcCommitteeIndex,
 } from "@lodestar/state-transition";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -81,7 +82,7 @@ async function validatePayloadAttestationMessage(
   // `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
   // processing the block up to the current slot as determined by the fork choice.
   const ptc = getPayloadTimelinessCommittee(state, data.slot);
-  const validatorCommitteeIndex = ptc.indexOf(validatorIndex);
+  const validatorCommitteeIndex = getPtcCommitteeIndex(ptc, validatorIndex);
 
   if (validatorCommitteeIndex === -1) {
     throw new PayloadAttestationError(GossipAction.REJECT, {

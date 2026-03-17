@@ -17,6 +17,11 @@ import {computeEpochAtSlot} from "./epoch.js";
 import {RootCache} from "./rootCache.js";
 import {computePayloadTimelinessCommitteeAtSlot} from "./seed.js";
 
+export type PtcCommitteeView = {
+  readonly length: number;
+  get(index: number): ValidatorIndex;
+};
+
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
 }
@@ -195,13 +200,13 @@ export function rotatePayloadTimelinessCommittees(state: CachedBeaconStateGloas)
   );
 }
 
-export function getPayloadTimelinessCommittee(state: CachedBeaconStateGloas, slot: Slot): number[] {
+export function getPayloadTimelinessCommittee(state: CachedBeaconStateGloas, slot: Slot): PtcCommitteeView {
   if (slot === state.slot) {
-    return state.currentPtc.getAll();
+    return state.currentPtc;
   }
 
   if (slot + 1 === state.slot) {
-    return state.previousPtc.getAll();
+    return state.previousPtc;
   }
 
   throw new Error(
@@ -209,12 +214,28 @@ export function getPayloadTimelinessCommittee(state: CachedBeaconStateGloas, slo
   );
 }
 
+export function getPtcCommitteeIndex(ptc: PtcCommitteeView, validatorIndex: ValidatorIndex): number {
+  for (let i = 0; i < ptc.length; i++) {
+    if (ptc.get(i) === validatorIndex) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
 export function getIndexedPayloadAttestation(
   state: CachedBeaconStateGloas,
   payloadAttestation: gloas.PayloadAttestation
 ): gloas.IndexedPayloadAttestation {
   const ptc = getPayloadTimelinessCommittee(state, payloadAttestation.data.slot);
-  const attestingIndices = payloadAttestation.aggregationBits.intersectValues(ptc);
+  const attestingIndices: number[] = [];
+
+  for (let i = 0; i < ptc.length; i++) {
+    if (payloadAttestation.aggregationBits.get(i)) {
+      attestingIndices.push(ptc.get(i));
+    }
+  }
 
   return {
     attestingIndices: attestingIndices.sort((a, b) => a - b),
