@@ -35,6 +35,7 @@ EthStaker
 EtherScan
 Ethereum
 EthereumJS
+FFG
 FINDNODE
 FX
 Flamegraph
