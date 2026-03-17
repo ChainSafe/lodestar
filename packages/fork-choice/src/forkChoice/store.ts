@@ -69,14 +69,18 @@ export class ForkChoiceStore implements IForkChoiceStore {
   justifiedBalancesGetter: JustifiedBalancesGetter;
   currentSlot: Slot;
 
-  // Fast Confirmation Rule fields
+  // Fast Confirmation Rule spec fields
   confirmedRoot: RootHex;
   previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
   currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
-  previousEpochObservedJustifiedBalances: JustifiedBalances;
-  currentEpochObservedJustifiedBalances: JustifiedBalances;
+  previousEpochGreatestUnrealizedCheckpoint: CheckpointWithHex;
   previousSlotHead: RootHex;
   currentSlotHead: RootHex;
+
+  // Fast Confirmation Rule internal fields
+  previousEpochObservedJustifiedBalances: JustifiedBalances;
+  currentEpochObservedJustifiedBalances: JustifiedBalances;
+  previousEpochGreatestUnrealizedBalances: JustifiedBalances;
   stateGetter: ForkChoiceStateGetter;
 
   constructor(
@@ -118,11 +122,13 @@ export class ForkChoiceStore implements IForkChoiceStore {
 
     // Initialize Fast Confirmation fields
     const anchorRoot = toCheckpointWithHex(finalizedCheckpoint).rootHex;
-    this.confirmedRoot = anchorRoot;
     this.previousEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
     this.currentEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
+    this.previousEpochGreatestUnrealizedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
+    this.confirmedRoot = anchorRoot;
     this.previousEpochObservedJustifiedBalances = justifiedBalances;
     this.currentEpochObservedJustifiedBalances = justifiedBalances;
+    this.previousEpochGreatestUnrealizedBalances = justifiedBalances;
     this.previousSlotHead = anchorRoot;
     this.currentSlotHead = anchorRoot;
   }

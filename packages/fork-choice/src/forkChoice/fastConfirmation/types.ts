@@ -13,16 +13,23 @@ export type ForkChoiceStateGetter = (
   opts: {stateRoot: RootHex; checkpoint?: never} | {stateRoot?: never; checkpoint: CheckpointWithHex}
 ) => CachedBeaconStateAllForks | null;
 
-export type IFastConfirmationStore = {
+type IFastConfirmationSpecStore = {
   confirmedRoot: RootHex;
   previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
   currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
-  previousEpochObservedJustifiedBalances: EffectiveBalanceIncrements;
-  currentEpochObservedJustifiedBalances: EffectiveBalanceIncrements;
+  previousEpochGreatestUnrealizedCheckpoint: CheckpointWithHex;
   previousSlotHead: RootHex;
   currentSlotHead: RootHex;
+};
+
+type IFastConfirmationAuxStore = {
+  previousEpochObservedJustifiedBalances: EffectiveBalanceIncrements;
+  currentEpochObservedJustifiedBalances: EffectiveBalanceIncrements;
+  previousEpochGreatestUnrealizedBalances: EffectiveBalanceIncrements;
   stateGetter: ForkChoiceStateGetter;
 };
+
+export type IFastConfirmationStore = IFastConfirmationSpecStore & IFastConfirmationAuxStore;
 
 export type FastConfirmationResult = {
   confirmedRoot: RootHex;

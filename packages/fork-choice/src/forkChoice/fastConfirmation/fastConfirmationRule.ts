@@ -96,6 +96,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     const previousSlotHead = this.store.currentSlotHead;
     const currentSlotHead = ctx.getHead().blockRoot;
     const currentSlot = ctx.getCurrentSlot();
+    const isStartSlotOfCurrentEpoch = isStartSlotOfEpoch(currentSlot);
     const isLastSlotOfCurrentEpoch = isStartSlotOfEpoch(currentSlot + 1);
 
     this.store.previousSlotHead = previousSlotHead;
@@ -105,15 +106,30 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       previousSlotHead,
       currentSlotHead,
       currentSlot,
+      isStartSlotOfCurrentEpoch,
       isLastSlotOfCurrentEpoch,
     });
 
+    // Spec step 1: freeze the greatest unrealized justified checkpoint at the
+    // last slot of the epoch so the next epoch consumes a stable snapshot.
     if (isLastSlotOfCurrentEpoch) {
+      const unrealized = ctx.getUnrealizedJustified();
+      this.store.previousEpochGreatestUnrealizedCheckpoint = unrealized.checkpoint;
+      this.store.previousEpochGreatestUnrealizedBalances = unrealized.balances;
+
+      this.logger?.verbose("Updated fast confirmation greatest unrealized snapshot", {
+        previousEpochGreatestUnrealizedCheckpointRoot: this.store.previousEpochGreatestUnrealizedCheckpoint.rootHex,
+        previousEpochGreatestUnrealizedCheckpointEpoch: this.store.previousEpochGreatestUnrealizedCheckpoint.epoch,
+      });
+    }
+
+    // Spec step 2: rotate observed justified checkpoints at the first slot of
+    // the new epoch using the snapshot taken at the end of the previous epoch.
+    if (isStartSlotOfCurrentEpoch) {
       this.store.previousEpochObservedJustifiedCheckpoint = this.store.currentEpochObservedJustifiedCheckpoint;
       this.store.previousEpochObservedJustifiedBalances = this.store.currentEpochObservedJustifiedBalances;
-      const unrealized = ctx.getUnrealizedJustified();
-      this.store.currentEpochObservedJustifiedCheckpoint = unrealized.checkpoint;
-      this.store.currentEpochObservedJustifiedBalances = unrealized.balances;
+      this.store.currentEpochObservedJustifiedCheckpoint = this.store.previousEpochGreatestUnrealizedCheckpoint;
+      this.store.currentEpochObservedJustifiedBalances = this.store.previousEpochGreatestUnrealizedBalances;
 
       this.logger?.verbose("Updated fast confirmation observed justified checkpoints", {
         previousEpochObservedJustifiedCheckpointRoot: this.store.previousEpochObservedJustifiedCheckpoint.rootHex,

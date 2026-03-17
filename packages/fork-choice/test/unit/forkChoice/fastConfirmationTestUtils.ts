@@ -87,15 +87,28 @@ export function makeStore(
   currentObservedEpoch: Epoch,
   previousSlotHead: RootHex,
   currentSlotHead: RootHex,
-  state: CachedBeaconStateAllForks
+  state: CachedBeaconStateAllForks,
+  opts: {
+    previousGreatestUnrealizedRoot?: RootHex;
+    previousGreatestUnrealizedEpoch?: Epoch;
+    previousObservedBalances?: Uint16Array;
+    currentObservedBalances?: Uint16Array;
+    previousGreatestUnrealizedBalances?: Uint16Array;
+  } = {}
 ): IFastConfirmationStore {
   const balances = state.epochCtx.effectiveBalanceIncrements;
   return {
-    confirmedRoot,
     previousEpochObservedJustifiedCheckpoint: checkpoint(previousObservedEpoch, previousObservedRoot),
     currentEpochObservedJustifiedCheckpoint: checkpoint(currentObservedEpoch, currentObservedRoot),
-    previousEpochObservedJustifiedBalances: balances,
-    currentEpochObservedJustifiedBalances: balances,
+    previousEpochGreatestUnrealizedCheckpoint: checkpoint(
+      opts.previousGreatestUnrealizedEpoch ?? currentObservedEpoch,
+      opts.previousGreatestUnrealizedRoot ?? currentObservedRoot
+    ),
+    confirmedRoot,
+    previousEpochObservedJustifiedBalances: opts.previousObservedBalances ?? balances,
+    currentEpochObservedJustifiedBalances: opts.currentObservedBalances ?? balances,
+    previousEpochGreatestUnrealizedBalances:
+      opts.previousGreatestUnrealizedBalances ?? opts.currentObservedBalances ?? balances,
     previousSlotHead,
     currentSlotHead,
     stateGetter: () => state,
@@ -109,7 +122,8 @@ export function makeContext(
   latestMessages: Map<ValidatorIndex, {root: RootHex; epoch: Epoch}>,
   unrealizedCheckpoint: {epoch: Epoch; rootHex: RootHex},
   state: CachedBeaconStateAllForks,
-  equivocatingIndices: ValidatorIndex[] = []
+  equivocatingIndices: ValidatorIndex[] = [],
+  unrealizedBalances: Uint16Array = state.epochCtx.effectiveBalanceIncrements
 ): FastConfirmationContext {
   const blocksByRoot = new Map(blocks.map((block) => [block.blockRoot, block]));
   const equivocating = new Set(equivocatingIndices);
@@ -144,7 +158,7 @@ export function makeContext(
     getLatestMessage: (validatorIndex: ValidatorIndex) => latestMessages.get(validatorIndex) ?? null,
     getUnrealizedJustified: () => ({
       checkpoint: checkpoint(unrealizedCheckpoint.epoch, unrealizedCheckpoint.rootHex),
-      balances: state.epochCtx.effectiveBalanceIncrements,
+      balances: unrealizedBalances,
     }),
     getFinalizedCheckpoint: () => checkpoint(0, ZERO_ROOT),
     getEquivocatingIndices: () => equivocating,

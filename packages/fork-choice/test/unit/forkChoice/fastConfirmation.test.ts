@@ -5,6 +5,7 @@ import {
   buildFastConfirmationSnapshot,
   createFastConfirmationCache,
 } from "../../../src/forkChoice/fastConfirmation/data.js";
+import {FastConfirmationRule} from "../../../src/forkChoice/fastConfirmation/fastConfirmationRule.js";
 import {runFastConfirmationRules} from "../../../src/forkChoice/fastConfirmation/rules.js";
 import {
   computeSafetyThreshold,
@@ -427,5 +428,66 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(confirmed.blockRoot);
     expect(result.didReset).toBe(false);
+  });
+
+  it("snapshots the greatest unrealized checkpoint at the last slot of the epoch", () => {
+    const state = makeState(2, 32, [SLOTS_PER_EPOCH as Slot]);
+    const previousObservedRoot = rootFromNumber(1);
+    const currentObservedRoot = rootFromNumber(2);
+    const greatestUnrealizedRoot = rootFromNumber(3);
+    const unrealizedBalances = new Uint16Array([48, 64]);
+    const store = makeStore(ZERO_ROOT, previousObservedRoot, currentObservedRoot, 0, 0, ZERO_ROOT, ZERO_ROOT, state, {
+      previousGreatestUnrealizedRoot: rootFromNumber(99),
+      previousGreatestUnrealizedEpoch: 0,
+    });
+    const ctx = makeContext(
+      (SLOTS_PER_EPOCH - 1) as Slot,
+      ZERO_ROOT,
+      [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT})],
+      new Map(),
+      {epoch: 0, rootHex: greatestUnrealizedRoot},
+      state,
+      [],
+      unrealizedBalances
+    );
+
+    new FastConfirmationRule(store, null).onSlotStartAfterPastAttestationsApplied(ctx);
+
+    expect(store.previousEpochGreatestUnrealizedCheckpoint.rootHex).toBe(greatestUnrealizedRoot);
+    expect(store.previousEpochGreatestUnrealizedCheckpoint.epoch).toBe(0);
+    expect(store.previousEpochGreatestUnrealizedBalances).toBe(unrealizedBalances);
+    expect(store.currentEpochObservedJustifiedCheckpoint.rootHex).toBe(currentObservedRoot);
+    expect(store.previousEpochObservedJustifiedCheckpoint.rootHex).toBe(previousObservedRoot);
+  });
+
+  it("rotates observed justified checkpoints from the stored greatest unrealized snapshot at epoch start", () => {
+    const state = makeState(2, 32, [SLOTS_PER_EPOCH as Slot]);
+    const previousObservedRoot = rootFromNumber(11);
+    const currentObservedRoot = rootFromNumber(12);
+    const greatestUnrealizedRoot = rootFromNumber(13);
+    const currentObservedBalances = new Uint16Array([32, 32]);
+    const greatestUnrealizedBalances = new Uint16Array([48, 64]);
+    const store = makeStore(ZERO_ROOT, previousObservedRoot, currentObservedRoot, 0, 0, ZERO_ROOT, ZERO_ROOT, state, {
+      currentObservedBalances,
+      previousGreatestUnrealizedRoot: greatestUnrealizedRoot,
+      previousGreatestUnrealizedEpoch: 0,
+      previousGreatestUnrealizedBalances: greatestUnrealizedBalances,
+    });
+    const ctx = makeContext(
+      SLOTS_PER_EPOCH as Slot,
+      ZERO_ROOT,
+      [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT})],
+      new Map(),
+      {epoch: 1, rootHex: rootFromNumber(99)},
+      state,
+      []
+    );
+
+    new FastConfirmationRule(store, null).onSlotStartAfterPastAttestationsApplied(ctx);
+
+    expect(store.previousEpochObservedJustifiedCheckpoint.rootHex).toBe(currentObservedRoot);
+    expect(store.currentEpochObservedJustifiedCheckpoint.rootHex).toBe(greatestUnrealizedRoot);
+    expect(store.previousEpochObservedJustifiedBalances).toBe(currentObservedBalances);
+    expect(store.currentEpochObservedJustifiedBalances).toBe(greatestUnrealizedBalances);
   });
 });
