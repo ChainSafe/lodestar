@@ -1,5 +1,7 @@
+import {BeaconConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {BLSPubkey, Bytes32, UintNum64, electra, ssz} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {computeEpochAtSlot, isValidatorKnown} from "../util/index.js";
@@ -77,7 +79,8 @@ function addBuilderToRegistry(
 export function processDepositRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
-  depositRequest: electra.DepositRequest
+  depositRequest: electra.DepositRequest,
+  pendingValidatorPubkeys?: Set<string>
 ): void {
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
@@ -91,10 +94,13 @@ export function processDepositRequest(
     // already exists with this pubkey, apply the deposit to their balance
     const isBuilder = builderIndex !== null;
     const isValidator = isValidatorKnown(state, validatorIndex);
-    const isBuilderPrefix = isBuilderWithdrawalCredential(withdrawalCredentials);
 
-    // Route to builder if it's an existing builder OR has builder prefix and is not a validator
-    if (isBuilder || (isBuilderPrefix && !isValidator)) {
+    if (
+      isBuilder ||
+      (isBuilderWithdrawalCredential(withdrawalCredentials) &&
+        !isValidator &&
+        !(pendingValidatorPubkeys ?? getPendingValidatorPubkeys(state.config, stateGloas)).has(toHex(pubkey)))
+    ) {
       // Apply builder deposits immediately
       applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
       return;
@@ -115,4 +121,29 @@ export function processDepositRequest(
     slot: state.slot,
   });
   state.pendingDeposits.push(pendingDeposit);
+}
+
+/**
+ * Build a set of pubkeys (hex-encoded) from pending deposits that have valid signatures.
+ * This is computed once and passed to each processDepositRequest call to avoid
+ * repeatedly iterating state.pendingDeposits.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/beacon-chain.md#new-is_pending_validator
+ */
+export function getPendingValidatorPubkeys(config: BeaconConfig, state: CachedBeaconStateGloas): Set<string> {
+  const result = new Set<string>();
+  for (const pendingDeposit of state.pendingDeposits.getAllReadonly()) {
+    if (
+      isValidDepositSignature(
+        config,
+        pendingDeposit.pubkey,
+        pendingDeposit.withdrawalCredentials,
+        pendingDeposit.amount,
+        pendingDeposit.signature
+      )
+    ) {
+      result.add(toHex(pendingDeposit.pubkey));
+    }
+  }
+  return result;
 }
