@@ -26,7 +26,7 @@ const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 /** Max number of discovered ENR texts to retain for API responses */
-const MAX_DISCOVERED_ENRS = 500;
+const MAX_DISCOVERED_ENRS = 250;
 
 export type PeerDiscoveryOpts = {
   discv5FirstQueryDelayMs: number;
