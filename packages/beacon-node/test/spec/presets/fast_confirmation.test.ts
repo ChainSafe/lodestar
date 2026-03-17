@@ -3,7 +3,9 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
   ForkPostDeneb,
@@ -52,8 +54,6 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.ts";
 import {ClockStopped} from "../../mocks/clock.ts";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.ts";
-import {getConfig} from "@lodestar/config/test-utils";
-import {testLogger} from "@lodestar/logger/test-utils";
 import {assertCorrectProgressiveBalances} from "../config.ts";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.ts";
 import {specTestIterator} from "../utils/specTestIterator.ts";

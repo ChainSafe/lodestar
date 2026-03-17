@@ -2,7 +2,14 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, CheckpointWithPayloadStatus, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  CheckpointWithPayloadStatus,
+  ForkChoiceStateGetter,
+  IForkChoice,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
