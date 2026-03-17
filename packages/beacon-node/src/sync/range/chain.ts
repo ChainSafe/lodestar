@@ -520,10 +520,7 @@ export class SyncChain {
           {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
           res.err
         );
-        if (
-          errCode === RequestErrorCode.RESP_RATE_LIMITED ||
-          errCode === RequestErrorCode.REQUEST_SELF_RATE_LIMITED
-        ) {
+        if (errCode === RequestErrorCode.RESP_RATE_LIMITED || errCode === RequestErrorCode.REQUEST_SELF_RATE_LIMITED) {
           // Peer rate-limited us — don't count as a failed download attempt and mark peer for backoff
           this.rateLimitedPeers.set(peer.peerId, Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS);
           batch.downloadingRateLimited();
