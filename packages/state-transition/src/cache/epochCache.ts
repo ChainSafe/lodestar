@@ -74,6 +74,7 @@ export type EpochCacheImmutableData = {
 
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
+  skipPayloadTimelinessCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
   shufflingGetter?: ShufflingGetter;
 };
@@ -447,7 +448,7 @@ export class EpochCache {
 
     // Compute PTC for all slots in the current epoch
     let payloadTimelinessCommittees: Uint32Array[] = [];
-    if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
+    if (currentEpoch >= config.GLOAS_FORK_EPOCH && !opts?.skipPayloadTimelinessCommitteeCache) {
       payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
         state,
         currentEpoch,

@@ -12,13 +12,19 @@ import {
 } from "@lodestar/params";
 import {Bytes32, Root, TimeSeconds, phase0, ssz} from "@lodestar/types";
 import {processDeposit} from "../block/processDeposit.js";
-import {EpochCacheImmutableData} from "../cache/epochCache.js";
+import {EpochCache, EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {increaseBalance} from "../index.js";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
+  CachedBeaconStateGloas,
+} from "../types.js";
 import {newFilledArray} from "./array.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
+import {initializePayloadTimelinessCommittee} from "./gloas.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
 import {getActiveValidatorIndices, getMaxEffectiveBalance} from "./validator.js";
 
@@ -256,7 +262,10 @@ export function initializeBeaconStateFromEth1(
   // - 3. interop state: Only supports starting from genesis at phase0 fork
   // So it's okay to skip syncing the sync committee cache here and expect it to be
   // populated latter when the altair fork happens for cases 2, 3.
-  const state = createCachedBeaconState(stateView, immutableData, {skipSyncCommitteeCache: true});
+  const state = createCachedBeaconState(stateView, immutableData, {
+    skipSyncCommitteeCache: true,
+    skipPayloadTimelinessCommitteeCache: true,
+  });
 
   applyTimestamp(config, state, eth1Timestamp);
   applyEth1BlockHash(state, eth1BlockHash);
@@ -329,9 +338,11 @@ export function initializeBeaconStateFromEth1(
   }
 
   if (fork >= ForkSeq.gloas) {
+    state.epochCtx = EpochCache.createFromState(state, immutableData);
     const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
     stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
     stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
+    initializePayloadTimelinessCommittee(state as CachedBeaconStateGloas);
   }
 
   state.commit();
