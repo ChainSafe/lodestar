@@ -1,6 +1,7 @@
 import {phase0} from "@lodestar/types";
 
-// With db implementation, persistedKey is serialized data of a checkpoint
+// With db implementation, persistedKey is serialized data of a checkpoint + 1
+// ie a fixed size of `ssz.phase0.Checkpoint.minSize + 1`
 export type DatastoreKey = Uint8Array;
 
 // Make this generic to support testing

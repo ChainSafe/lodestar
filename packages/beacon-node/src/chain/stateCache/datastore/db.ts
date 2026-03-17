@@ -57,10 +57,13 @@ export function checkpointToDatastoreKey(cp: phase0.Checkpoint, payloadPresent: 
   return key;
 }
 
+function isPayloadCheckpointState(key: DatastoreKey): boolean {
+  return key.at(-1) === 1;
+}
+
 /**
- * Get the latest safe checkpoint state the node can use to boot from
- *   - it should be the checkpoint state that's unique in its epoch
- *   - its last processed block slot should be at epoch boundary or last slot of previous epoch
+ * Get the latest "safe" checkpoint state the node can use to boot from
+ *   - its last processed block slot should be at epoch boundary (CRCS) or last slot of previous epoch (PRCS)
  *   - state slot should be at epoch boundary
  *   - state slot should be equal to epoch * SLOTS_PER_EPOCH
  *
@@ -79,16 +82,18 @@ export async function getLatestSafeDatastoreKey(
 
   const dataStoreKeyByEpoch: Map<Epoch, DatastoreKey> = new Map();
   for (const [epoch, keys] of checkpointsByEpoch.entries()) {
-    // only consider epochs with a single checkpoint to avoid ambiguity from forks
     if (keys.length === 1) {
+      // PRCS (skipped slot) or CRCS and no payloadPresent
+      // Pre-gloas always fall into this case
       dataStoreKeyByEpoch.set(epoch, keys[0]);
     } else if (keys.length === 2) {
-      // Two keys for the same checkpoint with different payloadPresent suffix (FULL/EMPTY)
-      // TODO GLOAS: Here we pick FULL key. Probably wrong, need to review this
+      // CRCS without payload and CRCS with payload
+      // ie Two keys for the same checkpoint with different payloadPresent suffix (FULL/EMPTY)
+      // TODO GLOAS: Here we pick FULL key, there is a chance that payload is orphaned hence we not be able to sync
       const cp0 = extractCheckpointBytes(keys[0]);
       const cp1 = extractCheckpointBytes(keys[1]);
-      if (Buffer.from(cp0).equals(Buffer.from(cp1))) {
-        const fullKey = keys[0][cp0.length] === 1 ? keys[0] : keys[1];
+      if (Buffer.compare(cp0, cp1) === 0) {
+        const fullKey = isPayloadCheckpointState(keys[0]) ? keys[0] : keys[1];
         dataStoreKeyByEpoch.set(epoch, fullKey);
       }
     }
