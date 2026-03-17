@@ -44,7 +44,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
       const block = headChain[i];
 
       if (block.slot >= startSlot && block.slot < endSlot) {
-        // TODO GLOAS: Use chain.getSerializedExecutionPayloadEnvelope() to check in-memory caches beforewhen the method is available
+        // TODO GLOAS: Use chain.getSerializedExecutionPayloadEnvelope() to check in-memory caches when the method is available
         const envelopeBytes = await unfinalized.getBinary(fromHex(block.blockRoot));
         if (envelopeBytes) {
           yield {
