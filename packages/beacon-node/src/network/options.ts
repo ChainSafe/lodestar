@@ -89,5 +89,5 @@ export const defaultNetworkOptions: NetworkOptions = {
   // libp2p-mplex default (5) is too low and can cause frequent connection resets.
   disconnectThreshold: 50,
   enablePartialColumns: false,
-  eagerlyPublishCells: true,
+  eagerlyPublishCells: false,
 };
