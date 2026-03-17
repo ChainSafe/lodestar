@@ -96,13 +96,13 @@ jobs:
           prerelease: false
           draft: true
 
-      - name: Publish release
+      - name: Publish to npm registry (release)
+        run: pnpm run release:publish
+
+      - name: Publish release (undraft after successful npm publish)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release edit ${{ needs.tag.outputs.tag }} --draft=false
-
-      - name: Publish to npm registry (release)
-        run: pnpm run release:publish
 
       # In case of failure
       - name: Rollback on failure

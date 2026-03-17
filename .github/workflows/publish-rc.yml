@@ -90,11 +90,6 @@ jobs:
           prerelease: true
           draft: true
 
-      - name: Publish release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit ${{ needs.tag.outputs.tag }} --draft=false
-
       - name: Change and commit version
         # Write version before publishing so it's picked up by `lerna publish from-package`.
         # It must also be committed to ensure a clean git tree, otherwise `lerna publish` errors.
@@ -113,6 +108,11 @@ jobs:
 
       - name: Publish to npm registry
         run: pnpm run release:publish --dist-tag rc
+
+      - name: Publish release (undraft after successful npm publish)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ needs.tag.outputs.tag }} --draft=false
 
       # In case of failure
       - name: Rollback on failure
