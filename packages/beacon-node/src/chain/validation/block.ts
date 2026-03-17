@@ -72,12 +72,7 @@ export async function validateGossipBlock(
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   const parentRoot = toRootHex(block.parentRoot);
-  const parentBlock = isGloasBeaconBlock(block)
-    ? chain.forkChoice.getBlockHexAndBlockHash(
-        parentRoot,
-        toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
-      )
-    : chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
@@ -90,6 +85,18 @@ export async function validateGossipBlock(
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+  }
+
+  // [IGNORE] The block's parent execution payload (defined by bid.parent_block_hash) has been seen
+  // (via gossip or non-gossip sources) (a client MAY queue blocks for processing once the parent payload is retrieved).
+  if (isGloasBeaconBlock(block)) {
+    const parentBlockHashHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
+    if (chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHashHex) === null) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+        parentBlockHash: parentBlockHashHex,
+      });
+    }
   }
 
   // [IGNORE] The attestation head block is too far behind the attestation slot, causing many skip slots.
