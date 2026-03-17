@@ -338,7 +338,6 @@ export function initializeBeaconStateFromEth1(
     const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
     stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
     stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
-    initializePayloadTimelinessCommittee(state as CachedBeaconStateGloas);
   }
 
   state.commit();
