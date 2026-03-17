@@ -534,7 +534,7 @@ export class BeaconChain implements IBeaconChain {
 
   async getHeadStateAtSlot(slot: Slot, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
     const headState = this.getHeadState();
-    if (slot <= headState.slot) {
+    if (slot === headState.slot) {
       return headState;
     }
 
