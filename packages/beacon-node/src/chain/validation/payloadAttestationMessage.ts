@@ -3,6 +3,7 @@ import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
+  getPayloadTimelinessCommittee,
   getPtcCommitteeIndex,
 } from "@lodestar/state-transition";
 import {RootHex, gloas, ssz} from "@lodestar/types";
@@ -80,7 +81,8 @@ async function validatePayloadAttestationMessage(
   // [REJECT] The message's validator index is within the payload committee in
   // `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
   // processing the block up to the current slot as determined by the fork choice.
-  const validatorCommitteeIndex = getPtcCommitteeIndex(state.currentPtc, validatorIndex);
+  const ptc = getPayloadTimelinessCommittee(state, data.slot);
+  const validatorCommitteeIndex = getPtcCommitteeIndex(ptc, validatorIndex);
 
   if (validatorCommitteeIndex === -1) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
