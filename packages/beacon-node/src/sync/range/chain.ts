@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {DEFAULT_RATE_LIMIT_BACKOFF_MS, RequestErrorCode} from "@lodestar/reqresp";
 import {Epoch, Root, Slot} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
@@ -133,6 +134,8 @@ export class SyncChain {
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
   private readonly peerset = new Map<PeerIdStr, ChainTarget>();
+  /** Tracks peers that have rate-limited us, mapped to the timestamp (ms) until which we should avoid them */
+  private readonly rateLimitedPeers = new Map<PeerIdStr, number>();
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
@@ -374,8 +377,18 @@ export class SyncChain {
       return;
     }
 
+    const now = Date.now();
     const peersSyncInfo: PeerSyncInfo[] = [];
     for (const [peerId, target] of this.peerset.entries()) {
+      // Skip peers that are currently in rate-limit backoff
+      const rateLimitedUntil = this.rateLimitedPeers.get(peerId);
+      if (rateLimitedUntil !== undefined) {
+        if (now < rateLimitedUntil) {
+          continue;
+        }
+        this.rateLimitedPeers.delete(peerId);
+      }
+
       try {
         peersSyncInfo.push({...this.getConnectedPeerSyncMeta(peerId), target});
       } catch (e) {
@@ -507,7 +520,17 @@ export class SyncChain {
           {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
           res.err
         );
-        batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
+        if (
+          errCode === RequestErrorCode.RESP_RATE_LIMITED ||
+          errCode === RequestErrorCode.REQUEST_SELF_RATE_LIMITED
+        ) {
+          // Peer rate-limited us — don't count as a failed download attempt and mark peer for backoff
+          this.rateLimitedPeers.set(peer.peerId, Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS);
+          batch.downloadingRateLimited();
+          this.triggerBatchDownloader();
+        } else {
+          batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
+        }
       } else {
         this.logger.verbose("Batch download success", {
           id: this.logId,
