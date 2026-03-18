@@ -71,14 +71,14 @@ jobs:
         run: node scripts/generate_changelog.mjs ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md
 
       - name: Get binaries
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: dist/
           merge-multiple: true
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -88,6 +88,7 @@ jobs:
           body_path: "CHANGELOG.md"
           name: Release ${{ needs.tag.outputs.tag }}
           prerelease: true
+          draft: true
 
       - name: Change and commit version
         # Write version before publishing so it's picked up by `lerna publish from-package`.
@@ -107,6 +108,11 @@ jobs:
 
       - name: Publish to npm registry
         run: pnpm run release:publish --dist-tag rc
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ needs.tag.outputs.tag }} --draft=false
 
       # In case of failure
       - name: Rollback on failure
