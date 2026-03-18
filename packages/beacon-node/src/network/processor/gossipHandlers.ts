@@ -985,6 +985,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           source: BlockInputSource.gossip,
           peerIdStr,
         });
+
+        // Trigger getBlobsV3 — the partial header carries kzg_commitments needed for the call.
+        // This may be the first gossip object for this block. getBlobsTracker deduplicates.
+        chain.getBlobsTracker.triggerGetBlobs(blockInput);
       } else {
         // No header — cannot identify block without header
         // TODO: wire groupID from gossipsub partial message metadata to look up existing BlockInput
