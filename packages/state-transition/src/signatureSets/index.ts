@@ -3,6 +3,7 @@ import {ForkSeq} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, altair, capella} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ISignatureSet} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
@@ -42,12 +43,14 @@ export function getBlockSignatureSets(
   // fork based validations
   const fork = config.getForkSeq(signedBlock.message.slot);
 
+  const stateView = new BeaconStateView(state);
+
   const signatureSets = [
     getRandaoRevealSignatureSet(config, signedBlock.message),
     ...getProposerSlashingsSignatureSets(config, signedBlock),
     ...getAttesterSlashingsSignatureSets(config, signedBlock),
     ...getAttestationsSignatureSets(config, signedBlock, indexedAttestations),
-    ...getVoluntaryExitsSignatureSets(config, state, signedBlock),
+    ...getVoluntaryExitsSignatureSets(config, stateView, signedBlock),
   ];
 
   if (!opts?.skipProposerSignature) {

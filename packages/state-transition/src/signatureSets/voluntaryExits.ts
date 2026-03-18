@@ -1,8 +1,9 @@
 import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
-import {SignedBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
+import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {PubkeyCache} from "../cache/pubkeyCache.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
+import {IBeaconStateView} from "../stateView/interface.js";
 import {
   ISignatureSet,
   SignatureSetType,
@@ -10,37 +11,36 @@ import {
   computeStartSlotAtEpoch,
   convertValidatorIndexToBuilderIndex,
   isBuilderIndex,
-  isGloasCachedStateType,
   verifySignatureSet,
 } from "../util/index.js";
 
 export function verifyVoluntaryExitSignature(
   config: BeaconConfig,
   pubkeyCache: PubkeyCache,
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
   return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit), pubkeyCache);
 }
 
 /**
- * Extract signatures to allow validating all block signatures at once
+ * Extract signatures to allow validating all block signatures at once.
  */
 export function getVoluntaryExitSignatureSet(
   config: BeaconConfig,
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
-  if (isGloasCachedStateType(state) && isBuilderVoluntaryExit(signedVoluntaryExit)) {
+  if (config.getForkSeq(state.slot) >= ForkSeq.gloas && isBuilderVoluntaryExit(signedVoluntaryExit)) {
     return getBuilderVoluntaryExitSignatureSet(config, state, signedVoluntaryExit);
   }
 
-  return getValidatorVoluntaryExitSignatureSet(config, state, signedVoluntaryExit);
+  return getValidatorVoluntaryExitSignatureSet(config, state.slot, signedVoluntaryExit);
 }
 
 export function getVoluntaryExitsSignatureSets(
   config: BeaconConfig,
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
@@ -50,11 +50,11 @@ export function getVoluntaryExitsSignatureSets(
 
 export function getValidatorVoluntaryExitSignatureSet(
   config: BeaconConfig,
-  state: CachedBeaconStateAllForks,
+  stateSlot: Slot,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
   const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = config.getDomainForVoluntaryExit(state.slot, messageSlot);
+  const domain = config.getDomainForVoluntaryExit(stateSlot, messageSlot);
 
   return {
     type: SignatureSetType.indexed,
@@ -66,13 +66,13 @@ export function getValidatorVoluntaryExitSignatureSet(
 
 export function getBuilderVoluntaryExitSignatureSet(
   config: BeaconConfig,
-  state: CachedBeaconStateGloas,
+  state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
   const messageSlot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
   const domain = config.getDomainForVoluntaryExit(state.slot, messageSlot);
   const builderIndex = convertValidatorIndexToBuilderIndex(signedVoluntaryExit.message.validatorIndex);
-  const builder = state.builders.getReadonly(builderIndex);
+  const builder = state.getBuilder(builderIndex);
 
   return {
     type: SignatureSetType.single,
