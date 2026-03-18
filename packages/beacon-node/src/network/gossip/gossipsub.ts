@@ -11,7 +11,7 @@ import type {PeerScoreParams, PeerScoreStatsDump} from "@libp2p/gossipsub/score"
 import type {AddrInfo, PublishOpts, TopicStr} from "@libp2p/gossipsub/types";
 import type {PeerId} from "@libp2p/interface";
 import {peerIdFromString} from "@libp2p/peer-id";
-import {multiaddr} from "@multiformats/multiaddr";
+import {type Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
@@ -537,19 +537,24 @@ export function parseDirectPeers(directPeerStrs: routes.lodestar.DirectPeer[], l
         const enr = ENR.decodeTxt(peerStr);
         const peerId = enr.peerId;
 
-        // Get TCP multiaddr from ENR
-        const multiaddrTCP = enr.getLocationMultiaddr("tcp");
-        if (!multiaddrTCP) {
-          logger.warn("ENR does not contain TCP multiaddr", {enr: peerStr});
+        // Get all available transport multiaddrs from ENR
+        const addrs = [enr.getLocationMultiaddr("quic"), enr.getLocationMultiaddr("tcp")].filter(
+          (a): a is Multiaddr => a != null
+        );
+        if (addrs.length === 0) {
+          logger.warn("ENR does not contain any transport multiaddr", {enr: peerStr});
           continue;
         }
 
         directPeers.push({
           id: peerId,
-          addrs: [multiaddrTCP],
+          addrs,
         });
 
-        logger.info("Added direct peer from ENR", {peerId: peerId.toString(), addr: multiaddrTCP.toString()});
+        logger.info("Added direct peer from ENR", {
+          peerId: peerId.toString(),
+          addrs: addrs.map((a) => a.toString()).join(", "),
+        });
       } catch (e) {
         logger.warn("Failed to parse direct peer ENR", {enr: peerStr}, e as Error);
       }
