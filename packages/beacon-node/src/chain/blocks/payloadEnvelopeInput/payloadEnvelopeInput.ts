@@ -68,9 +68,6 @@ export class PayloadEnvelopeInput {
   private readonly sampledColumns: ColumnIndex[];
   private readonly custodyColumns: ColumnIndex[];
 
-  /** Guard against double import - only one caller can claim the import */
-  private importClaimed = false;
-
   private timeCreatedSec: number;
 
   private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
@@ -283,20 +280,6 @@ export class PayloadEnvelopeInput {
 
   isComplete(): boolean {
     return this.state.hasPayload && this.state.hasAllData;
-  }
-
-  /**
-   * Check if this caller should import the payload.
-   * Returns true only once - guards against race condition where multiple
-   * gossip handlers (envelope + columns from different peers) could each
-   * observe isComplete() === true and trigger concurrent imports.
-   */
-  shouldImport(): boolean {
-    if (this.isComplete() && !this.importClaimed) {
-      this.importClaimed = true;
-      return true;
-    }
-    return false;
   }
 
   async waitForData(): Promise<gloas.SignedExecutionPayloadEnvelope> {

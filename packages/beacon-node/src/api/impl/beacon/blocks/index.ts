@@ -745,12 +745,7 @@ export function getBeaconBlockApi({
         // For self-builds, publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
         // Import execution payload. Signature already verified above
-        () => {
-          if (payloadInput.shouldImport()) {
-            chain.processExecutionPayload(payloadInput, {validSignature: true});
-          }
-          return Promise.resolve();
-        },
+        () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];
 
       const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);

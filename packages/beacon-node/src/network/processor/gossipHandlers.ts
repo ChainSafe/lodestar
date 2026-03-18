@@ -618,13 +618,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         });
       }
 
-      // TODO GLOAS: In Gloas, also add column to PayloadEnvelopeInput and check completion:
+      // TODO GLOAS: In Gloas, also add column to PayloadEnvelopeInput and notify the payload processor:
       // const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
       // if (payloadInput) {
       //   payloadInput.addColumn({columnSidecar, source: BlockInputSource.gossip, seenTimestampSec, peerIdStr});
-      //   if (payloadInput.shouldImport()) {
-      //     chain.processExecutionPayload(payloadInput, {validSignature: true});
-      //   }
+      //   chain.processExecutionPayload(payloadInput, {validSignature: true});
       // }
     },
 
@@ -866,10 +864,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         peerIdStr,
       });
 
-      if (payloadInput.shouldImport()) {
-        // TODO GLOAS: Emit execution_payload_gossip event for gossip receipt.
-        chain.processExecutionPayload(payloadInput, {validSignature: true});
-      }
+      // TODO GLOAS: Emit execution_payload_gossip event for gossip receipt.
+      chain.processExecutionPayload(payloadInput, {validSignature: true});
     },
     [GossipType.payload_attestation_message]: async ({
       gossipData,
