@@ -1635,33 +1635,37 @@ export function createLodestarMetrics(
       }),
     },
 
-    // reprocess gossip attestations
-    reprocessGossipAttestations: {
-      total: register.gauge({
-        name: "lodestar_reprocess_gossip_attestations_total",
-        help: "Total number of gossip attestations waiting to reprocess",
+    // some gossip messages need to wait for block to be processed before they can be processed
+    awaitingBlockGossipMessages: {
+      queue: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_total",
+        help: "Total number of gossip messages waiting for block to be processed",
+        labelNames: ["topic"],
       }),
       countPerSlot: register.gauge({
-        name: "lodestar_reprocess_gossip_attestations_per_slot_total",
-        help: "Total number of gossip attestations waiting to reprocess pet slot",
+        name: "lodestar_awaiting_block_gossip_messages_per_slot_total",
+        help: "Total number of gossip messages waiting for block to be processed per slot",
       }),
-      resolve: register.gauge({
-        name: "lodestar_reprocess_gossip_attestations_resolve_total",
-        help: "Total number of gossip attestations are reprocessed",
+      resolve: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_resolve_total",
+        help: "Total number of gossip messages are reprocessed",
+        labelNames: ["topic"],
       }),
-      waitSecBeforeResolve: register.gauge({
-        name: "lodestar_reprocess_gossip_attestations_wait_time_resolve_seconds",
+      waitSecBeforeResolve: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_wait_time_resolve_seconds",
         help: "Time to wait for unknown block in seconds",
+        labelNames: ["topic"],
       }),
-      reject: register.gauge<{reason: ReprocessRejectReason}>({
-        name: "lodestar_reprocess_gossip_attestations_reject_total",
-        help: "Total number of attestations are rejected to reprocess",
-        labelNames: ["reason"],
+      // having 2 labels here is not great for performance, however it's rarely happening and having the reason label is important for debugging
+      reject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_reject_total",
+        help: "Total number of gossip messages are rejected to reprocess",
+        labelNames: ["reason", "topic"],
       }),
-      waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason}>({
-        name: "lodestar_reprocess_gossip_attestations_wait_time_reject_seconds",
+      waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_wait_time_reject_seconds",
         help: "Time to wait for unknown block before being rejected",
-        labelNames: ["reason"],
+        labelNames: ["reason", "topic"],
       }),
     },
 
