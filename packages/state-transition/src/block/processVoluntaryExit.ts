@@ -1,6 +1,7 @@
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {
   convertValidatorIndexToBuilderIndex,
@@ -9,7 +10,7 @@ import {
   isActiveBuilder,
   isBuilderIndex,
 } from "../util/gloas.js";
-import {getPendingBalanceToWithdraw, isActiveValidator, isGloasCachedStateType} from "../util/index.js";
+import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
 import {initiateValidatorExit} from "./index.js";
 
 export enum VoluntaryExitValidity {
@@ -40,8 +41,11 @@ export function processVoluntaryExit(
     throw Error(`Invalid voluntary exit at forkSeq=${fork} reason=${validity}`);
   }
 
-  if (isGloasCachedStateType(state) && isBuilderIndex(voluntaryExit.validatorIndex)) {
-    initiateBuilderExit(state, convertValidatorIndexToBuilderIndex(voluntaryExit.validatorIndex));
+  if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
+    initiateBuilderExit(
+      state as CachedBeaconStateGloas,
+      convertValidatorIndexToBuilderIndex(voluntaryExit.validatorIndex)
+    );
     return;
   }
 
@@ -64,8 +68,8 @@ export function getVoluntaryExitValidity(
   }
 
   // Check if this is a builder exit
-  if (isGloasCachedStateType(state) && isBuilderIndex(voluntaryExit.validatorIndex)) {
-    return getBuilderVoluntaryExitValidity(state, signedVoluntaryExit, verifySignature);
+  if (fork >= ForkSeq.gloas && isBuilderIndex(voluntaryExit.validatorIndex)) {
+    return getBuilderVoluntaryExitValidity(state as CachedBeaconStateGloas, signedVoluntaryExit, verifySignature);
   }
 
   return getValidatorVoluntaryExitValidity(fork, state, signedVoluntaryExit, verifySignature);
@@ -98,7 +102,10 @@ function getBuilderVoluntaryExitValidity(
   }
 
   // Verify signature
-  if (verifySignature && !verifyVoluntaryExitSignature(config, epochCtx.pubkeyCache, state, signedVoluntaryExit)) {
+  if (
+    verifySignature &&
+    !verifyVoluntaryExitSignature(config, epochCtx.pubkeyCache, new BeaconStateView(state), signedVoluntaryExit)
+  ) {
     return VoluntaryExitValidity.invalidSignature;
   }
 
@@ -145,7 +152,10 @@ function getValidatorVoluntaryExitValidity(
   }
 
   // Verify signature
-  if (verifySignature && !verifyVoluntaryExitSignature(config, epochCtx.pubkeyCache, state, signedVoluntaryExit)) {
+  if (
+    verifySignature &&
+    !verifyVoluntaryExitSignature(config, epochCtx.pubkeyCache, new BeaconStateView(state), signedVoluntaryExit)
+  ) {
     return VoluntaryExitValidity.invalidSignature;
   }
 
