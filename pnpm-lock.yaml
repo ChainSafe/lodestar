@@ -222,6 +222,9 @@ importers:
       '@chainsafe/as-sha256':
         specifier: ^1.2.0
         version: 1.2.0
+      '@chainsafe/blst':
+        specifier: ^2.2.0
+        version: 2.2.0
       '@chainsafe/discv5':
         specifier: ^12.0.1
         version: 12.0.1
@@ -231,12 +234,12 @@ importers:
       '@chainsafe/libp2p-noise':
         specifier: ^17.0.0
         version: 17.0.0
-      '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/8308619ed584c7200a53c0aa6ddad107730f4254
       '@chainsafe/libp2p-quic':
         specifier: ^2.0.0
         version: 2.0.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/8308619ed584c7200a53c0aa6ddad107730f4254
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -436,17 +439,18 @@ importers:
       '@chainsafe/bls-keystore':
         specifier: ^3.1.0
         version: 3.1.0
+      '@chainsafe/blst':
+        specifier: ^2.2.0
+        version: 2.2.0
       '@chainsafe/discv5':
         specifier: ^12.0.1
         version: 12.0.1
       '@chainsafe/enr':
-        specifier: ^6.0.0
-        version: 6.0.0
+        specifier: ^6.0.1
+        version: 6.0.1
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
         version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/8308619ed584c7200a53c0aa6ddad107730f4254
-        specifier: ^6.0.1
-        version: 6.0.1
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -969,7 +973,7 @@ importers:
         version: 0.7.0
       vitest:
         specifier: 'catalog:'
-        version: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
+        version: 4.0.7(@types/node@25.3.3)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
 
   packages/state-transition:
     dependencies:
@@ -1036,7 +1040,7 @@ importers:
         version: 0.2.4
       vitest:
         specifier: 'catalog:'
-        version: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
+        version: 4.0.7(@types/node@25.3.3)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
     devDependencies:
       '@types/tmp':
         specifier: ^0.2.3
@@ -1451,9 +1455,6 @@ packages:
   '@chainsafe/libp2p-noise@17.0.0':
     resolution: {integrity: sha512-vwrmY2Y+L1xYhIDiEpl61KHxwrLCZoXzTpwhyk34u+3+6zCAZPL3GxH3i2cs+u5IYNoyLptORdH17RKFXy7upA==}
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/8308619ed584c7200a53c0aa6ddad107730f4254':
-    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/8308619ed584c7200a53c0aa6ddad107730f4254}
-    version: 0.1.0
   '@chainsafe/libp2p-quic-darwin-arm64@2.0.0':
     resolution: {integrity: sha512-dY/LEALfn4qRUjY8i3+V5YcmPRzJdeiaE/6eoS92KZr6UoWdVuxUCUz24+3jTl9Ke+EqvqsjZxfIS08CuhWhRA==}
     engines: {node: '>= 10'}
@@ -1503,6 +1504,10 @@ packages:
   '@chainsafe/libp2p-quic@2.0.0':
     resolution: {integrity: sha512-RNxHNdo22XhS5DEFbT0fAaZFfrEmuIVRP5InqgMq8md6r0f61AATZdmYqAuNkcj6VSBareLlCAJ/iuhhNZYt7A==}
     engines: {node: '>= 22'}
+
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/8308619ed584c7200a53c0aa6ddad107730f4254':
+    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/8308619ed584c7200a53c0aa6ddad107730f4254}
+    version: 0.1.0
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
@@ -3196,8 +3201,8 @@ packages:
   '@types/node@24.10.1':
     resolution: {integrity: sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==}
 
-  '@types/node@25.4.0':
-    resolution: {integrity: sha512-9wLpoeWuBlcbBpOY3XmzSTG3oscB6xjBEEtn+pYXTfhyXhIxC5FsBer2KTopBlvKEiW9l13po9fq+SJY/5lkhw==}
+  '@types/node@25.3.3':
+    resolution: {integrity: sha512-DpzbrH7wIcBaJibpKo9nnSQL0MTRdnWttGyE5haGwK86xgMOkFLp7vEyfQPGLOJh5wNYiJ3V9PmUMDhV9u8kkQ==}
 
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
@@ -5327,6 +5332,10 @@ packages:
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
+
+  lru-cache@11.0.1:
+    resolution: {integrity: sha512-CgeuL5uom6j/ZVrg7G/+1IXqRY8JXX4Hghfy5YE0EhoYQWvndP1kufu58cmZLNIDKnRhZrXfdS9urVWx98AipQ==}
+    engines: {node: 20 || >=22}
 
   lru-cache@11.2.4:
     resolution: {integrity: sha512-B5Y16Jr9LB9dHVkh6ZevG+vAbOsNOYCX+sXvFWFu7B3Iz5mijW3zdbMyhsh8ANd2mSWBYdJgnqi+mL7/LrOPYg==}
@@ -7887,9 +7896,6 @@ snapshots:
       uint8arrays: 5.1.0
       wherearewe: 2.0.1
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/8308619ed584c7200a53c0aa6ddad107730f4254':
-    dependencies:
-      '@chainsafe/zapi': 0.1.1
   '@chainsafe/libp2p-quic-darwin-arm64@2.0.0':
     optional: true
 
@@ -7929,6 +7935,10 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-gnu': 2.0.0
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.0.0
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.0.0
+
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/8308619ed584c7200a53c0aa6ddad107730f4254':
+    dependencies:
+      '@chainsafe/zapi': 0.1.1
 
   '@chainsafe/netmask@2.0.0':
     dependencies:
@@ -9437,7 +9447,7 @@ snapshots:
       agent-base: 7.1.3
       http-proxy-agent: 7.0.0
       https-proxy-agent: 7.0.6
-      lru-cache: 11.2.5
+      lru-cache: 11.2.4
       socks-proxy-agent: 8.0.5
     transitivePeerDependencies:
       - supports-color
@@ -9493,7 +9503,7 @@ snapshots:
     dependencies:
       '@npmcli/promise-spawn': 9.0.1
       ini: 6.0.0
-      lru-cache: 11.2.5
+      lru-cache: 11.2.4
       npm-pick-manifest: 11.0.3
       proc-log: 6.1.0
       promise-retry: 2.0.1
@@ -10024,7 +10034,7 @@ snapshots:
 
   '@types/dns-packet@5.6.5':
     dependencies:
-      '@types/node': 25.4.0
+      '@types/node': 24.10.1
 
   '@types/estree@1.0.8': {}
 
@@ -10052,7 +10062,7 @@ snapshots:
   '@types/multicast-dns@7.2.4':
     dependencies:
       '@types/dns-packet': 5.6.5
-      '@types/node': 25.4.0
+      '@types/node': 24.10.1
 
   '@types/node@18.15.13': {}
 
@@ -10066,9 +10076,10 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
-  '@types/node@25.4.0':
+  '@types/node@25.3.3':
     dependencies:
       undici-types: 7.18.2
+    optional: true
 
   '@types/normalize-package-data@2.4.4': {}
 
@@ -10172,13 +10183,13 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser-playwright@4.0.7(playwright@1.56.1)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser-playwright@4.0.7(playwright@1.56.1)(vite@6.1.6(@types/node@25.3.3)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
-      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))
+      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@25.3.3)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.3.3)(yaml@2.8.2))
       playwright: 1.56.1
       tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
+      vitest: 4.0.7(@types/node@25.3.3)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -10203,16 +10214,16 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser@4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser@4.0.7(vite@6.1.6(@types/node@25.3.3)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.3.3)(yaml@2.8.2))
       '@vitest/utils': 4.0.7
       magic-string: 0.30.21
       pixelmatch: 7.1.0
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
+      vitest: 4.0.7(@types/node@25.3.3)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
       ws: 8.18.3
     transitivePeerDependencies:
       - bufferutil
@@ -10257,13 +10268,13 @@ snapshots:
     optionalDependencies:
       vite: 6.1.6(@types/node@24.10.1)(yaml@2.8.2)
 
-  '@vitest/mocker@4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))':
+  '@vitest/mocker@4.0.7(vite@6.1.6(@types/node@25.3.3)(yaml@2.8.2))':
     dependencies:
       '@vitest/spy': 4.0.7
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 6.1.6(@types/node@25.4.0)(yaml@2.8.2)
+      vite: 6.1.6(@types/node@25.3.3)(yaml@2.8.2)
 
   '@vitest/pretty-format@2.1.8':
     dependencies:
@@ -10736,7 +10747,7 @@ snapshots:
       '@npmcli/fs': 5.0.0
       fs-minipass: 3.0.1
       glob: 13.0.0
-      lru-cache: 11.2.5
+      lru-cache: 11.2.4
       minipass: 7.1.2
       minipass-collect: 2.0.1
       minipass-flush: 1.0.5
@@ -11966,7 +11977,7 @@ snapshots:
 
   hosted-git-info@9.0.2:
     dependencies:
-      lru-cache: 11.2.5
+      lru-cache: 11.2.4
 
   html-encoding-sniffer@4.0.0:
     dependencies:
@@ -12622,6 +12633,8 @@ snapshots:
   lowercase-keys@2.0.0: {}
 
   lru-cache@10.4.3: {}
+
+  lru-cache@11.0.1: {}
 
   lru-cache@11.2.4: {}
 
@@ -13321,7 +13334,7 @@ snapshots:
 
   path-scurry@2.0.0:
     dependencies:
-      lru-cache: 11.2.5
+      lru-cache: 11.0.1
       minipass: 7.1.2
 
   path-to-regexp@6.3.0: {}
@@ -14350,7 +14363,8 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  undici-types@7.18.2: {}
+  undici-types@7.18.2:
+    optional: true
 
   undici@5.29.0:
     dependencies:
@@ -14496,13 +14510,13 @@ snapshots:
       fsevents: 2.3.3
       yaml: 2.8.2
 
-  vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2):
+  vite@6.1.6(@types/node@25.3.3)(yaml@2.8.2):
     dependencies:
       esbuild: 0.24.2
       postcss: 8.5.6
       rollup: 4.52.5
     optionalDependencies:
-      '@types/node': 25.4.0
+      '@types/node': 25.3.3
       fsevents: 2.3.3
       yaml: 2.8.2
 
@@ -14553,10 +14567,10 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2):
+  vitest@4.0.7(@types/node@25.3.3)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2):
     dependencies:
       '@vitest/expect': 4.0.7
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.3.3)(yaml@2.8.2))
       '@vitest/pretty-format': 4.0.7
       '@vitest/runner': 4.0.7
       '@vitest/snapshot': 4.0.7
@@ -14573,11 +14587,11 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 6.1.6(@types/node@25.4.0)(yaml@2.8.2)
+      vite: 6.1.6(@types/node@25.3.3)(yaml@2.8.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 25.4.0
-      '@vitest/browser-playwright': 4.0.7(playwright@1.56.1)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
+      '@types/node': 25.3.3
+      '@vitest/browser-playwright': 4.0.7(playwright@1.56.1)(vite@6.1.6(@types/node@25.3.3)(yaml@2.8.2))(vitest@4.0.7)
       jsdom: 23.0.1
     transitivePeerDependencies:
       - jiti
