@@ -78,7 +78,6 @@ export function defineSimTestConfig(
   const forkConfig = createChainForkConfig({
     ...opts,
     GENESIS_DELAY: genesisDelaySeconds,
-    SECONDS_PER_SLOT: (opts.SLOT_DURATION_MS ?? SIM_TESTS_SLOT_DURATION_MS) / 1000,
     SLOT_DURATION_MS: opts.SLOT_DURATION_MS ?? SIM_TESTS_SLOT_DURATION_MS,
     TERMINAL_TOTAL_DIFFICULTY: ttd,
     DEPOSIT_CHAIN_ID: SIM_ENV_CHAIN_ID,

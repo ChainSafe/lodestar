@@ -56,8 +56,6 @@ export const chainConfig: ChainConfig = {
 
   // Time parameters
   // ---------------------------------------------------------------
-  // [customized] Faster for testing purposes (DEPRECATED)
-  SECONDS_PER_SLOT: 6,
   // [customized] 6000 milliseconds, 6 seconds
   SLOT_DURATION_MS: 6000,
   // 14 (estimate from Eth1 mainnet)
