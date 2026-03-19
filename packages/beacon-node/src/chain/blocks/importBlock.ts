@@ -15,7 +15,6 @@ import {
   ForkSeq,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
-  isForkPostGloas,
 } from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
@@ -137,8 +136,7 @@ export async function importBlock(
   this.regen.processState(blockRootHex, postState);
 
   // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
-  const forkName = this.config.getForkName(blockSlot);
-  if (isForkPostGloas(forkName)) {
+  if (fork >= ForkSeq.gloas) {
     this.seenPayloadEnvelopeInput.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,

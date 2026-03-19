@@ -155,24 +155,34 @@ export async function importExecutionPayload(
   }
 
   // 5. Handle EL response
-  if (execResult.status === ExecutionPayloadStatus.INVALID) {
-    throw new PayloadError({
-      code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
-      execStatus: execResult.status,
-      errorMessage: execResult.validationError ?? "",
-    });
-  }
+  switch (execResult.status) {
+    case ExecutionPayloadStatus.VALID:
+      break;
 
-  if (
-    execResult.status === ExecutionPayloadStatus.INVALID_BLOCK_HASH ||
-    execResult.status === ExecutionPayloadStatus.ELERROR ||
-    execResult.status === ExecutionPayloadStatus.UNAVAILABLE
-  ) {
-    throw new PayloadError({
-      code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
-      execStatus: execResult.status,
-      errorMessage: execResult.validationError ?? "",
-    });
+    case ExecutionPayloadStatus.INVALID:
+      throw new PayloadError({
+        code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+        execStatus: execResult.status,
+        errorMessage: execResult.validationError ?? "",
+      });
+
+    case ExecutionPayloadStatus.ACCEPTED:
+    case ExecutionPayloadStatus.SYNCING:
+      // TODO GLOAS: Handle optimistic import for payload - for now treat as error
+      throw new PayloadError({
+        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+        execStatus: execResult.status,
+        errorMessage: execResult.validationError ?? "EL syncing, payload not yet validated",
+      });
+
+    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
+    case ExecutionPayloadStatus.ELERROR:
+    case ExecutionPayloadStatus.UNAVAILABLE:
+      throw new PayloadError({
+        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+        execStatus: execResult.status,
+        errorMessage: execResult.validationError ?? "",
+      });
   }
 
   // 5b. Verify envelope state root matches post-state
