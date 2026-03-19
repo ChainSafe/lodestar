@@ -1,7 +1,7 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithPayloadStatus, IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
@@ -109,7 +109,8 @@ export async function archiveBlocks(
       const migratedEntries = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
         config,
         db,
-        finalizedCanonicalBlockRoots
+        logger,
+        finalizedCanonicalBlocks
       );
       logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {...logCtx, migratedEntries});
     }
@@ -390,27 +391,32 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
-  blocks: BlockRootSlot[]
+  logger: Logger,
+  canonicalBlocks: ProtoBlock[]
 ): Promise<number> {
   let migratedEnvelopes = 0;
 
-  const gloasBlocks = blocks.filter((block) => config.getForkSeq(block.slot) >= ForkSeq.gloas);
-  if (gloasBlocks.length === 0) return 0;
+  const payloadBlocks = canonicalBlocks.filter(
+    (block) => config.getForkSeq(block.slot) >= ForkSeq.gloas && block.payloadStatus === PayloadStatus.FULL
+  );
+  if (payloadBlocks.length === 0) return 0;
+  const blocks = payloadBlocks.map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
 
   const envelopeEntries: KeyValue<Slot, Uint8Array>[] = [];
   const migratedRoots: Uint8Array[] = [];
 
   const envelopeBytesArray = await Promise.all(
-    gloasBlocks.map((block) => db.executionPayloadEnvelope.getBinary(block.root))
+    blocks.map((block) => db.executionPayloadEnvelope.getBinary(block.root))
   );
 
-  for (let i = 0; i < gloasBlocks.length; i++) {
+  for (let i = 0; i < blocks.length; i++) {
     const bytes = envelopeBytesArray[i];
     if (bytes !== null) {
-      envelopeEntries.push({key: gloasBlocks[i].slot, value: bytes});
-      migratedRoots.push(gloasBlocks[i].root);
+      envelopeEntries.push({key: blocks[i].slot, value: bytes});
+      migratedRoots.push(blocks[i].root);
+    } else {
+      logger.debug("Payload in forkchoice but missing in db", {slot: blocks[i].slot, root: toRootHex(blocks[i].root)});
     }
-    // If bytes is null, it is fine because not all blocks have execution payload envelopes
   }
 
   if (envelopeEntries.length > 0) {
