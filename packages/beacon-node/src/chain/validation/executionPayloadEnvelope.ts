@@ -9,6 +9,7 @@ import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
+import { PayloadStatus } from "@lodestar/fork-choice";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
@@ -47,22 +48,23 @@ async function validateExecutionPayloadEnvelope(
 
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
+  // const envelopeImportedToForkChoice =
+  //   block.parentBlockHash !== null && block.executionPayloadBlockHash !== block.parentBlockHash;
+  const envelopeBlock = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
   const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
+  if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+      blockRoot: blockRootHex,
+      slot: envelope.slot,
+    });
+  }
+
   if (!payloadInput) {
     // PayloadEnvelopeInput should have been created during block import
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
       blockRoot: blockRootHex,
-    });
-  }
-
-  // [IGNORE] The node has not seen another valid
-  // `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  if (payloadInput.hasPayloadEnvelope()) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
-      blockRoot: blockRootHex,
-      slot: envelope.slot,
     });
   }
 
