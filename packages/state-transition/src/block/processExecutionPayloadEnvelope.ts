@@ -2,6 +2,7 @@ import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getExecutionPayloadEnvelopeSignatureSet} from "../signatureSets/executionPayloadEnvelope.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeTimeAtSlot} from "../util/index.js";
 import {verifySignatureSet} from "../util/signatureSets.js";
@@ -160,7 +161,8 @@ function verifyExecutionPayloadEnvelopeSignature(
 ): boolean {
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     state.config,
-    state,
+    state.epochCtx.pubkeyCache,
+    new BeaconStateView(state),
     signedEnvelope,
     state.latestBlockHeader.proposerIndex
   );

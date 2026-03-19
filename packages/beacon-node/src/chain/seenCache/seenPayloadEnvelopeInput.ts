@@ -21,13 +21,14 @@ export type SeenPayloadEnvelopeInputModules = {
 /**
  * Cache for tracking PayloadEnvelopeInput instances, keyed by beacon block root.
  *
- * Created during block import when a Gloas block is processed.
+ * Created during block import when a block is processed.
  * Pruned on finalization and after payload is written to DB.
  */
 export class SeenPayloadEnvelopeInput {
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private readonly serializedCache: SerializedCache;
+  private readonly metrics: Metrics | null;
   private readonly logger?: Logger;
   private payloadInputs = new Map<RootHex, PayloadEnvelopeInput>();
 
@@ -35,12 +36,19 @@ export class SeenPayloadEnvelopeInput {
     this.chainEvents = chainEvents;
     this.signal = signal;
     this.serializedCache = serializedCache;
+    this.metrics = metrics;
     this.logger = logger;
 
     if (metrics) {
-      metrics.seenCache.payloadEnvelopeInput.count.addCollect(() =>
-        metrics.seenCache.payloadEnvelopeInput.count.set(this.payloadInputs.size)
-      );
+      metrics.seenCache.payloadEnvelopeInput.count.addCollect(() => {
+        metrics.seenCache.payloadEnvelopeInput.count.set(this.payloadInputs.size);
+        metrics.seenCache.payloadEnvelopeInput.serializedObjectRefs.set(
+          Array.from(this.payloadInputs.values()).reduce(
+            (count, payloadInput) => count + payloadInput.getSerializedCacheKeys().length,
+            0
+          )
+        );
+      });
     }
 
     this.chainEvents.on(ChainEvent.forkChoiceFinalized, this.onFinalized);
@@ -68,6 +76,7 @@ export class SeenPayloadEnvelopeInput {
     }
     const input = PayloadEnvelopeInput.createFromBlock(props);
     this.payloadInputs.set(props.blockRootHex, input);
+    this.metrics?.seenCache.payloadEnvelopeInput.created.inc();
     return input;
   }
 

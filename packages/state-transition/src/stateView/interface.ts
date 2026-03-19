@@ -213,5 +213,5 @@ export interface IBeaconStateView {
   processExecutionPayloadEnvelope(
     signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
     opts?: ProcessExecutionPayloadEnvelopeOpts
-  ): void;
+  ): IBeaconStateView;
 }

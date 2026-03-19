@@ -1,6 +1,10 @@
 import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
-import {CachedBeaconStateGloas, getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
+import {
+  BeaconStateView,
+  CachedBeaconStateGloas,
+  getExecutionPayloadEnvelopeSignatureSet,
+} from "@lodestar/state-transition";
 import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
@@ -120,7 +124,8 @@ export async function importExecutionPayload(
       : (async () => {
           const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
             this.config,
-            blockState,
+            blockState.epochCtx.pubkeyCache,
+            new BeaconStateView(blockState),
             envelope,
             payloadInput.proposerIndex
           );
@@ -189,13 +194,10 @@ export async function importExecutionPayload(
   const postPayloadState = postPayloadResult.postPayloadState;
   const postPayloadStateRoot = postPayloadState.hashTreeRoot();
   if (!byteArrayEquals(envelope.message.stateRoot, postPayloadStateRoot)) {
-    throw new PayloadError(
-      {
-        code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-        message: `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(postPayloadStateRoot)}`,
-      },
-      `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(postPayloadStateRoot)}`
-    );
+    throw new PayloadError({
+      code: PayloadErrorCode.STATE_TRANSITION_ERROR,
+      message: `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(postPayloadStateRoot)}`,
+    });
   }
 
   // 6. Update fork choice

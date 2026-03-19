@@ -765,12 +765,17 @@ export class BeaconStateView implements IBeaconStateView {
   processExecutionPayloadEnvelope(
     signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
     opts?: ProcessExecutionPayloadEnvelopeOpts
-  ): void {
+  ): BeaconStateView {
     const fork = this.config.getForkName(this.cachedState.slot);
     if (!isForkPostGloas(fork)) {
       throw Error(`processExecutionPayloadEnvelope is only available for gloas+ forks, got fork=${fork}`);
     }
-    processExecutionPayloadEnvelope(this.cachedState as CachedBeaconStateGloas, signedEnvelope, opts);
+    const postPayloadState = processExecutionPayloadEnvelope(
+      this.cachedState as CachedBeaconStateGloas,
+      signedEnvelope,
+      opts
+    );
+    return new BeaconStateView(postPayloadState);
   }
 }
 

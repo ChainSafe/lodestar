@@ -1,4 +1,5 @@
 import {
+  BeaconStateView,
   CachedBeaconStateGloas,
   computeStartSlotAtEpoch,
   getExecutionPayloadEnvelopeSignatureSet,
@@ -129,7 +130,12 @@ async function validateExecutionPayloadEnvelope(
 
   // Get pre-state to get correct builder's pubkey.
   const blockState = await chain.regen
-    .getBlockSlotState(parentBlock, block.slot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
+    .getBlockSlotState(
+      parentBlock,
+      block.slot,
+      {dontTransferCache: true},
+      RegenCaller.validateGossipExecutionPayloadEnvelope
+    )
     .catch(() => {
       throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
         code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_PARENT_STATE,
@@ -141,7 +147,8 @@ async function validateExecutionPayloadEnvelope(
   const state = blockState as CachedBeaconStateGloas;
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,
-    state,
+    state.epochCtx.pubkeyCache,
+    new BeaconStateView(state),
     executionPayloadEnvelope,
     payloadInput.proposerIndex
   );

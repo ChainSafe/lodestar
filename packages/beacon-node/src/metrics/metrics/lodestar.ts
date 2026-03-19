@@ -1561,6 +1561,14 @@ export function createLodestarMetrics(
           name: "lodestar_seen_payload_envelope_input_cache_size",
           help: "Number of cached PayloadEnvelopeInputs",
         }),
+        serializedObjectRefs: register.gauge({
+          name: "lodestar_seen_payload_envelope_input_cache_serialized_object_refs",
+          help: "Number of serialized-cache object refs retained by cached PayloadEnvelopeInputs",
+        }),
+        created: register.counter({
+          name: "lodestar_seen_payload_envelope_input_cache_items_created_total",
+          help: "Number of PayloadEnvelopeInputs created",
+        }),
       },
     },
 
