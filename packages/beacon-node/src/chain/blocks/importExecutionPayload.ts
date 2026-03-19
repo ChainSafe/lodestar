@@ -141,13 +141,10 @@ export async function importExecutionPayload(
           }),
         };
       } catch (e) {
-        throw new PayloadError(
-          {
-            code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-            message: (e as Error).message,
-          },
-          `State transition error: ${(e as Error).message}`
-        );
+        throw new PayloadError({
+          code: PayloadErrorCode.STATE_TRANSITION_ERROR,
+          message: (e as Error).message,
+        });
       }
     })(),
   ]);
