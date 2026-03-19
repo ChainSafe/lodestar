@@ -6,7 +6,7 @@ import {
   getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
 import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
-import {LodestarError, byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -24,14 +24,6 @@ export enum PayloadErrorCode {
   INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
 }
 
-type ExecutionEngineErrorStatus = Exclude<
-  ExecutionPayloadStatus,
-  | ExecutionPayloadStatus.VALID
-  | ExecutionPayloadStatus.ACCEPTED
-  | ExecutionPayloadStatus.SYNCING
-  | ExecutionPayloadStatus.INVALID
->;
-
 export type PayloadErrorType =
   | {
       code: PayloadErrorCode.EXECUTION_ENGINE_INVALID;
@@ -40,7 +32,7 @@ export type PayloadErrorType =
     }
   | {
       code: PayloadErrorCode.EXECUTION_ENGINE_ERROR;
-      execStatus: ExecutionEngineErrorStatus;
+      execStatus: ExecutionPayloadStatus;
       errorMessage: string;
     }
   | {
@@ -55,7 +47,14 @@ export type PayloadErrorType =
       code: PayloadErrorCode.INVALID_SIGNATURE;
     };
 
-export class PayloadError extends LodestarError<PayloadErrorType> {}
+export class PayloadError extends Error {
+  type: PayloadErrorType;
+
+  constructor(type: PayloadErrorType, message?: string) {
+    super(message ?? type.code);
+    this.type = type;
+  }
+}
 
 /**
  * Import an execution payload envelope after all data is available.
@@ -125,7 +124,7 @@ export async function importExecutionPayload(
       : (async () => {
           const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
             this.config,
-            this.pubkeyCache,
+            blockState.epochCtx.pubkeyCache,
             new BeaconStateView(blockState),
             envelope,
             payloadInput.proposerIndex
@@ -144,10 +143,13 @@ export async function importExecutionPayload(
           }),
         };
       } catch (e) {
-        throw new PayloadError({
-          code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-          message: (e as Error).message,
-        });
+        throw new PayloadError(
+          {
+            code: PayloadErrorCode.STATE_TRANSITION_ERROR,
+            message: (e as Error).message,
+          },
+          `State transition error: ${(e as Error).message}`
+        );
       }
     })(),
   ]);
