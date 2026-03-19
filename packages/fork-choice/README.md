@@ -2,7 +2,7 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Lodestar implementation of the [Ethereum Consensus fork choice](https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/phase0/fork-choice.md).
+Lodestar implementation of the [Ethereum Consensus fork choice](https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md).
 
 ## Usage
 

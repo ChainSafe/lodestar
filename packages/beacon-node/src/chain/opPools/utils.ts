@@ -41,7 +41,7 @@ export function isValidBlsToExecutionChangeForBlockInclusion(
   state: CachedBeaconStateAllForks,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): boolean {
-  // For each condition from https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/capella/beacon-chain.md#new-process_bls_to_execution_change
+  // For each condition from https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/capella/beacon-chain.md#new-process_bls_to_execution_change
   //
   // 1. assert address_change.validator_index < len(state.validators):
   //    If valid before will always be valid in the future, no need to check
