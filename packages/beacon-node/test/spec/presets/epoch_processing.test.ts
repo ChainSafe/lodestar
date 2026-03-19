@@ -55,7 +55,7 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
 };
 
 /**
- * https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/epoch_processing/README.md
  */
 type EpochTransitionCacheingTestCase = {
   meta?: {bls_setting?: bigint};
@@ -87,7 +87,7 @@ const epochProcessing =
 
         if (testcase.post === undefined) {
           // If post.ssz_snappy is not value, the sub-transition processing is aborted
-          // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
+          // https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/epoch_processing/README.md#postssz_snappy
           expect(() => epochTransitionFn(state, epochTransitionCache)).toThrow();
         } else {
           epochTransitionFn(state, epochTransitionCache);
