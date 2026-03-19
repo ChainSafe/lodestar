@@ -648,7 +648,8 @@ export class BeaconChain implements IBeaconChain {
       return this.cpStateDatastore.readLatestSafe();
     }
 
-    // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint.
+    // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint for backwards compatibility.
+    // because pre-gloas we always store FULL checkpoint state.
     const persistedKey = checkpointToDatastoreKey(checkpoint, true);
     return this.cpStateDatastore.read(persistedKey);
   }
