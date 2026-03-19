@@ -1,12 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkPostDeneb,
-  ForkPostFulu,
-  ForkPreFulu,
-  ForkPreGloas,
-  isForkPostFulu,
-  isForkPostGloas,
-} from "@lodestar/params";
+import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
@@ -19,7 +12,9 @@ import {
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
 import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
+import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {INetwork} from "../../network/index.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
 
@@ -41,6 +36,7 @@ export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
   logger: Logger;
   peerIdStr: string;
   batchBlocks?: IBlockInput[];
+  peerDasMetrics?: BeaconMetrics["peerDas"] | null;
 };
 
 export type CacheByRangeResponsesProps = {
@@ -202,6 +198,7 @@ export async function downloadByRange({
   blocksRequest,
   blobsRequest,
   columnsRequest,
+  peerDasMetrics,
 }: DownloadAndCacheByRangeProps): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   let response: DownloadByRangeResponses;
   try {
@@ -226,6 +223,7 @@ export async function downloadByRange({
     blocksRequest,
     blobsRequest,
     columnsRequest,
+    peerDasMetrics,
     ...response,
   });
 
@@ -296,10 +294,12 @@ export async function validateResponses({
   blocks,
   blobSidecars,
   columnSidecars,
+  peerDasMetrics,
 }: DownloadByRangeRequests &
   DownloadByRangeResponses & {
     config: ChainForkConfig;
     batchBlocks?: IBlockInput[];
+    peerDasMetrics?: BeaconMetrics["peerDas"] | null;
   }): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
   // Blocks are always required for blob/column validation
   // If a blocksRequest is provided, blocks have just been downloaded
@@ -378,7 +378,8 @@ export async function validateResponses({
       config,
       columnsRequest,
       blocksForDataValidation,
-      columnSidecars
+      columnSidecars,
+      peerDasMetrics
     );
     validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
     warnings = validatedColumnSidecarsResult.warnings;
@@ -614,7 +615,8 @@ export async function validateColumnsByRangeResponse(
   config: ChainForkConfig,
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedBlock[],
-  columnSidecars: fulu.DataColumnSidecars
+  columnSidecars: fulu.DataColumnSidecars,
+  peerDasMetrics?: BeaconMetrics["peerDas"] | null
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
 
@@ -695,13 +697,7 @@ export async function validateColumnsByRangeResponse(
         dataFork: dataSlot ? config.getForkName(dataSlot) : "unknown",
       });
     }
-    if (isForkPostGloas(forkName)) {
-      // TODO GLOAS: Post-gloas's blobKzgCommitments is not in beacon block body. Need to source it from somewhere else.
-      // if block without columns is passed default to zero and throw below
-      blobCount = 0;
-    } else {
-      blobCount = (block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments.length;
-    }
+    blobCount = getBlobKzgCommitments(forkName, block as SignedBeaconBlock<ForkPostFulu>).length;
 
     if (columnSidecars.length === 0) {
       if (!blobCount) {
@@ -776,7 +772,8 @@ export async function validateColumnsByRangeResponse(
         slot,
         blockRoot,
         blobCount,
-        columnSidecars
+        columnSidecars,
+        peerDasMetrics
       ).then(() => ({
         blockRoot,
         columnSidecars,

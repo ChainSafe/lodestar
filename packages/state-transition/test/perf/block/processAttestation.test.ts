@@ -13,7 +13,7 @@ import {
 import {phase0} from "@lodestar/types";
 import {processAttestationsAltair} from "../../../src/block/processAttestationsAltair.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../src/index.js";
-import {generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
+import {generatePerfTestCachedStateAltair, perfStateId} from "../../../src/testUtils/util.js";
 import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
 type StateAttestations = {

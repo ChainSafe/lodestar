@@ -1,5 +1,5 @@
 import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/blst";
-import {ISignatureSet, Index2PubkeyCache} from "@lodestar/state-transition";
+import {ISignatureSet, PubkeyCache} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
@@ -7,18 +7,18 @@ import {getAggregatedPubkey, getAggregatedPubkeysCount} from "./utils.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
   private readonly metrics: Metrics | null;
-  private readonly index2pubkey: Index2PubkeyCache;
+  private readonly pubkeyCache: PubkeyCache;
 
-  constructor({metrics = null, index2pubkey}: {metrics: Metrics | null; index2pubkey: Index2PubkeyCache}) {
+  constructor({metrics = null, pubkeyCache}: {metrics: Metrics | null; pubkeyCache: PubkeyCache}) {
     this.metrics = metrics;
-    this.index2pubkey = index2pubkey;
+    this.pubkeyCache = pubkeyCache;
   }
 
   async verifySignatureSets(sets: ISignatureSet[]): Promise<boolean> {
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
 
     const setsAggregated = sets.map((set) => ({
-      publicKey: getAggregatedPubkey(set, this.index2pubkey, this.metrics),
+      publicKey: getAggregatedPubkey(set, this.pubkeyCache, this.metrics),
       message: set.signingRoot,
       signature: set.signature,
     }));

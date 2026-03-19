@@ -355,7 +355,10 @@ export class LightClientServer {
     // Signature data
     const update = await this.db.bestLightClientUpdate.get(period);
     if (!update) {
-      throw Error(`No partialUpdate available for period ${period}`);
+      throw new LightClientServerError(
+        {code: LightClientServerErrorCode.RESOURCE_UNAVAILABLE},
+        `No partialUpdate available for period ${period}`
+      );
     }
     return update;
   }

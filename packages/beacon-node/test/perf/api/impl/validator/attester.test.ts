@@ -1,5 +1,5 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
-import {generatePerfTestCachedStatePhase0, numValidators} from "../../../../../../state-transition/test/perf/util.js";
+import {generatePerfTestCachedStatePhase0, numValidators} from "@lodestar/state-transition/test-utils";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 import {linspace} from "../../../../../src/util/numpy.js";
 
@@ -32,7 +32,7 @@ describe("api / impl / validator", () => {
       noThreshold: true,
       fn: () => {
         for (let i = 0; i < reqCount; i++) {
-          const pubkey = state.epochCtx.index2pubkey[i];
+          const pubkey = state.epochCtx.pubkeyCache.getOrThrow(i);
           pubkey.toBytes();
         }
       },

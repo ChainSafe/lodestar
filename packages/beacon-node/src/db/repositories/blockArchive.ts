@@ -1,4 +1,3 @@
-import all from "it-all";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, FilterOptions, KeyValue, Repository} from "@lodestar/db";
 import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
@@ -121,7 +120,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   async values(opts?: BlockFilterOptions): Promise<SignedBeaconBlock[]> {
-    return all(this.valuesStream(opts));
+    return await Array.fromAsync(this.valuesStream(opts));
   }
 
   // INDEX

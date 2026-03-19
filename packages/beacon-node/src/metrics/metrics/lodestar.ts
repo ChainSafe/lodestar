@@ -827,19 +827,31 @@ export function createLodestarMetrics(
         help: "Total number of blobs retrieved from execution engine and published to gossip",
       }),
     },
-    recoverDataColumnSidecars: {
-      recoverTime: register.histogram({
-        name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
-        help: "Time elapsed to recover data column sidecar",
-        buckets: [0.5, 1.0, 1.5, 2],
+    // Gossip execution payload envelope
+    gossipExecutionPayloadEnvelope: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_execution_payload_envelope_elapsed_time_till_received",
+        help: "Time elapsed between slot time and the time execution payload envelope received",
+        labelNames: ["source"],
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+    },
+    // recovery in the case of specific blob rows required
+    recoverBlobSidecars: {
+      blobsReconstructed: register.counter({
+        name: "lodestar_blobs_reconstructed_total",
+        help: "Total count of reconstructed blobs",
+      }),
+      reconstructionTime: register.histogram({
+        name: "lodestar_blob_reconstruction_seconds",
+        help: "Time taken to reconstruct blobs",
+        buckets: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 2, 5],
+      }),
+    },
+    recoverDataColumnSidecars: {
       custodyBeforeReconstruction: register.gauge({
         name: "lodestar_data_columns_in_custody_before_reconstruction",
         help: "Number of data columns in custody before reconstruction",
-      }),
-      numberOfColumnsRecovered: register.gauge({
-        name: "lodestar_recover_data_column_sidecar_recovered_columns_total",
-        help: "Total number of columns that were recovered",
       }),
       reconstructionResult: register.counter<{result: DataColumnReconstructionCode}>({
         name: "lodestar_data_column_sidecars_reconstruction_result",
@@ -848,6 +860,10 @@ export function createLodestarMetrics(
       }),
     },
     dataColumns: {
+      alreadyAdded: register.counter({
+        name: "lodestar_data_column_sidecar_already_added",
+        help: "Total number of columns that were already added by other sources while waiting",
+      }),
       bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_data_columns_by_source",
         help: "Number of received data columns by source",
@@ -903,11 +919,6 @@ export function createLodestarMetrics(
         help: "Total number of imported blobs by source",
         labelNames: ["blobsSource"],
       }),
-      columnsBySource: register.gauge<{source: BlockInputSource}>({
-        name: "lodestar_import_columns_by_source_total",
-        help: "Total number of imported columns (sampled columns) by source",
-        labelNames: ["source"],
-      }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "lodestar_import_block_not_override_fcu_reason_total",
         help: "Reason why the fcu call is not suppressed during block import",
@@ -917,6 +928,11 @@ export function createLodestarMetrics(
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({
       name: "lodestar_execution_engine_notify_new_payload_result_total",
       help: "The total result of calling notifyNewPayload execution engine api",
+      labelNames: ["result"],
+    }),
+    engineNotifyForkchoiceUpdateResult: register.gauge<{result: ExecutionPayloadStatus}>({
+      name: "lodestar_execution_engine_notify_forkchoice_update_result_total",
+      help: "The total result of calling notifyForkchoiceUpdate execution engine api",
       labelNames: ["result"],
     }),
     backfillSync: {
@@ -1447,28 +1463,36 @@ export function createLodestarMetrics(
           name: "lodestar_seen_block_input_cache_size",
           help: "Number of cached BlockInputs",
         }),
-        duplicateBlockCount: register.gauge<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_block_count",
+        serializedObjectRefs: register.gauge({
+          name: "lodestar_seen_block_input_cache_serialized_object_refs",
+          help: "Number of serialized-cache object refs retained by cached BlockInputs",
+        }),
+        duplicateBlockCount: register.counter<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_block_total",
           help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        duplicateBlobCount: register.gauge<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_blob_count",
+        duplicateBlobCount: register.counter<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_blob_total",
           help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        duplicateColumnCount: register.gauge<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_column_count",
+        duplicateColumnCount: register.counter<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_column_total",
           help: "Total number of duplicate columns that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        createdByBlock: register.gauge({
-          name: "lodestar_seen_block_input_cache_items_created_by_block",
+        createdByBlock: register.counter({
+          name: "lodestar_seen_block_input_cache_items_created_by_block_total",
           help: "Number of BlockInputs created via a block being seen first",
         }),
-        createdByBlob: register.gauge({
-          name: "lodestar_seen_block_input_cache_items_created_by_blob",
+        createdByBlob: register.counter({
+          name: "lodestar_seen_block_input_cache_items_created_by_blob_total",
           help: "Number of BlockInputs created via a blob being seen first",
+        }),
+        createdByColumn: register.counter({
+          name: "lodestar_seen_block_input_cache_items_created_by_column_total",
+          help: "Number of BlockInputs created via a data column being seen first",
         }),
       },
     },

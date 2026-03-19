@@ -5,7 +5,7 @@ import {beforeAll, describe, expect, it} from "vitest";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/networks";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {EraReader, EraWriter} from "../../src/era/index.ts";
+import {EraReader, EraWriter} from "../../src/era/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

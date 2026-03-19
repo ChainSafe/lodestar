@@ -1,6 +1,7 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {HttpHeader, getClient, routes} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
+import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
@@ -8,13 +9,12 @@ import {sleep} from "@lodestar/utils";
 import {Validator} from "@lodestar/validator";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
-import {LogLevel, TestLoggerOpts, testLogger} from "../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
-describe("lightclient api", () => {
-  vi.setConfig({testTimeout: 10_000});
-
+// TODO: Re-enable once lightclient E2E timing is stabilized
+// https://github.com/ChainSafe/lodestar/issues/8937
+describe.skipIf(process.env.CI)("lightclient api", () => {
   const SLOT_DURATION_MS = 1000;
   const restPort = 9596;
   const ELECTRA_FORK_EPOCH = 0;

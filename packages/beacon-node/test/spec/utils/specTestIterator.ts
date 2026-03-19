@@ -59,7 +59,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7805"],
+  skippedForks: ["eip7805", "heze"],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
@@ -72,7 +72,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    /^gloas\/(finality|fork_choice|sanity|transition)\/.*$/,
+    /^gloas\/fork_choice\/.*$/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
   ],
   skippedTests: [],

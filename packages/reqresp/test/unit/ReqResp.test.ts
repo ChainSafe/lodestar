@@ -1,4 +1,4 @@
-import {Libp2p} from "libp2p";
+import type {Libp2p} from "libp2p";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {Logger} from "@lodestar/utils";
@@ -8,7 +8,7 @@ import {RateLimiterQuota} from "../../src/rate_limiter/rateLimiterGRCA.js";
 import {Protocol} from "../../src/types.js";
 import {getEmptyHandler, sszSnappyPing} from "../fixtures/messages.js";
 import {numberToStringProtocol, numberToStringProtocolDialOnly, pingProtocol} from "../fixtures/protocols.js";
-import {MockLibP2pStream} from "../utils/index.js";
+import {createMockStream} from "../utils/mockStream.js";
 import {responseEncode} from "../utils/response.js";
 
 describe("ResResp", () => {
@@ -19,19 +19,22 @@ describe("ResResp", () => {
 
   beforeEach(() => {
     libp2p = {
-      dialProtocol: vi.fn().mockResolvedValue(
-        new MockLibP2pStream(
-          responseEncode(
-            [
-              {
-                status: RespStatus.SUCCESS,
-                payload: sszSnappyPing.binaryPayload,
-              },
-            ],
-            ping
-          ),
-          ping.method
-        )
+      dialProtocol: vi.fn().mockImplementation(
+        async () =>
+          (
+            await createMockStream({
+              protocol: ping.method,
+              source: responseEncode(
+                [
+                  {
+                    status: RespStatus.SUCCESS,
+                    payload: sszSnappyPing.binaryPayload,
+                  },
+                ],
+                ping
+              ),
+            })
+          ).stream
       ),
       handle: vi.fn(),
     } as unknown as Libp2p;

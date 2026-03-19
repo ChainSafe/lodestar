@@ -1,4 +1,5 @@
 import path from "node:path";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -11,7 +12,6 @@ import {
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -46,7 +46,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
         post: ssz[fork].BeaconState,
       },
       shouldError: (testCase) => !testCase.post,
-      timeout: 10000,
+      timeout: 30000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);

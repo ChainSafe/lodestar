@@ -1,7 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
+import {generatePerfTestCachedStatePhase0, perfStateEpoch, perfStateId} from "../../../src/testUtils/util.js";
 import {RootCache, computeStartSlotAtEpoch, getBlockRootAtSlot} from "../../../src/util/index.js";
 import {State} from "../types.js";
-import {generatePerfTestCachedStatePhase0, perfStateEpoch, perfStateId} from "../util.js";
 
 const slot = computeStartSlotAtEpoch(perfStateEpoch) - 1;
 

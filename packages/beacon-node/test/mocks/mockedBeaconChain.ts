@@ -1,8 +1,8 @@
 import {Mock, Mocked, vi} from "vitest";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {createPubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
@@ -52,6 +52,9 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getDependentRoot: vi.fn(),
       getBlockHex: vi.fn(),
       getBlock: vi.fn(),
+      getBlockDefaultStatus: vi.fn(),
+      getBlockHexDefaultStatus: vi.fn(),
+      getBlockHexAndBlockHash: vi.fn(),
       getAllAncestorBlocks: vi.fn(),
       getAllNonAncestorBlocks: vi.fn(),
       getAllAncestorAndNonAncestorBlocks: vi.fn(),
@@ -141,8 +144,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       // @ts-expect-error
       seenBlockInputCache: new SeenBlockInput(),
       shufflingCache: new ShufflingCache(),
-      pubkey2index: new PubkeyIndexMap(),
-      index2pubkey: [],
+      pubkeyCache: createPubkeyCache(),
       produceCommonBlockBody: vi.fn(),
       getProposerHead: vi.fn(),
       produceBlock: vi.fn(),

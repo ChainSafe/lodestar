@@ -3,16 +3,16 @@ import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {bytesToInt} from "@lodestar/utils";
+import {generateState} from "../../../src/testUtils/state.js";
 import {
+  computePayloadTimelinessCommitteeIndices,
   computeProposerIndex,
-  computeShuffledIndex,
-  getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   getRandaoMix,
+  naiveComputePayloadTimelinessCommitteeIndices,
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
 } from "../../../src/util/index.js";
-import {generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 describe("getRandaoMix", () => {
@@ -56,18 +56,6 @@ describe("computeProposerIndex", () => {
   }
 });
 
-describe("computeShuffledIndex", () => {
-  const seed = crypto.randomBytes(32);
-  const vc = 1000;
-  const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-  it("should be the same to the naive version", () => {
-    for (let i = 0; i < vc; i++) {
-      const expectedIndex = computeShuffledIndex(i, vc, seed);
-      expect(shuffledIndexFn(i)).toBe(expectedIndex);
-    }
-  });
-});
-
 describe("electra getNextSyncCommitteeIndices", () => {
   const vc = 1000;
   const validators = generateValidators(vc);
@@ -90,6 +78,22 @@ describe("electra getNextSyncCommitteeIndices", () => {
       expect(result).toEqual(new Uint32Array(expected));
     });
   }
+});
+
+describe("computePayloadTimelinessCommitteeIndices", () => {
+  const seed = crypto.randomBytes(32);
+  const vc = 1000;
+  const indices = new Uint32Array(Array.from({length: vc}, (_, i) => i));
+  const effectiveBalanceIncrements = new Uint16Array(vc);
+  for (let i = 0; i < vc; i++) {
+    effectiveBalanceIncrements[i] = 32 + 32 * (i % 64);
+  }
+
+  it("should be the same to the naive version", () => {
+    const expected = naiveComputePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
+    const result = computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, indices, seed);
+    expect(result).toEqual(new Uint32Array(expected));
+  });
 });
 
 describe("number from 2 bytes bytesToInt", () => {

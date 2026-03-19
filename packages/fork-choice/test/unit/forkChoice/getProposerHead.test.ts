@@ -6,7 +6,14 @@ import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray, ProtoBlock} from "../../../src/index.js";
+import {
+  ExecutionStatus,
+  ForkChoice,
+  IForkChoiceStore,
+  PayloadStatus,
+  ProtoArray,
+  ProtoBlock,
+} from "../../../src/index.js";
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
@@ -42,6 +49,11 @@ describe("Forkchoice / GetProposerHead", () => {
 
     timeliness: false,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: PayloadStatus.FULL,
+    builderIndex: null,
+    blockHashFromBid: null,
   };
 
   const baseHeadBlock: ProtoBlockWithWeight = {
@@ -67,6 +79,11 @@ describe("Forkchoice / GetProposerHead", () => {
 
     weight: 29,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: PayloadStatus.FULL,
+    builderIndex: null,
+    blockHashFromBid: null,
   };
 
   const baseParentHeadBlock: ProtoBlockWithWeight = {
@@ -91,28 +108,45 @@ describe("Forkchoice / GetProposerHead", () => {
     timeliness: false,
     weight: 212, // 240 - 29 + 1
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: PayloadStatus.FULL,
+    builderIndex: null,
+    blockHashFromBid: null,
   };
 
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot + 1,
     justified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisBlock.blockRoot),
+        rootHex: genesisBlock.blockRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances: new Uint16Array(Array(32).fill(150)),
       totalBalance: 32 * 150,
     },
     unrealizedJustified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisBlock.blockRoot),
+        rootHex: genesisBlock.blockRoot,
+        payloadStatus: PayloadStatus.FULL,
+      },
       balances: new Uint16Array(Array(32).fill(150)),
     },
     finalizedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
+      payloadStatus: PayloadStatus.FULL,
     },
     unrealizedFinalizedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
+      payloadStatus: PayloadStatus.FULL,
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
@@ -224,8 +258,8 @@ describe("Forkchoice / GetProposerHead", () => {
     expectedNotReorgedReason,
   } of testCases) {
     it(`${id}`, async () => {
-      protoArr.onBlock(parentBlock, parentBlock.slot);
-      protoArr.onBlock(headBlock, headBlock.slot);
+      protoArr.onBlock(parentBlock, parentBlock.slot, null);
+      protoArr.onBlock(headBlock, headBlock.slot, null);
 
       const currentSlot = proposalSlot ?? headBlock.slot + 1;
       const currentSecFromSlot = secFromSlot ?? 0;

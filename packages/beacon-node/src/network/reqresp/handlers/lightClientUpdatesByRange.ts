@@ -19,6 +19,7 @@ export async function* onLightClientUpdatesByRange(
   assertLightClientServer(chain.lightClientServer);
 
   const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
+  let started = false;
   for (let period = requestBody.startPeriod; period < requestBody.startPeriod + count; period++) {
     try {
       const update = await chain.lightClientServer.getUpdate(period);
@@ -29,9 +30,13 @@ export async function* onLightClientUpdatesByRange(
         data: type.serialize(update),
         boundary,
       };
+      started = true;
     } catch (e) {
       if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
-        throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, (e as Error).message);
+        // Period not available, if we already started yielding, stop to
+        // preserve consecutive order. Otherwise skip leading gaps.
+        if (started) return;
+        continue;
       }
       throw new ResponseError(RespStatus.SERVER_ERROR, (e as Error).message);
     }

@@ -4,7 +4,7 @@ import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {IndexedAttestation, ssz} from "@lodestar/types";
 import {isValidIndexedAttestation} from "../../../src/block/isValidIndexedAttestation.js";
 import {EMPTY_SIGNATURE} from "../../../src/index.js";
-import {generateCachedState} from "../../utils/state.js";
+import {generateCachedState} from "../../../src/testUtils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 describe("validate indexed attestation", () => {
@@ -48,7 +48,7 @@ describe("validate indexed attestation", () => {
     expect(
       isValidIndexedAttestation(
         state.config,
-        state.epochCtx.index2pubkey,
+        state.epochCtx.pubkeyCache,
         state.slot,
         state.validators.length,
         indexedAttestation,

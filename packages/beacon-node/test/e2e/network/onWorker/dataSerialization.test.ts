@@ -1,4 +1,4 @@
-import {TopicValidatorResult} from "@libp2p/interface";
+import {TopicValidatorResult} from "@libp2p/gossipsub";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";

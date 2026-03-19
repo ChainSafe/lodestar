@@ -1,7 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {AttesterSlashing, Slot} from "@lodestar/types";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
 import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";
@@ -22,7 +22,7 @@ export function processAttesterSlashing(
   const {epochCtx} = state;
   assertValidAttesterSlashing(
     state.config,
-    epochCtx.index2pubkey,
+    epochCtx.pubkeyCache,
     state.slot,
     state.validators.length,
     attesterSlashing,
@@ -48,7 +48,7 @@ export function processAttesterSlashing(
 
 export function assertValidAttesterSlashing(
   config: BeaconConfig,
-  index2pubkey: Index2PubkeyCache,
+  pubkeyCache: PubkeyCache,
   stateSlot: Slot,
   validatorsLen: number,
   attesterSlashing: AttesterSlashing,
@@ -66,7 +66,7 @@ export function assertValidAttesterSlashing(
   // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
   for (const [i, attestation] of [attestation1, attestation2].entries()) {
     if (
-      !isValidIndexedAttestationBigint(config, index2pubkey, stateSlot, validatorsLen, attestation, verifySignatures)
+      !isValidIndexedAttestationBigint(config, pubkeyCache, stateSlot, validatorsLen, attestation, verifySignatures)
     ) {
       throw new Error(`AttesterSlashing attestation${i} is invalid`);
     }
