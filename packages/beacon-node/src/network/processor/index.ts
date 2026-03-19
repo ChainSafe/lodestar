@@ -1,4 +1,6 @@
 import {routes} from "@lodestar/api";
+import {ForkSeq} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
@@ -264,7 +266,12 @@ export class NetworkProcessor {
     // DOS protection: avoid processing messages that are too old
     const {slot, root} = slotRoot;
     const clockSlot = this.chain.clock.currentSlot;
-    const earliestPermissableSlot = clockSlot - DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE;
+    const {fork} = message.topic.boundary;
+    let earliestPermissableSlot = clockSlot - DEFAULT_EARLIEST_PERMISSIBLE_SLOT_DISTANCE;
+    if (ForkSeq[fork] >= ForkSeq.deneb && topicType === GossipType.beacon_attestation) {
+      // post deneb, the attestations could be in current or previous epoch
+      earliestPermissableSlot = computeStartSlotAtEpoch(this.chain.clock.currentEpoch - 1);
+    }
     if (slot < earliestPermissableSlot) {
       // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
       this.metrics?.networkProcessor.gossipValidationError.inc({
@@ -312,8 +319,8 @@ export class NetworkProcessor {
   }
 
   private async onBlockProcessed({block: rootHex}: {block: string; executionOptimistic: boolean}): Promise<void> {
-    const waitingGossipsubMessages = this.awaitingBlockByRoot.getOrDefault(rootHex);
-    if (waitingGossipsubMessages.size === 0) {
+    const waitingGossipsubMessages = this.awaitingBlockByRoot.get(rootHex);
+    if (!waitingGossipsubMessages || waitingGossipsubMessages.size === 0) {
       return;
     }
 
