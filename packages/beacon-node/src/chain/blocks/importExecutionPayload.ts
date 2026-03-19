@@ -61,11 +61,13 @@ export class PayloadError extends Error {
  *
  * This function:
  * 1. Gets the ProtoBlock from fork choice
- * 2. Regenerates the block state
- * 3. Runs EL verification (notifyNewPayload) in parallel with signature verification and processExecutionPayloadEnvelope
- * 4. Updates fork choice
- * 5. Caches the post-execution payload state
- * 6. Records metrics for column sources
+ * 2. Applies write-queue backpressure (waitForSpace) early, before verification
+ * 3. Regenerates the block state
+ * 4. Runs EL verification (notifyNewPayload) in parallel with signature verification and processExecutionPayloadEnvelope
+ * 5. Persists verified payload envelope to hot DB
+ * 6. Updates fork choice
+ * 7. Caches the post-execution payload state
+ * 8. Records metrics for column sources
  *
  */
 export async function importExecutionPayload(
@@ -85,18 +87,9 @@ export async function importExecutionPayload(
     });
   }
 
-  // 2. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
-  // Wait for space in the write queue to apply backpressure during sync.
+  // 2. Apply backpressure from the write queue early, before doing verification work.
+  // The actual DB write is deferred until after verification succeeds.
   await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
-  this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
-    if (!isQueueErrorAborted(e)) {
-      this.logger.error(
-        "Error pushing payload envelope to unfinalized write queue",
-        {slot: payloadInput.slot, root: blockRootHex},
-        e as Error
-      );
-    }
-  });
 
   // 3. Get pre-state for processExecutionPayloadEnvelope
   // We need the block state (post-block, pre-payload) to process the envelope
@@ -199,6 +192,17 @@ export async function importExecutionPayload(
       message: `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(postPayloadStateRoot)}`,
     });
   }
+
+  // 5c. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
+  this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
+    if (!isQueueErrorAborted(e)) {
+      this.logger.error(
+        "Error pushing payload envelope to unfinalized write queue",
+        {slot: payloadInput.slot, root: blockRootHex},
+        e as Error
+      );
+    }
+  });
 
   // 6. Update fork choice
   this.forkChoice.onExecutionPayload(

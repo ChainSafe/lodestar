@@ -30,7 +30,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
-import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.ts";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {

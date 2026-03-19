@@ -28,7 +28,7 @@ import {
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {processExecutionPayloadEnvelope} from "../block/index.js";
-import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.ts";
+import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.js";
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
