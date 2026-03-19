@@ -153,8 +153,8 @@ const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 16;
 
 /**
  * The maximum number of pending unfinalized payload envelope writes to the database before backpressure is applied.
- * Similar to block writes, payload envelope write queue entries hold references to payload inputs
- * (including columns) keeping them in memory. Keep moderate to avoid OOM during sync.
+ * Payload envelope write queue entries hold references to payload inputs (including columns),
+ * keeping them in memory. Keep moderate to avoid OOM during sync.
  */
 const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
 

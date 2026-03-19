@@ -48,8 +48,6 @@ async function validateExecutionPayloadEnvelope(
 
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  // const envelopeImportedToForkChoice =
-  //   block.parentBlockHash !== null && block.executionPayloadBlockHash !== block.parentBlockHash;
   const envelopeBlock = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
   const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
   if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
