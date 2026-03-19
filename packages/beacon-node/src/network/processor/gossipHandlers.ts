@@ -43,6 +43,8 @@ import {
   BlockGossipError,
   DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
@@ -852,7 +854,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       if (!payloadInput) {
         // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
-        throw Error(`PayloadEnvelopeInput not found after validation blockRoot=${blockRootHex} slot=${slot}`);
+        throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+          code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
+          blockRoot: blockRootHex,
+        });
       }
 
       chain.serializedCache.set(executionPayloadEnvelope, serializedData);
@@ -865,7 +870,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
 
       // TODO GLOAS: Emit execution_payload_gossip event for gossip receipt.
-      chain.processExecutionPayload(payloadInput, {validSignature: true});
+      chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+        chain.logger.debug("Error processing execution payload from gossip", {slot, root: blockRootHex}, e as Error);
+      });
     },
     [GossipType.payload_attestation_message]: async ({
       gossipData,

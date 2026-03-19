@@ -1,3 +1,4 @@
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {
   BeaconStateView,
   CachedBeaconStateGloas,
@@ -47,22 +48,21 @@ async function validateExecutionPayloadEnvelope(
 
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
+  const envelopeBlock = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
   const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
+  if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+      blockRoot: blockRootHex,
+      slot: envelope.slot,
+    });
+  }
+
   if (!payloadInput) {
     // PayloadEnvelopeInput should have been created during block import
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
       blockRoot: blockRootHex,
-    });
-  }
-
-  // [IGNORE] The node has not seen another valid
-  // `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  if (payloadInput.hasPayloadEnvelope()) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
-      blockRoot: blockRootHex,
-      slot: envelope.slot,
     });
   }
 
@@ -108,38 +108,13 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
-  const parentRoot = block.parentRoot;
-  const parentHash = block.parentBlockHash;
-  if (parentHash === null) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN,
-      parentRoot,
-      slot: envelope.slot,
-    });
-  }
-
-  const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentHash);
-  if (parentBlock === null) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN,
-      parentRoot,
-      slot: envelope.slot,
-    });
-  }
-
-  // Get pre-state to get correct builder's pubkey.
+  // Get the post block state which is the pre-payload state to verify the builder's signature.
   const blockState = await chain.regen
-    .getBlockSlotState(
-      parentBlock,
-      block.slot,
-      {dontTransferCache: true},
-      RegenCaller.validateGossipExecutionPayloadEnvelope
-    )
+    .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
     .catch(() => {
       throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_PARENT_STATE,
-        parentRoot,
+        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
+        blockRoot: blockRootHex,
         slot: envelope.slot,
       });
     });
@@ -147,7 +122,7 @@ async function validateExecutionPayloadEnvelope(
   const state = blockState as CachedBeaconStateGloas;
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,
-    state.epochCtx.pubkeyCache,
+    chain.pubkeyCache,
     new BeaconStateView(state),
     executionPayloadEnvelope,
     payloadInput.proposerIndex

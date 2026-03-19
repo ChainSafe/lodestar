@@ -702,6 +702,8 @@ export function getBeaconBlockApi({
         await sleep(msToBlockSlot);
       }
 
+      // TODO GLOAS: if block and payload are submitted in parallel, payloadInput may not yet exist.
+      // A queuing mechanism is needed to handle this case. See https://github.com/ChainSafe/lodestar/issues/8915
       const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
       if (!payloadInput) {
         throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);

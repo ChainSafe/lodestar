@@ -138,7 +138,7 @@ export class PayloadEnvelopeInput {
 
   addPayloadEnvelope(props: AddPayloadEnvelopeProps): void {
     if (this.state.hasPayload) {
-      throw new Error("Payload envelope already set");
+      throw new Error(`Payload envelope already set for block ${this.blockRootHex}`);
     }
     if (toRootHex(props.envelope.message.beaconBlockRoot) !== this.blockRootHex) {
       throw new Error("Payload envelope beacon_block_root mismatch");
@@ -240,22 +240,17 @@ export class PayloadEnvelopeInput {
   getSampledColumns(): gloas.DataColumnSidecars {
     return this.sampledColumns
       .filter((idx) => this.columnsCache.has(idx))
-      .map((idx) => this.columnsCache.get(idx)?.columnSidecar)
-      .filter((col): col is gloas.DataColumnSidecar => col !== undefined);
+      .map((idx) => this.columnsCache.get(idx)!.columnSidecar);
   }
 
   getSampledColumnsWithSource(): ColumnWithSource[] {
-    return this.sampledColumns
-      .filter((idx) => this.columnsCache.has(idx))
-      .map((idx) => this.columnsCache.get(idx))
-      .filter((col): col is ColumnWithSource => col !== undefined);
+    return this.sampledColumns.filter((idx) => this.columnsCache.has(idx)).map((idx) => this.columnsCache.get(idx)!);
   }
 
   getCustodyColumns(): gloas.DataColumnSidecars {
     return this.custodyColumns
       .filter((idx) => this.columnsCache.has(idx))
-      .map((idx) => this.columnsCache.get(idx)?.columnSidecar)
-      .filter((col): col is gloas.DataColumnSidecar => col !== undefined);
+      .map((idx) => this.columnsCache.get(idx)!.columnSidecar);
   }
 
   hasComputedAllData(): boolean {
