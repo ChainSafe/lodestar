@@ -94,9 +94,15 @@ jobs:
           body_path: "CHANGELOG.md"
           name: Release ${{ needs.tag.outputs.tag }}
           prerelease: false
+          draft: true
 
       - name: Publish to npm registry (release)
         run: pnpm run release:publish
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ needs.tag.outputs.tag }} --draft=false
 
       # In case of failure
       - name: Rollback on failure

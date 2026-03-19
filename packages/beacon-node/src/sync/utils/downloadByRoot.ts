@@ -440,7 +440,7 @@ export async function fetchAndValidateColumns({
     );
   }
 
-  await validateBlockDataColumnSidecars(chain, slot, blockRoot, blobCount, columnSidecars);
+  await validateBlockDataColumnSidecars(chain, slot, blockRoot, blobCount, columnSidecars, chain?.metrics?.peerDas);
 
   return {result: columnSidecars, warnings: warnings.length > 0 ? warnings : null};
 }
