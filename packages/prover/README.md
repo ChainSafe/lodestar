@@ -148,7 +148,7 @@ If your project is using some provider type which is not among above list, you h
 
 ## What you need
 
-You will need to go over the [specification](https://github.com/ethereum/beacon-apis). You will also need to have a [basic understanding of lightclient](https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/light-client.md).
+You will need to go over the [specification](https://github.com/ethereum/beacon-apis). You will also need to have a [basic understanding of lightclient](https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/altair/light-client/light-client.md).
 
 ## Getting started
 

@@ -3,7 +3,7 @@ import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 
 // Mainnet config
-// https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/configs/mainnet.yaml
 
 export const chainConfig: ChainConfig = {
   // Extends the mainnet preset
