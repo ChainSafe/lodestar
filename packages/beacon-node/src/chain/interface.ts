@@ -1,6 +1,6 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, CheckpointWithPayloadStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {BeaconStateAllForks, CachedBeaconStateAllForks, EpochShuffling, PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -192,7 +192,7 @@ export interface IBeaconChain {
   ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
   /** Return state bytes by checkpoint */
   getStateOrBytesByCheckpoint(
-    checkpoint: CheckpointWithHex
+    checkpoint: CheckpointWithPayloadStatus
   ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
 
   /**

@@ -20,6 +20,11 @@ export type FIFOBlockStateCacheOpts = {
  *                                                                                             clock slot
  */
 export const DEFAULT_MAX_BLOCK_STATES = 64;
+/**
+ * For Gloas (ePBS), each block can have two states: block state and payload state.
+ * Double the cache size to maintain the same effective block depth.
+ */
+export const DEFAULT_MAX_BLOCK_STATES_GLOAS = 128;
 
 /**
  * New implementation of BlockStateCache that keeps the most recent n states consistently
@@ -41,10 +46,7 @@ export const DEFAULT_MAX_BLOCK_STATES = 64;
  * The maintained key order would be: 11 -> 13 -> 12 -> 10, and state 10 will be pruned first.
  */
 export class FIFOBlockStateCache implements BlockStateCache {
-  /**
-   * Max number of states allowed in the cache
-   */
-  readonly maxStates: number;
+  private maxStates: number;
 
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /**
@@ -168,6 +170,10 @@ export class FIFOBlockStateCache implements BlockStateCache {
       this.keyOrder.pop();
       this.cache.delete(key);
     }
+  }
+
+  upgradeToGloas(): void {
+    this.maxStates = DEFAULT_MAX_BLOCK_STATES_GLOAS;
   }
 
   /**
