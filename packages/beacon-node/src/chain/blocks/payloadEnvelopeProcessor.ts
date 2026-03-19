@@ -5,7 +5,7 @@ import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {importExecutionPayload} from "./importExecutionPayload.js";
 import {ImportPayloadOpts} from "./types.js";
 
-// Set to be equal to DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES for now
+// TODO GLOAS: Set to be equal to DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES for now
 const QUEUE_MAX_LENGTH = 16;
 
 enum PayloadEnvelopeImportStatus {
