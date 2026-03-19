@@ -2,13 +2,11 @@ import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
 import {ExecutionPayloadEnvelopesByRootRequest} from "../../../util/types.js";
 
 export async function* onExecutionPayloadEnvelopesByRoot(
   requestBody: ExecutionPayloadEnvelopesByRootRequest,
-  chain: IBeaconChain,
-  db: IBeaconDb
+  chain: IBeaconChain
 ): AsyncIterable<ResponseOutgoing> {
   // Spec: [max(GLOAS_FORK_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOCK_REQUESTS), current_epoch]
   const currentEpoch = chain.clock.currentEpoch;
@@ -30,8 +28,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
       continue;
     }
 
-    // TODO GLOAS: Use chain.getSerializedExecutionPayloadEnvelope() to check in-memory caches before hitting the db when the method is available
-    const envelopeBytes = await db.executionPayloadEnvelope.getBinary(root);
+    const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(block.slot, rootHex);
     if (envelopeBytes) {
       yield {
         data: envelopeBytes,

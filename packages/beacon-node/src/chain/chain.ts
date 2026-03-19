@@ -819,6 +819,15 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
+  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
+    // TODO GLOAS: Check SeenPayloadEnvelopeInput once one it is available
+    const unfinalizedEnvelope = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
+    if (unfinalizedEnvelope) {
+      return unfinalizedEnvelope;
+    }
+    return null;
+  }
+
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars> {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
     if (blockInput) {

@@ -3,7 +3,6 @@ import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 
@@ -16,7 +15,6 @@ export async function* onExecutionPayloadEnvelopesByRange(
   const endSlot = startSlot + count;
 
   const finalized = db.executionPayloadEnvelopeArchive;
-  const unfinalized = db.executionPayloadEnvelope;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
   // Finalized range of envelopes
@@ -44,8 +42,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
       const block = headChain[i];
 
       if (block.slot >= startSlot && block.slot < endSlot) {
-        // TODO GLOAS: Use chain.getSerializedExecutionPayloadEnvelope() to check in-memory caches when the method is available
-        const envelopeBytes = await unfinalized.getBinary(fromHex(block.blockRoot));
+        const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(block.slot, block.blockRoot);
         if (envelopeBytes) {
           yield {
             data: envelopeBytes,
