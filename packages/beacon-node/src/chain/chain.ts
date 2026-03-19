@@ -1368,7 +1368,7 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.clockEpoch.set(epoch);
 
     if (epoch === this.config.GLOAS_FORK_EPOCH) {
-      this.regen.upgradeForGloas();
+      this.regen.upgradeForGloas(epoch);
     }
 
     this.seenAttesters.prune(epoch);
