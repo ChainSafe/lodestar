@@ -6,7 +6,7 @@ import {
   getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
 import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
-import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
+import {LodestarError, byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -47,14 +47,7 @@ export type PayloadErrorType =
       code: PayloadErrorCode.INVALID_SIGNATURE;
     };
 
-export class PayloadError extends Error {
-  type: PayloadErrorType;
-
-  constructor(type: PayloadErrorType, message?: string) {
-    super(message ?? type.code);
-    this.type = type;
-  }
-}
+export class PayloadError extends LodestarError<PayloadErrorType> {}
 
 /**
  * Import an execution payload envelope after all data is available.

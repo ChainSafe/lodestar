@@ -145,7 +145,11 @@ export async function importBlock(
       timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
     });
     if (opts.seenTimestampSec !== undefined) {
-      this.logger.debug("Created PayloadEnvelopeInput for block", {slot: blockSlot, root: blockRootHex});
+      this.logger.debug("Created PayloadEnvelopeInput for gossip block", {
+        slot: blockSlot,
+        root: blockRootHex,
+        recvToImport: Date.now() / 1000 - opts.seenTimestampSec,
+      });
     }
   }
 
