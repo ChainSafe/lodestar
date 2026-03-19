@@ -122,7 +122,7 @@ async function validateExecutionPayloadEnvelope(
   const state = blockState as CachedBeaconStateGloas;
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,
-    state.epochCtx.pubkeyCache,
+    chain.pubkeyCache,
     new BeaconStateView(state),
     executionPayloadEnvelope,
     payloadInput.proposerIndex

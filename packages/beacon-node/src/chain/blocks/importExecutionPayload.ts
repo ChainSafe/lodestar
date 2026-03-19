@@ -125,7 +125,7 @@ export async function importExecutionPayload(
       : (async () => {
           const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
             this.config,
-            blockState.epochCtx.pubkeyCache,
+            this.pubkeyCache,
             new BeaconStateView(blockState),
             envelope,
             payloadInput.proposerIndex
