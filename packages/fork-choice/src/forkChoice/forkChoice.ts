@@ -895,7 +895,7 @@ export class ForkChoice implements IForkChoice {
     let payloadStatus: PayloadStatus;
 
     // We need to retrieve block to check if it's Gloas and to compare slot
-    // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/gloas/fork-choice.md#new-is_supporting_vote
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
     const block = this.getBlockHexDefaultStatus(blockRootHex);
 
     if (block && isGloasBlock(block)) {
