@@ -233,7 +233,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   upgradeForGloas(epoch: Epoch): void {
-    this.logger.info("Upgrading block state cache for Gloas fork", {epoch});
+    this.logger.verbose("Upgrading block state cache for Gloas fork", {epoch});
     this.blockStateCache.upgradeToGloas();
   }
 
