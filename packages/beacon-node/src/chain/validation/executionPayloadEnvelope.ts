@@ -111,13 +111,15 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // Get the post block state which is the pre-payload state to verify the builder's signature.
-  const blockState = await chain.regen.getState(block.stateRoot, RegenCaller.validateExecutionPayload).catch(() => {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
-      blockRoot: blockRootHex,
-      slot: envelope.slot,
+  const blockState = await chain.regen
+    .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
+    .catch(() => {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
+        blockRoot: blockRootHex,
+        slot: envelope.slot,
+      });
     });
-  });
 
   const state = blockState as CachedBeaconStateGloas;
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
