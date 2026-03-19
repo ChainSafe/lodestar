@@ -1,3 +1,4 @@
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {
   BeaconStateView,
   CachedBeaconStateGloas,
@@ -9,7 +10,6 @@ import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
-import { PayloadStatus } from "@lodestar/fork-choice";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
@@ -110,41 +110,14 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
-  const parentRoot = block.parentRoot;
-  const parentHash = block.parentBlockHash;
-  if (parentHash === null) {
+  // Get the post block state which is the pre-payload state to verify the builder's signature.
+  const blockState = await chain.regen.getState(block.stateRoot, RegenCaller.validateExecutionPayload).catch(() => {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN,
-      parentRoot,
+      code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
+      blockRoot: blockRootHex,
       slot: envelope.slot,
     });
-  }
-
-  const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentHash);
-  if (parentBlock === null) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.PARENT_UNKNOWN,
-      parentRoot,
-      slot: envelope.slot,
-    });
-  }
-
-  // Get pre-state to get correct builder's pubkey.
-  const blockState = await chain.regen
-    .getBlockSlotState(
-      parentBlock,
-      block.slot,
-      {dontTransferCache: true},
-      RegenCaller.validateGossipExecutionPayloadEnvelope
-    )
-    .catch(() => {
-      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_PARENT_STATE,
-        parentRoot,
-        slot: envelope.slot,
-      });
-    });
+  });
 
   const state = blockState as CachedBeaconStateGloas;
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(

@@ -9,6 +9,7 @@ export enum RegenCaller {
   processBlock = "processBlock",
   produceBlock = "produceBlock",
   validateGossipBlock = "validateGossipBlock",
+  validateExecutionPayload = "validateExecutionPayload",
   validateGossipBlob = "validateGossipBlob",
   validateGossipDataColumn = "validateGossipDataColumn",
   validateGossipExecutionPayloadEnvelope = "validateGossipExecutionPayloadEnvelope",

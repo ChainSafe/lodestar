@@ -26,7 +26,10 @@ export enum PayloadErrorCode {
 
 type ExecutionEngineErrorStatus = Exclude<
   ExecutionPayloadStatus,
-  ExecutionPayloadStatus.VALID | ExecutionPayloadStatus.ACCEPTED | ExecutionPayloadStatus.SYNCING | ExecutionPayloadStatus.INVALID
+  | ExecutionPayloadStatus.VALID
+  | ExecutionPayloadStatus.ACCEPTED
+  | ExecutionPayloadStatus.SYNCING
+  | ExecutionPayloadStatus.INVALID
 >;
 
 export type PayloadErrorType =

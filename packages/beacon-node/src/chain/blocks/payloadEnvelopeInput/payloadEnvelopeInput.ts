@@ -244,9 +244,7 @@ export class PayloadEnvelopeInput {
   }
 
   getSampledColumnsWithSource(): ColumnWithSource[] {
-    return this.sampledColumns
-      .filter((idx) => this.columnsCache.has(idx))
-      .map((idx) => this.columnsCache.get(idx)!);
+    return this.sampledColumns.filter((idx) => this.columnsCache.has(idx)).map((idx) => this.columnsCache.get(idx)!);
   }
 
   getCustodyColumns(): gloas.DataColumnSidecars {
