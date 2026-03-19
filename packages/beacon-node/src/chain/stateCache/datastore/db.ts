@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, phase0, ssz} from "@lodestar/types";
-import {MapDef} from "@lodestar/utils";
+import {MapDef, byteArrayEquals} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
 import {
   getLastProcessedSlotFromBeaconStateSerialized,
@@ -92,7 +92,7 @@ export async function getLatestSafeDatastoreKey(
       // TODO GLOAS: Here we pick FULL key, there is a chance that payload is orphaned hence we not be able to sync
       const cp0 = extractCheckpointBytes(keys[0]);
       const cp1 = extractCheckpointBytes(keys[1]);
-      if (Buffer.compare(cp0, cp1) === 0) {
+      if (byteArrayEquals(cp0, cp1)) {
         const fullKey = isPayloadCheckpointState(keys[0]) ? keys[0] : keys[1];
         dataStoreKeyByEpoch.set(epoch, fullKey);
       }
