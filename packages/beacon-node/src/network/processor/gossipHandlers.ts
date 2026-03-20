@@ -30,6 +30,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -42,6 +43,8 @@ import {
   BlockGossipError,
   DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
@@ -616,6 +619,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           });
         });
       }
+
+      // TODO GLOAS: In Gloas, also add column to PayloadEnvelopeInput and notify the payload processor:
+      // const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
+      // if (payloadInput) {
+      //   payloadInput.addColumn({columnSidecar, source: BlockInputSource.gossip, seenTimestampSec, peerIdStr});
+      //   chain.processExecutionPayload(payloadInput, {validSignature: true});
+      // }
     },
 
     [GossipType.beacon_aggregate_and_proof]: async ({
@@ -827,17 +837,43 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     [GossipType.execution_payload]: async ({
       gossipData,
       topic,
+      peerIdStr,
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
+      // TODO GLOAS: handle BLOCK_ROOT_UNKNOWN error to trigger sync
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 
       const slot = executionPayloadEnvelope.message.slot;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
+      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, executionPayloadEnvelope);
 
-      // TODO GLOAS: Handle valid envelope. Need an import flow that calls `processExecutionPayloadEnvelope` and fork choice
+      const blockRootHex = toRootHex(executionPayloadEnvelope.message.beaconBlockRoot);
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+
+      if (!payloadInput) {
+        // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
+        throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+          code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
+          blockRoot: blockRootHex,
+        });
+      }
+
+      chain.serializedCache.set(executionPayloadEnvelope, serializedData);
+
+      payloadInput.addPayloadEnvelope({
+        envelope: executionPayloadEnvelope,
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec,
+        peerIdStr,
+      });
+
+      // TODO GLOAS: Emit execution_payload_gossip event for gossip receipt.
+      chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+        chain.logger.debug("Error processing execution payload from gossip", {slot, root: blockRootHex}, e as Error);
+      });
     },
     [GossipType.payload_attestation_message]: async ({
       gossipData,

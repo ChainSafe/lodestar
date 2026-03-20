@@ -3,6 +3,7 @@ import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -234,6 +235,56 @@ export function createLodestarMetrics(
       concurrency: register.gauge({
         name: "lodestar_unfinalized_block_writes_queue_concurrency",
         help: "Current concurrency of unfinalized block writes queue",
+      }),
+    },
+
+    payloadEnvelopeProcessorQueue: {
+      length: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_length",
+        help: "Count of total payload envelope processor queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_dropped_jobs_total",
+        help: "Count of total payload envelope processor queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_payload_envelope_processor_queue_job_time_seconds",
+        help: "Time to process payload envelope processor queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_payload_envelope_processor_queue_job_wait_time_seconds",
+        help: "Time from job added to the payload envelope processor queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_concurrency",
+        help: "Current concurrency of payload envelope processor queue",
+      }),
+    },
+
+    unfinalizedPayloadEnvelopeWritesQueue: {
+      length: register.gauge({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_length",
+        help: "Count of total unfinalized payload envelope writes queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_dropped_jobs_total",
+        help: "Count of total unfinalized payload envelope writes queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_job_time_seconds",
+        help: "Time to process unfinalized payload envelope writes queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_job_wait_time_seconds",
+        help: "Time from job added to the unfinalized payload envelope writes queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_concurrency",
+        help: "Current concurrency of unfinalized payload envelope writes queue",
       }),
     },
 
@@ -925,6 +976,18 @@ export function createLodestarMetrics(
         labelNames: ["reason"],
       }),
     },
+    importPayload: {
+      bySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
+        name: "lodestar_import_payload_by_source_total",
+        help: "Total number of imported execution payload envelopes by source",
+        labelNames: ["source"],
+      }),
+      columnsBySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
+        name: "lodestar_import_payload_columns_by_source_total",
+        help: "Total number of payload-attached columns (sampled columns for Gloas) by source",
+        labelNames: ["source"],
+      }),
+    },
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({
       name: "lodestar_execution_engine_notify_new_payload_result_total",
       help: "The total result of calling notifyNewPayload execution engine api",
@@ -1493,6 +1556,20 @@ export function createLodestarMetrics(
         createdByColumn: register.counter({
           name: "lodestar_seen_block_input_cache_items_created_by_column_total",
           help: "Number of BlockInputs created via a data column being seen first",
+        }),
+      },
+      payloadEnvelopeInput: {
+        count: register.gauge({
+          name: "lodestar_seen_payload_envelope_input_cache_size",
+          help: "Number of cached PayloadEnvelopeInputs",
+        }),
+        serializedObjectRefs: register.gauge({
+          name: "lodestar_seen_payload_envelope_input_cache_serialized_object_refs",
+          help: "Number of serialized-cache object refs retained by cached PayloadEnvelopeInputs",
+        }),
+        created: register.counter({
+          name: "lodestar_seen_payload_envelope_input_cache_items_created_total",
+          help: "Number of PayloadEnvelopeInputs created",
         }),
       },
     },
