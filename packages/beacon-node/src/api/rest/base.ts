@@ -2,7 +2,7 @@ import bearerAuthPlugin from "@fastify/bearer-auth";
 import {fastifyCors} from "@fastify/cors";
 import {FastifyError, FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
 import {parse as parseQueryString} from "qs";
-import {FastifySchema, addSszContentTypeParser} from "@lodestar/api/server";
+import {addSszContentTypeParser} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing} from "../impl/errors.js";
@@ -214,5 +214,5 @@ export class RestApiServer {
 }
 
 function getOperationId(req: FastifyRequest): string {
-  return (req.routeOptions.schema as FastifySchema | undefined)?.operationId ?? "unknown";
+  return req.routeOptions.schema?.operationId ?? "unknown";
 }
