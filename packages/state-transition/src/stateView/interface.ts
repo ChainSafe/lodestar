@@ -122,6 +122,8 @@ export interface IBeaconStateView {
   currentSyncCommitteeIndexed: SyncCommitteeCache;
   syncProposerReward: number;
   getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
+  /** Get indexed sync committee with slot+1 offset for duty lookups */
+  getIndexedSyncCommittee(slot: Slot): SyncCommitteeCache;
 
   // Validators and balances
   effectiveBalanceIncrements: EffectiveBalanceIncrements;

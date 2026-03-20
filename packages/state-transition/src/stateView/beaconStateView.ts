@@ -503,6 +503,10 @@ export class BeaconStateView implements IBeaconStateView {
     return this.cachedState.epochCtx.syncProposerReward;
   }
 
+  getIndexedSyncCommittee(slot: Slot): SyncCommitteeCache {
+    return this.cachedState.epochCtx.getIndexedSyncCommittee(slot);
+  }
+
   getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache {
     return this.cachedState.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
   }

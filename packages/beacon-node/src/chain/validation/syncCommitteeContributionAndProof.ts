@@ -1,5 +1,5 @@
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {IBeaconStateView, computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
+import {IBeaconStateView, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {ValidatorIndex, altair} from "@lodestar/types";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -109,7 +109,7 @@ function getContributionIndices(
 ): ValidatorIndex[] {
   const startIndex = contribution.subcommitteeIndex * SYNC_COMMITTEE_SUBNET_SIZE;
 
-  const syncCommittee = state.getIndexedSyncCommitteeAtEpoch(computeEpochAtSlot(contribution.slot));
+  const syncCommittee = state.getIndexedSyncCommittee(contribution.slot);
   // The bits in contribution.aggregationBits select validatorIndexes in the subcommittee starting at startIndex
   const subcommitteeValidatorIndices = syncCommittee.validatorIndices.slice(
     startIndex,
