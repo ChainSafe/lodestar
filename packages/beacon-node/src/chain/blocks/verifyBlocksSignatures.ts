@@ -41,7 +41,7 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(config, currentSyncCommitteeIndexed, block, indexedAttestationsByBlock[i], {
+          getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
           })
         );

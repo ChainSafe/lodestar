@@ -429,7 +429,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#is_parent_strong
+    // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#is_parent_strong
     const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
@@ -1839,7 +1839,7 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-// Approximate https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#calculate_committee_fraction
+// Approximate https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#calculate_committee_fraction
 // Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
 export function getCommitteeFraction(
   justifiedTotalActiveBalanceByIncrement: number,

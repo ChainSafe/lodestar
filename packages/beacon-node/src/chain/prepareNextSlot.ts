@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
@@ -211,7 +211,11 @@ export class PrepareNextSlotScheduler {
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
+        // Determine payloadPresent from head block's payload status
+        // Pre-Gloas: payloadStatus is always FULL → payloadPresent = true
+        // Post-Gloas: FULL → true, EMPTY → false, PENDING → false (conservative, treat as block state)
+        const payloadPresent = headBlock.payloadStatus === PayloadStatus.FULL;
+        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch, payloadPresent);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }

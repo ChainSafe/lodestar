@@ -85,9 +85,9 @@ describe("regen", () => {
         {maxCPStateEpochsInMemory: 2}
       );
 
-      cache.add(cp0a, states["cp0a"]);
-      cache.add(cp0b, states["cp0b"]);
-      cache.add(cp1, states["cp1"]);
+      cache.add(cp0a, states["cp0a"], true);
+      cache.add(cp0b, states["cp0b"], true);
+      cache.add(cp1, states["cp1"], true);
     });
 
     /**

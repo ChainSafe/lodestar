@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.40.0",
+  "version": "1.41.0",
   "type": "module",
   "exports": {
     ".": {
@@ -71,7 +71,7 @@
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",
     "@lodestar/utils": "workspace:^",
-    "@vekexasia/bigint-buffer2": "^1.1.0"
+    "@vekexasia/bigint-buffer2": "^1.1.1"
   },
   "devDependencies": {
     "@lodestar/api": "workspace:^"
