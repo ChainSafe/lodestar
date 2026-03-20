@@ -680,7 +680,9 @@ describe("Gloas Fork Choice", () => {
       expect(block2PendingAfter).toBeDefined();
       expect(block3PendingAfter).toBeDefined();
       // Indices should be reduced by the number of pruned nodes
-      expect(block2PendingAfter! < block2PendingBefore!).toBe(true);
+      if (block2PendingAfter !== undefined && block2PendingBefore !== undefined) {
+        expect(block2PendingAfter < block2PendingBefore).toBe(true);
+      }
     });
 
     it("should clean up PTC votes for pruned Gloas blocks", () => {
