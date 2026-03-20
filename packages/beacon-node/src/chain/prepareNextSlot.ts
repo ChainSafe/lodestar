@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, isForkPostBellatrix, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   IBeaconStateView,
   StateHashTreeRootSource,
@@ -118,7 +118,7 @@ export class PrepareNextSlotScheduler {
         RegenCaller.precomputeEpoch
       );
 
-      if (prepareState.isExecutionStateType) {
+      if (isForkPostBellatrix(fork)) {
         const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         let updatedPrepareState = prepareState;
