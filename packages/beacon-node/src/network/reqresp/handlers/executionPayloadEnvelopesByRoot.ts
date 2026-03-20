@@ -28,7 +28,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
       continue;
     }
 
-    const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(block.slot, rootHex);
+    const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(rootHex);
     if (envelopeBytes) {
       yield {
         data: envelopeBytes,

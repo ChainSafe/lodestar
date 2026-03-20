@@ -819,7 +819,7 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
+  async getSerializedExecutionPayloadEnvelope(blockRootHex: string): Promise<Uint8Array | null> {
     // TODO GLOAS: Check SeenPayloadEnvelopeInput once one it is available
     // If SeenPayloadEnvelopeInput has the payload, try look up serializedCache to avoid serialization.
     // If serializedCache doesn't have it, serialize and return.
