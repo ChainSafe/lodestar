@@ -850,7 +850,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, executionPayloadEnvelope);
 
       const blockRootHex = toRootHex(executionPayloadEnvelope.message.beaconBlockRoot);
-      const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
 
       if (!payloadInput) {
         // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.

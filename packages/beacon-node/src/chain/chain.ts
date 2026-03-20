@@ -205,7 +205,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
-  readonly seenPayloadEnvelopeInput: SeenPayloadEnvelopeInput;
+  readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -347,7 +347,7 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
-    this.seenPayloadEnvelopeInput = new SeenPayloadEnvelopeInput({
+    this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,

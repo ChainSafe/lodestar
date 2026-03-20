@@ -142,7 +142,7 @@ export async function importBlock(
 
   // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
   if (fork >= ForkSeq.gloas) {
-    this.seenPayloadEnvelopeInput.add({
+    this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,
       sampledColumns: this.custodyConfig.sampledColumns,
