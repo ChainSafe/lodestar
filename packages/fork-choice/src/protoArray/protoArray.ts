@@ -1059,32 +1059,24 @@ export class ProtoArray {
       });
     }
 
-    // Find the minimum index among all variants to ensure we don't prune too much
-    const finalizedIndex = Array.isArray(variants)
-      ? Math.min(...variants.filter((idx) => idx !== undefined))
-      : variants;
+    // For Gloas, PENDING variant (index 0) is always the smallest since it's inserted first
+    const finalizedIndex = Array.isArray(variants) ? variants[0] : variants;
 
     if (finalizedIndex < this.pruneThreshold) {
       // Pruning at small numbers incurs more cost than benefit
       return [];
     }
 
-    // Collect all block roots that will be pruned
-    const prunedRoots = new Set<RootHex>();
+    // Remove indices and PTC votes for pruned blocks
+    // Gloas variants (PENDING/EMPTY/FULL) share the same blockRoot, so delete may be called
+    // multiple times for the same root, which is a safe no-op on Map
     for (let i = 0; i < finalizedIndex; i++) {
       const node = this.nodes[i];
       if (node === undefined) {
         throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: i});
       }
-      prunedRoots.add(node.blockRoot);
-    }
-
-    // Remove indices for pruned blocks and PTC votes
-    for (const root of prunedRoots) {
-      this.indices.delete(root);
-      // Prune PTC votes for this block to prevent memory leak
-      // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
-      this.ptcVotes.delete(root);
+      this.indices.delete(node.blockRoot);
+      this.ptcVotes.delete(node.blockRoot);
     }
 
     // Store nodes prior to finalization
