@@ -751,37 +751,6 @@ export class UnknownBlockPeerBalancer {
   }
 
   /**
-   * called from fetchUnavailableBlockInput() where we have either BlockInput or NullBlockInput
-   * excludedPeers are the peers that we requested already so we don't want to try again
-   */
-  bestPeerForBlockInput(blockInput: IBlockInput, excludedPeers: Set<PeerIdStr>): PeerSyncMeta | null {
-    const eligiblePeers: PeerIdStr[] = [];
-
-    if (isBlockInputColumns(blockInput)) {
-      const pendingDataColumns: Set<number> = new Set(blockInput.getMissingSampledColumnMeta().missing);
-      // there could be no pending column in case when block is still missing
-      eligiblePeers.push(...this.filterPeers(pendingDataColumns, excludedPeers));
-    } else {
-      // prefulu
-      eligiblePeers.push(...this.filterPeers(null, excludedPeers));
-    }
-
-    if (eligiblePeers.length === 0) {
-      return null;
-    }
-
-    const sortedEligiblePeers = sortBy(
-      shuffle(eligiblePeers),
-      // prefer peers with least active req
-      (peerId) => this.activeRequests.get(peerId) ?? 0
-    );
-
-    const bestPeerId = sortedEligiblePeers[0];
-    this.onRequest(bestPeerId);
-    return this.peersMeta.get(bestPeerId) ?? null;
-  }
-
-  /**
    * Consumers don't need to call this method directly, it is called internally by bestPeer*() methods
    * make this public for testing
    */
