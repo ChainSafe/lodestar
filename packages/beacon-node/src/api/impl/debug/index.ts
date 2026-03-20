@@ -79,11 +79,7 @@ export function getDebugApi({
         data = state;
       } else {
         slot = state.slot;
-        const stateBytes = state.serialize();
-        data = context?.returnBytes
-          ? stateBytes
-          : // TODO: modify api definition too?
-            sszTypesFor(config.getForkName(slot)).BeaconState.deserialize(stateBytes);
+        data = context?.returnBytes ? state.serialize() : state.toValue();
       }
       return {
         data,
