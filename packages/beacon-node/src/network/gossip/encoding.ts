@@ -24,14 +24,14 @@ const decoder = new snappyWasm.Decoder();
 // Shared buffer to convert msgId to string
 const sharedMsgIdBuf = Buffer.alloc(20);
 
-/**
- * The function used to generate a gossipsub message id
- * We use the first 8 bytes of SHA256(data) for content addressing
- */
 // Cache topic -> seed to avoid per-message allocations on the hot path.
 // Topics are a fixed set per fork (changes only at fork boundaries).
 const topicSeedCache = new Map<string, bigint>();
 
+/**
+ * The function used to generate a gossipsub message id
+ * We use the first 8 bytes of SHA256(data) for content addressing
+ */
 export function fastMsgIdFn(rpcMsg: RPC.Message): string {
   if (rpcMsg.data) {
     if (rpcMsg.topic) {
