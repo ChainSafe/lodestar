@@ -104,7 +104,11 @@ Lodestar uses [Biome](https://biomejs.dev/) for linting and formatting.
   `UPPER_SNAKE_CASE` for constants
 - **Quotes**: Use double quotes (`"`) not single quotes
 - **Types**: All functions must have explicit parameter and return types
-- **No `any`**: Avoid TypeScript `any` type
+- **No `any` or `as any`**: Do not use `any` type or `as any` assertions to bypass
+  the type system. In production code, find the proper type or interface. In test code,
+  use public APIs rather than accessing private fields via `as any`. If genuinely
+  unavoidable, add a suppression with the full rule ID and justification:
+  `// biome-ignore lint/suspicious/noExplicitAny: <reason>`
 - **Private fields**: No underscore prefix (use `private dirty`, not `private _dirty`)
 - **Named exports only**: No default exports
 
@@ -117,10 +121,17 @@ Imports are auto-sorted by Biome in this order:
 3. `@chainsafe/*` and `@lodestar/*` packages
 4. Relative paths
 
-Always use `.js` extension for relative imports (even for `.ts` files):
+In TypeScript source and test files, use `.js` extension for relative ESM imports
+(even though source files are `.ts`). This is required for Node.js ESM resolution.
+This rule does **not** apply to non-TS files (e.g., `package.json`, `.mjs` config).
 
 ```typescript
+// ✅ Correct
 import {something} from "./utils.js";
+import {IBeaconStateView} from "../stateView/interface.js";
+
+// ❌ Wrong — will break at runtime
+import {something} from "./utils.ts";
 ```
 
 ### Comments
@@ -438,82 +449,16 @@ Specs and code are organized by fork: `phase0`, `altair`, `bellatrix`,
 All PRs should target `unstable`. The `stable` branch is for releases only
 (see RELEASE.md for details).
 
-### Spec tests require download
-
-Before running `pnpm test:spec`, download test vectors:
-
-```bash
-pnpm download-spec-tests
-```
-
-### E2E tests require Docker
-
-Start the e2e environment before running e2e tests:
-
-```bash
-./scripts/run_e2e_env.sh start
-pnpm test:e2e
-./scripts/run_e2e_env.sh stop
-```
-
-### Generated files
-
-Do not edit files in `packages/*/lib/` - these are build outputs.
-Edit source files in `packages/*/src/` instead.
-
 ### Consensus spec references
 
 The `specrefs/` directory contains pinned consensus spec versions.
 When implementing spec changes, reference the exact spec version.
 
-## Common pitfalls
+## Pre-push checklist
 
-- **Forgetting `pnpm lint` before pushing**: Biome enforces formatting. Always
-  run it before committing. CI will catch it, but it wastes a round-trip.
-- **Forgetting `pnpm docs:lint` after editing docs**: Markdown files are
-  formatted by Prettier. Run `pnpm docs:lint` (or `pnpm docs:lint:fix` to
-  auto-fix) before pushing changes to `.md` files.
-- **Editing `lib/` instead of `src/`**: Files in `packages/*/lib/` are build
-  outputs. Always edit in `packages/*/src/`.
-- **Stale fork choice head**: After modifying proto-array execution status,
-  the cached head from `getHead()` is stale. Call `recomputeForkChoiceHead()`.
-- **Holding state references**: Beacon state objects are large. Don't store
-  references beyond their immediate use — let them be garbage collected.
-- **Missing `.js` extension**: Relative imports must use `.js` even though
-  source files are `.ts`. This is required for Node.js ESM resolution.
-- **Force pushing after review**: Never force push once a reviewer has started.
-  Use incremental commits — reviewers track changes between reviews.
+Before pushing any commit, verify:
 
-## TypeScript code quality rules
-
-These rules are mandatory for all contributions, including AI-assisted code.
-
-### No `as any` type assertions
-
-Do not use `as any` to bypass the type system. This includes:
-
-- **Production code**: `(obj as any).field` — find the proper type or interface
-- **Test code**: `(obj as any).privateField` — use public APIs to test behavior,
-  not internal implementation details. Tests that access private fields via
-  `as any` are brittle and break on unrelated refactors.
-
-If you genuinely cannot avoid `any`, add a `// biome-ignore` comment with a
-justification that a reviewer can evaluate.
-
-### Use `.js` extensions in relative imports
-
-All relative imports **must** use `.js` extensions, never `.ts`:
-
-```typescript
-// ✅ Correct
-import {something} from "./utils.js";
-import {IBeaconStateView} from "../stateView/interface.js";
-
-// ❌ Wrong — will break at runtime under Node.js ESM resolution
-import {something} from "./utils.ts";
-import {IBeaconStateView} from "../stateView/interface.ts";
-```
-
-This is a Node.js ESM requirement. TypeScript resolves `.js` imports to
-the corresponding `.ts` source file during compilation, but `.ts` imports
-do not resolve correctly at runtime.
+1. `pnpm lint` — Biome enforces formatting; CI will catch failures but it wastes a round-trip
+2. `pnpm check-types` — catch type errors before CI
+3. `pnpm docs:lint:fix` — if you edited any `.md` files (Prettier formatting)
+4. No edits in `packages/*/lib/` — these are build outputs; edit `src/` instead
