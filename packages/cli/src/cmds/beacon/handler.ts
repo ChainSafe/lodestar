@@ -73,15 +73,16 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   try {
     const {
       anchorState,
-      stateBytes: _anchorStateBytes,
+      stateBytes: anchorStateBytes,
       isFinalized,
       wsCheckpoint,
     } = await initBeaconState(args, beaconPaths.dataDir, config, db, logger);
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const pubkeyCache = createPubkeyCache();
     syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
-    // Feature flag: use {useNative: true, stateBytes: anchorStateBytes} when Zig BeaconStateView is ready
-    const anchorStateView = createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
+    const anchorStateView = args["chain.nativeStateView"]
+      ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
+      : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
 
     const node = await BeaconNode.init({
       opts: options,
