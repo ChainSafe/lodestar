@@ -238,19 +238,36 @@ export class PayloadEnvelopeInput {
   }
 
   getSampledColumns(): gloas.DataColumnSidecars {
-    return this.sampledColumns
-      .filter((idx) => this.columnsCache.has(idx))
-      .map((idx) => this.columnsCache.get(idx)!.columnSidecar);
+    const columns: gloas.DataColumnSidecars = [];
+    for (const index of this.sampledColumns) {
+      const column = this.columnsCache.get(index);
+      if (column) {
+        columns.push(column.columnSidecar);
+      }
+    }
+    return columns;
   }
 
   getSampledColumnsWithSource(): ColumnWithSource[] {
-    return this.sampledColumns.filter((idx) => this.columnsCache.has(idx)).map((idx) => this.columnsCache.get(idx)!);
+    const columns: ColumnWithSource[] = [];
+    for (const index of this.sampledColumns) {
+      const column = this.columnsCache.get(index);
+      if (column) {
+        columns.push(column);
+      }
+    }
+    return columns;
   }
 
   getCustodyColumns(): gloas.DataColumnSidecars {
-    return this.custodyColumns
-      .filter((idx) => this.columnsCache.has(idx))
-      .map((idx) => this.columnsCache.get(idx)!.columnSidecar);
+    const columns: gloas.DataColumnSidecars = [];
+    for (const index of this.custodyColumns) {
+      const column = this.columnsCache.get(index);
+      if (column) {
+        columns.push(column.columnSidecar);
+      }
+    }
+    return columns;
   }
 
   hasComputedAllData(): boolean {
