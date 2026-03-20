@@ -3,6 +3,7 @@ import {Transfer, expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {createPubkeyCache} from "@lodestar/state-transition";
 import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
 import {JobFnQueue} from "../../../util/queue/fnQueue.js";
@@ -51,6 +52,9 @@ const queue = new JobFnQueue(
   queueMetrics
 );
 
+// Reuse a single pubkey cache across all historical state regen calls in this worker
+const pubkeyCache = createPubkeyCache();
+
 const api: HistoricalStateWorkerApi = {
   async close() {
     abortController.abort();
@@ -62,7 +66,7 @@ const api: HistoricalStateWorkerApi = {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
     const stateBytes = await queue.push<Uint8Array>(() =>
-      getHistoricalState(slot, config, db, historicalStateRegenMetrics)
+      getHistoricalState(slot, config, db, historicalStateRegenMetrics, pubkeyCache)
     );
     const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 

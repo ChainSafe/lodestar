@@ -788,16 +788,18 @@ export class BeaconStateView implements IBeaconStateView {
  */
 export function createBeaconStateViewForHistoricalRegen(
   config: BeaconConfig,
-  stateBytes: Uint8Array
+  stateBytes: Uint8Array,
+  pubkeyCache?: PubkeyCache
 ): IBeaconStateView {
+  const cache = pubkeyCache ?? createPubkeyCache();
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
 
-  syncPubkeyCache(state, pubkeyCacheRegen);
+  syncPubkeyCache(state, cache);
   const cachedState = createCachedBeaconState(
     state,
     {
       config,
-      pubkeyCache: pubkeyCacheRegen,
+      pubkeyCache: cache,
     },
     {
       skipSyncPubkeys: true,
@@ -806,9 +808,6 @@ export function createBeaconStateViewForHistoricalRegen(
 
   return new BeaconStateView(cachedState);
 }
-
-// this is reused for all historical state regens in the worker.
-const pubkeyCacheRegen = createPubkeyCache();
 
 /**
  * Populate a PubkeyIndexMap with any new entries based on a BeaconState
