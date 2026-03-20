@@ -84,7 +84,10 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
+import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
+import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
+import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
@@ -109,13 +112,14 @@ import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produ
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
+  PayloadEnvelopeInput,
   SeenAggregators,
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
-  SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
+  SeenPayloadEnvelopeInput,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -148,6 +152,13 @@ const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
  */
 const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 16;
 
+/**
+ * The maximum number of pending unfinalized payload envelope writes to the database before backpressure is applied.
+ * Payload envelope write queue entries hold references to payload inputs (including columns),
+ * keeping them in memory. Keep moderate to avoid OOM during sync.
+ */
+const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
+
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
@@ -172,6 +183,7 @@ export class BeaconChain implements IBeaconChain {
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
   readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput], void>;
+  readonly unfinalizedPayloadEnvelopeWrites: JobItemQueue<[PayloadEnvelopeInput], void>;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -187,13 +199,13 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAggregators = new SeenAggregators();
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
-  readonly seenExecutionPayloadEnvelopes = new SeenExecutionPayloadEnvelopes();
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -221,6 +233,7 @@ export class BeaconChain implements IBeaconChain {
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
+  protected readonly payloadEnvelopeProcessor: PayloadEnvelopeProcessor;
   protected readonly db: IBeaconDb;
   // this is only available if nHistoricalStates is enabled
   private readonly cpStateDatastore?: CPStateDatastore;
@@ -334,6 +347,13 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
+    this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
+      chainEvents: emitter,
+      signal,
+      serializedCache: this.serializedCache,
+      metrics,
+      logger,
+    });
 
     this._earliestAvailableSlot = anchorState.slot;
 
@@ -411,6 +431,7 @@ export class BeaconChain implements IBeaconChain {
     this.reprocessController = new ReprocessController(this.metrics);
 
     this.blockProcessor = new BlockProcessor(this, metrics, opts, signal);
+    this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
     this.forkChoice = forkChoice;
     this.clock = clock;
@@ -447,6 +468,15 @@ export class BeaconChain implements IBeaconChain {
       metrics?.unfinalizedBlockWritesQueue
     );
 
+    this.unfinalizedPayloadEnvelopeWrites = new JobItemQueue(
+      persistPayloadEnvelopeInput.bind(this),
+      {
+        maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES,
+        signal,
+      },
+      metrics?.unfinalizedPayloadEnvelopeWritesQueue
+    );
+
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -477,6 +507,7 @@ export class BeaconChain implements IBeaconChain {
     // we can abort any ongoing unfinalized block writes.
     // TODO: persist fork choice to disk and allow unfinalized block writes to complete.
     this.unfinalizedBlockWrites.dropAllJobs();
+    this.unfinalizedPayloadEnvelopeWrites.dropAllJobs();
 
     this.abortController.abort();
   }
@@ -1022,6 +1053,10 @@ export class BeaconChain implements IBeaconChain {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
+  async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
+    return this.payloadEnvelopeProcessor.processPayloadEnvelopeJob(payloadInput, opts);
+  }
+
   getStatus(): Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
@@ -1414,7 +1449,6 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
-    this.seenExecutionPayloadEnvelopes.prune(finalizedSlot);
 
     // Update validator custody to account for effective balance changes
     await this.updateValidatorsCustodyRequirement(cp);

@@ -274,4 +274,8 @@ export const eventTestData: EventData = {
       "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
     ],
   }),
+  [EventType.executionPayloadAvailable]: {
+    slot: 10,
+    blockRoot: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+  },
 };

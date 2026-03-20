@@ -1,19 +1,18 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {
-  BUILDER_INDEX_SELF_BUILD,
-  DOMAIN_BEACON_BUILDER,
-  SLOTS_PER_EPOCH,
-  SLOTS_PER_HISTORICAL_ROOT,
-} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {getExecutionPayloadEnvelopeSignatureSet} from "../signatureSets/executionPayloadEnvelope.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateGloas} from "../types.js";
-import {computeSigningRoot, computeTimeAtSlot} from "../util/index.js";
+import {computeTimeAtSlot} from "../util/index.js";
+import {verifySignatureSet} from "../util/signatureSets.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 export type ProcessExecutionPayloadEnvelopeOpts = {
+  verifySignature?: boolean;
+  verifyStateRoot?: boolean;
   dontTransferCache?: boolean;
 };
 
@@ -23,14 +22,14 @@ export type ProcessExecutionPayloadEnvelopeOpts = {
 export function processExecutionPayloadEnvelope(
   state: CachedBeaconStateGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-  verify: boolean,
   opts?: ProcessExecutionPayloadEnvelopeOpts
 ): CachedBeaconStateGloas {
+  const {verifySignature = true, verifyStateRoot = true} = opts ?? {};
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(envelope.slot);
 
-  if (verify && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
+  if (verifySignature && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
     throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
   }
 
@@ -70,7 +69,7 @@ export function processExecutionPayloadEnvelope(
 
   postState.commit();
 
-  if (verify && !byteArrayEquals(envelope.stateRoot, postState.hashTreeRoot())) {
+  if (verifyStateRoot && !byteArrayEquals(envelope.stateRoot, postState.hashTreeRoot())) {
     throw new Error(
       `Envelope's state root does not match state envelope=${toRootHex(envelope.stateRoot)} state=${toRootHex(postState.hashTreeRoot())}`
     );
@@ -160,28 +159,12 @@ function verifyExecutionPayloadEnvelopeSignature(
   state: CachedBeaconStateGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): boolean {
-  const builderIndex = signedEnvelope.message.builderIndex;
-
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_BUILDER);
-  const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, signedEnvelope.message, domain);
-
-  try {
-    let publicKey: PublicKey;
-
-    if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
-      const validatorIndex = state.latestBlockHeader.proposerIndex;
-      const proposerPubkey = state.epochCtx.pubkeyCache.get(validatorIndex);
-      if (!proposerPubkey) {
-        return false;
-      }
-      publicKey = proposerPubkey;
-    } else {
-      publicKey = PublicKey.fromBytes(state.builders.getReadonly(builderIndex).pubkey);
-    }
-    const signature = Signature.fromBytes(signedEnvelope.signature, true);
-
-    return verify(signingRoot, publicKey, signature);
-  } catch (_e) {
-    return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
-  }
+  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
+    state.config,
+    state.epochCtx.pubkeyCache,
+    new BeaconStateView(state),
+    signedEnvelope,
+    state.latestBlockHeader.proposerIndex
+  );
+  return verifySignatureSet(signatureSet);
 }

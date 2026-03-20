@@ -78,7 +78,6 @@ runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, 
 
 const ignoredTopics: string[] = [
   // TODO GLOAS: required by v5.0.0-alpha.0
-  "execution_payload_available",
   "execution_payload_bid",
   "payload_attestation_message",
 ];
