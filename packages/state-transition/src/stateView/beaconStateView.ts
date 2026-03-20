@@ -33,7 +33,7 @@ import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processV
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
-import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
+import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
@@ -789,17 +789,16 @@ export class BeaconStateView implements IBeaconStateView {
 export function createBeaconStateViewForHistoricalRegen(
   config: BeaconConfig,
   stateBytes: Uint8Array,
-  pubkeyCache?: PubkeyCache
+  pubkeyCache: PubkeyCache
 ): IBeaconStateView {
-  const cache = pubkeyCache ?? createPubkeyCache();
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
 
-  syncPubkeyCache(state, cache);
+  syncPubkeyCache(state, pubkeyCache);
   const cachedState = createCachedBeaconState(
     state,
     {
       config,
-      pubkeyCache: cache,
+      pubkeyCache,
     },
     {
       skipSyncPubkeys: true,
