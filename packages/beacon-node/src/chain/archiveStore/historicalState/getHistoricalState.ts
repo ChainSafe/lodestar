@@ -3,7 +3,9 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
+  type PubkeyCache,
   createBeaconStateViewForHistoricalRegen,
+  createPubkeyCache,
 } from "@lodestar/state-transition";
 import {byteArrayEquals} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
@@ -13,14 +15,19 @@ import {RegenErrorType} from "./types.js";
 /**
  * Get the nearest BeaconState at or before a slot
  */
-export async function getNearestState(slot: number, config: BeaconConfig, db: IBeaconDb): Promise<IBeaconStateView> {
+export async function getNearestState(
+  slot: number,
+  config: BeaconConfig,
+  db: IBeaconDb,
+  pubkeyCache?: PubkeyCache
+): Promise<IBeaconStateView> {
   const stateBytesArr = await db.stateArchive.binaries({limit: 1, lte: slot, reverse: true});
   if (!stateBytesArr.length) {
     throw new Error("No near state found in the database");
   }
 
   const stateBytes = stateBytesArr[0];
-  return createBeaconStateViewForHistoricalRegen(config, stateBytes);
+  return createBeaconStateViewForHistoricalRegen(config, stateBytes, pubkeyCache);
 }
 
 /**
@@ -34,8 +41,11 @@ export async function getHistoricalState(
 ): Promise<Uint8Array> {
   const regenTimer = metrics?.regenTime.startTimer();
 
+  // Reuse a single pubkey cache for all state regens in this call
+  const pubkeyCache = createPubkeyCache();
+
   const loadStateTimer = metrics?.loadStateTime.startTimer();
-  let state = await getNearestState(slot, config, db).catch((e) => {
+  let state = await getNearestState(slot, config, db, pubkeyCache).catch((e) => {
     metrics?.regenErrorCount.inc({reason: RegenErrorType.loadState});
     throw e;
   });
