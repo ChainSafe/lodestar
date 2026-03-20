@@ -2,6 +2,7 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {
   BeaconBlock,
+  BeaconState,
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
@@ -193,6 +194,7 @@ export interface IBeaconStateView {
 
   // Serialization
   loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
+  toValue(): BeaconState;
   serialize(): Uint8Array;
   serializedSize(): number;
   serializeToBytes(output: ByteViews, offset: number): number;
