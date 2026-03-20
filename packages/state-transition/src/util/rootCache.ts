@@ -23,6 +23,8 @@ export class RootCache {
   private readonly blockRootEpochCache = new Map<Epoch, Root>();
   private readonly blockRootSlotCache = new Map<Slot, Root>();
 
+  // TODO: Once all state-transition internals consume IBeaconStateView,
+  // remove CachedBeaconStateAllForks path and use interface methods directly.
   constructor(private readonly state: CachedBeaconStateAllForks | IBeaconStateView) {
     this.currentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
     this.previousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
