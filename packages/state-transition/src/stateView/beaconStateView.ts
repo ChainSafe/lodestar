@@ -405,7 +405,7 @@ export class BeaconStateView implements IBeaconStateView {
    * Return the index of the validator in the PTC committee for the given slot.
    * return -1 if validator is not in the PTC committee for the given slot.
    */
-  validatorPTCCommitteeIndex(validatorIndex: ValidatorIndex, slot: Slot): number {
+  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("PTC committees are not supported before GLOAS");
     }
