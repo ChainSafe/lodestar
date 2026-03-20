@@ -632,9 +632,7 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
-      const block = this.forkChoice.getBlockDefaultStatus(
-        ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader)
-      );
+      const block = this.forkChoice.getBlockDefaultStatus(state.latestBlockHeaderRoot());
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state,
@@ -650,9 +648,7 @@ export class BeaconChain implements IBeaconChain {
     // TODO: This is very inneficient for debug requests of serialized content, since it deserializes to serialize again
     const cachedStateCtx = this.regen.getStateSync(stateRoot);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlockDefaultStatus(
-        ssz.phase0.BeaconBlockHeader.hashTreeRoot(cachedStateCtx.latestBlockHeader)
-      );
+      const block = this.forkChoice.getBlockDefaultStatus(cachedStateCtx.latestBlockHeaderRoot());
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
@@ -689,9 +685,7 @@ export class BeaconChain implements IBeaconChain {
     const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
     const cachedStateCtx = this.regen.getCheckpointStateSync(checkpointHexPayload);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlockDefaultStatus(
-        ssz.phase0.BeaconBlockHeader.hashTreeRoot(cachedStateCtx.latestBlockHeader)
-      );
+      const block = this.forkChoice.getBlockDefaultStatus(cachedStateCtx.latestBlockHeaderRoot());
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,

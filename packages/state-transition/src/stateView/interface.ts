@@ -2,6 +2,7 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {
   BeaconBlock,
+  BeaconState,
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
@@ -192,6 +193,10 @@ export interface IBeaconStateView {
   isStateValidatorsNodesPopulated(): boolean;
 
   // Serialization
+  /** Returns the full state as a plain value object (fork-aware). */
+  toValue(): BeaconState;
+  /** Returns the hash tree root of latestBlockHeader. */
+  latestBlockHeaderRoot(): Uint8Array;
   loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
   serialize(): Uint8Array;
   serializedSize(): number;
