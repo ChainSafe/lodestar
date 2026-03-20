@@ -18,7 +18,7 @@ export async function getNearestState(
   slot: number,
   config: BeaconConfig,
   db: IBeaconDb,
-  pubkeyCache?: PubkeyCache
+  pubkeyCache: PubkeyCache
 ): Promise<IBeaconStateView> {
   const stateBytesArr = await db.stateArchive.binaries({limit: 1, lte: slot, reverse: true});
   if (!stateBytesArr.length) {
@@ -36,8 +36,8 @@ export async function getHistoricalState(
   slot: number,
   config: BeaconConfig,
   db: IBeaconDb,
-  metrics?: HistoricalStateRegenMetrics,
-  pubkeyCache?: PubkeyCache
+  pubkeyCache: PubkeyCache,
+  metrics?: HistoricalStateRegenMetrics
 ): Promise<Uint8Array> {
   const regenTimer = metrics?.regenTime.startTimer();
 
