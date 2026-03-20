@@ -834,11 +834,18 @@ export function getBeaconBlockApi({
           }
 
           const indicesToReconstruct = indices ?? Array.from({length: blobCount}, (_, i) => i);
+
+          const timer = metrics?.recoverBlobSidecars.reconstructionTime.startTimer();
           const blobs = await reconstructBlobs(dataColumnSidecars, indicesToReconstruct);
+          timer?.();
+          metrics?.recoverBlobSidecars.blobsReconstructed.inc(indicesToReconstruct.length);
+
           const signedBlockHeader = signedBlockToSignedHeader(config, block);
 
           data = await Promise.all(
             indicesToReconstruct.map(async (index, i) => {
+              // record per column computation time
+              const compTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
               // Reconstruct blob sidecar from blob
               const kzgCommitment = blobKzgCommitments[index];
               const blob = blobs[i]; // Use i since blobs only contains requested indices
@@ -848,6 +855,7 @@ export function getBeaconBlockApi({
                 block.message.body,
                 index
               );
+              compTimer?.();
               return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
             })
           );
@@ -929,7 +937,10 @@ export function getBeaconBlockApi({
             indicesToReconstruct = Array.from({length: blobCount}, (_, i) => i);
           }
 
+          const timer = metrics?.peerDas.dataColumnsReconstructionTime.startTimer();
           blobs = await reconstructBlobs(dataColumnSidecars, indicesToReconstruct);
+          timer?.();
+          metrics?.peerDas.reconstructedColumns.inc(indicesToReconstruct.length);
         } else {
           blobs = [];
         }

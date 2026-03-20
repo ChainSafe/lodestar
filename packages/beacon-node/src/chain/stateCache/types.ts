@@ -2,7 +2,11 @@ import {routes} from "@lodestar/api";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
 
-export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
+/**
+ * Checkpoint hex representation for state cache keys.
+ * Extends CheckpointWithHex (from fork-choice) with payloadPresent.
+ */
+export type CheckpointHexPayload = {epoch: Epoch; rootHex: RootHex; payloadPresent: boolean};
 
 /**
  * Lodestar currently keeps two state caches around.
@@ -31,6 +35,8 @@ export interface BlockStateCache {
   size: number;
   prune(headStateRootHex: RootHex): void;
   deleteAllBeforeEpoch(finalizedEpoch: Epoch): void;
+  /** Upgrade cache capacity for Gloas fork (2x states for block + payload states) */
+  upgradeToGloas(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
   /** Expose beacon states stored in cache. Use with caution */
   getStates(): IterableIterator<CachedBeaconStateAllForks>;
@@ -59,13 +65,17 @@ export interface BlockStateCache {
  */
 export interface CheckpointStateCache {
   init?: () => Promise<void>;
-  getOrReload(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | null>;
-  getStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
-  get(cpOrKey: CheckpointHex | string): CachedBeaconStateAllForks | null;
-  add(cp: phase0.Checkpoint, state: CachedBeaconStateAllForks): void;
-  getLatest(rootHex: RootHex, maxEpoch: Epoch): CachedBeaconStateAllForks | null;
-  getOrReloadLatest(rootHex: RootHex, maxEpoch: Epoch): Promise<CachedBeaconStateAllForks | null>;
-  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
+  getOrReload(cp: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | null>;
+  getStateOrBytes(cp: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
+  get(cpOrKey: CheckpointHexPayload | string): CachedBeaconStateAllForks | null;
+  add(cp: phase0.Checkpoint, state: CachedBeaconStateAllForks, payloadPresent: boolean): void;
+  getLatest(rootHex: RootHex, maxEpoch: Epoch, payloadPresent: boolean): CachedBeaconStateAllForks | null;
+  getOrReloadLatest(
+    rootHex: RootHex,
+    maxEpoch: Epoch,
+    payloadPresent: boolean
+  ): Promise<CachedBeaconStateAllForks | null>;
+  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch, payloadPresent: boolean): number | null;
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
   pruneFinalized(finalizedEpoch: Epoch): void;
   processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number>;

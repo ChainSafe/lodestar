@@ -63,9 +63,11 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     if (checkpoint.epoch <= lastSeenEpoch) return;
     lastSeenEpoch = checkpoint.epoch;
 
+    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
     const checkpointState = bn.chain.regen.getCheckpointStateSync({
       ...checkpoint,
       rootHex: toRootHex(checkpoint.root),
+      payloadPresent: true,
     });
     if (checkpointState == null) {
       throw Error(`Checkpoint state not found for epoch ${checkpoint.epoch} root ${toRootHex(checkpoint.root)}`);

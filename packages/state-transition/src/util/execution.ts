@@ -143,7 +143,7 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
   }
 
   if (fork >= ForkSeq.deneb) {
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    // https://github.com/ethereum/consensus-specs/blob/v1.3.0-rc.2/specs/eip4844/beacon-chain.md#process_execution_payload
     (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).blobGasUsed = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
     ).blobGasUsed;
