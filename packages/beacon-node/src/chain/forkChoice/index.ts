@@ -154,15 +154,6 @@ export function initializeForkChoiceFromFinalizedState(
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
-        ...(computeEpochAtSlot(blockHeader.slot) < config.GLOAS_FORK_EPOCH
-          ? {
-              builderIndex: null,
-              blockHashFromBid: null,
-            }
-          : {
-              builderIndex: state.latestExecutionPayloadBid.builderIndex,
-              blockHashFromBid: toRootHex(state.latestExecutionPayloadBid.blockHash),
-            }),
         parentBlockHash: isForkPostGloas ? toRootHex(state.latestBlockHash) : null,
       },
       currentSlot
@@ -259,8 +250,6 @@ export function initializeForkChoiceFromUnfinalizedState(
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
-    builderIndex: isForkPostGloas ? unfinalizedState.latestExecutionPayloadBid.builderIndex : null,
-    blockHashFromBid: isForkPostGloas ? toRootHex(unfinalizedState.latestExecutionPayloadBid.blockHash) : null,
     parentBlockHash: isForkPostGloas ? toRootHex(unfinalizedState.latestBlockHash) : null,
   };
 

@@ -69,7 +69,12 @@ export function computeEnvelopeStateRoot(
   };
 
   const processEnvelopeTimer = metrics?.blockPayload.executionPayloadEnvelopeProcessingTime.startTimer();
-  const postEnvelopeState = postBlockState.processExecutionPayloadEnvelope(signedEnvelope, false, {
+  const postEnvelopeState = postBlockState.processExecutionPayloadEnvelope(signedEnvelope, {
+    // Signature is zero-ed (G2_POINT_AT_INFINITY), skip verification
+    verifySignature: false,
+    // State root is being computed here, the envelope doesn't have it yet
+    verifyStateRoot: false,
+    // Preserve cache in source state, since the resulting state is not added to the state cache
     dontTransferCache: true,
   });
   processEnvelopeTimer?.();

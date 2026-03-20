@@ -23,7 +23,7 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
-import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.ts";
+import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.js";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
@@ -213,7 +213,6 @@ export interface IBeaconStateView {
   ): IBeaconStateView;
   processExecutionPayloadEnvelope(
     signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    verify: boolean,
     opts?: ProcessExecutionPayloadEnvelopeOpts
   ): IBeaconStateView;
 }

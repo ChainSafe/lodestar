@@ -41,6 +41,14 @@ export enum BlobSidecarValidation {
   Full,
 }
 
+export type ImportPayloadOpts = {
+  /**
+   * Set to true if envelope signature was already verified (e.g., during gossip/API validation).
+   * When false/undefined, signature will be verified during import.
+   */
+  validSignature?: boolean;
+};
+
 export type ImportBlockOpts = {
   /**
    * TEMP: Review if this is safe, Lighthouse always imports attestations even in finalized sync.
