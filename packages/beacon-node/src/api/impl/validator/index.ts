@@ -198,17 +198,17 @@ export function getValidatorApi(
       // Close to genesis the genesis block may not be available in the DB
       if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
         genesisBlockRoot = state.blockRoots.get(0);
-      }
-
-      const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
-      if (blockRes) {
-        genesisBlockRoot = config
-          .getForkTypes(blockRes.block.message.slot)
-          .SignedBeaconBlock.hashTreeRoot(blockRes.block);
+      } else {
+        const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+        if (blockRes) {
+          genesisBlockRoot = config
+            .getForkTypes(blockRes.block.message.slot)
+            .SignedBeaconBlock.hashTreeRoot(blockRes.block);
+        }
       }
     }
 
-    // If for some reason the genesisBlockRoot is not able don't prevent validators from
+    // If for some reason the genesisBlockRoot is not available don't prevent validators from
     // proposing or attesting. If the genesisBlockRoot is wrong, at worst it may trigger a re-fetch of the duties
     return genesisBlockRoot || ZERO_HASH;
   }
