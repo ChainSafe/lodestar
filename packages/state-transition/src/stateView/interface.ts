@@ -98,7 +98,7 @@ export interface IBeaconStateView {
   latestExecutionPayloadBid: ExecutionPayloadBid;
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
-  validatorPTCCommitteeIndex(validatorIndex: ValidatorIndex, slot: Slot): number;
+  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
