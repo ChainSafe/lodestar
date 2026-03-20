@@ -719,7 +719,7 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   toValue(): BeaconState {
-    return this.cachedState.toValue() as BeaconState;
+    return this.cachedState.toValue();
   }
 
   serialize(): Uint8Array {
