@@ -131,7 +131,7 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
     // Get the actual sync committee root from the head state
     // The sync committee is computed using a weighted random shuffle, not simple alternation
     // Since the test starts at Electra, headState is always post-Altair and has currentSyncCommittee
-    const headState = bn.chain.getHeadState() as BeaconStateView;
+    const headState = bn.chain.getHeadState();
     const expectedRoot = ssz.altair.SyncCommittee.hashTreeRoot(headState.currentSyncCommittee);
 
     // single committee hash since we requested for the first period
