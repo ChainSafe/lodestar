@@ -481,7 +481,7 @@ export class BlockInputSync {
    * From a set of shuffled peers:
    *   - fetch the block
    *   - from deneb, fetch all missing blobs
-   *   - from peerDAS, fetch sampled colmns
+   *   - from peerDAS, fetch sampled columns
    * TODO: this means we only have block root, and nothing else. Consider to reflect this in the function name
    * prefulu, will attempt a max of `MAX_ATTEMPTS_PER_BLOCK` on different peers, postfulu we may attempt more as defined in `getMaxDownloadAttempts()` function
    * Also verifies the received block root + returns the peer that provided the block for future downscoring.
@@ -650,7 +650,7 @@ export class BlockInputSync {
       // TODO(fulu): why is this commented out here?
       //
       //   this.knownBadBlocks.add(block.blockRootHex);
-      //   for (const peerIdStr of block.peerIdStrs) {
+      //   for (const peerIdStr of block.peerIdStrings) {
       //     // TODO: Refactor peerRpcScores to work with peerIdStr only
       //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       //   }
@@ -729,7 +729,7 @@ export class UnknownBlockPeerBalancer {
   }
 
   /**
-   * called from fetchUnknownBlockRoot() where we only have block root and nothing else
+   * called from fetchBlockInput() where we only have block root and nothing else
    * excludedPeers are the peers that we requested already so we don't want to try again
    * pendingColumns is empty for prefulu, or the 1st time we we download a block by root
    */
