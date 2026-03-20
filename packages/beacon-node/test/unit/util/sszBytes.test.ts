@@ -26,6 +26,8 @@ import {
   getAttDataFromSignedAggregateAndProofPhase0,
   getAttDataFromSingleAttestationSerialized,
   getAttesterIndexFromSingleAttestationSerialized,
+  getBeaconBlockRootFromDataColumnSidecarSerialized,
+  getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
   getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
@@ -38,6 +40,8 @@ import {
   getSlotFromAttestationSerialized,
   getSlotFromBeaconStateSerialized,
   getSlotFromBlobSidecarSerialized,
+  getSlotFromDataColumnSidecarSerialized,
+  getSlotFromExecutionPayloadEnvelopeSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromSingleAttestationSerialized,
@@ -478,3 +482,99 @@ function blobSidecarFromValues(slot: Slot): deneb.BlobSidecar {
   blobSidecar.signedBlockHeader.message.slot = slot;
   return blobSidecar;
 }
+
+describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
+  const testCases: {slot: Slot; blockRoot: RootHex}[] = [
+    {slot: 0, blockRoot: "0x" + "00".repeat(32)},
+    {slot: 1_000_000, blockRoot: "0x" + "aa".repeat(32)},
+    {slot: 4_294_967_295, blockRoot: "0x" + "ff".repeat(32)}, // max uint32
+  ];
+
+  for (const {slot, blockRoot} of testCases) {
+    it(`slot=${slot}`, () => {
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.slot = slot;
+      envelope.message.beaconBlockRoot = fromHex(blockRoot);
+      const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+
+      expect(getSlotFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(slot);
+      expect(getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(bytes)).toBe(blockRoot);
+    });
+  }
+
+  it("getSlotFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
+    // Slot is at offset 148, need at least 156 bytes
+    const invalidSizes = [0, 50, 100, 155];
+    for (const size of invalidSizes) {
+      expect(getSlotFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
+    // Block root is at offset 116, need at least 148 bytes
+    const invalidSizes = [0, 50, 100, 147];
+    for (const size of invalidSizes) {
+      expect(getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+});
+
+describe("DataColumnSidecar SSZ serialized picking (fork-aware)", () => {
+  describe("Fulu (pre-Gloas)", () => {
+    const testCases: {slot: Slot}[] = [{slot: 0}, {slot: 500_000}, {slot: 4_294_967_295}];
+
+    for (const {slot} of testCases) {
+      it(`slot=${slot}`, () => {
+        const sidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+        sidecar.signedBlockHeader.message.slot = slot;
+        const bytes = ssz.fulu.DataColumnSidecar.serialize(sidecar);
+
+        expect(getSlotFromDataColumnSidecarSerialized(bytes, ForkName.fulu)).toBe(slot);
+      });
+    }
+
+    it("getSlotFromDataColumnSidecarSerialized - invalid data", () => {
+      // Slot is at offset 20 for pre-Gloas, need at least 28 bytes
+      const invalidSizes = [0, 10, 27];
+      for (const size of invalidSizes) {
+        expect(getSlotFromDataColumnSidecarSerialized(Buffer.alloc(size), ForkName.fulu)).toBeNull();
+      }
+    });
+  });
+
+  describe("Gloas", () => {
+    const testCases: {slot: Slot; blockRoot: RootHex}[] = [
+      {slot: 0, blockRoot: "0x" + "00".repeat(32)},
+      {slot: 600_000, blockRoot: "0x" + "bb".repeat(32)},
+      {slot: 4_294_967_295, blockRoot: "0x" + "ff".repeat(32)},
+    ];
+
+    for (const {slot, blockRoot} of testCases) {
+      it(`slot=${slot}`, () => {
+        const sidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+        sidecar.slot = slot;
+        sidecar.beaconBlockRoot = fromHex(blockRoot);
+        const bytes = ssz.gloas.DataColumnSidecar.serialize(sidecar);
+
+        expect(getSlotFromDataColumnSidecarSerialized(bytes, ForkName.gloas)).toBe(slot);
+        expect(getBeaconBlockRootFromDataColumnSidecarSerialized(bytes)).toBe(blockRoot);
+      });
+    }
+
+    it("getSlotFromDataColumnSidecarSerialized - invalid data", () => {
+      // Slot is at offset 16 for Gloas, need at least 24 bytes
+      const invalidSizes = [0, 10, 23];
+      for (const size of invalidSizes) {
+        expect(getSlotFromDataColumnSidecarSerialized(Buffer.alloc(size), ForkName.gloas)).toBeNull();
+      }
+    });
+
+    it("getBeaconBlockRootFromDataColumnSidecarSerialized - invalid data", () => {
+      // Block root is at offset 24 for Gloas, need at least 56 bytes
+      const invalidSizes = [0, 20, 55];
+      for (const size of invalidSizes) {
+        expect(getBeaconBlockRootFromDataColumnSidecarSerialized(Buffer.alloc(size))).toBeNull();
+      }
+    });
+  });
+});

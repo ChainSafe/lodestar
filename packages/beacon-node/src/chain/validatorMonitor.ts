@@ -23,6 +23,7 @@ import {
   ValidatorIndex,
   altair,
   deneb,
+  gloas,
 } from "@lodestar/types";
 import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
@@ -61,6 +62,11 @@ export type ValidatorMonitor = {
   ): void;
   registerBeaconBlock(src: OpSource, delaySec: Seconds, block: BeaconBlock): void;
   registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
+  registerExecutionPayloadEnvelope(
+    src: OpSource,
+    delaySec: Seconds,
+    envelope: gloas.SignedExecutionPayloadEnvelope
+  ): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
@@ -448,6 +454,10 @@ export function createValidatorMonitor(
 
     registerBlobSidecar(_src, _seenTimestampSec, _blob) {
       //TODO: freetheblobs
+    },
+
+    registerExecutionPayloadEnvelope(_src, _delaySec, _envelope) {
+      // TODO GLOAS: implement execution payload envelope monitoring
     },
 
     registerImportedBlock(block, {proposerBalanceDelta}) {
