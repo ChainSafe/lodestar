@@ -1076,6 +1076,8 @@ export class ProtoArray {
         throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: i});
       }
       this.indices.delete(node.blockRoot);
+      // Prune PTC votes for this block to prevent memory leak
+      // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
       this.ptcVotes.delete(node.blockRoot);
     }
 
