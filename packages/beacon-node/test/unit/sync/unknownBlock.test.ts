@@ -5,7 +5,6 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
 import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
@@ -354,7 +353,6 @@ describe("UnknownBlockSync", () => {
 });
 
 describe("UnknownBlockPeerBalancer", async () => {
-  const custodyConfig = {sampledColumns: [0, 1, 2, 3]} as CustodyConfig;
   const peer0 = await getRandPeerSyncMeta("peer-0");
   const peer1 = await getRandPeerSyncMeta("peer-1");
   const peer2 = await getRandPeerSyncMeta("peer-2");
