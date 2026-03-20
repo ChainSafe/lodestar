@@ -26,7 +26,7 @@ export async function getNearestState(
   }
 
   const stateBytes = stateBytesArr[0];
-  return createBeaconStateViewForHistoricalRegen(config, stateBytes, pubkeyCache);
+  return createBeaconStateViewForHistoricalRegen({useNative: false, config, stateBytes});
 }
 
 /**
