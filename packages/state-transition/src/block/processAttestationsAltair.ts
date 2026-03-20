@@ -18,6 +18,7 @@ import {Attestation, Epoch, phase0} from "@lodestar/types";
 import {byteArrayEquals, intSqrt} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
 import {isAttestationSameSlot, isAttestationSameSlotRootCache} from "../util/gloas.js";
 import {increaseBalance, verifySignatureSet} from "../util/index.js";
@@ -42,7 +43,7 @@ export function processAttestationsAltair(
   const {epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
-  const rootCache = new RootCache(state);
+  const rootCache = new RootCache(new BeaconStateView(state));
   const currentEpoch = epochCtx.epoch;
 
   // Process all attestations first and then increase the balance of the proposer once

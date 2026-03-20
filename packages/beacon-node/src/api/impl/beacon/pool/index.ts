@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {
   AttestationError,
@@ -256,7 +255,7 @@ export function getBeaconPoolApi({
       await Promise.all(
         signatures.map(async (signature, i) => {
           try {
-            const synCommittee = state.getIndexedSyncCommitteeAtEpoch(computeEpochAtSlot(signature.slot));
+            const synCommittee = state.getIndexedSyncCommittee(signature.slot);
             const indexesInCommittee = synCommittee.validatorIndexMap.get(signature.validatorIndex);
             if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
               return; // Not a sync committee member

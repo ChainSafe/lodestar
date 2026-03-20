@@ -6,7 +6,7 @@ import {config} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {BLSSignature, ValidatorIndex, capella, phase0, ssz} from "@lodestar/types";
 import {ZERO_HASH} from "../../../src/constants/index.js";
-import {BeaconStateView} from "../../../src/index.ts";
+import {BeaconStateView} from "../../../src/index.js";
 import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
 import {generateCachedState} from "../../../src/testUtils/state.js";
 import {generateValidators} from "../../utils/validator.js";
