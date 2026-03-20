@@ -483,3 +483,37 @@ When implementing spec changes, reference the exact spec version.
   source files are `.ts`. This is required for Node.js ESM resolution.
 - **Force pushing after review**: Never force push once a reviewer has started.
   Use incremental commits — reviewers track changes between reviews.
+
+## TypeScript code quality rules
+
+These rules are mandatory for all contributions, including AI-assisted code.
+
+### No `as any` type assertions
+
+Do not use `as any` to bypass the type system. This includes:
+
+- **Production code**: `(obj as any).field` — find the proper type or interface
+- **Test code**: `(obj as any).privateField` — use public APIs to test behavior,
+  not internal implementation details. Tests that access private fields via
+  `as any` are brittle and break on unrelated refactors.
+
+If you genuinely cannot avoid `any`, add a `// biome-ignore` comment with a
+justification that a reviewer can evaluate.
+
+### Use `.js` extensions in relative imports
+
+All relative imports **must** use `.js` extensions, never `.ts`:
+
+```typescript
+// ✅ Correct
+import {something} from "./utils.js";
+import {IBeaconStateView} from "../stateView/interface.js";
+
+// ❌ Wrong — will break at runtime under Node.js ESM resolution
+import {something} from "./utils.ts";
+import {IBeaconStateView} from "../stateView/interface.ts";
+```
+
+This is a Node.js ESM requirement. TypeScript resolves `.js` imports to
+the corresponding `.ts` source file during compilation, but `.ts` imports
+do not resolve correctly at runtime.
