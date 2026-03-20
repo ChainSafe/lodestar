@@ -53,6 +53,7 @@ import {
 } from "@lodestar/types";
 import {
   TimeoutError,
+  byteArrayEquals,
   defer,
   formatWeiToEth,
   fromHex,
@@ -195,10 +196,18 @@ export function getValidatorApi(
   /** Compute and cache the genesis block root */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
     if (!genesisBlockRoot) {
-      // Close to genesis the genesis block may not be available in the DB
+      // Close to genesis the genesis block root may already be in blockRoots
       if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
-        genesisBlockRoot = state.blockRoots.get(0);
-      } else {
+        const root = state.blockRoots.get(0);
+        // At slot 0 blockRoots may not be populated yet (all zeros), so only
+        // cache if non-zero to allow the DB fallback to run on the next call
+        if (!byteArrayEquals(root, ZERO_HASH)) {
+          genesisBlockRoot = root;
+        }
+      }
+
+      // Fall through to DB lookup if blockRoots didn't yield a valid root
+      if (!genesisBlockRoot) {
         const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
         if (blockRes) {
           genesisBlockRoot = config
