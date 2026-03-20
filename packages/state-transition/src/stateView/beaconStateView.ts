@@ -4,6 +4,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
 import {
   BeaconBlock,
+  BeaconState,
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
@@ -715,6 +716,10 @@ export class BeaconStateView implements IBeaconStateView {
     cachedState.balances.getAll();
 
     return new BeaconStateView(cachedState);
+  }
+
+  toValue(): BeaconState {
+    return this.cachedState.toValue() as BeaconState;
   }
 
   serialize(): Uint8Array {
