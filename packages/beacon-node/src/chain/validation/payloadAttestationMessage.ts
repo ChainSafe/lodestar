@@ -2,6 +2,7 @@ import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -66,6 +67,9 @@ async function validatePayloadAttestationMessage(
   }
 
   const state = chain.getHeadState();
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);
+  }
 
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,

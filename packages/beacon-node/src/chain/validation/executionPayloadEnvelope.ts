@@ -1,5 +1,9 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {computeStartSlotAtEpoch, getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
+import {
+  computeStartSlotAtEpoch,
+  getExecutionPayloadEnvelopeSignatureSet,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
@@ -113,6 +117,9 @@ async function validateExecutionPayloadEnvelope(
         slot: envelope.slot,
       });
     });
+  if (!isStatePostGloas(blockState)) {
+    throw new Error(`Expected gloas+ state for execution payload envelope validation, got fork=${blockState.forkName}`);
+  }
 
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,

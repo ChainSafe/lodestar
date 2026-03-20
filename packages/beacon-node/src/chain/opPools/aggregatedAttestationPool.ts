@@ -26,6 +26,7 @@ import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getAttestationParticipationStatus,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
 import {MapDef, assert, toRootHex} from "@lodestar/utils";
@@ -353,13 +354,14 @@ export class AggregatedAttestationPool {
         // after all committees are processed, we have a list of sameAttDataCons
         for (const consolidation of sameAttDataCons) {
           // Score attestations by profitability to maximize proposer reward
+          const executionPayloadAvailability = isStatePostGloas(state) ? state.executionPayloadAvailability : null;
           const flags = getAttestationParticipationStatus(
             ForkSeq[fork],
             consolidation.attData,
             inclusionDistance,
             stateEpoch,
             rootCache,
-            ForkSeq[fork] >= ForkSeq.gloas ? state.executionPayloadAvailability : null
+            executionPayloadAvailability
           );
 
           const weight =

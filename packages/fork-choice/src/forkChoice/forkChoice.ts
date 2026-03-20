@@ -10,6 +10,7 @@ import {
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isExecutionBlockBodyType,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   AttesterSlashing,
@@ -1870,6 +1871,9 @@ export function getCheckpointPayloadStatus(
   // Pre-Gloas: always FULL
   if (fork < ForkSeq.gloas) {
     return PayloadStatus.FULL;
+  }
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for checkpoint payload status, got fork=${state.forkName}`);
   }
 
   // For Gloas, check state.execution_payload_availability

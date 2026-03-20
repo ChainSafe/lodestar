@@ -1,6 +1,15 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {
+  ForkName,
+  ForkPostElectra,
+  ForkPostFulu,
+  ForkPostGloas,
+  isForkPostElectra,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
+import {
   BeaconBlock,
   BeaconState,
   BlindedBeaconBlock,
@@ -41,6 +50,7 @@ export interface IBeaconStateView {
   // State access
 
   // phase0
+  forkName: ForkName;
   slot: Slot;
   fork: Fork;
   epoch: Epoch;
@@ -81,24 +91,6 @@ export interface IBeaconStateView {
 
   // capella
   historicalSummaries: capella.HistoricalSummaries;
-
-  // electra
-  pendingDeposits: electra.PendingDeposits;
-  pendingDepositsCount: number;
-  pendingPartialWithdrawals: electra.PendingPartialWithdrawals;
-  pendingPartialWithdrawalsCount: number;
-  pendingConsolidations: electra.PendingConsolidations;
-  pendingConsolidationsCount: number;
-
-  // fulu
-  proposerLookahead: fulu.ProposerLookahead;
-
-  // gloas
-  executionPayloadAvailability: BitArray;
-  latestExecutionPayloadBid: ExecutionPayloadBid;
-  getBuilder(index: BuilderIndex): gloas.Builder;
-  canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
-  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
@@ -215,8 +207,47 @@ export interface IBeaconStateView {
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
     modules?: StateTransitionModules
   ): IBeaconStateView;
+}
+
+/** Electra+ state fields — use isStatePostElectra() guard */
+export interface IBeaconStateViewElectra extends IBeaconStateView {
+  forkName: ForkPostElectra;
+  pendingDeposits: electra.PendingDeposits;
+  pendingDepositsCount: number;
+  pendingPartialWithdrawals: electra.PendingPartialWithdrawals;
+  pendingPartialWithdrawalsCount: number;
+  pendingConsolidations: electra.PendingConsolidations;
+  pendingConsolidationsCount: number;
+}
+
+/** Fulu+ state fields — use isStatePostFulu() guard */
+export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
+  forkName: ForkPostFulu;
+  proposerLookahead: fulu.ProposerLookahead;
+}
+
+/** Gloas+ state fields — use isStatePostGloas() guard */
+export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
+  forkName: ForkPostGloas;
+  executionPayloadAvailability: BitArray;
+  latestExecutionPayloadBid: ExecutionPayloadBid;
+  getBuilder(index: BuilderIndex): gloas.Builder;
+  canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
+  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
   processExecutionPayloadEnvelope(
     signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
     opts?: ProcessExecutionPayloadEnvelopeOpts
   ): IBeaconStateView;
+}
+
+export function isStatePostElectra(state: IBeaconStateView): state is IBeaconStateViewElectra {
+  return isForkPostElectra(state.forkName);
+}
+
+export function isStatePostFulu(state: IBeaconStateView): state is IBeaconStateViewFulu {
+  return isForkPostFulu(state.forkName);
+}
+
+export function isStatePostGloas(state: IBeaconStateView): state is IBeaconStateViewGloas {
+  return isForkPostGloas(state.forkName);
 }

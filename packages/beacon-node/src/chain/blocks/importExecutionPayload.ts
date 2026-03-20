@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
-import {getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
+import {getExecutionPayloadEnvelopeSignatureSet, isStatePostGloas} from "@lodestar/state-transition";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -94,6 +94,12 @@ export async function importExecutionPayload(
     {dontTransferCache: true},
     RegenCaller.processBlock
   );
+  if (!isStatePostGloas(blockState)) {
+    throw new PayloadError({
+      code: PayloadErrorCode.STATE_TRANSITION_ERROR,
+      message: `Expected gloas+ block state for payload import, got fork=${blockState.forkName}`,
+    });
+  }
 
   // 4. Run verification steps in parallel
   // Note: No data availability check needed here - importExecutionPayload is only

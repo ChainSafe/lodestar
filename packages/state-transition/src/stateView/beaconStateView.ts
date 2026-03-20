@@ -1,7 +1,7 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconState,
@@ -101,6 +101,10 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   // phase0
+
+  get forkName(): ForkName {
+    return this.config.getForkName(this.cachedState.slot);
+  }
 
   get slot(): number {
     return this.cachedState.slot;
