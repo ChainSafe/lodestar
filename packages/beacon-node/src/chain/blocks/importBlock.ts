@@ -149,13 +149,12 @@ export async function importBlock(
       custodyColumns: this.custodyConfig.custodyColumns,
       timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
     });
-    if (opts.seenTimestampSec !== undefined) {
-      this.logger.debug("Created PayloadEnvelopeInput for gossip block", {
-        slot: blockSlot,
-        root: blockRootHex,
-        recvToImport: Date.now() / 1000 - opts.seenTimestampSec,
-      });
-    }
+    this.logger.debug("Created PayloadEnvelopeInput for block", {
+      slot: blockSlot,
+      root: blockRootHex,
+      source: source.source,
+      ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
+    });
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
