@@ -10,12 +10,14 @@ import {
   ForkChoiceOpts as RawForkChoiceOpts,
   getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
-import {ForkSeq, ZERO_HASH_HEX} from "@lodestar/params";
+import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   IBeaconStateView,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  isStatePostBellatrix,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
@@ -107,6 +109,15 @@ export function initializeForkChoiceFromFinalizedState(
 
   // Determine finalized checkpoint payload status
   const finalizedPayloadStatus = getCheckpointPayloadStatus(config, state, finalizedCheckpoint.epoch);
+  const parentBlockHash = isForkPostGloas
+    ? (() => {
+        if (!isStatePostGloas(state)) {
+          throw Error("Expected Gloas state for post-gloas anchor checkpoint");
+        }
+
+        return toRootHex(state.latestBlockHash);
+      })()
+    : null;
 
   return new forkchoiceConstructor(
     config,
@@ -142,19 +153,19 @@ export function initializeForkChoiceFromFinalizedState(
         unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
         unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
-        ...(state.isExecutionStateType && state.isMergeTransitionComplete
+        ...(isStatePostBellatrix(state) && state.isExecutionStateType && state.isMergeTransitionComplete
           ? {
               executionPayloadBlockHash: toRootHex(state.latestBlockHash),
               // TODO GLOAS: executionPayloadNumber is not tracked in BeaconState post-gloas (EIP-7732 removed
               // latestExecutionPayloadHeader). Using 0 as unavailable fallback until a solution is found.
-              executionPayloadNumber: config.getForkSeq(state.slot) >= ForkSeq.gloas ? 0 : state.payloadBlockNumber,
+              executionPayloadNumber: isStatePostGloas(state) ? 0 : state.payloadBlockNumber,
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
             }
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
-        parentBlockHash: isForkPostGloas ? toRootHex(state.latestBlockHash) : null,
+        parentBlockHash,
       },
       currentSlot
     ),
@@ -204,6 +215,15 @@ export function initializeForkChoiceFromUnfinalizedState(
   // It checks state.execution_payload_availability to determine EMPTY vs FULL.
   const justifiedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, justifiedCheckpoint.epoch);
   const finalizedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, finalizedCheckpoint.epoch);
+  const parentBlockHash = isForkPostGloas
+    ? (() => {
+        if (!isStatePostGloas(unfinalizedState)) {
+          throw Error("Expected Gloas state for post-gloas unfinalized anchor");
+        }
+
+        return toRootHex(unfinalizedState.latestBlockHash);
+      })()
+    : null;
 
   const store = new ForkChoiceStore(
     currentSlot,
@@ -237,20 +257,21 @@ export function initializeForkChoiceFromUnfinalizedState(
     unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
     unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
 
-    ...(unfinalizedState.isExecutionStateType && unfinalizedState.isMergeTransitionComplete
+    ...(isStatePostBellatrix(unfinalizedState) &&
+    unfinalizedState.isExecutionStateType &&
+    unfinalizedState.isMergeTransitionComplete
       ? {
           executionPayloadBlockHash: toRootHex(unfinalizedState.latestBlockHash),
           // TODO GLOAS: executionPayloadNumber is not tracked in BeaconState post-gloas (EIP-7732 removed
           // latestExecutionPayloadHeader). Using 0 as unavailable fallback until a solution is found.
-          executionPayloadNumber:
-            config.getForkSeq(unfinalizedState.slot) >= ForkSeq.gloas ? 0 : unfinalizedState.payloadBlockNumber,
+          executionPayloadNumber: isStatePostGloas(unfinalizedState) ? 0 : unfinalizedState.payloadBlockNumber,
           executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
         }
       : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
-    parentBlockHash: isForkPostGloas ? toRootHex(unfinalizedState.latestBlockHash) : null,
+    parentBlockHash,
   };
 
   const parentSlot = blockHeader.slot - 1;

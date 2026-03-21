@@ -26,6 +26,7 @@ import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getAttestationParticipationStatus,
+  isStatePostAltair,
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
@@ -743,6 +744,9 @@ export function getNotSeenValidatorsFn(
   const stateSlot = state.slot;
   if (config.getForkName(stateSlot) === ForkName.phase0) {
     throw new Error("getNotSeenValidatorsFn is not supported phase0 state");
+  }
+  if (!isStatePostAltair(state)) {
+    throw new Error("Expected Altair state for participation tracking");
   }
 
   // altair and future forks

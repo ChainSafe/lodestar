@@ -45,9 +45,17 @@ export * from "./stateTransition.js";
 export {BeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/beaconStateView.js";
 export {
   type IBeaconStateView,
+  type IBeaconStateViewAltair,
+  type IBeaconStateViewBellatrix,
+  type IBeaconStateViewCapella,
+  type IBeaconStateViewDeneb,
   type IBeaconStateViewElectra,
   type IBeaconStateViewFulu,
   type IBeaconStateViewGloas,
+  isStatePostAltair,
+  isStatePostBellatrix,
+  isStatePostCapella,
+  isStatePostDeneb,
   isStatePostElectra,
   isStatePostFulu,
   isStatePostGloas,

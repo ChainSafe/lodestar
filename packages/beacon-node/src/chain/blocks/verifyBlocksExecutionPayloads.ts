@@ -8,7 +8,7 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
+import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
@@ -152,6 +152,7 @@ export async function verifyBlockExecutionPayload(
 
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
+    isStatePostBellatrix(preState0) &&
     preState0.isExecutionStateType &&
     isExecutionBlockBodyType(block.message.body) &&
     preState0.isExecutionEnabled(block.message)

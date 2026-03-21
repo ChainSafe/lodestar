@@ -7,6 +7,7 @@ import {
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
@@ -159,6 +160,9 @@ export class PrepareNextSlotScheduler {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
+          if (!isStatePostBellatrix(updatedPrepareState)) {
+            throw Error("Expected Bellatrix state for payload preparation");
+          }
 
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
           const finalizedBlockHash =
@@ -181,6 +185,10 @@ export class PrepareNextSlotScheduler {
             proposerIndex,
             feeRecipient,
           });
+        }
+
+        if (!isStatePostBellatrix(updatedPrepareState)) {
+          throw Error("Expected Bellatrix state for payload attributes");
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);

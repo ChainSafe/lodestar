@@ -1,5 +1,5 @@
 import {SYNC_COMMITTEE_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {IBeaconStateView} from "@lodestar/state-transition";
+import {IBeaconStateView, isStatePostAltair} from "@lodestar/state-transition";
 import {SubnetID, altair} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
@@ -147,6 +147,10 @@ function getIndexInSubcommittee(
   subnet: SubnetID,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubcommittee | null {
+  if (!isStatePostAltair(headState)) {
+    return null;
+  }
+
   const syncCommittee = headState.getIndexedSyncCommittee(data.slot);
   const indexesInCommittee = syncCommittee.validatorIndexMap.get(data.validatorIndex);
   if (indexesInCommittee === undefined) {

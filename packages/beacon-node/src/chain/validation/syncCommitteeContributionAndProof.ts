@@ -1,5 +1,5 @@
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {IBeaconStateView, isSyncCommitteeAggregator} from "@lodestar/state-transition";
+import {IBeaconStateView, isStatePostAltair, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {ValidatorIndex, altair} from "@lodestar/types";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -107,6 +107,10 @@ function getContributionIndices(
   state: IBeaconStateView,
   contribution: altair.SyncCommitteeContribution
 ): ValidatorIndex[] {
+  if (!isStatePostAltair(state)) {
+    throw Error("Expected Altair state for sync committee contribution");
+  }
+
   const startIndex = contribution.subcommitteeIndex * SYNC_COMMITTEE_SUBNET_SIZE;
 
   const syncCommittee = state.getIndexedSyncCommittee(contribution.slot);

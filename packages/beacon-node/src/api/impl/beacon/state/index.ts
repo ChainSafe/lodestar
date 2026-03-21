@@ -6,6 +6,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getCurrentEpoch,
+  isStatePostAltair,
   isStatePostElectra,
   isStatePostFulu,
 } from "@lodestar/state-transition";
@@ -298,6 +299,9 @@ export function getBeaconStateApi({
       const stateEpoch = computeEpochAtSlot(state.slot);
       if (stateEpoch < config.ALTAIR_FORK_EPOCH) {
         throw new ApiError(400, "Requested state before ALTAIR_FORK_EPOCH");
+      }
+      if (!isStatePostAltair(state)) {
+        throw Error("Expected Altair state for sync committee lookup");
       }
 
       const syncCommitteeCache = state.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);

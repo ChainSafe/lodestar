@@ -10,6 +10,7 @@ import {
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isExecutionBlockBodyType,
+  isStatePostBellatrix,
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
@@ -825,7 +826,10 @@ export class ForkChoice implements IForkChoice {
             executionStatus: this.getPostGloasExecStatus(executionStatus),
             dataAvailabilityStatus,
           }
-        : isExecutionBlockBodyType(block.body) && state.isExecutionStateType && state.isExecutionEnabled(block)
+        : isExecutionBlockBodyType(block.body) &&
+            isStatePostBellatrix(state) &&
+            state.isExecutionStateType &&
+            state.isExecutionEnabled(block)
           ? {
               executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
               executionPayloadNumber: block.body.executionPayload.blockNumber,

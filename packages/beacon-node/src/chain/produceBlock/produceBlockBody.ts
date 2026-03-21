@@ -14,7 +14,15 @@ import {
   isForkPostBellatrix,
   isForkPostGloas,
 } from "@lodestar/params";
-import {G2_POINT_AT_INFINITY, IBeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
+import {
+  G2_POINT_AT_INFINITY,
+  IBeaconStateView,
+  type IBeaconStateViewBellatrix,
+  computeTimeAtSlot,
+  isStatePostBellatrix,
+  isStatePostCapella,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BLSSignature,
@@ -191,6 +199,10 @@ export async function produceBlockBody<T extends BlockType>(
   this.logger.verbose("Producing beacon block body", logMeta);
 
   if (isForkPostGloas(fork)) {
+    if (!isStatePostGloas(currentState)) {
+      throw Error("Expected Gloas state for Gloas block production");
+    }
+
     // TODO GLOAS: support non self-building here, the block type differentiation between
     // full and blinded no longer makes sense in gloas, it might be a good idea to move
     // this into a completely separate function and have pre/post gloas more separated
@@ -297,6 +309,10 @@ export async function produceBlockBody<T extends BlockType>(
       shouldOverrideBuilder,
     });
   } else if (isForkPostBellatrix(fork)) {
+    if (!isStatePostBellatrix(currentState)) {
+      throw Error("Expected Bellatrix state for execution block production");
+    }
+
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -598,7 +614,7 @@ export async function prepareExecutionPayload(
   parentBlockRoot: Root,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
-  state: IBeaconStateView,
+  state: IBeaconStateViewBellatrix,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
   const parentHash = state.latestBlockHash;
@@ -666,7 +682,7 @@ async function prepareExecutionPayloadHeader(
     config: ChainForkConfig;
   },
   fork: ForkPostBellatrix,
-  state: IBeaconStateView,
+  state: IBeaconStateViewBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<{
   header: ExecutionPayloadHeader;
@@ -693,7 +709,7 @@ export function getPayloadAttributesForSSE(
     prepareSlot,
     parentBlockRoot,
     feeRecipient,
-  }: {prepareState: IBeaconStateView; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
+  }: {prepareState: IBeaconStateViewBellatrix; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
 ): SSEPayloadAttributes {
   const parentHash = prepareState.latestBlockHash;
   const payloadAttributes = preparePayloadAttributes(fork, chain, {
@@ -736,7 +752,7 @@ function preparePayloadAttributes(
     parentBlockRoot,
     feeRecipient,
   }: {
-    prepareState: IBeaconStateView;
+    prepareState: IBeaconStateViewBellatrix;
     prepareSlot: Slot;
     parentBlockRoot: Root;
     feeRecipient: string;
@@ -751,6 +767,10 @@ function preparePayloadAttributes(
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
+    if (!isStatePostCapella(prepareState)) {
+      throw Error("Expected Capella state for withdrawals");
+    }
+
     // withdrawals logic is now fork aware as it changes on electra fork post capella
     (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
       prepareState.getExpectedWithdrawals().expectedWithdrawals;
