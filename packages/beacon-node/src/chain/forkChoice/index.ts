@@ -75,15 +75,6 @@ export function initializeForkChoice(
 /**
  * Initialize forkchoice from a finalized state.
  */
-
-function getGloasParentBlockHash(isGloas: boolean, state: IBeaconStateView): string | null {
-  if (!isGloas) return null;
-  if (!isStatePostGloas(state)) {
-    throw new Error(`Expected gloas+ state for anchor checkpoint, got fork=${state.forkName}`);
-  }
-  return toRootHex(state.latestBlockHash);
-}
-
 export function initializeForkChoiceFromFinalizedState(
   config: ChainForkConfig,
   emitter: ChainEventEmitter,
@@ -118,7 +109,14 @@ export function initializeForkChoiceFromFinalizedState(
 
   // Determine finalized checkpoint payload status
   const finalizedPayloadStatus = getCheckpointPayloadStatus(config, state, finalizedCheckpoint.epoch);
-  const parentBlockHash = getGloasParentBlockHash(isForkPostGloas, state);
+  const parentBlockHash = isForkPostGloas
+    ? (() => {
+        if (!isStatePostGloas(state)) {
+          throw new Error(`Expected gloas+ state for anchor checkpoint, got fork=${state.forkName}`);
+        }
+        return toRootHex(state.latestBlockHash);
+      })()
+    : null;
 
   return new forkchoiceConstructor(
     config,
@@ -216,7 +214,14 @@ export function initializeForkChoiceFromUnfinalizedState(
   // It checks state.execution_payload_availability to determine EMPTY vs FULL.
   const justifiedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, justifiedCheckpoint.epoch);
   const finalizedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, finalizedCheckpoint.epoch);
-  const parentBlockHash = getGloasParentBlockHash(isForkPostGloas, unfinalizedState);
+  const parentBlockHash = isForkPostGloas
+    ? (() => {
+        if (!isStatePostGloas(unfinalizedState)) {
+          throw new Error(`Expected gloas+ state for unfinalized anchor, got fork=${unfinalizedState.forkName}`);
+        }
+        return toRootHex(unfinalizedState.latestBlockHash);
+      })()
+    : null;
 
   const store = new ForkChoiceStore(
     currentSlot,
