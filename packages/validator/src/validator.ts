@@ -182,7 +182,7 @@ export class Validator {
           globalInit: {
             signal: controller.signal,
             ...globalInit,
-            timeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS
+            timeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
           },
         },
         {config, logger, metrics: metrics?.restApiClient}
