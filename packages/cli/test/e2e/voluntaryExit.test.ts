@@ -1,5 +1,6 @@
+import fs from "node:fs";
 import path from "node:path";
-import {describe, it, onTestFinished, vi} from "vitest";
+import {describe, expect, it, onTestFinished, vi} from "vitest";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
@@ -8,7 +9,7 @@ import {retry} from "@lodestar/utils";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit cmd", () => {
-  vi.setConfig({testTimeout: 60_000});
+  vi.setConfig({testTimeout: 80_000});
 
   it("Perform a voluntary exit", async () => {
     const restPort = 9596;
@@ -86,6 +87,78 @@ describe("voluntaryExit cmd", () => {
     }
 
     // Disconnect the event stream for the client
+    httpClientController.abort();
+  });
+
+  it("Perform a voluntary exit and save to file", async () => {
+    const restPort = 9596;
+    const outputFile = path.join(testFilesDir, "voluntary-exit-output.json");
+
+    const devBnProc = await spawnCliCommand(
+      "packages/cli/bin/lodestar.js",
+      [
+        "dev",
+        `--dataDir=${path.join(testFilesDir, "dev-voluntary-exit-file")}`,
+        "--genesisValidators=8",
+        "--startValidators=0..7",
+        "--rest",
+        `--rest.port=${restPort}`,
+        "--params.SLOT_DURATION_MS=2000",
+        "--params.SHARD_COMMITTEE_PERIOD=0",
+      ],
+      {pipeStdioToParent: true, logPrefix: "dev"}
+    );
+    onTestFinished(async () => {
+      await stopChildProcess(devBnProc, "SIGINT");
+    });
+
+    const baseUrl = `http://127.0.0.1:${restPort}`;
+    const httpClientController = new AbortController();
+    const client = getClient({baseUrl, globalInit: {signal: httpClientController.signal}}, {config});
+
+    await retry(
+      async () => {
+        const head = (await client.beacon.getBlockHeader({blockId: "head"})).value();
+        if (head.header.message.slot < 1) throw Error("pre-genesis");
+      },
+      {retryDelay: 1000, retries: 20}
+    );
+
+    const indexesToExit = [0, 1];
+    const pubkeysToExit = indexesToExit.map((i) => interopSecretKey(i).toPublicKey().toHex());
+
+    await execCliCommand(
+      "packages/cli/bin/lodestar.js",
+      [
+        "validator",
+        "voluntary-exit",
+        "--network=dev",
+        "--yes",
+        "--interopIndexes=0..3",
+        `--server=${baseUrl}`,
+        `--pubkeys=${pubkeysToExit.join(",")}`,
+        `--outputFile=${outputFile}`,
+      ],
+      {pipeStdioToParent: false, logPrefix: "voluntary-exit-file"}
+    );
+
+    // Verify file was written with valid content
+    const fileContent = JSON.parse(fs.readFileSync(outputFile, "utf-8"));
+    expect(fileContent).toHaveLength(indexesToExit.length);
+    console.log(fileContent);
+    for (const exit of fileContent) {
+      expect(exit).toHaveProperty("message");
+      expect(exit).toHaveProperty("signature");
+      expect(exit.message).toHaveProperty("epoch");
+      expect(exit.message).toHaveProperty("validator_index");
+    }
+
+    // Verify validators are NOT exiting (messages were saved, not published)
+    for (const pubkey of pubkeysToExit) {
+      const validator = (await client.beacon.getStateValidator({stateId: "head", validatorId: pubkey})).value();
+      expect(validator.status).not.toBe("active_exiting");
+    }
+
     httpClientController.abort();
   });
 });
