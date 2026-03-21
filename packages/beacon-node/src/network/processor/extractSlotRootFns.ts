@@ -1,11 +1,14 @@
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostGloas} from "@lodestar/params";
 import {SlotOptionalRoot, SlotRootHex} from "@lodestar/types";
 import {
+  getBeaconBlockRootFromDataColumnSidecarSerialized,
+  getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
   getBlockRootFromBeaconAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromBeaconAttestationSerialized,
   getSlotFromBlobSidecarSerialized,
   getSlotFromDataColumnSidecarSerialized,
+  getSlotFromExecutionPayloadEnvelopeSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
 } from "../../util/sszBytes.js";
@@ -52,13 +55,23 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
       }
       return {slot};
     },
-    [GossipType.data_column_sidecar]: (data: Uint8Array): SlotOptionalRoot | null => {
-      const slot = getSlotFromDataColumnSidecarSerialized(data);
-
+    [GossipType.data_column_sidecar]: (data: Uint8Array, fork: ForkName): SlotOptionalRoot | null => {
+      const slot = getSlotFromDataColumnSidecarSerialized(data, fork);
       if (slot === null) {
         return null;
       }
-      return {slot};
+
+      const root = isForkPostGloas(fork) ? getBeaconBlockRootFromDataColumnSidecarSerialized(data) : null;
+      return root !== null ? {slot, root} : {slot};
+    },
+    [GossipType.execution_payload]: (data: Uint8Array): SlotRootHex | null => {
+      const slot = getSlotFromExecutionPayloadEnvelopeSerialized(data);
+      const root = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(data);
+
+      if (slot === null || root === null) {
+        return null;
+      }
+      return {slot, root};
     },
   };
 }

@@ -9,7 +9,14 @@ import {
   getSafeExecutionBlockHash,
   isGloasBlock,
 } from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkPostGloas,
+  ForkSeq,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   EpochCache,
@@ -21,7 +28,17 @@ import {
   isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {
+  Attestation,
+  BeaconBlock,
+  SignedBeaconBlock,
+  altair,
+  capella,
+  electra,
+  isGloasBeaconBlock,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -122,6 +139,23 @@ export async function importBlock(
   const payloadPresent = !isGloasBlock(blockSummary);
   // processState manages both block state and payload state variants together for memory/disk management
   this.regen.processBlockState(blockRootHex, postState);
+
+  // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
+  if (fork >= ForkSeq.gloas) {
+    this.seenPayloadEnvelopeInputCache.add({
+      blockRootHex,
+      block: block as SignedBeaconBlock<ForkPostGloas>,
+      sampledColumns: this.custodyConfig.sampledColumns,
+      custodyColumns: this.custodyConfig.custodyColumns,
+      timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
+    });
+    this.logger.debug("Created PayloadEnvelopeInput for block", {
+      slot: blockSlot,
+      root: blockRootHex,
+      source: source.source,
+      ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
+    });
+  }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
