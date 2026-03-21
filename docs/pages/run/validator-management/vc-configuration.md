@@ -149,7 +149,7 @@ Mar-31 15:27:16.511[]                 info: 2 local keystores
 Mar-31 15:27:16.512[]                 info: 0xad3751569b3b7ee67d85e1440fcb954533146ee6545ec23ee78ad1fe680029e4a1869330c8f053ee0fcc0f71a60f9167
 Mar-31 15:27:16.512[]                 info: 0xa8a423cbeaca51064d7b5c04c10fdad0114d71a42786d3dbc835b5b00b481872c55af0cf2af10fb5412f2a66695b5aac
 Mar-31 15:27:20.843[]                 info: Started metrics HTTP server address=http://127.0.0.1:5064
-Mar-31 15:27:20.849[]                 info: Beacon node urls=http://127.0.0.1:9596, requestWireFormat=ssz, responseWireFormat=ssz
+Mar-31 15:27:20.849[]                 info: Beacon node urls=http://127.0.0.1:9596, requestWireFormat=ssz, responseWireFormat=ssz, requestTimeout=12000
 Mar-31 15:27:20.867[]                 info: Genesis fetched from the beacon node
 Mar-31 15:27:20.872[]                 info: Verified connected beacon node and validator have same the config
 Mar-31 15:27:20.873[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
