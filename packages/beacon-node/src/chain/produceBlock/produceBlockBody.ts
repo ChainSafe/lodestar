@@ -200,7 +200,7 @@ export async function produceBlockBody<T extends BlockType>(
 
   if (isForkPostGloas(fork)) {
     if (!isStatePostGloas(currentState)) {
-      throw Error("Expected Gloas state for Gloas block production");
+      throw new Error("Expected Gloas state for Gloas block production");
     }
 
     // TODO GLOAS: support non self-building here, the block type differentiation between
@@ -310,7 +310,7 @@ export async function produceBlockBody<T extends BlockType>(
     });
   } else if (isForkPostBellatrix(fork)) {
     if (!isStatePostBellatrix(currentState)) {
-      throw Error("Expected Bellatrix state for execution block production");
+      throw new Error("Expected Bellatrix state for execution block production");
     }
 
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
@@ -768,7 +768,7 @@ function preparePayloadAttributes(
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
     if (!isStatePostCapella(prepareState)) {
-      throw Error("Expected Capella state for withdrawals");
+      throw new Error("Expected Capella state for withdrawals");
     }
 
     // withdrawals logic is now fork aware as it changes on electra fork post capella

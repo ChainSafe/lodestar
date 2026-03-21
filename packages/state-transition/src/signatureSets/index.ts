@@ -57,7 +57,7 @@ export function getBlockSignatureSets(
   // Only after altair fork, validate tSyncCommitteeSignature
   if (fork >= ForkSeq.altair) {
     if (currentSyncCommitteeIndexed === null) {
-      throw Error("Altair block requires sync committee cache");
+      throw new Error("Altair block requires sync committee cache");
     }
 
     const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(

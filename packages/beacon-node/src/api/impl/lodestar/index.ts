@@ -220,7 +220,7 @@ export function getLodestarApi({
         throw new Error("Historical summaries are not supported before Capella");
       }
       if (!isStatePostCapella(stateView)) {
-        throw Error("Expected Capella state for historical summaries");
+        throw new Error("Expected Capella state for historical summaries");
       }
 
       const {gindex} = ssz[fork].BeaconState.getPathInfo(["historicalSummaries"]);

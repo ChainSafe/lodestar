@@ -219,7 +219,7 @@ export interface IBeaconStateViewCapella extends IBeaconStateViewBellatrix {
   };
 }
 
-/** Deneb+ state fields — use isStatePostDeneb() guard */
+/** Deneb+ state — no new state-view fields; placeholder for fork completeness and isStatePostDeneb() narrowing */
 export interface IBeaconStateViewDeneb extends IBeaconStateViewCapella {
   forkName: ForkPostDeneb;
 }

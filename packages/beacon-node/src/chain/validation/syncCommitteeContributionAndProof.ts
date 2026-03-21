@@ -108,7 +108,7 @@ function getContributionIndices(
   contribution: altair.SyncCommitteeContribution
 ): ValidatorIndex[] {
   if (!isStatePostAltair(state)) {
-    throw Error("Expected Altair state for sync committee contribution");
+    throw new Error("Expected Altair state for sync committee contribution");
   }
 
   const startIndex = contribution.subcommitteeIndex * SYNC_COMMITTEE_SUBNET_SIZE;

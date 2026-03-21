@@ -161,7 +161,7 @@ export class PrepareNextSlotScheduler {
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
           if (!isStatePostBellatrix(updatedPrepareState)) {
-            throw Error("Expected Bellatrix state for payload preparation");
+            throw new Error("Expected Bellatrix state for payload preparation");
           }
 
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
@@ -188,7 +188,7 @@ export class PrepareNextSlotScheduler {
         }
 
         if (!isStatePostBellatrix(updatedPrepareState)) {
-          throw Error("Expected Bellatrix state for payload attributes");
+          throw new Error("Expected Bellatrix state for payload attributes");
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);

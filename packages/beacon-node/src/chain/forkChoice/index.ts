@@ -75,6 +75,15 @@ export function initializeForkChoice(
 /**
  * Initialize forkchoice from a finalized state.
  */
+
+function getGloasParentBlockHash(isGloas: boolean, state: IBeaconStateView): string | null {
+  if (!isGloas) return null;
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for anchor checkpoint, got fork=${state.forkName}`);
+  }
+  return toRootHex(state.latestBlockHash);
+}
+
 export function initializeForkChoiceFromFinalizedState(
   config: ChainForkConfig,
   emitter: ChainEventEmitter,
@@ -109,15 +118,7 @@ export function initializeForkChoiceFromFinalizedState(
 
   // Determine finalized checkpoint payload status
   const finalizedPayloadStatus = getCheckpointPayloadStatus(config, state, finalizedCheckpoint.epoch);
-  const parentBlockHash = isForkPostGloas
-    ? (() => {
-        if (!isStatePostGloas(state)) {
-          throw Error("Expected Gloas state for post-gloas anchor checkpoint");
-        }
-
-        return toRootHex(state.latestBlockHash);
-      })()
-    : null;
+  const parentBlockHash = getGloasParentBlockHash(isForkPostGloas, state);
 
   return new forkchoiceConstructor(
     config,
@@ -215,15 +216,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   // It checks state.execution_payload_availability to determine EMPTY vs FULL.
   const justifiedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, justifiedCheckpoint.epoch);
   const finalizedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, finalizedCheckpoint.epoch);
-  const parentBlockHash = isForkPostGloas
-    ? (() => {
-        if (!isStatePostGloas(unfinalizedState)) {
-          throw Error("Expected Gloas state for post-gloas unfinalized anchor");
-        }
-
-        return toRootHex(unfinalizedState.latestBlockHash);
-      })()
-    : null;
+  const parentBlockHash = getGloasParentBlockHash(isForkPostGloas, unfinalizedState);
 
   const store = new ForkChoiceStore(
     currentSlot,

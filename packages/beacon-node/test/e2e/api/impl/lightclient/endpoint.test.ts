@@ -133,7 +133,7 @@ describe.skipIf(process.env.CI)("lightclient api", () => {
     // Since the test starts at Electra, headState is always post-Altair and has currentSyncCommittee
     const headState = bn.chain.getHeadState();
     if (!isStatePostAltair(headState)) {
-      throw Error("Expected Altair state in lightclient test");
+      throw new Error("Expected Altair state in lightclient test");
     }
     const expectedRoot = ssz.altair.SyncCommittee.hashTreeRoot(headState.currentSyncCommittee);
 

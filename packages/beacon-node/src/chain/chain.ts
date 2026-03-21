@@ -1600,7 +1600,7 @@ export class BeaconChain implements IBeaconChain {
 
     preState = preState.processSlots(block.slot); // Dial preState's slot to block.slot
     if (!isStatePostAltair(preState)) {
-      throw Error("Sync committee rewards are not supported before Altair");
+      throw new Error("Sync committee rewards are not supported before Altair");
     }
 
     return preState.computeSyncCommitteeRewards(block, validatorIds ?? []);

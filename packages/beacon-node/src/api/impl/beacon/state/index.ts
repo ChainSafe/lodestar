@@ -301,7 +301,7 @@ export function getBeaconStateApi({
         throw new ApiError(400, "Requested state before ALTAIR_FORK_EPOCH");
       }
       if (!isStatePostAltair(state)) {
-        throw Error("Expected Altair state for sync committee lookup");
+        throw new Error("Expected Altair state for sync committee lookup");
       }
 
       const syncCommitteeCache = state.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
