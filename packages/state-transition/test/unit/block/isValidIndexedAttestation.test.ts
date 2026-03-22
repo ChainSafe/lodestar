@@ -33,6 +33,11 @@ describe("validate indexed attestation", () => {
       expectedValue: true,
       name: "should return valid indexed attestation",
     },
+    {
+      indices: [0],
+      expectedValue: true,
+      name: "should return valid indexed attestation - single index 0",
+    },
   ];
 
   it.each(testValues)("$name", ({indices, expectedValue}) => {
