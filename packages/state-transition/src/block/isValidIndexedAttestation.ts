@@ -74,7 +74,7 @@ export function isValidIndexedAttestationIndices(
     prev = index;
   }
 
-  // check if indices are out of bounds, `prev` value is the highest index (since it is sorted)
+  // check if indices are out of bounds, `prev` is the highest index since indices are sorted
   if (prev >= validatorsLen) {
     return false;
   }
