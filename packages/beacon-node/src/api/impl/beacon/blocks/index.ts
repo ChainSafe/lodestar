@@ -709,12 +709,16 @@ export function getBeaconBlockApi({
         throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
-      payloadInput.addPayloadEnvelope({
-        envelope: signedExecutionPayloadEnvelope,
-        source: PayloadEnvelopeInputSource.api,
-        seenTimestampSec,
-        peerIdStr: undefined,
-      });
+      try {
+        payloadInput.addPayloadEnvelope({
+          envelope: signedExecutionPayloadEnvelope,
+          source: PayloadEnvelopeInputSource.api,
+          seenTimestampSec,
+          peerIdStr: undefined,
+        });
+      } catch (e) {
+        throw new ApiError(400, `Invalid payload envelope: ${(e as Error).message}`);
+      }
 
       if (dataColumnSidecars.length > 0) {
         for (const columnSidecar of dataColumnSidecars) {

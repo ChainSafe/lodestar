@@ -1,6 +1,6 @@
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, DataColumnSidecars, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
-import {toRootHex, withTimeout} from "@lodestar/utils";
+import {toRootHex, withTimeout, Logger} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {AddPayloadEnvelopeProps, ColumnWithSource, CreateFromBlockProps, SourceMeta} from "./types.js";
@@ -62,6 +62,7 @@ export class PayloadEnvelopeInput {
   readonly proposerIndex: ValidatorIndex;
   readonly bid: gloas.ExecutionPayloadBid;
   readonly versionedHashes: VersionedHashes;
+  private readonly logger?: Logger;
 
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
 
@@ -83,6 +84,7 @@ export class PayloadEnvelopeInput {
     sampledColumns: ColumnIndex[];
     custodyColumns: ColumnIndex[];
     timeCreatedSec: number;
+    logger?: Logger;
   }) {
     this.blockRootHex = props.blockRootHex;
     this.slot = props.slot;
@@ -92,12 +94,15 @@ export class PayloadEnvelopeInput {
     this.sampledColumns = props.sampledColumns;
     this.custodyColumns = props.custodyColumns;
     this.timeCreatedSec = props.timeCreatedSec;
+    
     this.payloadEnvelopeDataPromise = createPromise();
     this.columnsDataPromise = createPromise();
+    this.logger = props.logger;
 
     const noBlobs = props.bid.blobKzgCommitments.length === 0;
     const noSampledColumns = props.sampledColumns.length === 0;
     const hasAllData = noBlobs || noSampledColumns;
+    
 
     if (hasAllData) {
       this.state = {hasPayload: false, hasAllData: true, hasComputedAllData: true};
@@ -117,6 +122,7 @@ export class PayloadEnvelopeInput {
       sampledColumns: props.sampledColumns,
       custodyColumns: props.custodyColumns,
       timeCreatedSec: props.timeCreatedSec,
+      logger: props.logger,
     });
   }
 
@@ -136,42 +142,59 @@ export class PayloadEnvelopeInput {
     return this.bid.blobKzgCommitments;
   }
 
-  addPayloadEnvelope(props: AddPayloadEnvelopeProps): void {
-    if (this.state.hasPayload) {
-      throw new Error(`Payload envelope already set for block ${this.blockRootHex}`);
-    }
-    if (toRootHex(props.envelope.message.beaconBlockRoot) !== this.blockRootHex) {
+addPayloadEnvelope(props: AddPayloadEnvelopeProps): void {
+  const incomingRoot = toRootHex(props.envelope.message.beaconBlockRoot);
+
+  if (this.state.hasPayload) {
+    if (incomingRoot !== this.blockRootHex) {
       throw new Error("Payload envelope beacon_block_root mismatch");
     }
 
-    const source: SourceMeta = {
-      source: props.source,
-      seenTimestampSec: props.seenTimestampSec,
-      peerIdStr: props.peerIdStr,
-    };
-
-    if (this.state.hasAllData) {
-      // Complete state
-      this.state = {
-        hasPayload: true,
-        hasAllData: true,
-        hasComputedAllData: this.state.hasComputedAllData,
-        payloadEnvelope: props.envelope,
-        payloadEnvelopeSource: source,
-        timeCompleteSec: props.seenTimestampSec,
-      };
-      this.payloadEnvelopeDataPromise.resolve(props.envelope);
+    const existing = this.state.payloadEnvelope;
+    if (existing && existing.message.payload.blockHash !== props.envelope.message.payload.blockHash) {
+      this.logger?.warn?.(
+        `Conflicting payload envelope for block ${this.blockRootHex}`
+      );
     } else {
-      // Has payload, waiting for columns
-      this.state = {
-        hasPayload: true,
-        hasAllData: false,
-        hasComputedAllData: false,
-        payloadEnvelope: props.envelope,
-        payloadEnvelopeSource: source,
-      };
+      this.logger?.debug?.(
+        `Duplicate payload envelope ignored for block ${this.blockRootHex}`
+      );
     }
+
+    return;
   }
+
+  // ✅ Keep original validation
+  if (incomingRoot !== this.blockRootHex) {
+    throw new Error("Payload envelope beacon_block_root mismatch");
+  }
+
+  const source: SourceMeta = {
+    source: props.source,
+    seenTimestampSec: props.seenTimestampSec,
+    peerIdStr: props.peerIdStr,
+  };
+
+  if (this.state.hasAllData) {
+    this.state = {
+      hasPayload: true,
+      hasAllData: true,
+      hasComputedAllData: this.state.hasComputedAllData,
+      payloadEnvelope: props.envelope,
+      payloadEnvelopeSource: source,
+      timeCompleteSec: props.seenTimestampSec,
+    };
+    this.payloadEnvelopeDataPromise.resolve(props.envelope);
+  } else {
+    this.state = {
+      hasPayload: true,
+      hasAllData: false,
+      hasComputedAllData: false,
+      payloadEnvelope: props.envelope,
+      payloadEnvelopeSource: source,
+    };
+  }
+}
 
   addColumn(columnWithSource: ColumnWithSource): void {
     const {columnSidecar, seenTimestampSec} = columnWithSource;

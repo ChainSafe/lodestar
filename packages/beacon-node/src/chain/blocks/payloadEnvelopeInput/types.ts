@@ -1,5 +1,6 @@
 import {ForkPostGloas} from "@lodestar/params";
 import {ColumnIndex, RootHex, SignedBeaconBlock, gloas} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 
 export enum PayloadEnvelopeInputSource {
   gossip = "gossip",
@@ -26,6 +27,7 @@ export type CreateFromBlockProps = {
   sampledColumns: ColumnIndex[];
   custodyColumns: ColumnIndex[];
   timeCreatedSec: number;
+  logger?: Logger;
 };
 
 export type AddPayloadEnvelopeProps = SourceMeta & {
