@@ -75,8 +75,8 @@ export function isValidIndexedAttestationIndices(
   }
 
   // check if indices are out of bounds, by checking the highest index (since it is sorted)
-  const lastIndex = indices.at(-1);
-  if (lastIndex !== undefined && lastIndex >= validatorsLen) {
+  const lastIndex = indices[indices.length - 1];
+  if (lastIndex >= validatorsLen) {
     return false;
   }
 
