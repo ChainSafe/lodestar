@@ -575,7 +575,9 @@ export async function validateBlockDataColumnSidecars(
           slot: blockSlot,
           expected: toRootHex(blockRoot),
           actual: toRootHex(
-            ssz.phase0.BeaconBlockHeader.hashTreeRoot((columnSidecar as fulu.DataColumnSidecar).signedBlockHeader.message)
+            ssz.phase0.BeaconBlockHeader.hashTreeRoot(
+              (columnSidecar as fulu.DataColumnSidecar).signedBlockHeader.message
+            )
           ),
         });
       }

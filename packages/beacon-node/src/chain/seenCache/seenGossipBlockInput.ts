@@ -16,7 +16,7 @@ import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/u
 import {Metrics} from "../../metrics/metrics.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {IClock} from "../../util/clock.js";
-import {CustodyConfig, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
+import {CustodyConfig} from "../../util/dataColumns.js";
 import {SerializedCache} from "../../util/serializedCache.js";
 import {
   BlockInput,
@@ -56,9 +56,9 @@ export type SeenBlockInputCacheModules = {
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   custodyConfig: CustodyConfig;
+  serializedCache: SerializedCache;
   metrics: Metrics | null;
   logger?: Logger;
-  serializedCache: SerializedCache;
 };
 
 export type GetByBlobOptions = {
@@ -338,7 +338,7 @@ export class SeenBlockInput {
     let created = false;
     if (!blockInput) {
       created = true;
-      const {forkName, daOutOfRange} = this.buildCommonProps(getDataColumnSidecarSlot(columnSidecar));
+      const {forkName, daOutOfRange} = this.buildCommonProps(columnSidecar.signedBlockHeader.message.slot);
       blockInput = BlockInputColumns.createFromColumn({
         columnSidecar,
         blockRootHex,

@@ -356,9 +356,7 @@ export function getBeaconBlockApi({
             blockRoot,
             slot,
             index: dataColumnSidecar.index,
-            kzgCommitments: isGloasDataColumnSidecar(dataColumnSidecar)
-              ? []
-              : dataColumnSidecar.kzgCommitments.map(toHex),
+            kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
           });
         }
       }
