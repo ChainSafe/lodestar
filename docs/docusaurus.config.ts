@@ -18,6 +18,9 @@ const versions: string[] = (() => {
 // Default to the latest stable version (skip RC pre-releases)
 const lastVersion = versions.find((v) => !v.includes("-"));
 
+const siteUrl = "https://chainsafe.github.io";
+const basePath = "/lodestar";
+
 const config: Config = {
   title: "Lodestar",
   tagline: "TypeScript Implementation of Ethereum Consensus",
@@ -166,7 +169,7 @@ const config: Config = {
       attributes: {
         rel: "apple-touch-icon",
         sizes: "180x180",
-        href: "/lodestar/images/apple-touch-icon.png",
+        href: `${basePath}/images/apple-touch-icon.png`,
       },
     },
     {
@@ -175,21 +178,28 @@ const config: Config = {
         rel: "icon",
         type: "image/png",
         sizes: "192x192",
-        href: "/lodestar/images/favicon-192x192.png",
+        href: `${basePath}/images/favicon-192x192.png`,
       },
     },
     {
       tagName: "meta",
       attributes: {
         property: "og:image",
-        content: "https://chainsafe.github.io/lodestar/images/favicon-512x512.png",
+        content: `${siteUrl}${basePath}/images/favicon-512x512.png`,
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:card",
+        content: "summary_large_image",
       },
     },
     {
       tagName: "meta",
       attributes: {
         name: "twitter:image",
-        content: "https://chainsafe.github.io/lodestar/images/favicon-512x512.png",
+        content: `${siteUrl}${basePath}/images/favicon-512x512.png`,
       },
     },
   ],
