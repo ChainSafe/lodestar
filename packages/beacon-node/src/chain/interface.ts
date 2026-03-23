@@ -1,13 +1,7 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, CheckpointWithPayload, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {
-  BeaconStateAllForks,
-  CachedBeaconStateAllForks,
-  EpochShuffling,
-  Index2PubkeyCache,
-} from "@lodestar/state-transition";
+import {CheckpointWithHex, CheckpointWithPayloadStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, EpochShuffling, PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -39,7 +33,7 @@ import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
-import {ImportBlockOpts} from "./blocks/types.js";
+import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
@@ -65,7 +59,6 @@ import {
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
-  SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
   SeenPayloadEnvelopeCache,
   SeenSyncCommitteeMessages,
@@ -74,6 +67,7 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
+import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
@@ -119,8 +113,7 @@ export interface IBeaconChain {
   readonly regen: IStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly pubkey2index: PubkeyIndexMap;
-  readonly index2pubkey: Index2PubkeyCache;
+  readonly pubkeyCache: PubkeyCache;
   readonly archiveStore: IArchiveStore;
 
   // Ops pool
@@ -137,13 +130,13 @@ export interface IBeaconChain {
   readonly seenAggregators: SeenAggregators;
   readonly seenPayloadAttesters: SeenPayloadAttesters;
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
-  readonly seenExecutionPayloadEnvelopes: SeenExecutionPayloadEnvelopes;
   readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   readonly seenPayloadEnvelopeCache: SeenPayloadEnvelopeCache;
   /** Deserialized envelopes cached from gossip, keyed by beacon block root hex.
    *  Block import path consumes these to import parent envelopes before state transition. */
@@ -205,7 +198,7 @@ export interface IBeaconChain {
   ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
   /** Return state bytes by checkpoint */
   getStateOrBytesByCheckpoint(
-    checkpoint: CheckpointWithPayload
+    checkpoint: CheckpointWithPayloadStatus
   ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
 
   /**
@@ -262,6 +255,9 @@ export interface IBeaconChain {
 
   /** Process a signed execution payload envelope (post-gloas) */
   importExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void>;
+
+  /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
+  processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
 
   getStatus(): Status;
 

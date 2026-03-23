@@ -121,7 +121,10 @@ export async function verifyBlocksStateTransitionOnly(
     if (signedEnvelope && isGloasBeaconBlock(block.message)) {
       const postEnvelopeState = postState.clone(true) as CachedBeaconStateGloas;
       // Envelope signatures are verified in verifyBlocksSignatures(); avoid duplicate checks here.
-      processExecutionPayloadEnvelope(postEnvelopeState, signedEnvelope, false);
+      processExecutionPayloadEnvelope(postEnvelopeState, signedEnvelope, {
+        verifySignature: false,
+        verifyStateRoot: false,
+      });
 
       const envelopeHashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
         source: StateHashTreeRootSource.envelopeTransition,

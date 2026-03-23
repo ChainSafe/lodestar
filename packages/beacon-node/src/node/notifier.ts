@@ -171,7 +171,7 @@ function getHeadExecutionInfo(
   // or the parent block's FULL variant to show resolved execution payload info.
   let payloadBlockForDisplay = headInfo;
   if (
-    headInfo.executionStatus === ExecutionStatus.PendingEnvelope ||
+    headInfo.executionStatus === ExecutionStatus.PayloadSeparated ||
     headInfo.payloadStatus === PayloadStatus.PENDING ||
     headInfo.payloadStatus === PayloadStatus.EMPTY
   ) {
@@ -198,13 +198,10 @@ function getHeadExecutionInfo(
 
   const executionPayloadHashInfo = payloadBlockForDisplay.executionPayloadBlockHash;
   const executionPayloadNumberInfo = payloadBlockForDisplay.executionPayloadNumber;
-  const bidHashInfo = payloadBlockForDisplay.blockHashFromBid
-    ? ` bid:${prettyBytesShort(payloadBlockForDisplay.blockHashFromBid)}`
-    : "";
 
   return [
     `exec-block: ${executionStatusStr}/${payloadStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
       executionPayloadHashInfo
-    )}${bidHashInfo})`,
+    )})`,
   ];
 }

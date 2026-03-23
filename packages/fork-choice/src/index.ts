@@ -24,7 +24,7 @@ export {
 export * from "./forkChoice/safeBlocks.js";
 export {
   type CheckpointWithHex,
-  type CheckpointWithPayload,
+  type CheckpointWithPayloadStatus,
   ForkChoiceStore,
   type IForkChoiceStore,
   type JustifiedBalancesGetter,
@@ -38,5 +38,5 @@ export type {
   ProtoBlock,
   ProtoNode,
 } from "./protoArray/interface.js";
-export {ExecutionStatus, PayloadStatus} from "./protoArray/interface.js";
+export {ExecutionStatus, PayloadStatus, isGloasBlock} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";

@@ -1,5 +1,5 @@
-import {Identify} from "@libp2p/identify";
-import {
+import type {Identify} from "@libp2p/identify";
+import type {
   ComponentLogger,
   ConnectionGater,
   ConnectionProtector,
@@ -16,7 +16,7 @@ import {
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
 import type {Datastore} from "interface-datastore";
-import {Libp2p as ILibp2p} from "libp2p";
+import type {Libp2p as ILibp2p} from "libp2p";
 import {
   AttesterSlashing,
   DataColumnSidecar,

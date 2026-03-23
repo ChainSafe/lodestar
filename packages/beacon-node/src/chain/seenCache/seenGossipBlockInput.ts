@@ -17,11 +17,12 @@ import {Metrics} from "../../metrics/metrics.js";
 import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {
   BlockInput,
   BlockInputBlobs,
   BlockInputColumns,
-  BlockInputPayloadBid,
+  BlockInputNoData,
   BlockInputPreData,
   BlockWithSource,
   DAType,
@@ -55,6 +56,7 @@ export type SeenBlockInputCacheModules = {
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   custodyConfig: CustodyConfig;
+  serializedCache: SerializedCache;
   metrics: Metrics | null;
   logger?: Logger;
 };
@@ -101,6 +103,7 @@ export class SeenBlockInput {
   private readonly clock: IClock;
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
+  private readonly serializedCache: SerializedCache;
   private readonly metrics: Metrics | null;
   private readonly logger?: Logger;
   private blockInputs = new Map<RootHex, IBlockInput>();
@@ -109,19 +112,35 @@ export class SeenBlockInput {
   // and the signature to ensure we only skip verification if both match
   private verifiedProposerSignatures = new Map<Slot, Map<RootHex, BLSSignature>>();
 
-  constructor({config, custodyConfig, clock, chainEvents, signal, metrics, logger}: SeenBlockInputCacheModules) {
+  constructor({
+    config,
+    custodyConfig,
+    clock,
+    chainEvents,
+    signal,
+    serializedCache,
+    metrics,
+    logger,
+  }: SeenBlockInputCacheModules) {
     this.config = config;
     this.custodyConfig = custodyConfig;
     this.clock = clock;
     this.chainEvents = chainEvents;
     this.signal = signal;
+    this.serializedCache = serializedCache;
     this.metrics = metrics;
     this.logger = logger;
 
     if (metrics) {
-      metrics.seenCache.blockInput.blockInputCount.addCollect(() =>
-        metrics.seenCache.blockInput.blockInputCount.set(this.blockInputs.size)
-      );
+      metrics.seenCache.blockInput.blockInputCount.addCollect(() => {
+        metrics.seenCache.blockInput.blockInputCount.set(this.blockInputs.size);
+        metrics.seenCache.blockInput.serializedObjectRefs.set(
+          Array.from(this.blockInputs.values()).reduce(
+            (count, blockInput) => count + blockInput.getSerializedCacheKeys().length,
+            0
+          )
+        );
+      });
     }
 
     this.chainEvents.on(ChainEvent.forkChoiceFinalized, this.onFinalized);
@@ -142,7 +161,10 @@ export class SeenBlockInput {
    * Removes the single BlockInput from the cache
    */
   remove(rootHex: RootHex): void {
-    this.blockInputs.delete(rootHex);
+    const blockInput = this.blockInputs.get(rootHex);
+    if (blockInput) {
+      this.evictBlockInput(blockInput);
+    }
   }
 
   /**
@@ -154,24 +176,24 @@ export class SeenBlockInput {
     let deletedCount = 0;
     while (blockInput) {
       deletedCount++;
-      this.blockInputs.delete(blockInput.blockRootHex);
+      this.evictBlockInput(blockInput);
       blockInput = this.blockInputs.get(parentRootHex ?? "");
       parentRootHex = blockInput?.parentRootHex;
     }
-    this.logger?.debug(`BlockInputCache.prune deleted ${deletedCount} cached BlockInputs`);
+    this.logger?.debug("BlockInputCache.prune deleted cached BlockInputs", {deletedCount});
     this.pruneToMaxSize();
   }
 
   onFinalized = (checkpoint: CheckpointWithHex) => {
     let deletedCount = 0;
     const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    for (const [rootHex, blockInput] of this.blockInputs) {
+    for (const [, blockInput] of this.blockInputs) {
       if (blockInput.slot < cutoffSlot) {
         deletedCount++;
-        this.blockInputs.delete(rootHex);
+        this.evictBlockInput(blockInput);
       }
     }
-    this.logger?.debug(`BlockInputCache.onFinalized deleted ${deletedCount} cached BlockInputs`);
+    this.logger?.debug("BlockInputCache.onFinalized deleted cached BlockInputs", {deletedCount});
     this.pruneToMaxSize();
   };
 
@@ -181,14 +203,13 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // Post-Gloas: beacon blocks contain only a bid. No DA data dependency — the execution
-      // payload and data columns are delivered via their own separate gossip pipelines.
       if (isForkPostGloas(forkName)) {
-        blockInput = BlockInputPayloadBid.createFromBlock({
+        // Post-gloas
+        blockInput = BlockInputNoData.createFromBlock({
           block: block as SignedBeaconBlock<ForkPostGloas>,
           blockRootHex,
           daOutOfRange,
-          forkName: forkName as ForkPostGloas,
+          forkName,
           source,
           seenTimestampSec,
           peerIdStr,
@@ -204,8 +225,8 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-        // Fulu Only
       } else if (isForkPostFulu(forkName)) {
+        // Fulu Only
         blockInput = BlockInputColumns.createFromBlock({
           block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
           blockRootHex,
@@ -217,8 +238,8 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-        // Deneb and Electra
       } else {
+        // Deneb and Electra
         blockInput = BlockInputBlobs.createFromBlock({
           block: block as SignedBeaconBlock<ForkBlobsDA>,
           blockRootHex,
@@ -229,6 +250,7 @@ export class SeenBlockInput {
           peerIdStr,
         });
       }
+      this.metrics?.seenCache.blockInput.createdByBlock.inc();
       this.blockInputs.set(blockInput.blockRootHex, blockInput);
     }
 
@@ -328,7 +350,7 @@ export class SeenBlockInput {
         custodyColumns: this.custodyConfig.custodyColumns,
         sampledColumns: this.custodyConfig.sampledColumns,
       });
-      this.metrics?.seenCache.blockInput.createdByBlob.inc();
+      this.metrics?.seenCache.blockInput.createdByColumn.inc();
       this.blockInputs.set(blockRootHex, blockInput);
     }
 
@@ -409,13 +431,19 @@ export class SeenBlockInput {
 
     if (itemsToDelete > 0) {
       const sorted = [...this.blockInputs.entries()].sort((a, b) => a[1].slot - b[1].slot);
-      for (const [rootHex] of sorted) {
-        this.blockInputs.delete(rootHex);
+      for (const [, blockInput] of sorted) {
+        this.evictBlockInput(blockInput);
         itemsToDelete--;
         if (itemsToDelete <= 0) return;
       }
     }
     pruneSetToMax(this.verifiedProposerSignatures, MAX_BLOCK_INPUT_CACHE_SIZE);
+  }
+
+  private evictBlockInput(blockInput: IBlockInput): void {
+    // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
+    this.serializedCache.delete(blockInput.getSerializedCacheKeys());
+    this.blockInputs.delete(blockInput.blockRootHex);
   }
 }
 

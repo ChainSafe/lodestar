@@ -34,9 +34,10 @@ export async function* onBlobSidecarsByRange(
 
   // Non-finalized range of blobs
   if (endSlot > finalizedSlot) {
-    const head = chain.forkChoice.getHead();
+    const headBlock = chain.forkChoice.getHead();
+    const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(head);
+    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {

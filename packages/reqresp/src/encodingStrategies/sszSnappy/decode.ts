@@ -1,8 +1,9 @@
+import type {Stream} from "@libp2p/interface";
+import type {ByteStream} from "@libp2p/utils";
 import {decode as varintDecode, encodingLength as varintEncodingLength} from "uint8-varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {TypeSizes} from "../../types.js";
-import {BufferedSource} from "../../utils/index.js";
-import {SnappyFramesUncompress} from "../../utils/snappyIndex.js";
+import {ChunkType, decodeSnappyFrameData, parseSnappyFrameHeader} from "../../utils/snappyIndex.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
 import {maxEncodedLen} from "./utils.js";
 
@@ -15,76 +16,115 @@ export const MAX_VARINT_BYTES = 10;
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function readSszSnappyPayload(bufferedSource: BufferedSource, type: TypeSizes): Promise<Uint8Array> {
-  const sszDataLength = await readSszSnappyHeader(bufferedSource, type);
+export async function readSszSnappyPayload(
+  stream: ByteStream<Stream>,
+  type: TypeSizes,
+  signal?: AbortSignal
+): Promise<Uint8Array> {
+  const sszDataLength = await readSszSnappyHeader(stream, type, signal);
 
-  return readSszSnappyBody(bufferedSource, sszDataLength);
+  return readSszSnappyBody(stream, sszDataLength, signal);
 }
 
 /**
  * Reads `<encoding-dependent-header>` for ssz-snappy.
  * encoding-header ::= the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
  */
-export async function readSszSnappyHeader(bufferedSource: BufferedSource, type: TypeSizes): Promise<number> {
-  for await (const buffer of bufferedSource) {
-    // Get next bytes if empty
-    if (buffer.length === 0) {
-      continue;
+export async function readSszSnappyHeader(
+  stream: ByteStream<Stream>,
+  type: TypeSizes,
+  signal?: AbortSignal
+): Promise<number> {
+  const varintBytes: number[] = [];
+
+  while (true) {
+    const byte = await readExactOrSourceAborted(stream, 1, signal);
+
+    const value = byte.get(0);
+
+    varintBytes.push(value);
+    if (varintBytes.length > MAX_VARINT_BYTES) {
+      throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes.length});
     }
 
-    let sszDataLength: number;
-    try {
-      sszDataLength = varintDecode(buffer.subarray());
-    } catch (_e) {
-      throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: Infinity});
-    }
-
-    // MUST validate: the unsigned protobuf varint used for the length-prefix MUST not be longer than 10 bytes
-    // encodingLength function only returns 1-8 inclusive
-    const varintBytes = varintEncodingLength(sszDataLength);
-    buffer.consume(varintBytes);
-
-    // MUST validate: the length-prefix is within the expected size bounds derived from the payload SSZ type.
-    const minSize = type.minSize;
-    const maxSize = type.maxSize;
-    if (sszDataLength < minSize) {
-      throw new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
-    }
-    if (sszDataLength > maxSize) {
-      throw new SszSnappyError({code: SszSnappyErrorCode.OVER_SSZ_MAX_SIZE, maxSize, sszDataLength});
-    }
-
-    return sszDataLength;
+    // MSB not set => varint terminated
+    if ((value & 0x80) === 0) break;
   }
 
-  throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
+  let sszDataLength: number;
+  try {
+    sszDataLength = varintDecode(Uint8Array.from(varintBytes));
+  } catch {
+    throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: Infinity});
+  }
+
+  // MUST validate: the unsigned protobuf varint used for the length-prefix MUST not be longer than 10 bytes
+  // encodingLength function only returns 1-8 inclusive
+  const varintByteLength = varintEncodingLength(sszDataLength);
+  if (varintByteLength > MAX_VARINT_BYTES) {
+    throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintByteLength});
+  }
+
+  // MUST validate: the length-prefix is within the expected size bounds derived from the payload SSZ type.
+  const minSize = type.minSize;
+  const maxSize = type.maxSize;
+  if (sszDataLength < minSize) {
+    throw new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
+  }
+  if (sszDataLength > maxSize) {
+    throw new SszSnappyError({code: SszSnappyErrorCode.OVER_SSZ_MAX_SIZE, maxSize, sszDataLength});
+  }
+
+  return sszDataLength;
 }
 
 /**
  * Reads `<encoded-payload>` for ssz-snappy and decompress.
  * The returned bytes can be SSZ deseralized
  */
-export async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: number): Promise<Uint8Array> {
-  const decompressor = new SnappyFramesUncompress();
+export async function readSszSnappyBody(
+  stream: ByteStream<Stream>,
+  sszDataLength: number,
+  signal?: AbortSignal
+): Promise<Uint8Array> {
   const uncompressedData = new Uint8ArrayList();
-  let readBytes = 0;
+  let encodedBytesRead = 0;
+  const maxBytes = maxEncodedLen(sszDataLength);
+  let foundIdentifier = false;
 
-  for await (const buffer of bufferedSource) {
+  while (uncompressedData.length < sszDataLength) {
+    const header = await readExactOrSourceAborted(stream, 4, signal);
+
     // SHOULD NOT read more than max_encoded_len(n) bytes after reading the SSZ length-prefix n from the header
-    readBytes += buffer.length;
-    if (readBytes > maxEncodedLen(sszDataLength)) {
-      throw new SszSnappyError({code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ, readBytes, sszDataLength});
-    }
+    encodedBytesRead = addEncodedBytesReadOrThrow(encodedBytesRead, header.length, maxBytes, sszDataLength);
 
-    // No bytes left to consume, get next
-    if (buffer.length === 0) {
-      continue;
-    }
-
-    // stream contents can be passed through a buffered Snappy reader to decompress frame by frame
+    let headerParsed: {type: ChunkType; frameSize: number};
     try {
-      const uncompressed = decompressor.uncompress(buffer);
-      buffer.consume(buffer.length);
+      headerParsed = parseSnappyFrameHeader(header.subarray());
+      if (!foundIdentifier && headerParsed.type !== ChunkType.IDENTIFIER) {
+        throw new Error("malformed input: must begin with an identifier");
+      }
+    } catch (e) {
+      throw new SszSnappyError({code: SszSnappyErrorCode.DECOMPRESSOR_ERROR, decompressorError: e as Error});
+    }
+
+    if (headerParsed.frameSize > maxBytes - encodedBytesRead) {
+      throw new SszSnappyError({
+        code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
+        readBytes: encodedBytesRead + headerParsed.frameSize,
+        sszDataLength,
+      });
+    }
+    const frame = await readExactOrSourceAborted(stream, headerParsed.frameSize, signal);
+
+    encodedBytesRead = addEncodedBytesReadOrThrow(encodedBytesRead, frame.length, maxBytes, sszDataLength);
+
+    try {
+      if (headerParsed.type === ChunkType.IDENTIFIER) {
+        foundIdentifier = true;
+      }
+
+      const uncompressed = decodeSnappyFrameData(headerParsed.type, frame.subarray());
       if (uncompressed !== null) {
         uncompressedData.append(uncompressed);
       }
@@ -96,16 +136,34 @@ export async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataL
     if (uncompressedData.length > sszDataLength) {
       throw new SszSnappyError({code: SszSnappyErrorCode.TOO_MANY_BYTES, sszDataLength});
     }
-
-    // Keep reading chunks until `n` SSZ bytes
-    if (uncompressedData.length < sszDataLength) {
-      continue;
-    }
-
-    // buffer.length === n
-    return uncompressedData.subarray(0, sszDataLength);
   }
 
-  // SHOULD consider invalid: An early EOF before fully reading the declared length-prefix worth of SSZ bytes
-  throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
+  // buffer.length === n
+  return uncompressedData.subarray(0, sszDataLength);
+}
+
+function addEncodedBytesReadOrThrow(
+  encodedBytesRead: number,
+  bytesToAdd: number,
+  maxBytes: number,
+  sszDataLength: number
+): number {
+  const nextReadBytes = encodedBytesRead + bytesToAdd;
+  if (nextReadBytes > maxBytes) {
+    throw new SszSnappyError({code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ, readBytes: nextReadBytes, sszDataLength});
+  }
+  return nextReadBytes;
+}
+
+async function readExactOrSourceAborted(
+  stream: ByteStream<Stream>,
+  bytes: number,
+  signal?: AbortSignal
+): Promise<Uint8ArrayList> {
+  return stream.read({bytes, signal}).catch((e) => {
+    if ((e as Error).name === "UnexpectedEOFError") {
+      throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
+    }
+    throw e;
+  });
 }

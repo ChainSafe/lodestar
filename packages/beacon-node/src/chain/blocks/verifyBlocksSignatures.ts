@@ -109,8 +109,11 @@ async function verifyExecutionPayloadEnvelopeSignature(
   const envelope = signedEnvelope.message;
   const pubkey =
     envelope.builderIndex === BUILDER_INDEX_SELF_BUILD
-      ? state.epochCtx.index2pubkey[block.message.proposerIndex]
+      ? state.epochCtx.getPubkey(block.message.proposerIndex)
       : PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey);
+  if (pubkey == null) {
+    return false;
+  }
   const publicKey = pubkey instanceof PublicKey ? pubkey : PublicKey.fromBytes(pubkey);
   const signatureSet = createSingleSignatureSetFromComponents(
     publicKey,

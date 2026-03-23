@@ -16,7 +16,7 @@ import {
   convertValidatorIndexToBuilderIndex,
   isBuilderIndex,
   isParentBlockFull,
-} from "../util/gloas.ts";
+} from "../util/gloas.js";
 import {
   decreaseBalance,
   getMaxEffectiveBalance,

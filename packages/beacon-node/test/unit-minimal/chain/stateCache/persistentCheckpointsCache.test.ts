@@ -1,6 +1,7 @@
 import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ACTIVE_PRESET, PresetName, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
@@ -13,7 +14,6 @@ import {
 } from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {CheckpointHexPayload} from "../../../../src/chain/stateCache/types.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
-import {testLogger} from "../../../utils/logger.js";
 import {generateCachedState} from "../../../utils/state.js";
 
 describe("PersistentCheckpointStateCache", () => {
@@ -57,7 +57,7 @@ describe("PersistentCheckpointStateCache", () => {
     cp1 = {epoch: 21, root: root1};
     cp2 = {epoch: 22, root: root2};
     [cp0aHex, cp0bHex, cp1Hex, cp2Hex] = [cp0a, cp0b, cp1, cp2].map((cp) => toCheckpointHexPayload(cp, true));
-    persistent0bKey = toHexString(checkpointToDatastoreKey(cp0b));
+    persistent0bKey = toHexString(checkpointToDatastoreKey(cp0b, true));
     const allStates = [cp0a, cp0b, cp1, cp2]
       .map((cp) => generateCachedState({slot: cp.epoch * SLOTS_PER_EPOCH}))
       .map((state, i) => {
@@ -1039,7 +1039,7 @@ describe("PersistentCheckpointStateCache", () => {
   });
 
   async function assertPersistedCheckpointState(cps: phase0.Checkpoint[], stateBytesArr: Uint8Array[]): Promise<void> {
-    const persistedKeys = cps.map((cp) => toHexString(checkpointToDatastoreKey(cp)));
+    const persistedKeys = cps.map((cp) => toHexString(checkpointToDatastoreKey(cp, true)));
     expect(Array.from(fileApisBuffer.keys())).toStrictEqual(persistedKeys);
     for (const [i, persistedKey] of persistedKeys.entries()) {
       expect(fileApisBuffer.get(persistedKey)).toStrictEqual(stateBytesArr[i]);

@@ -1,8 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
-import {testLogger} from "../../utils/logger.js";
 
 describe("ValidatorMonitor", () => {
   // Use phase0 config (no altair) to avoid needing full state with block roots

@@ -9,8 +9,10 @@ export enum RegenCaller {
   processBlock = "processBlock",
   produceBlock = "produceBlock",
   validateGossipBlock = "validateGossipBlock",
+  validateGossipPayloadEnvelope = "validateGossipPayloadEnvelope",
   validateGossipBlob = "validateGossipBlob",
   validateGossipDataColumn = "validateGossipDataColumn",
+  validateGossipExecutionPayloadEnvelope = "validateGossipExecutionPayloadEnvelope",
   precomputeEpoch = "precomputeEpoch",
   predictProposerHead = "predictProposerHead",
   produceAttestationData = "produceAttestationData",
@@ -50,7 +52,7 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
    * @param blockRootHex - Block root hex
    * @param postState - Cached beacon state after block processing
    */
-  processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void;
+  processBlockState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void;
   /**
    * Process payload state for caching (after processExecutionPayloadEnvelope).
    * Only called for Gloas blocks that have payloads revealed.
@@ -68,6 +70,7 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks, payloadPresent: boolean): void;
   updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch, payloadPresent: boolean): number | null;
+  upgradeForGloas(epoch: Epoch): void;
 }
 
 /**

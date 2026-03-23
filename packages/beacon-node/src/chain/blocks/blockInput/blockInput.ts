@@ -1,5 +1,5 @@
 import {ForkName, ForkPostFulu, ForkPostGloas, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu, gloas} from "@lodestar/types";
 import {byteArrayEquals, fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -24,7 +24,12 @@ import {
   SourceMeta,
 } from "./types.js";
 
-export type BlockInput = BlockInputPreData | BlockInputBlobs | BlockInputColumns | BlockInputPayloadBid;
+export type BlockInput =
+  | BlockInputPreData
+  | BlockInputBlobs
+  | BlockInputColumns
+  | BlockInputPayloadBid
+  | BlockInputNoData;
 
 export function isBlockInputPreDeneb(blockInput: IBlockInput): blockInput is BlockInputPreData {
   return blockInput.type === DAType.PreData;
@@ -39,6 +44,10 @@ export function isBlockInputColumns(blockInput: IBlockInput): blockInput is Bloc
 
 export function isBlockInputPayloadBid(blockInput: IBlockInput): blockInput is BlockInputPayloadBid {
   return blockInput.type === DAType.PayloadBid;
+}
+
+export function isBlockInputNoData(blockInput: IBlockInput): blockInput is BlockInputNoData {
+  return blockInput.type === DAType.NoData;
 }
 
 function createPromise<T>(): PromiseParts<T> {
@@ -105,6 +114,7 @@ abstract class AbstractBlockInput<F extends ForkName = ForkName, TData extends D
   }
 
   abstract addBlock(props: AddBlock<F>): void;
+  abstract getSerializedCacheKeys(): object[];
 
   hasBlock(): boolean {
     return this.state.hasBlock;
@@ -243,6 +253,10 @@ export class BlockInputPreData extends AbstractBlockInput<ForkPreDeneb, null> {
       );
     }
   }
+
+  getSerializedCacheKeys(): object[] {
+    return [this.state.block];
+  }
 }
 
 // Payload Bid (Post-Gloas)
@@ -293,6 +307,10 @@ export class BlockInputPayloadBid extends AbstractBlockInput<ForkPostGloas, null
       timeCompleteSec: props.seenTimestampSec,
     };
     return new BlockInputPayloadBid(init, state);
+  }
+
+  getSerializedCacheKeys(): object[] {
+    return [this.state.block];
   }
 
   addBlock(_: AddBlock, opts = {throwOnDuplicateAdd: true}): void {
@@ -588,6 +606,20 @@ export class BlockInputBlobs extends AbstractBlockInput<ForkBlobsDA, deneb.BlobS
 
   getBlobs(): deneb.BlobSidecars {
     return this.getAllBlobsWithSource().map(({blobSidecar}) => blobSidecar);
+  }
+
+  getSerializedCacheKeys(): object[] {
+    const objects: object[] = [];
+
+    if (this.state.hasBlock) {
+      objects.push(this.state.block);
+    }
+
+    for (const {blobSidecar} of this.blobsCache.values()) {
+      objects.push(blobSidecar);
+    }
+
+    return objects;
   }
 }
 
@@ -968,5 +1000,82 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
       return withTimeout(() => this.computedDataPromise.promise, timeout, signal);
     }
     return Promise.resolve(this.getSampledColumns());
+  }
+
+  getSerializedCacheKeys(): object[] {
+    const objects: object[] = [];
+
+    if (this.state.hasBlock) {
+      objects.push(this.state.block);
+    }
+
+    objects.push(...this.getAllColumns());
+
+    return objects;
+  }
+}
+
+type BlockInputNoDataState = {
+  hasBlock: true;
+  hasAllData: true;
+  block: SignedBeaconBlock<ForkPostGloas>;
+  source: SourceMeta;
+  timeCompleteSec: number;
+};
+
+export class BlockInputNoData extends AbstractBlockInput<ForkPostGloas, null> {
+  type = DAType.NoData as const;
+
+  state: BlockInputNoDataState;
+
+  private constructor(init: BlockInputInit, state: BlockInputNoDataState) {
+    super(init);
+    this.state = state;
+    this.dataPromise.resolve(null);
+    this.blockPromise.resolve(state.block);
+  }
+
+  static createFromBlock(props: AddBlock<ForkPostGloas> & CreateBlockInputMeta): BlockInputNoData {
+    const init: BlockInputInit = {
+      daOutOfRange: props.daOutOfRange,
+      timeCreated: props.seenTimestampSec,
+      forkName: props.forkName,
+      slot: props.block.message.slot,
+      blockRootHex: props.blockRootHex,
+      parentRootHex: toRootHex(props.block.message.parentRoot),
+    };
+    const state: BlockInputNoDataState = {
+      hasBlock: true,
+      hasAllData: true,
+      block: props.block,
+      source: {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      },
+      timeCompleteSec: props.seenTimestampSec,
+    };
+    return new BlockInputNoData(init, state);
+  }
+
+  addBlock(_: AddBlock<ForkPostGloas>, opts = {throwOnDuplicateAdd: true}): void {
+    if (opts.throwOnDuplicateAdd) {
+      throw new BlockInputError(
+        {
+          code: BlockInputErrorCode.INVALID_CONSTRUCTION,
+          blockRoot: this.blockRootHex,
+        },
+        "Cannot addBlock to BlockInputNoData - block already exists"
+      );
+    }
+  }
+
+  getBlobKzgCommitments(): deneb.BlobKzgCommitments {
+    return (this.state.block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
+      .blobKzgCommitments;
+  }
+
+  getSerializedCacheKeys(): object[] {
+    return [this.state.block];
   }
 }

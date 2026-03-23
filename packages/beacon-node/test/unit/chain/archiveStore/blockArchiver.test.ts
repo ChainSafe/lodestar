@@ -3,14 +3,13 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {ZERO_HASH} from "@lodestar/params";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
-import {testLogger} from "../../../utils/logger.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
 function toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
@@ -70,7 +69,7 @@ describe("block archiver task", () => {
       forkChoiceStub,
       lightclientServer,
       logger,
-      {epoch: 5, rootHex: ZERO_HASH_HEX, root: ZERO_HASH, payloadStatus: PayloadStatus.EMPTY},
+      {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX, payloadStatus: PayloadStatus.FULL},
       currentEpoch
     );
 
@@ -143,7 +142,12 @@ describe("block archiver task", () => {
       forkChoiceStub,
       lightclientServer,
       logger,
-      {epoch: config.FULU_FORK_EPOCH + 1, root: ZERO_HASH, rootHex: ZERO_HASH_HEX, payloadStatus: PayloadStatus.EMPTY},
+      {
+        epoch: config.FULU_FORK_EPOCH + 1,
+        root: fromHexString(ZERO_HASH_HEX),
+        rootHex: ZERO_HASH_HEX,
+        payloadStatus: PayloadStatus.FULL,
+      },
       currentEpoch
     );
 

@@ -1,4 +1,5 @@
 import path from "node:path";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -8,7 +9,6 @@ import {
 } from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -70,7 +70,7 @@ export function generateBlocksSZZTypeMapping(fork: ForkName, n: number): BlocksS
  * ```
  * {blocks_count: 16}
  * ```
- * https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/finality/README.md
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/finality/README.md
  */
 type FinalityTestCase = {
   [k: string]: altair.SignedBeaconBlock | unknown | null | undefined;

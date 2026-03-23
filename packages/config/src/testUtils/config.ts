@@ -1,7 +1,8 @@
-import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
-import {config as chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {ZERO_HASH} from "../../src/constants/index.js";
+import {config as chainConfig} from "../default.js";
+import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "../index.js";
+
+export const ZERO_HASH = Buffer.alloc(32, 0);
 
 /** default config with ZERO_HASH as genesisValidatorsRoot */
 export const config = createBeaconConfig(chainConfig, ZERO_HASH);

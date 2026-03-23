@@ -179,7 +179,11 @@ export class Validator {
           urls: typeof clientOrUrls === "string" ? [clientOrUrls] : clientOrUrls,
           // Validator would need the beacon to respond within the slot
           // See https://github.com/ChainSafe/lodestar/issues/5315 for rationale
-          globalInit: {timeoutMs: config.SLOT_DURATION_MS, signal: controller.signal, ...globalInit},
+          globalInit: {
+            signal: controller.signal,
+            ...globalInit,
+            timeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
+          },
         },
         {config, logger, metrics: metrics?.restApiClient}
       );
@@ -296,6 +300,7 @@ export class Validator {
         urls: urls.map(toPrintableUrl).toString(),
         requestWireFormat: globalInit?.requestWireFormat ?? defaultInit.requestWireFormat,
         responseWireFormat: globalInit?.responseWireFormat ?? defaultInit.responseWireFormat,
+        requestTimeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
       });
     } else {
       api = clientOrUrls;

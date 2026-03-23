@@ -4,6 +4,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
   ForkPostBellatrix,
+  ForkPostCapella,
   ForkPostDeneb,
   ForkPostFulu,
   ForkPostGloas,
@@ -457,7 +458,7 @@ export async function produceBlockBody<T extends BlockType>(
           parentBlockRoot: toRootHex(parentBlockRoot),
           feeRecipient,
         });
-        // https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/validator.md#constructing-the-beaconblockbody
+        // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/deneb/validator.md#constructing-the-beaconblockbody
         const prepareRes = await prepareExecutionPayload(
           this,
           this.logger,
@@ -527,9 +528,16 @@ export async function produceBlockBody<T extends BlockType>(
           // NOTE: Even though the fulu.BlobsBundle type is superficially the same as deneb.BlobsBundle, it is NOT.
           // In fulu, proofs are _cell_ proofs, vs in deneb they are _blob_ proofs.
 
+          const timer = this?.metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
           const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
+          timer?.();
           if (this.opts.sanityCheckExecutionEngineBlobs) {
-            await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+            const validationTimer = this.metrics?.peerDas.kzgVerificationDataColumnBatchTime.startTimer();
+            try {
+              await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+            } finally {
+              validationTimer?.();
+            }
           }
 
           (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
@@ -584,8 +592,14 @@ export async function produceBlockBody<T extends BlockType>(
     });
   }
 
-  if (ForkSeq[fork] >= ForkSeq.capella && ForkSeq[fork] < ForkSeq.gloas) {
-    const {blsToExecutionChanges, executionPayload} = blockBody as capella.BeaconBlockBody;
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blsToExecutionChanges, payloadAttestations} = blockBody as BeaconBlockBody<ForkPostGloas>;
+    Object.assign(logMeta, {
+      blsToExecutionChanges: blsToExecutionChanges.length,
+      payloadAttestations: payloadAttestations.length,
+    });
+  } else if (ForkSeq[fork] >= ForkSeq.capella) {
+    const {blsToExecutionChanges, executionPayload} = blockBody as BeaconBlockBody<ForkPostCapella & ForkPreGloas>;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
     });
@@ -596,12 +610,6 @@ export async function produceBlockBody<T extends BlockType>(
         withdrawals: executionPayload.withdrawals.length,
       });
     }
-  } else if (ForkSeq[fork] >= ForkSeq.gloas) {
-    const {blsToExecutionChanges, payloadAttestations} = blockBody as gloas.BeaconBlockBody;
-    Object.assign(logMeta, {
-      blsToExecutionChanges: blsToExecutionChanges.length,
-      payloadAttestations: payloadAttestations.length,
-    });
   }
 
   Object.assign(logMeta, {executionPayloadValue});
@@ -750,8 +758,7 @@ export function getPayloadAttributesForSSE(
 
   let parentBlockNumber: number;
   if (isForkPostGloas(fork)) {
-    // TODO GLOAS: revisit this after fork choice changes are merged
-    const parentBlock = chain.forkChoice.getBlockDefaultStatus(parentBlockRoot);
+    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(toRootHex(parentBlockRoot), toRootHex(parentHash));
     if (parentBlock?.executionPayloadBlockHash == null) {
       throw Error(`Parent block not found in fork choice root=${toRootHex(parentBlockRoot)}`);
     }

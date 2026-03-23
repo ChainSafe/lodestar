@@ -1,4 +1,4 @@
-import {CheckpointWithPayload} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
 import {RootHex} from "@lodestar/types";
 import {Metrics} from "../../metrics/metrics.js";
 
@@ -44,9 +44,9 @@ export type FinalizedStats = {
 
 export interface StateArchiveStrategy {
   onCheckpoint(stateRoot: RootHex, metrics?: Metrics | null): Promise<void>;
-  onFinalizedCheckpoint(finalized: CheckpointWithPayload, metrics?: Metrics | null): Promise<void>;
-  maybeArchiveState(finalized: CheckpointWithPayload, metrics?: Metrics | null): Promise<void>;
-  archiveState(finalized: CheckpointWithPayload, metrics?: Metrics | null): Promise<void>;
+  onFinalizedCheckpoint(finalized: CheckpointWithPayloadStatus, metrics?: Metrics | null): Promise<void>;
+  maybeArchiveState(finalized: CheckpointWithPayloadStatus, metrics?: Metrics | null): Promise<void>;
+  archiveState(finalized: CheckpointWithPayloadStatus, metrics?: Metrics | null): Promise<void>;
 }
 
 export interface IArchiveStore {

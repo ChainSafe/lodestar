@@ -1,9 +1,17 @@
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {routes} from "@lodestar/api";
-import {CheckpointWithPayload, IForkChoice, PayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus, IForkChoice, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, PubkeyCache} from "@lodestar/state-transition";
+import {
+  BLSPubkey,
+  Epoch,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+  getValidatorStatus,
+  mapToGeneralStatus,
+  phase0,
+} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
@@ -11,7 +19,7 @@ import {ApiError, ValidationError} from "../../errors.js";
 export function resolveStateId(
   forkChoice: IForkChoice,
   stateId: routes.beacon.StateId
-): RootHex | Slot | CheckpointWithPayload {
+): RootHex | Slot | CheckpointWithPayloadStatus {
   if (stateId === "head") {
     return forkChoice.getHead().stateRoot;
   }
@@ -83,28 +91,6 @@ export async function getStateResponseWithRegen(
   return res;
 }
 
-type GeneralValidatorStatus = "active" | "pending" | "exited" | "withdrawal";
-
-function mapToGeneralStatus(subStatus: routes.beacon.ValidatorStatus): GeneralValidatorStatus {
-  switch (subStatus) {
-    case "active_ongoing":
-    case "active_exiting":
-    case "active_slashed":
-      return "active";
-    case "pending_initialized":
-    case "pending_queued":
-      return "pending";
-    case "exited_slashed":
-    case "exited_unslashed":
-      return "exited";
-    case "withdrawal_possible":
-    case "withdrawal_done":
-      return "withdrawal";
-    default:
-      throw new Error(`Unknown substatus: ${subStatus}`);
-  }
-}
-
 export function toValidatorResponse(
   index: ValidatorIndex,
   validator: phase0.Validator,
@@ -122,7 +108,7 @@ export function toValidatorResponse(
 export function filterStateValidatorsByStatus(
   statuses: string[],
   state: BeaconStateAllForks,
-  pubkey2index: PubkeyIndexMap,
+  pubkeyCache: PubkeyCache,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
@@ -133,7 +119,7 @@ export function filterStateValidatorsByStatus(
     const validatorStatus = getValidatorStatus(validator, currentEpoch);
     const generalStatus = mapToGeneralStatus(validatorStatus);
 
-    const resp = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
+    const resp = getStateValidatorIndex(validator.pubkey, state, pubkeyCache);
     if (resp.valid && (statusSet.has(validatorStatus) || statusSet.has(generalStatus))) {
       responses.push(
         toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
@@ -150,7 +136,7 @@ type StateValidatorIndexResponse =
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
-  pubkey2index: PubkeyIndexMap
+  pubkeyCache: PubkeyCache
 ): StateValidatorIndexResponse {
   if (typeof id === "string") {
     // mutate `id` and fallthrough to below
@@ -178,7 +164,7 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  const validatorIndex = pubkey2index.get(id);
+  const validatorIndex = pubkeyCache.getIndex(id);
   if (validatorIndex === null) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }

@@ -1,5 +1,6 @@
 import path from "node:path";
 import {expect} from "vitest";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -12,7 +13,6 @@ import {
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -55,7 +55,7 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
 };
 
 /**
- * https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/epoch_processing/README.md
  */
 type EpochTransitionCacheingTestCase = {
   meta?: {bls_setting?: bigint};
@@ -87,7 +87,7 @@ const epochProcessing =
 
         if (testcase.post === undefined) {
           // If post.ssz_snappy is not value, the sub-transition processing is aborted
-          // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
+          // https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/epoch_processing/README.md#postssz_snappy
           expect(() => epochTransitionFn(state, epochTransitionCache)).toThrow();
         } else {
           epochTransitionFn(state, epochTransitionCache);

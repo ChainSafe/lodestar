@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
-import {Index2PubkeyCache, createCachedBeaconState, syncPubkeys} from "@lodestar/state-transition";
+import {testLogger} from "@lodestar/logger/test-utils";
+import {createCachedBeaconState, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconChain} from "../../src/chain/chain.js";
@@ -12,7 +12,6 @@ import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.j
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
 import {ClockStatic} from "./clock.js";
-import {testLogger} from "./logger.js";
 import {generateState} from "./state.js";
 
 export type NetworkForTestOpts = {
@@ -43,15 +42,13 @@ export async function getNetworkForTest(
   );
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-  const pubkey2index = new PubkeyIndexMap();
-  const index2pubkey: Index2PubkeyCache = [];
-  syncPubkeys(state.validators.getAllReadonlyValues(), pubkey2index, index2pubkey);
+  const pubkeyCache = createPubkeyCache();
+  syncPubkeys(pubkeyCache, state.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     state,
     {
       config: beaconConfig,
-      pubkey2index,
-      index2pubkey,
+      pubkeyCache,
     },
     {skipSyncPubkeys: true}
   );
@@ -73,8 +70,7 @@ export async function getNetworkForTest(
     {
       privateKey,
       config: beaconConfig,
-      pubkey2index,
-      index2pubkey,
+      pubkeyCache,
       db,
       dataDir: ".",
       dbName: ".",

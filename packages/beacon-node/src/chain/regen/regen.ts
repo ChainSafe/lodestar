@@ -80,10 +80,10 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     if (
       isGloasBeaconBlock(block) &&
       parentBlock.payloadStatus !== PayloadStatus.FULL &&
-      parentBlock.blockHashFromBid !== null
+      parentBlock.executionPayloadBlockHash !== null
     ) {
       const childParentBlockHash = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
-      if (childParentBlockHash === parentBlock.blockHashFromBid) {
+      if (childParentBlockHash === parentBlock.executionPayloadBlockHash) {
         throw new RegenError({
           code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
           blockRoot: block.parentRoot,
@@ -131,9 +131,14 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const {checkpointStateCache} = this.modules;
     const epoch = computeEpochAtSlot(slot);
 
-    // Convert PayloadStatus to payloadPresent boolean.
-    // PENDING blocks are in fork-choice but lack an envelope — treat as non-FULL (payloadPresent=false).
-    // Their checkpoint states are cached with payloadPresent=false during block import.
+    // Convert PayloadStatus to payloadPresent boolean
+    if (block.payloadStatus === PayloadStatus.PENDING) {
+      throw new RegenError({
+        code: RegenErrorCode.UNEXPECTED_PAYLOAD_STATUS,
+        blockRoot: fromHex(blockRoot),
+        payloadStatus: block.payloadStatus,
+      });
+    }
     const payloadPresent = block.payloadStatus === PayloadStatus.FULL;
 
     const latestCheckpointStateCtx = allowDiskReload
@@ -183,7 +188,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
 
     const getSeedStateTimer = this.modules.metrics?.regenGetState.getSeedState.startTimer({caller});
     // iterateAncestorBlocks only returns ancestor blocks, not the block itself
-    for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot)) {
+    for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot, block.payloadStatus)) {
       state = this.modules.blockStateCache.get(b.stateRoot);
       if (state) {
         break;
@@ -192,8 +197,13 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       if (!lastBlockToReplay) continue;
       const epoch = computeEpochAtSlot(lastBlockToReplay.slot - 1);
 
-      // Convert PayloadStatus to payloadPresent boolean.
-      // PENDING blocks are treated as non-FULL (payloadPresent=false).
+      // Convert PayloadStatus to payloadPresent boolean
+      if (b.payloadStatus === PayloadStatus.PENDING) {
+        throw new RegenError({
+          code: RegenErrorCode.INTERNAL_ERROR,
+          message: `Unexpected PENDING payloadStatus for ancestor block ${b.blockRoot} at slot ${b.slot}`,
+        });
+      }
       const payloadPresent = b.payloadStatus === PayloadStatus.FULL;
 
       state = allowDiskReload
@@ -409,14 +419,11 @@ export async function processSlotsToNearestCheckpoint(
     // This may becomes the "official" checkpoint state if the 1st block of epoch is skipped
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    // processSlots() only does epoch transitions, never processes payloads.
-    // Post-Gloas: epoch boundary states are always post-CL (block state, no payload applied),
-    // regardless of the source block's payload status. Always cache as EMPTY (false)
-    // to ensure finalized/justified API lookups find the correct variant.
-    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block).
-    const isGloas = checkpointState.config.getForkSeq(checkpointState.slot) >= ForkSeq.gloas;
-    const cpPayloadPresent = !isGloas;
-    checkpointStateCache.add(cp, checkpointState, cpPayloadPresent);
+    // processSlots() only does epoch transitions, never processes payloads
+    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
+    // Post-Gloas: result is a block state (payloadPresent=false)
+    const isPayloadPresent = checkpointState.config.getForkSeq(checkpointState.slot) < ForkSeq.gloas;
+    checkpointStateCache.add(cp, checkpointState, isPayloadPresent);
     // consumers should not mutate state ever
     emitter?.emit(ChainEvent.checkpoint, cp, checkpointState);
 

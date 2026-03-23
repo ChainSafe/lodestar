@@ -7,7 +7,7 @@ import {ColumnIndex, fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {prettyPrintPeerId} from "../../util.ts";
+import {prettyPrintPeerId} from "../../util.js";
 import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
@@ -78,8 +78,9 @@ export async function* onDataColumnSidecarsByRange(
 
   // Non-finalized range of columns
   if (endSlot > finalizedSlot) {
-    const head = chain.forkChoice.getHead();
-    const headChain = chain.forkChoice.getAllAncestorBlocks(head);
+    const headBlock = chain.forkChoice.getHead();
+    const headRoot = headBlock.blockRoot;
+    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {

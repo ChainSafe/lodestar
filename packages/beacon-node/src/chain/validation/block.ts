@@ -9,7 +9,7 @@ import {
   isExecutionEnabled,
   isExecutionStateType,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, gloas} from "@lodestar/types";
+import {SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -72,12 +72,12 @@ export async function validateGossipBlock(
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   const parentRoot = toRootHex(block.parentRoot);
-  // For gossip validation, we only need to verify the parent root exists in fork-choice.
-  // Post-Gloas blocks use getBlockHexDefaultStatus (root-only) because getBlockHexAndBlockHash
-  // can return null for bid-only parents whose executionPayloadBlockHash hasn't been set yet
-  // (envelope not imported). The full block hash verification happens during state transition.
-  let parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
-
+  let parentBlock = isGloasBeaconBlock(block)
+    ? chain.forkChoice.getBlockHexAndBlockHash(
+        parentRoot,
+        toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
+      )
+    : chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If we have already seen the parent block, it may be in-flight (validated/imported but not
     // inserted into fork-choice yet). Give fork-choice a brief chance to catch up before treating
@@ -126,7 +126,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The block is from a higher slot than its parent.
   if (parentBlock.slot >= blockSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
+    throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.NOT_LATER_THAN_PARENT,
       parentSlot: parentBlock.slot,
       slot: blockSlot,

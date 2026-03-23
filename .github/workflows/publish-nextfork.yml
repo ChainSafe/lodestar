@@ -22,12 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
       - name: Install pnpm before setup node
-        uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 24
           registry-url: "https://registry.npmjs.org"
@@ -37,7 +37,7 @@ jobs:
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
-        uses: actions/cache@master
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # master
         id: cache-deps
         with:
           path: |

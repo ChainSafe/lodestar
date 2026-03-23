@@ -187,6 +187,19 @@ export function xor(a: Uint8Array, b: Uint8Array): Uint8Array {
   return a;
 }
 
+/** Count set bits in a Uint8Array without allocation (Brian Kernighan's algorithm) */
+export function bitCount(arr: Uint8Array): number {
+  let count = 0;
+  for (let i = 0; i < arr.length; i++) {
+    let byte = arr[i];
+    while (byte) {
+      byte &= byte - 1;
+      count++;
+    }
+  }
+  return count;
+}
+
 /**
  * Compare two byte arrays for equality.
  * Note: In Node.js environment, the implementation in nodejs.ts uses Buffer.compare

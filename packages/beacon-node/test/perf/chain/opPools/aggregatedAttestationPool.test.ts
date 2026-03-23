@@ -12,8 +12,8 @@ import {
   getBlockRootAtSlot,
   newFilledArray,
 } from "@lodestar/state-transition";
+import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
-import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
@@ -71,8 +71,6 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
 
           parentBlockHash: null,
           payloadStatus: 2, // PayloadStatus.FULL
-          builderIndex: null,
-          blockHashFromBid: null,
         },
         originalState.slot
       );
@@ -101,10 +99,9 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
 
             parentBlockHash: null,
             payloadStatus: 2, // PayloadStatus.FULL
-            builderIndex: null,
-            blockHashFromBid: null,
           },
-          slot
+          slot,
+          null
         );
       }
 

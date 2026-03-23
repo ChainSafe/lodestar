@@ -2,10 +2,10 @@ import {bench, describe} from "@chainsafe/benchmark";
 import {createChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {reconstructBlobs} from "../../../src/util/blobs.ts";
-import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.ts";
-import {kzg} from "../../../src/util/kzg.ts";
-import {generateRandomBlob} from "../../utils/kzg.ts";
+import {reconstructBlobs} from "../../../src/util/blobs.js";
+import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
+import {kzg} from "../../../src/util/kzg.js";
+import {generateRandomBlob} from "../../utils/kzg.js";
 
 describe("reconstructBlobs", () => {
   const config = createChainForkConfig({

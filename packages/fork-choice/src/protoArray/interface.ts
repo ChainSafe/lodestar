@@ -17,17 +17,27 @@ export const NULL_VOTE_INDEX = 0xffffffff;
  */
 export type VoteIndex = number;
 
+/**
+ * Execution status of a block in fork choice.
+ *
+ * - Valid: Execution payload verified as valid by the EL
+ * - Syncing: EL is syncing, payload validity unknown (optimistic sync)
+ * - PreMerge: Block is from before The Merge, no execution payload exists
+ * - Invalid: Execution payload was invalidated by the EL (post-import status)
+ * - PayloadSeparated: Gloas beacon block without embedded execution payload.
+ *         The execution payload arrives separately via SignedExecutionPayloadEnvelope.
+ *         Gloas blocks WITH execution payload (FULL variant) use Valid/Invalid/Syncing.
+ */
 export enum ExecutionStatus {
   Valid = "Valid",
   Syncing = "Syncing",
   PreMerge = "PreMerge",
   Invalid = "Invalid",
-  /** Post-Gloas blocks with separated payload (bid-only). Pending envelope arrival. */
-  PendingEnvelope = "PendingEnvelope",
+  PayloadSeparated = "PayloadSeparated",
 }
 
 /**
- * Payload status for Gloas fork (EIP-7732 separated payloads)
+ * Payload status for ePBS (Gloas fork)
  * Spec: gloas/fork-choice.md#constants
  */
 export enum PayloadStatus {
@@ -116,12 +126,6 @@ export type ProtoBlock = BlockExtraMeta & {
 
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
-
-  // GLOAS: The followings are from bids. They are null in pre-gloas
-  // Used for execution payload gossip validation
-  builderIndex: number | null;
-  // Used for execution payload gossip validation. Not to be confused with executionPayloadBlockHash
-  blockHashFromBid: RootHex | null;
 
   // Used to determine if this block extends EMPTY or FULL parent variant
   // Spec: gloas/fork-choice.md#new-get_parent_payload_status

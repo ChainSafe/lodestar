@@ -1,68 +1,81 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {
-  BUILDER_INDEX_SELF_BUILD,
-  DOMAIN_BEACON_BUILDER,
-  SLOTS_PER_EPOCH,
-  SLOTS_PER_HISTORICAL_ROOT,
-} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateGloas} from "../types.ts";
-import {computeSigningRoot, computeTimeAtSlot} from "../util/index.ts";
-import {processConsolidationRequest} from "./processConsolidationRequest.ts";
-import {processDepositRequest} from "./processDepositRequest.ts";
-import {processWithdrawalRequest} from "./processWithdrawalRequest.ts";
+import {getExecutionPayloadEnvelopeSignatureSet} from "../signatureSets/executionPayloadEnvelope.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
+import {CachedBeaconStateGloas} from "../types.js";
+import {computeTimeAtSlot} from "../util/index.js";
+import {verifySignatureSet} from "../util/signatureSets.js";
+import {processConsolidationRequest} from "./processConsolidationRequest.js";
+import {processDepositRequest} from "./processDepositRequest.js";
+import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
-// This function does not call execution engine to verify payload. Need to call it from other place
+export type ProcessExecutionPayloadEnvelopeOpts = {
+  verifySignature?: boolean;
+  verifyStateRoot?: boolean;
+  dontTransferCache?: boolean;
+};
+
+// Unlike other block processing functions which mutate state in-place, this function
+// clones the state and returns the post-state, similar to stateTransition().
+// This function does not call execution engine to verify payload. Need to call it from other place.
 export function processExecutionPayloadEnvelope(
   state: CachedBeaconStateGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-  verify: boolean
-): void {
+  opts?: ProcessExecutionPayloadEnvelopeOpts
+): CachedBeaconStateGloas {
+  const {verifySignature = true, verifyStateRoot = true} = opts ?? {};
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(envelope.slot);
 
-  if (verify && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
+  if (verifySignature && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
     throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
   }
 
-  validateExecutionPayloadEnvelope(state, envelope);
+  // .clone() before mutating state, similar to stateTransition()
+  const postState = state.clone(opts?.dontTransferCache) as CachedBeaconStateGloas;
+
+  validateExecutionPayloadEnvelope(postState, envelope);
 
   const requests = envelope.executionRequests;
 
   for (const deposit of requests.deposits) {
-    processDepositRequest(fork, state, deposit);
+    processDepositRequest(fork, postState, deposit);
   }
 
   for (const withdrawal of requests.withdrawals) {
-    processWithdrawalRequest(fork, state, withdrawal);
+    processWithdrawalRequest(fork, postState, withdrawal);
   }
 
   for (const consolidation of requests.consolidations) {
-    processConsolidationRequest(state, consolidation);
+    processConsolidationRequest(postState, consolidation);
   }
 
   // Queue the builder payment
-  const paymentIndex = SLOTS_PER_EPOCH + (state.slot % SLOTS_PER_EPOCH);
-  const payment = state.builderPendingPayments.get(paymentIndex).clone();
+  const paymentIndex = SLOTS_PER_EPOCH + (postState.slot % SLOTS_PER_EPOCH);
+  const payment = postState.builderPendingPayments.get(paymentIndex).clone();
   const amount = payment.withdrawal.amount;
 
   if (amount > 0) {
-    state.builderPendingWithdrawals.push(payment.withdrawal);
+    postState.builderPendingWithdrawals.push(payment.withdrawal);
   }
 
-  state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
+  postState.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
 
   // Cache the execution payload hash
-  state.executionPayloadAvailability.set(state.slot % SLOTS_PER_HISTORICAL_ROOT, true);
-  state.latestBlockHash = payload.blockHash;
+  postState.executionPayloadAvailability.set(postState.slot % SLOTS_PER_HISTORICAL_ROOT, true);
+  postState.latestBlockHash = payload.blockHash;
 
-  if (verify && !byteArrayEquals(envelope.stateRoot, state.hashTreeRoot())) {
+  postState.commit();
+
+  if (verifyStateRoot && !byteArrayEquals(envelope.stateRoot, postState.hashTreeRoot())) {
     throw new Error(
-      `Envelope's state root does not match state envelope=${toRootHex(envelope.stateRoot)} state=${toRootHex(state.hashTreeRoot())}`
+      `Envelope's state root does not match state envelope=${toRootHex(envelope.stateRoot)} state=${toRootHex(postState.hashTreeRoot())}`
     );
   }
+
+  return postState;
 }
 
 function validateExecutionPayloadEnvelope(
@@ -151,24 +164,12 @@ function verifyExecutionPayloadEnvelopeSignature(
   state: CachedBeaconStateGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): boolean {
-  const builderIndex = signedEnvelope.message.builderIndex;
-
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_BUILDER);
-  const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, signedEnvelope.message, domain);
-
-  try {
-    let publicKey: PublicKey;
-
-    if (builderIndex === BUILDER_INDEX_SELF_BUILD) {
-      const validatorIndex = state.latestBlockHeader.proposerIndex;
-      publicKey = state.epochCtx.index2pubkey[validatorIndex];
-    } else {
-      publicKey = PublicKey.fromBytes(state.builders.getReadonly(builderIndex).pubkey);
-    }
-    const signature = Signature.fromBytes(signedEnvelope.signature, true);
-
-    return verify(signingRoot, publicKey, signature);
-  } catch (_e) {
-    return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
-  }
+  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
+    state.config,
+    state.epochCtx.pubkeyCache,
+    new BeaconStateView(state),
+    signedEnvelope,
+    state.latestBlockHeader.proposerIndex
+  );
+  return verifySignatureSet(signatureSet);
 }

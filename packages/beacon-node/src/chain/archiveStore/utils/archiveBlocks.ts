@@ -1,7 +1,7 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithPayload, IForkChoice, PayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
@@ -52,7 +52,7 @@ export async function archiveBlocks(
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer | undefined,
   logger: Logger,
-  finalizedCheckpoint: CheckpointWithPayload,
+  finalizedCheckpoint: CheckpointWithPayloadStatus,
   currentEpoch: Epoch,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
@@ -118,10 +118,12 @@ export async function archiveBlocks(
       logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
     }
 
-    if (finalizedPostGloas && finalizedCanonicalEnvelopeBlockRoots.length > 0) {
+    if (finalizedPostGloas) {
       const migratedEntries = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
+        config,
         db,
-        finalizedCanonicalEnvelopeBlockRoots
+        logger,
+        finalizedCanonicalBlocks
       );
       logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {...logCtx, migratedEntries});
     }
@@ -165,6 +167,11 @@ export async function archiveBlocks(
     if (finalizedPostFulu) {
       await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical dataColumnSidecars from hot DB", logCtx);
+    }
+
+    if (finalizedPostGloas) {
+      await db.executionPayloadEnvelope.batchDelete(nonCanonicalBlockRoots);
+      logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", logCtx);
     }
   }
 
@@ -395,42 +402,42 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 }
 
 async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
+  config: ChainForkConfig,
   db: IBeaconDb,
-  blocks: BlockRootSlot[]
+  logger: Logger,
+  canonicalBlocks: ProtoBlock[]
 ): Promise<number> {
   let migratedEnvelopes = 0;
-  for (let i = 0; i < blocks.length; i += BLOCK_BATCH_SIZE) {
-    const toIdx = Math.min(i + BLOCK_BATCH_SIZE, blocks.length);
-    const canonicalBlocks = blocks.slice(i, toIdx);
 
-    if (canonicalBlocks.length === 0) break;
+  const payloadBlocks = canonicalBlocks.filter(
+    (block) => config.getForkSeq(block.slot) >= ForkSeq.gloas && block.payloadStatus === PayloadStatus.FULL
+  );
+  if (payloadBlocks.length === 0) return 0;
+  const blocks = payloadBlocks.map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
 
-    const canonicalEnvelopeEntries = await Promise.all(
-      canonicalBlocks.map(async (block) => {
-        const envelopeBytes = await db.executionPayloadEnvelope.getBinary(block.root);
-        if (!envelopeBytes) {
-          // Not every canonical Gloas block is guaranteed to have a revealed envelope.
-          // Skip missing envelopes (orphaned/unrevealed payload path) instead of failing
-          // finalized archival processing.
-          return null;
-        }
+  const envelopeEntries: KeyValue<Slot, Uint8Array>[] = [];
+  const migratedRoots: Uint8Array[] = [];
 
-        return {slot: block.slot, root: block.root, value: envelopeBytes};
-      })
-    );
+  const envelopeBytesArray = await Promise.all(
+    blocks.map((block) => db.executionPayloadEnvelope.getBinary(block.root))
+  );
 
-    const envelopesToArchive = canonicalEnvelopeEntries.filter((entry) => entry !== null);
-
-    if (envelopesToArchive.length > 0) {
-      await Promise.all([
-        db.executionPayloadEnvelopeArchive.batchPutBinary(
-          envelopesToArchive.map((entry) => ({key: entry.slot, value: entry.value}))
-        ),
-        db.executionPayloadEnvelope.batchDelete(envelopesToArchive.map((entry) => entry.root)),
-      ]);
+  for (let i = 0; i < blocks.length; i++) {
+    const bytes = envelopeBytesArray[i];
+    if (bytes !== null) {
+      envelopeEntries.push({key: blocks[i].slot, value: bytes});
+      migratedRoots.push(blocks[i].root);
+    } else {
+      logger.debug("Payload in forkchoice but missing in db", {slot: blocks[i].slot, root: toRootHex(blocks[i].root)});
     }
+  }
 
-    migratedEnvelopes += envelopesToArchive.length;
+  if (envelopeEntries.length > 0) {
+    await Promise.all([
+      db.executionPayloadEnvelopeArchive.batchPutBinary(envelopeEntries),
+      db.executionPayloadEnvelope.batchDelete(migratedRoots),
+    ]);
+    migratedEnvelopes = envelopeEntries.length;
   }
 
   return migratedEnvelopes;

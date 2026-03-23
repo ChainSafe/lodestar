@@ -543,7 +543,6 @@ export class BlockInputSync {
     childParentBlockHash?: RootHex;
     parentRoot?: RootHex;
     parentPayloadStatus?: PayloadStatus;
-    parentBlockHashFromBid?: RootHex;
     wantsFullParent?: boolean;
   } {
     const block = pendingBlock.blockInput.getBlock();
@@ -559,7 +558,7 @@ export class BlockInputSync {
     const parentRoot = pendingBlock.blockInput.parentRootHex;
     const parentBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
 
-    if (!parentBlock || parentBlock.blockHashFromBid == null) {
+    if (!parentBlock || parentBlock.executionPayloadBlockHash == null) {
       return {
         shouldRetry: false,
         forkName,
@@ -568,9 +567,13 @@ export class BlockInputSync {
       };
     }
 
-    const parentBlockHashFromBid = parentBlock.blockHashFromBid;
     const parentPayloadStatus = parentBlock.payloadStatus;
-    const wantsFullParent = childParentBlockHash === parentBlockHashFromBid;
+    // The child extends FULL if its parentBlockHash does NOT match the default (PENDING/EMPTY)
+    // variant's executionPayloadBlockHash. For PENDING/EMPTY variants, executionPayloadBlockHash
+    // is the parentBlockHash from the parent's bid. For FULL, it's the actual payload block hash
+    // (which equals the bid's blockHash). If the child points to the FULL variant's hash,
+    // it won't match the default variant's hash.
+    const wantsFullParent = childParentBlockHash !== parentBlock.executionPayloadBlockHash;
 
     return {
       shouldRetry: wantsFullParent && parentPayloadStatus !== PayloadStatus.FULL,
@@ -578,7 +581,6 @@ export class BlockInputSync {
       childParentBlockHash,
       parentRoot,
       parentPayloadStatus,
-      parentBlockHashFromBid,
       wantsFullParent,
     };
   }
@@ -634,7 +636,7 @@ export class BlockInputSync {
    * From a set of shuffled peers:
    *   - fetch the block
    *   - from deneb, fetch all missing blobs
-   *   - from peerDAS, fetch sampled colmns
+   *   - from peerDAS, fetch sampled columns
    * TODO: this means we only have block root, and nothing else. Consider to reflect this in the function name
    * prefulu, will attempt a max of `MAX_ATTEMPTS_PER_BLOCK` on different peers, postfulu we may attempt more as defined in `getMaxDownloadAttempts()` function
    * Also verifies the received block root + returns the peer that provided the block for future downscoring.
@@ -642,10 +644,7 @@ export class BlockInputSync {
   private async fetchBlockInput(cacheItem: BlockInputSyncCacheItem): Promise<PendingBlockInput> {
     const rootHex = getBlockInputSyncCacheItemRootHex(cacheItem);
     const excludedPeers = new Set<PeerIdStr>();
-    const defaultPendingColumns =
-      this.config.getForkSeq(this.chain.clock.currentSlot) >= ForkSeq.fulu
-        ? new Set(this.network.custodyConfig.sampledColumns)
-        : null;
+    const defaultPendingColumns = new Set(this.network.custodyConfig.sampledColumns);
 
     const fetchStartSec = Date.now() / 1000;
     let slot = isPendingBlockInput(cacheItem) ? cacheItem.blockInput.slot : undefined;
@@ -659,14 +658,10 @@ export class BlockInputSync {
         isPendingBlockInput(cacheItem) && isBlockInputColumns(cacheItem.blockInput)
           ? new Set(cacheItem.blockInput.getMissingSampledColumnMeta().missing)
           : defaultPendingColumns;
-      // pendingDataColumns is null pre-fulu
       const peerMeta = this.peerBalancer.bestPeerForPendingColumns(pendingColumns, excludedPeers);
       if (peerMeta === null) {
         // no more peer with needed columns to try, throw error
-        let message = `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: cannot find peer`;
-        if (pendingColumns) {
-          message += ` with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
-        }
+        const message = `Error fetching UnknownBlockRoot slot=${slot} root=${rootHex} after ${i}: cannot find peer with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`;
         this.metrics?.blockInputSync.fetchTimeSec.observe(
           {result: FetchResult.FailureTriedAllPeers},
           Date.now() / 1000 - fetchStartSec
@@ -803,7 +798,7 @@ export class BlockInputSync {
       // TODO(fulu): why is this commented out here?
       //
       //   this.knownBadBlocks.add(block.blockRootHex);
-      //   for (const peerIdStr of block.peerIdStrs) {
+      //   for (const peerIdStr of block.peerIdStrings) {
       //     // TODO: Refactor peerRpcScores to work with peerIdStr only
       //     this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       //   }
@@ -882,43 +877,12 @@ export class UnknownBlockPeerBalancer {
   }
 
   /**
-   * called from fetchUnknownBlockRoot() where we only have block root and nothing else
+   * called from fetchBlockInput() where we only have block root and nothing else
    * excludedPeers are the peers that we requested already so we don't want to try again
    * pendingColumns is empty for prefulu, or the 1st time we we download a block by root
    */
-  bestPeerForPendingColumns(pendingColumns: Set<number> | null, excludedPeers: Set<PeerIdStr>): PeerSyncMeta | null {
+  bestPeerForPendingColumns(pendingColumns: Set<number>, excludedPeers: Set<PeerIdStr>): PeerSyncMeta | null {
     const eligiblePeers = this.filterPeers(pendingColumns, excludedPeers);
-    if (eligiblePeers.length === 0) {
-      return null;
-    }
-
-    const sortedEligiblePeers = sortBy(
-      shuffle(eligiblePeers),
-      // prefer peers with least active req
-      (peerId) => this.activeRequests.get(peerId) ?? 0
-    );
-
-    const bestPeerId = sortedEligiblePeers[0];
-    this.onRequest(bestPeerId);
-    return this.peersMeta.get(bestPeerId) ?? null;
-  }
-
-  /**
-   * called from fetchUnavailableBlockInput() where we have either BlockInput or NullBlockInput
-   * excludedPeers are the peers that we requested already so we don't want to try again
-   */
-  bestPeerForBlockInput(blockInput: IBlockInput, excludedPeers: Set<PeerIdStr>): PeerSyncMeta | null {
-    const eligiblePeers: PeerIdStr[] = [];
-
-    if (isBlockInputColumns(blockInput)) {
-      const pendingDataColumns: Set<number> = new Set(blockInput.getMissingSampledColumnMeta().missing);
-      // there could be no pending column in case when block is still missing
-      eligiblePeers.push(...this.filterPeers(pendingDataColumns, excludedPeers));
-    } else {
-      // prefulu
-      eligiblePeers.push(...this.filterPeers(null, excludedPeers));
-    }
-
     if (eligiblePeers.length === 0) {
       return null;
     }
@@ -957,8 +921,7 @@ export class UnknownBlockPeerBalancer {
     return totalActiveRequests;
   }
 
-  // pendingDataColumns could be null for prefulu
-  private filterPeers(pendingDataColumns: Set<number> | null, excludedPeers: Set<PeerIdStr>): PeerIdStr[] {
+  private filterPeers(pendingDataColumns: Set<number>, excludedPeers: Set<PeerIdStr>): PeerIdStr[] {
     let maxColumnCount = 0;
     const considerPeers: {peerId: PeerIdStr; columnCount: number}[] = [];
     for (const [peerId, syncMeta] of this.peersMeta.entries()) {
@@ -973,13 +936,12 @@ export class UnknownBlockPeerBalancer {
         continue;
       }
 
-      if (pendingDataColumns === null || pendingDataColumns.size === 0) {
-        // prefulu, no pending columns
+      if (pendingDataColumns.size === 0) {
         considerPeers.push({peerId, columnCount: 0});
         continue;
       }
 
-      // postfulu, find peers that have custody columns that we need
+      // find peers that have custody columns that we need
       const {custodyColumns: peerColumns} = syncMeta;
       // check if the peer has all needed columns
       // get match

@@ -89,7 +89,7 @@ export enum EventType {
   blobSidecar = "blob_sidecar",
   /** The node has received a valid DataColumnSidecar (from P2P or API) */
   dataColumnSidecar = "data_column_sidecar",
-  /** The node has received a valid execution payload envelope and it has been imported (ePBS) */
+  /** The node has verified that the execution payload and blobs for a block are available */
   executionPayloadAvailable = "execution_payload_available",
   /** The node has received a valid execution payload bid (ePBS) */
   executionPayloadBid = "execution_payload_bid",

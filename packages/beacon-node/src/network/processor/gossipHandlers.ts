@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {
   ForkName,
+  ForkPostDeneb,
   ForkPostElectra,
   ForkPreElectra,
   ForkSeq,
@@ -31,6 +32,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import type {BidInfo} from "../../chain/blocks/payloadEnvelopeInput.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
@@ -44,6 +46,8 @@ import {
   BlockGossipError,
   DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
@@ -74,6 +78,7 @@ import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {ClockEvent} from "../../util/clock.js";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -459,12 +464,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.getBlobsTracker.triggerGetBlobs(blockInput);
     } else {
       metrics?.blockInputFetchStats.totalDataAvailableBlockInputs.inc();
-      // blobKzgCommitments is removed from BeaconBlockBody post-Gloas (EIP-7732)
-      if (config.getForkSeq(slot) < ForkSeq.gloas) {
-        metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(
-          (signedBlock.message as deneb.BeaconBlock).body.blobKzgCommitments.length
-        );
-      }
+      const blobCount = getBlobKzgCommitments(
+        blockInput.forkName,
+        signedBlock as SignedBeaconBlock<ForkPostDeneb>
+      ).length;
+      metrics?.blockInputFetchStats.totalDataAvailableBlockInputBlobs.inc(blobCount);
     }
 
     chain
@@ -657,6 +661,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           });
         });
       }
+
+      // TODO GLOAS: In Gloas, also add column to PayloadEnvelopeInput and notify the payload processor:
+      // const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
+      // if (payloadInput) {
+      //   payloadInput.addColumn({columnSidecar, source: BlockInputSource.gossip, seenTimestampSec, peerIdStr});
+      //   chain.processExecutionPayload(payloadInput, {validSignature: true});
+      // }
     },
 
     [GossipType.beacon_aggregate_and_proof]: async ({
@@ -808,9 +819,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const syncCommittee = sszDeserialize(topic, serializedData);
       const {subnet} = topic;
-      let indexInSubcommittee = 0;
+      let indicesInSubcommittee: number[] = [0];
       try {
-        indexInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubcommittee;
+        indicesInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indicesInSubcommittee;
       } catch (e) {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(ssz.altair.SyncCommitteeMessage, syncCommittee, "gossip_reject");
@@ -818,11 +829,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       }
 
-      // Handler
-
+      // Handler — add for ALL positions this validator holds in the subcommittee
       try {
-        const insertOutcome = chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
-        metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
+        for (const indexInSubcommittee of indicesInSubcommittee) {
+          const insertOutcome = chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
+          metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
+        }
       } catch (e) {
         logger.debug("Error adding to syncCommittee pool", {subnet}, e as Error);
       }
@@ -867,6 +879,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     [GossipType.execution_payload]: async ({
       gossipData,
       topic,
+      peerIdStr,
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
@@ -885,19 +898,36 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         return;
       }
 
-      const envelopeInput = chain.seenPayloadEnvelopeCache.get(blockRootHex);
-
-      // Pass envelopeInput so validation uses bid info from cache when available.
-      // Blocks imported via unknown-block sync may not have a cache entry — validation
-      // falls back to fork-choice metadata in that case.
-      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope, envelopeInput);
-      envelopeInput?.setEnvelope(executionPayloadEnvelope);
+      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 
       const slot = executionPayloadEnvelope.message.slot;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
+      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, executionPayloadEnvelope);
 
-      await chain.importExecutionPayloadEnvelope(executionPayloadEnvelope);
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+
+      if (!payloadInput) {
+        // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
+        throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+          code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
+          blockRoot: blockRootHex,
+        });
+      }
+
+      chain.serializedCache.set(executionPayloadEnvelope, serializedData);
+
+      payloadInput.addPayloadEnvelope({
+        envelope: executionPayloadEnvelope,
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec,
+        peerIdStr,
+      });
+
+      // TODO GLOAS: Emit execution_payload_gossip event for gossip receipt.
+      chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+        chain.logger.debug("Error processing execution payload from gossip", {slot, root: blockRootHex}, e as Error);
+      });
     },
     [GossipType.payload_attestation_message]: async ({
       gossipData,
@@ -917,6 +947,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       } catch (e) {
         logger.error("Error adding to payloadAttestation pool", {}, e as Error);
       }
+      chain.forkChoice.notifyPtcMessages(
+        toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+        [validationResult.validatorCommitteeIndex],
+        payloadAttestationMessage.data.payloadPresent
+      );
     },
     [GossipType.execution_payload_bid]: async ({
       gossipData,

@@ -81,8 +81,9 @@ export async function verifyBlocksInEpoch(
   ) {
     const parentRootHex = toRootHex(block0.message.parentRoot);
     const childParentBlockHash = toRootHex(block0.message.body.signedExecutionPayloadBid.message.parentBlockHash);
+    const parentPayloadInput = this.seenPayloadEnvelopeInputCache.get(parentRootHex);
     const childWantsFullParent =
-      parentBlock.blockHashFromBid !== null && childParentBlockHash === parentBlock.blockHashFromBid;
+      parentPayloadInput !== undefined && childParentBlockHash === parentPayloadInput.getBlockHashHex();
 
     if (childWantsFullParent) {
       // Try up to 20 times with 100ms delay (total max wait: ~2s)

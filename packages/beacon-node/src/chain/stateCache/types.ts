@@ -38,6 +38,8 @@ export interface BlockStateCache {
   size: number;
   prune(headStateRootHex: RootHex): void;
   deleteAllBeforeEpoch(finalizedEpoch: Epoch): void;
+  /** Upgrade cache capacity for Gloas fork (2x states for block + payload states) */
+  upgradeToGloas(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
   /** Expose beacon states stored in cache. Use with caution */
   getStates(): IterableIterator<CachedBeaconStateAllForks>;

@@ -190,6 +190,10 @@ export class FIFOBlockStateCache implements BlockStateCache {
     }
   }
 
+  upgradeToGloas(): void {
+    this.maxStates = DEFAULT_MAX_BLOCK_STATES_GLOAS;
+  }
+
   /**
    * No need for this implementation
    * This is only to conform to the old api

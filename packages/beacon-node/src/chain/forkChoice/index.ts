@@ -10,7 +10,7 @@ import {
   ForkChoiceOpts as RawForkChoiceOpts,
   getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
-import {ForkSeq, ZERO_HASH_HEX} from "@lodestar/params";
+import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateGloas,
@@ -22,7 +22,6 @@ import {
   getEffectiveBalanceIncrementsZeroInactive,
   isExecutionStateType,
   isMergeTransitionComplete,
-  isParentBlockFull,
 } from "@lodestar/state-transition";
 import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
@@ -107,7 +106,7 @@ export function initializeForkChoiceFromFinalizedState(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
-  const isForkPostGloas = config.getForkSeq(state.slot) >= ForkSeq.gloas;
+  const isForkPostGloas = (state as CachedBeaconStateGloas).latestBlockHash !== undefined;
 
   // Determine justified checkpoint payload status
   const justifiedPayloadStatus = getCheckpointPayloadStatus(state, justifiedCheckpoint.epoch);
@@ -164,15 +163,7 @@ export function initializeForkChoiceFromFinalizedState(
             : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-        payloadStatus: isForkPostGloas
-          ? isParentBlockFull(state as CachedBeaconStateGloas)
-            ? PayloadStatus.FULL
-            : PayloadStatus.EMPTY
-          : PayloadStatus.FULL,
-        builderIndex: isForkPostGloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex : null,
-        blockHashFromBid: isForkPostGloas
-          ? toRootHex((state as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash)
-          : null,
+        payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
         parentBlockHash: isForkPostGloas ? toRootHex((state as CachedBeaconStateGloas).latestBlockHash) : null,
       },
       currentSlot
@@ -217,7 +208,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   // this is not the justified state, but there is no other ways to get justified balances
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(unfinalizedState);
 
-  const isForkPostGloas = config.getForkSeq(unfinalizedState.slot) >= ForkSeq.gloas;
+  const isForkPostGloas = (unfinalizedState as CachedBeaconStateGloas).latestBlockHash !== undefined;
 
   // For unfinalized state, use getCheckpointPayloadStatus to determine the correct status.
   // It checks state.execution_payload_availability to determine EMPTY vs FULL.
@@ -271,17 +262,7 @@ export function initializeForkChoiceFromUnfinalizedState(
         : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-    payloadStatus: isForkPostGloas
-      ? isParentBlockFull(unfinalizedState as CachedBeaconStateGloas)
-        ? PayloadStatus.FULL
-        : PayloadStatus.EMPTY
-      : PayloadStatus.FULL,
-    builderIndex: isForkPostGloas
-      ? (unfinalizedState as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex
-      : null,
-    blockHashFromBid: isForkPostGloas
-      ? toRootHex((unfinalizedState as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash)
-      : null,
+    payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
     parentBlockHash: isForkPostGloas ? toRootHex((unfinalizedState as CachedBeaconStateGloas).latestBlockHash) : null,
   };
 
@@ -324,9 +305,9 @@ export function initializeForkChoiceFromUnfinalizedState(
   };
 
   const protoArray = ProtoArray.initialize(finalizedBlock, currentSlot);
-  protoArray.onBlock(justifiedBlock, currentSlot);
-  protoArray.onBlock(parentBlock, currentSlot);
-  protoArray.onBlock(headBlock, currentSlot);
+  protoArray.onBlock(justifiedBlock, currentSlot, null);
+  protoArray.onBlock(parentBlock, currentSlot, null);
+  protoArray.onBlock(headBlock, currentSlot, null);
 
   logger?.verbose("Initialized protoArray successfully", {...logCtx, length: protoArray.length()});
 

@@ -7,8 +7,16 @@ import {
   ForkChoiceErrorCode,
   NotReorgedReason,
   getSafeExecutionBlockHash,
+  isGloasBlock,
 } from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkPostGloas,
+  ForkSeq,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   EpochCache,
@@ -20,7 +28,17 @@ import {
   isStartSlotOfEpoch,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
+import {
+  Attestation,
+  BeaconBlock,
+  SignedBeaconBlock,
+  altair,
+  capella,
+  electra,
+  isGloasBeaconBlock,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -102,7 +120,7 @@ export async function importBlock(
   // Without this, a supernode syncing from behind can accumulate many blocks worth of column
   // data in memory (up to 128 columns per block) causing OOM before persistence catches up.
   await this.unfinalizedBlockWrites.waitForSpace();
-  this.unfinalizedBlockWrites.push([blockInput]).catch((e) => {
+  this.unfinalizedBlockWrites.push(blockInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error("Error pushing block to unfinalized write queue", {slot: blockSlot}, e as Error);
     }
@@ -123,17 +141,11 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true (execution payload embedded in block)
-  // Post-Gloas: blockSummary.payloadStatus is always PENDING (EMPTY variant also created), payloadPresent = false (block state only, no payload processing yet)
-  const isGloasBlock = blockSummary.blockHashFromBid !== null;
-  const payloadPresent = !isGloasBlock;
+  // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true
+  // Post-Gloas: blockSummary.payloadStatus is always PENDING, so payloadPresent = false (block state only, no payload processing yet)
+  const payloadPresent = !isGloasBlock(blockSummary);
   // processState manages both block state and payload state variants together for memory/disk management
-  this.regen.processState(blockRootHex, postState);
-  this.logger.verbose("Added block to forkchoice and block state cache", {
-    slot: blockSlot,
-    root: blockRootHex,
-    stateRoot: toRootHex(postState.hashTreeRoot()),
-  });
+  this.regen.processBlockState(blockRootHex, postState);
 
   if (postEnvelopeState !== null) {
     this.regen.processPayloadState(postEnvelopeState);
@@ -151,12 +163,29 @@ export async function importBlock(
     });
   }
 
+  // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
+  if (fork >= ForkSeq.gloas) {
+    this.seenPayloadEnvelopeInputCache.add({
+      blockRootHex,
+      block: block as SignedBeaconBlock<ForkPostGloas>,
+      sampledColumns: this.custodyConfig.sampledColumns,
+      custodyColumns: this.custodyConfig.custodyColumns,
+      timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
+    });
+    this.logger.debug("Created PayloadEnvelopeInput for block", {
+      slot: blockSlot,
+      root: blockRootHex,
+      source: source.source,
+      ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
+    });
+  }
+
   this.metrics?.importBlock.bySource.inc({source: source.source});
 
   // Post-Gloas: immediately import pending envelope for this block if available.
   // This makes the block FULL right away, so child blocks won't need to wait
   // for the envelope in their verifyBlock parent-envelope polling loop.
-  if (isGloasBlock) {
+  if (isGloasBlock(blockSummary)) {
     const pendingEnvelope = this.pendingEnvelopes.get(blockRootHex);
     if (pendingEnvelope) {
       try {
@@ -277,6 +306,32 @@ export async function importBlock(
         this.forkChoice.onAttesterSlashing(slashing);
       } catch (e) {
         this.logger.warn("Error processing AttesterSlashing from block", {slot: blockSlot}, e as Error);
+      }
+    }
+  }
+
+  // 4.5. Import payload attestations to fork choice (Gloas)
+  //
+  if (isGloasBeaconBlock(block.message)) {
+    for (const payloadAttestation of block.message.body.payloadAttestations) {
+      try {
+        // Extract PTC indices from aggregation bits
+        const ptcIndices: number[] = [];
+        for (let i = 0; i < payloadAttestation.aggregationBits.bitLen; i++) {
+          if (payloadAttestation.aggregationBits.get(i)) {
+            ptcIndices.push(i);
+          }
+        }
+
+        if (ptcIndices.length > 0) {
+          this.forkChoice.notifyPtcMessages(
+            toRootHex(payloadAttestation.data.beaconBlockRoot),
+            ptcIndices,
+            payloadAttestation.data.payloadPresent
+          );
+        }
+      } catch (e) {
+        this.logger.warn("Error processing PayloadAttestation from block", {slot: blockSlot}, e as Error);
       }
     }
   }
@@ -481,8 +536,6 @@ export async function importBlock(
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    // Pre-Gloas: payloadPresent = true (FULL variant, execution payload embedded in block)
-    // Post-Gloas: payloadPresent = false (PENDING variant with EMPTY also created, block state only)
     this.regen.addCheckpointState(cp, checkpointState, payloadPresent);
     // consumers should not mutate state ever
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
@@ -581,7 +634,7 @@ export async function importBlock(
 
   if (isBlockInputColumns(blockInput)) {
     for (const {source} of blockInput.getSampledColumnsWithSource()) {
-      this.metrics?.importBlock.columnsBySource.inc({source});
+      this.metrics?.dataColumns.bySource.inc({source});
     }
   } else if (isBlockInputBlobs(blockInput)) {
     for (const {source} of blockInput.getAllBlobsWithSource()) {
