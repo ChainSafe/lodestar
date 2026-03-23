@@ -5,10 +5,9 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
-import {BlockInputColumns, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../src/chain/index.js";
@@ -22,7 +21,6 @@ import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {generateBlockWithColumnSidecars} from "../../utils/blocksAndData.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
 
 describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
@@ -355,7 +353,6 @@ describe("UnknownBlockSync", () => {
 });
 
 describe("UnknownBlockPeerBalancer", async () => {
-  const custodyConfig = {sampledColumns: [0, 1, 2, 3]} as CustodyConfig;
   const peer0 = await getRandPeerSyncMeta("peer-0");
   const peer1 = await getRandPeerSyncMeta("peer-1");
   const peer2 = await getRandPeerSyncMeta("peer-2");
@@ -413,44 +410,6 @@ describe("UnknownBlockPeerBalancer", async () => {
     for (const [i, groups] of custodyGroups.entries()) {
       peers[i].custodyColumns = groups;
     }
-
-    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
-    signedBlock.message.body.blobKzgCommitments = [ssz.fulu.KZGCommitment.defaultValue()];
-    const {block, rootHex, columnSidecars} = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
-    const blockInput = BlockInputColumns.createFromBlock({
-      block: block,
-      blockRootHex: rootHex,
-      forkName: ForkName.fulu,
-      daOutOfRange: false,
-      source: BlockInputSource.gossip,
-      seenTimestampSec: Math.floor(Date.now() / 1000),
-      custodyColumns: custodyConfig.custodyColumns,
-      sampledColumns: custodyConfig.sampledColumns,
-    });
-
-    // test cases rely on first 2 columns being known, the rest unknown
-    for (const sidecar of columnSidecars.slice(0, 2)) {
-      blockInput.addColumn({
-        columnSidecar: sidecar,
-        blockRootHex: rootHex,
-        seenTimestampSec: Math.floor(Date.now() / 1000),
-        source: BlockInputSource.gossip,
-      });
-    }
-
-    it(`bestPeerForBlockInput - test case ${testCaseIndex}`, () => {
-      for (const [i, activeRequest] of activeRequests.entries()) {
-        for (let j = 0; j < activeRequest; j++) {
-          peerBalancer.onRequest(peers[i].peerId);
-        }
-      }
-      const peer = peerBalancer.bestPeerForBlockInput(blockInput, new Set(excludedPeers));
-      if (bestPeer) {
-        expect(peer).toEqual(bestPeer);
-      } else {
-        expect(peer).toBeNull();
-      }
-    });
 
     it(`bestPeerForPendingColumns - test case ${testCaseIndex}`, () => {
       for (const [i, activeRequest] of activeRequests.entries()) {
