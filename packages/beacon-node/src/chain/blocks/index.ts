@@ -58,15 +58,11 @@ export class BlockProcessor {
 export async function processBlocks(
   this: BeaconChain,
   blocks: IBlockInput[],
-  _envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
     return; // TODO: or throw?
-  }
-
-  if (blocks.length > 1) {
-    assertLinearChainSegment(this.config, blocks);
   }
 
   try {
@@ -77,6 +73,8 @@ export async function processBlocks(
       // parentBlock can only be null if relevantBlocks are empty
       return;
     }
+
+    assertLinearChainSegment(this.config, relevantBlocks, envelopes, parentBlock);
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
