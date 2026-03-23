@@ -255,6 +255,13 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   ): IBeaconStateView;
 }
 
+/**
+ * Type constraint for the concrete BeaconStateView class.
+ * Requires all fields from the latest fork interface (IBeaconStateViewGloas) but keeps
+ * forkName as ForkName since the class wraps any fork's state.
+ * Sub-interfaces retain their narrowed forkName discriminants for caller-side type guards.
+ */
+export type IBeaconStateViewLatestFork = Omit<IBeaconStateViewGloas, "forkName"> & {forkName: ForkName};
 export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {
   return isForkPostAltair(state.forkName);
 }

@@ -67,9 +67,9 @@ import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getStateTypeFromBytes} from "../util/sszBytes.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {IBeaconStateView} from "./interface.js";
+import {IBeaconStateView, IBeaconStateViewLatestFork} from "./interface.js";
 
-export class BeaconStateView implements IBeaconStateView {
+export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
   // Cached values extracted from the tree
   // phase0
