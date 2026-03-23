@@ -145,7 +145,6 @@ describe("voluntaryExit cmd", () => {
     // Verify file was written with valid content
     const fileContent = JSON.parse(fs.readFileSync(outputFile, "utf-8"));
     expect(fileContent).toHaveLength(indexesToExit.length);
-    console.log(fileContent);
     for (const exit of fileContent) {
       expect(exit).toHaveProperty("message");
       expect(exit).toHaveProperty("signature");

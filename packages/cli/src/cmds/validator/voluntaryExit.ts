@@ -159,17 +159,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
     }
 
     if (args.outputFile && signedExits.length > 0) {
-      try {
-        const json = JSON.stringify(
-          signedExits.map((e) => ssz.phase0.SignedVoluntaryExit.toJson(e)),
-          null,
-          2
-        );
-        fs.writeFileSync(args.outputFile, json);
-        console.log(`Wrote ${signedExits.length} signed voluntary exit(s) to ${args.outputFile}`);
-      } catch (e) {
-        throw new YargsError(`Failed to write to output file "${args.outputFile}": ${(e as Error).message}`);
-      }
+      writeSignedExitsToFile(signedExits, args.outputFile);
     }
   },
 };
@@ -265,5 +255,19 @@ function getSignerPubkeyHex(signer: Signer): string {
 
     case SignerType.Remote:
       return signer.pubkey;
+  }
+}
+
+function writeSignedExitsToFile(signedExits: phase0.SignedVoluntaryExit[], outputFile: string): void {
+  try {
+    const json = JSON.stringify(
+      signedExits.map((e) => ssz.phase0.SignedVoluntaryExit.toJson(e)),
+      null,
+      2
+    );
+    fs.writeFileSync(outputFile, json);
+    console.log(`Wrote ${signedExits.length} signed voluntary exit(s) to ${outputFile}`);
+  } catch (e) {
+    throw new YargsError(`Failed to write to output file "${outputFile}": ${(e as Error).message}`);
   }
 }
