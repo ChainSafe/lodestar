@@ -13,7 +13,16 @@ import {
   VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, DataColumnSidecars, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
+import {
+  BeaconBlockBody,
+  DataColumnSidecars,
+  SSZTypesFor,
+  SignedBeaconBlock,
+  deneb,
+  fulu,
+  gloas,
+  ssz,
+} from "@lodestar/types";
 import {kzg} from "./kzg.js";
 
 type VersionHash = Uint8Array;
@@ -251,4 +260,82 @@ function cellsToBlob(cells: fulu.Cell[]): deneb.Blob {
   }
 
   return blob;
+}
+
+/**
+ * Recover all data columns from a partial set of Gloas DataColumnSidecars.
+ *
+ * Unlike Fulu sidecars, Gloas sidecars don't carry kzgCommitments, signedBlockHeader,
+ * or kzgCommitmentsInclusionProof. The blob count must be provided externally
+ * (from the block's execution payload bid).
+ *
+ * SPEC FUNCTION (Modified in Gloas:EIP7732)
+ * https://github.com/ethereum/consensus-specs/blob/dev/specs/fulu/das-core.md#recover_matrix
+ */
+export async function dataColumnMatrixRecoveryGloas(
+  partialSidecars: Map<number, gloas.DataColumnSidecar>,
+  blobCount: number
+): Promise<gloas.DataColumnSidecars | null> {
+  const columnCount = partialSidecars.size;
+  if (columnCount < NUMBER_OF_COLUMNS / 2) {
+    return null;
+  }
+
+  if (columnCount === NUMBER_OF_COLUMNS) {
+    return Array.from(partialSidecars.values());
+  }
+
+  const partialSidecarsSorted = Array.from(partialSidecars.values()).sort((a, b) => a.index - b.index);
+
+  const firstDataColumn = partialSidecarsSorted[0];
+  if (firstDataColumn == null) {
+    throw new Error("No data column found in cache to recover from");
+  }
+
+  const fullColumns: Array<Uint8Array[]> = Array.from(
+    {length: NUMBER_OF_COLUMNS},
+    () => new Array<Uint8Array>(blobCount)
+  );
+  const blobProofs: Array<Uint8Array[]> = Array.from({length: blobCount});
+
+  const cellsAndProofs = await Promise.all(
+    blobProofs.map((_, blobIndex) => {
+      const cellIndices: number[] = [];
+      const cells: Uint8Array[] = [];
+      for (const dataColumn of partialSidecarsSorted) {
+        cellIndices.push(dataColumn.index);
+        cells.push(dataColumn.column[blobIndex]);
+      }
+      return kzg.asyncRecoverCellsAndKzgProofs(cellIndices, cells);
+    })
+  );
+
+  for (let blobIndex = 0; blobIndex < blobCount; blobIndex++) {
+    const recoveredCells = cellsAndProofs[blobIndex].cells;
+    blobProofs[blobIndex] = cellsAndProofs[blobIndex].proofs;
+    for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+      fullColumns[columnIndex][blobIndex] = recoveredCells[columnIndex];
+    }
+  }
+
+  const result: gloas.DataColumnSidecars = new Array(NUMBER_OF_COLUMNS);
+
+  for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
+    const existing = partialSidecars.get(columnIndex);
+    if (existing) {
+      result[columnIndex] = existing;
+      continue;
+    }
+
+    // Gloas sidecars: only index, column, kzgProofs, slot, beaconBlockRoot
+    result[columnIndex] = {
+      index: columnIndex,
+      column: fullColumns[columnIndex],
+      kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
+      slot: firstDataColumn.slot,
+      beaconBlockRoot: firstDataColumn.beaconBlockRoot,
+    };
+  }
+
+  return result;
 }

@@ -3,6 +3,7 @@ import {
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   KZG_COMMITMENTS_SUBTREE_INDEX,
   NUMBER_OF_COLUMNS,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -10,7 +11,7 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {DataColumnSidecar, Root, Slot, SubnetID, fulu, ssz} from "@lodestar/types";
+import {DataColumnSidecar, Root, Slot, SubnetID, deneb, fulu, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -479,4 +480,327 @@ export async function validateBlockDataColumnSidecars(
  */
 export function computeSubnetForDataColumnSidecar(config: ChainConfig, columnSidecar: DataColumnSidecar): SubnetID {
   return columnSidecar.index % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
+}
+
+// ===========================
+// Gloas-specific validation
+// ===========================
+
+/**
+ * SPEC FUNCTION (Modified in Gloas:EIP7732)
+ * https://github.com/ethereum/consensus-specs/blob/dev/specs/gloas/p2p-interface.md#modified-verify_data_column_sidecar
+ *
+ * Verifies a Gloas DataColumnSidecar against externally-provided KZG commitments (from the bid).
+ * In Gloas, kzgCommitments are NOT embedded in the sidecar but sourced from
+ * block.body.signedExecutionPayloadBid.message.blobKzgCommitments.
+ */
+function verifyGloasDataColumnSidecar(
+  config: ChainForkConfig,
+  dataColumnSidecar: gloas.DataColumnSidecar,
+  kzgCommitments: deneb.KZGCommitment[]
+): void {
+  // The sidecar index must be within the valid range
+  if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INVALID_INDEX,
+      slot: dataColumnSidecar.slot,
+      columnIndex: dataColumnSidecar.index,
+    });
+  }
+
+  // A sidecar for zero blobs is invalid [Modified in Gloas:EIP7732]
+  if (dataColumnSidecar.column.length === 0) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.NO_COMMITMENTS,
+      slot: dataColumnSidecar.slot,
+      columnIndex: dataColumnSidecar.index,
+    });
+  }
+
+  const epoch = computeEpochAtSlot(dataColumnSidecar.slot);
+  const maxBlobsPerBlock = config.getMaxBlobsPerBlock(epoch);
+
+  if (kzgCommitments.length > maxBlobsPerBlock) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.TOO_MANY_KZG_COMMITMENTS,
+      slot: dataColumnSidecar.slot,
+      columnIndex: dataColumnSidecar.index,
+      count: kzgCommitments.length,
+      limit: maxBlobsPerBlock,
+    });
+  }
+
+  // The column length must be equal to the number of commitments/proofs
+  // [Modified in Gloas:EIP7732] — commitments from bid, not sidecar
+  if (
+    dataColumnSidecar.column.length !== kzgCommitments.length ||
+    dataColumnSidecar.column.length !== dataColumnSidecar.kzgProofs.length
+  ) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.MISMATCHED_LENGTHS,
+      columnLength: dataColumnSidecar.column.length,
+      commitmentsLength: kzgCommitments.length,
+      proofsLength: dataColumnSidecar.kzgProofs.length,
+    });
+  }
+}
+
+/**
+ * SPEC FUNCTION (Modified in Gloas:EIP7732)
+ * https://github.com/ethereum/consensus-specs/blob/dev/specs/gloas/p2p-interface.md#data_column_sidecar_subnet_id
+ *
+ * Validates a Gloas DataColumnSidecar received via gossip.
+ * Key differences from Fulu:
+ * - No proposer signature verification (no signedBlockHeader)
+ * - No inclusion proof verification (no kzgCommitmentsInclusionProof)
+ * - KZG commitments sourced from block's execution payload bid
+ * - Block must already be known for validation
+ */
+export async function validateGossipGloasDataColumnSidecar(
+  chain: IBeaconChain,
+  dataColumnSidecar: gloas.DataColumnSidecar,
+  gossipSubnet: SubnetID,
+  metrics: Metrics | null
+): Promise<void> {
+  const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
+  const slot = dataColumnSidecar.slot;
+
+  // 1) [IGNORE] A valid block for the sidecar's slot has been seen.
+  //    If not yet seen, a client MUST queue the sidecar for deferred validation.
+  const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  if (protoBlock === null) {
+    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+      code: DataColumnSidecarErrorCode.BLOCK_UNKNOWN,
+      blockRoot: blockRootHex,
+      slot,
+    });
+  }
+
+  // 2) [REJECT] The sidecar's slot matches the slot of the block
+  if (protoBlock.slot !== slot) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.SLOT_MISMATCH,
+      expectedSlot: protoBlock.slot,
+      sidecarSlot: slot,
+    });
+  }
+
+  // Get KZG commitments from the block's execution payload bid
+  // First try seenBlockInputCache (fast path), then fall back to DB
+  const blockResult = await chain.getBlockByRoot(blockRootHex);
+  if (blockResult === null) {
+    // Block is in fork choice but body not available yet
+    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+      code: DataColumnSidecarErrorCode.BLOCK_UNKNOWN,
+      blockRoot: blockRootHex,
+      slot,
+    });
+  }
+  // Verify the referenced block is actually a Gloas block (prevents pre-Gloas body crash)
+  const blockFork = chain.config.getForkName(blockResult.block.message.slot);
+  if (!isForkPostGloas(blockFork)) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.SLOT_MISMATCH,
+      expectedSlot: slot,
+      sidecarSlot: blockResult.block.message.slot,
+    });
+  }
+  const blockBody = blockResult.block.message.body as gloas.BeaconBlockBody;
+  const kzgCommitments = blockBody.signedExecutionPayloadBid.message.blobKzgCommitments;
+
+  // 3) [REJECT] verify_data_column_sidecar(sidecar, bid.blob_kzg_commitments)
+  verifyGloasDataColumnSidecar(chain.config, dataColumnSidecar, kzgCommitments);
+
+  // 4) [REJECT] The sidecar is for the correct subnet
+  if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INVALID_SUBNET,
+      columnIndex: dataColumnSidecar.index,
+      gossipSubnet,
+    });
+  }
+
+  // 5) [REJECT] verify_data_column_sidecar_kzg_proofs(sidecar, bid.blob_kzg_commitments)
+  const kzgProofTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
+  try {
+    await verifyDataColumnSidecarKzgProofs(
+      kzgCommitments,
+      Array.from({length: dataColumnSidecar.column.length}, () => dataColumnSidecar.index),
+      dataColumnSidecar.column,
+      dataColumnSidecar.kzgProofs
+    );
+  } catch {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF,
+      slot,
+      columnIndex: dataColumnSidecar.index,
+    });
+  } finally {
+    kzgProofTimer?.();
+  }
+
+  // 6) [IGNORE] The sidecar is the first sidecar for the tuple
+  //    (sidecar.beacon_block_root, sidecar.index) with valid kzg proof.
+  //    -- Handled by the caller (seenGossipBlockInput / PayloadEnvelopeInput dedup)
+}
+
+/**
+ * Validate Gloas DataColumnSidecars received via ReqResp (DataColumnsByRoot/DataColumnsByRange).
+ *
+ * Key differences from Fulu:
+ * - No signedBlockHeader comparison (sidecars don't have headers)
+ * - No proposer signature verification
+ * - No inclusion proof verification
+ * - KZG commitments are externally provided (from the block's execution payload bid)
+ * - Validates slot and beaconBlockRoot match across sidecars
+ *
+ * SPEC FUNCTION (Modified in Gloas:EIP7732)
+ */
+export async function validateBlockGloasDataColumnSidecars(
+  blockSlot: Slot,
+  blockRoot: Root,
+  kzgCommitments: deneb.KZGCommitment[],
+  dataColumnSidecars: gloas.DataColumnSidecars,
+  metrics?: BeaconMetrics["peerDas"] | null
+): Promise<void> {
+  metrics?.dataColumnSidecarProcessingRequests.inc(dataColumnSidecars.length);
+  const verificationTimer = metrics?.dataColumnSidecarGossipVerificationTime.startTimer();
+  try {
+    if (dataColumnSidecars.length === 0) {
+      return;
+    }
+
+    const blockBlobCount = kzgCommitments.length;
+    if (blockBlobCount === 0) {
+      throw new DataColumnSidecarValidationError(
+        {
+          code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT,
+          slot: blockSlot,
+          expected: 0,
+          actual: dataColumnSidecars.length,
+        },
+        "Block has no blob commitments but data column sidecars were provided"
+      );
+    }
+
+    // Verify first sidecar's beaconBlockRoot matches expected root
+    const firstSidecar = dataColumnSidecars[0];
+    if (!byteArrayEquals(blockRoot, firstSidecar.beaconBlockRoot)) {
+      throw new DataColumnSidecarValidationError(
+        {
+          code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
+          slot: blockSlot,
+          columnIndex: 0,
+          expected: toRootHex(blockRoot),
+          actual: toRootHex(firstSidecar.beaconBlockRoot),
+        },
+        "Gloas DataColumnSidecar doesn't match corresponding block"
+      );
+    }
+
+    // Verify first sidecar's slot matches expected slot
+    if (firstSidecar.slot !== blockSlot) {
+      throw new DataColumnSidecarValidationError({
+        code: DataColumnSidecarErrorCode.SLOT_MISMATCH,
+        expectedSlot: blockSlot,
+        sidecarSlot: firstSidecar.slot,
+      });
+    }
+
+    const commitments: Uint8Array[] = [];
+    const cellIndices: number[] = [];
+    const cells: Uint8Array[] = [];
+    const proofs: Uint8Array[] = [];
+
+    for (let i = 0; i < dataColumnSidecars.length; i++) {
+      const columnSidecar = dataColumnSidecars[i];
+
+      // All sidecars must reference the same block
+      if (i !== 0) {
+        if (!byteArrayEquals(firstSidecar.beaconBlockRoot, columnSidecar.beaconBlockRoot)) {
+          throw new DataColumnSidecarValidationError({
+            code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
+            slot: blockSlot,
+            expected: toRootHex(firstSidecar.beaconBlockRoot),
+            actual: toRootHex(columnSidecar.beaconBlockRoot),
+          });
+        }
+        if (columnSidecar.slot !== blockSlot) {
+          throw new DataColumnSidecarValidationError({
+            code: DataColumnSidecarErrorCode.SLOT_MISMATCH,
+            expectedSlot: blockSlot,
+            sidecarSlot: columnSidecar.slot,
+          });
+        }
+      }
+
+      if (columnSidecar.index >= NUMBER_OF_COLUMNS) {
+        throw new DataColumnSidecarValidationError(
+          {
+            code: DataColumnSidecarErrorCode.INVALID_INDEX,
+            slot: blockSlot,
+            columnIndex: columnSidecar.index,
+          },
+          "Gloas DataColumnSidecar has invalid index"
+        );
+      }
+
+      // Column length must match blob count from KZG commitments
+      if (columnSidecar.column.length !== blockBlobCount) {
+        throw new DataColumnSidecarValidationError({
+          code: DataColumnSidecarErrorCode.INCORRECT_CELL_COUNT,
+          slot: blockSlot,
+          columnIndex: columnSidecar.index,
+          expected: blockBlobCount,
+          actual: columnSidecar.column.length,
+        });
+      }
+
+      // KZG proofs count must match column length
+      if (columnSidecar.column.length !== columnSidecar.kzgProofs.length) {
+        throw new DataColumnSidecarValidationError({
+          code: DataColumnSidecarErrorCode.INCORRECT_KZG_PROOF_COUNT,
+          slot: blockSlot,
+          columnIndex: columnSidecar.index,
+          expected: columnSidecar.column.length,
+          actual: columnSidecar.kzgProofs.length,
+        });
+      }
+
+      // No inclusion proof verification for Gloas (field doesn't exist)
+      // No signedBlockHeader verification for Gloas (field doesn't exist)
+
+      // Use externally-provided KZG commitments (from bid)
+      commitments.push(...kzgCommitments);
+      cellIndices.push(...Array.from({length: columnSidecar.column.length}, () => columnSidecar.index));
+      cells.push(...columnSidecar.column);
+      proofs.push(...columnSidecar.kzgProofs);
+    }
+
+    let reason: string | undefined;
+    const kzgVerificationTimer = metrics?.kzgVerificationDataColumnBatchTime.startTimer();
+    try {
+      const valid = await kzg.asyncVerifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);
+      if (!valid) {
+        reason = "Invalid KZG proof batch";
+      }
+    } catch (e) {
+      reason = (e as Error).message;
+    } finally {
+      kzgVerificationTimer?.();
+    }
+    if (reason !== undefined) {
+      throw new DataColumnSidecarValidationError(
+        {
+          code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH,
+          slot: blockSlot,
+          reason,
+        },
+        "Gloas DataColumnSidecar has invalid KZG proof batch"
+      );
+    }
+    metrics?.dataColumnSidecarProcessingSuccesses.inc();
+  } finally {
+    verificationTimer?.();
+  }
 }

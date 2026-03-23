@@ -16,6 +16,7 @@ import {
   BeaconBlockBody,
   ColumnIndex,
   CustodyIndex,
+  DataColumnSidecar,
   Root,
   SSZTypesFor,
   SignedBeaconBlock,
@@ -24,15 +25,18 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasDataColumnSidecar,
   ssz,
 } from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {Metrics} from "../metrics/metrics.js";
 import {NodeId} from "../network/subnets/index.js";
-import {dataColumnMatrixRecovery} from "./blobs.js";
+import {dataColumnMatrixRecovery, dataColumnMatrixRecoveryGloas} from "./blobs.js";
 import {kzg} from "./kzg.js";
 
 export enum RecoverResult {
@@ -467,6 +471,68 @@ export async function recoverDataColumnSidecars(
   return DataColumnReconstructionCode.SuccessResolved;
 }
 
+/**
+ * Recover missing sampled/custody columns for a Gloas PayloadEnvelopeInput once
+ * at least half the columns are available. Reconstructed columns are added back
+ * to the payload input and published as normal data column sidecars.
+ */
+export async function recoverGloasDataColumnSidecars(
+  payloadInput: PayloadEnvelopeInput,
+  emitter: ChainEventEmitter,
+  metrics: Metrics | null
+): Promise<DataColumnReconstructionCode> {
+  const existingColumns = payloadInput.getAllColumnsWithSource();
+  const columnCount = existingColumns.length;
+  if (columnCount >= NUMBER_OF_COLUMNS) {
+    return DataColumnReconstructionCode.NotAttemptedAlreadyFull;
+  }
+
+  if (columnCount < NUMBER_OF_COLUMNS / 2) {
+    return DataColumnReconstructionCode.NotAttemptedHaveLessThanHalf;
+  }
+
+  metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(columnCount);
+  const partialSidecars = new Map<number, gloas.DataColumnSidecar>();
+  for (const {columnSidecar} of existingColumns) {
+    if (partialSidecars.size >= NUMBER_OF_COLUMNS / 2) {
+      break;
+    }
+    partialSidecars.set(columnSidecar.index, columnSidecar);
+  }
+
+  const timer = metrics?.peerDas.dataColumnsReconstructionTime.startTimer();
+  const fullSidecars = await dataColumnMatrixRecoveryGloas(
+    partialSidecars,
+    payloadInput.getBlobKzgCommitments().length
+  ).catch(() => null);
+  timer?.();
+  if (fullSidecars == null) {
+    return DataColumnReconstructionCode.NullReturned;
+  }
+
+  if (payloadInput.getAllColumns().length === NUMBER_OF_COLUMNS) {
+    metrics?.dataColumns.alreadyAdded.inc(fullSidecars.length);
+    return DataColumnReconstructionCode.SuccessLate;
+  }
+
+  const sidecarsToPublish: gloas.DataColumnSidecars = [];
+  for (const columnSidecar of fullSidecars) {
+    if (!payloadInput.hasColumn(columnSidecar.index)) {
+      payloadInput.addColumn({
+        columnSidecar,
+        seenTimestampSec: Date.now() / 1000,
+        source: PayloadEnvelopeInputSource.recovery,
+      });
+      sidecarsToPublish.push(columnSidecar);
+    }
+  }
+
+  metrics?.peerDas.reconstructedColumns.inc(sidecarsToPublish.length);
+  metrics?.dataColumns.bySource.inc({source: BlockInputSource.recovery}, sidecarsToPublish.length);
+  emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);
+  return DataColumnReconstructionCode.SuccessResolved;
+}
+
 export enum DataColumnReconstructionCode {
   NotAttemptedAlreadyFull = "not_attempted_full",
   NotAttemptedHaveLessThanHalf = "not_attempted_less_than_half",
@@ -474,4 +540,28 @@ export enum DataColumnReconstructionCode {
   SuccessLate = "success_late",
   SuccessResolved = "success_resolved",
   Failed = "failed",
+}
+
+/**
+ * Get the slot from a DataColumnSidecar regardless of fork.
+ * Fulu: from signedBlockHeader.message.slot
+ * Gloas: from sidecar.slot directly
+ */
+export function getDataColumnSlot(sidecar: DataColumnSidecar): Slot {
+  if (isGloasDataColumnSidecar(sidecar)) {
+    return sidecar.slot;
+  }
+  return (sidecar as fulu.DataColumnSidecar).signedBlockHeader.message.slot;
+}
+
+/**
+ * Get the block root from a DataColumnSidecar regardless of fork.
+ * Fulu: computed from signedBlockHeader.message via hashTreeRoot
+ * Gloas: from sidecar.beaconBlockRoot directly
+ */
+export function getDataColumnBlockRoot(sidecar: DataColumnSidecar): Root {
+  if (isGloasDataColumnSidecar(sidecar)) {
+    return sidecar.beaconBlockRoot;
+  }
+  return ssz.phase0.BeaconBlockHeader.hashTreeRoot((sidecar as fulu.DataColumnSidecar).signedBlockHeader.message);
 }

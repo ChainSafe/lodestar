@@ -617,23 +617,25 @@ export class Network implements INetwork {
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
   ): Promise<fulu.DataColumnSidecar[]> {
+    // TODO GLOAS: add Gloas-specific column sync method
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       request.count * request.columns.length,
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRange]
-    );
+    ) as Promise<fulu.DataColumnSidecar[]>;
   }
 
   async sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
     request: DataColumnSidecarsByRootRequest
   ): Promise<fulu.DataColumnSidecar[]> {
+    // TODO GLOAS: add Gloas-specific column sync method
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
       request.reduce((total, {columns}) => total + columns.length, 0),
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot],
       this.chain.serializedCache
-    );
+    ) as Promise<fulu.DataColumnSidecar[]>;
   }
 
   private sendReqRespRequest<Req>(

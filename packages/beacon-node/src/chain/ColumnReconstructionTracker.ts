@@ -1,8 +1,13 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
-import {DataColumnReconstructionCode, recoverDataColumnSidecars} from "../util/dataColumns.js";
+import {
+  DataColumnReconstructionCode,
+  recoverDataColumnSidecars,
+  recoverGloasDataColumnSidecars,
+} from "../util/dataColumns.js";
 import {BlockInputColumns} from "./blocks/blockInput/index.js";
+import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
 /**
@@ -32,14 +37,14 @@ export class ColumnReconstructionTracker {
   config: ChainForkConfig;
 
   /**
-   * Track last attempted block root
-   *
-   * This is sufficient to avoid duplicate calls since we only call this
-   * function when we see a new data column sidecar from gossip.
+   * Track last attempted block root per pipeline (Fulu vs Gloas).
+   * Separate state prevents one pipeline's in-flight reconstruction
+   * from blocking the other.
    */
-  lastBlockRootHex: string | null = null;
-  /** Track if a reconstruction attempt is in-flight */
-  running = false;
+  private fuluLastBlockRootHex: string | null = null;
+  private fuluRunning = false;
+  private gloasLastBlockRootHex: string | null = null;
+  private gloasRunning = false;
 
   private readonly minDelayMs: number;
   private readonly maxDelayMs: number;
@@ -54,18 +59,18 @@ export class ColumnReconstructionTracker {
   }
 
   triggerColumnReconstruction(blockInput: BlockInputColumns): void {
-    if (this.running) {
+    if (this.fuluRunning) {
       return;
     }
 
-    if (this.lastBlockRootHex === blockInput.blockRootHex) {
+    if (this.fuluLastBlockRootHex === blockInput.blockRootHex) {
       return;
     }
 
     // We don't care about the outcome of this call,
     // just that it has been triggered for this block root.
-    this.running = true;
-    this.lastBlockRootHex = blockInput.blockRootHex;
+    this.fuluRunning = true;
+    this.fuluLastBlockRootHex = blockInput.blockRootHex;
     const delay = this.minDelayMs + Math.random() * (this.maxDelayMs - this.minDelayMs);
     sleep(delay)
       .then(() => {
@@ -84,7 +89,47 @@ export class ColumnReconstructionTracker {
           })
           .finally(() => {
             this.logger.debug("Data column sidecar reconstruction attempt finished", logCtx);
-            this.running = false;
+            this.fuluRunning = false;
+          });
+      })
+      .catch((err) => {
+        this.logger.debug("ColumnReconstructionTracker unreachable error", {}, err);
+      });
+  }
+
+  triggerPayloadEnvelopeReconstruction(payloadInput: PayloadEnvelopeInput, onComplete?: () => void): void {
+    if (this.gloasRunning) {
+      return;
+    }
+
+    if (this.gloasLastBlockRootHex === payloadInput.blockRootHex) {
+      return;
+    }
+
+    this.gloasRunning = true;
+    this.gloasLastBlockRootHex = payloadInput.blockRootHex;
+    const delay = this.minDelayMs + Math.random() * (this.maxDelayMs - this.minDelayMs);
+    sleep(delay)
+      .then(() => {
+        const logCtx = {slot: payloadInput.slot, root: payloadInput.blockRootHex};
+        this.logger.debug("Attempting Gloas data column sidecar reconstruction", logCtx);
+        recoverGloasDataColumnSidecars(payloadInput, this.emitter, this.metrics)
+          .then((result) => {
+            this.metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result});
+            this.logger.debug("Gloas data column sidecar reconstruction complete", {...logCtx, result});
+            if (result === DataColumnReconstructionCode.SuccessResolved && payloadInput.isComplete()) {
+              onComplete?.();
+            }
+          })
+          .catch((e) => {
+            this.metrics?.recoverDataColumnSidecars.reconstructionResult.inc({
+              result: DataColumnReconstructionCode.Failed,
+            });
+            this.logger.debug("Error during Gloas data column sidecar reconstruction", logCtx, e as Error);
+          })
+          .finally(() => {
+            this.logger.debug("Gloas data column sidecar reconstruction attempt finished", logCtx);
+            this.gloasRunning = false;
           });
       })
       .catch((err) => {

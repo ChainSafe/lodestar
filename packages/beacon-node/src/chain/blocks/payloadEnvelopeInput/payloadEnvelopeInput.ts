@@ -248,6 +248,22 @@ export class PayloadEnvelopeInput {
     return columns;
   }
 
+  get columnCount(): number {
+    return this.columnsCache.size;
+  }
+
+  hasColumn(columnIndex: number): boolean {
+    return this.columnsCache.has(columnIndex);
+  }
+
+  getAllColumnsWithSource(): ColumnWithSource[] {
+    return [...this.columnsCache.values()];
+  }
+
+  getAllColumns(): gloas.DataColumnSidecars {
+    return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar);
+  }
+
   getSampledColumnsWithSource(): ColumnWithSource[] {
     const columns: ColumnWithSource[] = [];
     for (const index of this.sampledColumns) {
@@ -290,8 +306,13 @@ export class PayloadEnvelopeInput {
     return this.state.timeCompleteSec;
   }
 
+  /**
+   * Payload import is only safe once the payload envelope is present AND the sampled
+   * columns are actually available (or no columns are required). Merely having enough
+   * columns to reconstruct later is not sufficient until reconstruction has run.
+   */
   isComplete(): boolean {
-    return this.state.hasPayload && this.state.hasAllData;
+    return this.state.hasPayload && this.state.hasComputedAllData;
   }
 
   async waitForData(): Promise<gloas.SignedExecutionPayloadEnvelope> {

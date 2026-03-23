@@ -27,6 +27,12 @@ export enum DataColumnSidecarErrorCode {
   /** Sidecars proofs not valid */
   INVALID_KZG_PROOF_BATCH = "DATA_COLUMN_SIDECAR_ERROR_INVALID_KZG_PROOF_BATCH",
 
+  // Gloas-specific errors (EIP-7732)
+  /** Block for sidecar's beacon_block_root is not yet known */
+  BLOCK_UNKNOWN = "DATA_COLUMN_SIDECAR_ERROR_BLOCK_UNKNOWN",
+  /** Sidecar slot does not match the associated block's slot */
+  SLOT_MISMATCH = "DATA_COLUMN_SIDECAR_ERROR_SLOT_MISMATCH",
+
   // following errors are adapted from the block errors
   ALREADY_KNOWN = "DATA_COLUMN_SIDECAR_ERROR_ALREADY_KNOWN",
   FUTURE_SLOT = "DATA_COLUMN_SIDECAR_ERROR_FUTURE_SLOT",
@@ -55,6 +61,8 @@ export type DataColumnSidecarErrorType =
       count: number;
       limit: number;
     }
+  | {code: DataColumnSidecarErrorCode.BLOCK_UNKNOWN; blockRoot: RootHex; slot: Slot}
+  | {code: DataColumnSidecarErrorCode.SLOT_MISMATCH; expectedSlot: Slot; sidecarSlot: Slot}
   | {code: DataColumnSidecarErrorCode.ALREADY_KNOWN; columnIndex: number; slot: Slot}
   | {code: DataColumnSidecarErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: DataColumnSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}

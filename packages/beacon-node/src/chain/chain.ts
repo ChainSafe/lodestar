@@ -860,12 +860,16 @@ export class BeaconChain implements IBeaconChain {
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars> {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputColumns(blockInput)) {
-        throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
-      }
+    if (blockInput && isBlockInputColumns(blockInput)) {
       return blockInput.getAllColumns();
     }
+
+    // Gloas columns live in PayloadEnvelopeInput, not BlockInputColumns
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    if (payloadInput) {
+      return payloadInput.getAllColumns();
+    }
+
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {
       return sidecarsUnfinalized as DataColumnSidecars;
@@ -880,10 +884,7 @@ export class BeaconChain implements IBeaconChain {
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]> {
     const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputColumns(blockInput)) {
-        throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
-      }
+    if (blockInput && isBlockInputColumns(blockInput)) {
       return indices.map((index) => {
         const sidecar = blockInput.getColumn(index);
         if (!sidecar) {
@@ -896,6 +897,26 @@ export class BeaconChain implements IBeaconChain {
         return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
       });
     }
+
+    // Gloas columns live in PayloadEnvelopeInput, not BlockInputColumns
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    if (payloadInput) {
+      // Build index map once to avoid O(n*m) lookups
+      const columnsByIndex = new Map(payloadInput.getAllColumns().map((c) => [c.index, c]));
+      const sszType = sszTypesFor(this.config.getForkName(payloadInput.slot) as ForkPostFulu).DataColumnSidecar;
+      return indices.map((index) => {
+        const sidecar = columnsByIndex.get(index);
+        if (!sidecar) {
+          return undefined;
+        }
+        const serialized = this.serializedCache.get(sidecar);
+        if (serialized) {
+          return serialized;
+        }
+        return sszType.serialize(sidecar);
+      });
+    }
+
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
     if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
       return sidecarsUnfinalized;
