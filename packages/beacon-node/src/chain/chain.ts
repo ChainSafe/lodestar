@@ -1049,11 +1049,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob([block], opts);
+    return this.blockProcessor.processBlocksJob([block], null, opts);
   }
 
-  async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob(blocks, opts);
+  async processChainSegment(
+    blocks: IBlockInput[],
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    opts?: ImportBlockOpts
+  ): Promise<void> {
+    return this.blockProcessor.processBlocksJob(blocks, envelopes, opts);
   }
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {

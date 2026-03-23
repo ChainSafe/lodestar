@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Root, Slot} from "@lodestar/types";
+import {Epoch, Root, Slot, gloas} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
@@ -44,7 +44,11 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: IBlockInput[], syncType: RangeSyncType) => Promise<void>;
+  processChainSegment: (
+    blocks: IBlockInput[],
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    syncType: RangeSyncType
+  ) => Promise<void>;
   /** Must download blocks, and validate their range */
   downloadByRange: (
     peer: PeerSyncMeta,
@@ -581,7 +585,7 @@ export class SyncChain {
     const blocks = batch.startProcessing();
 
     // wrapError ensures to never call both batch success() and batch error()
-    const res = await wrapError(this.processChainSegment(blocks, this.syncType));
+    const res = await wrapError(this.processChainSegment(blocks, null, this.syncType));
 
     if (!res.err) {
       batch.processingSuccess();
