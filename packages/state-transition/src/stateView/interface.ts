@@ -2,6 +2,13 @@ import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {
   ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostCapella,
+  ForkPostDeneb,
+  ForkPostElectra,
+  ForkPostFulu,
+  ForkPostGloas,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostCapella,
@@ -157,6 +164,7 @@ export interface IBeaconStateView {
 
 /** Altair+ state fields — use isStatePostAltair() guard */
 export interface IBeaconStateViewAltair extends IBeaconStateView {
+  forkName: ForkPostAltair;
   previousEpochParticipation: Uint8Array;
   currentEpochParticipation: Uint8Array;
   getPreviousEpochParticipation(validatorIndex: ValidatorIndex): number;
@@ -177,6 +185,7 @@ export interface IBeaconStateViewAltair extends IBeaconStateView {
 
 /** Bellatrix+ state fields — use isStatePostBellatrix() guard */
 export interface IBeaconStateViewBellatrix extends IBeaconStateViewAltair {
+  forkName: ForkPostBellatrix;
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
   /**
    * Cross-fork accessor for the execution block hash of the most recently included payload.
@@ -199,6 +208,7 @@ export interface IBeaconStateViewBellatrix extends IBeaconStateViewAltair {
 
 /** Capella+ state fields — use isStatePostCapella() guard */
 export interface IBeaconStateViewCapella extends IBeaconStateViewBellatrix {
+  forkName: ForkPostCapella;
   historicalSummaries: capella.HistoricalSummaries;
   getExpectedWithdrawals(): {
     expectedWithdrawals: capella.Withdrawal[];
@@ -210,10 +220,13 @@ export interface IBeaconStateViewCapella extends IBeaconStateViewBellatrix {
 }
 
 /** Deneb+ state — no new state-view fields; placeholder for fork completeness and isStatePostDeneb() narrowing */
-export interface IBeaconStateViewDeneb extends IBeaconStateViewCapella {}
+export interface IBeaconStateViewDeneb extends IBeaconStateViewCapella {
+  forkName: ForkPostDeneb;
+}
 
 /** Electra+ state fields — use isStatePostElectra() guard */
 export interface IBeaconStateViewElectra extends IBeaconStateViewDeneb {
+  forkName: ForkPostElectra;
   pendingDeposits: electra.PendingDeposits;
   pendingDepositsCount: number;
   pendingPartialWithdrawals: electra.PendingPartialWithdrawals;
@@ -224,11 +237,13 @@ export interface IBeaconStateViewElectra extends IBeaconStateViewDeneb {
 
 /** Fulu+ state fields — use isStatePostFulu() guard */
 export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
+  forkName: ForkPostFulu;
   proposerLookahead: fulu.ProposerLookahead;
 }
 
 /** Gloas+ state fields — use isStatePostGloas() guard */
 export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
+  forkName: ForkPostGloas;
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   getBuilder(index: BuilderIndex): gloas.Builder;
