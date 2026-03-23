@@ -1,6 +1,7 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RegenCaller} from "../../../../src/chain/regen/interface.js";
@@ -8,7 +9,6 @@ import {processSlotsToNearestCheckpoint} from "../../../../src/chain/regen/regen
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
-import {testLogger} from "../../../utils/logger.js";
 import {generateCachedState} from "../../../utils/state.js";
 
 describe("regen", () => {
@@ -85,9 +85,9 @@ describe("regen", () => {
         {maxCPStateEpochsInMemory: 2}
       );
 
-      cache.add(cp0a, states["cp0a"]);
-      cache.add(cp0b, states["cp0b"]);
-      cache.add(cp1, states["cp1"]);
+      cache.add(cp0a, states["cp0a"], true);
+      cache.add(cp0b, states["cp0b"], true);
+      cache.add(cp1, states["cp1"], true);
     });
 
     /**

@@ -8,6 +8,7 @@ import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/
 import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode} from "@lodestar/logger/node";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {
   BeaconStateAllForks,
@@ -26,7 +27,6 @@ import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {IBeaconNodeOptions, defaultOptions} from "../../../src/node/options.js";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
 import {initDevState} from "../../../src/node/utils/state.js";
-import {testLogger} from "../logger.js";
 
 export async function getDevBeaconNode(
   opts: {

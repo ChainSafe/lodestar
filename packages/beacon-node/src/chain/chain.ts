@@ -2,7 +2,14 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithPayloadStatus,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  UpdateHeadOpt,
+  getCheckpointPayloadStatus,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -58,7 +65,7 @@ import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRoot
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.ts";
+import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -69,15 +76,18 @@ import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumn
 import {callInNextEventLoop} from "../util/eventLoop.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
-import {JobItemQueue} from "../util/queue/itemQueue.ts";
+import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.ts";
+import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {persistBlockInputs} from "./blocks/writeBlockInputToDb.ts";
+import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
+import {ImportPayloadOpts} from "./blocks/types.js";
+import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
+import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
@@ -102,13 +112,14 @@ import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produ
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
+  PayloadEnvelopeInput,
   SeenAggregators,
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
-  SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
+  SeenPayloadEnvelopeInput,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -120,7 +131,7 @@ import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datasto
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
-import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
+import {PersistentCheckpointStateCache, fcCheckpointToHexPayload} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
@@ -140,6 +151,13 @@ const DEFAULT_MAX_CACHED_PRODUCED_RESULTS = 4;
  * write can hold significant memory. Keep moderate to avoid OOM during sync.
  */
 const DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES = 16;
+
+/**
+ * The maximum number of pending unfinalized payload envelope writes to the database before backpressure is applied.
+ * Payload envelope write queue entries hold references to payload inputs (including columns),
+ * keeping them in memory. Keep moderate to avoid OOM during sync.
+ */
+const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -164,7 +182,8 @@ export class BeaconChain implements IBeaconChain {
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
-  readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput[]], void>;
+  readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput], void>;
+  readonly unfinalizedPayloadEnvelopeWrites: JobItemQueue<[PayloadEnvelopeInput], void>;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -180,13 +199,13 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAggregators = new SeenAggregators();
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
-  readonly seenExecutionPayloadEnvelopes = new SeenExecutionPayloadEnvelopes();
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -214,6 +233,7 @@ export class BeaconChain implements IBeaconChain {
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
+  protected readonly payloadEnvelopeProcessor: PayloadEnvelopeProcessor;
   protected readonly db: IBeaconDb;
   // this is only available if nHistoricalStates is enabled
   private readonly cpStateDatastore?: CPStateDatastore;
@@ -305,7 +325,9 @@ export class BeaconChain implements IBeaconChain {
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
-    this.metrics?.peerDas.targetCustodyGroupCount.set(initialCustodyGroupCount);
+    this.metrics?.peerDas.custodyGroupCount.set(initialCustodyGroupCount);
+    // TODO: backfill not implemented yet
+    this.metrics?.peerDas.custodyGroupsBackfilled.set(0);
     this.custodyConfig = new CustodyConfig({
       nodeId,
       config,
@@ -314,12 +336,21 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
+    this.serializedCache = new SerializedCache();
     this.seenBlockInputCache = new SeenBlockInput({
       config,
       custodyConfig: this.custodyConfig,
       clock,
       chainEvents: emitter,
       signal,
+      serializedCache: this.serializedCache,
+      metrics,
+      logger,
+    });
+    this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
+      chainEvents: emitter,
+      signal,
+      serializedCache: this.serializedCache,
       metrics,
       logger,
     });
@@ -365,7 +396,8 @@ export class BeaconChain implements IBeaconChain {
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     blockStateCache.add(anchorState);
     blockStateCache.setHeadState(anchorState);
-    checkpointStateCache.add(checkpoint, anchorState);
+    const payloadPresent = getCheckpointPayloadStatus(anchorState, checkpoint.epoch) === PayloadStatus.FULL;
+    checkpointStateCache.add(checkpoint, anchorState, payloadPresent);
 
     const forkChoice = initializeForkChoice(
       config,
@@ -399,14 +431,13 @@ export class BeaconChain implements IBeaconChain {
     this.reprocessController = new ReprocessController(this.metrics);
 
     this.blockProcessor = new BlockProcessor(this, metrics, opts, signal);
+    this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
     this.forkChoice = forkChoice;
     this.clock = clock;
     this.regen = regen;
     this.bls = bls;
     this.emitter = emitter;
-
-    this.serializedCache = new SerializedCache();
 
     this.getBlobsTracker = new GetBlobsTracker({
       logger,
@@ -429,12 +460,21 @@ export class BeaconChain implements IBeaconChain {
     );
 
     this.unfinalizedBlockWrites = new JobItemQueue(
-      persistBlockInputs.bind(this),
+      persistBlockInput.bind(this),
       {
         maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_BLOCK_WRITES,
         signal,
       },
       metrics?.unfinalizedBlockWritesQueue
+    );
+
+    this.unfinalizedPayloadEnvelopeWrites = new JobItemQueue(
+      persistPayloadEnvelopeInput.bind(this),
+      {
+        maxLength: DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES,
+        signal,
+      },
+      metrics?.unfinalizedPayloadEnvelopeWritesQueue
     );
 
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
@@ -467,6 +507,7 @@ export class BeaconChain implements IBeaconChain {
     // we can abort any ongoing unfinalized block writes.
     // TODO: persist fork choice to disk and allow unfinalized block writes to complete.
     this.unfinalizedBlockWrites.dropAllJobs();
+    this.unfinalizedPayloadEnvelopeWrites.dropAllJobs();
 
     this.abortController.abort();
   }
@@ -600,7 +641,7 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
-      const block = this.forkChoice.getBlock(state.latestBlockHeader.hashTreeRoot());
+      const block = this.forkChoice.getBlockDefaultStatus(state.latestBlockHeader.hashTreeRoot());
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state,
@@ -616,7 +657,7 @@ export class BeaconChain implements IBeaconChain {
     // TODO: This is very inneficient for debug requests of serialized content, since it deserializes to serialize again
     const cachedStateCtx = this.regen.getStateSync(stateRoot);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
+      const block = this.forkChoice.getBlockDefaultStatus(cachedStateCtx.latestBlockHeader.hashTreeRoot());
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
@@ -640,17 +681,20 @@ export class BeaconChain implements IBeaconChain {
       return this.cpStateDatastore.readLatestSafe();
     }
 
-    const persistedKey = checkpointToDatastoreKey(checkpoint);
+    // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint for backwards compatibility.
+    // because pre-gloas we always store FULL checkpoint state.
+    const persistedKey = checkpointToDatastoreKey(checkpoint, true);
     return this.cpStateDatastore.read(persistedKey);
   }
 
   getStateByCheckpoint(
-    checkpoint: CheckpointWithHex
+    checkpoint: CheckpointWithPayloadStatus
   ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null {
     // finalized or justified checkpoint states maynot be available with PersistentCheckpointStateCache, use getCheckpointStateOrBytes() api to get Uint8Array
-    const cachedStateCtx = this.regen.getCheckpointStateSync(checkpoint);
+    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
+    const cachedStateCtx = this.regen.getCheckpointStateSync(checkpointHexPayload);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
+      const block = this.forkChoice.getBlockDefaultStatus(cachedStateCtx.latestBlockHeader.hashTreeRoot());
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
@@ -663,11 +707,12 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getStateOrBytesByCheckpoint(
-    checkpoint: CheckpointWithHex
+    checkpoint: CheckpointWithPayloadStatus
   ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpoint);
+    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
+    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHexPayload);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlock(checkpoint.root);
+      const block = this.forkChoice.getBlockDefaultStatus(checkpoint.root);
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
@@ -711,7 +756,7 @@ export class BeaconChain implements IBeaconChain {
   async getBlockByRoot(
     root: string
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const block = this.forkChoice.getBlockHex(root);
+    const block = this.forkChoice.getBlockHexDefaultStatus(root);
     if (block) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -735,7 +780,7 @@ export class BeaconChain implements IBeaconChain {
   async getSerializedBlockByRoot(
     root: string
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
-    const block = this.forkChoice.getBlockHex(root);
+    const block = this.forkChoice.getBlockHexDefaultStatus(root);
     if (block) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -996,6 +1041,10 @@ export class BeaconChain implements IBeaconChain {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
+  async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
+    return this.payloadEnvelopeProcessor.processPayloadEnvelopeJob(payloadInput, opts);
+  }
+
   getStatus(): Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
@@ -1186,7 +1235,7 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private justifiedBalancesGetter(
-    checkpoint: CheckpointWithHex,
+    checkpoint: CheckpointWithPayloadStatus,
     blockState: CachedBeaconStateAllForks
   ): EffectiveBalanceIncrements {
     this.metrics?.balancesCache.requests.inc();
@@ -1225,10 +1274,11 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private closestJustifiedBalancesStateToCheckpoint(
-    checkpoint: CheckpointWithHex,
+    checkpoint: CheckpointWithPayloadStatus,
     blockState: CachedBeaconStateAllForks
   ): {state: CachedBeaconStateAllForks; stateId: string; shouldWarn: boolean} {
-    const state = this.regen.getCheckpointStateSync(checkpoint);
+    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
+    const state = this.regen.getCheckpointStateSync(checkpointHexPayload);
     if (state) {
       return {state, stateId: "checkpoint_state", shouldWarn: false};
     }
@@ -1239,7 +1289,10 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // Find a state in the same branch of checkpoint at same epoch. Balances should exactly the same
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(
+      checkpoint.rootHex,
+      checkpoint.payloadStatus
+    )) {
       if (computeEpochAtSlot(descendantBlock.slot) === checkpoint.epoch) {
         const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {
@@ -1255,7 +1308,10 @@ export class BeaconChain implements IBeaconChain {
 
     // Find a state in the same branch of checkpoint at a latter epoch. Balances are not the same, but should be close
     // Note: must call .forwardIterateDescendants() again since nodes are not sorted
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(
+      checkpoint.rootHex,
+      checkpoint.payloadStatus
+    )) {
       if (computeEpochAtSlot(descendantBlock.slot) > checkpoint.epoch) {
         const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {
@@ -1349,6 +1405,10 @@ export class BeaconChain implements IBeaconChain {
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
 
+    if (epoch === this.config.GLOAS_FORK_EPOCH) {
+      this.regen.upgradeForGloas(epoch);
+    }
+
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);
     this.seenPayloadAttesters.prune(epoch);
@@ -1362,7 +1422,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenContributionAndProof.prune(head.slot);
   }
 
-  private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
+  private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithPayloadStatus): void {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
@@ -1373,11 +1433,10 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
+  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithPayloadStatus): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
-    this.seenExecutionPayloadEnvelopes.prune(finalizedSlot);
 
     // Update validator custody to account for effective balance changes
     await this.updateValidatorsCustodyRequirement(cp);
@@ -1415,7 +1474,7 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithHex): Promise<void> {
+  private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithPayloadStatus): Promise<void> {
     if (this.custodyConfig.targetCustodyGroupCount === this.config.NUMBER_OF_CUSTODY_GROUPS) {
       // Custody requirements can only be increased, we can disable dynamic custody updates
       // if the node already maintains custody of all custody groups in case it is configured
@@ -1461,7 +1520,7 @@ export class BeaconChain implements IBeaconChain {
     // Only update if target is increased
     if (targetCustodyGroupCount > this.custodyConfig.targetCustodyGroupCount) {
       this.custodyConfig.updateTargetCustodyGroupCount(targetCustodyGroupCount);
-      this.metrics?.peerDas.targetCustodyGroupCount.set(targetCustodyGroupCount);
+      this.metrics?.peerDas.custodyGroupCount.set(targetCustodyGroupCount);
       this.logger.verbose("Updated target custody group count", {
         finalizedEpoch: finalizedCheckpoint.epoch,
         validatorCount: validatorIndices.length,

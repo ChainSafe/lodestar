@@ -3,9 +3,9 @@ import {BeaconApiMethods, registerRoutes} from "@lodestar/api/beacon/server";
 import {RestApiServer, RestApiServerModules, RestApiServerOpts} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 
 const ZERO_HASH_HEX = toHex(Buffer.alloc(32, 0));
 

@@ -2,7 +2,7 @@ import type {Stream} from "@libp2p/interface";
 import {byteStream} from "@libp2p/utils";
 import {readEncodedPayload} from "../encodingStrategies/index.js";
 import {MixedProtocol} from "../types.js";
-import {drainByteStream} from "../utils/stream.ts";
+import {drainByteStream} from "../utils/stream.js";
 
 const EMPTY_DATA = new Uint8Array();
 

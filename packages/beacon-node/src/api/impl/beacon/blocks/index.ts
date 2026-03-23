@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApiError, ApplicationMethods} from "@lodestar/api/server";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkPostBellatrix,
@@ -36,6 +37,7 @@ import {
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
@@ -49,6 +51,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
   computePreFuluKzgCommitmentsInclusionProof,
@@ -208,7 +211,7 @@ export function getBeaconBlockApi({
       case routes.beacon.BroadcastValidation.consensus: {
         // check if this beacon node produced the block else run validations
         if (!blockLocallyProduced) {
-          const parentBlock = chain.forkChoice.getBlock(signedBlock.message.parentRoot);
+          const parentBlock = chain.forkChoice.getBlockDefaultStatus(signedBlock.message.parentRoot);
           if (parentBlock === null) {
             chain.emitter.emit(ChainEvent.unknownParent, {
               blockInput: blockForImport,
@@ -655,13 +658,15 @@ export function getBeaconBlockApi({
       }
 
       // TODO GLOAS: review checks, do we want to implement `broadcast_validation`?
-      const block = chain.forkChoice.getBlockHex(blockRootHex);
+      const block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
       if (block === null) {
         throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
       }
       if (block.slot !== slot) {
         throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
       }
+
+      await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       let dataColumnSidecars: gloas.DataColumnSidecars = [];
@@ -680,6 +685,7 @@ export function getBeaconBlockApi({
         }
 
         if (cachedResult.cells && cachedResult.blobsBundle.commitments.length > 0) {
+          const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
           const cellsAndProofs = cachedResult.cells.map((rowCells, rowIndex) => ({
             cells: rowCells,
             proofs: cachedResult.blobsBundle.proofs.slice(
@@ -689,24 +695,42 @@ export function getBeaconBlockApi({
           }));
 
           dataColumnSidecars = getDataColumnSidecarsForGloas(slot, envelope.beaconBlockRoot, cellsAndProofs);
+          timer?.();
         }
       } else {
         // TODO GLOAS: will this api be used by builders or only for self-building?
       }
 
-      // TODO GLOAS: Verify execution payload envelope signature
-      // For self-builds, the proposer signs with their own validator key
-      // For external builders, verify using the builder's registered pubkey
-      // Use verify_execution_payload_envelope_signature(state, signed_envelope)
+      // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
+      const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
+      if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
+        await sleep(msToBlockSlot);
+      }
 
-      // TODO GLOAS: Process execution payload via state transition
-      // Call process_execution_payload(state, signed_envelope, execution_engine)
+      // TODO GLOAS: if block and payload are submitted in parallel, payloadInput may not yet exist.
+      // A queuing mechanism is needed to handle this case. See https://github.com/ChainSafe/lodestar/issues/8915
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (!payloadInput) {
+        throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
+      }
 
-      // TODO GLOAS: Update fork choice with the execution payload
-      // Call on_execution_payload(store, signed_envelope) to update fork choice state
+      payloadInput.addPayloadEnvelope({
+        envelope: signedExecutionPayloadEnvelope,
+        source: PayloadEnvelopeInputSource.api,
+        seenTimestampSec,
+        peerIdStr: undefined,
+      });
 
-      // TODO GLOAS: Add envelope and data columns to block input via seenBlockInputCache
-      // and trigger block import (Gloas block import requires both beacon block and envelope)
+      if (dataColumnSidecars.length > 0) {
+        for (const columnSidecar of dataColumnSidecars) {
+          payloadInput.addColumn({
+            columnSidecar,
+            source: PayloadEnvelopeInputSource.api,
+            seenTimestampSec,
+            peerIdStr: undefined,
+          });
+        }
+      }
 
       const valLogMeta = {
         slot,
@@ -716,23 +740,19 @@ export function getBeaconBlockApi({
         dataColumns: dataColumnSidecars.length,
       };
 
-      // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
-      const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
-      if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
-        await sleep(msToBlockSlot);
-      }
-
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
+      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.api, delaySec, signedExecutionPayloadEnvelope);
 
       chain.logger.info("Publishing execution payload envelope", valLogMeta);
 
-      // Publish envelope and data columns
       const publishPromises = [
         // Gossip the signed execution payload envelope first
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // For self-builds, publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
+        // Import execution payload. Signature already verified above
+        () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];
 
       const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
@@ -819,11 +839,18 @@ export function getBeaconBlockApi({
           }
 
           const indicesToReconstruct = indices ?? Array.from({length: blobCount}, (_, i) => i);
+
+          const timer = metrics?.recoverBlobSidecars.reconstructionTime.startTimer();
           const blobs = await reconstructBlobs(dataColumnSidecars, indicesToReconstruct);
+          timer?.();
+          metrics?.recoverBlobSidecars.blobsReconstructed.inc(indicesToReconstruct.length);
+
           const signedBlockHeader = signedBlockToSignedHeader(config, block);
 
           data = await Promise.all(
             indicesToReconstruct.map(async (index, i) => {
+              // record per column computation time
+              const compTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
               // Reconstruct blob sidecar from blob
               const kzgCommitment = blobKzgCommitments[index];
               const blob = blobs[i]; // Use i since blobs only contains requested indices
@@ -833,6 +860,7 @@ export function getBeaconBlockApi({
                 block.message.body,
                 index
               );
+              compTimer?.();
               return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
             })
           );
@@ -914,7 +942,10 @@ export function getBeaconBlockApi({
             indicesToReconstruct = Array.from({length: blobCount}, (_, i) => i);
           }
 
+          const timer = metrics?.peerDas.dataColumnsReconstructionTime.startTimer();
           blobs = await reconstructBlobs(dataColumnSidecars, indicesToReconstruct);
+          timer?.();
+          metrics?.peerDas.reconstructedColumns.inc(indicesToReconstruct.length);
         } else {
           blobs = [];
         }

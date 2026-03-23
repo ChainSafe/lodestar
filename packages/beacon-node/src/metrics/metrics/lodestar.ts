@@ -3,6 +3,7 @@ import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -234,6 +235,56 @@ export function createLodestarMetrics(
       concurrency: register.gauge({
         name: "lodestar_unfinalized_block_writes_queue_concurrency",
         help: "Current concurrency of unfinalized block writes queue",
+      }),
+    },
+
+    payloadEnvelopeProcessorQueue: {
+      length: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_length",
+        help: "Count of total payload envelope processor queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_dropped_jobs_total",
+        help: "Count of total payload envelope processor queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_payload_envelope_processor_queue_job_time_seconds",
+        help: "Time to process payload envelope processor queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_payload_envelope_processor_queue_job_wait_time_seconds",
+        help: "Time from job added to the payload envelope processor queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_concurrency",
+        help: "Current concurrency of payload envelope processor queue",
+      }),
+    },
+
+    unfinalizedPayloadEnvelopeWritesQueue: {
+      length: register.gauge({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_length",
+        help: "Count of total unfinalized payload envelope writes queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_dropped_jobs_total",
+        help: "Count of total unfinalized payload envelope writes queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_job_time_seconds",
+        help: "Time to process unfinalized payload envelope writes queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_job_wait_time_seconds",
+        help: "Time from job added to the unfinalized payload envelope writes queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_concurrency",
+        help: "Current concurrency of unfinalized payload envelope writes queue",
       }),
     },
 
@@ -836,19 +887,22 @@ export function createLodestarMetrics(
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
-    recoverDataColumnSidecars: {
-      recoverTime: register.histogram({
-        name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
-        help: "Time elapsed to recover data column sidecar",
-        buckets: [0.5, 1.0, 1.5, 2],
+    // recovery in the case of specific blob rows required
+    recoverBlobSidecars: {
+      blobsReconstructed: register.counter({
+        name: "lodestar_blobs_reconstructed_total",
+        help: "Total count of reconstructed blobs",
       }),
+      reconstructionTime: register.histogram({
+        name: "lodestar_blob_reconstruction_seconds",
+        help: "Time taken to reconstruct blobs",
+        buckets: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 2, 5],
+      }),
+    },
+    recoverDataColumnSidecars: {
       custodyBeforeReconstruction: register.gauge({
         name: "lodestar_data_columns_in_custody_before_reconstruction",
         help: "Number of data columns in custody before reconstruction",
-      }),
-      numberOfColumnsRecovered: register.gauge({
-        name: "lodestar_recover_data_column_sidecar_recovered_columns_total",
-        help: "Total number of columns that were recovered",
       }),
       reconstructionResult: register.counter<{result: DataColumnReconstructionCode}>({
         name: "lodestar_data_column_sidecars_reconstruction_result",
@@ -857,6 +911,10 @@ export function createLodestarMetrics(
       }),
     },
     dataColumns: {
+      alreadyAdded: register.counter({
+        name: "lodestar_data_column_sidecar_already_added",
+        help: "Total number of columns that were already added by other sources while waiting",
+      }),
       bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_data_columns_by_source",
         help: "Number of received data columns by source",
@@ -912,15 +970,22 @@ export function createLodestarMetrics(
         help: "Total number of imported blobs by source",
         labelNames: ["blobsSource"],
       }),
-      columnsBySource: register.gauge<{source: BlockInputSource}>({
-        name: "lodestar_import_columns_by_source_total",
-        help: "Total number of imported columns (sampled columns) by source",
-        labelNames: ["source"],
-      }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "lodestar_import_block_not_override_fcu_reason_total",
         help: "Reason why the fcu call is not suppressed during block import",
         labelNames: ["reason"],
+      }),
+    },
+    importPayload: {
+      bySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
+        name: "lodestar_import_payload_by_source_total",
+        help: "Total number of imported execution payload envelopes by source",
+        labelNames: ["source"],
+      }),
+      columnsBySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
+        name: "lodestar_import_payload_columns_by_source_total",
+        help: "Total number of payload-attached columns (sampled columns for Gloas) by source",
+        labelNames: ["source"],
       }),
     },
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({
@@ -1461,28 +1526,50 @@ export function createLodestarMetrics(
           name: "lodestar_seen_block_input_cache_size",
           help: "Number of cached BlockInputs",
         }),
-        duplicateBlockCount: register.gauge<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_block_count",
+        serializedObjectRefs: register.gauge({
+          name: "lodestar_seen_block_input_cache_serialized_object_refs",
+          help: "Number of serialized-cache object refs retained by cached BlockInputs",
+        }),
+        duplicateBlockCount: register.counter<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_block_total",
           help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        duplicateBlobCount: register.gauge<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_blob_count",
+        duplicateBlobCount: register.counter<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_blob_total",
           help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        duplicateColumnCount: register.gauge<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_column_count",
+        duplicateColumnCount: register.counter<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_column_total",
           help: "Total number of duplicate columns that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        createdByBlock: register.gauge({
-          name: "lodestar_seen_block_input_cache_items_created_by_block",
+        createdByBlock: register.counter({
+          name: "lodestar_seen_block_input_cache_items_created_by_block_total",
           help: "Number of BlockInputs created via a block being seen first",
         }),
-        createdByBlob: register.gauge({
-          name: "lodestar_seen_block_input_cache_items_created_by_blob",
+        createdByBlob: register.counter({
+          name: "lodestar_seen_block_input_cache_items_created_by_blob_total",
           help: "Number of BlockInputs created via a blob being seen first",
+        }),
+        createdByColumn: register.counter({
+          name: "lodestar_seen_block_input_cache_items_created_by_column_total",
+          help: "Number of BlockInputs created via a data column being seen first",
+        }),
+      },
+      payloadEnvelopeInput: {
+        count: register.gauge({
+          name: "lodestar_seen_payload_envelope_input_cache_size",
+          help: "Number of cached PayloadEnvelopeInputs",
+        }),
+        serializedObjectRefs: register.gauge({
+          name: "lodestar_seen_payload_envelope_input_cache_serialized_object_refs",
+          help: "Number of serialized-cache object refs retained by cached PayloadEnvelopeInputs",
+        }),
+        created: register.counter({
+          name: "lodestar_seen_payload_envelope_input_cache_items_created_total",
+          help: "Number of PayloadEnvelopeInputs created",
         }),
       },
     },

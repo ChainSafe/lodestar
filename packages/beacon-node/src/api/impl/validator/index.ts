@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
@@ -74,7 +74,7 @@ import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {CheckpointHex} from "../../../chain/stateCache/types.js";
+import {CheckpointHexPayload} from "../../../chain/stateCache/types.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -303,7 +303,7 @@ export function getValidatorApi(
    *                    |
    *              prepareNextSlot (4s before next slot)
    */
-  async function waitForCheckpointState(cpHex: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
+  async function waitForCheckpointState(cpHex: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | null> {
     const cpState = chain.regen.getCheckpointStateSync(cpHex);
     if (cpState) {
       return cpState;
@@ -389,7 +389,7 @@ export function getValidatorApi(
    */
 
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+    const protoBeaconBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
     if (!protoBeaconBlock) {
       throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
@@ -401,7 +401,7 @@ export function getValidatorApi(
   }
 
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+    const protoBeaconBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
     if (!protoBeaconBlock) {
       throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
@@ -989,16 +989,6 @@ export function getValidatorApi(
       const headBlockRoot = fromHex(headBlockRootHex);
       const fork = config.getForkName(slot);
 
-      let index: CommitteeIndex;
-      if (isForkPostElectra(fork)) {
-        index = 0;
-      } else {
-        if (committeeIndex === undefined) {
-          throw new ApiError(400, `Committee index must be provided for pre-electra fork=${fork}`);
-        }
-        index = committeeIndex;
-      }
-
       const beaconBlockRoot =
         slot >= headSlot
           ? // When attesting to the head slot or later, always use the head of the chain.
@@ -1006,6 +996,30 @@ export function getValidatorApi(
           : // Permit attesting to slots *prior* to the current head. This is desirable when
             // the VC and BN are out-of-sync due to time issues or overloading.
             getBlockRootAtSlot(headState, slot);
+
+      let index: CommitteeIndex;
+      if (isForkPostGloas(fork)) {
+        const canonicalBlock = chain.forkChoice.getCanonicalBlockByRoot(beaconBlockRoot);
+        if (!canonicalBlock) {
+          // This should never happen
+          throw Error(`Block not found in fork choice for slot=${slot}, root=${toRootHex(beaconBlockRoot)}`);
+        }
+        // After Gloas, attestation.data.index signals payload status in fork-choice:
+        // - 0 = EMPTY / not present, 1 = FULL / present
+        // - same-slot attestations must always use index = 0
+        if (canonicalBlock.slot !== slot) {
+          index = canonicalBlock.payloadStatus === PayloadStatus.FULL ? 1 : 0;
+        } else {
+          index = 0;
+        }
+      } else if (isForkPostElectra(fork)) {
+        index = 0;
+      } else {
+        if (committeeIndex === undefined) {
+          throw new ApiError(400, `Committee index must be provided for pre-electra fork=${fork}`);
+        }
+        index = committeeIndex;
+      }
 
       const targetSlot = computeStartSlotAtEpoch(attEpoch);
       const targetRoot =
@@ -1098,7 +1112,11 @@ export function getValidatorApi(
       // this is to avoid missed block proposal due to 0 epoch look ahead
       if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
         // wait for maximum 1 slot for cp state which is the timeout of validator api
-        const cpState = await waitForCheckpointState({rootHex: head.blockRoot, epoch});
+        const cpState = await waitForCheckpointState({
+          rootHex: head.blockRoot,
+          epoch,
+          payloadPresent: head.payloadStatus === PayloadStatus.FULL,
+        });
         if (cpState) {
           state = cpState;
           metrics?.duties.requestNextEpochProposalDutiesHit.inc();

@@ -1,6 +1,6 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, CheckpointWithPayloadStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {BeaconStateAllForks, CachedBeaconStateAllForks, EpochShuffling, PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -32,7 +32,7 @@ import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
-import {ImportBlockOpts} from "./blocks/types.js";
+import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
@@ -58,7 +58,6 @@ import {
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
-  SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
@@ -66,6 +65,7 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
+import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
@@ -128,13 +128,13 @@ export interface IBeaconChain {
   readonly seenAggregators: SeenAggregators;
   readonly seenPayloadAttesters: SeenPayloadAttesters;
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
-  readonly seenExecutionPayloadEnvelopes: SeenExecutionPayloadEnvelopes;
   readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
@@ -192,7 +192,7 @@ export interface IBeaconChain {
   ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
   /** Return state bytes by checkpoint */
   getStateOrBytesByCheckpoint(
-    checkpoint: CheckpointWithHex
+    checkpoint: CheckpointWithPayloadStatus
   ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
 
   /**
@@ -241,6 +241,9 @@ export interface IBeaconChain {
   processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
+
+  /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
+  processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
 
   getStatus(): Status;
 

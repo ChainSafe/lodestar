@@ -456,7 +456,8 @@ export async function fetchAndValidateColumns({
     blockRoot,
     blobCount,
     columnSidecars,
-    getBlobKzgCommitments(forkName, block)
+    getBlobKzgCommitments(forkName, block),
+    chain?.metrics?.peerDas
   );
 
   return {result: columnSidecars, warnings: warnings.length > 0 ? warnings : null};

@@ -399,67 +399,102 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
 }
 
 /**
+ * Pre-Gloas DataColumnSidecar:
  * {
-    index: ColumnIndex [ fixed - 8 bytes],
-    column: DataColumn BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL * <some non fixed length>,
-    kzgCommitments: denebSsz.BlobKzgCommitments,
-    kzgProofs: denebSsz.KZGProofs,
-    signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
-    kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof,
-  }
+ *   index: ColumnIndex [fixed - 8 bytes],
+ *   column: DataColumn (offset - 4 bytes),
+ *   kzgCommitments: (offset - 4 bytes),
+ *   kzgProofs: (offset - 4 bytes),
+ *   signedBlockHeader: (offset - 4 bytes) -> slot at variable offset after fixed header
+ *   kzgCommitmentsInclusionProof: (offset - 4 bytes),
+ * }
+ * Post-Gloas DataColumnSidecar:
+ * {
+ *   index: ColumnIndex [8 bytes],
+ *   column: DataColumn (offset - 4 bytes),
+ *   kzgProofs: (offset - 4 bytes),
+ *   slot: Slot [8 bytes] - at offset 16,
+ *   beaconBlockRoot: Root [32 bytes] - at offset 24,
+ * }
  */
+const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS = 20;
+const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_POST_GLOAS = 16;
+const BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR = 24;
 
-const DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION = 8;
-// Gloas DataColumnSidecar SSZ layout:
-//   index (8 bytes) | column offset (4 bytes) | kzgProofs offset (4 bytes) | slot (8 bytes) | beaconBlockRoot (32 bytes)
-// Fixed portion total: 8 + 4 + 4 + 8 + 32 = 56
-const GLOAS_DATA_COLUMN_SIDECAR_FIRST_OFFSET = 56;
-const SLOT_BYTES_POSITION_IN_FULU_DATA_COLUMN_SIDECAR = 20;
-const SLOT_BYTES_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR = 16;
-const BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR = 24;
+export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array, fork: ForkName): Slot | null {
+  const offset = isForkPostGloas(fork)
+    ? SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_POST_GLOAS
+    : SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS;
 
-function isGloasDataColumnSidecarSerialized(data: Uint8Array): boolean {
-  if (data.length < DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION + 4) {
-    return false;
-  }
-
-  const firstOffset =
-    data[DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION] |
-    (data[DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION + 1] << 8) |
-    (data[DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION + 2] << 16) |
-    (data[DATA_COLUMN_SIDECAR_FIRST_OFFSET_POSITION + 3] << 24);
-
-  return firstOffset === GLOAS_DATA_COLUMN_SIDECAR_FIRST_OFFSET;
-}
-
-export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot | null {
-  const slotOffset = isGloasDataColumnSidecarSerialized(data)
-    ? SLOT_BYTES_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR
-    : SLOT_BYTES_POSITION_IN_FULU_DATA_COLUMN_SIDECAR;
-
-  if (data.length < slotOffset + SLOT_SIZE) {
+  if (data.length < offset + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, slotOffset);
+  return getSlotFromOffset(data, offset);
 }
 
-export function getBlockRootFromDataColumnSidecarSerialized(data: Uint8Array): BlockRootHex | null {
-  if (!isGloasDataColumnSidecarSerialized(data)) {
-    return null;
-  }
-
-  if (data.length < BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE) {
+export function getBeaconBlockRootFromDataColumnSidecarSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE) {
     return null;
   }
 
   blockRootBuf.set(
     data.subarray(
-      BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR,
-      BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE
+      BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR,
+      BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR + ROOT_SIZE
     )
   );
-  return `0x${blockRootBuf.toString("hex")}`;
+  return "0x" + blockRootBuf.toString("hex");
+}
+
+/**
+ * SignedExecutionPayloadEnvelope SSZ Layout:
+ * ├─ 4 bytes: message offset (points to byte 100)
+ * ├─ 96 bytes: signature
+ * └─ ExecutionPayloadEnvelope (starts at byte 100):
+ *    ├─ 4 bytes: payload offset
+ *    ├─ 4 bytes: executionRequests offset
+ *    ├─ 8 bytes: builderIndex        (offset 108-115)
+ *    ├─ 32 bytes: beaconBlockRoot    (offset 116-147)
+ *    ├─ 8 bytes: slot                (offset 148-155)
+ *    └─ 32 bytes: stateRoot          (offset 156-187)
+ */
+const SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET = 4;
+const SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE = 96;
+const EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET = 4;
+const EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET = 4;
+const EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE = 8;
+
+const BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET +
+  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE +
+  EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET +
+  EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET +
+  EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE; // 116
+
+const SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
+  BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE; // 148
+
+export function getSlotFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE);
+}
+
+export function getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE) {
+    return null;
+  }
+
+  blockRootBuf.set(
+    data.subarray(
+      BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE,
+      BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + ROOT_SIZE
+    )
+  );
+  return "0x" + blockRootBuf.toString("hex");
 }
 
 /**
