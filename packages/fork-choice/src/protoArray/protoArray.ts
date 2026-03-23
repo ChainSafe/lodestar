@@ -1060,7 +1060,7 @@ export class ProtoArray {
     }
 
     // For Gloas, PENDING variant (index 0) is always the smallest since it's inserted first
-    const finalizedIndex = Array.isArray(variants) ? variants[0] : variants;
+    const finalizedIndex = Array.isArray(variants) ? variants[PayloadStatus.PENDING] : variants;
 
     if (finalizedIndex < this.pruneThreshold) {
       // Pruning at small numbers incurs more cost than benefit
