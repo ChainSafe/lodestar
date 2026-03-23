@@ -159,6 +159,40 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
   scripts: [{src: "https://plausible.io/js/script.js", defer: true, "data-domain": "chainsafe.github.io/lodestar"}],
+
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "apple-touch-icon",
+        sizes: "180x180",
+        href: "/lodestar/images/apple-touch-icon.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        sizes: "192x192",
+        href: "/lodestar/images/favicon-192x192.png",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:image",
+        content: "https://chainsafe.github.io/lodestar/images/favicon-512x512.png",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:image",
+        content: "https://chainsafe.github.io/lodestar/images/favicon-512x512.png",
+      },
+    },
+  ],
 };
 
 export default config;
