@@ -53,6 +53,7 @@ export async function validateGossipDataColumnSidecar(
         fork,
       });
     }
+
     await validateGossipDataColumnSidecarGloas(chain, dataColumnSidecar, gossipSubnet, metrics);
   } else {
     if (isGloasDataColumnSidecar(dataColumnSidecar)) {
