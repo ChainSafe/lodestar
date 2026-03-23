@@ -858,16 +858,22 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getSerializedExecutionPayloadEnvelope(blockRootHex: string): Promise<Uint8Array | null> {
-    // TODO GLOAS: Check SeenPayloadEnvelopeInput once one it is available
-    // If SeenPayloadEnvelopeInput has the payload, try look up serializedCache to avoid serialization.
-    // If serializedCache doesn't have it, serialize and return.
-
-    const unfinalizedEnvelope = await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex));
-    if (unfinalizedEnvelope) {
-      return unfinalizedEnvelope;
+  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      const envelope = payloadInput.getPayloadEnvelope();
+      const serialized = this.serializedCache.get(envelope);
+      if (serialized) {
+        return serialized;
+      }
+      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
     }
-    return null;
+
+    return (
+      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
+      null
+    );
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars> {

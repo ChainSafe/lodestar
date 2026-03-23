@@ -42,7 +42,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
       const block = headChain[i];
 
       if (block.slot >= startSlot && block.slot < endSlot) {
-        const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(block.blockRoot);
+        const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(block.slot, block.blockRoot);
         if (envelopeBytes) {
           yield {
             data: envelopeBytes,
