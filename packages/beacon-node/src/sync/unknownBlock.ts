@@ -66,7 +66,7 @@ enum FetchResult {
  *
  * - publishBlock
  * - gossipHandlers
- * - searchUnknownSlotRoot
+ * - searchUnknownBlock
  *    = produceSyncCommitteeContribution
  *    = validateGossipFnRetryUnknownRoot
  *        * submitPoolAttestationsV2

@@ -18,6 +18,7 @@ export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars;
  * sources so each should be labelled individually.
  */
 export enum BlockInputSource {
+  network_processor = "network_processor",
   gossip = "gossip",
   api = "api",
   engine = "engine",

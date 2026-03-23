@@ -620,4 +620,125 @@ describe("Gloas Fork Choice", () => {
       // FULL should be preferred due to higher weight
     });
   });
+
+  describe("Pruning (maybePrune)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+    });
+
+    it("should prune all Gloas variants (PENDING/EMPTY/FULL) before finalized index", () => {
+      // Build a chain: block1 → block2 → block3
+      // When we prune at block2, block1 and all its variants (PENDING/EMPTY/FULL) are removed.
+      const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      const block2 = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02");
+      const block3 = createTestBlock(gloasForkSlot + 2, "0x04", "0x03", "0x03");
+
+      protoArray.onBlock(block1, gloasForkSlot, null);
+      protoArray.onBlock(block2, gloasForkSlot + 1, null);
+      protoArray.onBlock(block3, gloasForkSlot + 2, null);
+
+      // Create all three variants for block1: PENDING, EMPTY, FULL
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot, null);
+
+      // Get block1's variants indices before pruning
+      const block1PendingBefore = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
+      const block1EmptyBefore = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
+      const block1FullBefore = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
+      expect(block1PendingBefore).toBeDefined();
+      expect(block1EmptyBefore).toBeDefined();
+      expect(block1FullBefore).toBeDefined();
+
+      // Get block2's PENDING index (this will be the finalizedIndex)
+      const block2PendingBefore = protoArray.getNodeIndexByRootAndStatus("0x03", PayloadStatus.PENDING);
+      expect(block2PendingBefore).toBeDefined();
+
+      // Prune at block2 (all block1 variants will be deleted)
+      const prunedBlocks = protoArray.maybePrune("0x03");
+
+      // Verify block1's variants are removed from indices
+      expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING)).toBeUndefined();
+      expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)).toBeUndefined();
+      expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL)).toBeUndefined();
+
+      // Verify pruned blocks were returned
+      expect(prunedBlocks.length).toBeGreaterThan(0);
+      expect(prunedBlocks.some((b) => b.blockRoot === "0x02")).toBe(true);
+
+      // Verify block2 and block3 still exist with adjusted indices
+      const block2PendingAfter = protoArray.getNodeIndexByRootAndStatus("0x03", PayloadStatus.PENDING);
+      const block3PendingAfter = protoArray.getNodeIndexByRootAndStatus("0x04", PayloadStatus.PENDING);
+      expect(block2PendingAfter).toBeDefined();
+      expect(block3PendingAfter).toBeDefined();
+      // Indices should be reduced by the number of pruned nodes
+      if (block2PendingAfter !== undefined && block2PendingBefore !== undefined) {
+        expect(block2PendingAfter < block2PendingBefore).toBe(true);
+      }
+    });
+
+    it("should clean up PTC votes for pruned Gloas blocks", () => {
+      const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      const block2 = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02");
+
+      protoArray.onBlock(block1, gloasForkSlot, null);
+      protoArray.onBlock(block2, gloasForkSlot + 1, null);
+
+      // Create FULL variant for block1
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot, null);
+
+      // Set PTC votes for block1
+      const threshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: threshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", indices, true);
+
+      // Verify PTC votes are set
+      expect(protoArray.isPayloadTimely("0x02")).toBe(true);
+
+      // Prune at block2 - this removes block1
+      protoArray.maybePrune("0x03");
+
+      // After pruning, block1 is gone, so isPayloadTimely should return false
+      expect(protoArray.isPayloadTimely("0x02")).toBe(false);
+    });
+
+    it("should handle Gloas variants with correct single-pass deletion", () => {
+      // Test the core assumption: PENDING is always at index[0] for Gloas variants
+      // and all variants share the same blockRoot, so they're all deleted in one loop.
+      const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      const block2 = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02");
+
+      protoArray.onBlock(block1, gloasForkSlot, null);
+      protoArray.onBlock(block2, gloasForkSlot + 1, null);
+
+      // Create all three variants for block1
+      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot, null);
+
+      // Verify all three variants exist via the public API
+      const pendingIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
+      const emptyIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
+      const fullIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
+      expect(pendingIdx).not.toBeUndefined();
+      expect(emptyIdx).not.toBeUndefined();
+      expect(fullIdx).not.toBeUndefined();
+
+      // Verify PENDING is stored at the smallest index among the variants
+      expect(pendingIdx! < emptyIdx!).toBe(true);
+      expect(pendingIdx! < fullIdx!).toBe(true);
+
+      // Prune - all block1 variants should be deleted even though they're at different indices
+      protoArray.maybePrune("0x03");
+
+      // All three variants removed in one pass
+      expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING)).toBeUndefined();
+      expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)).toBeUndefined();
+      expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL)).toBeUndefined();
+    });
+  });
 });
