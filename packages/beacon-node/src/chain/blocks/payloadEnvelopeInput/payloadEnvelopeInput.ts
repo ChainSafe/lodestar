@@ -219,6 +219,10 @@ export class PayloadEnvelopeInput {
     }
   }
 
+  hasColumn(index: ColumnIndex): boolean {
+    return this.columnsCache.has(index);
+  }
+
   getVersionedHashes(): VersionedHashes {
     return this.versionedHashes;
   }
