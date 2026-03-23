@@ -159,7 +159,6 @@ export class NetworkProcessor {
   // we may not receive the block for messages like Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
   private readonly awaitingBlockByRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
-  private unknownBlockGossipsubMessagesCount = 0;
   private unknownBlocksBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
 
   constructor(
@@ -299,7 +298,6 @@ export class NetworkProcessor {
       this.metrics?.awaitingBlockGossipMessages.queue.inc({topic: topicType});
       const awaitingGossipsubMessages = this.awaitingBlockByRoot.getOrDefault(root);
       awaitingGossipsubMessages.add(message);
-      this.unknownBlockGossipsubMessagesCount++;
       return;
     }
 
@@ -344,7 +342,6 @@ export class NetworkProcessor {
       }
     }
 
-    this.unknownBlockGossipsubMessagesCount -= waitingGossipsubMessages.size;
     this.awaitingBlockByRoot.delete(rootHex);
   }
 
@@ -355,9 +352,9 @@ export class NetworkProcessor {
     for (const [slot, roots] of this.unknownBlocksBySlot) {
       if (slot > minSlot) continue;
       for (const rootHex of roots) {
-        const gossipMessagesByRoot = this.awaitingBlockByRoot.get(rootHex);
-        if (gossipMessagesByRoot !== undefined) {
-          for (const message of gossipMessagesByRoot) {
+        const gossipMessages = this.awaitingBlockByRoot.get(rootHex);
+        if (gossipMessages !== undefined) {
+          for (const message of gossipMessages) {
             const topicType = message.topic.type;
             this.metrics?.awaitingBlockGossipMessages.reject.inc({
               topic: topicType,
@@ -369,15 +366,10 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          this.unknownBlockGossipsubMessagesCount -= gossipMessagesByRoot.size;
           this.awaitingBlockByRoot.delete(rootHex);
         }
       }
       this.unknownBlocksBySlot.delete(slot);
-    }
-
-    if (this.unknownBlocksBySlot.size === 0) {
-      this.unknownBlockGossipsubMessagesCount = 0;
     }
   }
 
@@ -516,5 +508,13 @@ export class NetworkProcessor {
     }
 
     return null;
+  }
+
+  private get unknownBlockGossipsubMessagesCount(): number {
+    let count = 0;
+    for (const messages of this.awaitingBlockByRoot.values()) {
+      count += messages.size;
+    }
+    return count;
   }
 }

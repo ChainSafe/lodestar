@@ -14,7 +14,7 @@ import {ExtractSlotRootFns} from "./types.js";
 
 /**
  * Extract the slot and block root of a gossip message form serialized data.
- * Only applicable for beacon_attestation and beacon_aggregate_and_proof topics.
+ * Not applicable for all topics.
  */
 export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
   return {
