@@ -9,6 +9,7 @@ import {
   ForkSeq,
   NUMBER_OF_COLUMNS,
   isForkPostElectra,
+  isForkPostFulu,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -302,6 +303,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   async function validateBeaconDataColumn(
     dataColumnSidecar: DataColumnSidecar,
     _dataColumnBytes: Uint8Array,
+    fork: ForkName,
     gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
@@ -348,7 +350,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
+      await validateGossipDataColumnSidecar(fork, chain, dataColumnSidecar, gossipSubnet, metrics);
       // TODO(gloas): handle gloas data columns separately via BlockInputNoData path
       const blockInput = chain.seenBlockInputCache.getByColumn({
         blockRootHex,
@@ -564,18 +566,20 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
+      const fork = topic.boundary.fork;
       const {serializedData} = gossipData;
-      const dataColumnSidecar = sszDeserialize(topic, serializedData) as DataColumnSidecar;
+      const dataColumnSidecar = sszDeserialize(topic, serializedData);
       const dataColumnSlot = getDataColumnSidecarSlot(dataColumnSidecar);
       const index = dataColumnSidecar.index;
 
-      if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {
+      if (!isForkPostFulu(fork)) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
       }
       const delaySec = chain.clock.secFromSlot(dataColumnSlot, seenTimestampSec);
       const blockInput = await validateBeaconDataColumn(
         dataColumnSidecar,
         serializedData,
+        fork,
         topic.subnet,
         peerIdStr,
         seenTimestampSec

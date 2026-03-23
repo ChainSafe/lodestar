@@ -1,3 +1,4 @@
+import {ForkName} from "@lodestar/params";
 import {RootHex, Slot, SubnetID} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {GossipActionError} from "./gossipValidation.js";
@@ -6,6 +7,7 @@ export enum DataColumnSidecarErrorCode {
   INVALID_INDEX = "DATA_COLUMN_SIDECAR_ERROR_INVALID_INDEX",
   NO_COMMITMENTS = "DATA_COLUMN_SIDECAR_ERROR_NO_COMMITMENTS",
   MISMATCHED_LENGTHS = "DATA_COLUMN_SIDECAR_ERROR_MISMATCHED_LENGTHS",
+  INCORRECT_TYPE = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_TYPE",
   INVALID_SUBNET = "DATA_COLUMN_SIDECAR_ERROR_INVALID_SUBNET",
   INVALID_KZG_PROOF = "DATA_COLUMN_SIDECAR_ERROR_INVALID_KZG_PROOF",
   TOO_MANY_KZG_COMMITMENTS = "DATA_COLUMN_SIDECAR_ERROR_TOO_MANY_KZG_COMMITMENTS",
@@ -18,6 +20,10 @@ export enum DataColumnSidecarErrorCode {
   INCORRECT_SIDECAR_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_SIDECAR_COUNT",
   /** Sidecar doesn't match block */
   INCORRECT_BLOCK = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_BLOCK",
+  /** Sidecar slot doesn't match block slot */
+  INCORRECT_SIDECAR_SLOT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_SIDECAR_SLOT",
+  /** Sidecar expected block type doesn't match block type */
+  INCORRECT_BLOCK_TYPE = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_BLOCK_TYPE",
   /** Sidecar cell count not as expected */
   INCORRECT_CELL_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_CELL_COUNT",
   /** Sidecar kzg proof count not as expected */
@@ -46,6 +52,12 @@ export type DataColumnSidecarErrorType =
       columnLength: number;
       commitmentsLength: number;
       proofsLength: number;
+    }
+  | {
+      code: DataColumnSidecarErrorCode.INCORRECT_TYPE;
+      slot: Slot;
+      columnIndex: number;
+      fork: ForkName;
     }
   | {code: DataColumnSidecarErrorCode.INVALID_SUBNET; columnIndex: number; gossipSubnet: SubnetID}
   | {
@@ -79,6 +91,17 @@ export type DataColumnSidecarErrorType =
       columnIndex: number;
       expected: string;
       actual: string;
+    }
+  | {
+      code: DataColumnSidecarErrorCode.INCORRECT_BLOCK_TYPE;
+      slot: Slot;
+      columnIndex: number;
+    }
+  | {
+      code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_SLOT;
+      columnIndex: number;
+      expected: Slot;
+      actual: Slot;
     }
   | {
       code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT;
