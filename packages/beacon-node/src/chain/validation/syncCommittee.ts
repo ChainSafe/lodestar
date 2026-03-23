@@ -15,12 +15,12 @@ export async function validateGossipSyncCommittee(
   chain: IBeaconChain,
   syncCommittee: altair.SyncCommitteeMessage,
   subnet: SubnetID
-): Promise<{indexInSubcommittee: IndexInSubcommittee}> {
+): Promise<{indicesInSubcommittee: IndexInSubcommittee[]}> {
   const {slot, validatorIndex, beaconBlockRoot} = syncCommittee;
   const messageRoot = toRootHex(beaconBlockRoot);
 
   const headState = chain.getHeadState();
-  const indexInSubcommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
+  const indicesInSubcommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
 
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
@@ -68,7 +68,7 @@ export async function validateGossipSyncCommittee(
   // Register this valid item as seen
   chain.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex, messageRoot);
 
-  return {indexInSubcommittee};
+  return {indicesInSubcommittee};
 }
 
 export async function validateApiSyncCommittee(
@@ -105,7 +105,7 @@ export function validateGossipSyncCommitteeExceptSig(
   headState: CachedBeaconStateAllForks,
   subnet: SubnetID,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
-): IndexInSubcommittee {
+): IndexInSubcommittee[] {
   const {slot, validatorIndex} = data;
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
@@ -127,26 +127,27 @@ export function validateGossipSyncCommitteeExceptSig(
 
   // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
   // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
-  const indexInSubcommittee = getIndexInSubcommittee(headState, subnet, data);
-  if (indexInSubcommittee === null) {
+  const indicesInSubcommittee = getIndicesInSubcommittee(headState, subnet, data);
+  if (indicesInSubcommittee === null) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
       validatorIndex,
     });
   }
 
-  return indexInSubcommittee;
+  return indicesInSubcommittee;
 }
 
 /**
- * Returns the IndexInSubcommittee of the given `subnet`.
- * Returns `null` if not part of the sync committee or not part of the given `subnet`
+ * Returns all IndexInSubcommittee positions of the given `subnet`.
+ * Returns `null` if not part of the sync committee or not part of the given `subnet`.
+ * A validator may appear multiple times in the same subcommittee.
  */
-function getIndexInSubcommittee(
+function getIndicesInSubcommittee(
   headState: CachedBeaconStateAllForks,
   subnet: SubnetID,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
-): IndexInSubcommittee | null {
+): IndexInSubcommittee[] | null {
   const syncCommittee = headState.epochCtx.getIndexedSyncCommittee(data.slot);
   const indexesInCommittee = syncCommittee.validatorIndexMap.get(data.validatorIndex);
   if (indexesInCommittee === undefined) {
@@ -154,12 +155,12 @@ function getIndexInSubcommittee(
     return null;
   }
 
+  const indices: IndexInSubcommittee[] = [];
   for (const indexInCommittee of indexesInCommittee) {
     if (Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE) === subnet) {
-      return indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
+      indices.push(indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE);
     }
   }
 
-  // Not part of this specific subnet
-  return null;
+  return indices.length > 0 ? indices : null;
 }
