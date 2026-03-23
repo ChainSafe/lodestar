@@ -1068,7 +1068,7 @@ export function getValidatorApi(
       // see https://github.com/ChainSafe/lodestar/issues/5063
       if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
         const rootHex = toRootHex(beaconBlockRoot);
-        network.searchUnknownSlotRoot({slot, root: rootHex}, BlockInputSource.api);
+        network.searchUnknownBlock({slot, root: rootHex}, BlockInputSource.api);
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
         await chain.waitForBlock(slot, rootHex);
       }
