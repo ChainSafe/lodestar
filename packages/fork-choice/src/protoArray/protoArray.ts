@@ -1067,18 +1067,22 @@ export class ProtoArray {
       return [];
     }
 
-    // Remove indices and PTC votes for pruned blocks
-    // Gloas variants (PENDING/EMPTY/FULL) share the same blockRoot, so delete may be called
-    // multiple times for the same root, which is a safe no-op on Map
+    // Collect all block roots that will be pruned
+    const prunedRoots = new Set<RootHex>();
     for (let i = 0; i < finalizedIndex; i++) {
       const node = this.nodes[i];
       if (node === undefined) {
         throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: i});
       }
-      this.indices.delete(node.blockRoot);
+      prunedRoots.add(node.blockRoot);
+    }
+
+    // Remove indices for pruned blocks and PTC votes
+    for (const root of prunedRoots) {
+      this.indices.delete(root);
       // Prune PTC votes for this block to prevent memory leak
       // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
-      this.ptcVotes.delete(node.blockRoot);
+      this.ptcVotes.delete(root);
     }
 
     // Store nodes prior to finalization
