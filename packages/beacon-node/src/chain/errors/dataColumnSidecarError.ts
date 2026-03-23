@@ -22,7 +22,7 @@ export enum DataColumnSidecarErrorCode {
   INCORRECT_BLOCK = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_BLOCK",
   /** Sidecar slot doesn't match block slot */
   INCORRECT_SIDECAR_SLOT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_SIDECAR_SLOT",
-  /** Sidecar expected block type doesn't match block type */
+  /** Sidecar referenced block is not the expected block type */
   INCORRECT_BLOCK_TYPE = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_BLOCK_TYPE",
   /** Sidecar cell count not as expected */
   INCORRECT_CELL_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_CELL_COUNT",
