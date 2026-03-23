@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Critical rules
+
+- **Target branch:** `unstable` (never `stable`)
+- **Pre-push:** run `pnpm lint`, `pnpm check-types`, `pnpm test:unit` before every push
+- **Relative imports:** use `.js` extension in TypeScript ESM imports
+- **No `any`:** avoid `any` / `as any`; use proper types or justified `biome-ignore`
+- **No `lib/` edits:** never edit `packages/*/lib/` — these are build outputs
+- **Follow existing patterns** before introducing new abstractions
+- **Structured logging** with specific error codes (not generic `Error`)
+- **Incremental commits** after review starts — do not force push unless maintainer requests it
+
 ## Project overview
 
 Lodestar is a TypeScript implementation of the Ethereum consensus client
@@ -103,8 +114,12 @@ Lodestar uses [Biome](https://biomejs.dev/) for linting and formatting.
 - **Naming**: `camelCase` for functions/variables, `PascalCase` for classes,
   `UPPER_SNAKE_CASE` for constants
 - **Quotes**: Use double quotes (`"`) not single quotes
-- **Types**: All functions must have explicit parameter and return types
-- **No `any`**: Avoid TypeScript `any` type
+- **Types**: Prefer explicit types on public APIs and complex functions
+- **No `any` or `as any`**: Do not use `any` type or `as any` assertions to bypass
+  the type system. In production code, find the proper type or interface. In test code,
+  use public APIs rather than accessing private fields via `as any`. If genuinely
+  unavoidable, add a suppression with the full rule ID and justification:
+  `// biome-ignore lint/suspicious/noExplicitAny: <reason>`
 - **Private fields**: No underscore prefix (use `private dirty`, not `private _dirty`)
 - **Named exports only**: No default exports
 
@@ -117,10 +132,17 @@ Imports are auto-sorted by Biome in this order:
 3. `@chainsafe/*` and `@lodestar/*` packages
 4. Relative paths
 
-Always use `.js` extension for relative imports (even for `.ts` files):
+In TypeScript source and test files, use `.js` extension for relative ESM imports
+(even though source files are `.ts`). This is required for Node.js ESM resolution.
+This rule does **not** apply to non-TS files (e.g., `package.json`, `.mjs` config).
 
 ```typescript
+// ✅ Correct
 import {something} from "./utils.js";
+import {IBeaconStateView} from "../stateView/interface.js";
+
+// ❌ Wrong — will break at runtime
+import {something} from "./utils.ts";
 ```
 
 ### Comments
@@ -258,25 +280,8 @@ for (const block of blocks) {
 
 ### Running specific tests
 
-Use vitest project filters for targeted test runs:
-
-```bash
-# Unit tests only (from repo root)
-pnpm vitest run --project unit test/unit/chain/validation/block.test.ts
-
-# With pattern matching
-pnpm vitest run --project unit -t "should reject"
-
-# From package directory (no project filter needed)
-cd packages/beacon-node
-pnpm vitest run test/unit/chain/validation/block.test.ts
-```
-
-For spec tests with minimal preset (faster):
-
-```bash
-LODESTAR_PRESET=minimal pnpm vitest run --config vitest.spec.config.ts
-```
+See **Build commands** above for all test invocations. Use `--project unit`
+for targeted runs and `LODESTAR_PRESET=minimal` for faster spec tests.
 
 ## Pull request guidelines
 
@@ -321,10 +326,19 @@ refactor(reqresp)!: support byte based handlers
 ### PR etiquette
 
 - Keep PRs as drafts until ready for review
-- Don't force push after review starts (use incremental commits)
-- Close stale PRs rather than letting them sit
+- Avoid force push after review starts unless a maintainer requests it (use incremental commits)
+- Flag stale PRs to maintainers rather than letting them sit indefinitely
 - Respond to review feedback promptly — reply to every comment, including bot reviewers
 - When updating based on feedback, respond in-thread to acknowledge
+
+## Pre-push checklist
+
+Before pushing any commit, verify:
+
+1. `pnpm lint` — Biome enforces formatting; CI catches failures but wastes a round-trip
+2. `pnpm check-types` — catch type errors before CI
+3. `pnpm docs:lint` — if you edited any `.md` files, check Prettier formatting
+4. No edits in `packages/*/lib/` — these are build outputs; edit `src/` instead
 
 ## Common tasks
 
@@ -341,7 +355,7 @@ refactor(reqresp)!: support byte based handlers
 1. Write a failing test that reproduces the bug
 2. Fix the bug
 3. Verify the test passes
-4. Run full test suite: `pnpm test:unit`
+4. Run checks: `pnpm lint`, `pnpm check-types`, `pnpm test:unit`
 
 ### Adding a new SSZ type
 
@@ -360,47 +374,10 @@ refactor(reqresp)!: support byte based handlers
 
 ## Style learnings from reviews
 
-### Prefer inline logic over helper functions
-
-For simple validation logic, inline the check rather than creating a helper:
-
-```typescript
-// Preferred
-if (error.code === RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE) {
-  return GossipAction.REJECT;
-}
-
-// Avoid (unless logic is complex and reused)
-function shouldReject(error: Error): boolean {
-  return error.code === RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE;
-}
-```
-
-### Match existing comment style
-
-When adding comments to containers or functions modified across forks,
-follow the existing style in that file. Don't add unnecessary markers.
-
-### Error handling patterns
-
-Use specific error codes when available:
-
-```typescript
-// Preferred
-throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN});
-
-// Avoid generic errors when specific ones exist
-throw new Error("Parent not found");
-```
-
-### Config value coercion
-
-When reading optional config values, handle undefined explicitly:
-
-```typescript
-const peers = config.directPeers ?? [];
-const trimmed = value?.trim() ?? "";
-```
+- **Prefer inline logic** over single-use helper functions for simple checks
+- **Match existing patterns** in the file you're modifying (comments, structure)
+- **Use specific error codes** (`BlockErrorCode.PARENT_UNKNOWN`) over generic `Error`
+- **Handle undefined** explicitly: `config.directPeers ?? []`, `value?.trim() ?? ""`
 
 ## Implementing consensus specs
 
@@ -422,8 +399,7 @@ When implementing changes from the consensus specs, the mapping is typically:
 
 ### Fork organization
 
-Specs and code are organized by fork: `phase0`, `altair`, `bellatrix`,
-`capella`, `deneb`, `electra`, `fulu`, `gloas`.
+Forks follow the progression defined in **Architecture patterns > Fork-aware code** above.
 
 - **@lodestar/types/src/** - Each fork has its own directory with SSZ type definitions
 - **@lodestar/state-transition/src/block/** - Block processing functions
@@ -431,55 +407,5 @@ Specs and code are organized by fork: `phase0`, `altair`, `bellatrix`,
 - **@lodestar/state-transition/src/epoch/** - Epoch processing functions
 - **@lodestar/state-transition/src/slot/** - Slot processing functions
 
-## Important notes
-
-### Default branch is `unstable`
-
-All PRs should target `unstable`. The `stable` branch is for releases only
-(see RELEASE.md for details).
-
-### Spec tests require download
-
-Before running `pnpm test:spec`, download test vectors:
-
-```bash
-pnpm download-spec-tests
-```
-
-### E2E tests require Docker
-
-Start the e2e environment before running e2e tests:
-
-```bash
-./scripts/run_e2e_env.sh start
-pnpm test:e2e
-./scripts/run_e2e_env.sh stop
-```
-
-### Generated files
-
-Do not edit files in `packages/*/lib/` - these are build outputs.
-Edit source files in `packages/*/src/` instead.
-
-### Consensus spec references
-
 The `specrefs/` directory contains pinned consensus spec versions.
 When implementing spec changes, reference the exact spec version.
-
-## Common pitfalls
-
-- **Forgetting `pnpm lint` before pushing**: Biome enforces formatting. Always
-  run it before committing. CI will catch it, but it wastes a round-trip.
-- **Forgetting `pnpm docs:lint` after editing docs**: Markdown files are
-  formatted by Prettier. Run `pnpm docs:lint` (or `pnpm docs:lint:fix` to
-  auto-fix) before pushing changes to `.md` files.
-- **Editing `lib/` instead of `src/`**: Files in `packages/*/lib/` are build
-  outputs. Always edit in `packages/*/src/`.
-- **Stale fork choice head**: After modifying proto-array execution status,
-  the cached head from `getHead()` is stale. Call `recomputeForkChoiceHead()`.
-- **Holding state references**: Beacon state objects are large. Don't store
-  references beyond their immediate use — let them be garbage collected.
-- **Missing `.js` extension**: Relative imports must use `.js` even though
-  source files are `.ts`. This is required for Node.js ESM resolution.
-- **Force pushing after review**: Never force push once a reviewer has started.
-  Use incremental commits — reviewers track changes between reviews.

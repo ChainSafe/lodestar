@@ -1,14 +1,15 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {
+  BeaconStateView,
   CachedBeaconStateGloas,
   computeStartSlotAtEpoch,
-  createSingleSignatureSetFromComponents,
-  getExecutionPayloadEnvelopeSigningRoot,
+  getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
@@ -47,11 +48,21 @@ async function validateExecutionPayloadEnvelope(
 
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  if (chain.seenExecutionPayloadEnvelopes.isKnown(blockRootHex)) {
+  const envelopeBlock = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
+  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+  if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,
       slot: envelope.slot,
+    });
+  }
+
+  if (!payloadInput) {
+    // PayloadEnvelopeInput should have been created during block import
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
+      blockRoot: blockRootHex,
     });
   }
 
@@ -79,45 +90,47 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  if (block.builderIndex == null || block.blockHashFromBid == null) {
-    // This indicates this block is a pre-gloas block which is wrong
-    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-      code: ExecutionPayloadEnvelopeErrorCode.CACHE_FAIL,
-      blockRoot: blockRootHex,
-    });
-  }
-
   // [REJECT] `envelope.builder_index == bid.builder_index`
-  if (envelope.builderIndex !== block.builderIndex) {
+  if (envelope.builderIndex !== payloadInput.getBuilderIndex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
       envelopeBuilderIndex: envelope.builderIndex,
-      bidBuilderIndex: block.builderIndex,
+      bidBuilderIndex: payloadInput.getBuilderIndex(),
     });
   }
 
   // [REJECT] `payload.block_hash == bid.block_hash`
-  if (toRootHex(payload.blockHash) !== block.blockHashFromBid) {
+  if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
       envelopeBlockHash: toRootHex(payload.blockHash),
-      bidBlockHash: block.blockHashFromBid,
+      bidBlockHash: payloadInput.getBlockHashHex(),
     });
   }
 
-  // [REJECT] `signed_execution_payload_envelope.signature` is valid with respect to the builder's public key.
-  const state = chain.getHeadState() as CachedBeaconStateGloas;
-  const signatureSet = createSingleSignatureSetFromComponents(
-    PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey),
-    getExecutionPayloadEnvelopeSigningRoot(chain.config, envelope),
-    executionPayloadEnvelope.signature
+  // Get the post block state which is the pre-payload state to verify the builder's signature.
+  const blockState = await chain.regen
+    .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
+    .catch(() => {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
+        blockRoot: blockRootHex,
+        slot: envelope.slot,
+      });
+    });
+
+  const state = blockState as CachedBeaconStateGloas;
+  const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
+    chain.config,
+    chain.pubkeyCache,
+    new BeaconStateView(state),
+    executionPayloadEnvelope,
+    payloadInput.proposerIndex
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
     });
   }
-
-  chain.seenExecutionPayloadEnvelopes.add(blockRootHex, envelope.slot);
 }
