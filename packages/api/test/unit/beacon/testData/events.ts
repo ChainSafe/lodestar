@@ -5,7 +5,7 @@ import {
   EventData,
   EventType,
   blobSidecarSSE,
-  dataColumnSidecarSSE,
+  dataColumnSidecarSSEFulu,
 } from "../../../../src/beacon/routes/events.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
@@ -266,7 +266,7 @@ export const eventTestData: EventData = {
     slot: "1",
     versioned_hash: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
   }),
-  [EventType.dataColumnSidecar]: dataColumnSidecarSSE.fromJson({
+  [EventType.dataColumnSidecar]: dataColumnSidecarSSEFulu.fromJson({
     block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
     index: "1",
     slot: "1",
