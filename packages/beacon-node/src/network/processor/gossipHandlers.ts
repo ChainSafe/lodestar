@@ -855,7 +855,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       if (!payloadInput) {
         // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
-        throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
           code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
           blockRoot: blockRootHex,
         });
