@@ -722,16 +722,17 @@ describe("Gloas Fork Choice", () => {
       // Create all three variants for block1
       protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, stateRoot, null);
 
-      const variants = (protoArray as any).indices.get("0x02");
-      expect(Array.isArray(variants)).toBe(true);
-      expect(variants.length).toBe(3); // PENDING, EMPTY, FULL
+      // Verify all three variants exist via the public API
+      const pendingIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
+      const emptyIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
+      const fullIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
+      expect(pendingIdx).not.toBeUndefined();
+      expect(emptyIdx).not.toBeUndefined();
+      expect(fullIdx).not.toBeUndefined();
 
-      // Verify PENDING (variants[0]) is the smallest
-      const pendingIdx = variants[PayloadStatus.PENDING];
-      const emptyIdx = variants[PayloadStatus.EMPTY];
-      const fullIdx = variants[PayloadStatus.FULL];
-      expect(pendingIdx < emptyIdx).toBe(true);
-      expect(pendingIdx < fullIdx).toBe(true);
+      // Verify PENDING is stored at the smallest index among the variants
+      expect(pendingIdx! < emptyIdx!).toBe(true);
+      expect(pendingIdx! < fullIdx!).toBe(true);
 
       // Prune - all block1 variants should be deleted even though they're at different indices
       protoArray.maybePrune("0x03");
