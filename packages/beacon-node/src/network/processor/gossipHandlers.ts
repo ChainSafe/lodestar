@@ -1044,7 +1044,7 @@ export async function validateGossipFnRetryUnknownRoot<T>(
         if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
           const rootHex = toRootHex(blockRoot);
-          network.searchUnknownSlotRoot({slot, root: rootHex}, BlockInputSource.gossip);
+          network.searchUnknownBlock({slot, root: rootHex}, BlockInputSource.gossip);
         }
 
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
