@@ -158,7 +158,7 @@ export class NetworkProcessor {
   private readonly extractBlockSlotRootFns = createExtractBlockSlotRootFns();
   // we may not receive the block for messages like Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
-  private readonly awaitingBlockByRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
+  private readonly awaitingMessagesByBlockRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
   private unknownBlocksBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
 
   constructor(
@@ -183,7 +183,7 @@ export class NetworkProcessor {
     this.chain.emitter.on(routes.events.EventType.block, this.onBlockProcessed.bind(this));
     this.chain.clock.on(ClockEvent.slot, this.onClockSlot.bind(this));
 
-    this.awaitingBlockByRoot = new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set());
+    this.awaitingMessagesByBlockRoot = new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set());
 
     // TODO: Implement queues and priorization for ReqResp incoming requests
     // Listens to NetworkEvent.reqRespIncomingRequest event
@@ -238,7 +238,7 @@ export class NetworkProcessor {
   searchUnknownBlock({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
     if (
       this.chain.seenBlock(root) ||
-      this.awaitingBlockByRoot.has(root) ||
+      this.awaitingMessagesByBlockRoot.has(root) ||
       this.unknownBlocksBySlot.getOrDefault(slot).has(root)
     ) {
       return;
@@ -296,7 +296,7 @@ export class NetworkProcessor {
       }
 
       this.metrics?.awaitingBlockGossipMessages.queue.inc({topic: topicType});
-      const awaitingGossipsubMessages = this.awaitingBlockByRoot.getOrDefault(root);
+      const awaitingGossipsubMessages = this.awaitingMessagesByBlockRoot.getOrDefault(root);
       awaitingGossipsubMessages.add(message);
       return;
     }
@@ -317,7 +317,7 @@ export class NetworkProcessor {
   }
 
   private async onBlockProcessed({block: rootHex}: {block: string; executionOptimistic: boolean}): Promise<void> {
-    const waitingGossipsubMessages = this.awaitingBlockByRoot.get(rootHex);
+    const waitingGossipsubMessages = this.awaitingMessagesByBlockRoot.get(rootHex);
     if (!waitingGossipsubMessages || waitingGossipsubMessages.size === 0) {
       return;
     }
@@ -342,7 +342,7 @@ export class NetworkProcessor {
       }
     }
 
-    this.awaitingBlockByRoot.delete(rootHex);
+    this.awaitingMessagesByBlockRoot.delete(rootHex);
   }
 
   private onClockSlot(clockSlot: Slot): void {
@@ -352,7 +352,7 @@ export class NetworkProcessor {
     for (const [slot, roots] of this.unknownBlocksBySlot) {
       if (slot > minSlot) continue;
       for (const rootHex of roots) {
-        const gossipMessages = this.awaitingBlockByRoot.get(rootHex);
+        const gossipMessages = this.awaitingMessagesByBlockRoot.get(rootHex);
         if (gossipMessages !== undefined) {
           for (const message of gossipMessages) {
             const topicType = message.topic.type;
@@ -366,7 +366,7 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          this.awaitingBlockByRoot.delete(rootHex);
+          this.awaitingMessagesByBlockRoot.delete(rootHex);
         }
       }
       this.unknownBlocksBySlot.delete(slot);
@@ -512,7 +512,7 @@ export class NetworkProcessor {
 
   private get unknownBlockGossipsubMessagesCount(): number {
     let count = 0;
-    for (const messages of this.awaitingBlockByRoot.values()) {
+    for (const messages of this.awaitingMessagesByBlockRoot.values()) {
       count += messages.size;
     }
     return count;
