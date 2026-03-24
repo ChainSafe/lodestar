@@ -48,6 +48,7 @@ import {
   Root,
   RootHex,
   SignedBeaconBlock,
+  SignedExecutionProof,
   Slot,
   Status,
   UintNum64,
@@ -200,6 +201,8 @@ export class BeaconChain implements IBeaconChain {
   readonly minProofsRequired: number;
   /** EIP-8025: Verifier for execution proofs — swap implementation for real zkvm prover */
   readonly executionProofVerifier: IZkvmExecutionProofVerifier;
+  /** EIP-8025: Maps newPayloadRequestRoot hex → blockRoot hex for proof→block lookup */
+  readonly requestRootToBlockRoot = new Map<string, string>();
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 
@@ -1452,7 +1455,8 @@ export class BeaconChain implements IBeaconChain {
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
-    this.executionProofPool.prune(slot);
+    // TODO EIP-8025: Implement pruning based on finalized request roots
+    // this.executionProofPool was previously pruned by slot, now needs pruning by request root
     this.seenExecutionPayloadBids.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
@@ -1604,47 +1608,46 @@ export class BeaconChain implements IBeaconChain {
    * EIP-8025: Check if enough execution proofs arrived for a block and transition it to Valid in fork choice.
    * Called from both gossip handler and REST API handler when a new proof is added to the pool.
    */
-  maybeTransitionToValidOnProofArrival(proof: {slot: number; blockRoot: Uint8Array; blockHash: Uint8Array}): void {
-    if (!this.activateZkvm) {
+  maybeTransitionToValidOnProofArrival(signedProof: SignedExecutionProof): void {
+    if (!this.activateZkvm) return;
+
+    const requestRoot = signedProof.message.publicInput.newPayloadRequestRoot;
+    if (!this.executionProofPool.hasEnoughProofs(requestRoot, this.minProofsRequired)) return;
+
+    const requestRootHex = toRootHex(requestRoot);
+    const blockRootHex = this.requestRootToBlockRoot.get(requestRootHex);
+    if (blockRootHex == null) {
+      this.logger.debug("Cannot transition block to valid: requestRoot not mapped to blockRoot", {
+        requestRoot: requestRootHex,
+      });
       return;
     }
 
-    const blockRootHex = toRootHex(proof.blockRoot);
-    if (this.executionProofPool.hasEnoughProofs(blockRootHex, this.minProofsRequired)) {
-      // Look up the block in fork choice to get the canonical execution payload block hash.
-      // We must NOT use proof.blockHash because gossip proofs from other clients may use
-      // incompatible SSZ encodings, causing the deserialized blockHash to be garbage.
-      // The fork choice proto-array is the authoritative source for execution block hashes.
-      const block = this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
-      if (block == null || block.executionPayloadBlockHash == null) {
-        this.logger.debug("Cannot transition block to valid: not found in fork choice", {
-          slot: proof.slot,
-          blockRoot: blockRootHex,
-        });
-        return;
-      }
-
-      // Skip if already valid — multiple proofs arriving concurrently can trigger this
-      if (block.executionStatus === ExecutionStatus.Valid) {
-        return;
-      }
-
-      const execBlockHash = block.executionPayloadBlockHash;
-      this.forkChoice.validateLatestHash({
-        executionStatus: ExecutionStatus.Valid,
-        latestValidExecHash: execBlockHash,
-      });
-      // Refresh the cached fork choice head so API responses reflect the updated execution status.
-      // validateLatestHash updates the proto-array nodes but the cached head is a stale snapshot.
-      this.recomputeForkChoiceHead(ForkchoiceCaller.onExecutionProof);
-      this.logger.info("Execution proofs sufficient, marked block as execution-valid (zkvm mode)", {
-        slot: proof.slot,
+    const block = this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
+    if (block == null || block.executionPayloadBlockHash == null) {
+      this.logger.debug("Cannot transition block to valid: block not found in fork choice", {
         blockRoot: blockRootHex,
-        execBlockHash,
-        proofsAvailable: this.executionProofPool.getProofsByBlockRoot(blockRootHex).length,
-        minRequired: this.minProofsRequired,
+        requestRoot: requestRootHex,
       });
+      return;
     }
+
+    // Skip if already valid — multiple proofs arriving concurrently can trigger this
+    if (block.executionStatus === ExecutionStatus.Valid) return;
+
+    this.forkChoice.validateLatestHash({
+      executionStatus: ExecutionStatus.Valid,
+      latestValidExecHash: block.executionPayloadBlockHash,
+    });
+    // Refresh the cached fork choice head so API responses reflect the updated execution status.
+    // validateLatestHash updates the proto-array nodes but the cached head is a stale snapshot.
+    this.recomputeForkChoiceHead(ForkchoiceCaller.onExecutionProof);
+    this.logger.info("Execution proofs sufficient, marked block valid (zkvm)", {
+      blockRoot: blockRootHex,
+      execBlockHash: block.executionPayloadBlockHash,
+      proofsAvailable: this.executionProofPool.getByRequestRoot(requestRoot).length,
+      minRequired: this.minProofsRequired,
+    });
   }
 
   updateBuilderStatus(clockSlot: Slot): void {
