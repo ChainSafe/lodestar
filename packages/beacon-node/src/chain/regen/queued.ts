@@ -3,7 +3,7 @@ import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, isGloasBeaconBlock, phase0} from "@lodestar/types";
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
@@ -152,18 +152,17 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * Get state closest to head
    */
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null {
-    // Convert PayloadStatus to payloadPresent boolean
-    if (head.payloadStatus === PayloadStatus.PENDING) {
-      throw new RegenError({
-        code: RegenErrorCode.UNEXPECTED_PAYLOAD_STATUS,
-        blockRoot: fromHex(head.blockRoot),
-        payloadStatus: head.payloadStatus,
-      });
-    }
-    const payloadPresent = head.payloadStatus === PayloadStatus.FULL;
+    // Convert PayloadStatus to payloadPresent boolean.
+    // PENDING blocks are in fork-choice but lack an envelope — treat as non-FULL.
+    const preferredPayloadPresent = head.payloadStatus === PayloadStatus.FULL;
+
+    // In some restart edge cases, fork-choice may reference a head variant whose payload status
+    // differs from the variant persisted in checkpoint cache. Fall back to the opposite variant
+    // to avoid startup failures (`headState does not exist`).
     return (
-      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, payloadPresent) ||
-      this.blockStateCache.get(head.stateRoot)
+      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, preferredPayloadPresent) ||
+      this.blockStateCache.get(head.stateRoot) ||
+      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, !preferredPayloadPresent)
     );
   }
 
