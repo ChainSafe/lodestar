@@ -21,7 +21,10 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[IBlockInput[], Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null, ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<
+    [IBlockInput[], Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null, ImportBlockOpts],
+    void
+  >;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
     this.jobQueue = new JobItemQueue<
@@ -79,7 +82,7 @@ export async function processBlocks(
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
     const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock} =
-      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
+      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, envelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate

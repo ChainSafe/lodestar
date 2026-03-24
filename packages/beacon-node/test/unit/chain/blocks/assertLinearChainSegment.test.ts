@@ -1,16 +1,15 @@
 import {describe, it} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
+import {ForkName} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
-import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
-import {IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
+import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
 import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chainSegment.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
-import { ForkName } from "@lodestar/params";
 
 const GLOAS_FORK_EPOCH = 1;
 const config = createChainForkConfig({

@@ -1,5 +1,5 @@
-import {ProtoBlock} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {Slot, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../../errors/index.js";

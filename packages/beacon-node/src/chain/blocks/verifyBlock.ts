@@ -1,7 +1,7 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
-import {IndexedAttestation, deneb} from "@lodestar/types";
+import {IndexedAttestation, Slot, deneb, gloas} from "@lodestar/types";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -32,6 +32,7 @@ export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: IBeaconStateView[];
@@ -94,7 +95,15 @@ export async function verifyBlocksInEpoch(
     // Start execution payload verification first (async request to execution client)
     const verifyExecutionPayloadsPromise =
       opts.skipVerifyExecutionPayload !== true
-        ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, abortController.signal, opts)
+        ? verifyBlocksExecutionPayload(
+            this,
+            parentBlock,
+            blockInputs,
+            envelopes,
+            preState0,
+            abortController.signal,
+            opts
+          )
         : Promise.resolve({
             execAborted: null,
             executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
