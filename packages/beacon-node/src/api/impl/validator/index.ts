@@ -25,6 +25,7 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getCurrentSlot,
+  isStatePostAltair,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
@@ -1282,6 +1283,9 @@ export function getValidatorApi(
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
       }
+      if (epoch < config.ALTAIR_FORK_EPOCH) {
+        throw new ApiError(400, "Sync committee duties are not supported before Altair");
+      }
 
       // May request for an epoch that's in the future
       await waitForNextClosestEpoch();
@@ -1291,6 +1295,9 @@ export function getValidatorApi(
       // Note: does not support requesting past duties
       const head = chain.forkChoice.getHead();
       const state = chain.getHeadState();
+      if (!isStatePostAltair(state)) {
+        throw new ApiError(400, "Sync committee duties are not available before Altair");
+      }
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state, indices);

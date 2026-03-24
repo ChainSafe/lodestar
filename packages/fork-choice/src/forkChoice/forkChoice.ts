@@ -10,6 +10,8 @@ import {
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isExecutionBlockBodyType,
+  isStatePostBellatrix,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   AttesterSlashing,
@@ -824,7 +826,10 @@ export class ForkChoice implements IForkChoice {
             executionStatus: this.getPostGloasExecStatus(executionStatus),
             dataAvailabilityStatus,
           }
-        : isExecutionBlockBodyType(block.body) && state.isExecutionStateType && state.isExecutionEnabled(block)
+        : isExecutionBlockBodyType(block.body) &&
+            isStatePostBellatrix(state) &&
+            state.isExecutionStateType &&
+            state.isExecutionEnabled(block)
           ? {
               executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
               executionPayloadNumber: block.body.executionPayload.blockNumber,
@@ -1870,6 +1875,9 @@ export function getCheckpointPayloadStatus(
   // Pre-Gloas: always FULL
   if (fork < ForkSeq.gloas) {
     return PayloadStatus.FULL;
+  }
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for checkpoint payload status, got fork=${state.forkName}`);
   }
 
   // For Gloas, check state.execution_payload_availability

@@ -6,6 +6,7 @@ import {
   computeTimeAtSlot,
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
@@ -174,7 +175,7 @@ export async function validateGossipBlock(
   if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
     if (!isExecutionBlockBodyType(block.body)) throw Error("Not execution block body type");
     const executionPayload = block.body.executionPayload;
-    if (blockState.isExecutionStateType && blockState.isExecutionEnabled(block)) {
+    if (isStatePostBellatrix(blockState) && blockState.isExecutionStateType && blockState.isExecutionEnabled(block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {

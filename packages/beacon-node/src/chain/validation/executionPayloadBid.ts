@@ -3,6 +3,7 @@ import {
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
   isActiveBuilder,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -32,6 +33,9 @@ async function validateExecutionPayloadBid(
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
   const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipExecutionPayloadBid);
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
+  }
 
   // [IGNORE] `bid.slot` is the current slot or the next slot.
   const currentSlot = chain.clock.currentSlot;

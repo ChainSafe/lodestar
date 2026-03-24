@@ -42,7 +42,24 @@ export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";
 export * from "./rewards/index.js";
 export * from "./signatureSets/index.js";
 export * from "./stateTransition.js";
-export * from "./stateView/index.js";
+export {BeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/beaconStateView.js";
+export {
+  type IBeaconStateView,
+  type IBeaconStateViewAltair,
+  type IBeaconStateViewBellatrix,
+  type IBeaconStateViewCapella,
+  type IBeaconStateViewDeneb,
+  type IBeaconStateViewElectra,
+  type IBeaconStateViewFulu,
+  type IBeaconStateViewGloas,
+  isStatePostAltair,
+  isStatePostBellatrix,
+  isStatePostCapella,
+  isStatePostDeneb,
+  isStatePostElectra,
+  isStatePostFulu,
+  isStatePostGloas,
+} from "./stateView/interface.js";
 export type {
   BeaconStateAllForks,
   BeaconStateAltair,

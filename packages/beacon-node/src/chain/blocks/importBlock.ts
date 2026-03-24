@@ -24,6 +24,8 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   isStartSlotOfEpoch,
+  isStatePostAltair,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -370,11 +372,13 @@ export async function importBlock(
       // we want to import block asap so do this in the next event loop
       callInNextEventLoop(() => {
         try {
-          this.lightClientServer?.onImportBlockHead(
-            block.message as BeaconBlock<ForkPostAltair>,
-            postState,
-            parentBlockSlot
-          );
+          if (isStatePostAltair(postState)) {
+            this.lightClientServer?.onImportBlockHead(
+              block.message as BeaconBlock<ForkPostAltair>,
+              postState,
+              parentBlockSlot
+            );
+          }
         } catch (e) {
           this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
         }
@@ -393,7 +397,7 @@ export async function importBlock(
   // and the block is weak and can potentially be reorged out.
   let shouldOverrideFcu = false;
 
-  if (blockSlot >= currentSlot && postState.isExecutionStateType) {
+  if (blockSlot >= currentSlot && isStatePostBellatrix(postState) && postState.isExecutionStateType) {
     let notOverrideFcuReason = NotReorgedReason.Unknown;
     const proposalSlot = blockSlot + 1;
     try {
@@ -580,7 +584,7 @@ export async function importBlock(
   this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
-  if (this.config.getForkSeq(blockSlot) >= ForkSeq.altair) {
+  if (isStatePostAltair(fullyVerifiedBlock.postState)) {
     this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,

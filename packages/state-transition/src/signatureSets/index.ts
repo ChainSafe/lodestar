@@ -30,7 +30,7 @@ export * from "./voluntaryExits.js";
  */
 export function getBlockSignatureSets(
   config: BeaconConfig,
-  currentSyncCommitteeIndexed: SyncCommitteeCache,
+  currentSyncCommitteeIndexed: SyncCommitteeCache | null,
   state: IBeaconStateView,
   signedBlock: SignedBeaconBlock,
   indexedAttestations: IndexedAttestation[],
@@ -56,6 +56,10 @@ export function getBlockSignatureSets(
 
   // Only after altair fork, validate tSyncCommitteeSignature
   if (fork >= ForkSeq.altair) {
+    if (currentSyncCommitteeIndexed === null) {
+      throw new Error("Altair block requires sync committee cache");
+    }
+
     const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(
       config,
       currentSyncCommitteeIndexed,
