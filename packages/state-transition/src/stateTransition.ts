@@ -77,6 +77,7 @@ export enum StateHashTreeRootSource {
   regenState = "regen_state",
   computeNewStateRoot = "compute_new_state_root",
   computeEnvelopeStateRoot = "compute_envelope_state_root",
+  envelopeTransition = "envelope_transition",
 }
 
 /**

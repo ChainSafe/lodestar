@@ -81,8 +81,13 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock} =
-      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, envelopes, opts);
+    const {
+      postBlockStates,
+      dataAvailabilityStatuses,
+      proposerBalanceDeltas,
+      segmentExecStatus,
+      indexedAttestationsByBlock,
+    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, envelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -97,7 +102,7 @@ export async function processBlocks(
     const fullyVerifiedBlocks = relevantBlocks.map(
       (block, i): FullyVerifiedBlock => ({
         blockInput: block,
-        postBlockState: postStates[i],
+        postBlockState: postBlockStates[i],
         postEnvelopeState: null,
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],

@@ -8,10 +8,7 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {
-  IBeaconStateView,
-  isExecutionBlockBodyType,
-} from "@lodestar/state-transition";
+import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
 import {ExecutionPayload, ExecutionRequests, Root, Slot, bellatrix, electra, gloas} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine, VersionedHashes} from "../../execution/engine/interface.js";

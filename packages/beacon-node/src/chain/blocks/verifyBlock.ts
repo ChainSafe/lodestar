@@ -35,11 +35,12 @@ export async function verifyBlocksInEpoch(
   envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
-  postStates: IBeaconStateView[];
+  postBlockStates: IBeaconStateView[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
   dataAvailabilityStatuses: DataAvailabilityStatus[];
   indexedAttestationsByBlock: IndexedAttestation[][];
+  postEnvelopeStates: Map<Slot, IBeaconStateView | null>;
 }> {
   const blocks = blockInputs.map((blockInput) => blockInput.getBlock());
   const lastBlock = blocks.at(-1);
@@ -123,7 +124,7 @@ export async function verifyBlocksInEpoch(
     const [
       segmentExecStatus,
       {dataAvailabilityStatuses, availableTime},
-      {postStates, proposerBalanceDeltas, verifyStateTime},
+      {postBlockStates, proposerBalanceDeltas, verifyStateTime, postEnvelopeStates},
       {verifySignaturesTime},
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
@@ -136,6 +137,7 @@ export async function verifyBlocksInEpoch(
       verifyBlocksStateTransitionOnly(
         preState0,
         blockInputs,
+        envelopes,
         // hack availability for state transition eval as availability is separately determined
         blocks.map(() => DataAvailabilityStatus.Available),
         this.logger,
@@ -238,7 +240,14 @@ export async function verifyBlocksInEpoch(
       );
     }
 
-    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock};
+    return {
+      postBlockStates,
+      dataAvailabilityStatuses,
+      proposerBalanceDeltas,
+      segmentExecStatus,
+      indexedAttestationsByBlock,
+      postEnvelopeStates,
+    };
   } finally {
     abortController.abort();
   }
