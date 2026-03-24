@@ -2,8 +2,8 @@ import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
   CachedBeaconStateGloas,
+  IBeaconStateView,
   createSingleSignatureSetFromComponents,
   getBlockSignatureSets,
   getExecutionPayloadEnvelopeSigningRoot,
@@ -28,7 +28,7 @@ export async function verifyBlocksSignatures(
   bls: IBlsVerifier,
   logger: Logger,
   metrics: Metrics | null,
-  preState0: CachedBeaconStateAllForks,
+  preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
   envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   indexedAttestationsByBlock: IndexedAttestation[][],
@@ -36,7 +36,7 @@ export async function verifyBlocksSignatures(
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
-  const currentSyncCommitteeIndexed = preState0.epochCtx.currentSyncCommitteeIndexed;
+  const currentSyncCommitteeIndexed = preState0.currentSyncCommitteeIndexed;
 
   // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
   // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().

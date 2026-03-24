@@ -1,10 +1,9 @@
 import {
-  CachedBeaconStateAllForks,
   CachedBeaconStateGloas,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
+  IBeaconStateView,
   StateHashTreeRootSource,
-  stateTransition,
 } from "@lodestar/state-transition";
 import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
 import {Slot, gloas, isGloasBeaconBlock} from "@lodestar/types";
@@ -26,7 +25,7 @@ import {ImportBlockOpts} from "./types.js";
  *   - Check state root matches
  */
 export async function verifyBlocksStateTransitionOnly(
-  preState0: CachedBeaconStateAllForks,
+  preState0: IBeaconStateView,
   blocks: IBlockInput[],
   envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   dataAvailabilityStatuses: DataAvailabilityStatus[],
@@ -36,22 +35,22 @@ export async function verifyBlocksStateTransitionOnly(
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
-  preStates: CachedBeaconStateAllForks[];
-  postStates: CachedBeaconStateAllForks[];
-  postEnvelopeStates: Map<Slot, CachedBeaconStateGloas | null>;
+  preStates: IBeaconStateView[];
+  postStates: IBeaconStateView[];
+  postEnvelopeStates: Map<Slot, IBeaconStateView | null>;
   proposerBalanceDeltas: number[];
   verifyStateTime: number;
 }> {
-  const preStates: CachedBeaconStateAllForks[] = [];
-  const postStates: CachedBeaconStateAllForks[] = [];
-  const postEnvelopeStates = new Map<Slot, CachedBeaconStateGloas | null>();
+  const preStates: IBeaconStateView[] = [];
+  const postStates: IBeaconStateView[] = [];
+  const postEnvelopeStates = new Map<Slot, IBeaconStateView | null>();
   const proposerBalanceDeltas: number[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
     const block = blocks[i].getBlock();
-    let preState: CachedBeaconStateAllForks;
+    let preState: IBeaconStateView;
     if (i === 0) {
       preState = preState0;
     } else {
@@ -82,8 +81,7 @@ export async function verifyBlocksStateTransitionOnly(
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-    const postState = stateTransition(
-      preState,
+    const postState = preState.stateTransition(
       block,
       {
         // NOTE: Assume valid for now while sending payload to execution engine in parallel
@@ -149,7 +147,7 @@ export async function verifyBlocksStateTransitionOnly(
 
     // For metric block profitability
     const proposerIndex = block.message.proposerIndex;
-    proposerBalanceDeltas[i] = postState.balances.get(proposerIndex) - preState.balances.get(proposerIndex);
+    proposerBalanceDeltas[i] = postState.getBalance(proposerIndex) - preState.getBalance(proposerIndex);
 
     // If blocks are invalid in execution the main promise could resolve before this loop ends.
     // In that case stop processing blocks and return early.

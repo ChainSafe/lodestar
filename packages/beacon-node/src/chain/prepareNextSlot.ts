@@ -3,9 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostGloas} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateExecutions,
-  CachedBeaconStateGloas,
+  IBeaconStateView,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -121,9 +119,9 @@ export class PrepareNextSlotScheduler {
       );
 
       if (isForkPostBellatrix(fork)) {
-        const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
+        const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
-        let updatedPrepareState = prepareState as CachedBeaconStateExecutions | CachedBeaconStateGloas;
+        let updatedPrepareState = prepareState;
         let updatedHeadRoot = headRoot;
 
         if (feeRecipient) {
@@ -140,13 +138,13 @@ export class PrepareNextSlotScheduler {
               headRoot,
             });
             this.metrics?.weakHeadDetected.inc();
-            updatedPrepareState = (await this.chain.regen.getBlockSlotState(
+            updatedPrepareState = await this.chain.regen.getBlockSlotState(
               proposerHead,
               prepareSlot,
               // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
-            )) as CachedBeaconStateExecutions | CachedBeaconStateGloas;
+            );
             updatedHeadRoot = proposerHeadRoot;
           }
 
@@ -250,7 +248,7 @@ export class PrepareNextSlotScheduler {
     }
   };
 
-  computeStateHashTreeRoot(state: CachedBeaconStateAllForks, isEpochTransition: boolean): void {
+  computeStateHashTreeRoot(state: IBeaconStateView, isEpochTransition: boolean): void {
     // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
     // see https://github.com/ChainSafe/lodestar/issues/6194
     const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({

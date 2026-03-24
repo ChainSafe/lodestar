@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ForkSeq} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -59,7 +59,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
    */
   private gloasMaxStatesActive = false;
 
-  private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
+  private readonly cache: MapTracker<string, IBeaconStateView>;
   /**
    * Key order to implement FIFO cache
    */
@@ -79,7 +79,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
   /**
    * Set a state as head, happens when importing a block and head block is changed.
    */
-  setHeadState(item: CachedBeaconStateAllForks | null): void {
+  setHeadState(item: IBeaconStateView | null): void {
     if (item !== null) {
       this.add(item, true);
     }
@@ -90,7 +90,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
    * base merkle tree for all BeaconState objects across application.
    * See packages/state-transition/src/util/loadState/loadState.ts for more detail
    */
-  getSeedState(): CachedBeaconStateAllForks {
+  getSeedState(): IBeaconStateView {
     const firstValue = this.cache.values().next();
     if (firstValue.done) {
       // should not happen
@@ -105,7 +105,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
   /**
    * Get a state from this cache given a state root hex.
    */
-  get(rootHex: RootHex): CachedBeaconStateAllForks | null {
+  get(rootHex: RootHex): IBeaconStateView | null {
     this.metrics?.lookups.inc();
     const item = this.cache.get(rootHex);
     if (!item) {
@@ -123,7 +123,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
    * @param isHead if true, move it to the head of the list. Otherwise add to the 2nd position.
    * In importBlock() steps, normally it'll call add() with isHead = false first. Then call setHeadState() to set the head.
    */
-  add(item: CachedBeaconStateAllForks, isHead = false): void {
+  add(item: IBeaconStateView, isHead = false): void {
     // Dynamically upgrade maxStates when Gloas fork is reached
     // Gloas blocks can have two states (block state and payload state), so we need 2x capacity
     if (!this.gloasMaxStatesActive && item.config.getForkSeq(item.slot) >= ForkSeq.gloas) {
@@ -218,7 +218,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
     }));
   }
 
-  getStates(): IterableIterator<CachedBeaconStateAllForks> {
+  getStates(): IterableIterator<IBeaconStateView> {
     return this.cache.values();
   }
 

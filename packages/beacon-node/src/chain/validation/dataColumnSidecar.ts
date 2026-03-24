@@ -132,7 +132,7 @@ export async function validateGossipDataColumnSidecar(
   //              while proposers for the block's branch are calculated -- in such a case do not REJECT, instead IGNORE
   //              this message.
   const proposerIndex = blockHeader.proposerIndex;
-  const expectedProposerIndex = blockState.epochCtx.getBeaconProposer(blockHeader.slot);
+  const expectedProposerIndex = blockState.getBeaconProposer(blockHeader.slot);
 
   if (proposerIndex !== expectedProposerIndex) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {

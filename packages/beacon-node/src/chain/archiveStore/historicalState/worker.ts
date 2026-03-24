@@ -52,6 +52,7 @@ const queue = new JobFnQueue(
   queueMetrics
 );
 
+// Reuse a single pubkey cache across all historical state regen calls in this worker
 const pubkeyCache = createPubkeyCache();
 
 const api: HistoricalStateWorkerApi = {

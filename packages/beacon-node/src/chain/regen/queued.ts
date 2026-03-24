@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, isGloasBeaconBlock, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -36,7 +36,7 @@ export type RegenRequest = RegenRequestByKey[RegenRequestKey];
  * All requests are queued so that only a single state at a time may be regenerated at a time
  */
 export class QueuedStateRegenerator implements IStateRegenerator {
-  readonly jobQueue: JobItemQueue<[RegenRequest], CachedBeaconStateAllForks>;
+  readonly jobQueue: JobItemQueue<[RegenRequest], IBeaconStateView>;
   private readonly regen: StateRegenerator;
 
   private readonly forkChoice: IForkChoice;
@@ -47,7 +47,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   constructor(modules: QueuedStateRegeneratorModules) {
     this.regen = new StateRegenerator(modules);
-    this.jobQueue = new JobItemQueue<[RegenRequest], CachedBeaconStateAllForks>(
+    this.jobQueue = new JobItemQueue<[RegenRequest], IBeaconStateView>(
       this.jobQueueProcessor,
       {maxLength: REGEN_QUEUE_MAX_LEN, signal: modules.signal},
       modules.metrics ? modules.metrics.regenQueue : undefined
@@ -81,14 +81,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   /**
    * Get a state from block state cache.
    */
-  getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null {
+  getStateSync(stateRoot: RootHex): IBeaconStateView | null {
     return this.blockStateCache.get(stateRoot);
   }
 
   /**
    * Get state for block processing.
    */
-  getPreStateSync(block: BeaconBlock): CachedBeaconStateAllForks | null {
+  getPreStateSync(block: BeaconBlock): IBeaconStateView | null {
     const parentRoot = toRootHex(block.parentRoot);
     const parentBlock = isGloasBeaconBlock(block)
       ? this.forkChoice.getBlockHexAndBlockHash(
@@ -145,21 +145,21 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return null;
   }
 
-  async getCheckpointStateOrBytes(cp: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | Uint8Array | null> {
+  async getCheckpointStateOrBytes(cp: CheckpointHexPayload): Promise<IBeaconStateView | Uint8Array | null> {
     return this.checkpointStateCache.getStateOrBytes(cp);
   }
 
   /**
    * Get checkpoint state from cache
    */
-  getCheckpointStateSync(cp: CheckpointHexPayload): CachedBeaconStateAllForks | null {
+  getCheckpointStateSync(cp: CheckpointHexPayload): IBeaconStateView | null {
     return this.checkpointStateCache.get(cp);
   }
 
   /**
    * Get state closest to head
    */
-  getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null {
+  getClosestHeadState(head: ProtoBlock): IBeaconStateView | null {
     // Convert PayloadStatus to payloadPresent boolean.
     // PENDING blocks are in fork-choice but lack an envelope — treat as non-FULL.
     const preferredPayloadPresent = head.payloadStatus === PayloadStatus.FULL;
@@ -184,7 +184,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
   }
 
-  processBlockState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void {
+  processBlockState(blockRootHex: RootHex, postState: IBeaconStateView): void {
     this.blockStateCache.add(postState);
     this.checkpointStateCache.processState(blockRootHex, postState).catch((e) => {
       this.logger.debug("Error processing block state", {blockRootHex, slot: postState.slot}, e);
@@ -198,7 +198,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * Note: We don't call checkpointStateCache.processState() here because it was already
    * called during block import and processes both block state and payload state variants together.
    */
-  processPayloadState(payloadState: CachedBeaconStateAllForks): void {
+  processPayloadState(payloadState: IBeaconStateView): void {
     // Add payload state to block state cache (keyed by payload state root)
     this.blockStateCache.add(payloadState);
     if (payloadState.slot % SLOTS_PER_EPOCH === 0) {
@@ -207,11 +207,11 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   // TODO GLOAS: This should also be called when importing execution payload after we implement it
-  addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks, payloadPresent: boolean): void {
+  addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView, payloadPresent: boolean): void {
     this.checkpointStateCache.add(cp, item, payloadPresent);
   }
 
-  updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void {
+  updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void {
     const {stateRoot: newHeadStateRoot, blockRoot: newHeadBlockRoot, slot: newHeadSlot} = newHead;
     const maybeHeadStateRoot = toRootHex(maybeHeadState.hashTreeRoot());
     const logCtx = {
@@ -257,11 +257,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * Get the state to run with `block`.
    * - State after `block.parentRoot` dialed forward to block.slot
    */
-  async getPreState(
-    block: BeaconBlock,
-    opts: StateRegenerationOpts,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks> {
+  async getPreState(block: BeaconBlock, opts: StateRegenerationOpts, rCaller: RegenCaller): Promise<IBeaconStateView> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
 
     // First attempt to fetch the state from caches before queueing
@@ -287,14 +283,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     slot: Slot,
     opts: StateRegenerationOpts,
     rCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks> {
+  ): Promise<IBeaconStateView> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getBlockSlotState});
 
     // The state is not immediately available in the caches, enqueue the job
     return this.jobQueue.push({key: "getBlockSlotState", args: [block, slot, opts, rCaller]});
   }
 
-  async getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+  async getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<IBeaconStateView> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
 
     // First attempt to fetch the state from cache before queueing
@@ -308,7 +304,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.push({key: "getState", args: [stateRoot, rCaller]});
   }
 
-  private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconStateAllForks> => {
+  private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<IBeaconStateView> => {
     const metricsLabels = {
       caller: regenRequest.args.at(-1) as RegenCaller,
       entrypoint: regenRequest.key as RegenFnName,
