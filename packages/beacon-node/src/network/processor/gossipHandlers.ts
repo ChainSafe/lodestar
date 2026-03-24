@@ -1160,25 +1160,21 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       topic,
     }: GossipHandlerParamGeneric<GossipType.execution_proof>) => {
       const {serializedData} = gossipData;
-      const executionProof = sszDeserialize(topic, serializedData);
-
-      // TODO EIP-8025: Add full gossip validation (slot bounds, dedup, proof verification)
-      // For now, basic deserialization validation is sufficient for initial interop
+      const signedProof = sszDeserialize(topic, serializedData);
+      const proof = signedProof.message;
+      const requestRootHex = toRootHex(proof.publicInput.newPayloadRequestRoot);
 
       try {
-        const clockSlot = chain.clock.currentSlot;
-        const insertOutcome = chain.executionProofPool.add(executionProof, clockSlot);
-        const blockRootHex = toRootHex(executionProof.blockRoot);
+        const insertOutcome = chain.executionProofPool.add(signedProof);
         logger.debug("Received execution proof via gossip", {
-          proofId: executionProof.proofId,
-          slot: executionProof.slot,
-          blockRoot: blockRootHex,
+          proofType: proof.proofType,
+          requestRoot: requestRootHex,
+          validatorIndex: signedProof.validatorIndex,
           insertOutcome,
         });
 
-        // EIP-8025: In zkvm mode, check if we now have enough proofs to validate this block
         if (insertOutcome === InsertOutcome.NewData) {
-          chain.maybeTransitionToValidOnProofArrival(executionProof);
+          chain.maybeTransitionToValidOnProofArrival(signedProof);
         }
       } catch (e) {
         logger.error("Error adding execution proof to pool", {}, e as Error);

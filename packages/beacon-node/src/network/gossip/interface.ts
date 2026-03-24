@@ -5,11 +5,11 @@ import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
   AttesterSlashing,
   DataColumnSidecar,
-  ExecutionProof,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  SignedExecutionProof,
   SingleAttestation,
   Slot,
   SubnetID,
@@ -113,7 +113,7 @@ export type GossipTypeMap = {
   [GossipType.execution_payload]: gloas.SignedExecutionPayloadEnvelope;
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
-  [GossipType.execution_proof]: ExecutionProof;
+  [GossipType.execution_proof]: SignedExecutionProof;
 };
 
 export type GossipFnByType = {
@@ -145,7 +145,7 @@ export type GossipFnByType = {
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ) => Promise<void> | void;
   [GossipType.execution_payload_bid]: (executionPayloadBid: gloas.SignedExecutionPayloadBid) => Promise<void> | void;
-  [GossipType.execution_proof]: (executionProof: ExecutionProof) => Promise<void> | void;
+  [GossipType.execution_proof]: (signedProof: SignedExecutionProof) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];

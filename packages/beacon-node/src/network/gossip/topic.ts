@@ -126,7 +126,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.execution_payload_bid:
       return ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.execution_proof:
-      return ssz.eip8025.ExecutionProof;
+      return ssz.eip8025.SignedExecutionProof;
   }
 }
 
