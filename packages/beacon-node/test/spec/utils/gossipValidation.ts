@@ -131,11 +131,11 @@ class GossipTestClock extends EventEmitter implements IClock {
 interface MetaYaml {
   topic: GossipType;
   blocks?: {block: string; failed?: boolean}[];
-  finalized_checkpoint?: {epoch: number; root?: string; block?: string};
-  current_time_ms?: number;
+  finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
+  current_time_ms?: bigint;
   messages: {
-    offset_ms?: number;
-    subnet_id?: number;
+    offset_ms?: bigint;
+    subnet_id?: bigint;
     message: string;
     expected: "valid" | "ignore" | "reject";
     reason?: string;
