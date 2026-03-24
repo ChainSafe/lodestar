@@ -87,6 +87,7 @@ export async function processBlocks(
       proposerBalanceDeltas,
       segmentExecStatus,
       indexedAttestationsByBlock,
+      postEnvelopeStates,
     } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, envelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
@@ -103,7 +104,7 @@ export async function processBlocks(
       (block, i): FullyVerifiedBlock => ({
         blockInput: block,
         postBlockState: postBlockStates[i],
-        postEnvelopeState: null,
+        postEnvelopeState: postEnvelopeStates.get(block.getBlock().message.slot) ?? null,
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
         // start supporting optimistic syncing/processing

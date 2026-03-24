@@ -155,6 +155,23 @@ export async function importBlock(
     });
   }
 
+  // For Gloas blocks whose envelope was pre-verified during state transition (sync/batch path),
+  // immediately transition the block to FULL status in fork choice and cache the payload state.
+  // Mirrors steps 6–7 of importExecutionPayload, but reuses the already-computed postEnvelopeState.
+  if (fullyVerifiedBlock.postEnvelopeState !== null) {
+    // TODO GLOAS: this.unfinalizedPayloadEnvelopeWrites.push(payloadInput)
+    // need a payloadInput in fullyVerifiedBlock
+    const {postEnvelopeState} = fullyVerifiedBlock;
+    this.regen.processPayloadState(postEnvelopeState);
+    this.forkChoice.onExecutionPayload(
+      blockRootHex,
+      toRootHex(postEnvelopeState.latestBlockHash),
+      // TODO GLOAS: this is not right but we don't need to track it as part of consensus spec, lighthouse also does not track it
+      0,
+      toRootHex(postEnvelopeState.hashTreeRoot())
+    );
+  }
+
   this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
@@ -479,7 +496,7 @@ export async function importBlock(
   }
 
   if (!postBlockState.isStateValidatorsNodesPopulated()) {
-    this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postBlockState.slot});
+    this.logger.verbose("After importBlock caching postBlockState without SSZ cache", {slot: postBlockState.slot});
   }
 
   // Cache shufflings when crossing an epoch boundary
