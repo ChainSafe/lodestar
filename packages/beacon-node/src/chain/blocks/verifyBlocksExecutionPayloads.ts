@@ -9,7 +9,7 @@ import {
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
-import {bellatrix, electra} from "@lodestar/types";
+import {SignedExecutionProof, bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -37,6 +37,8 @@ export type VerifyBlockExecutionPayloadModules = {
   minProofsRequired?: number;
   /** EIP-8025: Verifier for execution proofs — defaults to dummy verifier if not provided */
   executionProofVerifier?: IZkvmExecutionProofVerifier;
+  /** EIP-8025: Maps newPayloadRequestRoot hex → blockRoot hex, used for reverse lookup */
+  requestRootToBlockRoot?: Map<string, string>;
 };
 
 type ExecAbortType = {blockIndex: number; execError: BlockError};
@@ -287,12 +289,23 @@ function verifyBlockExecutionPayloadByProof(
     executionBlock: executionPayload.blockNumber,
   };
 
-  const proofs = chain.executionProofPool?.getProofsByBlockRoot(blockRootHex) ?? [];
+  // EIP-8025: Look up proofs by newPayloadRequestRoot.
+  // Find the requestRoot that maps to this block's blockRoot via the reverse mapping.
+  // TODO EIP-8025: Compute NewPayloadRequestHeader.hashTreeRoot() directly
+  // instead of relying on the reverse mapping.
+  let proofs: SignedExecutionProof[] = [];
+  if (chain.executionProofPool) {
+    for (const [requestRootHex, mappedBlockRootHex] of chain.requestRootToBlockRoot ?? []) {
+      if (mappedBlockRootHex === blockRootHex) {
+        proofs = chain.executionProofPool.getByRequestRootHex(requestRootHex);
+        break;
+      }
+    }
+  }
+
   const verifier = chain.executionProofVerifier ?? defaultZkvmExecutionProofVerifier;
   const verification = verifier.verifyProofs({
     proofs,
-    expectedBlockRootHex: blockRootHex,
-    expectedExecBlockHashHex: execBlockHash,
     minProofsRequired: minRequired,
   });
 
@@ -310,7 +323,7 @@ function verifyBlockExecutionPayloadByProof(
     return {executionStatus: ExecutionStatus.Syncing, execError: null};
   }
 
-  chain.logger.debug("Execution payload verified by zkvm proofs (dummy verifier)", {
+  chain.logger.debug("Execution payload verified by zkvm proofs", {
     ...logCtx,
     distinctProofTypes: verification.distinctProofTypes,
     minRequired,
