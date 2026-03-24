@@ -1,6 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
-import {IBeaconStateView, getBlockSignatureSets} from "@lodestar/state-transition";
-import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
+import {
+  IBeaconStateView,
+  PubkeyCache,
+  getBlockSignatureSets,
+  getExecutionPayloadEnvelopeSignatureSet,
+} from "@lodestar/state-transition";
+import {IndexedAttestation, SignedBeaconBlock, Slot, gloas} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -17,11 +22,13 @@ import {ImportBlockOpts} from "./types.js";
  */
 export async function verifyBlocksSignatures(
   config: BeaconConfig,
+  pubkeyCache: PubkeyCache,
   bls: IBlsVerifier,
   logger: Logger,
   metrics: Metrics | null,
   preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   indexedAttestationsByBlock: IndexedAttestation[][],
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
@@ -38,13 +45,30 @@ export async function verifyBlocksSignatures(
     isValidPromises[i] = opts.validSignatures
       ? // Skip all signature verification
         Promise.resolve(true)
-      : //
-        // Verify signatures per block to track which block is invalid
-        bls.verifySignatureSets(
-          getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
-            skipProposerSignature: opts.validProposerSignature,
-          })
-        );
+      : // Verify signatures per block + envelope to track which block is invalid
+        (() => {
+          const signatureSets = getBlockSignatureSets(
+            config,
+            currentSyncCommitteeIndexed,
+            preState0,
+            block,
+            indexedAttestationsByBlock[i],
+            {skipProposerSignature: opts.validProposerSignature}
+          );
+          const envelope = envelopes?.get(block.message.slot);
+          if (envelope) {
+            signatureSets.push(
+              getExecutionPayloadEnvelopeSignatureSet(
+                config,
+                pubkeyCache,
+                preState0,
+                envelope,
+                block.message.proposerIndex
+              )
+            );
+          }
+          return bls.verifySignatureSets(signatureSets);
+        })();
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
     // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to

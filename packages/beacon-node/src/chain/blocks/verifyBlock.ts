@@ -151,11 +151,13 @@ export async function verifyBlocksInEpoch(
       opts.skipVerifyBlockSignatures !== true
         ? verifyBlocksSignatures(
             this.config,
+            this.pubkeyCache,
             this.bls,
             this.logger,
             this.metrics,
             preState0,
             blocks,
+            envelopes,
             indexedAttestationsByBlock,
             opts
           )
