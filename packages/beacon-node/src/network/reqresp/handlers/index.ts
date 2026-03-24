@@ -90,28 +90,26 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     // EIP-8025: Execution proof req/resp handlers
     [ReqRespMethod.ExecutionProofsByRoot]: (req) => {
       const body = ssz.eip8025.ExecutionProofsByRootRequest.deserialize(req.data);
-      const blockRootHex = toRootHex(body.blockRoot);
-      const alreadyHaveSet = new Set(body.alreadyHave);
-      const proofs = chain.executionProofPool
-        .getProofsByBlockRoot(blockRootHex)
-        .filter((p) => !alreadyHaveSet.has(p.proofId));
+      // TODO EIP-8025: ExecutionProofsByRootRequest should use requestRoot per spec
+      const proofs = chain.executionProofPool.getByRequestRootHex(toRootHex(body.blockRoot));
       return (async function* () {
         for (const proof of proofs) {
           yield {
-            data: ssz.eip8025.ExecutionProof.serialize(proof),
-            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(proof.slot)),
+            data: ssz.eip8025.SignedExecutionProof.serialize(proof),
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(chain.clock.currentSlot)),
           };
         }
       })();
     },
-    [ReqRespMethod.ExecutionProofsByRange]: (req) => {
-      const body = ssz.eip8025.ExecutionProofsByRangeRequest.deserialize(req.data);
-      const proofs = chain.executionProofPool.getProofsByRange(body.startSlot, Number(body.count));
+    [ReqRespMethod.ExecutionProofsByRange]: (_req) => {
+      // Pool no longer has slot-based indexing; return all proofs
+      // TODO EIP-8025: Add slot-based filtering or update protocol
+      const proofs = chain.executionProofPool.getAll();
       return (async function* () {
         for (const proof of proofs) {
           yield {
-            data: ssz.eip8025.ExecutionProof.serialize(proof),
-            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(proof.slot)),
+            data: ssz.eip8025.SignedExecutionProof.serialize(proof),
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(chain.clock.currentSlot)),
           };
         }
       })();

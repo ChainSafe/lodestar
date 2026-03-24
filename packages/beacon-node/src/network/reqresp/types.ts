@@ -4,7 +4,7 @@ import { ForkName, ForkPostAltair, ForkPostFulu, isForkPostAltair, isForkPostFul
 import { Protocol, ProtocolHandler, ReqRespRequest } from "@lodestar/reqresp";
 import {
   DataColumnSidecar,
-  ExecutionProof,
+  SignedExecutionProof,
   ExecutionProofsByRangeRequest,
   ExecutionProofsByRootRequest,
   LightClientBootstrap,
@@ -103,8 +103,8 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
   [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
   // EIP-8025
-  [ReqRespMethod.ExecutionProofsByRoot]: ExecutionProof;
-  [ReqRespMethod.ExecutionProofsByRange]: ExecutionProof;
+  [ReqRespMethod.ExecutionProofsByRoot]: SignedExecutionProof;
+  [ReqRespMethod.ExecutionProofsByRange]: SignedExecutionProof;
 };
 
 /** Request SSZ type for each method and ForkName */
@@ -169,8 +169,8 @@ export const responseSszTypeByMethod: { [K in ReqRespMethod]: ResponseTypeGetter
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
   // EIP-8025
-  [ReqRespMethod.ExecutionProofsByRoot]: () => ssz.eip8025.ExecutionProof,
-  [ReqRespMethod.ExecutionProofsByRange]: () => ssz.eip8025.ExecutionProof,
+  [ReqRespMethod.ExecutionProofsByRoot]: () => ssz.eip8025.SignedExecutionProof,
+  [ReqRespMethod.ExecutionProofsByRange]: () => ssz.eip8025.SignedExecutionProof,
 };
 
 function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
