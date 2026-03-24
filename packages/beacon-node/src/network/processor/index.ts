@@ -1,4 +1,5 @@
 import {routes} from "@lodestar/api";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
@@ -159,7 +160,10 @@ export class NetworkProcessor {
   // we may not receive the block for messages like Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
   private readonly awaitingMessagesByBlockRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
+  // Messages waiting for a payload envelope to be imported for a known beacon block root
+  private readonly awaitingMessagesByEnvelopeBlockRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
   private unknownBlocksBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
+  private unknownEnvelopesBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
 
   constructor(
     modules: NetworkProcessorModules,
@@ -181,9 +185,11 @@ export class NetworkProcessor {
 
     events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
     this.chain.emitter.on(routes.events.EventType.block, this.onBlockProcessed.bind(this));
+    this.chain.emitter.on(routes.events.EventType.executionPayloadAvailable, this.onPayloadProcessed.bind(this));
     this.chain.clock.on(ClockEvent.slot, this.onClockSlot.bind(this));
 
     this.awaitingMessagesByBlockRoot = new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set());
+    this.awaitingMessagesByEnvelopeBlockRoot = new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set());
 
     // TODO: Implement queues and priorization for ReqResp incoming requests
     // Listens to NetworkEvent.reqRespIncomingRequest event
@@ -212,6 +218,7 @@ export class NetworkProcessor {
   async stop(): Promise<void> {
     this.events.off(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
     this.chain.emitter.off(routes.events.EventType.block, this.onBlockProcessed);
+    this.chain.emitter.off(routes.events.EventType.executionPayloadAvailable, this.onPayloadProcessed);
     this.chain.emitter.off(ClockEvent.slot, this.onClockSlot);
   }
 
@@ -246,6 +253,22 @@ export class NetworkProcessor {
     // Search for the unknown block
     this.unknownBlocksBySlot.getOrDefault(slot).add(root);
     this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
+  }
+
+  /**
+   * Search for a missing execution payload envelope for a known beacon block root.
+   * Only emits if the block is known but FULL variant is missing.
+   */
+  searchUnknownEnvelope({slot, root: blockRoot}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    if (this.awaitingMessagesByEnvelopeBlockRoot.has(blockRoot)) return;
+    if (this.unknownEnvelopesBySlot.getOrDefault(slot).has(blockRoot)) return;
+    // Only search if block is known — if block is unknown, searchUnknownBlock handles it
+    if (!this.chain.forkChoice.hasBlockHexUnsafe(blockRoot)) return;
+    // If FULL variant already exists, no need to search
+    if (this.chain.forkChoice.getBlockHex(blockRoot, PayloadStatus.FULL)) return;
+
+    this.unknownEnvelopesBySlot.getOrDefault(slot).add(blockRoot);
+    this.chain.emitter.emit(ChainEvent.unknownPayloadEnvelope, {blockRootHex: blockRoot, peer, source});
   }
 
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
@@ -301,6 +324,14 @@ export class NetworkProcessor {
       return;
     }
 
+    // Block is known — check if message requires FULL payload state
+    // TODO GLOAS (PR #9025): Add evidence routing for specific gossip types:
+    //   - attestation index === 1: needs FULL payload
+    //   - PTC payloadPresent === true: needs FULL payload
+    //   - data_column_sidecar in Gloas: needs FULL payload
+    // For now, these messages proceed to validation where they will fail with
+    // appropriate errors if FULL variant is missing
+
     this.pushPendingGossipsubMessageToQueue(message);
   }
 
@@ -345,6 +376,32 @@ export class NetworkProcessor {
     this.awaitingMessagesByBlockRoot.delete(rootHex);
   }
 
+  private async onPayloadProcessed({blockRoot}: {slot: Slot; blockRoot: string}): Promise<void> {
+    const waitingMessages = this.awaitingMessagesByEnvelopeBlockRoot.get(blockRoot);
+    if (!waitingMessages || waitingMessages.size === 0) {
+      return;
+    }
+
+    const nowSec = Date.now() / 1000;
+    let count = 0;
+    for (const message of waitingMessages) {
+      const topicType = message.topic.type;
+      this.metrics?.awaitingEnvelopeGossipMessages.waitSecBeforeResolve.set(
+        {topic: topicType},
+        nowSec - message.seenTimestampSec
+      );
+      this.metrics?.awaitingEnvelopeGossipMessages.resolve.inc({topic: topicType});
+      this.pushPendingGossipsubMessageToQueue(message);
+      count++;
+      if (count === MAX_AWAITING_GOSSIP_OBJECTS_PER_TICK) {
+        count = 0;
+        await sleep(AWAITING_GOSSIP_OBJECTS_YIELD_EVERY_MS);
+      }
+    }
+
+    this.awaitingMessagesByEnvelopeBlockRoot.delete(blockRoot);
+  }
+
   private onClockSlot(clockSlot: Slot): void {
     const nowSec = Date.now() / 1000;
     const minSlot = clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE;
@@ -370,6 +427,29 @@ export class NetworkProcessor {
         }
       }
       this.unknownBlocksBySlot.delete(slot);
+    }
+
+    // Prune envelope waiting maps in parallel
+    for (const [slot, roots] of this.unknownEnvelopesBySlot) {
+      if (slot > minSlot) continue;
+      for (const rootHex of roots) {
+        const gossipMessages = this.awaitingMessagesByEnvelopeBlockRoot.get(rootHex);
+        if (gossipMessages !== undefined) {
+          for (const message of gossipMessages) {
+            const topicType = message.topic.type;
+            this.metrics?.awaitingEnvelopeGossipMessages.reject.inc({
+              topic: topicType,
+              reason: ReprocessRejectReason.expired,
+            });
+            this.metrics?.awaitingEnvelopeGossipMessages.waitSecBeforeReject.set(
+              {topic: topicType, reason: ReprocessRejectReason.expired},
+              nowSec - message.seenTimestampSec
+            );
+          }
+          this.awaitingMessagesByEnvelopeBlockRoot.delete(rootHex);
+        }
+      }
+      this.unknownEnvelopesBySlot.delete(slot);
     }
   }
 

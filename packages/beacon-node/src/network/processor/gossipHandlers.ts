@@ -197,6 +197,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           throw e;
         }
 
+        if (e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN && blockInput) {
+          logger.debug("Gossip block has parent payload unknown", {slot, root: blockShortHex, code: e.type.code});
+          chain.emitter.emit(ChainEvent.unknownParentPayload, {
+            blockInput,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+          });
+          throw e;
+        }
+
         if (e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
         }
@@ -842,7 +852,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
-      // TODO GLOAS: handle BLOCK_ROOT_UNKNOWN error to trigger sync
+      // BLOCK_ROOT_UNKNWON should not happen here. It would be caught early on and be queued in awaitingMessagesByBlockRoot
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 
       const slot = executionPayloadEnvelope.message.slot;

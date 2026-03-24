@@ -680,6 +680,23 @@ export function createLodestarMetrics(
           labelNames: ["code", "client"],
         }),
       },
+      pendingPayloads: register.gauge({
+        name: "lodestar_sync_block_input_pending_payloads_size",
+        help: "Current size of pending payloads cache in BlockInputSync",
+      }),
+      payloadFetchSuccess: register.gauge({
+        name: "lodestar_sync_block_input_payload_fetch_success_total",
+        help: "Total successful payload envelope fetches",
+      }),
+      payloadFetchError: register.gauge({
+        name: "lodestar_sync_block_input_payload_fetch_error_total",
+        help: "Total failed payload envelope fetches",
+      }),
+      payloadRequests: register.gauge<{source: string}>({
+        name: "lodestar_sync_block_input_payload_requests_total",
+        help: "Total unknown payload events by source",
+        labelNames: ["source"],
+      }),
       peerBalancer: {
         peersMetaCount: register.gauge({
           name: "lodestar_sync_unknown_block_peer_balancer_peers_meta_count",
@@ -1742,6 +1759,29 @@ export function createLodestarMetrics(
       waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
         name: "lodestar_awaiting_block_gossip_messages_wait_time_reject_seconds",
         help: "Time to wait for unknown block before being rejected",
+        labelNames: ["reason", "topic"],
+      }),
+    },
+
+    awaitingEnvelopeGossipMessages: {
+      resolve: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_envelope_gossip_messages_resolve_total",
+        help: "Total number of gossip messages reprocessed after payload envelope import",
+        labelNames: ["topic"],
+      }),
+      waitSecBeforeResolve: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_envelope_gossip_messages_wait_time_resolve_seconds",
+        help: "Time to wait for unknown payload envelope in seconds",
+        labelNames: ["topic"],
+      }),
+      reject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
+        name: "lodestar_awaiting_envelope_gossip_messages_reject_total",
+        help: "Total number of gossip messages rejected while waiting for payload envelope",
+        labelNames: ["reason", "topic"],
+      }),
+      waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
+        name: "lodestar_awaiting_envelope_gossip_messages_wait_time_reject_seconds",
+        help: "Time to wait for unknown payload envelope before being rejected",
         labelNames: ["reason", "topic"],
       }),
     },

@@ -79,6 +79,15 @@ export async function validateGossipBlock(
       )
     : chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
+    // For Gloas blocks: if the parent block root is known but the matching FULL variant
+    // (by parentBlockHash) is missing, this is a payload availability issue, not a missing block.
+    if (isGloasBeaconBlock(block) && chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+        parentRoot,
+        parentBlockHash: toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash),
+      });
+    }
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
     //

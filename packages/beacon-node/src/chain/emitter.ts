@@ -66,6 +66,15 @@ export enum ChainEvent {
    * cut-off window passes for waiting on gossip
    */
   incompleteBlockInput = "incompleteBlockInput",
+  /**
+   * Trigger BlockInputSync to fetch a missing execution payload envelope for a known beacon block root
+   */
+  unknownPayloadEnvelope = "unknownPayloadEnvelope",
+  /**
+   * Trigger BlockInputSync when a gossip block's parent block is known but parent payload is missing.
+   * Tracks the child block in pendingBlocks and triggers parent payload fetch.
+   */
+  unknownParentPayload = "unknownParentPayload",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -78,6 +87,8 @@ export type ChainEventData = {
   [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
   [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownPayloadEnvelope]: {blockRootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownParentPayload]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {
@@ -99,6 +110,8 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.unknownParent]: (data: ChainEventData[ChainEvent.unknownParent]) => void;
   [ChainEvent.unknownBlockRoot]: (data: ChainEventData[ChainEvent.unknownBlockRoot]) => void;
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
+  [ChainEvent.unknownPayloadEnvelope]: (data: ChainEventData[ChainEvent.unknownPayloadEnvelope]) => void;
+  [ChainEvent.unknownParentPayload]: (data: ChainEventData[ChainEvent.unknownParentPayload]) => void;
 };
 
 /**
