@@ -9,11 +9,12 @@ import {
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
-import {SignedExecutionProof, bellatrix, electra} from "@lodestar/types";
+import {SignedExecutionProof, bellatrix, deneb, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
+import {computeNewPayloadRequestRoot} from "../eip8025/newPayloadRequestHeader.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ExecutionProofPool} from "../opPools/executionProofPool.js";
 import {BlockProcessOpts} from "../options.js";
@@ -289,17 +290,24 @@ function verifyBlockExecutionPayloadByProof(
     executionBlock: executionPayload.blockNumber,
   };
 
-  // EIP-8025: Look up proofs by newPayloadRequestRoot.
-  // Find the requestRoot that maps to this block's blockRoot via the reverse mapping.
-  // TODO EIP-8025: Compute NewPayloadRequestHeader.hashTreeRoot() directly
-  // instead of relying on the reverse mapping.
+  // EIP-8025: Compute the newPayloadRequestRoot from the block data and look up proofs by it.
   let proofs: SignedExecutionProof[] = [];
   if (chain.executionProofPool) {
-    for (const [requestRootHex, mappedBlockRootHex] of chain.requestRootToBlockRoot ?? []) {
-      if (mappedBlockRootHex === blockRootHex) {
-        proofs = chain.executionProofPool.getByRequestRootHex(requestRootHex);
-        break;
-      }
+    const block = blockInput.getBlock();
+    const body = block.message.body as deneb.BeaconBlockBody;
+    const newPayloadRequestRoot = computeNewPayloadRequestRoot(
+      chain.config,
+      blockInput.slot,
+      executionPayload,
+      body.blobKzgCommitments ?? [],
+      block.message.parentRoot,
+      (body as electra.BeaconBlockBody).executionRequests
+    );
+    proofs = chain.executionProofPool.getByRequestRoot(newPayloadRequestRoot);
+
+    // Populate the reverse mapping so maybeTransitionToValidOnProofArrival can find the block
+    if (chain.requestRootToBlockRoot) {
+      chain.requestRootToBlockRoot.set(toRootHex(newPayloadRequestRoot), blockRootHex);
     }
   }
 

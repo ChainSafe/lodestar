@@ -3,7 +3,6 @@ import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {
-  CheckpointWithHex,
   CheckpointWithPayloadStatus,
   ExecutionStatus,
   IForkChoice,
