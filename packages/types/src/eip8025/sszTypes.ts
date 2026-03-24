@@ -1,6 +1,6 @@
 import {ByteListType, ContainerType, ListBasicType, UintNumberType} from "@chainsafe/ssz";
 import {EXECUTION_PROOF_TYPE_COUNT, MAX_PROOF_DATA_BYTES} from "@lodestar/params";
-import {Root, Slot, Uint8, UintNum64} from "../primitive/sszTypes.js";
+import {BLSSignature, Root, Slot, Uint8, UintNum64, ValidatorIndex} from "../primitive/sszTypes.js";
 
 /**
  * ExecutionProofId identifies which zkVM/proof system + EL combination a proof belongs to.
@@ -11,9 +11,21 @@ import {Root, Slot, Uint8, UintNum64} from "../primitive/sszTypes.js";
 export const ExecutionProofId = Uint8;
 
 /**
- * The actual proof data, variable length up to MAX_PROOF_DATA_BYTES (1MB).
+ * Identifies the proof system type.
+ */
+export const ProofType = Uint8;
+
+/**
+ * The actual proof data, variable length up to MAX_PROOF_DATA_BYTES.
  */
 export const ProofData = new ByteListType(MAX_PROOF_DATA_BYTES);
+
+export const PublicInput = new ContainerType(
+  {
+    newPayloadRequestRoot: Root,
+  },
+  {typeName: "PublicInput", jsonCase: "eth2"}
+);
 
 /**
  * ExecutionProof represents a cryptographic proof that an execution payload is valid.
@@ -25,18 +37,26 @@ export const ProofData = new ByteListType(MAX_PROOF_DATA_BYTES);
  */
 export const ExecutionProof = new ContainerType(
   {
-    /** Which proof type (zkVM+EL combination) this proof belongs to (0-7) */
-    proofId: ExecutionProofId,
-    /** The slot of the beacon block this proof validates */
-    slot: Slot,
-    /** The block hash of the execution payload this proof validates */
-    blockHash: Root,
-    /** The beacon block root corresponding to the block with the execution payload */
-    blockRoot: Root,
     /** The actual ZK proof data */
     proofData: ProofData,
+    proofType: ProofType,
+    /**
+     * Public input of an [`ExecutionProof`].
+     * Contains the tree hash root of the new payload request that the proof is associated with.
+     **/
+    publicInput: PublicInput,
   },
   {typeName: "ExecutionProof", jsonCase: "eth2"}
+);
+
+export const SignedExecutionProof = new ContainerType(
+  {
+    /** The actual ZK proof data */
+    message: ExecutionProof,
+    validatorIndex: ValidatorIndex,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedExecutionProof", jsonCase: "eth2"}
 );
 
 /**
