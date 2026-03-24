@@ -20,7 +20,7 @@ import type {Libp2p as ILibp2p} from "libp2p";
 import {
   AttesterSlashing,
   DataColumnSidecar,
-  ExecutionProof,
+  SignedExecutionProof,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
@@ -113,7 +113,7 @@ export interface INetwork extends INetworkCorePublic {
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
   publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number>;
-  publishExecutionProof(executionProof: ExecutionProof): Promise<number>;
+  publishExecutionProof(signedProof: SignedExecutionProof): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;
