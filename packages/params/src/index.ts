@@ -1,14 +1,14 @@
-import {PresetName} from "./presetName.js";
-import {presetStatus} from "./presetStatus.js";
-import {gnosisPreset} from "./presets/gnosis.js";
-import {mainnetPreset} from "./presets/mainnet.js";
-import {minimalPreset} from "./presets/minimal.js";
-import {userOverrides, userSelectedPreset} from "./setPreset.js";
+import { PresetName } from "./presetName.js";
+import { presetStatus } from "./presetStatus.js";
+import { gnosisPreset } from "./presets/gnosis.js";
+import { mainnetPreset } from "./presets/mainnet.js";
+import { minimalPreset } from "./presets/minimal.js";
+import { userOverrides, userSelectedPreset } from "./setPreset.js";
 
 export * from "./forkName.js";
-export {presetToJson} from "./json.js";
-export type {BeaconPreset} from "./types.js";
-export {PresetName};
+export { presetToJson } from "./json.js";
+export type { BeaconPreset } from "./types.js";
+export { PresetName };
 
 const presets = {
   [PresetName.mainnet]: mainnetPreset,
@@ -31,7 +31,7 @@ export const ACTIVE_PRESET =
   userSelectedPreset ??
   (typeof process !== "undefined" ? PresetName[process?.env?.LODESTAR_PRESET as PresetName] : undefined) ??
   PresetName.mainnet;
-export const activePreset = {...presets[ACTIVE_PRESET], ...userOverrides};
+export const activePreset = { ...presets[ACTIVE_PRESET], ...userOverrides };
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports
@@ -316,8 +316,8 @@ export const KZG_COMMITMENTS_GINDEX = 27;
 export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
 
 // EIP-8025: Optional Execution Proofs
-/** Maximum size of proof data in bytes (1MB, matching devnet implementations) */
-export const MAX_PROOF_DATA_BYTES = 1_048_576;
+/** Maximum size of proof data in bytes (307200 ~= 300KiB) */
+export const MAX_PROOF_DATA_BYTES = 307_200;
 /** Maximum number of execution proof types (zkVM+EL combinations) */
 export const EXECUTION_PROOF_TYPE_COUNT = 8;
 /** Default minimum number of distinct proof types required for DA in zkvm mode */
