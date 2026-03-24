@@ -40,7 +40,12 @@ import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
-import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
+import {
+  BeaconBlocksByRootRequest,
+  BlobSidecarsByRootRequest,
+  DataColumnSidecarsByRootRequest,
+  ExecutionPayloadEnvelopesByRootRequest,
+} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
@@ -632,6 +637,29 @@ export class Network implements INetwork {
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
       request.reduce((total, {columns}) => total + columns.length, 0),
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot],
+      this.chain.serializedCache
+    );
+  }
+
+  async sendExecutionPayloadEnvelopesByRange(
+    peerId: PeerIdStr,
+    request: gloas.ExecutionPayloadEnvelopesByRangeRequest
+  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRange, [Version.V1], request),
+      request.count,
+      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRange]
+    );
+  }
+
+  async sendExecutionPayloadEnvelopesByRoot(
+    peerId: PeerIdStr,
+    request: ExecutionPayloadEnvelopesByRootRequest
+  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRoot, [Version.V1], request),
+      request.length,
+      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRoot],
       this.chain.serializedCache
     );
   }
