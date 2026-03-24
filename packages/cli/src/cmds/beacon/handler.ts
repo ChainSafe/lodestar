@@ -7,7 +7,7 @@ import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {createCachedBeaconState, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
+import {BeaconStateView, createCachedBeaconState, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -100,7 +100,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       privateKey,
       dataDir: beaconPaths.dataDir,
       peerStoreDir: beaconPaths.peerStoreDir,
-      anchorState: cachedState,
+      anchorState: new BeaconStateView(cachedState),
       isAnchorStateFinalized: isFinalized,
       wsCheckpoint,
     });

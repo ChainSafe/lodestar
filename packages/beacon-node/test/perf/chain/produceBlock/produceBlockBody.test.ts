@@ -3,7 +3,7 @@ import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {CachedBeaconStateAltair} from "@lodestar/state-transition";
+import {BeaconStateView, CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test-utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BeaconChain} from "../../../../src/chain/index.js";
@@ -46,7 +46,7 @@ describe("produceBlockBody", () => {
         processShutdownCallback: () => {},
         metrics: null,
         validatorMonitor: null,
-        anchorState: state,
+        anchorState: new BeaconStateView(state),
         isAnchorStateFinalized: true,
         executionEngine: new ExecutionEngineDisabled(),
       }
@@ -69,7 +69,7 @@ describe("produceBlockBody", () => {
       const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
       const proposerPubKey = state.epochCtx.pubkeyCache.getOrThrow(proposerIndex).toBytes();
 
-      return {chain, state, head, proposerIndex, proposerPubKey};
+      return {chain, state: new BeaconStateView(state), head, proposerIndex, proposerPubKey};
     },
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;

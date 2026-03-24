@@ -10,6 +10,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateView,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
@@ -333,7 +334,7 @@ export async function runGossipValidationTest(
       clock,
       metrics: null,
       validatorMonitor: null,
-      anchorState: cachedState,
+      anchorState: new BeaconStateView(cachedState),
       isAnchorStateFinalized: true,
       executionEngine,
       executionBuilder: undefined,

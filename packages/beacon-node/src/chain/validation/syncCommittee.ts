@@ -1,5 +1,5 @@
 import {SYNC_COMMITTEE_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {SubnetID, altair} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
@@ -73,7 +73,7 @@ export async function validateGossipSyncCommittee(
 
 export async function validateApiSyncCommittee(
   chain: IBeaconChain,
-  headState: CachedBeaconStateAllForks,
+  headState: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   const prioritizeBls = true;
@@ -85,7 +85,7 @@ export async function validateApiSyncCommittee(
  */
 async function validateSyncCommitteeSigOnly(
   chain: IBeaconChain,
-  headState: CachedBeaconStateAllForks,
+  headState: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage,
   prioritizeBls = false
 ): Promise<void> {
@@ -102,7 +102,7 @@ async function validateSyncCommitteeSigOnly(
  */
 export function validateGossipSyncCommitteeExceptSig(
   chain: IBeaconChain,
-  headState: CachedBeaconStateAllForks,
+  headState: IBeaconStateView,
   subnet: SubnetID,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubcommittee[] {
@@ -144,11 +144,11 @@ export function validateGossipSyncCommitteeExceptSig(
  * A validator may appear multiple times in the same subcommittee.
  */
 function getIndicesInSubcommittee(
-  headState: CachedBeaconStateAllForks,
+  headState: IBeaconStateView,
   subnet: SubnetID,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubcommittee[] | null {
-  const syncCommittee = headState.epochCtx.getIndexedSyncCommittee(data.slot);
+  const syncCommittee = headState.getIndexedSyncCommittee(data.slot);
   const indexesInCommittee = syncCommittee.validatorIndexMap.get(data.validatorIndex);
   if (indexesInCommittee === undefined) {
     // Not part of the sync committee

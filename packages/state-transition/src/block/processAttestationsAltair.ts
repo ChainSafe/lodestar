@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkSeq,
@@ -17,6 +18,7 @@ import {Attestation, Epoch, phase0} from "@lodestar/types";
 import {byteArrayEquals, intSqrt} from "@lodestar/utils";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
 import {isAttestationSameSlot, isAttestationSameSlotRootCache} from "../util/gloas.js";
 import {increaseBalance, verifySignatureSet} from "../util/index.js";
@@ -41,7 +43,7 @@ export function processAttestationsAltair(
   const {epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
-  const rootCache = new RootCache(state);
+  const rootCache = new RootCache(new BeaconStateView(state));
   const currentEpoch = epochCtx.epoch;
 
   // Process all attestations first and then increase the balance of the proposer once
@@ -80,7 +82,7 @@ export function processAttestationsAltair(
       stateSlot - data.slot,
       epochCtx.epoch,
       rootCache,
-      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability.toBoolArray() : null
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).executionPayloadAvailability : null
     );
 
     // For each participant, update their participation
@@ -177,7 +179,7 @@ export function getAttestationParticipationStatus(
   inclusionDelay: number,
   currentEpoch: Epoch,
   rootCache: RootCache,
-  executionPayloadAvailability: boolean[] | null
+  executionPayloadAvailability: BitArray | null
 ): number {
   const justifiedCheckpoint =
     data.target.epoch === currentEpoch ? rootCache.currentJustifiedCheckpoint : rootCache.previousJustifiedCheckpoint;
@@ -221,7 +223,8 @@ export function getAttestationParticipationStatus(
         throw new Error(`data index must be 0 or 1 index=${data.index}`);
       }
 
-      isMatchingPayload = Boolean(data.index) === executionPayloadAvailability[data.slot % SLOTS_PER_HISTORICAL_ROOT];
+      isMatchingPayload =
+        Boolean(data.index) === executionPayloadAvailability.get(data.slot % SLOTS_PER_HISTORICAL_ROOT);
     }
 
     isMatchingHead = isMatchingHead && isMatchingPayload;

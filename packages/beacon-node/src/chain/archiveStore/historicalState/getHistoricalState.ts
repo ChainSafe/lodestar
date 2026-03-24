@@ -1,32 +1,15 @@
 import {BeaconConfig} from "@lodestar/config";
 import {
-  BeaconStateAllForks,
-  CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  PubkeyCache,
-  createCachedBeaconState,
-  stateTransition,
+  IBeaconStateView,
+  type PubkeyCache,
+  createBeaconStateViewForHistoricalRegen,
 } from "@lodestar/state-transition";
 import {byteArrayEquals} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/index.js";
-import {getStateTypeFromBytes} from "../../../util/multifork.js";
 import {HistoricalStateRegenMetrics} from "./metrics.js";
 import {RegenErrorType} from "./types.js";
-
-/**
- * Populate a PubkeyCache with any new entries based on a BeaconState
- */
-export function syncPubkeyCache(state: BeaconStateAllForks, pubkeyCache: PubkeyCache): void {
-  // Get the validators sub tree once for all the loop
-  const validators = state.validators;
-
-  const newCount = state.validators.length;
-  for (let i = pubkeyCache.size; i < newCount; i++) {
-    const pubkey = validators.getReadonly(i).pubkey;
-    pubkeyCache.set(i, pubkey);
-  }
-}
 
 /**
  * Get the nearest BeaconState at or before a slot
@@ -36,26 +19,14 @@ export async function getNearestState(
   config: BeaconConfig,
   db: IBeaconDb,
   pubkeyCache: PubkeyCache
-): Promise<CachedBeaconStateAllForks> {
+): Promise<IBeaconStateView> {
   const stateBytesArr = await db.stateArchive.binaries({limit: 1, lte: slot, reverse: true});
   if (!stateBytesArr.length) {
     throw new Error("No near state found in the database");
   }
 
   const stateBytes = stateBytesArr[0];
-  const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-  syncPubkeyCache(state, pubkeyCache);
-
-  return createCachedBeaconState(
-    state,
-    {
-      config,
-      pubkeyCache,
-    },
-    {
-      skipSyncPubkeys: true,
-    }
-  );
+  return createBeaconStateViewForHistoricalRegen(config, stateBytes, pubkeyCache);
 }
 
 /**
@@ -81,8 +52,7 @@ export async function getHistoricalState(
   let blockCount = 0;
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
     try {
-      state = stateTransition(
-        state,
+      state = state.stateTransition(
         block,
         {
           verifyProposer: false,

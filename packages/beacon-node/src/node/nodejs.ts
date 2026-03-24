@@ -6,7 +6,7 @@ import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {CachedBeaconStateAllForks, PubkeyCache, isExecutionCachedStateType} from "@lodestar/state-transition";
+import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -53,7 +53,7 @@ export type BeaconNodeInitModules = {
   privateKey: PrivateKey;
   dataDir: string;
   peerStoreDir?: string;
-  anchorState: CachedBeaconStateAllForks;
+  anchorState: IBeaconStateView;
   isAnchorStateFinalized: boolean;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
@@ -221,9 +221,7 @@ export class BeaconNode {
 
     let executionEngineOpts = opts.executionEngine;
     if (opts.executionEngine.mode === "mock") {
-      const eth1BlockHash = isExecutionCachedStateType(anchorState)
-        ? toRootHex(anchorState.latestExecutionPayloadHeader.blockHash)
-        : undefined;
+      const eth1BlockHash = anchorState.isExecutionStateType ? toRootHex(anchorState.latestBlockHash) : undefined;
       executionEngineOpts = {
         ...opts.executionEngine,
         genesisBlockHash: ZERO_HASH_HEX,

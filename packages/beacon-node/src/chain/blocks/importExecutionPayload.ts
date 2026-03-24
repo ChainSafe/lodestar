@@ -1,11 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
-import {
-  BeaconStateView,
-  CachedBeaconStateGloas,
-  getExecutionPayloadEnvelopeSignatureSet,
-} from "@lodestar/state-transition";
-import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
+import {getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -93,12 +88,12 @@ export async function importExecutionPayload(
 
   // 3. Get pre-state for processExecutionPayloadEnvelope
   // We need the block state (post-block, pre-payload) to process the envelope
-  const blockState = (await this.regen.getBlockSlotState(
+  const blockState = await this.regen.getBlockSlotState(
     protoBlock,
     protoBlock.slot,
     {dontTransferCache: true},
     RegenCaller.processBlock
-  )) as CachedBeaconStateGloas;
+  );
 
   // 4. Run verification steps in parallel
   // Note: No data availability check needed here - importExecutionPayload is only
@@ -117,8 +112,8 @@ export async function importExecutionPayload(
       : (async () => {
           const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
             this.config,
-            blockState.epochCtx.pubkeyCache,
-            new BeaconStateView(blockState),
+            this.pubkeyCache,
+            blockState,
             envelope,
             payloadInput.proposerIndex
           );
@@ -130,7 +125,7 @@ export async function importExecutionPayload(
     (async () => {
       try {
         return {
-          postPayloadState: processExecutionPayloadEnvelope(blockState, envelope, {
+          postPayloadState: blockState.processExecutionPayloadEnvelope(envelope, {
             verifySignature: false,
             verifyStateRoot: false,
           }),
