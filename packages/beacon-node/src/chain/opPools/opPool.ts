@@ -11,11 +11,10 @@ import {
   MAX_VOLUNTARY_EXITS,
 } from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
+  IBeaconStateView,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
-  isValidVoluntaryExit,
 } from "@lodestar/state-transition";
 import {
   AttesterSlashing,
@@ -185,7 +184,7 @@ export class OpPool {
    * slashings included earlier in the block.
    */
   getSlashingsAndExits(
-    state: CachedBeaconStateAllForks,
+    state: IBeaconStateView,
     blockType: BlockType,
     metrics: Metrics | null
   ): [
@@ -207,7 +206,7 @@ export class OpPool {
     const endProposerSlashing = stepsMetrics?.startTimer();
     for (const proposerSlashing of this.proposerSlashings.values()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
-      const validator = state.validators.getReadonly(index);
+      const validator = state.getValidator(index);
       if (!validator.slashed && validator.activationEpoch <= stateEpoch && stateEpoch < validator.withdrawableEpoch) {
         proposerSlashings.push(proposerSlashing);
         // Set of validators to be slashed, so we don't attempt to construct invalid attester slashings.
@@ -234,7 +233,7 @@ export class OpPool {
           continue attesterSlashing;
         }
 
-        const validator = state.validators.getReadonly(index);
+        const validator = state.getValidator(index);
         if (isSlashableAtEpoch(validator, stateEpoch)) {
           slashableIndices.add(index);
         }
@@ -261,7 +260,7 @@ export class OpPool {
     for (const voluntaryExit of this.voluntaryExits.values()) {
       if (
         !toBeSlashedIndices.has(voluntaryExit.message.validatorIndex) &&
-        isValidVoluntaryExit(stateFork, state, voluntaryExit, false) &&
+        state.isValidVoluntaryExit(voluntaryExit, false) &&
         // Signature validation is skipped in `isValidVoluntaryExit(,,false)` since it was already validated in gossip
         // However we must make sure that the signature fork is the same, or it will become invalid if included through
         // a future fork.
@@ -320,7 +319,7 @@ export class OpPool {
   /**
    * Prune all types of transactions given the latest head state
    */
-  pruneAll(headBlock: SignedBeaconBlock, headState: CachedBeaconStateAllForks): void {
+  pruneAll(headBlock: SignedBeaconBlock, headState: IBeaconStateView): void {
     this.pruneAttesterSlashings(headState);
     this.pruneProposerSlashings(headState);
     this.pruneVoluntaryExits(headState);
@@ -330,7 +329,7 @@ export class OpPool {
   /**
    * Prune attester slashings for all slashed or withdrawn validators.
    */
-  private pruneAttesterSlashings(headState: CachedBeaconStateAllForks): void {
+  private pruneAttesterSlashings(headState: IBeaconStateView): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
     attesterSlashing: for (const [key, attesterSlashing] of this.attesterSlashings.entries()) {
       // Slashings that don't slash any validators can be dropped
@@ -342,7 +341,7 @@ export class OpPool {
         //
         // We cannot check the `slashed` field since the `head` is not finalized and
         // a fork could un-slash someone.
-        if (headState.validators.getReadonly(index).exitEpoch > finalizedEpoch) {
+        if (headState.getValidator(index).exitEpoch > finalizedEpoch) {
           continue attesterSlashing;
         }
       }
@@ -355,11 +354,11 @@ export class OpPool {
   /**
    * Prune proposer slashings for validators which are exited in the finalized epoch.
    */
-  private pruneProposerSlashings(headState: CachedBeaconStateAllForks): void {
+  private pruneProposerSlashings(headState: IBeaconStateView): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
     for (const [key, proposerSlashing] of this.proposerSlashings.entries()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
-      if (headState.validators.getReadonly(index).exitEpoch <= finalizedEpoch) {
+      if (headState.getValidator(index).exitEpoch <= finalizedEpoch) {
         this.proposerSlashings.delete(key);
       }
     }
@@ -369,7 +368,7 @@ export class OpPool {
    * Call after finalizing
    * Prune if validator has already exited at or before the finalized checkpoint of the head.
    */
-  private pruneVoluntaryExits(headState: CachedBeaconStateAllForks): void {
+  private pruneVoluntaryExits(headState: IBeaconStateView): void {
     const headStateFork = this.config.getForkSeq(headState.slot);
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
 
@@ -392,7 +391,7 @@ export class OpPool {
    * In the worse case where head block is reorged, the same BlsToExecutionChange message can be re-added
    * to opPool once gossipsub seen cache TTL passes.
    */
-  private pruneBlsToExecutionChanges(headBlock: SignedBeaconBlock, headState: CachedBeaconStateAllForks): void {
+  private pruneBlsToExecutionChanges(headBlock: SignedBeaconBlock, headState: IBeaconStateView): void {
     const recentBlsToExecutionChanges =
       this.config.getForkSeq(headBlock.message.slot) >= ForkSeq.capella
         ? (headBlock as capella.SignedBeaconBlock).message.body.blsToExecutionChanges
@@ -405,7 +404,7 @@ export class OpPool {
     for (const [key, blsToExecutionChange] of this.blsToExecutionChanges.entries()) {
       const {validatorIndex} = blsToExecutionChange.data.message;
       if (!recentBlsToExecutionChangeIndexes.has(validatorIndex)) {
-        const validator = headState.validators.getReadonly(validatorIndex);
+        const validator = headState.getValidator(validatorIndex);
         if (validator.withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
           this.blsToExecutionChanges.delete(key);
         }

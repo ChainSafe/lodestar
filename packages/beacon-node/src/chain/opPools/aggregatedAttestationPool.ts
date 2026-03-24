@@ -19,16 +19,13 @@ import {
   isForkPostElectra,
 } from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
-  CachedBeaconStateGloas,
   EffectiveBalanceIncrements,
+  IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getAttestationParticipationStatus,
-  getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
 import {MapDef, assert, toRootHex} from "@lodestar/utils";
@@ -212,7 +209,7 @@ export class AggregatedAttestationPool {
     fork: ForkName,
     forkChoice: IForkChoice,
     shufflingCache: ShufflingCache,
-    state: CachedBeaconStateAllForks
+    state: IBeaconStateView
   ): Attestation[] {
     const forkSeq = ForkSeq[fork];
     if (forkSeq < ForkSeq.electra) {
@@ -229,10 +226,10 @@ export class AggregatedAttestationPool {
     fork: ForkName,
     forkChoice: IForkChoice,
     shufflingCache: ShufflingCache,
-    state: CachedBeaconStateAllForks
+    state: IBeaconStateView
   ): electra.Attestation[] {
     const stateSlot = state.slot;
-    const stateEpoch = state.epochCtx.epoch;
+    const stateEpoch = state.epoch;
     const statePrevEpoch = stateEpoch - 1;
     const rootCache = new RootCache(state);
 
@@ -312,7 +309,7 @@ export class AggregatedAttestationPool {
           // The committeeCountPerSlot can be precomputed once per slot
           const getAttestationGroupResult = attestationGroup.getAttestationsForBlock(
             fork,
-            state.epochCtx.effectiveBalanceIncrements,
+            state.effectiveBalanceIncrements,
             notSeenCommitteeMembers,
             MAX_ATTESTATIONS_PER_GROUP_ELECTRA
           );
@@ -362,9 +359,7 @@ export class AggregatedAttestationPool {
             inclusionDistance,
             stateEpoch,
             rootCache,
-            ForkSeq[fork] >= ForkSeq.gloas
-              ? (state as CachedBeaconStateGloas).executionPayloadAvailability.toBoolArray()
-              : null
+            ForkSeq[fork] >= ForkSeq.gloas ? state.executionPayloadAvailability : null
           );
 
           const weight =
@@ -735,13 +730,13 @@ export function aggregateConsolidation({byCommittee, attData}: AttestationsConso
 }
 
 /**
- * Pre-compute participation from a CachedBeaconStateAllForks, for use to check if an attestation's committee
+ * Pre-compute participation from a IBeaconStateView, for use to check if an attestation's committee
  * has already attested or not.
  */
 export function getNotSeenValidatorsFn(
   config: BeaconConfig,
   shufflingCache: ShufflingCache,
-  state: CachedBeaconStateAllForks
+  state: IBeaconStateView
 ): GetNotSeenValidatorsFn {
   const stateSlot = state.slot;
   if (config.getForkName(stateSlot) === ForkName.phase0) {
@@ -753,9 +748,8 @@ export function getNotSeenValidatorsFn(
   // Attestations are sorted by inclusion distance then number of attesters.
   // Attestations should pass the validation when processing attestations in state-transition.
   // check for altair block already
-  const altairState = state as CachedBeaconStateAltair;
-  const previousParticipation = altairState.previousEpochParticipation.getAll();
-  const currentParticipation = altairState.currentEpochParticipation.getAll();
+  const previousParticipation = state.previousEpochParticipation;
+  const currentParticipation = state.currentEpochParticipation;
   const stateEpoch = computeEpochAtSlot(stateSlot);
   // this function could be called multiple times with same slot + committeeIndex
   const cachedNotSeenValidators = new Map<string, Set<number>>();
@@ -774,7 +768,7 @@ export function getNotSeenValidatorsFn(
       return notSeenCommitteeMembers.size === 0 ? null : notSeenCommitteeMembers;
     }
 
-    const decisionRoot = state.epochCtx.getShufflingDecisionRoot(computeEpochAtSlot(slot));
+    const decisionRoot = state.getShufflingDecisionRoot(computeEpochAtSlot(slot));
     const committee = shufflingCache.getBeaconCommittee(epoch, decisionRoot, slot, committeeIndex);
     notSeenCommitteeMembers = new Set<number>();
     for (const [i, validatorIndex] of committee.entries()) {
@@ -804,11 +798,11 @@ export function getNotSeenValidatorsFn(
  */
 export function getValidateAttestationDataFn(
   forkChoice: IForkChoice,
-  state: CachedBeaconStateAllForks
+  state: IBeaconStateView
 ): ValidateAttestationDataFn {
   const cachedValidatedAttestationData = new Map<string, InvalidAttestationData | null>();
   const {previousJustifiedCheckpoint, currentJustifiedCheckpoint} = state;
-  const stateEpoch = state.epochCtx.epoch;
+  const stateEpoch = state.epoch;
   return (attData: phase0.AttestationData) => {
     const targetEpoch = attData.target.epoch;
     let justifiedCheckpoint: phase0.Checkpoint;
@@ -850,14 +844,14 @@ export function getValidateAttestationDataFn(
  */
 function isValidShuffling(
   forkChoice: IForkChoice,
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   blockRootHex: RootHex,
   targetEpoch: Epoch
 ): InvalidAttestationData | null {
   // Otherwise the shuffling is determined by the block at the end of the target epoch
   // minus the shuffling lookahead (usually 2). We call this the "pivot".
   const pivotSlot = computeStartSlotAtEpoch(targetEpoch - 1) - 1;
-  const stateDependentRoot = toRootHex(getBlockRootAtSlot(state, pivotSlot));
+  const stateDependentRoot = toRootHex(state.getBlockRootAtSlot(pivotSlot));
 
   // Use fork choice's view of the block DAG to quickly evaluate whether the attestation's
   // pivot block is the same as the current state's pivot block. If it is, then the
