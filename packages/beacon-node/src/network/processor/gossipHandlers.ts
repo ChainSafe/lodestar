@@ -187,6 +187,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     } catch (e) {
       if (e instanceof BlockGossipError) {
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput) {
+          // TODO GLOAS: dead code
           logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
           chain.emitter.emit(ChainEvent.unknownParent, {
             blockInput,

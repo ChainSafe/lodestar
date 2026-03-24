@@ -1,16 +1,19 @@
-import {ForkName, isForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {SlotOptionalRoot, SlotRootHex} from "@lodestar/types";
 import {
   getBeaconBlockRootFromDataColumnSidecarSerialized,
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
   getBlockRootFromBeaconAttestationSerialized,
+  getBlockRootFromPayloadAttestationMessageSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromBeaconAttestationSerialized,
   getSlotFromBlobSidecarSerialized,
   getSlotFromDataColumnSidecarSerialized,
   getSlotFromExecutionPayloadEnvelopeSerialized,
+  getSlotFromPayloadAttestationMessageSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
+  getSlotFromSignedExecutionPayloadBidSerialized,
 } from "../../util/sszBytes.js";
 import {GossipType} from "../gossip/index.js";
 import {ExtractSlotRootFns} from "./types.js";
@@ -57,11 +60,16 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
     },
     [GossipType.data_column_sidecar]: (data: Uint8Array, fork: ForkName): SlotOptionalRoot | null => {
       const slot = getSlotFromDataColumnSidecarSerialized(data, fork);
+
       if (slot === null) {
         return null;
       }
 
-      const root = isForkPostGloas(fork) ? getBeaconBlockRootFromDataColumnSidecarSerialized(data) : null;
+      if (ForkSeq[fork] < ForkSeq.gloas) {
+        return {slot};
+      }
+
+      const root = getBeaconBlockRootFromDataColumnSidecarSerialized(data);
       return root !== null ? {slot, root} : {slot};
     },
     [GossipType.execution_payload]: (data: Uint8Array): SlotRootHex | null => {
@@ -72,6 +80,28 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
         return null;
       }
       return {slot, root};
+    },
+    [GossipType.payload_attestation_message]: (data: Uint8Array): SlotRootHex | null => {
+      const slot = getSlotFromPayloadAttestationMessageSerialized(data);
+      const root = getBlockRootFromPayloadAttestationMessageSerialized(data);
+
+      if (slot === null || root === null) {
+        return null;
+      }
+      return {slot, root};
+    },
+    [GossipType.execution_payload_bid]: (data: Uint8Array): SlotOptionalRoot | null => {
+      const slot = getSlotFromSignedExecutionPayloadBidSerialized(data);
+
+      if (slot === null) {
+        return null;
+      }
+
+      // Don't extract a root here — the bid's awaiting logic is handled explicitly
+      // in the processor switch case using getParentBlockRootFromSignedExecutionPayloadBidSerialized.
+      // Returning a root here would cause the initial block-root check to queue this message
+      // in awaitingMessagesByBlockRoot under a garbage key.
+      return {slot};
     },
   };
 }

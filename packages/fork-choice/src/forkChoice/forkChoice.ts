@@ -1060,6 +1060,21 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Returns true if the FULL payload variant (execution payload envelope) exists for this block root,
+   * without checking if the block is a descendant of the finalized root.
+   */
+  hasEnvelopeUnsafe(blockRoot: Root): boolean {
+    return this.hasEnvelopeHexUnsafe(toRootHex(blockRoot));
+  }
+
+  /**
+   * Same to hasEnvelopeUnsafe but accepts a hex-encoded block root.
+   */
+  hasEnvelopeHexUnsafe(blockRoot: RootHex): boolean {
+    return this.protoArray.hasEnvelope(blockRoot);
+  }
+
+  /**
    * Returns a MUTABLE `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
   getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null {

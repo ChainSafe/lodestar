@@ -66,6 +66,10 @@ export enum ChainEvent {
    * cut-off window passes for waiting on gossip
    */
   incompleteBlockInput = "incompleteBlockInput",
+  /**
+   * Trigger sync for objects that correspond to a payload envelope (SignedExecutionPayloadEnvelope) that is not yet known
+   */
+  unknownEnvelopeBlockRoot = "unknownEnvelopeBlockRoot",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -78,6 +82,7 @@ export type ChainEventData = {
   [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
   [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {
@@ -99,6 +104,7 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.unknownParent]: (data: ChainEventData[ChainEvent.unknownParent]) => void;
   [ChainEvent.unknownBlockRoot]: (data: ChainEventData[ChainEvent.unknownBlockRoot]) => void;
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
+  [ChainEvent.unknownEnvelopeBlockRoot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]) => void;
 };
 
 /**

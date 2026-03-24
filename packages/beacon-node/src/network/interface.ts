@@ -74,6 +74,7 @@ export interface INetwork extends INetworkCorePublic {
   shouldAggregate(subnet: SubnetID, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
   searchUnknownBlock(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
+  searchUnknownEnvelope(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void;
   // ReqResp
   sendBeaconBlocksByRange(peerId: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
   sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;

@@ -182,10 +182,7 @@ export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot |
  * Extract committee index from SingleAttestation serialized bytes.
  * Return null if data is not long enough to extract slot.
  */
-export function getCommitteeIndexFromSingleAttestationSerialized(
-  fork: ForkName,
-  data: Uint8Array
-): CommitteeIndex | null {
+export function getIndexFromSingleAttestationSerialized(fork: ForkName, data: Uint8Array): CommitteeIndex | null {
   if (isForkPostElectra(fork)) {
     if (data.length !== SINGLE_ATTESTATION_SIZE) {
       return null;
@@ -269,6 +266,7 @@ export function getSignatureFromSingleAttestationSerialized(data: Uint8Array): B
 const AGGREGATE_AND_PROOF_OFFSET = 4 + 96;
 const AGGREGATE_OFFSET = AGGREGATE_AND_PROOF_OFFSET + 8 + 4 + 96;
 const SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET = AGGREGATE_OFFSET + VARIABLE_FIELD_OFFSET;
+const SIGNED_AGGREGATE_AND_PROOF_COMMITTEE_INDEX_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + SLOT_SIZE;
 const SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + 8 + 8;
 
 /**
@@ -301,6 +299,19 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
     )
   );
   return "0x" + blockRootBuf.toString("hex");
+}
+
+/**
+ * Extract index from signed aggregate and proof serialized bytes.
+ * Return null if data is not long enough to extract index.
+ * This works for both phase0 + electra (index is in attestation data at the same offset).
+ */
+export function getIndexFromSignedAggregateAndProofSerialized(data: Uint8Array): CommitteeIndex | null {
+  if (data.length < SIGNED_AGGREGATE_AND_PROOF_COMMITTEE_INDEX_OFFSET + COMMITTEE_INDEX_SIZE) {
+    return null;
+  }
+
+  return getIndexFromOffset(data, SIGNED_AGGREGATE_AND_PROOF_COMMITTEE_INDEX_OFFSET);
 }
 
 /**
@@ -525,6 +536,104 @@ export function getSlotFromBeaconStateSerialized(data: Uint8Array): Slot | null 
   }
 
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_BEACON_STATE);
+}
+
+/**
+ * PayloadAttestationMessage: {
+ *   validatorIndex: ValidatorIndex (8 bytes)
+ *   data: PayloadAttestationData {
+ *     beaconBlockRoot: Root (32 bytes)  ← offset 8
+ *     slot: Slot (8 bytes)              ← offset 40
+ *     payloadPresent: Boolean (1 byte)
+ *     blobDataAvailable: Boolean (1 byte)
+ *   }
+ *   signature: BLSSignature (96 bytes)
+ * }
+ * Fully fixed-size container, no offset table.
+ */
+const PAYLOAD_ATTESTATION_MESSAGE_BEACON_BLOCK_ROOT_OFFSET = 8;
+const PAYLOAD_ATTESTATION_MESSAGE_SLOT_OFFSET = 8 + ROOT_SIZE; // 40
+const PAYLOAD_ATTESTATION_MESSAGE_PAYLOAD_PRESENT_OFFSET = PAYLOAD_ATTESTATION_MESSAGE_SLOT_OFFSET + SLOT_SIZE; // 48
+
+export function getSlotFromPayloadAttestationMessageSerialized(data: Uint8Array): Slot | null {
+  if (data.length < PAYLOAD_ATTESTATION_MESSAGE_SLOT_OFFSET + SLOT_SIZE) {
+    return null;
+  }
+  return getSlotFromOffset(data, PAYLOAD_ATTESTATION_MESSAGE_SLOT_OFFSET);
+}
+
+export function getPayloadPresentFromPayloadAttestationMessageSerialized(data: Uint8Array): boolean | null {
+  if (data.length < PAYLOAD_ATTESTATION_MESSAGE_PAYLOAD_PRESENT_OFFSET + 1) {
+    return null;
+  }
+  return data[PAYLOAD_ATTESTATION_MESSAGE_PAYLOAD_PRESENT_OFFSET] !== 0;
+}
+
+export function getBlockRootFromPayloadAttestationMessageSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < PAYLOAD_ATTESTATION_MESSAGE_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE) {
+    return null;
+  }
+  blockRootBuf.set(
+    data.subarray(
+      PAYLOAD_ATTESTATION_MESSAGE_BEACON_BLOCK_ROOT_OFFSET,
+      PAYLOAD_ATTESTATION_MESSAGE_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE
+    )
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
+}
+
+/**
+ * SignedExecutionPayloadBid: {message: ExecutionPayloadBid (variable), signature: BLSSignature (96 bytes)}
+ *   Fixed part: 4-byte offset + 96-byte signature = 100 bytes
+ *   message data starts at byte 100
+ *
+ * ExecutionPayloadBid fixed fields (in order):
+ *   parentBlockHash: Bytes32      (32 bytes)
+ *   parentBlockRoot: Root         (32 bytes)
+ *   blockHash: Bytes32            (32 bytes)
+ *   prevRandao: Bytes32           (32 bytes)
+ *   feeRecipient: ExecutionAddress(20 bytes)
+ *   gasLimit: UintBn64            (8 bytes)
+ *   builderIndex: BuilderIndex    (8 bytes)
+ *   slot: Slot                    (8 bytes)  ← absolute offset 264
+ */
+const SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // 100
+const SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET =
+  SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE; // 132
+const SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET =
+  VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + 32 + 32 + 32 + 32 + 20 + 8 + 8; // 264
+
+export function getSlotFromSignedExecutionPayloadBidSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET + SLOT_SIZE) {
+    return null;
+  }
+  return getSlotFromOffset(data, SIGNED_EXECUTION_PAYLOAD_BID_SLOT_OFFSET);
+}
+
+export function getParentBlockHashFromSignedExecutionPayloadBidSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE) {
+    return null;
+  }
+  blockRootBuf.set(
+    data.subarray(
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET,
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_HASH_OFFSET + ROOT_SIZE
+    )
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
+}
+
+export function getParentBlockRootFromSignedExecutionPayloadBidSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET + ROOT_SIZE) {
+    return null;
+  }
+  blockRootBuf.set(
+    data.subarray(
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET,
+      SIGNED_EXECUTION_PAYLOAD_BID_PARENT_BLOCK_ROOT_OFFSET + ROOT_SIZE
+    )
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
 }
 
 /**
