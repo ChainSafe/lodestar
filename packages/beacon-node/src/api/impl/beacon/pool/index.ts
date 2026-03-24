@@ -317,55 +317,38 @@ export function getBeaconPoolApi({
       }
     },
 
-    async getPoolExecutionProofs({slot}) {
-      // Return all proofs in the pool, optionally filtered by slot
-      const allProofs: import("@lodestar/types").ExecutionProof[] = [];
-      if (slot !== undefined) {
-        // Get proofs for a single slot
-        const proofs = chain.executionProofPool.getProofsByRange(slot, 1);
-        allProofs.push(...proofs);
-      } else {
-        // Get proofs for a wide range around the current slot (recent SLOTS_RETAINED window)
-        const currentSlot = chain.clock.currentSlot;
-        const proofs = chain.executionProofPool.getProofsByRange(Math.max(0, currentSlot - 8), 9);
-        allProofs.push(...proofs);
-      }
-      return {data: allProofs};
+    async getPoolExecutionProofs() {
+      // TODO EIP-8025: Route definition still uses old ExecutionProof type; cast until API package is updated
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return {data: chain.executionProofPool.getAll() as any};
     },
 
-    async submitPoolExecutionProofs({executionProof}) {
-      // Validate basic fields
-      const {slot, blockRoot, proofId} = executionProof;
-      const blockRootHex = toRootHex(blockRoot);
+    async submitPoolExecutionProofs({executionProof: _rawProof}) {
+      // TODO EIP-8025: Route definition still uses old ExecutionProof type; cast until API package is updated
+      const signedExecutionProof = _rawProof as unknown as import("@lodestar/types").SignedExecutionProof;
+      const proof = signedExecutionProof.message;
+      const requestRootHex = toRootHex(proof.publicInput.newPayloadRequestRoot);
 
-      // Check for duplicates
-      if (chain.executionProofPool.has(blockRootHex, proofId)) {
-        logger.debug("Ignoring known execution proof", {slot, blockRoot: blockRootHex, proofId});
+      if (chain.executionProofPool.has(proof.publicInput.newPayloadRequestRoot, proof.proofType)) {
+        logger.debug("Ignoring known execution proof", {requestRoot: requestRootHex, proofType: proof.proofType});
         return {};
       }
 
-      // TODO EIP-8025: Add full proof verification (dummy accept for devnet)
-
-      // Add to pool (pass clock slot to reject far-future proofs)
-      const clockSlot = chain.clock.currentSlot;
-      const insertOutcome = chain.executionProofPool.add(executionProof, clockSlot);
+      const insertOutcome = chain.executionProofPool.add(signedExecutionProof);
       logger.info("Execution proof submitted via API", {
-        slot,
-        blockRoot: blockRootHex,
-        proofId,
+        requestRoot: requestRootHex,
+        proofType: proof.proofType,
+        validatorIndex: signedExecutionProof.validatorIndex,
         insertOutcome,
       });
 
-      // Only publish to gossip if the proof was actually accepted
       if (insertOutcome === InsertOutcome.NewData) {
         try {
-          await network.publishExecutionProof(executionProof);
+          await network.publishExecutionProof(signedExecutionProof);
         } catch (e) {
-          logger.debug("Failed to publish execution proof to gossip", {slot, proofId}, e as Error);
+          logger.debug("Failed to publish execution proof", {proofType: proof.proofType}, e as Error);
         }
-
-        // EIP-8025: In zkvm mode, check if we now have enough proofs to validate this block
-        chain.maybeTransitionToValidOnProofArrival(executionProof);
+        chain.maybeTransitionToValidOnProofArrival(signedExecutionProof);
       }
 
       return {};
