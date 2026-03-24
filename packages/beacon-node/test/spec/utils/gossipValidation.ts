@@ -542,13 +542,6 @@ async function validateMessageForTopic(
         ssz.altair.SyncCommitteeMessage.deserialize(bytes)
       );
       await validateGossipSyncCommittee(chain, syncCommitteeMessage, Number(message.subnet_id ?? 0));
-      // Mirror gossip handler: mark as seen so duplicate detection works
-      chain.seenSyncCommitteeMessages.add(
-        syncCommitteeMessage.slot,
-        Number(message.subnet_id ?? 0),
-        syncCommitteeMessage.validatorIndex,
-        toRootHex(syncCommitteeMessage.beaconBlockRoot)
-      );
       break;
     }
 
@@ -557,10 +550,6 @@ async function validateMessageForTopic(
         ssz.altair.SignedContributionAndProof.deserialize(bytes)
       );
       await validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof);
-      // Mirror gossip handler: mark as seen so duplicate detection works
-      const contribution = signedContributionAndProof.message.contribution;
-      const trueBitCount = Array.from(contribution.aggregationBits).filter(Boolean).length;
-      chain.seenContributionAndProof.add(signedContributionAndProof.message, trueBitCount);
       break;
     }
 
