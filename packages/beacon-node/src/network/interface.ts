@@ -20,11 +20,11 @@ import type {Libp2p as ILibp2p} from "libp2p";
 import {
   AttesterSlashing,
   DataColumnSidecar,
-  SignedExecutionProof,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  SignedExecutionProof,
   SingleAttestation,
   Slot,
   SlotRootHex,

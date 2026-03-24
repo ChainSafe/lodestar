@@ -1,10 +1,9 @@
-import { Type } from "@chainsafe/ssz";
-import { BeaconConfig } from "@lodestar/config";
-import { ForkName, ForkPostAltair, ForkPostFulu, isForkPostAltair, isForkPostFulu } from "@lodestar/params";
-import { Protocol, ProtocolHandler, ReqRespRequest } from "@lodestar/reqresp";
+import {Type} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
+import {ForkName, ForkPostAltair, ForkPostFulu, isForkPostAltair, isForkPostFulu} from "@lodestar/params";
+import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
   DataColumnSidecar,
-  SignedExecutionProof,
   ExecutionProofsByRangeRequest,
   ExecutionProofsByRootRequest,
   LightClientBootstrap,
@@ -14,6 +13,7 @@ import {
   Metadata,
   Root,
   SignedBeaconBlock,
+  SignedExecutionProof,
   Status,
   altair,
   deneb,
@@ -112,32 +112,32 @@ export const requestSszTypeByMethod: (
   fork: ForkName,
   config: BeaconConfig
 ) => {
-    [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
-  } = (fork, config) => ({
-    // Status type should ideally be determined by protocol version and not fork but since
-    // we only start using the new status version after the fork this is not an issue
-    [ReqRespMethod.Status]: sszTypesFor(fork).Status,
-    [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
-    [ReqRespMethod.Ping]: ssz.phase0.Ping,
-    [ReqRespMethod.Metadata]: null,
+  [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
+} = (fork, config) => ({
+  // Status type should ideally be determined by protocol version and not fork but since
+  // we only start using the new status version after the fork this is not an issue
+  [ReqRespMethod.Status]: sszTypesFor(fork).Status,
+  [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
+  [ReqRespMethod.Ping]: ssz.phase0.Ping,
+  [ReqRespMethod.Metadata]: null,
 
-    [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
-    [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
-    [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
-    [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
-    [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
-    [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
-    [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequestType(config),
-    [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest,
+  [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
+  [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
+  [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
+  [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
+  [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequestType(config),
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest,
 
-    [ReqRespMethod.LightClientBootstrap]: ssz.Root,
-    [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
-    [ReqRespMethod.LightClientFinalityUpdate]: null,
-    [ReqRespMethod.LightClientOptimisticUpdate]: null,
-    // EIP-8025
-    [ReqRespMethod.ExecutionProofsByRoot]: ssz.eip8025.ExecutionProofsByRootRequest,
-    [ReqRespMethod.ExecutionProofsByRange]: ssz.eip8025.ExecutionProofsByRangeRequest,
-  });
+  [ReqRespMethod.LightClientBootstrap]: ssz.Root,
+  [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
+  [ReqRespMethod.LightClientFinalityUpdate]: null,
+  [ReqRespMethod.LightClientOptimisticUpdate]: null,
+  // EIP-8025
+  [ReqRespMethod.ExecutionProofsByRoot]: ssz.eip8025.ExecutionProofsByRootRequest,
+  [ReqRespMethod.ExecutionProofsByRange]: ssz.eip8025.ExecutionProofsByRangeRequest,
+});
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
 
@@ -149,7 +149,7 @@ const blocksResponseType: ResponseTypeGetter<SignedBeaconBlock> = (fork, version
   return ssz[fork].SignedBeaconBlock;
 };
 
-export const responseSszTypeByMethod: { [K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]> } = {
+export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<ResponseBodyByMethod[K]>} = {
   [ReqRespMethod.Status]: (_, version) => (version === Version.V2 ? ssz.fulu.Status : ssz.phase0.Status),
   [ReqRespMethod.Goodbye]: () => ssz.phase0.Goodbye,
   [ReqRespMethod.Ping]: () => ssz.phase0.Ping,
@@ -188,7 +188,7 @@ function onlyPostFuluFork(fork: ForkName): ForkPostFulu {
 }
 
 export type RequestTypedContainer = {
-  [K in ReqRespMethod]: { method: K; body: RequestBodyByMethod[K] };
+  [K in ReqRespMethod]: {method: K; body: RequestBodyByMethod[K]};
 }[ReqRespMethod];
 
 export enum Version {

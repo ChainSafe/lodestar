@@ -11,8 +11,6 @@ import { computeEpochAtSlot } from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   DataColumnSidecar,
-  ExecutionProof,
-  SignedExecutionProof,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -20,6 +18,7 @@ import {
   Root,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  SignedExecutionProof,
   SingleAttestation,
   SlotRootHex,
   SubnetID,

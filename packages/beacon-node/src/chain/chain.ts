@@ -6,13 +6,9 @@ import {
   CheckpointWithHex,
   CheckpointWithPayloadStatus,
   ExecutionStatus,
-  ExecutionStatus,
-  IForkChoice,
   IForkChoice,
   PayloadStatus,
   ProtoBlock,
-  ProtoBlock,
-  UpdateHeadOpt,
   UpdateHeadOpt,
   getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
