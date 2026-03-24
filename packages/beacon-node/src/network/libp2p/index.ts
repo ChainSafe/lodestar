@@ -88,6 +88,7 @@ export async function createNodeJsLibp2p(
     );
   }
   if (networkOpts.quic) {
+    const hasIpv6Quic = localMultiaddrs.some((ma) => ma.includes("/ip6/") && ma.includes("/quic-v1"));
     transports.unshift(
       quic({
         handshakeTimeout: 5_000,
@@ -96,6 +97,7 @@ export async function createNodeJsLibp2p(
         maxConcurrentStreamLimit: 256,
         maxStreamData: 10_000_000,
         maxConnectionData: 15_000_000,
+        ipv6: hasIpv6Quic,
       })
     );
   }
