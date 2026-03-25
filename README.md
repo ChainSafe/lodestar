@@ -77,3 +77,5 @@ Weekly contributor meetings are posted under [Discussions](https://github.com/Ch
 
 We are a local group of Toronto open-source developers. As such, all of our open-source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
 If you want to donate, you can find the ETH address under "Sponsor this project" on this repository.
+
+<!-- test -->
