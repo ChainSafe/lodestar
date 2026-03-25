@@ -142,6 +142,7 @@ export async function importBlock(
     const payloadInput = this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,
+      forkName: blockInput.forkName,
       sampledColumns: this.custodyConfig.sampledColumns,
       custodyColumns: this.custodyConfig.custodyColumns,
       timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,

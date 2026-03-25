@@ -287,7 +287,7 @@ export function getBlobKzgCommitments(
  * Given a signed block header and the commitments, inclusion proof, cells/proofs associated with
  * each blob in the block, assemble the sidecars which can be distributed to peers.
  *
- * SPEC FUNCTION (fulu)
+ * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars
  *
  * For gloas, use getGloasDataColumnSidecars (spec: gloas/builder.md#get_data_column_sidecars)
@@ -488,20 +488,25 @@ export async function recoverDataColumnSidecars(
   // it SHOULD still expose the availability of the DataColumnSidecar as part of the gossip emission process.
   // After exposing the reconstructed DataColumnSidecar to the network,
   // the node MAY delete the DataColumnSidecar if it is not part of the node's custody requirement.
-  const isPayloadInput = input instanceof PayloadEnvelopeInput;
   const sidecarsToPublish = [];
   for (const columnSidecar of fullSidecars) {
     if (!input.hasColumn(columnSidecar.index)) {
-      if (isPayloadInput) {
+      if (input instanceof PayloadEnvelopeInput) {
+        if (!isGloasDataColumnSidecar(columnSidecar)) {
+          throw new Error(`Expected gloas DataColumnSidecar for block ${input.blockRootHex}`);
+        }
         input.addColumn({
-          columnSidecar: columnSidecar as gloas.DataColumnSidecar,
+          columnSidecar,
           seenTimestampSec: Date.now() / 1000,
           source: PayloadEnvelopeInputSource.recovery,
         });
       } else {
+        if (isGloasDataColumnSidecar(columnSidecar)) {
+          throw new Error(`Expected fulu DataColumnSidecar for block ${input.blockRootHex}`);
+        }
         input.addColumn({
           blockRootHex: input.blockRootHex,
-          columnSidecar: columnSidecar as fulu.DataColumnSidecar,
+          columnSidecar,
           seenTimestampSec: Date.now() / 1000,
           source: BlockInputSource.recovery,
         });

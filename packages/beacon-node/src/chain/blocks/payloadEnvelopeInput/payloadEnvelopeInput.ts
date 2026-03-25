@@ -1,4 +1,4 @@
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
 import {toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
@@ -60,6 +60,7 @@ function createPromise<T>(): PromiseParts<T> {
 export class PayloadEnvelopeInput {
   readonly blockRootHex: RootHex;
   readonly slot: Slot;
+  readonly forkName: ForkName;
   readonly proposerIndex: ValidatorIndex;
   readonly bid: gloas.ExecutionPayloadBid;
   readonly versionedHashes: VersionedHashes;
@@ -79,6 +80,7 @@ export class PayloadEnvelopeInput {
   private constructor(props: {
     blockRootHex: RootHex;
     slot: Slot;
+    forkName: ForkName;
     proposerIndex: ValidatorIndex;
     bid: gloas.ExecutionPayloadBid;
     sampledColumns: ColumnIndex[];
@@ -87,6 +89,7 @@ export class PayloadEnvelopeInput {
   }) {
     this.blockRootHex = props.blockRootHex;
     this.slot = props.slot;
+    this.forkName = props.forkName;
     this.proposerIndex = props.proposerIndex;
     this.bid = props.bid;
     this.versionedHashes = props.bid.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
@@ -113,6 +116,7 @@ export class PayloadEnvelopeInput {
     return new PayloadEnvelopeInput({
       blockRootHex: props.blockRootHex,
       slot: props.block.message.slot,
+      forkName: props.forkName,
       proposerIndex: props.block.message.proposerIndex,
       bid,
       sampledColumns: props.sampledColumns,
