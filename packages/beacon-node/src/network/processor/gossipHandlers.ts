@@ -1,19 +1,21 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkPostDeneb,
   ForkPostElectra,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreElectra,
   ForkSeq,
   NUMBER_OF_COLUMNS,
   isForkPostElectra,
   isForkPostFulu,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
-  DataColumnSidecar,
   Root,
   SignedBeaconBlock,
   SingleAttestation,
@@ -22,6 +24,7 @@ import {
   UintNum64,
   deneb,
   fulu,
+  gloas,
   isGloasDataColumnSidecar,
   ssz,
   sszTypesFor,
@@ -34,7 +37,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
-import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
+import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -55,7 +58,10 @@ import {
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {validateGossipDataColumnSidecar} from "../../chain/validation/dataColumnSidecar.js";
+import {
+  validateGossipFuluDataColumnSidecar,
+  validateGossipGloasDataColumnSidecar,
+} from "../../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
 import {
@@ -301,9 +307,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
   }
 
   async function validateBeaconDataColumn(
-    dataColumnSidecar: DataColumnSidecar,
-    _dataColumnBytes: Uint8Array,
-    fork: ForkName,
+    dataColumnSidecar: fulu.DataColumnSidecar,
     gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
@@ -332,7 +336,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const blockInput = chain.seenBlockInputCache.get(blockRootHex);
       if (blockInput && isBlockInputColumns(blockInput) && blockInput.hasColumn(dataColumnSidecar.index)) {
         metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
-        logger.debug("Already have column sidecar, skipping processing", {
+        logger.debug("Already have column sidecar in BlockInput, skipping processing", {
           ...blockInput.getLogMeta(),
           index: dataColumnSidecar.index,
         });
@@ -350,11 +354,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipDataColumnSidecar(fork, chain, dataColumnSidecar, gossipSubnet, metrics);
-      // TODO(gloas): handle gloas data columns separately via BlockInputNoData path
+      await validateGossipFuluDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
       const blockInput = chain.seenBlockInputCache.getByColumn({
         blockRootHex,
-        columnSidecar: dataColumnSidecar as fulu.DataColumnSidecar,
+        columnSidecar: dataColumnSidecar,
         source: BlockInputSource.gossip,
         seenTimestampSec,
         peerIdStr,
@@ -372,9 +375,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           blockRoot: blockRootHex,
           slot,
           index: dataColumnSidecar.index,
-          kzgCommitments: isGloasDataColumnSidecar(dataColumnSidecar)
-            ? []
-            : dataColumnSidecar.kzgCommitments.map(toHex),
+          kzgCommitments: dataColumnSidecar.kzgCommitments.map(toHex),
         });
       }
 
@@ -405,6 +406,115 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         //        unknownBlockSync.  And duplicate addition of a block will be deduplicated by the
         //        BlockInputSync event handler. Check this!!
         // events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+      }
+
+      throw e;
+    } finally {
+      verificationTimer?.();
+    }
+  }
+
+  async function validatePayloadDataColumn(
+    dataColumnSidecar: gloas.DataColumnSidecar,
+    gossipSubnet: SubnetID,
+    peerIdStr: string,
+    seenTimestampSec: number
+  ): Promise<PayloadEnvelopeInput> {
+    metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
+    const slot = getDataColumnSidecarSlot(dataColumnSidecar);
+    const blockRootHex = toRootHex(getDataColumnSidecarBlockRoot(dataColumnSidecar));
+
+    // check to see if payload has already been processed and PayloadEnvelopeInput has been deleted (column received via reqresp or other means)
+    if (chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL) !== null) {
+      metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
+      logger.debug("Already processed payload for column sidecar, skipping processing", {
+        slot,
+        blockRoot: blockRootHex,
+        index: dataColumnSidecar.index,
+      });
+      throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+        code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
+        columnIndex: dataColumnSidecar.index,
+        slot,
+      });
+    }
+
+    const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+
+    if (!payloadInput) {
+      // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
+      throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+        code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
+        slot,
+        blockRoot: blockRootHex,
+      });
+    }
+
+    // check if column already known in PayloadEnvelopeInput
+    if (payloadInput.hasColumn(dataColumnSidecar.index)) {
+      metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
+      logger.debug("Already have column sidecar in PayloadEnvelopeInput, skipping processing", {
+        ...payloadInput.getLogMeta(),
+        index: dataColumnSidecar.index,
+      });
+      throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+        code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
+        columnIndex: dataColumnSidecar.index,
+        slot,
+      });
+    }
+
+    const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
+
+    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
+
+    try {
+      await validateGossipGloasDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
+
+      payloadInput.addColumn({
+        columnSidecar: dataColumnSidecar,
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec,
+        peerIdStr,
+      });
+
+      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
+      const validationTime = recvToValidation - recvToValLatency;
+
+      metrics?.peerDas.dataColumnSidecarProcessingSuccesses.inc();
+      metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
+      metrics?.gossipBlob.validationTime.observe(validationTime);
+
+      if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
+        chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
+          blockRoot: blockRootHex,
+          slot,
+          index: dataColumnSidecar.index,
+        });
+      }
+
+      logger.debug("Received gossip dataColumn", {
+        ...payloadInput.getLogMeta(),
+        currentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        delaySec,
+        gossipSubnet,
+        columnIndex: dataColumnSidecar.index,
+        recvToValLatency,
+        recvToValidation,
+        validationTime,
+      });
+
+      return payloadInput;
+    } catch (e) {
+      if (e instanceof DataColumnSidecarGossipError && e.action === GossipAction.REJECT) {
+        const dataColumnFork = config.getForkName(slot);
+        chain.persistInvalidSszValue(
+          sszTypesFor(dataColumnFork as ForkPostGloas).DataColumnSidecar,
+          dataColumnSidecar,
+          `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
+        );
       }
 
       throw e;
@@ -566,7 +676,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
-      const fork = topic.boundary.fork;
+      const {fork} = topic.boundary;
       const {serializedData} = gossipData;
       const dataColumnSidecar = sszDeserialize(topic, serializedData);
       const dataColumnSlot = getDataColumnSidecarSlot(dataColumnSidecar);
@@ -575,70 +685,120 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (!isForkPostFulu(fork)) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
       }
-      const delaySec = chain.clock.secFromSlot(dataColumnSlot, seenTimestampSec);
-      const blockInput = await validateBeaconDataColumn(
-        dataColumnSidecar,
-        serializedData,
-        fork,
-        topic.subnet,
-        peerIdStr,
-        seenTimestampSec
-      );
-      chain.serializedCache.set(dataColumnSidecar, serializedData);
-      const blockInputMeta = blockInput.getLogMeta();
-      const {receivedColumns} = blockInputMeta;
-      // it's not helpful to track every single column received
-      // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
-      switch (receivedColumns) {
-        case 1:
-        case config.SAMPLES_PER_SLOT:
-        case 2 * config.SAMPLES_PER_SLOT:
-        case NUMBER_OF_COLUMNS / 4:
-        case NUMBER_OF_COLUMNS / 2:
-        case NUMBER_OF_COLUMNS:
-          metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
-          break;
-      }
 
-      if (!blockInput.hasComputedAllData()) {
-        // immediately attempt fetch of data columns from execution engine
-        chain.getBlobsTracker.triggerGetBlobs(blockInput);
-        // if we've received at least half of the columns, trigger reconstruction of the rest
-        if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
-          chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+      const delaySec = chain.clock.secFromSlot(dataColumnSlot, seenTimestampSec);
+
+      if (isForkPostGloas(fork)) {
+        if (!isGloasDataColumnSidecar(dataColumnSidecar)) {
+          throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+            code: DataColumnSidecarErrorCode.INCORRECT_TYPE,
+            slot: dataColumnSlot,
+            columnIndex: index,
+            fork,
+          });
+        }
+
+        // After gloas, data columns are tracked in PayloadEnvelopeInput
+        const payloadInput = await validatePayloadDataColumn(
+          dataColumnSidecar,
+          topic.subnet,
+          peerIdStr,
+          seenTimestampSec
+        );
+        chain.serializedCache.set(dataColumnSidecar, serializedData);
+
+        const payloadInputMeta = payloadInput.getLogMeta();
+        const {columnsCount} = payloadInputMeta;
+        // it's not helpful to track every single column received
+        // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
+        switch (columnsCount) {
+          case 1:
+          case config.SAMPLES_PER_SLOT:
+          case 2 * config.SAMPLES_PER_SLOT:
+          case NUMBER_OF_COLUMNS / 4:
+          case NUMBER_OF_COLUMNS / 2:
+          case NUMBER_OF_COLUMNS:
+            metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: columnsCount}, delaySec);
+            break;
+        }
+
+        // TODO GLOAS: trigger getBlobsTracker / columnReconstructionTracker for PayloadEnvelopeInput
+        if (!payloadInput.isComplete()) {
+          chain.logger.debug("Received gossip data column, payload envelope input not yet complete", {
+            dataColumnIndex: index,
+            ...payloadInputMeta,
+          });
+        }
+
+        chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+          chain.logger.debug(
+            "Error processing execution payload from gossip data column",
+            {slot: dataColumnSlot, root: payloadInput.blockRootHex},
+            e as Error
+          );
+        });
+      } else {
+        if (isGloasDataColumnSidecar(dataColumnSidecar)) {
+          throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+            code: DataColumnSidecarErrorCode.INCORRECT_TYPE,
+            slot: dataColumnSlot,
+            columnIndex: index,
+            fork,
+          });
+        }
+
+        // Before gloas, data columns are tracked in BlockInput
+        const blockInput = await validateBeaconDataColumn(dataColumnSidecar, topic.subnet, peerIdStr, seenTimestampSec);
+        chain.serializedCache.set(dataColumnSidecar, serializedData);
+
+        const blockInputMeta = blockInput.getLogMeta();
+        const {receivedColumns} = blockInputMeta;
+        // it's not helpful to track every single column received
+        // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
+        switch (receivedColumns) {
+          case 1:
+          case config.SAMPLES_PER_SLOT:
+          case 2 * config.SAMPLES_PER_SLOT:
+          case NUMBER_OF_COLUMNS / 4:
+          case NUMBER_OF_COLUMNS / 2:
+          case NUMBER_OF_COLUMNS:
+            metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
+            break;
+        }
+
+        if (!blockInput.hasComputedAllData()) {
+          // immediately attempt fetch of data columns from execution engine
+          chain.getBlobsTracker.triggerGetBlobs(blockInput);
+          // if we've received at least half of the columns, trigger reconstruction of the rest
+          if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {
+            chain.columnReconstructionTracker.triggerColumnReconstruction(blockInput);
+          }
+        }
+
+        if (!blockInput.hasBlockAndAllData()) {
+          const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
+          chain.logger.debug("Received gossip data column, waiting for full data availability", {
+            msToWait: cutoffTimeMs,
+            dataColumnIndex: index,
+            ...blockInputMeta,
+          });
+          // do not await here to not delay gossip validation
+          blockInput.waitForBlockAndAllData(cutoffTimeMs).catch((_e) => {
+            chain.logger.debug(
+              "Waited for data after receiving gossip column. Cut-off reached so attempting to fetch remainder of BlockInput",
+              {
+                dataColumnIndex: index,
+                ...blockInputMeta,
+              }
+            );
+            chain.emitter.emit(ChainEvent.incompleteBlockInput, {
+              blockInput,
+              peer: peerIdStr,
+              source: BlockInputSource.gossip,
+            });
+          });
         }
       }
-
-      if (!blockInput.hasBlockAndAllData()) {
-        const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
-        chain.logger.debug("Received gossip data column, waiting for full data availability", {
-          msToWait: cutoffTimeMs,
-          dataColumnIndex: index,
-          ...blockInputMeta,
-        });
-        // do not await here to not delay gossip validation
-        blockInput.waitForBlockAndAllData(cutoffTimeMs).catch((_e) => {
-          chain.logger.debug(
-            "Waited for data after receiving gossip column. Cut-off reached so attempting to fetch remainder of BlockInput",
-            {
-              dataColumnIndex: index,
-              ...blockInputMeta,
-            }
-          );
-          chain.emitter.emit(ChainEvent.incompleteBlockInput, {
-            blockInput,
-            peer: peerIdStr,
-            source: BlockInputSource.gossip,
-          });
-        });
-      }
-
-      // TODO GLOAS: In Gloas, also add column to PayloadEnvelopeInput and notify the payload processor:
-      // const payloadInput = chain.seenPayloadEnvelopeInput.get(blockRootHex);
-      // if (payloadInput) {
-      //   payloadInput.addColumn({columnSidecar, source: BlockInputSource.gossip, seenTimestampSec, peerIdStr});
-      //   chain.processExecutionPayload(payloadInput, {validSignature: true});
-      // }
     },
 
     [GossipType.beacon_aggregate_and_proof]: async ({

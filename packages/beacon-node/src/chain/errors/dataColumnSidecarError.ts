@@ -42,6 +42,7 @@ export enum DataColumnSidecarErrorCode {
   PROPOSAL_SIGNATURE_INVALID = "DATA_COLUMN_SIDECAR_ERROR_PROPOSAL_SIGNATURE_INVALID",
   INCLUSION_PROOF_INVALID = "DATA_COLUMN_SIDECAR_ERROR_INCLUSION_PROOF_INVALID",
   INCORRECT_PROPOSER = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_PROPOSER",
+  PAYLOAD_ENVELOPE_INPUT_MISSING = "DATA_COLUMN_SIDECAR_ERROR_PAYLOAD_ENVELOPE_INPUT_MISSING",
 }
 
 export type DataColumnSidecarErrorType =
@@ -120,7 +121,8 @@ export type DataColumnSidecarErrorType =
       actual: number;
     }
   | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH; slot: number; reason: string}
-  | {code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER; actualProposerIndex: number; expectedProposerIndex: number};
+  | {code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER; actualProposerIndex: number; expectedProposerIndex: number}
+  | {code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; slot: Slot; blockRoot: RootHex};
 
 export class DataColumnSidecarGossipError extends GossipActionError<DataColumnSidecarErrorType> {}
 export class DataColumnSidecarValidationError extends LodestarError<DataColumnSidecarErrorType> {}

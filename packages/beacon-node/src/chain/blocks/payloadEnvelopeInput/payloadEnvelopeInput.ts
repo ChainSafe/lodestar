@@ -223,6 +223,14 @@ export class PayloadEnvelopeInput {
     return this.columnsCache.has(index);
   }
 
+  getColumn(index: ColumnIndex): gloas.DataColumnSidecar | undefined {
+    return this.columnsCache.get(index)?.columnSidecar;
+  }
+
+  getAllColumns(): gloas.DataColumnSidecars {
+    return [...this.columnsCache.values()].map(({columnSidecar}) => columnSidecar);
+  }
+
   getVersionedHashes(): VersionedHashes {
     return this.versionedHashes;
   }

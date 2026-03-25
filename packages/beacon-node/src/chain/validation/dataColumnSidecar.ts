@@ -1,10 +1,8 @@
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {
-  ForkName,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH,
   KZG_COMMITMENTS_SUBTREE_INDEX,
   NUMBER_OF_COLUMNS,
-  isForkPostGloas,
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -37,41 +35,9 @@ import {GossipAction} from "../errors/gossipValidation.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/interface.js";
 
-export async function validateGossipDataColumnSidecar(
-  fork: ForkName,
-  chain: IBeaconChain,
-  dataColumnSidecar: DataColumnSidecar,
-  gossipSubnet: SubnetID,
-  metrics: Metrics | null
-): Promise<void> {
-  if (isForkPostGloas(fork)) {
-    if (!isGloasDataColumnSidecar(dataColumnSidecar)) {
-      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-        code: DataColumnSidecarErrorCode.INCORRECT_TYPE,
-        slot: dataColumnSidecar.signedBlockHeader.message.slot,
-        columnIndex: dataColumnSidecar.index,
-        fork,
-      });
-    }
-
-    await validateGossipDataColumnSidecarGloas(chain, dataColumnSidecar, gossipSubnet, metrics);
-  } else {
-    if (isGloasDataColumnSidecar(dataColumnSidecar)) {
-      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-        code: DataColumnSidecarErrorCode.INCORRECT_TYPE,
-        slot: dataColumnSidecar.slot,
-        columnIndex: dataColumnSidecar.index,
-        fork,
-      });
-    }
-
-    await validateGossipDataColumnSidecarFulu(chain, dataColumnSidecar, gossipSubnet, metrics);
-  }
-}
-
 // SPEC FUNCTION
 // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
-async function validateGossipDataColumnSidecarFulu(
+export async function validateGossipFuluDataColumnSidecar(
   chain: IBeaconChain,
   dataColumnSidecar: fulu.DataColumnSidecar,
   gossipSubnet: SubnetID,
@@ -81,7 +47,7 @@ async function validateGossipDataColumnSidecarFulu(
   const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
-  verifyDataColumnSidecarFulu(chain.config, dataColumnSidecar);
+  verifyFuluDataColumnSidecar(chain.config, dataColumnSidecar);
 
   // 2) [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_data_column_sidecar(sidecar.index) == subnet_id
   if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
@@ -250,7 +216,7 @@ async function validateGossipDataColumnSidecarFulu(
 
 // SPEC FUNCTION
 // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/p2p-interface.md#data_column_sidecar_subnet_id
-async function validateGossipDataColumnSidecarGloas(
+export async function validateGossipGloasDataColumnSidecar(
   chain: IBeaconChain,
   dataColumnSidecar: gloas.DataColumnSidecar,
   gossipSubnet: SubnetID,
@@ -293,7 +259,7 @@ async function validateGossipDataColumnSidecarGloas(
 
   // [REJECT] The sidecar must pass verify_data_column_sidecar against the block commitments
   const kzgCommitments = blockData.message.body.signedExecutionPayloadBid.message.blobKzgCommitments;
-  verifyDataColumnSidecarGloas(dataColumnSidecar, kzgCommitments);
+  verifyGloasDataColumnSidecar(dataColumnSidecar, kzgCommitments);
 
   // [REJECT] The sidecar must be on the correct subnet
   if (computeSubnetForDataColumnSidecar(chain.config, dataColumnSidecar) !== gossipSubnet) {
@@ -328,7 +294,7 @@ async function validateGossipDataColumnSidecarGloas(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#verify_data_column_sidecar
  */
-function verifyDataColumnSidecarFulu(config: ChainForkConfig, dataColumnSidecar: fulu.DataColumnSidecar): void {
+function verifyFuluDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar: fulu.DataColumnSidecar): void {
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_INDEX,
@@ -371,7 +337,7 @@ function verifyDataColumnSidecarFulu(config: ChainForkConfig, dataColumnSidecar:
   }
 }
 
-function verifyDataColumnSidecarGloas(dataColumnSidecar: gloas.DataColumnSidecar, kzgCommitments: Uint8Array[]): void {
+function verifyGloasDataColumnSidecar(dataColumnSidecar: gloas.DataColumnSidecar, kzgCommitments: Uint8Array[]): void {
   const slot = getDataColumnSidecarSlot(dataColumnSidecar);
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
@@ -452,7 +418,7 @@ export async function validateBlockDataColumnSidecars(
   blockRoot: Root,
   blockBlobCount: number,
   dataColumnSidecars: DataColumnSidecar[],
-  blockKzgCommitments?: Uint8Array[],
+  blockKzgCommitments: Uint8Array[] | null,
   metrics?: BeaconMetrics["peerDas"] | null
 ): Promise<void> {
   metrics?.dataColumnSidecarProcessingRequests.inc(dataColumnSidecars.length);
@@ -627,7 +593,7 @@ export async function validateBlockDataColumnSidecars(
         });
       }
 
-      let columnCommitments: Uint8Array[] | undefined;
+      let columnCommitments: Uint8Array[] | null | undefined;
       if (isGloasSidecar) {
         columnCommitments = blockKzgCommitments;
         if (!columnCommitments) {

@@ -15,6 +15,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   EFFECTIVE_BALANCE_INCREMENT,
   ForkPostFulu,
+  ForkPostGloas,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   isForkPostElectra,
@@ -859,13 +860,25 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputColumns(blockInput)) {
-        throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+    const fork = this.config.getForkName(blockSlot);
+
+    if (isForkPostGloas(fork)) {
+      // After gloas, columns are tracked in PayloadEnvelopeInput
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput) {
+        return payloadInput.getAllColumns();
       }
-      return blockInput.getAllColumns() as DataColumnSidecars;
+    } else {
+      // Before gloas, columns are tracked in BlockInput
+      const blockInput = this.seenBlockInputCache.get(blockRootHex);
+      if (blockInput) {
+        if (!isBlockInputColumns(blockInput)) {
+          throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+        }
+        return blockInput.getAllColumns();
+      }
     }
+
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {
       return sidecarsUnfinalized as DataColumnSidecars;
@@ -879,23 +892,45 @@ export class BeaconChain implements IBeaconChain {
     blockRootHex: string,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputColumns(blockInput)) {
-        throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+    const fork = this.config.getForkName(blockSlot);
+
+    if (isForkPostGloas(fork)) {
+      // After gloas, columns are tracked in PayloadEnvelopeInput
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput) {
+        return indices.map((index) => {
+          const sidecar = payloadInput.getColumn(index);
+          if (!sidecar) {
+            return undefined;
+          }
+          const serialized = this.serializedCache.get(sidecar);
+          if (serialized) {
+            return serialized;
+          }
+          return sszTypesFor(fork as ForkPostGloas).DataColumnSidecar.serialize(sidecar);
+        });
       }
-      return indices.map((index) => {
-        const sidecar = blockInput.getColumn(index);
-        if (!sidecar) {
-          return undefined;
+    } else {
+      // Before gloas, columns are tracked in BlockInput
+      const blockInput = this.seenBlockInputCache.get(blockRootHex);
+      if (blockInput) {
+        if (!isBlockInputColumns(blockInput)) {
+          throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
         }
-        const serialized = this.serializedCache.get(sidecar);
-        if (serialized) {
-          return serialized;
-        }
-        return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
-      });
+        return indices.map((index) => {
+          const sidecar = blockInput.getColumn(index);
+          if (!sidecar) {
+            return undefined;
+          }
+          const serialized = this.serializedCache.get(sidecar);
+          if (serialized) {
+            return serialized;
+          }
+          return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
+        });
+      }
     }
+
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
     if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
       return sidecarsUnfinalized;
