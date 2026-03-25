@@ -314,8 +314,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     seenTimestampSec: number
   ): Promise<BlockInputColumns> {
     metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
-    const slot = getDataColumnSidecarSlot(dataColumnSidecar);
-    const blockRootHex = toRootHex(getDataColumnSidecarBlockRoot(dataColumnSidecar));
+    const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
+    const slot = dataColumnBlockHeader.slot;
+    const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
 
     // check to see if block has already been processed and BlockInput has been deleted (column received via reqresp or other means)
     if (chain.forkChoice.hasBlockHex(blockRootHex)) {
@@ -395,9 +396,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       return blockInput;
     } catch (e) {
       if (e instanceof DataColumnSidecarGossipError && e.action === GossipAction.REJECT) {
-        const dataColumnFork = config.getForkName(slot);
         chain.persistInvalidSszValue(
-          sszTypesFor(dataColumnFork as ForkPostFulu).DataColumnSidecar,
+          ssz.fulu.DataColumnSidecar,
           dataColumnSidecar,
           `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
         );
