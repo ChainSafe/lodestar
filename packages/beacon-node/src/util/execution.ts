@@ -161,8 +161,7 @@ export async function getDataColumnSidecarsFromExecution(
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  const forkName = input.forkName as ForkPostFulu;
-  const blobs = await executionEngine.getBlobs(forkName, versionedHashes, blobAndProofBuffers);
+  const blobs = await executionEngine.getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers);
   timer?.();
 
   // Execution engine was unable to find one or more blobs
@@ -240,7 +239,7 @@ export async function getDataColumnSidecarsFromExecution(
         blockRoot: input.blockRootHex,
         slot: input.slot,
         index: columnSidecar.index,
-        kzgCommitments: isGloasDataColumnSidecar(columnSidecar) ? undefined : columnSidecar.kzgCommitments.map(toHex),
+        kzgCommitments: !isGloasDataColumnSidecar(columnSidecar) ? columnSidecar.kzgCommitments.map(toHex) : undefined,
       });
     }
   }
