@@ -139,7 +139,7 @@ export async function importBlock(
 
   // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
   if (fork >= ForkSeq.gloas) {
-    this.seenPayloadEnvelopeInputCache.add({
+    const payloadInput = this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,
       sampledColumns: this.custodyConfig.sampledColumns,
@@ -152,6 +152,10 @@ export async function importBlock(
       source: source.source,
       ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
     });
+
+    // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
+    // which is all the information we need so there is no reason to delay until execution payload arrives
+    this.getBlobsTracker.triggerGetBlobs(payloadInput);
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});

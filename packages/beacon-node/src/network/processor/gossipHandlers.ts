@@ -10,7 +10,6 @@ import {
   ForkSeq,
   NUMBER_OF_COLUMNS,
   isForkPostElectra,
-  isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -731,7 +730,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             break;
         }
 
-        // TODO GLOAS: trigger getBlobsTracker / columnReconstructionTracker for PayloadEnvelopeInput
+        // TODO GLOAS: trigger columnReconstructionTracker for PayloadEnvelopeInput
         if (!payloadInput.isComplete()) {
           chain.logger.debug("Received gossip data column, payload envelope input not yet complete", {
             dataColumnIndex: index,

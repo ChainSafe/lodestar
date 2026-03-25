@@ -288,6 +288,16 @@ export class PayloadEnvelopeInput {
     return columns;
   }
 
+  getMissingSampledColumns(): ColumnIndex[] {
+    const missing: ColumnIndex[] = [];
+    for (const index of this.sampledColumns) {
+      if (!this.columnsCache.has(index)) {
+        missing.push(index);
+      }
+    }
+    return missing;
+  }
+
   hasComputedAllData(): boolean {
     return this.state.hasComputedAllData;
   }
