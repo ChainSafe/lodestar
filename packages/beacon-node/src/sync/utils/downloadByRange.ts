@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
-import {DataColumnSidecar, SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
+import {DataColumnSidecar, DataColumnSidecars, SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
@@ -27,7 +27,7 @@ export type DownloadByRangeRequests = {
 export type DownloadByRangeResponses = {
   blocks?: SignedBeaconBlock[];
   blobSidecars?: deneb.BlobSidecars;
-  columnSidecars?: DataColumnSidecar[];
+  columnSidecars?: DataColumnSidecars;
 };
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
@@ -58,7 +58,7 @@ export type ValidatedBlobSidecars = {
 
 export type ValidatedColumnSidecars = {
   blockRoot: Uint8Array;
-  columnSidecars: DataColumnSidecar[];
+  columnSidecars: DataColumnSidecars;
 };
 
 export type ValidatedResponses = {
@@ -246,7 +246,7 @@ export async function requestByRange({
 }): Promise<DownloadByRangeResponses> {
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
-  let columnSidecars: undefined | DataColumnSidecar[];
+  let columnSidecars: undefined | DataColumnSidecars;
 
   const requests: Promise<unknown>[] = [];
 
@@ -616,7 +616,7 @@ export async function validateColumnsByRangeResponse(
   config: ChainForkConfig,
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedBlock[],
-  columnSidecars: DataColumnSidecar[],
+  columnSidecars: DataColumnSidecars,
   peerDasMetrics?: BeaconMetrics["peerDas"] | null
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
@@ -678,7 +678,7 @@ export async function validateColumnsByRangeResponse(
     const rootHex = toRootHex(blockRoot);
     const forkName = config.getForkName(slot);
     const columnSidecarsMap: Map<number, DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
-    const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index);
+    const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index) as DataColumnSidecars;
 
     let blobCount: number;
     if (!isForkPostFulu(forkName)) {

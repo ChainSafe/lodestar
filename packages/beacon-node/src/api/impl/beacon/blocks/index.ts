@@ -22,7 +22,7 @@ import {
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {
-  DataColumnSidecar,
+  DataColumnSidecars,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
@@ -107,7 +107,7 @@ export function getBeaconBlockApi({
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
-    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: DataColumnSidecar[];
+    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: DataColumnSidecars;
 
     if (isDenebBlockContents(signedBlockContents)) {
       if (isForkPostFulu(fork)) {
@@ -666,7 +666,7 @@ export function getBeaconBlockApi({
       await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
-      let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
+      let dataColumnSidecars: gloas.DataColumnSidecars = [];
 
       if (isSelfBuild) {
         // For self-builds, construct and publish data column sidecars from cached block production data

@@ -1,5 +1,5 @@
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ColumnIndex, DataColumnSidecar, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecars, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
 import {toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -71,7 +71,7 @@ export class PayloadEnvelopeInput {
   private timeCreatedSec: number;
 
   private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
-  private readonly columnsDataPromise: PromiseParts<DataColumnSidecar[]>;
+  private readonly columnsDataPromise: PromiseParts<DataColumnSidecars>;
 
   state: PayloadEnvelopeInputState;
 
@@ -227,7 +227,7 @@ export class PayloadEnvelopeInput {
     return this.columnsCache.get(index)?.columnSidecar;
   }
 
-  getAllColumns(): gloas.DataColumnSidecar[] {
+  getAllColumns(): gloas.DataColumnSidecars {
     return [...this.columnsCache.values()].map(({columnSidecar}) => columnSidecar);
   }
 
@@ -249,8 +249,8 @@ export class PayloadEnvelopeInput {
     return this.state.payloadEnvelopeSource;
   }
 
-  getSampledColumns(): gloas.DataColumnSidecar[] {
-    const columns: gloas.DataColumnSidecar[] = [];
+  getSampledColumns(): gloas.DataColumnSidecars {
+    const columns: gloas.DataColumnSidecars = [];
     for (const index of this.sampledColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
@@ -271,8 +271,8 @@ export class PayloadEnvelopeInput {
     return columns;
   }
 
-  getCustodyColumns(): gloas.DataColumnSidecar[] {
-    const columns: gloas.DataColumnSidecar[] = [];
+  getCustodyColumns(): gloas.DataColumnSidecars {
+    const columns: gloas.DataColumnSidecars = [];
     for (const index of this.custodyColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
@@ -286,7 +286,7 @@ export class PayloadEnvelopeInput {
     return this.state.hasComputedAllData;
   }
 
-  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecar[]> {
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecars> {
     if (this.state.hasComputedAllData) {
       return Promise.resolve(this.getSampledColumns());
     }

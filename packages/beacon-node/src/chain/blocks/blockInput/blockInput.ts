@@ -617,7 +617,7 @@ type BlockInputColumnsState =
  * - The block is not yet seen and all required sampled columns are seen
  * - The block is not yet seen and all required sampled columns are not yet seen
  */
-export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.DataColumnSidecar[]> {
+export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.DataColumnSidecars> {
   type = DAType.Columns as const;
 
   state: BlockInputColumnsState;
@@ -630,7 +630,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
    *
    * This is different from `dataPromise` which resolves when all data is available or could become available (e.g. through reconstruction)
    */
-  protected computedDataPromise = createPromise<fulu.DataColumnSidecar[]>();
+  protected computedDataPromise = createPromise<fulu.DataColumnSidecars>();
 
   private constructor(
     init: BlockInputInit,
@@ -854,8 +854,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.state.versionedHashes;
   }
 
-  getCustodyColumns(): fulu.DataColumnSidecar[] {
-    const columns: fulu.DataColumnSidecar[] = [];
+  getCustodyColumns(): fulu.DataColumnSidecars {
+    const columns: fulu.DataColumnSidecars = [];
     for (const index of this.custodyColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
@@ -876,8 +876,8 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return columns;
   }
 
-  getSampledColumns(): fulu.DataColumnSidecar[] {
-    const columns: fulu.DataColumnSidecar[] = [];
+  getSampledColumns(): fulu.DataColumnSidecars {
+    const columns: fulu.DataColumnSidecars = [];
     for (const index of this.sampledColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
@@ -891,7 +891,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return [...this.columnsCache.values()];
   }
 
-  getAllColumns(): fulu.DataColumnSidecar[] {
+  getAllColumns(): fulu.DataColumnSidecars {
     return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar);
   }
 
@@ -919,7 +919,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.state.hasComputedAllData;
   }
 
-  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<fulu.DataColumnSidecar[]> {
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<fulu.DataColumnSidecars> {
     if (!this.state.hasComputedAllData) {
       return withTimeout(() => this.computedDataPromise.promise, timeout, signal);
     }

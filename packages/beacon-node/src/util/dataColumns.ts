@@ -17,6 +17,7 @@ import {
   ColumnIndex,
   CustodyIndex,
   DataColumnSidecar,
+  DataColumnSidecars,
   Root,
   SSZTypesFor,
   SignedBeaconBlock,
@@ -294,12 +295,12 @@ export function getDataColumnSidecars(
   kzgCommitments: deneb.KZGCommitment[],
   kzgCommitmentsInclusionProof: fulu.KzgCommitmentsInclusionProof,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): fulu.DataColumnSidecar[] {
+): fulu.DataColumnSidecars {
   if (cellsAndKzgProofs.length !== kzgCommitments.length) {
     throw Error("Invalid cellsAndKzgProofs length for getDataColumnSidecars");
   }
 
-  const sidecars: fulu.DataColumnSidecar[] = [];
+  const sidecars: fulu.DataColumnSidecars = [];
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     const columnCells = [];
     const columnProofs = [];
@@ -330,7 +331,7 @@ export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock<ForkPostFulu>,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): DataColumnSidecar[] {
+): DataColumnSidecars {
   const fork = config.getForkName(signedBlock.message.slot);
   const blobKzgCommitments = getBlobKzgCommitments(fork, signedBlock);
 
@@ -361,7 +362,7 @@ export function getDataColumnSidecarsFromBlock(
 export function getDataColumnSidecarsFromColumnSidecar(
   sidecar: DataColumnSidecar,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): DataColumnSidecar[] {
+): DataColumnSidecars {
   if (isGloasDataColumnSidecar(sidecar)) {
     return getDataColumnSidecarsForGloas(sidecar.slot, sidecar.beaconBlockRoot, cellsAndKzgProofs);
   }
@@ -398,13 +399,13 @@ export function getDataColumnSidecarsForGloas(
   slot: Slot,
   beaconBlockRoot: Root,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): gloas.DataColumnSidecar[] {
+): gloas.DataColumnSidecars {
   // No need to create data column sidecars if there are no blobs
   if (cellsAndKzgProofs.length === 0) {
     return [];
   }
 
-  const sidecars: gloas.DataColumnSidecar[] = [];
+  const sidecars: gloas.DataColumnSidecars = [];
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     const column: Uint8Array[] = [];
     const kzgProofs: Uint8Array[] = [];
@@ -491,7 +492,7 @@ export async function recoverDataColumnSidecars(
   }
   metrics?.peerDas.reconstructedColumns.inc(sidecarsToPublish.length);
   metrics?.dataColumns.bySource.inc({source: BlockInputSource.recovery}, sidecarsToPublish.length);
-  emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);
+  emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish as DataColumnSidecars);
   // TODO: Can we record dataColumns.sentPeersPerSubnet metric somehow
   return DataColumnReconstructionCode.SuccessResolved;
 }

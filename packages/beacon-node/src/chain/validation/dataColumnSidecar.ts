@@ -12,6 +12,7 @@ import {
 } from "@lodestar/state-transition";
 import {
   DataColumnSidecar,
+  DataColumnSidecars,
   Root,
   Slot,
   SubnetID,
@@ -417,7 +418,7 @@ export async function validateBlockDataColumnSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   blockBlobCount: number,
-  dataColumnSidecars: DataColumnSidecar[],
+  dataColumnSidecars: DataColumnSidecars,
   blockKzgCommitments: Uint8Array[] | null,
   metrics?: BeaconMetrics["peerDas"] | null
 ): Promise<void> {
@@ -684,7 +685,6 @@ export async function validateBlockDataColumnSidecars(
         "DataColumnSidecar has invalid KZG proof batch"
       );
     }
-
     metrics?.dataColumnSidecarProcessingSuccesses.inc();
   } finally {
     verificationTimer?.();
