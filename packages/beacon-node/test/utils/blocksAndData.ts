@@ -162,7 +162,7 @@ function generateColumnSidecars<F extends ForkPostFulu>(
   returnBlobs = false
 ): {
   block: SignedBeaconBlock<F>;
-  columnSidecars: fulu.DataColumnSidecars;
+  columnSidecars: fulu.DataColumnSidecar[];
   blobs?: deneb.Blob[];
 } {
   const blobs = Array.from({length: numberOfBlobs}, () => generateRandomBlob());
@@ -251,7 +251,7 @@ export type BlockWithBlobsTestSet<F extends ForkPostDeneb> = BlockTestSet<F> & {
 };
 
 export type BlockWithColumnsTestSet<F extends ForkPostFulu> = BlockTestSet<F> & {
-  columnSidecars: fulu.DataColumnSidecars;
+  columnSidecars: fulu.DataColumnSidecar[];
   blobs?: deneb.Blob[];
 };
 

@@ -23,7 +23,7 @@ describe("dataColumnSidecar repository", () => {
   const testDir = "./.tmp";
   let dataColumnRepo: DataColumnSidecarRepository;
   let db: LevelDbController;
-  let allDataColumnSidecars: fulu.DataColumnSidecars;
+  let allDataColumnSidecars: fulu.DataColumnSidecar[];
   const blobKzgCommitmentsLen = 3;
   const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
   const blockSlot = 11;
@@ -44,7 +44,7 @@ describe("dataColumnSidecar repository", () => {
       config,
       signedBlock,
       cellsAndProofs
-    ) as fulu.DataColumnSidecars;
+    ) as fulu.DataColumnSidecar[];
     for (let j = 0; j < allDataColumnSidecars.length; j++) {
       allDataColumnSidecars[j].index = j;
     }
@@ -130,7 +130,7 @@ describe("dataColumnSidecarArchive repository", () => {
   let dataColumnArchiveRepo: DataColumnSidecarArchiveRepository;
   let db: LevelDbController;
   let blockRoot: Root;
-  let allDataColumnSidecars: fulu.DataColumnSidecars;
+  let allDataColumnSidecars: fulu.DataColumnSidecar[];
   const blobKzgCommitmentsLen = 3;
   const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
   const blockSlot = 11;
@@ -153,7 +153,7 @@ describe("dataColumnSidecarArchive repository", () => {
       config,
       signedBlock,
       cellsAndProofs
-    ) as fulu.DataColumnSidecars;
+    ) as fulu.DataColumnSidecar[];
     for (let j = 0; j < allDataColumnSidecars.length; j++) {
       allDataColumnSidecars[j].index = j;
     }

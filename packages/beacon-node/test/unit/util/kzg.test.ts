@@ -97,7 +97,7 @@ describe("KZG", () => {
       config,
       signedBeaconBlock,
       cellsAndProofs
-    ) as fulu.DataColumnSidecars;
+    ) as fulu.DataColumnSidecar[];
     const signedBlockHeader = signedBlockToSignedHeader(config, signedBeaconBlock);
 
     sidecars.forEach((sidecar, column) => {
@@ -148,6 +148,6 @@ describe("KZG", () => {
       throw new Error("Recovered sidecars should not be null");
     }
     expect(recoveredSidecars.length).toBe(NUMBER_OF_COLUMNS);
-    expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars as fulu.DataColumnSidecars, sidecars)).toBeTruthy();
+    expect(ssz.fulu.DataColumnSidecars.equals(recoveredSidecars as fulu.DataColumnSidecar[], sidecars)).toBeTruthy();
   });
 });
