@@ -22,7 +22,6 @@ import {
   signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
 import {
-  DataColumnSidecar,
   ProducedBlockSource,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
@@ -107,7 +106,7 @@ export function getBeaconBlockApi({
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
-    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: DataColumnSidecar[];
+    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
 
     if (isDenebBlockContents(signedBlockContents)) {
       if (isForkPostFulu(fork)) {
@@ -125,7 +124,7 @@ export function getBeaconBlockApi({
           config,
           signedBlock as SignedBeaconBlock<ForkPostFulu>,
           cellsAndProofs
-        );
+        ) as fulu.DataColumnSidecar[];
         timer?.();
         blobSidecars = [];
       } else if (isForkPostDeneb(fork)) {
@@ -144,8 +143,7 @@ export function getBeaconBlockApi({
         blockForImport.addColumn(
           {
             blockRootHex: blockRoot,
-            // BlockInputColumns is fulu-only, safe to narrow
-            columnSidecar: dataColumnSidecar as fulu.DataColumnSidecar,
+            columnSidecar: dataColumnSidecar,
             source: BlockInputSource.api,
             seenTimestampSec,
           },
