@@ -691,7 +691,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const dataColumnSlot = getDataColumnSidecarSlot(dataColumnSidecar);
       const index = dataColumnSidecar.index;
 
-      if (!isForkPostFulu(fork)) {
+      if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
       }
 
