@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkPostAltair, isForkPostAltair, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkPostAltair, ForkPostFulu, isForkPostAltair, isForkPostFulu} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
   DataColumnSidecar,
@@ -136,10 +136,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
-  [ReqRespMethod.DataColumnSidecarsByRange]: (fork) =>
-    isForkPostFulu(fork) ? sszTypesFor(fork).DataColumnSidecar : ssz.fulu.DataColumnSidecar,
-  [ReqRespMethod.DataColumnSidecarsByRoot]: (fork) =>
-    isForkPostFulu(fork) ? sszTypesFor(fork).DataColumnSidecar : ssz.fulu.DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRange]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
 };
@@ -149,6 +147,13 @@ function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
     return fork;
   }
   throw Error(`Not a post-altair fork ${fork}`);
+}
+
+function onlyPostFuluFork(fork: ForkName): ForkPostFulu {
+  if (isForkPostFulu(fork)) {
+    return fork;
+  }
+  throw Error(`Not a post-fulu fork ${fork}`);
 }
 
 export type RequestTypedContainer = {
