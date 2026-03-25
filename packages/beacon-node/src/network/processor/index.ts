@@ -21,7 +21,7 @@ import {
   getParentBlockRootFromSignedExecutionPayloadBidSerialized,
   getParentRootFromSignedBeaconBlockSerialized,
   getPayloadPresentFromPayloadAttestationMessageSerialized,
-} from "../../util/sszBytes.ts";
+} from "../../util/sszBytes.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {
   GossipHandlers,
@@ -403,6 +403,7 @@ export class NetworkProcessor {
               ? getIndexFromSingleAttestationSerialized(fork, message.msg.data)
               : getIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasEnvelopeHexUnsafe(root)) {
+            // ptc attestation vote for the payload but it's not known
             this.searchUnknownEnvelope(
               {slot, root},
               BlockInputSource.network_processor,
