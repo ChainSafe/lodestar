@@ -730,8 +730,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             break;
         }
 
-        // TODO GLOAS: trigger columnReconstructionTracker for PayloadEnvelopeInput
-        if (!payloadInput.isComplete()) {
+        if (!payloadInput.hasComputedAllData()) {
+          // if we've received at least half of the columns, trigger reconstruction of the rest
+          if (columnsCount >= NUMBER_OF_COLUMNS / 2) {
+            chain.columnReconstructionTracker.triggerColumnReconstruction(payloadInput);
+          }
+
           chain.logger.debug("Received gossip data column, payload envelope input not yet complete", {
             dataColumnIndex: index,
             ...payloadInputMeta,

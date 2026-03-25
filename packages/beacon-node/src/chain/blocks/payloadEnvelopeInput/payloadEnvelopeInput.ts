@@ -3,6 +3,7 @@ import {ColumnIndex, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodesta
 import {toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
+import {MissingColumnMeta} from "../blockInput/types.js";
 import {AddPayloadEnvelopeProps, ColumnWithSource, CreateFromBlockProps, SourceMeta} from "./types.js";
 
 export type PayloadEnvelopeInputState =
@@ -288,14 +289,22 @@ export class PayloadEnvelopeInput {
     return columns;
   }
 
-  getMissingSampledColumns(): ColumnIndex[] {
+  hasAllData(): boolean {
+    return this.state.hasAllData;
+  }
+
+  getMissingSampledColumnMeta(): MissingColumnMeta {
+    if (this.state.hasAllData) {
+      return {missing: [], versionedHashes: this.versionedHashes};
+    }
+
     const missing: ColumnIndex[] = [];
     for (const index of this.sampledColumns) {
       if (!this.columnsCache.has(index)) {
         missing.push(index);
       }
     }
-    return missing;
+    return {missing, versionedHashes: this.versionedHashes};
   }
 
   hasComputedAllData(): boolean {

@@ -8,8 +8,7 @@ import {callInNextEventLoop} from "../util/eventLoop.js";
 import {
   DataColumnEngineResult,
   getBlobSidecarsFromExecution,
-  getBlockDataColumnsFromExecution,
-  getPayloadDataColumnsFromExecution,
+  getDataColumnSidecarsFromExecution,
 } from "../util/execution.js";
 import {IBlockInput, isBlockInputBlobs} from "./blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/index.js";
@@ -91,24 +90,14 @@ export class GetBlobsTracker {
     callInNextEventLoop(() => {
       const logCtx = {slot: input.slot, root: input.blockRootHex};
       this.logger.verbose("Trigger getBlobsV2 for block", logCtx);
-      const promise =
-        input instanceof PayloadEnvelopeInput
-          ? getPayloadDataColumnsFromExecution(
-              this.executionEngine,
-              this.emitter,
-              input,
-              this.metrics,
-              this.blobsAndProofsBuffers[freeIndex].buffers
-            )
-          : getBlockDataColumnsFromExecution(
-              this.config,
-              this.executionEngine,
-              this.emitter,
-              input,
-              this.metrics,
-              this.blobsAndProofsBuffers[freeIndex].buffers
-            );
-      promise
+      getDataColumnSidecarsFromExecution(
+        this.config,
+        this.executionEngine,
+        this.emitter,
+        input,
+        this.metrics,
+        this.blobsAndProofsBuffers[freeIndex].buffers
+      )
         .then((result) => {
           this.logger.debug("getBlobsV2 result for block", {...logCtx, result});
           this.metrics?.dataColumns.dataColumnEngineResult.inc({result});

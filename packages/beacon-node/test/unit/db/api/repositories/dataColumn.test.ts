@@ -4,7 +4,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {Root, fulu, ssz} from "@lodestar/types";
+import {DataColumnSidecar, Root, fulu, ssz} from "@lodestar/types";
 import {fromAsync, toHex} from "@lodestar/utils";
 import {DataColumnSidecarRepository} from "../../../../../src/db/repositories/dataColumnSidecar.js";
 import {DataColumnSidecarArchiveRepository} from "../../../../../src/db/repositories/dataColumnSidecarArchive.js";
@@ -23,7 +23,7 @@ describe("dataColumnSidecar repository", () => {
   const testDir = "./.tmp";
   let dataColumnRepo: DataColumnSidecarRepository;
   let db: LevelDbController;
-  let allDataColumnSidecars: fulu.DataColumnSidecar[];
+  let allDataColumnSidecars: DataColumnSidecar[];
   const blobKzgCommitmentsLen = 3;
   const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
   const blockSlot = 11;
@@ -40,11 +40,7 @@ describe("dataColumnSidecar repository", () => {
     const commitments = Array.from({length: blobKzgCommitmentsLen}, () => commitment);
     signedBlock.message.body.blobKzgCommitments = commitments;
     const cellsAndProofs = blobs.map((b) => kzg.computeCellsAndKzgProofs(b));
-    allDataColumnSidecars = getDataColumnSidecarsFromBlock(
-      config,
-      signedBlock,
-      cellsAndProofs
-    ) as fulu.DataColumnSidecar[];
+    allDataColumnSidecars = getDataColumnSidecarsFromBlock(config, signedBlock, cellsAndProofs);
     for (let j = 0; j < allDataColumnSidecars.length; j++) {
       allDataColumnSidecars[j].index = j;
     }
@@ -130,7 +126,7 @@ describe("dataColumnSidecarArchive repository", () => {
   let dataColumnArchiveRepo: DataColumnSidecarArchiveRepository;
   let db: LevelDbController;
   let blockRoot: Root;
-  let allDataColumnSidecars: fulu.DataColumnSidecar[];
+  let allDataColumnSidecars: DataColumnSidecar[];
   const blobKzgCommitmentsLen = 3;
   const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
   const blockSlot = 11;
@@ -149,11 +145,7 @@ describe("dataColumnSidecarArchive repository", () => {
     const commitments = Array.from({length: blobKzgCommitmentsLen}, () => commitment);
     signedBlock.message.body.blobKzgCommitments = commitments;
     const cellsAndProofs = blobs.map((b) => kzg.computeCellsAndKzgProofs(b));
-    allDataColumnSidecars = getDataColumnSidecarsFromBlock(
-      config,
-      signedBlock,
-      cellsAndProofs
-    ) as fulu.DataColumnSidecar[];
+    allDataColumnSidecars = getDataColumnSidecarsFromBlock(config, signedBlock, cellsAndProofs);
     for (let j = 0; j < allDataColumnSidecars.length; j++) {
       allDataColumnSidecars[j].index = j;
     }
@@ -250,7 +242,7 @@ describe("dataColumnSidecarArchive repository", () => {
     for (let i = 0; i < dataColumnsLen; i++) {
       expect(retrievedDataColumnSidecarBytes[i].value.byteLength).toEqual(columnsSize);
       expect(toHex(retrievedDataColumnSidecarBytes[i].value)).toEqual(
-        toHex(ssz.fulu.DataColumnSidecar.serialize(dataColumnSidecars[i]))
+        toHex(ssz.fulu.DataColumnSidecar.serialize(dataColumnSidecars[i] as fulu.DataColumnSidecar))
       );
     }
   });
@@ -275,7 +267,9 @@ describe("dataColumnSidecarArchive repository", () => {
       if (serialized == null) {
         throw Error("Unexpected undefined dataColumnSidecar");
       }
-      expect(toHex(serialized)).toEqual(toHex(ssz.fulu.DataColumnSidecar.serialize(allDataColumnSidecars[i])));
+      expect(toHex(serialized)).toEqual(
+        toHex(ssz.fulu.DataColumnSidecar.serialize(allDataColumnSidecars[i] as fulu.DataColumnSidecar))
+      );
     }
   });
 });

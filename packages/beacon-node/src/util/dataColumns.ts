@@ -31,6 +31,7 @@ import {
 import {bytesToBigInt} from "@lodestar/utils";
 import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {Metrics} from "../metrics/metrics.js";
 import {NodeId} from "../network/subnets/index.js";
@@ -286,10 +287,12 @@ export function getBlobKzgCommitments(
  * Given a signed block header and the commitments, inclusion proof, cells/proofs associated with
  * each blob in the block, assemble the sidecars which can be distributed to peers.
  *
- * SPEC FUNCTION
+ * SPEC FUNCTION (fulu)
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars
+ *
+ * For gloas, use getGloasDataColumnSidecars (spec: gloas/builder.md#get_data_column_sidecars)
  */
-export function getDataColumnSidecars(
+export function getFuluDataColumnSidecars(
   signedBlockHeader: SignedBeaconBlockHeader,
   kzgCommitments: deneb.KZGCommitment[],
   kzgCommitmentsInclusionProof: fulu.KzgCommitmentsInclusionProof,
@@ -324,7 +327,8 @@ export function getDataColumnSidecars(
  * block, assemble the sidecars which can be distributed to peers.
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_block
+ * fulu: https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_block
+ * gloas: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/builder.md#modified-get_data_column_sidecars_from_block
  */
 export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
@@ -341,14 +345,18 @@ export function getDataColumnSidecarsFromBlock(
 
   if (isForkPostGloas(fork)) {
     const beaconBlockRoot = config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message);
-    return getDataColumnSidecarsForGloas(signedBlock.message.slot, beaconBlockRoot, cellsAndKzgProofs);
+    return getGloasDataColumnSidecars(signedBlock.message.slot, beaconBlockRoot, cellsAndKzgProofs);
   }
 
   const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
-
   const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
 
-  return getDataColumnSidecars(signedBlockHeader, blobKzgCommitments, kzgCommitmentsInclusionProof, cellsAndKzgProofs);
+  return getFuluDataColumnSidecars(
+    signedBlockHeader,
+    blobKzgCommitments,
+    kzgCommitmentsInclusionProof,
+    cellsAndKzgProofs
+  );
 }
 
 /**
@@ -356,17 +364,18 @@ export function getDataColumnSidecarsFromBlock(
  * to the commitments it contains, assemble all sidecars for distribution to peers.
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_column_sidecar
+ * fulu: https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_column_sidecar
+ * gloas: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/validator.md#modified-get_data_column_sidecars_from_column_sidecar
  */
 export function getDataColumnSidecarsFromColumnSidecar(
   sidecar: DataColumnSidecar,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
 ): DataColumnSidecar[] {
   if (isGloasDataColumnSidecar(sidecar)) {
-    return getDataColumnSidecarsForGloas(sidecar.slot, sidecar.beaconBlockRoot, cellsAndKzgProofs);
+    return getGloasDataColumnSidecars(sidecar.slot, sidecar.beaconBlockRoot, cellsAndKzgProofs);
   }
 
-  return getDataColumnSidecars(
+  return getFuluDataColumnSidecars(
     sidecar.signedBlockHeader,
     sidecar.kzgCommitments,
     sidecar.kzgCommitmentsInclusionProof,
@@ -393,8 +402,11 @@ export function getDataColumnSidecarBlockRoot(sidecar: DataColumnSidecar): Root 
 /**
  * In Gloas, data column sidecars have a simplified structure with `slot` and `beaconBlockRoot`
  * instead of `signedBlockHeader`, `kzgCommitments`, and `kzgCommitmentsInclusionProof`.
+ *
+ * SPEC FUNCTION
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/builder.md#modified-get_data_column_sidecars
  */
-export function getDataColumnSidecarsForGloas(
+export function getGloasDataColumnSidecars(
   slot: Slot,
   beaconBlockRoot: Root,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
@@ -424,14 +436,14 @@ export function getDataColumnSidecarsForGloas(
 }
 
 /**
- * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns
+ * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns.
  */
 export async function recoverDataColumnSidecars(
-  blockInput: BlockInputColumns,
+  input: BlockInputColumns | PayloadEnvelopeInput,
   emitter: ChainEventEmitter,
   metrics: Metrics | null
 ): Promise<DataColumnReconstructionCode> {
-  const existingColumns = blockInput.getAllColumns();
+  const existingColumns = input.getAllColumns();
   const columnCount = existingColumns.length;
   if (columnCount >= NUMBER_OF_COLUMNS) {
     // We have all columns
@@ -462,7 +474,7 @@ export async function recoverDataColumnSidecars(
     return DataColumnReconstructionCode.NullReturned;
   }
 
-  if (blockInput.getAllColumns().length === NUMBER_OF_COLUMNS) {
+  if (input.getAllColumns().length === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
     metrics?.dataColumns.alreadyAdded.inc(fullSidecars.length);
     return DataColumnReconstructionCode.SuccessLate;
@@ -476,16 +488,24 @@ export async function recoverDataColumnSidecars(
   // it SHOULD still expose the availability of the DataColumnSidecar as part of the gossip emission process.
   // After exposing the reconstructed DataColumnSidecar to the network,
   // the node MAY delete the DataColumnSidecar if it is not part of the node's custody requirement.
+  const isPayloadInput = input instanceof PayloadEnvelopeInput;
   const sidecarsToPublish = [];
   for (const columnSidecar of fullSidecars) {
-    if (!blockInput.hasColumn(columnSidecar.index)) {
-      // BlockInputColumns is fulu-only, safe to narrow
-      blockInput.addColumn({
-        blockRootHex: blockInput.blockRootHex,
-        columnSidecar: columnSidecar as fulu.DataColumnSidecar,
-        seenTimestampSec: Date.now() / 1000,
-        source: BlockInputSource.recovery,
-      });
+    if (!input.hasColumn(columnSidecar.index)) {
+      if (isPayloadInput) {
+        input.addColumn({
+          columnSidecar: columnSidecar as gloas.DataColumnSidecar,
+          seenTimestampSec: Date.now() / 1000,
+          source: PayloadEnvelopeInputSource.recovery,
+        });
+      } else {
+        input.addColumn({
+          blockRootHex: input.blockRootHex,
+          columnSidecar: columnSidecar as fulu.DataColumnSidecar,
+          seenTimestampSec: Date.now() / 1000,
+          source: BlockInputSource.recovery,
+        });
+      }
       sidecarsToPublish.push(columnSidecar);
     }
   }
