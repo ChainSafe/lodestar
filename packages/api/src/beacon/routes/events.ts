@@ -37,7 +37,7 @@ export const blobSidecarSSE = new ContainerType(
 );
 type BlobSidecarSSE = ValueOf<typeof blobSidecarSSE>;
 
-export const dataColumnSidecarSSEFulu = new ContainerType(
+export const fuluDataColumnSidecarSSE = new ContainerType(
   {
     blockRoot: stringType,
     index: ssz.ColumnIndex,
@@ -46,7 +46,7 @@ export const dataColumnSidecarSSEFulu = new ContainerType(
   },
   {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
 );
-const dataColumnSidecarSSEGloas = new ContainerType(
+const gloasDataColumnSidecarSSE = new ContainerType(
   {
     blockRoot: stringType,
     index: ssz.ColumnIndex,
@@ -54,8 +54,8 @@ const dataColumnSidecarSSEGloas = new ContainerType(
   },
   {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
 );
-type FuluDataColumnSidecarSSE = ValueOf<typeof dataColumnSidecarSSEFulu>;
-type GloasDataColumnSidecarSSE = ValueOf<typeof dataColumnSidecarSSEGloas>;
+type FuluDataColumnSidecarSSE = ValueOf<typeof fuluDataColumnSidecarSSE>;
+type GloasDataColumnSidecarSSE = ValueOf<typeof gloasDataColumnSidecarSSE>;
 type DataColumnSidecarSSE = FuluDataColumnSidecarSSE | GloasDataColumnSidecarSSE;
 
 export enum EventType {
@@ -331,16 +331,16 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       toJson: (data) => {
         const fork = config.getForkName(data.slot);
         if (isForkPostGloas(fork)) {
-          return dataColumnSidecarSSEGloas.toJson(data);
+          return gloasDataColumnSidecarSSE.toJson(data);
         }
-        return dataColumnSidecarSSEFulu.toJson(data as FuluDataColumnSidecarSSE);
+        return fuluDataColumnSidecarSSE.toJson(data as FuluDataColumnSidecarSSE);
       },
       fromJson: (data) => {
         const fork = config.getForkName((data as DataColumnSidecarSSE).slot);
         if (isForkPostGloas(fork)) {
-          return dataColumnSidecarSSEGloas.fromJson(data);
+          return gloasDataColumnSidecarSSE.fromJson(data);
         }
-        return dataColumnSidecarSSEFulu.fromJson(data);
+        return fuluDataColumnSidecarSSE.fromJson(data);
       },
     },
     [EventType.executionPayloadAvailable]: new ContainerType(
