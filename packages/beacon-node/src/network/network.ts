@@ -509,7 +509,8 @@ export class Network implements INetwork {
   }
 
   async publishExecutionProof(executionProof: ExecutionProof): Promise<number> {
-    const epoch = computeEpochAtSlot(executionProof.slot);
+    // Use current clock epoch since the proof type no longer carries slot
+    const epoch = computeEpochAtSlot(this.clock.currentSlot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.execution_proof>(

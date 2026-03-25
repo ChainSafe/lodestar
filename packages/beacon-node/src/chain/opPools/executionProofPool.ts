@@ -1,21 +1,21 @@
 import {EXECUTION_PROOF_TYPE_COUNT} from "@lodestar/params";
-import {ExecutionProof, Slot} from "@lodestar/types";
+import {ExecutionProof} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {InsertOutcome} from "./types.js";
-import {pruneBySlot} from "./utils.js";
+
+type NewPayloadRequestRootHex = string;
+type ProofType = number;
 
 /**
- * Number of slots to retain proofs for.
- * Keep proofs around for a few slots in case of reorgs.
+ * Max number of distinct newPayloadRequestRoot entries to prevent unbounded growth.
+ * Each root can have up to EXECUTION_PROOF_TYPE_COUNT proofs.
  */
-const SLOTS_RETAINED = 8;
-
-type BlockRootHex = string;
-type ProofId = number;
+const MAX_ROOT_ENTRIES = 64;
 
 /**
- * EIP-8025: In-memory pool for execution proofs, indexed by slot → blockRoot → proofId.
+ * EIP-8025: In-memory pool for execution proofs.
  *
+ * Indexed by newPayloadRequestRoot (from proof.publicInput) → proofType.
  * Stores verified execution proofs received via gossip or API submission.
  * Used to:
  * - Track proof availability for blocks (zkvm mode gating)
@@ -23,121 +23,97 @@ type ProofId = number;
  * - Deduplicate incoming proofs
  */
 export class ExecutionProofPool {
-  private readonly proofsByBlockRootBySlot = new MapDef<Slot, MapDef<BlockRootHex, Map<ProofId, ExecutionProof>>>(
-    () => new MapDef<BlockRootHex, Map<ProofId, ExecutionProof>>(() => new Map())
-  );
-  /** Reverse index: blockRootHex → slot for O(1) lookups */
-  private readonly blockRootToSlot = new Map<BlockRootHex, Slot>();
-  private lowestPermissibleSlot = 0;
+  private readonly proofsByRoot = new MapDef<NewPayloadRequestRootHex, Map<ProofType, ExecutionProof>>(() => new Map());
 
   /** Total number of individual proofs in the pool */
   get size(): number {
     let count = 0;
-    for (const byBlockRoot of this.proofsByBlockRootBySlot.values()) {
-      for (const byProofId of byBlockRoot.values()) {
-        count += byProofId.size;
-      }
+    for (const byType of this.proofsByRoot.values()) {
+      count += byType.size;
     }
     return count;
   }
 
   /**
    * Add a verified proof to the pool.
-   * Deduplicates by (blockRoot, proofId) — only one proof per type per block.
+   * Deduplicates by (newPayloadRequestRoot, proofType) — only one proof per type per payload request.
    */
-  add(proof: ExecutionProof, clockSlot?: Slot): InsertOutcome {
-    const {slot, blockRoot, proofId} = proof;
+  add(proof: ExecutionProof): InsertOutcome {
+    const rootHex = toRootHex(proof.publicInput.newPayloadRequestRoot);
+    const {proofType} = proof;
 
-    if (slot < this.lowestPermissibleSlot) {
-      return InsertOutcome.Old;
-    }
-
-    // Reject far-future slots to prevent unbounded memory growth via spam
-    if (clockSlot !== undefined && slot > clockSlot + SLOTS_RETAINED) {
-      return InsertOutcome.Old;
-    }
-
-    if (proofId >= EXECUTION_PROOF_TYPE_COUNT) {
+    if (proofType >= EXECUTION_PROOF_TYPE_COUNT) {
       return InsertOutcome.Old; // Invalid proof type
     }
 
-    const blockRootHex = toRootHex(blockRoot);
-    const proofsByProofId = this.proofsByBlockRootBySlot.getOrDefault(slot).getOrDefault(blockRootHex);
-
-    if (proofsByProofId.has(proofId)) {
+    const byType = this.proofsByRoot.getOrDefault(rootHex);
+    if (byType.has(proofType)) {
       return InsertOutcome.AlreadyKnown;
     }
 
-    proofsByProofId.set(proofId, proof);
-    this.blockRootToSlot.set(blockRootHex, slot);
+    // Prevent unbounded memory growth
+    if (this.proofsByRoot.size >= MAX_ROOT_ENTRIES && !this.proofsByRoot.has(rootHex)) {
+      return InsertOutcome.Old;
+    }
+
+    byType.set(proofType, proof);
     return InsertOutcome.NewData;
   }
 
   /**
-   * Get all proofs for a given block root. O(1) slot lookup via reverse index.
+   * Get all proofs for a given newPayloadRequestRoot.
    */
-  getProofsByBlockRoot(blockRootHex: BlockRootHex): ExecutionProof[] {
-    const slot = this.blockRootToSlot.get(blockRootHex);
-    if (slot === undefined) return [];
-
-    const byProofId = this.proofsByBlockRootBySlot.get(slot)?.get(blockRootHex);
-    return byProofId ? Array.from(byProofId.values()) : [];
+  getProofsByNewPayloadRequestRoot(rootHex: NewPayloadRequestRootHex): ExecutionProof[] {
+    const byType = this.proofsByRoot.get(rootHex);
+    return byType ? Array.from(byType.values()) : [];
   }
 
   /**
-   * Get proofs for a range of slots. Used to serve ExecutionProofsByRange req/resp.
+   * Get all proofs in the pool. Used for API listing.
    */
-  getProofsByRange(startSlot: Slot, count: number): ExecutionProof[] {
+  getAllProofs(): ExecutionProof[] {
     const proofs: ExecutionProof[] = [];
-    for (let slot = startSlot; slot < startSlot + count; slot++) {
-      const byBlockRoot = this.proofsByBlockRootBySlot.get(slot);
-      if (byBlockRoot) {
-        for (const byProofId of byBlockRoot.values()) {
-          for (const proof of byProofId.values()) {
-            proofs.push(proof);
-          }
-        }
+    for (const byType of this.proofsByRoot.values()) {
+      for (const proof of byType.values()) {
+        proofs.push(proof);
       }
     }
     return proofs;
   }
 
   /**
-   * Check whether a block has enough distinct proof types for availability.
-   * O(1) slot lookup via reverse index.
+   * Check whether a newPayloadRequestRoot has enough distinct proof types for availability.
    */
-  hasEnoughProofs(blockRootHex: BlockRootHex, minRequired: number): boolean {
-    const slot = this.blockRootToSlot.get(blockRootHex);
-    if (slot === undefined) return false;
-
-    const byProofId = this.proofsByBlockRootBySlot.get(slot)?.get(blockRootHex);
-    return byProofId !== undefined && byProofId.size >= minRequired;
+  hasEnoughProofs(rootHex: NewPayloadRequestRootHex, minRequired: number): boolean {
+    const byType = this.proofsByRoot.get(rootHex);
+    return byType !== undefined && byType.size >= minRequired;
   }
 
   /**
-   * Check if a specific (blockRoot, proofId) combination is already known.
+   * Check if a specific (newPayloadRequestRoot, proofType) combination is already known.
    * Used for gossip deduplication (IGNORE if already seen).
-   * O(1) slot lookup via reverse index.
    */
-  has(blockRootHex: BlockRootHex, proofId: ProofId): boolean {
-    const slot = this.blockRootToSlot.get(blockRootHex);
-    if (slot === undefined) return false;
-
-    return this.proofsByBlockRootBySlot.get(slot)?.get(blockRootHex)?.has(proofId) ?? false;
+  has(rootHex: NewPayloadRequestRootHex, proofType: ProofType): boolean {
+    return this.proofsByRoot.get(rootHex)?.has(proofType) ?? false;
   }
 
   /**
-   * Prune proofs older than clockSlot - SLOTS_RETAINED.
-   * Called periodically (e.g., on slot clock tick).
+   * Remove all proofs for a given newPayloadRequestRoot.
+   * Called when block is finalized or proof set is no longer needed.
    */
-  prune(clockSlot: Slot): void {
-    // Clean up reverse index for pruned slots
-    const cutoffSlot = clockSlot - SLOTS_RETAINED;
-    for (const [blockRootHex, slot] of this.blockRootToSlot) {
-      if (slot < cutoffSlot) {
-        this.blockRootToSlot.delete(blockRootHex);
-      }
+  pruneByRoot(rootHex: NewPayloadRequestRootHex): void {
+    this.proofsByRoot.delete(rootHex);
+  }
+
+  /**
+   * Remove oldest entries to keep pool within MAX_ROOT_ENTRIES.
+   * Uses insertion order (Map iteration order) as a proxy for age.
+   */
+  prune(): void {
+    while (this.proofsByRoot.size > MAX_ROOT_ENTRIES) {
+      const firstKey = this.proofsByRoot.keys().next().value;
+      if (firstKey === undefined) break;
+      this.proofsByRoot.delete(firstKey);
     }
-    this.lowestPermissibleSlot = pruneBySlot(this.proofsByBlockRootBySlot, clockSlot, SLOTS_RETAINED);
   }
 }

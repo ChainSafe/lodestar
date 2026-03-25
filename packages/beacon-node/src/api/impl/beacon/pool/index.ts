@@ -313,42 +313,27 @@ export function getBeaconPoolApi({
       }
     },
 
-    async getPoolExecutionProofs({slot}) {
-      // Return all proofs in the pool, optionally filtered by slot
-      const allProofs: import("@lodestar/types").ExecutionProof[] = [];
-      if (slot !== undefined) {
-        // Get proofs for a single slot
-        const proofs = chain.executionProofPool.getProofsByRange(slot, 1);
-        allProofs.push(...proofs);
-      } else {
-        // Get proofs for a wide range around the current slot (recent SLOTS_RETAINED window)
-        const currentSlot = chain.clock.currentSlot;
-        const proofs = chain.executionProofPool.getProofsByRange(Math.max(0, currentSlot - 8), 9);
-        allProofs.push(...proofs);
-      }
-      return {data: allProofs};
+    async getPoolExecutionProofs() {
+      // Return all proofs in the pool
+      return {data: chain.executionProofPool.getAllProofs()};
     },
 
     async submitPoolExecutionProofs({executionProof}) {
-      // Validate basic fields
-      const {slot, blockRoot, proofId} = executionProof;
-      const blockRootHex = toRootHex(blockRoot);
+      const newPayloadRequestRootHex = toRootHex(executionProof.publicInput.newPayloadRequestRoot);
+      const {proofType} = executionProof;
 
       // Check for duplicates
-      if (chain.executionProofPool.has(blockRootHex, proofId)) {
-        logger.debug("Ignoring known execution proof", {slot, blockRoot: blockRootHex, proofId});
+      if (chain.executionProofPool.has(newPayloadRequestRootHex, proofType)) {
+        logger.debug("Ignoring known execution proof", {newPayloadRequestRoot: newPayloadRequestRootHex, proofType});
         return {};
       }
 
       // TODO EIP-8025: Add full proof verification (dummy accept for devnet)
 
-      // Add to pool (pass clock slot to reject far-future proofs)
-      const clockSlot = chain.clock.currentSlot;
-      const insertOutcome = chain.executionProofPool.add(executionProof, clockSlot);
+      const insertOutcome = chain.executionProofPool.add(executionProof);
       logger.info("Execution proof submitted via API", {
-        slot,
-        blockRoot: blockRootHex,
-        proofId,
+        newPayloadRequestRoot: newPayloadRequestRootHex,
+        proofType,
         insertOutcome,
       });
 
@@ -357,7 +342,7 @@ export function getBeaconPoolApi({
         try {
           await network.publishExecutionProof(executionProof);
         } catch (e) {
-          logger.debug("Failed to publish execution proof to gossip", {slot, proofId}, e as Error);
+          logger.debug("Failed to publish execution proof to gossip", {proofType}, e as Error);
         }
 
         // EIP-8025: In zkvm mode, check if we now have enough proofs to validate this block

@@ -7,6 +7,7 @@ import {
   BlindedBeaconBlock,
   DataColumnSidecars,
   Epoch,
+  ExecutionProof,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -286,7 +287,7 @@ export interface IBeaconChain {
   updateBuilderStatus(clockSlot: Slot): void;
 
   /** EIP-8025: Check if enough execution proofs arrived for a block and transition it to Valid in fork choice */
-  maybeTransitionToValidOnProofArrival(proof: {slot: number; blockRoot: Uint8Array; blockHash: Uint8Array}): void;
+  maybeTransitionToValidOnProofArrival(proof: ExecutionProof): void;
 
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;

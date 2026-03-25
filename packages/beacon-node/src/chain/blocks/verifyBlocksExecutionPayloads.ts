@@ -17,8 +17,8 @@ import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ExecutionProofPool} from "../opPools/executionProofPool.js";
 import {BlockProcessOpts} from "../options.js";
-import {isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/blockInput.js";
 import {IZkvmExecutionProofVerifier, defaultZkvmExecutionProofVerifier} from "../validation/executionProofVerifier.js";
+import {isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {ImportBlockOpts} from "./types.js";
 
@@ -286,12 +286,10 @@ function verifyBlockExecutionPayloadByProof(
     executionBlock: executionPayload.blockNumber,
   };
 
-  const proofs = chain.executionProofPool?.getProofsByBlockRoot(blockRootHex) ?? [];
+  const proofs = chain.executionProofPool?.getAllProofs() ?? [];
   const verifier = chain.executionProofVerifier ?? defaultZkvmExecutionProofVerifier;
   const verification = verifier.verifyProofs({
     proofs,
-    expectedBlockRootHex: blockRootHex,
-    expectedExecBlockHashHex: execBlockHash,
     minProofsRequired: minRequired,
   });
 

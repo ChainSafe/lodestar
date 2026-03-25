@@ -1,10 +1,7 @@
 import {ExecutionProof} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
 
 export type VerifyExecutionProofsInput = {
   proofs: ExecutionProof[];
-  expectedBlockRootHex: string;
-  expectedExecBlockHashHex: string;
   minProofsRequired: number;
 };
 
@@ -20,38 +17,21 @@ export interface IZkvmExecutionProofVerifier {
  * This is intentionally basic for initial interop:
  * - At least min distinct proof types are present
  * - proofData is non-empty
- * - proof blockRoot matches expected beacon block root
- * - proof blockHash matches expected execution payload block hash
+ *
+ * TODO EIP-8025: Replace with real zkVM proof verification
  */
 export class DummyZkvmExecutionProofVerifier implements IZkvmExecutionProofVerifier {
   verifyProofs(input: VerifyExecutionProofsInput): VerifyExecutionProofsResult {
-    const {proofs, expectedBlockRootHex, expectedExecBlockHashHex, minProofsRequired} = input;
+    const {proofs, minProofsRequired} = input;
 
     const distinctProofTypes = new Set<number>();
 
     for (const proof of proofs) {
-      const proofBlockRootHex = toRootHex(proof.blockRoot);
-      const proofExecBlockHashHex = toRootHex(proof.blockHash);
-
       if (proof.proofData.length === 0) {
-        return {ok: false, error: `empty proofData for proofId=${proof.proofId}`};
+        return {ok: false, error: `empty proofData for proofType=${proof.proofType}`};
       }
 
-      if (proofBlockRootHex !== expectedBlockRootHex) {
-        return {
-          ok: false,
-          error: `proof blockRoot mismatch: expected=${expectedBlockRootHex} got=${proofBlockRootHex}`,
-        };
-      }
-
-      if (proofExecBlockHashHex !== expectedExecBlockHashHex) {
-        return {
-          ok: false,
-          error: `proof blockHash mismatch: expected=${expectedExecBlockHashHex} got=${proofExecBlockHashHex}`,
-        };
-      }
-
-      distinctProofTypes.add(proof.proofId);
+      distinctProofTypes.add(proof.proofType);
     }
 
     if (distinctProofTypes.size < minProofsRequired) {

@@ -927,13 +927,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // For now, basic deserialization validation is sufficient for initial interop
 
       try {
-        const clockSlot = chain.clock.currentSlot;
-        const insertOutcome = chain.executionProofPool.add(executionProof, clockSlot);
-        const blockRootHex = toRootHex(executionProof.blockRoot);
+        const insertOutcome = chain.executionProofPool.add(executionProof);
+        const newPayloadRequestRootHex = toRootHex(executionProof.publicInput.newPayloadRequestRoot);
         logger.debug("Received execution proof via gossip", {
-          proofId: executionProof.proofId,
-          slot: executionProof.slot,
-          blockRoot: blockRootHex,
+          proofType: executionProof.proofType,
+          newPayloadRequestRoot: newPayloadRequestRootHex,
           insertOutcome,
         });
 

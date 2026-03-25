@@ -1,7 +1,6 @@
 import {ProtocolHandler} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {
@@ -78,28 +77,34 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     // EIP-8025: Execution proof req/resp handlers
     [ReqRespMethod.ExecutionProofsByRoot]: (req) => {
       const body = ssz.eip8025.ExecutionProofsByRootRequest.deserialize(req.data);
-      const blockRootHex = toRootHex(body.blockRoot);
+      // TODO EIP-8025: Use body.blockRoot to look up proofs via blockRoot → newPayloadRequestRoot mapping
       const alreadyHaveSet = new Set(body.alreadyHave);
-      const proofs = chain.executionProofPool
-        .getProofsByBlockRoot(blockRootHex)
-        .filter((p) => !alreadyHaveSet.has(p.proofId));
+      // TODO EIP-8025: Need blockRoot → newPayloadRequestRoot mapping to look up proofs.
+      // For now, iterate all proofs and filter by alreadyHave proof types.
+      // This is a temporary workaround until the chain populates the mapping.
+      const allProofs = chain.executionProofPool.getAllProofs();
+      const proofs = allProofs.filter((p) => !alreadyHaveSet.has(p.proofType));
+      const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(chain.clock.currentSlot));
       return (async function* () {
         for (const proof of proofs) {
           yield {
             data: ssz.eip8025.ExecutionProof.serialize(proof),
-            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(proof.slot)),
+            boundary,
           };
         }
       })();
     },
-    [ReqRespMethod.ExecutionProofsByRange]: (req) => {
-      const body = ssz.eip8025.ExecutionProofsByRangeRequest.deserialize(req.data);
-      const proofs = chain.executionProofPool.getProofsByRange(body.startSlot, Number(body.count));
+    [ReqRespMethod.ExecutionProofsByRange]: (_req) => {
+      // TODO EIP-8025: Use ssz.eip8025.ExecutionProofsByRangeRequest.deserialize(req.data) for slot filtering
+      // TODO EIP-8025: Range-based queries require slot indexing which is no longer
+      // part of the proof type. Return all proofs as a temporary workaround.
+      const proofs = chain.executionProofPool.getAllProofs();
+      const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(chain.clock.currentSlot));
       return (async function* () {
         for (const proof of proofs) {
           yield {
             data: ssz.eip8025.ExecutionProof.serialize(proof),
-            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(proof.slot)),
+            boundary,
           };
         }
       })();

@@ -1,6 +1,6 @@
 import {ByteListType, ContainerType, ListBasicType, UintNumberType} from "@chainsafe/ssz";
 import {EXECUTION_PROOF_TYPE_COUNT, MAX_PROOF_DATA_BYTES} from "@lodestar/params";
-import {BLSSignature, Root, Slot, Uint8, UintNum64, ValidatorIndex} from "../primitive/sszTypes.js";
+import {BLSSignature, Root, Uint8, UintNum64, ValidatorIndex} from "../primitive/sszTypes.js";
 
 /**
  * ExecutionProofId identifies which zkVM/proof system + EL combination a proof belongs to.
