@@ -210,7 +210,7 @@ export function getBeaconBlockApi({
         if (!blockLocallyProduced) {
           const parentBlock = chain.forkChoice.getBlockDefaultStatus(signedBlock.message.parentRoot);
           if (parentBlock === null) {
-            chain.emitter.emit(ChainEvent.unknownParent, {
+            chain.emitter.emit(ChainEvent.blockUnknownParent, {
               blockInput: blockForImport,
               peer: IDENTITY_PEER_ID,
               source: BlockInputSource.api,
@@ -305,7 +305,7 @@ export function getBeaconBlockApi({
           .processBlock(blockForImport, opts)
           .catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-              chain.emitter.emit(ChainEvent.unknownParent, {
+              chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: blockForImport,
                 peer: IDENTITY_PEER_ID,
                 source: BlockInputSource.api,

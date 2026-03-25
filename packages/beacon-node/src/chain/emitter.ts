@@ -4,6 +4,7 @@ import {routes} from "@lodestar/api";
 import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {DataColumnSidecars, RootHex, deneb, phase0} from "@lodestar/types";
+import {SignedExecutionPayloadEnvelope} from "@lodestar/types/gloas";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 
@@ -56,7 +57,11 @@ export enum ChainEvent {
   /**
    * Trigger a BlockInputSync for blocks where the parentRoot is not known to fork choice
    */
-  unknownParent = "unknownParent",
+  blockUnknownParent = "blockUnknownParent",
+  /**
+   * Trigger a BlockInputSync for envelope (payload) with unknown block root
+   */
+  envelopeUnknownBlockRoot = "envelopeUnknownBlockRoot",
   /**
    * Trigger BlockInputSync for objects that correspond to a block that is not known to fork choice
    */
@@ -79,7 +84,12 @@ export type ReorgEventData = routes.events.EventData[routes.events.EventType.cha
 type ApiEvents = {[K in routes.events.EventType]: (data: routes.events.EventData[K]) => void};
 
 export type ChainEventData = {
-  [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.blockUnknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.envelopeUnknownBlockRoot]: {
+    envelope: SignedExecutionPayloadEnvelope;
+    peer?: PeerIdStr;
+    source: BlockInputSource;
+  };
   [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
   [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
@@ -101,7 +111,8 @@ export type IChainEvents = ApiEvents & {
 
   // Sync events that are chain->chain. Initiated from network requests but do not cross the network
   // barrier so are considered ChainEvent(s).
-  [ChainEvent.unknownParent]: (data: ChainEventData[ChainEvent.unknownParent]) => void;
+  [ChainEvent.blockUnknownParent]: (data: ChainEventData[ChainEvent.blockUnknownParent]) => void;
+  [ChainEvent.envelopeUnknownBlockRoot]: (data: ChainEventData[ChainEvent.envelopeUnknownBlockRoot]) => void;
   [ChainEvent.unknownBlockRoot]: (data: ChainEventData[ChainEvent.unknownBlockRoot]) => void;
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
   [ChainEvent.unknownEnvelopeBlockRoot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]) => void;

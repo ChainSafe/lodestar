@@ -161,16 +161,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     logger.debug("Received gossip block", {...logCtx});
 
-    let blockInput: IBlockInput | undefined;
+    // optimically add gossip block to the seen cache
+    // if validation fails, we will NOT forward this gossip block to peers
+    //   - if PARENT_UNKNOWN error, blockInput will then be queued inside BlockInputSync. If the gossip block is really invalid, it will be pruned there
+    //   - if other validator errors, blockInput will stay in the seen cache and will be pruned on finalization
+    const blockInput = chain.seenBlockInputCache.getByBlock({
+      block: signedBlock,
+      blockRootHex,
+      source: BlockInputSource.gossip,
+      seenTimestampSec,
+      peerIdStr,
+    });
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
-      blockInput = chain.seenBlockInputCache.getByBlock({
-        block: signedBlock,
-        blockRootHex,
-        source: BlockInputSource.gossip,
-        seenTimestampSec,
-        peerIdStr,
-      });
       const blockInputMeta = blockInput.getLogMeta();
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
@@ -186,10 +189,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
+        logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput) {
-          // TODO GLOAS: dead code
-          logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-          chain.emitter.emit(ChainEvent.unknownParent, {
+          chain.emitter.emit(ChainEvent.blockUnknownParent, {
             blockInput,
             peer: peerIdStr,
             source: BlockInputSource.gossip,
@@ -844,8 +846,36 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const signedEnvelope = sszDeserialize(topic, serializedData);
       const envelope = signedEnvelope.message;
-      // TODO GLOAS: handle BLOCK_ROOT_UNKNOWN error to trigger sync
-      await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+
+      // TODO GLOAS: consider optimistically create PayloadEnvelopeInput here similar to how we do that for beacon_block
+      // so that UnknownBlockSync can handle backward sync
+      // the problem now is we cannot create a PayloadEnvelopeInput without the beacon block being known, we need at least the proposer index
+      // we can achieve that by looking into the EpochCache
+      try {
+        await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+      } catch (e) {
+        if (e instanceof ExecutionPayloadEnvelopeError) {
+          const {slot, beaconBlockRoot} = signedEnvelope.message;
+          logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
+          if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN) {
+            chain.emitter.emit(ChainEvent.envelopeUnknownBlockRoot, {
+              envelope: signedEnvelope,
+              peer: peerIdStr,
+              source: BlockInputSource.gossip,
+            });
+          }
+
+          if (e.action === GossipAction.REJECT) {
+            chain.persistInvalidSszValue(
+              ssz.gloas.SignedExecutionPayloadEnvelope,
+              signedEnvelope,
+              `gossip_reject_slot_${slot}`
+            );
+          }
+        }
+
+        throw e;
+      }
 
       const slot = envelope.slot;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
