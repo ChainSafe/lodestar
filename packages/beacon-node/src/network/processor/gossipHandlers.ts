@@ -161,7 +161,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     logger.debug("Received gossip block", {...logCtx});
 
-    // optimically add gossip block to the seen cache
+    // optimistically add gossip block to the seen cache
     // if validation fails, we will NOT forward this gossip block to peers
     //   - if PARENT_UNKNOWN error, blockInput will then be queued inside BlockInputSync. If the gossip block is really invalid, it will be pruned there
     //   - if other validator errors, blockInput will stay in the seen cache and will be pruned on finalization

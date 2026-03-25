@@ -1678,7 +1678,7 @@ export class ProtoArray {
    * Returns true once the SignedExecutionPayloadEnvelope for this block has been received and processed.
    */
   hasEnvelope(blockRoot: RootHex): boolean {
-    // we should also make sure this blockRoot is gloas block, however we only call this function
+    // we should also make sure this blockRoot is a gloas block, however we only call this function
     // starting from GLOAS_FORK_EPOCH, so we can assume the blockRoot is from gloas block
     return this.getNodeIndexByRootAndStatus(blockRoot, PayloadStatus.FULL) !== undefined;
   }

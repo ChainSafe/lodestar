@@ -139,7 +139,7 @@ export enum CannotAcceptWorkReason {
 }
 
 /**
- * No need metrics for this so make it as numeric to make it ligghtweight
+ * No metrics needed here; using a number to keep it lightweight
  */
 enum PreprocessAction {
   AwaitBlock,
@@ -306,7 +306,7 @@ export class NetworkProcessor {
     const topicType = message.topic.type;
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
 
-    // 1st extract round: make sure slot in range and if block root is not available
+    // 1st extract round: make sure slot is in range and if block root is not available
     // proactively search for it + queue the message
     const slotRoot = extractBlockSlotRootFn
       ? extractBlockSlotRootFn(message.msg.data, message.topic.boundary.fork)
@@ -339,20 +339,20 @@ export class NetworkProcessor {
 
     message.msgSlot = slot;
 
-    // this to determine this message needs to wait for Block or Envelope
-    // a message should only be waited for what they voted for, hence we don't want to put them on both queues
+    // this determines whether this message needs to wait for a Block or Envelope
+    // a message should only wait for what it voted for, hence we don't want to put it on both queues
     let preprocessResult: PreprocessResult = {action: PreprocessAction.PushToQueue};
     // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
     if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
       // starting from GLOAS, unknown root from data_column_sidecar also falls into this case
       this.searchUnknownBlock({slot, root}, BlockInputSource.network_processor, message.propagationSource.toString());
-      // for beacon_attestation and beacon_aggregate_and_proof messages, this is only temporary
-      // if "index = 1" we need to await for Envelope instead
+      // for beacon_attestation and beacon_aggregate_and_proof messages, this is only temporary.
+      // if "index = 1" we need to await for the Envelope instead
       preprocessResult = {action: PreprocessAction.AwaitBlock, root};
     }
 
     // 2nd extract round for some specific topics
-    // we separate to search action vs await action
+    // we separate the search action from the await action
 
     // beacon_block: proactively search for parent block/envelope across all forks, but never queue.
     // BlockInputSync handles cascading recovery if the gossip handler throws.
@@ -403,7 +403,7 @@ export class NetworkProcessor {
               ? getIndexFromSingleAttestationSerialized(fork, message.msg.data)
               : getIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasEnvelopeHexUnsafe(root)) {
-            // ptc attestation vote for the payload but it's not known
+            // ptc attestation votes for the payload but the envelope is not yet known
             this.searchUnknownEnvelope(
               {slot, root},
               BlockInputSource.network_processor,
@@ -434,14 +434,15 @@ export class NetworkProcessor {
               BlockInputSource.network_processor,
               message.propagationSource.toString()
             );
-            preprocessResult = {action: PreprocessAction.AwaitEnvelope, root};
+            // do not await the envelope, we can do gossip validation
+            preprocessResult = {action: PreprocessAction.PushToQueue};
           }
           break;
         }
         case GossipType.execution_payload: {
           // extractBlockSlotRootFn does not return a root for this topic.
           // Extract beacon_block_root directly and proactively trigger block sync if missing.
-          // Do NOT queue — the handler runs immediately; BlockInputSync handles recovery.
+          // Do NOT await the block — the handler runs immediately; BlockInputSync handles recovery.
           const blockRoot = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(message.msg.data);
           if (blockRoot && !this.chain.forkChoice.hasBlockHexUnsafe(blockRoot)) {
             this.searchUnknownBlock(
@@ -450,12 +451,12 @@ export class NetworkProcessor {
               message.propagationSource.toString()
             );
           }
-          // do not await for block, we want UnknownBlockSync to handle it.
+          // do not await the block, we want UnknownBlockSync to handle it.
           preprocessResult = {action: PreprocessAction.PushToQueue};
           break;
         }
         case GossipType.execution_payload_bid: {
-          // instead of search for root, this searches for parent root
+          // instead of searching for the message root, this searches for the parent root
           const parentBlockRoot = getParentBlockRootFromSignedExecutionPayloadBidSerialized(message.msg.data);
           const parentBlockHash = getParentBlockHashFromSignedExecutionPayloadBidSerialized(message.msg.data);
           if (

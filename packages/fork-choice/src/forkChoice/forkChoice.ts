@@ -1046,14 +1046,14 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Same to hasBlock but without checking if the block is a descendant of the finalized root.
+   * Same as hasBlock but without checking if the block is a descendant of the finalized root.
    */
   hasBlockUnsafe(blockRoot: Root): boolean {
     return this.hasBlockHexUnsafe(toRootHex(blockRoot));
   }
 
   /**
-   * Same to hasBlockHex but without checking if the block is a descendant of the finalized root.
+   * Same as hasBlockHex but without checking if the block is a descendant of the finalized root.
    */
   hasBlockHexUnsafe(blockRoot: RootHex): boolean {
     return this.protoArray.hasBlock(blockRoot);
@@ -1068,7 +1068,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Same to hasEnvelopeUnsafe but accepts a hex-encoded block root.
+   * Same as hasEnvelopeUnsafe but accepts a hex-encoded block root.
    */
   hasEnvelopeHexUnsafe(blockRoot: RootHex): boolean {
     return this.protoArray.hasEnvelope(blockRoot);

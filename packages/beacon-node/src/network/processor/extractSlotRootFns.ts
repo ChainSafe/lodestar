@@ -19,7 +19,7 @@ import {ExtractSlotRootFns} from "./types.js";
 
 /**
  * Extract the slot and block root of a gossip message form serialized data.
- * Only do it for messages that has slot and block root, and we want to await for the block if the block root is not known.
+ * Only do it for messages that have a slot and block root, and we want to await the block if the block root is not known.
  */
 export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
   return {
@@ -73,7 +73,7 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
     },
     [GossipType.execution_payload]: (data: Uint8Array): SlotOptionalRoot | null => {
       const slot = getSlotFromExecutionPayloadEnvelopeSerialized(data);
-      // do not extract root now because network processor will await for block
+      // do not extract root now because network processor will await the block
       // instead, we want network processor to extract root and search for block later if it's missing and BlockInputSync will queue it
       if (slot === null) {
         return null;
