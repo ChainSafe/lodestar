@@ -83,11 +83,7 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {
-  getBlobKzgCommitments,
-  getDataColumnSidecarBlockRoot,
-  getDataColumnSidecarSlot,
-} from "../../util/dataColumns.js";
+import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -421,8 +417,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     seenTimestampSec: number
   ): Promise<PayloadEnvelopeInput> {
     metrics?.peerDas.dataColumnSidecarProcessingRequests.inc();
-    const slot = getDataColumnSidecarSlot(dataColumnSidecar);
-    const blockRootHex = toRootHex(getDataColumnSidecarBlockRoot(dataColumnSidecar));
+    const slot = dataColumnSidecar.slot;
+    const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
 
     // check to see if payload has already been processed and PayloadEnvelopeInput has been deleted (column received via reqresp or other means)
     if (chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL) !== null) {
