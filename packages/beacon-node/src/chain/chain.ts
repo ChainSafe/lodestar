@@ -44,7 +44,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
-  DataColumnSidecars,
+  DataColumnSidecar,
   Epoch,
   Root,
   RootHex,
@@ -859,7 +859,7 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars> {
+  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
     const fork = this.config.getForkName(blockSlot);
 
     if (isForkPostGloas(fork)) {
@@ -881,10 +881,10 @@ export class BeaconChain implements IBeaconChain {
 
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {
-      return sidecarsUnfinalized as DataColumnSidecars;
+      return sidecarsUnfinalized;
     }
     const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
-    return sidecarsFinalized as DataColumnSidecars;
+    return sidecarsFinalized;
   }
 
   async getSerializedDataColumnSidecars(
