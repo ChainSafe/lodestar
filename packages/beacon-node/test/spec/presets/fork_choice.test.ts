@@ -18,6 +18,7 @@ import {
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
+  BeaconStateView,
   createCachedBeaconState,
   createPubkeyCache,
   isExecutionStateType,
@@ -139,7 +140,7 @@ const forkChoiceTest =
             clock,
             metrics: null,
             validatorMonitor: null,
-            anchorState: cachedState,
+            anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
             executionEngine,
             executionBuilder: undefined,
@@ -167,10 +168,10 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState();
+              const headState = chain.getHeadState() as BeaconStateView;
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               chain.forkChoice.onAttestation(
-                headState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
+                headState.cachedState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
                 attDataRootHex
               );
             }

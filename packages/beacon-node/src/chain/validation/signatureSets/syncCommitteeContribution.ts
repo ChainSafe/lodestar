@@ -1,11 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_SYNC_COMMITTEE} from "@lodestar/params";
-import {CachedBeaconStateAltair, ISignatureSet, SignatureSetType, computeSigningRoot} from "@lodestar/state-transition";
+import {IBeaconStateView, ISignatureSet, SignatureSetType, computeSigningRoot} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
 
 export function getSyncCommitteeContributionSignatureSet(
   config: BeaconConfig,
-  state: CachedBeaconStateAltair,
+  state: IBeaconStateView,
   contribution: altair.SyncCommitteeContribution,
   participantIndices: number[]
 ): ISignatureSet {

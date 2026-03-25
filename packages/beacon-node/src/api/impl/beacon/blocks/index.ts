@@ -609,7 +609,7 @@ export function getBeaconBlockApi({
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
           const state = chain.getHeadState();
           return {
-            data: {root: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)},
+            data: {root: state.getBlockRootAtSlot(slot)},
             meta: {
               executionOptimistic: isOptimisticBlock(head),
               finalized: computeEpochAtSlot(slot) <= chain.forkChoice.getFinalizedCheckpoint().epoch,

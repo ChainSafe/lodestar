@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateAllForks, EpochShuffling} from "@lodestar/state-transition";
+import {BeaconStateView, EpochShuffling} from "@lodestar/state-transition";
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 
@@ -15,17 +15,17 @@ describe("FIFOBlockStateCache", () => {
     committeesPerSlot: 1,
   };
 
-  const state1 = generateCachedState({slot: 0});
+  const state1 = new BeaconStateView(generateCachedState({slot: 0}));
   const key1 = toHexString(state1.hashTreeRoot());
-  state1.epochCtx.currentShuffling = {...shuffling, epoch: 0};
+  state1.cachedState.epochCtx.currentShuffling = {...shuffling, epoch: 0};
 
-  const state2 = generateCachedState({slot: 1 * SLOTS_PER_EPOCH});
+  const state2 = new BeaconStateView(generateCachedState({slot: 1 * SLOTS_PER_EPOCH}));
   const key2 = toHexString(state2.hashTreeRoot());
-  state2.epochCtx.currentShuffling = {...shuffling, epoch: 1};
+  state2.cachedState.epochCtx.currentShuffling = {...shuffling, epoch: 1};
 
-  const state3 = generateCachedState({slot: 2 * SLOTS_PER_EPOCH});
+  const state3 = new BeaconStateView(generateCachedState({slot: 2 * SLOTS_PER_EPOCH}));
   const key3 = toHexString(state3.hashTreeRoot());
-  state3.epochCtx.currentShuffling = {...shuffling, epoch: 2};
+  state3.cachedState.epochCtx.currentShuffling = {...shuffling, epoch: 2};
 
   beforeEach(() => {
     // max 2 items
@@ -36,7 +36,7 @@ describe("FIFOBlockStateCache", () => {
 
   const testCases: {
     name: string;
-    headState: CachedBeaconStateAllForks;
+    headState: BeaconStateView;
     addAsHeadArr: boolean[];
     keptStates: string[];
     prunedState: string;
