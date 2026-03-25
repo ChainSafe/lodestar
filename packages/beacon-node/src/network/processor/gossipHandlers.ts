@@ -468,12 +468,25 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     try {
       await validateGossipGloasDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
 
-      payloadInput.addColumn({
+      const addedColumn = payloadInput.addColumn({
         columnSidecar: dataColumnSidecar,
         source: PayloadEnvelopeInputSource.gossip,
         seenTimestampSec,
         peerIdStr,
       });
+
+      if (!addedColumn) {
+        metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
+        logger.debug("Already have column sidecar in PayloadEnvelopeInput, skipping processing", {
+          ...payloadInput.getLogMeta(),
+          index: dataColumnSidecar.index,
+        });
+        throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+          code: DataColumnSidecarErrorCode.ALREADY_KNOWN,
+          columnIndex: dataColumnSidecar.index,
+          slot,
+        });
+      }
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
@@ -752,7 +765,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           seenTimestampSec
         );
         chain.serializedCache.set(dataColumnSidecar, serializedData);
-
         const blockInputMeta = blockInput.getLogMeta();
         const {receivedColumns} = blockInputMeta;
         // it's not helpful to track every single column received

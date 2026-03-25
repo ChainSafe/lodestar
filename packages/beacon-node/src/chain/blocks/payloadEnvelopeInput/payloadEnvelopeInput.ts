@@ -173,8 +173,12 @@ export class PayloadEnvelopeInput {
     }
   }
 
-  addColumn(columnWithSource: ColumnWithSource): void {
+  addColumn(columnWithSource: ColumnWithSource): boolean {
     const {columnSidecar, seenTimestampSec} = columnWithSource;
+    if (this.columnsCache.has(columnSidecar.index)) {
+      return false;
+    }
+
     this.columnsCache.set(columnSidecar.index, columnWithSource);
 
     const sampledColumns = this.getSampledColumns();
@@ -191,7 +195,7 @@ export class PayloadEnvelopeInput {
       sampledColumns.length === this.sampledColumns.length;
 
     if (!hasAllData) {
-      return;
+      return true;
     }
 
     if (hasComputedAllData) {
@@ -217,6 +221,8 @@ export class PayloadEnvelopeInput {
         hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
       };
     }
+
+    return true;
   }
 
   hasColumn(index: ColumnIndex): boolean {
