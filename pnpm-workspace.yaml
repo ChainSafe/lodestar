@@ -2,7 +2,7 @@ packages:
   - packages/*
 
 catalog:
-  '@chainsafe/lodestar-z': github:chainsafe/lodestar-z#bing/native-mt-blst-v2
+  '@chainsafe/lodestar-z': github:chainsafe/lodestar-z#bing/native-mt-blst-pointers
   '@vitest/browser': ^4.0.7
   '@vitest/browser-playwright': ^4.0.7
   '@vitest/coverage-v8': ^4.0.7
