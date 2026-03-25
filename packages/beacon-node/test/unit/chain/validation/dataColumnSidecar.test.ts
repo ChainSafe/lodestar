@@ -15,7 +15,8 @@ describe("validateBlockDataColumnSidecars", () => {
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        columnSidecars
+        columnSidecars,
+        null
       )
     ).resolves.toBeUndefined();
   });
@@ -27,14 +28,15 @@ describe("validateBlockDataColumnSidecars", () => {
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        []
+        [],
+        null
       )
     ).resolves.toBeUndefined();
   });
 
   it("should error on no blobs in block", async () => {
     await expect(
-      validateBlockDataColumnSidecars(null, block.message.slot, blockRoot, 0, columnSidecars)
+      validateBlockDataColumnSidecars(null, block.message.slot, blockRoot, 0, columnSidecars, null)
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
 
@@ -48,7 +50,8 @@ describe("validateBlockDataColumnSidecars", () => {
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar]
+        [invalidSidecar],
+        null
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
@@ -63,7 +66,8 @@ describe("validateBlockDataColumnSidecars", () => {
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar]
+        [invalidSidecar],
+        null
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
@@ -78,7 +82,8 @@ describe("validateBlockDataColumnSidecars", () => {
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar]
+        [invalidSidecar],
+        null
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
@@ -93,7 +98,8 @@ describe("validateBlockDataColumnSidecars", () => {
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar]
+        [invalidSidecar],
+        null
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
@@ -108,7 +114,8 @@ describe("validateBlockDataColumnSidecars", () => {
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar]
+        [invalidSidecar],
+        null
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });

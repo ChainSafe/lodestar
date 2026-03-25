@@ -54,9 +54,9 @@ const dataColumnSidecarSSEGloas = new ContainerType(
   },
   {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
 );
-type DataColumnSidecarSSEFulu = ValueOf<typeof dataColumnSidecarSSEFulu>;
-type DataColumnSidecarSSEGloas = ValueOf<typeof dataColumnSidecarSSEGloas>;
-type DataColumnSidecarSSE = DataColumnSidecarSSEFulu | DataColumnSidecarSSEGloas;
+type FuluDataColumnSidecarSSE = ValueOf<typeof dataColumnSidecarSSEFulu>;
+type GloasDataColumnSidecarSSE = ValueOf<typeof dataColumnSidecarSSEGloas>;
+type DataColumnSidecarSSE = FuluDataColumnSidecarSSE | GloasDataColumnSidecarSSE;
 
 export enum EventType {
   /**
@@ -333,7 +333,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         if (isForkPostGloas(fork)) {
           return dataColumnSidecarSSEGloas.toJson(data);
         }
-        return dataColumnSidecarSSEFulu.toJson(data as DataColumnSidecarSSEFulu);
+        return dataColumnSidecarSSEFulu.toJson(data as FuluDataColumnSidecarSSE);
       },
       fromJson: (data) => {
         const fork = config.getForkName((data as DataColumnSidecarSSE).slot);

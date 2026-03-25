@@ -246,6 +246,7 @@ const forkChoiceTest =
                     (signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments
                       .length,
                     columns,
+                    null,
                     chain.metrics?.peerDas
                   );
 

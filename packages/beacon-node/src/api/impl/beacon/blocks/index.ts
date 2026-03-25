@@ -32,7 +32,6 @@ import {
   fulu,
   gloas,
   isDenebBlockContents,
-  isGloasDataColumnSidecar,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
