@@ -716,23 +716,23 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         chain.serializedCache.set(dataColumnSidecar, serializedData);
 
         const payloadInputMeta = payloadInput.getLogMeta();
-        const {columnsCount} = payloadInputMeta;
+        const {receivedColumns} = payloadInputMeta;
         // it's not helpful to track every single column received
         // instead of that, track 1st, 8th, 16th 32th, 64th, and 128th column
-        switch (columnsCount) {
+        switch (receivedColumns) {
           case 1:
           case config.SAMPLES_PER_SLOT:
           case 2 * config.SAMPLES_PER_SLOT:
           case NUMBER_OF_COLUMNS / 4:
           case NUMBER_OF_COLUMNS / 2:
           case NUMBER_OF_COLUMNS:
-            metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: columnsCount}, delaySec);
+            metrics?.dataColumns.elapsedTimeTillReceived.observe({receivedOrder: receivedColumns}, delaySec);
             break;
         }
 
         if (!payloadInput.hasComputedAllData()) {
           // if we've received at least half of the columns, trigger reconstruction of the rest
-          if (columnsCount >= NUMBER_OF_COLUMNS / 2) {
+          if (receivedColumns >= NUMBER_OF_COLUMNS / 2) {
             chain.columnReconstructionTracker.triggerColumnReconstruction(payloadInput);
           }
 

@@ -360,7 +360,7 @@ export class PayloadEnvelopeInput {
     hasAllData: boolean;
     hasComputedAllData: boolean;
     isComplete: boolean;
-    columnsCount: number;
+    receivedColumns: number;
     sampledColumnsCount: number;
   } {
     return {
@@ -370,7 +370,7 @@ export class PayloadEnvelopeInput {
       hasAllData: this.state.hasAllData,
       hasComputedAllData: this.state.hasComputedAllData,
       isComplete: this.isComplete(),
-      columnsCount: this.columnsCache.size,
+      receivedColumns: this.columnsCache.size,
       sampledColumnsCount: this.sampledColumns.length,
     };
   }
