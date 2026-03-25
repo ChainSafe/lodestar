@@ -138,11 +138,16 @@ export enum CannotAcceptWorkReason {
 /**
  * No need metrics for this so make it as numeric to make it ligghtweight
  */
-enum PreProcessAction {
-  await_block,
-  await_envelope,
-  push_to_queue,
+enum PreprocessAction {
+  AwaitBlock,
+  AwaitEnvelope,
+  PushToQueue,
 }
+
+type PreprocessResult =
+  | {action: PreprocessAction.PushToQueue}
+  | {action: PreprocessAction.AwaitBlock; root: RootHex}
+  | {action: PreprocessAction.AwaitEnvelope; root: RootHex};
 
 /**
  * Network processor handles the gossip queues and throtles processing to not overload the main thread
@@ -261,7 +266,7 @@ export class NetworkProcessor {
 
   /**
    * Search block via `ChainEvent.unknownBlockRoot` event
-   * Note that slot is not necessarily the same to the block's slot but it can be used for a good prune strategy.
+   * Slot is the message slot, which is not necessarily the same as the block's slot, but it can be used for a good prune strategy.
    * In the rare case, if 2 messages on 2 slots search for the same root (for example beacon_attestation) we may emit the same root twice but BlockInputSync should handle it well.
    */
   searchUnknownBlock({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
@@ -279,7 +284,7 @@ export class NetworkProcessor {
 
   /**
    * Search envelope via `ChainEvent.unknownEnvelopeBlockRoot` event
-   * Note that slot is not necessarily the same to the envelope's slot but it can be used for a good prune strategy.
+   * Slot is the message slot, which is not necessarily the same as the envelope's slot, but it can be used for a good prune strategy.
    * In the rare case, if 2 messages on 2 slots search for the same root (for example beacon_attestation) we may emit the same root twice but BlockInputSync should handle it well.
    */
   searchUnknownEnvelope({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
@@ -330,14 +335,14 @@ export class NetworkProcessor {
 
     // this to determine this message needs to wait for Block or Envelope
     // a message should only be waited for what they voted for, hence we don't want to put them on both queues
-    let preProcessAction = PreProcessAction.push_to_queue;
+    let preprocessResult: PreprocessResult = {action: PreprocessAction.PushToQueue};
     // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
     if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
       // starting from GLOAS, unknown root from data_column_sidecar also falls into this case
       this.searchUnknownBlock({slot, root}, BlockInputSource.network_processor, message.propagationSource.toString());
       // for beacon_attestation and beacon_aggregate_and_proof messages, this is only temporary
       // if "index = 1" we need to await for Envelope instead
-      preProcessAction = PreProcessAction.await_block;
+      preprocessResult = {action: PreprocessAction.AwaitBlock, root};
     }
 
     if (ForkSeq[fork] >= ForkSeq.gloas) {
@@ -358,7 +363,7 @@ export class NetworkProcessor {
               BlockInputSource.network_processor,
               message.propagationSource.toString()
             );
-            preProcessAction = PreProcessAction.await_envelope;
+            preprocessResult = {action: PreprocessAction.AwaitEnvelope, root};
           }
           break;
         }
@@ -371,7 +376,7 @@ export class NetworkProcessor {
               BlockInputSource.network_processor,
               message.propagationSource.toString()
             );
-            preProcessAction = PreProcessAction.await_envelope;
+            preprocessResult = {action: PreprocessAction.AwaitEnvelope, root};
           }
           break;
         }
@@ -383,7 +388,7 @@ export class NetworkProcessor {
               BlockInputSource.network_processor,
               message.propagationSource.toString()
             );
-            preProcessAction = PreProcessAction.await_envelope;
+            preprocessResult = {action: PreprocessAction.AwaitEnvelope, root};
           }
           break;
         }
@@ -404,6 +409,7 @@ export class NetworkProcessor {
                 BlockInputSource.network_processor,
                 message.propagationSource.toString()
               );
+              preprocessResult = {action: PreprocessAction.AwaitBlock, root: parentBlockRoot};
             }
             if (protoBlock?.executionPayloadBlockHash && protoBlock?.executionPayloadBlockHash !== parentBlockHash) {
               this.searchUnknownEnvelope(
@@ -411,22 +417,19 @@ export class NetworkProcessor {
                 BlockInputSource.network_processor,
                 message.propagationSource.toString()
               );
+              preprocessResult = {action: PreprocessAction.AwaitEnvelope, root: parentBlockRoot};
             }
-
-            // don't queue for this execution_payload_bid message because PreProcessAction.await_* expect non-null root
-            // it's only an issue if we're the block proposer
-            // other gossip messages of the previous slot should search for the missing block/envelope anyway
           }
           break;
         }
       }
     }
 
-    switch (preProcessAction) {
-      case PreProcessAction.push_to_queue:
+    switch (preprocessResult.action) {
+      case PreprocessAction.PushToQueue:
         this.pushPendingGossipsubMessageToQueue(message);
         break;
-      case PreProcessAction.await_block: {
+      case PreprocessAction.AwaitBlock: {
         if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
           // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           this.metrics?.awaitingBlockGossipMessages.reject.inc({
@@ -437,15 +440,11 @@ export class NetworkProcessor {
         }
 
         this.metrics?.awaitingBlockGossipMessages.queue.inc({topic: topicType});
-        if (root == null) {
-          // should not happen
-          throw Error(`Root should not be null if preProcessAction is ${PreProcessAction.await_block}`);
-        }
-        const awaitingGossipsubMessages = this.awaitingMessagesByBlockRoot.getOrDefault(root);
+        const awaitingGossipsubMessages = this.awaitingMessagesByBlockRoot.getOrDefault(preprocessResult.root);
         awaitingGossipsubMessages.add(message);
         break;
       }
-      case PreProcessAction.await_envelope: {
+      case PreprocessAction.AwaitEnvelope: {
         if (this.unknownPayloadGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_PAYLOAD_GOSSIP_OBJECTS) {
           this.metrics?.awaitingPayloadGossipMessages.reject.inc({
             reason: ReprocessRejectReason.reached_limit,
@@ -455,11 +454,9 @@ export class NetworkProcessor {
         }
 
         this.metrics?.awaitingPayloadGossipMessages.queue.inc({topic: topicType});
-        if (root == null) {
-          // should not happen
-          throw Error(`Root should not be null if preProcessAction is ${PreProcessAction.await_envelope}`);
-        }
-        const awaitingPayloadGossipsubMessages = this.awaitingMessagesByPayloadBlockRoot.getOrDefault(root);
+        const awaitingPayloadGossipsubMessages = this.awaitingMessagesByPayloadBlockRoot.getOrDefault(
+          preprocessResult.root
+        );
         awaitingPayloadGossipsubMessages.add(message);
         break;
       }
