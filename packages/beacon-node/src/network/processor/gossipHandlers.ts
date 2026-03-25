@@ -308,6 +308,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   async function validateBeaconDataColumn(
     dataColumnSidecar: fulu.DataColumnSidecar,
+    _dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
@@ -748,7 +749,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
 
         // Before gloas, data columns are tracked in BlockInput
-        const blockInput = await validateBeaconDataColumn(dataColumnSidecar, topic.subnet, peerIdStr, seenTimestampSec);
+        const blockInput = await validateBeaconDataColumn(
+          dataColumnSidecar,
+          serializedData,
+          topic.subnet,
+          peerIdStr,
+          seenTimestampSec
+        );
         chain.serializedCache.set(dataColumnSidecar, serializedData);
 
         const blockInputMeta = blockInput.getLogMeta();
