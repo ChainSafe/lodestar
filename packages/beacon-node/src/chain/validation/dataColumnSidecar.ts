@@ -663,6 +663,7 @@ export async function validateBlockDataColumnSidecars(
     }
 
     let reason: string | undefined;
+    // batch verification for the cases: downloadByRange and downloadByRoot
     const kzgVerificationTimer = metrics?.kzgVerificationDataColumnBatchTime.startTimer();
     try {
       const valid = await kzg.asyncVerifyCellKzgProofBatch(commitments, cellIndices, cells, proofs);

@@ -634,30 +634,38 @@ export async function validateColumnsByRangeResponse(
     }
 
     if (seenSlotColumns.has(columnSidecar.index)) {
-      throw new DownloadByRangeError({
-        code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
-        slot,
-        index: columnSidecar.index,
-      });
+      warnings.push(
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.DUPLICATE_COLUMN,
+          slot,
+          index: columnSidecar.index,
+        })
+      );
+
+      continue;
     }
 
     if (currentSlot > slot) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
-          slot,
-        },
-        "ColumnSidecars received out of slot order"
+      warnings.push(
+        new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+            slot,
+          },
+          "ColumnSidecars received out of slot order"
+        )
       );
     }
 
     if (currentSlot === slot && currentIndex > columnSidecar.index) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
-          slot,
-        },
-        "Column indices out of order within a slot"
+      warnings.push(
+        new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.OUT_OF_ORDER_COLUMNS,
+            slot,
+          },
+          "Column indices out of order within a slot"
+        )
       );
     }
 
