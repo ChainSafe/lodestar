@@ -884,6 +884,24 @@ export class BeaconChain implements IBeaconChain {
     return sidecarsFinalized;
   }
 
+  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      const envelope = payloadInput.getPayloadEnvelope();
+      const serialized = this.serializedCache.get(envelope);
+      if (serialized) {
+        return serialized;
+      }
+      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+    }
+
+    return (
+      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
+      null
+    );
+  }
+
   async getSerializedDataColumnSidecars(
     blockSlot: Slot,
     blockRootHex: string,
