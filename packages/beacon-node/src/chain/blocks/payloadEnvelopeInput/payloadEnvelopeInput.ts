@@ -1,5 +1,5 @@
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ColumnIndex, DataColumnSidecar, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
+import {ColumnIndex, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
 import {toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -71,7 +71,7 @@ export class PayloadEnvelopeInput {
   private timeCreatedSec: number;
 
   private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
-  private readonly columnsDataPromise: PromiseParts<DataColumnSidecar[]>;
+  private readonly columnsDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
 
   state: PayloadEnvelopeInputState;
 
@@ -286,7 +286,7 @@ export class PayloadEnvelopeInput {
     return this.state.hasComputedAllData;
   }
 
-  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecar[]> {
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<gloas.DataColumnSidecar[]> {
     if (this.state.hasComputedAllData) {
       return Promise.resolve(this.getSampledColumns());
     }
