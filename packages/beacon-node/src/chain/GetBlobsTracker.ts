@@ -46,22 +46,21 @@ export class GetBlobsTracker {
   }
 
   triggerGetBlobs(input: IBlockInput | PayloadEnvelopeInput): void {
-    const blockRootHex = input.blockRootHex;
-    if (this.activeReconstructions.has(blockRootHex)) {
+    if (this.activeReconstructions.has(input.blockRootHex)) {
       return;
     }
 
     if (!(input instanceof PayloadEnvelopeInput) && isBlockInputBlobs(input)) {
       // there is not preallocation for blob sidecars like there is for columns sidecars so no need to
       // store the index for the preallocated buffers
-      this.activeReconstructions.add(blockRootHex);
+      this.activeReconstructions.add(input.blockRootHex);
       callInNextEventLoop(() => {
-        const logCtx = {slot: input.slot, root: blockRootHex};
+        const logCtx = {slot: input.slot, root: input.blockRootHex};
         this.logger.verbose("Trigger getBlobsV1 for block", logCtx);
         getBlobSidecarsFromExecution(this.config, this.executionEngine, this.metrics, this.emitter, input).finally(
           () => {
             this.logger.verbose("Completed getBlobsV1 for block", logCtx);
-            this.activeReconstructions.delete(blockRootHex);
+            this.activeReconstructions.delete(input.blockRootHex);
           }
         );
       });
@@ -87,10 +86,10 @@ export class GetBlobsTracker {
 
     // We don't care about the outcome of this call,
     // just that it has been triggered for this block root.
-    this.activeReconstructions.add(blockRootHex);
+    this.activeReconstructions.add(input.blockRootHex);
     this.blobsAndProofsBuffers[freeIndex].inUse = true;
     callInNextEventLoop(() => {
-      const logCtx = {slot: input.slot, root: blockRootHex};
+      const logCtx = {slot: input.slot, root: input.blockRootHex};
       this.logger.verbose("Trigger getBlobsV2 for block", logCtx);
       const promise =
         input instanceof PayloadEnvelopeInput
@@ -120,7 +119,7 @@ export class GetBlobsTracker {
         })
         .finally(() => {
           this.logger.verbose("Completed getBlobsV2 for block", logCtx);
-          this.activeReconstructions.delete(blockRootHex);
+          this.activeReconstructions.delete(input.blockRootHex);
           this.blobsAndProofsBuffers[freeIndex].inUse = false;
         });
     });
