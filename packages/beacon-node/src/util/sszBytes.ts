@@ -380,6 +380,8 @@ export function getAttDataFromSignedAggregateAndProofPhase0(data: Uint8Array): A
  * ```
  */
 const SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE;
+// proposer_index is ValidatorIndex = uint64 = 8 bytes
+const PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + SLOT_SIZE + 8;
 
 export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot | null {
   if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + SLOT_SIZE) {
@@ -387,6 +389,67 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
   }
 
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK);
+}
+
+export function getParentRootFromSignedBeaconBlockSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + ROOT_SIZE) {
+    return null;
+  }
+  blockRootBuf.set(
+    data.subarray(
+      PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK,
+      PARENT_ROOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + ROOT_SIZE
+    )
+  );
+  return `0x${blockRootBuf.toString("hex")}`;
+}
+
+/**
+ * Extract parentBlockHash from a GLOAS SignedBeaconBlock by navigating the SSZ offset pointer
+ * to the embedded SignedExecutionPayloadBid.
+ *
+ * Layout (bytes from start of SignedBeaconBlock):
+ *   [0..4)    message offset
+ *   [4..100)  signature (96 B)
+ *   [100..184) BeaconBlock fixed section: slot(8)+proposer_index(8)+parent_root(32)+state_root(32)+body_offset(4)
+ *   [184..)   BeaconBlockBody
+ *
+ * BeaconBlockBody (GLOAS) fixed section before signedExecutionPayloadBid offset pointer:
+ *   randaoReveal(96) + eth1Data(72) + graffiti(32)
+ *   + proposerSlashings(4) + attesterSlashings(4) + attestations(4) + deposits(4) + voluntaryExits(4)
+ *   + syncAggregate(160) + blsToExecutionChanges(4) = 384 bytes
+ *
+ * The 4-byte pointer at byte 568 (= 184+384) gives the offset of SignedExecutionPayloadBid
+ * within BeaconBlockBody. parentBlockHash is at that bid's byte 100 (after offset+sig).
+ */
+// BeaconBlock body starts after: msg_offset(4) + sig(96) + slot(8) + proposer_index(8) + parent_root(32) + state_root(32) + body_offset_ptr(4)
+const GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK =
+  VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE + SLOT_SIZE + 8 + ROOT_SIZE + ROOT_SIZE + VARIABLE_FIELD_OFFSET; // = 184
+const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY = 96 + 72 + 32 + 4 + 4 + 4 + 4 + 4 + 160 + 4; // = 384
+const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK =
+  GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + GLOAS_SIGNED_BID_OFFSET_POINTER_IN_BODY; // = 568
+// Within SignedExecutionPayloadBid, parentBlockHash is at byte 100 (msg_offset:4 + sig:96)
+const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // = 100
+
+export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + VARIABLE_FIELD_OFFSET) {
+    return null;
+  }
+  const bidOffset =
+    data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK] |
+    (data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + 1] << 8) |
+    (data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + 2] << 16) |
+    (data[GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + 3] << 24);
+
+  const parentBlockHashStart =
+    GLOAS_BODY_START_IN_SIGNED_BEACON_BLOCK + bidOffset + PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID;
+
+  if (data.length < parentBlockHashStart + ROOT_SIZE) {
+    return null;
+  }
+
+  blockRootBuf.set(data.subarray(parentBlockHashStart, parentBlockHashStart + ROOT_SIZE));
+  return `0x${blockRootBuf.toString("hex")}`;
 }
 
 /**

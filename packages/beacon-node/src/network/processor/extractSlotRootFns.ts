@@ -2,7 +2,6 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {SlotOptionalRoot, SlotRootHex} from "@lodestar/types";
 import {
   getBeaconBlockRootFromDataColumnSidecarSerialized,
-  getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
   getBlockRootFromBeaconAttestationSerialized,
   getBlockRootFromPayloadAttestationMessageSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
@@ -20,7 +19,7 @@ import {ExtractSlotRootFns} from "./types.js";
 
 /**
  * Extract the slot and block root of a gossip message form serialized data.
- * Not applicable for all topics.
+ * Only do it for messages that has slot and block root, and we want to await for the block if the block root is not known.
  */
 export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
   return {
@@ -72,14 +71,14 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
       const root = getBeaconBlockRootFromDataColumnSidecarSerialized(data);
       return root !== null ? {slot, root} : {slot};
     },
-    [GossipType.execution_payload]: (data: Uint8Array): SlotRootHex | null => {
+    [GossipType.execution_payload]: (data: Uint8Array): SlotOptionalRoot | null => {
       const slot = getSlotFromExecutionPayloadEnvelopeSerialized(data);
-      const root = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(data);
-
-      if (slot === null || root === null) {
+      // do not extract root now because network processor will await for block
+      // instead, we want network processor to extract root and search for block later if it's missing and BlockInputSync will queue it
+      if (slot === null) {
         return null;
       }
-      return {slot, root};
+      return {slot};
     },
     [GossipType.payload_attestation_message]: (data: Uint8Array): SlotRootHex | null => {
       const slot = getSlotFromPayloadAttestationMessageSerialized(data);
@@ -97,10 +96,6 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
         return null;
       }
 
-      // Don't extract a root here — the bid's awaiting logic is handled explicitly
-      // in the processor switch case using getParentBlockRootFromSignedExecutionPayloadBidSerialized.
-      // Returning a root here would cause the initial block-root check to queue this message
-      // in awaitingMessagesByBlockRoot under a garbage key.
       return {slot};
     },
   };

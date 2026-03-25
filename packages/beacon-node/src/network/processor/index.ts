@@ -13,10 +13,13 @@ import {ClockEvent} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {
+  getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
   getIndexFromSignedAggregateAndProofSerialized,
   getIndexFromSingleAttestationSerialized,
+  getParentBlockHashFromGloasSignedBeaconBlockSerialized,
   getParentBlockHashFromSignedExecutionPayloadBidSerialized,
   getParentBlockRootFromSignedExecutionPayloadBidSerialized,
+  getParentRootFromSignedBeaconBlockSerialized,
   getPayloadPresentFromPayloadAttestationMessageSerialized,
 } from "../../util/sszBytes.ts";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
@@ -302,6 +305,9 @@ export class NetworkProcessor {
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
     const topicType = message.topic.type;
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
+
+    // 1st extract round: make sure slot in range and if block root is not available
+    // proactively search for it + queue the message
     const slotRoot = extractBlockSlotRootFn
       ? extractBlockSlotRootFn(message.msg.data, message.topic.boundary.fork)
       : null;
@@ -345,9 +351,48 @@ export class NetworkProcessor {
       preprocessResult = {action: PreprocessAction.AwaitBlock, root};
     }
 
+    // 2nd extract round for some specific topics
+    // we separate to search action vs await action
+
+    // beacon_block: proactively search for parent block/envelope across all forks, but never queue.
+    // BlockInputSync handles cascading recovery if the gossip handler throws.
+    if (topicType === GossipType.beacon_block) {
+      const parentRoot = getParentRootFromSignedBeaconBlockSerialized(message.msg.data);
+      if (parentRoot) {
+        if (ForkSeq[fork] >= ForkSeq.gloas) {
+          // GLOAS: also check parent envelope, same logic as execution_payload_bid
+          const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data);
+          if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
+            const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+            if (protoBlock === null) {
+              this.searchUnknownBlock(
+                {slot, root: parentRoot},
+                BlockInputSource.network_processor,
+                message.propagationSource.toString()
+              );
+            }
+            if (protoBlock?.executionPayloadBlockHash && protoBlock.executionPayloadBlockHash !== parentBlockHash) {
+              this.searchUnknownEnvelope(
+                {slot, root: parentRoot},
+                BlockInputSource.network_processor,
+                message.propagationSource.toString()
+              );
+            }
+          }
+        } else if (!this.chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
+          this.searchUnknownBlock(
+            {slot, root: parentRoot},
+            BlockInputSource.network_processor,
+            message.propagationSource.toString()
+          );
+        }
+      }
+      preprocessResult = {action: PreprocessAction.PushToQueue};
+    }
+
     if (ForkSeq[fork] >= ForkSeq.gloas) {
       // specific check for each topic
-      // note that it's supposed to NOT queues for beacon_block and execution_payload because it's not a one-off
+      // note that it's supposed to NOT queue beacon_block (handled above) and execution_payload because it's not a one-off;
       // for those topics, gossip handlers will throw and BlockInputSync will handle a tree of them instead
       switch (topicType) {
         case GossipType.beacon_attestation:
@@ -392,7 +437,22 @@ export class NetworkProcessor {
           }
           break;
         }
-        // TODO GLOAS: handle for beacon_block and execution_payload too, but do not queue them
+        case GossipType.execution_payload: {
+          // extractBlockSlotRootFn does not return a root for this topic.
+          // Extract beacon_block_root directly and proactively trigger block sync if missing.
+          // Do NOT queue — the handler runs immediately; BlockInputSync handles recovery.
+          const blockRoot = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(message.msg.data);
+          if (blockRoot && !this.chain.forkChoice.hasBlockHexUnsafe(blockRoot)) {
+            this.searchUnknownBlock(
+              {slot, root: blockRoot},
+              BlockInputSource.network_processor,
+              message.propagationSource.toString()
+            );
+          }
+          // do not await for block, we want UnknownBlockSync to handle it.
+          preprocessResult = {action: PreprocessAction.PushToQueue};
+          break;
+        }
         case GossipType.execution_payload_bid: {
           // instead of search for root, this searches for parent root
           const parentBlockRoot = getParentBlockRootFromSignedExecutionPayloadBidSerialized(message.msg.data);

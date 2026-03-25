@@ -38,8 +38,10 @@ import {
   getIndexFromSignedAggregateAndProofSerialized,
   getIndexFromSingleAttestationSerialized,
   getLastProcessedSlotFromBeaconStateSerialized,
+  getParentBlockHashFromGloasSignedBeaconBlockSerialized,
   getParentBlockHashFromSignedExecutionPayloadBidSerialized,
   getParentBlockRootFromSignedExecutionPayloadBidSerialized,
+  getParentRootFromSignedBeaconBlockSerialized,
   getPayloadPresentFromPayloadAttestationMessageSerialized,
   getSignatureFromAttestationSerialized,
   getSignatureFromSingleAttestationSerialized,
@@ -337,6 +339,7 @@ describe("signedBeaconBlock SSZ serialized picking", () => {
     const bytes = ssz.phase0.SignedBeaconBlock.serialize(signedBeaconBlock);
     it(`signedBeaconBlock ${i}`, () => {
       expect(getSlotFromSignedBeaconBlockSerialized(bytes)).toBe(signedBeaconBlock.message.slot);
+      expect(getParentRootFromSignedBeaconBlockSerialized(bytes)).toBe(toRootHex(signedBeaconBlock.message.parentRoot));
     });
   }
 
@@ -344,6 +347,30 @@ describe("signedBeaconBlock SSZ serialized picking", () => {
     const invalidSlotDataSizes = [0, 50, 104];
     for (const size of invalidSlotDataSizes) {
       expect(getSlotFromSignedBeaconBlockSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getParentRootFromSignedBeaconBlockSerialized - invalid data", () => {
+    for (const size of [0, 100, 147]) {
+      expect(getParentRootFromSignedBeaconBlockSerialized(Buffer.alloc(size))).toBeNull();
+    }
+  });
+});
+
+describe("getParentBlockHashFromGloasSignedBeaconBlockSerialized", () => {
+  it("extracts parent block hash from GLOAS signed beacon block", () => {
+    const signedBeaconBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    signedBeaconBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0xaa);
+    const bytes = ssz.gloas.SignedBeaconBlock.serialize(signedBeaconBlock);
+
+    expect(getParentBlockHashFromGloasSignedBeaconBlockSerialized(bytes)).toBe(
+      toHex(signedBeaconBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+    );
+  });
+
+  it("returns null for invalid data", () => {
+    for (const size of [0, 200, 571]) {
+      expect(getParentBlockHashFromGloasSignedBeaconBlockSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 });
