@@ -17,7 +17,6 @@ import {
   ColumnIndex,
   CustodyIndex,
   DataColumnSidecar,
-  DataColumnSidecars,
   Root,
   SSZTypesFor,
   SignedBeaconBlock,
@@ -295,12 +294,12 @@ export function getDataColumnSidecars(
   kzgCommitments: deneb.KZGCommitment[],
   kzgCommitmentsInclusionProof: fulu.KzgCommitmentsInclusionProof,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): fulu.DataColumnSidecars {
+): fulu.DataColumnSidecar[] {
   if (cellsAndKzgProofs.length !== kzgCommitments.length) {
     throw Error("Invalid cellsAndKzgProofs length for getDataColumnSidecars");
   }
 
-  const sidecars: fulu.DataColumnSidecars = [];
+  const sidecars: fulu.DataColumnSidecar[] = [];
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     const columnCells = [];
     const columnProofs = [];
@@ -331,7 +330,7 @@ export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock<ForkPostFulu>,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): DataColumnSidecars {
+): DataColumnSidecar[] {
   const fork = config.getForkName(signedBlock.message.slot);
   const blobKzgCommitments = getBlobKzgCommitments(fork, signedBlock);
 
@@ -362,7 +361,7 @@ export function getDataColumnSidecarsFromBlock(
 export function getDataColumnSidecarsFromColumnSidecar(
   sidecar: DataColumnSidecar,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): DataColumnSidecars {
+): DataColumnSidecar[] {
   if (isGloasDataColumnSidecar(sidecar)) {
     return getDataColumnSidecarsForGloas(sidecar.slot, sidecar.beaconBlockRoot, cellsAndKzgProofs);
   }
@@ -399,13 +398,13 @@ export function getDataColumnSidecarsForGloas(
   slot: Slot,
   beaconBlockRoot: Root,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): gloas.DataColumnSidecars {
+): gloas.DataColumnSidecar[] {
   // No need to create data column sidecars if there are no blobs
   if (cellsAndKzgProofs.length === 0) {
     return [];
   }
 
-  const sidecars: gloas.DataColumnSidecars = [];
+  const sidecars: gloas.DataColumnSidecar[] = [];
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     const column: Uint8Array[] = [];
     const kzgProofs: Uint8Array[] = [];
