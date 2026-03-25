@@ -16,7 +16,6 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {
   BeaconBlockBody,
   DataColumnSidecar,
-  DataColumnSidecars,
   SSZTypesFor,
   SignedBeaconBlock,
   deneb,
@@ -83,7 +82,7 @@ export function getBlobSidecars(
  */
 export async function dataColumnMatrixRecovery(
   partialSidecars: Map<number, DataColumnSidecar>
-): Promise<DataColumnSidecars | null> {
+): Promise<DataColumnSidecar[] | null> {
   const columnCount = partialSidecars.size;
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
@@ -92,7 +91,7 @@ export async function dataColumnMatrixRecovery(
 
   if (columnCount === NUMBER_OF_COLUMNS) {
     // full columns, no need to recover
-    return Array.from(partialSidecars.values()) as DataColumnSidecars;
+    return Array.from(partialSidecars.values());
   }
 
   // Sort data columns by index in ascending order before passing for kzg operations
@@ -132,7 +131,7 @@ export async function dataColumnMatrixRecovery(
     }
   }
 
-  const result: DataColumnSidecars = new Array(NUMBER_OF_COLUMNS);
+  const result: DataColumnSidecar[] = new Array(NUMBER_OF_COLUMNS);
 
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     let sidecar = partialSidecars.get(columnIndex);
@@ -170,7 +169,7 @@ export async function dataColumnMatrixRecovery(
  * Reconstruct blobs from a set of data columns, at least 50%+ of all the columns
  * must be provided to allow to reconstruct the full data matrix
  */
-export async function reconstructBlobs(sidecars: DataColumnSidecars, indices?: number[]): Promise<deneb.Blobs> {
+export async function reconstructBlobs(sidecars: DataColumnSidecar[], indices?: number[]): Promise<deneb.Blobs> {
   if (sidecars.length < NUMBER_OF_COLUMNS / 2) {
     throw Error(
       `Expected at least ${NUMBER_OF_COLUMNS / 2} data columns to reconstruct blobs, received ${sidecars.length}`
@@ -209,7 +208,7 @@ export async function reconstructBlobs(sidecars: DataColumnSidecars, indices?: n
  * Recover cells for specific blob indices from a set of data columns
  */
 async function recoverBlobCells(
-  partialSidecars: DataColumnSidecars,
+  partialSidecars: DataColumnSidecar[],
   blobIndices: number[]
 ): Promise<Map<number, fulu.Cell[]> | null> {
   const columnCount = partialSidecars.length;

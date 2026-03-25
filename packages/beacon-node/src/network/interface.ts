@@ -20,7 +20,6 @@ import type {Libp2p as ILibp2p} from "libp2p";
 import {
   AttesterSlashing,
   DataColumnSidecar,
-  DataColumnSidecars,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
@@ -78,11 +77,11 @@ export interface INetwork extends INetworkCorePublic {
   sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
-  ): Promise<DataColumnSidecars>;
+  ): Promise<DataColumnSidecar[]>;
   sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
     request: DataColumnSidecarsByRootRequest
-  ): Promise<DataColumnSidecars>;
+  ): Promise<DataColumnSidecar[]>;
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;

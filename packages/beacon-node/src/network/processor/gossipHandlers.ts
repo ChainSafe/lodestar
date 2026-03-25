@@ -5,6 +5,7 @@ import {
   ForkName,
   ForkPostDeneb,
   ForkPostElectra,
+  ForkPostFulu,
   ForkPostGloas,
   ForkPreElectra,
   ForkSeq,

@@ -199,7 +199,7 @@ const forkChoiceTest =
               // `proofs` should not be present.
               let blobs: deneb.Blob[] | undefined;
               let proofs: deneb.KZGProof[] | undefined;
-              let columns: fulu.DataColumnSidecars | undefined;
+              let columns: fulu.DataColumnSidecar[] | undefined;
               if (step.blobs !== undefined) {
                 blobs = testcase.blobs.get(step.blobs);
               }

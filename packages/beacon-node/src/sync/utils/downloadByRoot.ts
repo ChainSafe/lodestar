@@ -4,7 +4,7 @@ import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFul
 import {
   BlobIndex,
   ColumnIndex,
-  DataColumnSidecars,
+  DataColumnSidecar,
   SignedBeaconBlock,
   Slot,
   deneb,
@@ -61,7 +61,7 @@ export type FetchByRootAndValidateColumnsProps = FetchByRootCoreProps & {
 export type FetchByRootResponses = {
   block: SignedBeaconBlock;
   blobSidecars?: deneb.BlobSidecars;
-  columnSidecars?: DataColumnSidecars;
+  columnSidecars?: DataColumnSidecar[];
 };
 
 export type DownloadByRootProps = FetchByRootCoreProps & {
@@ -223,7 +223,7 @@ export async function fetchByRoot({
 }: FetchByRootProps): Promise<WarnResult<FetchByRootResponses, DownloadByRootError>> {
   let block: SignedBeaconBlock;
   let blobSidecars: deneb.BlobSidecars | undefined;
-  let columnSidecarResult: WarnResult<DataColumnSidecars, DownloadByRootError> | undefined;
+  let columnSidecarResult: WarnResult<DataColumnSidecar[], DownloadByRootError> | undefined;
   const {peerId: peerIdStr} = peerMeta;
 
   if (isPendingBlockInput(cacheItem)) {
@@ -386,7 +386,7 @@ export async function fetchAndValidateColumns({
   block,
   blockRoot,
   missing,
-}: FetchByRootAndValidateColumnsProps): Promise<WarnResult<DataColumnSidecars, DownloadByRootError>> {
+}: FetchByRootAndValidateColumnsProps): Promise<WarnResult<DataColumnSidecar[], DownloadByRootError>> {
   const {peerId: peerIdStr} = peerMeta;
   const slot = block.message.slot;
   const blobCount = getBlobKzgCommitments(forkName, block).length;
@@ -470,7 +470,7 @@ export async function fetchColumnsByRoot({
   blockRoot,
   missing,
 }: Pick<FetchByRootAndValidateColumnsProps, "network" | "peerMeta" | "blockRoot" | "missing">): Promise<
-  DataColumnSidecars
+  DataColumnSidecar[]
 > {
   return await network.sendDataColumnSidecarsByRoot(peerMeta.peerId, [{blockRoot, columns: missing}]);
 }

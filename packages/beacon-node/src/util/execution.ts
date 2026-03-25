@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {DataColumnSidecars, SignedBeaconBlock, deneb, fulu, isGloasDataColumnSidecar} from "@lodestar/types";
+import {DataColumnSidecar, SignedBeaconBlock, deneb, fulu, isGloasDataColumnSidecar} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -172,7 +172,7 @@ export async function getDataColumnSidecarsFromExecution(
     return DataColumnEngineResult.SuccessLate;
   }
 
-  let dataColumnSidecars: DataColumnSidecars;
+  let dataColumnSidecars: DataColumnSidecar[];
   const compTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
   try {
     const cellsAndProofs = await getCellsAndProofs(blobs);
@@ -195,7 +195,7 @@ export async function getDataColumnSidecarsFromExecution(
   const sampledColumns = previouslyMissingColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
 
   // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
-  emitter.emit(ChainEvent.publishDataColumns, sampledColumns as DataColumnSidecars);
+  emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
   // TODO: Can we record dataColumns.sentPeersPerSubnet metric here somehow
 
   // add all sampled columns to the block input, even if we didn't sample them
