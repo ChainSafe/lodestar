@@ -395,7 +395,7 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
 }
 
 /**
- * Validate a subset of fulu data column sidecars against a block.
+ * Validate a subset of fulu data column sidecars against a block
  *
  * Requires the block to be known to the node
  *
