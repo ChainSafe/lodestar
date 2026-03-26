@@ -690,11 +690,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const dataColumnSidecar = sszDeserialize(topic, serializedData);
       const dataColumnSlot = getDataColumnSidecarSlot(dataColumnSidecar);
       const index = dataColumnSidecar.index;
-
-      if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
-      }
-
       const delaySec = chain.clock.secFromSlot(dataColumnSlot, seenTimestampSec);
 
       if (isForkPostGloas(fork)) {
@@ -751,6 +746,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           );
         });
       } else {
+        if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {
+          throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
+        }
+
         if (isGloasDataColumnSidecar(dataColumnSidecar)) {
           throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
             code: DataColumnSidecarErrorCode.INCORRECT_TYPE,
