@@ -7,21 +7,27 @@ import {
   ForkPostCapella,
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreFulu,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_EPOCH,
   isForkPostDeneb,
   isForkPostFulu,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, ssz} from "@lodestar/types";
+import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {VersionedHashes} from "../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
 import {getBlobSidecars, kzgCommitmentToVersionedHash} from "../../src/util/blobs.js";
 import {Clock} from "../../src/util/clock.js";
-import {CustodyConfig, computePostFuluKzgCommitmentsInclusionProof} from "../../src/util/dataColumns.js";
+import {
+  CustodyConfig,
+  computePostFuluKzgCommitmentsInclusionProof,
+  getGloasDataColumnSidecars,
+} from "../../src/util/dataColumns.js";
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
 
@@ -94,6 +100,10 @@ export type GenerateBlockProps<F extends ForkPostCapella> = {
   parentRoot?: Uint8Array;
 };
 
+type ColumnSidecarsForFork<F extends ForkPostFulu> = F extends ForkPostGloas
+  ? gloas.DataColumnSidecar[]
+  : fulu.DataColumnSidecar[];
+
 function generateBeaconBlock<F extends ForkPostCapella>({
   forkName,
   slot,
@@ -162,34 +172,55 @@ function generateColumnSidecars<F extends ForkPostFulu>(
   returnBlobs = false
 ): {
   block: SignedBeaconBlock<F>;
-  columnSidecars: fulu.DataColumnSidecar[];
+  columnSidecars: ColumnSidecarsForFork<F>;
   blobs?: deneb.Blob[];
 } {
   const blobs = Array.from({length: numberOfBlobs}, () => generateRandomBlob());
   const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
-  (block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments = kzgCommitments;
-
-  const signedBlockHeader = signedBlockToSignedHeader(config, block);
   const cellsAndProofs = blobs.map((blob) => kzg.computeCellsAndKzgProofs(blob));
-  const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(forkName, block.message.body);
+  let columnSidecars: ColumnSidecarsForFork<F>;
 
-  const columnSidecars = Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
-    const column = oomProtection
-      ? []
-      : Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].cells[columnIndex]);
-    const kzgProofs = Array.from(
-      {length: blobs.length},
-      (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]
+  if (isForkPostGloas(forkName)) {
+    (block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments = kzgCommitments;
+
+    const beaconBlockRoot = ssz[forkName as ForkPostGloas].BeaconBlock.hashTreeRoot(
+      block.message as SignedBeaconBlock<ForkPostGloas>["message"]
     );
-    return {
-      index: columnIndex,
-      column,
-      kzgCommitments,
-      kzgProofs,
-      signedBlockHeader,
-      kzgCommitmentsInclusionProof,
-    };
-  });
+    columnSidecars = getGloasDataColumnSidecars(
+      block.message.slot,
+      beaconBlockRoot,
+      cellsAndProofs
+    ) as ColumnSidecarsForFork<F>;
+  } else {
+    (block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>).blobKzgCommitments = kzgCommitments;
+
+    const signedBlockHeader = signedBlockToSignedHeader(
+      config,
+      block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>
+    );
+    const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(
+      forkName,
+      block.message.body as BeaconBlockBody<ForkPostFulu & ForkPreGloas>
+    );
+
+    columnSidecars = Array.from({length: NUMBER_OF_COLUMNS}, (_, columnIndex) => {
+      const column = oomProtection
+        ? []
+        : Array.from({length: blobs.length}, (_, rowNumber) => cellsAndProofs[rowNumber].cells[columnIndex]);
+      const kzgProofs = Array.from(
+        {length: blobs.length},
+        (_, rowNumber) => cellsAndProofs[rowNumber].proofs[columnIndex]
+      );
+      return {
+        index: columnIndex,
+        column,
+        kzgCommitments,
+        kzgProofs,
+        signedBlockHeader,
+        kzgCommitmentsInclusionProof,
+      } satisfies fulu.DataColumnSidecar;
+    }) as ColumnSidecarsForFork<F>;
+  }
 
   return {
     block,
@@ -251,7 +282,7 @@ export type BlockWithBlobsTestSet<F extends ForkPostDeneb> = BlockTestSet<F> & {
 };
 
 export type BlockWithColumnsTestSet<F extends ForkPostFulu> = BlockTestSet<F> & {
-  columnSidecars: fulu.DataColumnSidecar[];
+  columnSidecars: ColumnSidecarsForFork<F>;
   blobs?: deneb.Blob[];
 };
 
