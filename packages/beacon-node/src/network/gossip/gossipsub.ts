@@ -179,6 +179,19 @@ export class Eth2Gossipsub {
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: 16829,
+      // Protobuf decode limits to bound memory allocation from untrusted RPC messages.
+      // js-gossipsub defaults all limits to Infinity. Setting finite values provides
+      // defense-in-depth against resource exhaustion via crafted control messages.
+      // See: Lighthouse v8.1.3 security patches for analogous rust-libp2p fixes.
+      decodeRpcLimits: {
+        maxSubscriptions: 512,
+        maxMessages: 256,
+        maxIhaveMessageIDs: 200,
+        maxIwantMessageIDs: 200,
+        maxIdontwantMessageIDs: 2000,
+        maxControlMessages: 500,
+        maxPeerInfos: 100,
+      },
     })(modules.libp2p.services.components) as GossipSubInternal;
 
     if (metrics) {
