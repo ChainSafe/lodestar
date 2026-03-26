@@ -902,7 +902,7 @@ export function getBeaconBlockApi({
           );
         }
 
-        const blobKzgCommitments = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments;
+        const blobKzgCommitments = getBlobKzgCommitments(fork, block as SignedBeaconBlock<ForkPostFulu>);
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
