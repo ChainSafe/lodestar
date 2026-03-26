@@ -44,7 +44,7 @@ export class GetBlobsTracker {
     this.config = init.config;
   }
 
-  triggerGetBlobs(input: IBlockInput | PayloadEnvelopeInput): void {
+  triggerGetBlobs(input: IBlockInput | PayloadEnvelopeInput, onComplete?: () => void): void {
     if (this.activeReconstructions.has(input.blockRootHex)) {
       return;
     }
@@ -101,6 +101,7 @@ export class GetBlobsTracker {
         .then((result) => {
           this.logger.debug("getBlobsV2 result for block", {...logCtx, result});
           this.metrics?.dataColumns.dataColumnEngineResult.inc({result});
+          onComplete?.();
         })
         .catch((error) => {
           this.logger.debug("Error during getBlobsV2 for block", logCtx, error as Error);

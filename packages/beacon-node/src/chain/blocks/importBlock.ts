@@ -155,8 +155,18 @@ export async function importBlock(
     });
 
     // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
-    // which is all the information we need so there is no reason to delay until execution payload arrives
-    this.getBlobsTracker.triggerGetBlobs(payloadInput);
+    // which is all the information we need so there is no reason to delay until execution payload arrives.
+    this.getBlobsTracker.triggerGetBlobs(payloadInput, () => {
+      //TODO GLOAS: come up with a better mechanism to trigger processExecutionPayload after data becomes available,
+      // similar to how pre-gloas uses waitForBlockAndAllData with a cutoff timeout and incompleteBlockInput event.
+      this.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+        this.logger.debug(
+          "Error processing execution payload after getBlobs",
+          {slot: blockSlot, root: blockRootHex},
+          e as Error
+        );
+      });
+    });
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
