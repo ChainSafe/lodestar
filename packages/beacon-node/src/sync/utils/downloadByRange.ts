@@ -27,7 +27,7 @@ export type DownloadByRangeRequests = {
 export type DownloadByRangeResponses = {
   blocks?: SignedBeaconBlock[];
   blobSidecars?: deneb.BlobSidecars;
-  columnSidecars?: DataColumnSidecar[];
+  columnSidecars?: fulu.DataColumnSidecar[];
 };
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
@@ -58,7 +58,7 @@ export type ValidatedBlobSidecars = {
 
 export type ValidatedColumnSidecars = {
   blockRoot: Uint8Array;
-  columnSidecars: DataColumnSidecar[];
+  columnSidecars: fulu.DataColumnSidecar[];
 };
 
 export type ValidatedResponses = {
@@ -150,7 +150,7 @@ export function cacheByRangeResponses({
   }
 
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
-    const dataSlot = columnSidecars.at(0) ? getDataColumnSidecarSlot(columnSidecars[0]) : undefined;
+    const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
     if (dataSlot === undefined) {
       throw new Error(
         `Coding Error: empty columnSidecars returned for blockRoot=${toRootHex(blockRoot)} from validation functions`
@@ -174,10 +174,9 @@ export function cacheByRangeResponses({
     }
     for (const columnSidecar of columnSidecars) {
       // will throw if root hex does not match (meaning we are following the wrong chain)
-      // BlockInputColumns is fulu-only, safe to narrow
       existing.addColumn(
         {
-          columnSidecar: columnSidecar as fulu.DataColumnSidecar,
+          columnSidecar,
           blockRootHex,
           seenTimestampSec,
           peerIdStr,
@@ -246,7 +245,7 @@ export async function requestByRange({
 }): Promise<DownloadByRangeResponses> {
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
-  let columnSidecars: undefined | DataColumnSidecar[];
+  let columnSidecars: undefined | fulu.DataColumnSidecar[];
 
   const requests: Promise<unknown>[] = [];
 
@@ -269,7 +268,7 @@ export async function requestByRange({
   if (columnsRequest) {
     requests.push(
       network.sendDataColumnSidecarsByRange(peerIdStr, columnsRequest).then((columnResponse) => {
-        columnSidecars = columnResponse;
+        columnSidecars = columnResponse as fulu.DataColumnSidecar[];
       })
     );
   }
@@ -685,12 +684,12 @@ export async function validateColumnsByRangeResponse(
     const slot = block.message.slot;
     const rootHex = toRootHex(blockRoot);
     const forkName = config.getForkName(slot);
-    const columnSidecarsMap: Map<number, DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
+    const columnSidecarsMap: Map<number, fulu.DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
     const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index);
 
     let blobCount: number;
     if (!isForkPostFulu(forkName)) {
-      const dataSlot = columnSidecars.at(0) ? getDataColumnSidecarSlot(columnSidecars[0]) : undefined;
+      const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISMATCH_BLOCK_FORK,
         slot,
@@ -773,7 +772,7 @@ export async function validateColumnsByRangeResponse(
         slot,
         blockRoot,
         blobCount,
-        columnSidecars as fulu.DataColumnSidecar[],
+        columnSidecars,
         peerDasMetrics
       ).then(() => ({
         blockRoot,

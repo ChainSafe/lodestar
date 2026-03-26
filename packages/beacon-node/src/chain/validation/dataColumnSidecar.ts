@@ -397,6 +397,8 @@ export function verifyDataColumnSidecarInclusionProof(dataColumnSidecar: fulu.Da
 /**
  * Validate a subset of fulu data column sidecars against a block.
  *
+ * Requires the block to be known to the node
+ *
  * NOTE: chain is optional to skip signature verification. Helpful for testing purposes and so that can control whether
  * signature gets checked depending on the reqresp method that is being checked
  */
