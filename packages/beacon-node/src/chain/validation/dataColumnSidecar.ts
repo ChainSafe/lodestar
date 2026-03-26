@@ -224,8 +224,8 @@ export async function validateGossipGloasDataColumnSidecar(
 
   if (!blockData) {
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
-      code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
-      parentRoot: blockRootHex,
+      code: DataColumnSidecarErrorCode.BLOCK_UNKNOWN,
+      blockRoot: blockRootHex,
       slot,
     });
   }
