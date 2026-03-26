@@ -465,7 +465,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipGloasDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
+      await validateGossipGloasDataColumnSidecar(chain, payloadInput, dataColumnSidecar, gossipSubnet, metrics);
 
       const addedColumn = payloadInput.addColumn({
         columnSidecar: dataColumnSidecar,

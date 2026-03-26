@@ -10,12 +10,13 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {DataColumnSidecar, Root, Slot, SubnetID, fulu, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
+import {DataColumnSidecar, Root, Slot, SubnetID, fulu, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {getDataColumnSidecarBlockRoot, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
+import {getDataColumnSidecarSlot} from "../../util/dataColumns.js";
 import {kzg} from "../../util/kzg.js";
+import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {
   DataColumnSidecarErrorCode,
   DataColumnSidecarGossipError,
@@ -208,21 +209,16 @@ export async function validateGossipFuluDataColumnSidecar(
 // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipGloasDataColumnSidecar(
   chain: IBeaconChain,
+  payloadInput: PayloadEnvelopeInput,
   dataColumnSidecar: gloas.DataColumnSidecar,
   gossipSubnet: SubnetID,
   metrics: Metrics | null
 ): Promise<void> {
-  const blockRoot = getDataColumnSidecarBlockRoot(dataColumnSidecar);
-  const blockRootHex = toRootHex(blockRoot);
-  const slot = getDataColumnSidecarSlot(dataColumnSidecar);
+  const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
+  const slot = dataColumnSidecar.slot;
 
   // [IGNORE] The sidecar's block must be known
-  const cachedBlockInput = chain.seenBlockInputCache.get(blockRootHex);
-  const blockData = cachedBlockInput?.hasBlock()
-    ? cachedBlockInput.getBlock()
-    : (await chain.getBlockByRoot(blockRootHex))?.block;
-
-  if (!blockData) {
+  if (chain.forkChoice.getBlockHexDefaultStatus(blockRootHex) === null) {
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
       code: DataColumnSidecarErrorCode.BLOCK_UNKNOWN,
       blockRoot: blockRootHex,
@@ -230,25 +226,17 @@ export async function validateGossipGloasDataColumnSidecar(
     });
   }
 
-  if (blockData.message.slot !== slot) {
+  if (payloadInput.slot !== slot) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_SLOT,
       columnIndex: dataColumnSidecar.index,
-      expected: blockData.message.slot,
+      expected: payloadInput.slot,
       actual: slot,
     });
   }
 
-  if (!isGloasBeaconBlock(blockData.message)) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.INCORRECT_BLOCK_TYPE,
-      slot,
-      columnIndex: dataColumnSidecar.index,
-    });
-  }
-
   // [REJECT] The sidecar must pass verify_data_column_sidecar against the block commitments
-  const kzgCommitments = blockData.message.body.signedExecutionPayloadBid.message.blobKzgCommitments;
+  const kzgCommitments = payloadInput.getBlobKzgCommitments();
   verifyGloasDataColumnSidecar(dataColumnSidecar, kzgCommitments);
 
   // [REJECT] The sidecar must be on the correct subnet
