@@ -289,8 +289,6 @@ export function getBlobKzgCommitments(
  *
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars
- *
- * For gloas, use getGloasDataColumnSidecars (spec: gloas/builder.md#get_data_column_sidecars)
  */
 export function getFuluDataColumnSidecars(
   signedBlockHeader: SignedBeaconBlockHeader,
@@ -436,7 +434,7 @@ export function getGloasDataColumnSidecars(
 }
 
 /**
- * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns.
+ * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns
  */
 export async function recoverDataColumnSidecars(
   input: BlockInputColumns | PayloadEnvelopeInput,
