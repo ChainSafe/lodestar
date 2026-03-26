@@ -215,23 +215,24 @@ export async function validateGossipGloasDataColumnSidecar(
   metrics: Metrics | null
 ): Promise<void> {
   const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
-  const slot = dataColumnSidecar.slot;
+  const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
 
-  // [IGNORE] The sidecar's block must be known
-  if (chain.forkChoice.getBlockHexDefaultStatus(blockRootHex) === null) {
+  // [IGNORE] A valid block for the sidecar's `slot` has been seen.
+  if (block === null) {
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
       code: DataColumnSidecarErrorCode.BLOCK_UNKNOWN,
       blockRoot: blockRootHex,
-      slot,
+      slot: dataColumnSidecar.slot,
     });
   }
 
-  if (payloadInput.slot !== slot) {
+  // [REJECT] The sidecar slot matches the slot of the block with root beacon_block_root.
+  if (block.slot !== dataColumnSidecar.slot) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_SLOT,
       columnIndex: dataColumnSidecar.index,
-      expected: payloadInput.slot,
-      actual: slot,
+      expected: block.slot,
+      actual: dataColumnSidecar.slot,
     });
   }
 
@@ -260,7 +261,7 @@ export async function validateGossipGloasDataColumnSidecar(
   } catch {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF,
-      slot,
+      slot: dataColumnSidecar.slot,
       columnIndex: dataColumnSidecar.index,
     });
   } finally {
@@ -315,6 +316,10 @@ function verifyFuluDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar:
   }
 }
 
+/**
+ * SPEC FUNCTION
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/p2p-interface.md#verify_data_column_sidecar
+ */
 function verifyGloasDataColumnSidecar(dataColumnSidecar: gloas.DataColumnSidecar, kzgCommitments: Uint8Array[]): void {
   const slot = getDataColumnSidecarSlot(dataColumnSidecar);
   if (dataColumnSidecar.index >= NUMBER_OF_COLUMNS) {

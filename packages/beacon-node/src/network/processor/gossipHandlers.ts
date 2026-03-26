@@ -445,7 +445,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
     }
 
-    // check if column already known in PayloadEnvelopeInput
+    // [IGNORE] The sidecar is the first sidecar for the tuple
+    // (sidecar.beacon_block_root, sidecar.index) with valid kzg proof.
     if (payloadInput.hasColumn(dataColumnSidecar.index)) {
       metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
       logger.debug("Already have column sidecar in PayloadEnvelopeInput, skipping processing", {
