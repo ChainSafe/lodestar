@@ -11,7 +11,7 @@ import {
 } from "../../chain/blocks/blockInput/index.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
-import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
+import {validateFuluBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {INetwork} from "../../network/index.js";
 import {getBlobKzgCommitments, getDataColumnSidecarSlot} from "../../util/dataColumns.js";
@@ -768,13 +768,12 @@ export async function validateColumnsByRangeResponse(
     }
 
     validationPromises.push(
-      validateBlockDataColumnSidecars(
+      validateFuluBlockDataColumnSidecars(
         null, // do not pass chain here so we do not validate header signature
         slot,
         blockRoot,
         blobCount,
-        columnSidecars,
-        getBlobKzgCommitments(forkName, block as SignedBeaconBlock<ForkPostFulu>),
+        columnSidecars as fulu.DataColumnSidecar[],
         peerDasMetrics
       ).then(() => ({
         blockRoot,

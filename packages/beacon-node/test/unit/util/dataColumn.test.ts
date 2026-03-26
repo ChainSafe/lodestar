@@ -1,9 +1,9 @@
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {ChainForkConfig, createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {fulu, ssz} from "@lodestar/types";
 import {bigIntToBytes, fromHex} from "@lodestar/utils";
-import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {
   CustodyConfig,
   getDataColumnSidecarsFromBlock,
@@ -173,7 +173,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
     await expect(
-      validateBlockDataColumnSidecars(null, slot, blockRoot, kzgCommitments.length, columnSidecars, null)
+      validateFuluBlockDataColumnSidecars(null, slot, blockRoot, kzgCommitments.length, columnSidecars as fulu.DataColumnSidecar[])
     ).resolves.toBeUndefined();
   });
 
@@ -209,7 +209,7 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    await expect(validateBlockDataColumnSidecars(chain, slot, blockRoot, 0, columnSidecars, null)).rejects.toThrow(
+    await expect(validateFuluBlockDataColumnSidecars(chain, slot, blockRoot, 0, columnSidecars as fulu.DataColumnSidecar[])).rejects.toThrow(
       "Block has no blob commitments but data column sidecars were provided"
     );
   });

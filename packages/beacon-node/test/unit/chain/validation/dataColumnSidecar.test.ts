@@ -2,41 +2,39 @@ import {describe, expect, it} from "vitest";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
-import {validateBlockDataColumnSidecars} from "../../../../src/chain/validation/dataColumnSidecar.js";
+import {validateFuluBlockDataColumnSidecars} from "../../../../src/chain/validation/dataColumnSidecar.js";
 import {generateBlockWithColumnSidecars} from "../../../utils/blocksAndData.js";
 
-describe("validateBlockDataColumnSidecars", () => {
+describe("validateFuluBlockDataColumnSidecars", () => {
   const {block, blockRoot, columnSidecars} = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
 
   it("should validate correct column sidecars", async () => {
     await expect(
-      validateBlockDataColumnSidecars(
+      validateFuluBlockDataColumnSidecars(
         null,
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        columnSidecars,
-        null
+        columnSidecars
       )
     ).resolves.toBeUndefined();
   });
 
   it("should validate empty sidecars array", async () => {
     await expect(
-      validateBlockDataColumnSidecars(
+      validateFuluBlockDataColumnSidecars(
         null,
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [],
-        null
+        []
       )
     ).resolves.toBeUndefined();
   });
 
   it("should error on no blobs in block", async () => {
     await expect(
-      validateBlockDataColumnSidecars(null, block.message.slot, blockRoot, 0, columnSidecars, null)
+      validateFuluBlockDataColumnSidecars(null, block.message.slot, blockRoot, 0, columnSidecars)
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
 
@@ -45,13 +43,12 @@ describe("validateBlockDataColumnSidecars", () => {
     invalidSidecar.signedBlockHeader.message.slot += 1; // invalid slot (will change the root)
 
     await expect(
-      validateBlockDataColumnSidecars(
+      validateFuluBlockDataColumnSidecars(
         null,
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar],
-        null
+        [invalidSidecar]
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
@@ -61,13 +58,12 @@ describe("validateBlockDataColumnSidecars", () => {
     invalidSidecar.index = NUMBER_OF_COLUMNS; // invalid index
 
     await expect(
-      validateBlockDataColumnSidecars(
+      validateFuluBlockDataColumnSidecars(
         null,
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar],
-        null
+        [invalidSidecar]
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
@@ -77,13 +73,12 @@ describe("validateBlockDataColumnSidecars", () => {
     invalidSidecar.kzgCommitments = columnSidecars[0].kzgCommitments.map((commitment) => commitment.map((b) => b ^ 1)); // invalid commitments
 
     await expect(
-      validateBlockDataColumnSidecars(
+      validateFuluBlockDataColumnSidecars(
         null,
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar],
-        null
+        [invalidSidecar]
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
@@ -93,13 +88,12 @@ describe("validateBlockDataColumnSidecars", () => {
     invalidSidecar.kzgCommitmentsInclusionProof[0][0] ^= 1; // invalid inclusion proof
 
     await expect(
-      validateBlockDataColumnSidecars(
+      validateFuluBlockDataColumnSidecars(
         null,
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar],
-        null
+        [invalidSidecar]
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });
@@ -109,13 +103,12 @@ describe("validateBlockDataColumnSidecars", () => {
     invalidSidecar.kzgProofs = columnSidecars[0].kzgProofs.map((proof) => proof.map((b) => b ^ 1)); // invalid proofs
 
     await expect(
-      validateBlockDataColumnSidecars(
+      validateFuluBlockDataColumnSidecars(
         null,
         block.message.slot,
         blockRoot,
         block.message.body.blobKzgCommitments.length,
-        [invalidSidecar],
-        null
+        [invalidSidecar]
       )
     ).rejects.toThrow(DataColumnSidecarValidationError);
   });

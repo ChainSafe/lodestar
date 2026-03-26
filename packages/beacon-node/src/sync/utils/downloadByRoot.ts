@@ -17,7 +17,7 @@ import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types
 import {ChainEventEmitter} from "../../chain/emitter.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
-import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
+import {validateFuluBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
@@ -450,13 +450,12 @@ export async function fetchAndValidateColumns({
     );
   }
 
-  await validateBlockDataColumnSidecars(
+  await validateFuluBlockDataColumnSidecars(
     chain,
     slot,
     blockRoot,
     blobCount,
-    columnSidecars,
-    getBlobKzgCommitments(forkName, block),
+    columnSidecars as fulu.DataColumnSidecar[],
     chain?.metrics?.peerDas
   );
 
