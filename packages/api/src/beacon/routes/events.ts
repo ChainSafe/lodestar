@@ -336,7 +336,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         return fuluDataColumnSidecarSSE.toJson(data as FuluDataColumnSidecarSSE);
       },
       fromJson: (data) => {
-        const fork = config.getForkName((data as DataColumnSidecarSSE).slot);
+        const fork = config.getForkName(Number((data as DataColumnSidecarSSE).slot));
         if (isForkPostGloas(fork)) {
           return gloasDataColumnSidecarSSE.fromJson(data);
         }
