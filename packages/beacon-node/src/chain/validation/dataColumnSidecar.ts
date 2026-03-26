@@ -318,7 +318,7 @@ function verifyFuluDataColumnSidecar(config: ChainForkConfig, dataColumnSidecar:
 
 /**
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/p2p-interface.md#verify_data_column_sidecar
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/p2p-interface.md#modified-verify_data_column_sidecar
  */
 function verifyGloasDataColumnSidecar(dataColumnSidecar: gloas.DataColumnSidecar, kzgCommitments: Uint8Array[]): void {
   const slot = getDataColumnSidecarSlot(dataColumnSidecar);
