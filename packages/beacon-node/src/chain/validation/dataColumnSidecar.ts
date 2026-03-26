@@ -583,8 +583,8 @@ export async function validateFuluBlockDataColumnSidecars(
 }
 
 /**
- * Validate a subset of gloas data column sidecars against a block.
- * Gloas sidecars don't carry signed block headers, kzg commitments, or inclusion proofs.
+ * Validate a subset of gloas data column sidecars against a block
+ * Gloas sidecars don't carry signed block headers, kzg commitments, or inclusion proofs
  */
 export async function validateGloasBlockDataColumnSidecars(
   blockSlot: Slot,
