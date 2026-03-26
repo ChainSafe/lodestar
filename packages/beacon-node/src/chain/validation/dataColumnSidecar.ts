@@ -589,9 +589,8 @@ export async function validateFuluBlockDataColumnSidecars(
 export async function validateGloasBlockDataColumnSidecars(
   blockSlot: Slot,
   blockRoot: Root,
-  blockBlobCount: number,
-  dataColumnSidecars: gloas.DataColumnSidecar[],
   blockKzgCommitments: Uint8Array[],
+  dataColumnSidecars: gloas.DataColumnSidecar[],
   metrics?: BeaconMetrics["peerDas"] | null
 ): Promise<void> {
   metrics?.dataColumnSidecarProcessingRequests.inc(dataColumnSidecars.length);
@@ -601,7 +600,7 @@ export async function validateGloasBlockDataColumnSidecars(
       return;
     }
 
-    if (blockBlobCount === 0) {
+    if (blockKzgCommitments.length === 0) {
       throw new DataColumnSidecarValidationError(
         {
           code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_COUNT,
@@ -611,42 +610,6 @@ export async function validateGloasBlockDataColumnSidecars(
         },
         "Block has no blob commitments but data column sidecars were provided"
       );
-    }
-
-    const firstSidecar = dataColumnSidecars[0];
-    if (!byteArrayEquals(blockRoot, firstSidecar.beaconBlockRoot)) {
-      throw new DataColumnSidecarValidationError(
-        {
-          code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
-          slot: blockSlot,
-          columnIndex: 0,
-          expected: toRootHex(blockRoot),
-          actual: toRootHex(firstSidecar.beaconBlockRoot),
-        },
-        "DataColumnSidecar doesn't match corresponding block"
-      );
-    }
-
-    if (firstSidecar.slot !== blockSlot) {
-      throw new DataColumnSidecarValidationError(
-        {
-          code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_SLOT,
-          columnIndex: firstSidecar.index,
-          expected: blockSlot,
-          actual: firstSidecar.slot,
-        },
-        "DataColumnSidecar slot doesn't match corresponding block"
-      );
-    }
-
-    if (blockKzgCommitments.length !== blockBlobCount) {
-      throw new DataColumnSidecarValidationError({
-        code: DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT,
-        slot: blockSlot,
-        columnIndex: firstSidecar.index,
-        expected: blockBlobCount,
-        actual: blockKzgCommitments.length,
-      });
     }
 
     const commitments: Uint8Array[] = [];
@@ -665,8 +628,9 @@ export async function validateGloasBlockDataColumnSidecars(
 
       if (!byteArrayEquals(columnSidecar.beaconBlockRoot, blockRoot)) {
         throw new DataColumnSidecarValidationError({
-          code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT,
+          code: DataColumnSidecarErrorCode.INCORRECT_BLOCK,
           slot: blockSlot,
+          columnIndex: columnSidecar.index,
           expected: toRootHex(blockRoot),
           actual: toRootHex(columnSidecar.beaconBlockRoot),
         });
@@ -683,12 +647,12 @@ export async function validateGloasBlockDataColumnSidecars(
         );
       }
 
-      if (columnSidecar.column.length !== blockBlobCount) {
+      if (columnSidecar.column.length !== blockKzgCommitments.length) {
         throw new DataColumnSidecarValidationError({
           code: DataColumnSidecarErrorCode.INCORRECT_CELL_COUNT,
           slot: blockSlot,
           columnIndex: columnSidecar.index,
-          expected: blockBlobCount,
+          expected: blockKzgCommitments.length,
           actual: columnSidecar.column.length,
         });
       }
