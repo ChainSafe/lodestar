@@ -186,8 +186,8 @@ export class Eth2Gossipsub {
       decodeRpcLimits: {
         maxSubscriptions: 512,
         maxMessages: 256,
-        maxIhaveMessageIDs: 200,
-        maxIwantMessageIDs: 200,
+        maxIhaveMessageIDs: 5000,
+        maxIwantMessageIDs: 5000,
         maxIdontwantMessageIDs: 2000,
         maxControlMessages: 500,
         maxPeerInfos: 100,
