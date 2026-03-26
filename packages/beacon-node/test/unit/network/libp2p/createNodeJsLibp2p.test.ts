@@ -1,12 +1,13 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
-const createLibp2pMock = vi.fn(async () => ({}) as never);
-const quicMock = vi.fn((options?: Record<string, unknown>) => ({options}) as never);
+const {createLibp2pMock, quicMock} = vi.hoisted(() => ({
+  createLibp2pMock: vi.fn(async () => ({}) as never),
+  quicMock: vi.fn((options?: Record<string, unknown>) => ({options}) as never),
+}));
 
 vi.mock("libp2p", async (importActual) => {
   const mod = await importActual<typeof import("libp2p")>();
-
   return {
     ...mod,
     createLibp2p: createLibp2pMock,
@@ -15,7 +16,6 @@ vi.mock("libp2p", async (importActual) => {
 
 vi.mock("@chainsafe/libp2p-quic", async (importActual) => {
   const mod = await importActual<typeof import("@chainsafe/libp2p-quic")>();
-
   return {
     ...mod,
     quic: quicMock,
