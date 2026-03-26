@@ -620,6 +620,8 @@ export async function validateColumnsByRangeResponse(
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
 
+  // TODO GLOAS: Extend by range column sync to support gloas.DataColumnSidecar and
+  // validate against the block bid commitments instead of the fulu signed header shape
   const seenColumns = new Map<Slot, Map<number, fulu.DataColumnSidecar>>();
   let currentSlot = -1;
   let currentIndex = -1;

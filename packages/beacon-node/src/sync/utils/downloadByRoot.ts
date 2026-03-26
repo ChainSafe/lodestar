@@ -387,6 +387,8 @@ export async function fetchAndValidateColumns({
   const blockRootHex = toRootHex(blockRoot);
   const peerColumns = new Set(peerMeta.custodyColumns ?? []);
   const requestedColumns = missing.filter((c) => peerColumns.has(c));
+  // TODO GLOAS: Extend by root column sync to support gloas.DataColumnSidecar and
+  // validate against block bid commitments instead of the fulu signed header shape
   const columnSidecars = (await network.sendDataColumnSidecarsByRoot(peerIdStr, [
     {blockRoot, columns: requestedColumns},
   ])) as fulu.DataColumnSidecar[];
@@ -440,6 +442,7 @@ export async function fetchAndValidateColumns({
     );
   }
 
+  // TODO GLOAS: Swap to fork-aware column validation once post-gloas by-root sync is implemented
   await validateFuluBlockDataColumnSidecars(chain, slot, blockRoot, blobCount, columnSidecars, chain?.metrics?.peerDas);
 
   return {result: columnSidecars, warnings: warnings.length > 0 ? warnings : null};
