@@ -57,7 +57,11 @@ import {
   kzgCommitmentToVersionedHash,
   reconstructBlobs,
 } from "../../../../util/blobs.js";
-import {getDataColumnSidecarsFromBlock, getGloasDataColumnSidecars} from "../../../../util/dataColumns.js";
+import {
+  getBlobKzgCommitments,
+  getDataColumnSidecarsFromBlock,
+  getGloasDataColumnSidecars,
+} from "../../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -99,7 +103,6 @@ export function getBeaconBlockApi({
     const fork = config.getForkName(slot);
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
-    // TODO GLOAS: handle new BlockInput type
     const blockForImport = chain.seenBlockInputCache.getByBlock({
       block: signedBlock,
       source: BlockInputSource.api,
@@ -109,7 +112,11 @@ export function getBeaconBlockApi({
     let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
 
     if (isDenebBlockContents(signedBlockContents)) {
-      if (isForkPostFulu(fork)) {
+      if (isForkPostGloas(fork)) {
+        // After gloas, data columns are not published with the block but when publishing the execution payload envelope
+        blobSidecars = [];
+        dataColumnSidecars = [];
+      } else if (isForkPostFulu(fork)) {
         const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
         // If the block was produced by this node, we will already have computed cells
         // Otherwise, we will compute them from the blobs in this function
