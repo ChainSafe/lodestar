@@ -17,7 +17,9 @@ const SLOT_BYTE_SIZE = 8;
 export class DataColumnSidecarArchiveRepository extends PrefixedRepository<Slot, ColumnIndex, DataColumnSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_dataColumnSidecarsArchive;
-    super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));
+    // Type won't be used since we select it dynamically based on fork
+    const type = ssz.fulu.DataColumnSidecar;
+    super(config, db, bucket, type, getBucketNameByValue(bucket));
   }
 
   /**
