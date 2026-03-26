@@ -1,4 +1,5 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {BeaconStateView} from "@lodestar/state-transition";
 import {generatePerfTestCachedStatePhase0, numValidators} from "@lodestar/state-transition/test-utils";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 import {linspace} from "../../../../../src/util/numpy.js";
@@ -47,7 +48,7 @@ describe("api / impl / validator", () => {
       noThreshold: reqCount < 1000,
       fn: () => {
         const indexes = linspace(0, reqCount - 1);
-        getPubkeysForIndices(state.validators, indexes);
+        getPubkeysForIndices(new BeaconStateView(state), indexes);
       },
     });
   }

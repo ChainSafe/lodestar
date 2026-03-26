@@ -1,16 +1,11 @@
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_SYNC_COMMITTEE} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  ISignatureSet,
-  SignatureSetType,
-  computeSigningRoot,
-} from "@lodestar/state-transition";
+import {IBeaconStateView, ISignatureSet, SignatureSetType, computeSigningRoot} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
 
 export function getSyncCommitteeSignatureSet(
   config: BeaconConfig,
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage
 ): ISignatureSet {
   const domain = config.getDomain(state.slot, DOMAIN_SYNC_COMMITTEE, syncCommittee.slot);

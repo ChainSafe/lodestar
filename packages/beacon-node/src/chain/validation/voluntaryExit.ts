@@ -1,9 +1,4 @@
-import {
-  BeaconStateView,
-  VoluntaryExitValidity,
-  getVoluntaryExitSignatureSet,
-  getVoluntaryExitValidity,
-} from "@lodestar/state-transition";
+import {VoluntaryExitValidity, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {
   GossipAction,
@@ -53,14 +48,14 @@ async function validateVoluntaryExit(
 
   // [REJECT] All of the conditions within process_voluntary_exit pass validation.
   // verifySignature = false, verified in batch below
-  const validity = getVoluntaryExitValidity(chain.config.getForkSeq(state.slot), state, voluntaryExit, false);
+  const validity = state.getVoluntaryExitValidity(voluntaryExit, false);
   if (validity !== VoluntaryExitValidity.valid) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: voluntaryExitValidityToErrorCode(validity),
     });
   }
 
-  const signatureSet = getVoluntaryExitSignatureSet(chain.config, new BeaconStateView(state), voluntaryExit);
+  const signatureSet = getVoluntaryExitSignatureSet(chain.config, state, voluntaryExit);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID_SIGNATURE,

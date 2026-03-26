@@ -176,7 +176,7 @@ export async function validateGossipBlobSidecar(
   // MAY be queued for later processing while proposers for the block's branch are calculated -- in such
   // a case _do not_ `REJECT`, instead `IGNORE` this message.
   const proposerIndex = blobSidecar.signedBlockHeader.message.proposerIndex;
-  if (blockState.epochCtx.getBeaconProposer(blobSlot) !== proposerIndex) {
+  if (blockState.getBeaconProposer(blobSlot) !== proposerIndex) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INCORRECT_PROPOSER,
       proposerIndex,

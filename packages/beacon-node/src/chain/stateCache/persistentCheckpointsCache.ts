@@ -1,12 +1,7 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
-import {
-  CachedBeaconStateAllForks,
-  computeStartSlotAtEpoch,
-  getBlockRootAtSlot,
-  loadCachedBeaconState,
-} from "@lodestar/state-transition";
+import {IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
 import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -40,7 +35,7 @@ type CacheKey = string;
 
 type InMemoryCacheItem = {
   type: CacheItemType.inMemory;
-  state: CachedBeaconStateAllForks;
+  state: IBeaconStateView;
   // if a cp state is reloaded from disk, it'll keep track of persistedKey to allow us to remove it from disk later
   // it also helps not to persist it again
   persistedKey?: DatastoreKey;
@@ -220,9 +215,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - Get block for processing
    * - Regen head state
    */
-  async getOrReload(cp: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | null> {
+  async getOrReload(cp: CheckpointHexPayload): Promise<IBeaconStateView | null> {
     const stateOrStateBytesData = await this.getStateOrLoadDb(cp);
-    if (stateOrStateBytesData === null || isCachedBeaconState(stateOrStateBytesData)) {
+    if (stateOrStateBytesData === null || isBeaconStateView(stateOrStateBytesData)) {
       return stateOrStateBytesData ?? null;
     }
     const {persistedKey, stateBytes} = stateOrStateBytesData;
@@ -237,7 +232,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0
     );
     const seedState = this.findSeedStateToReload(cp);
-    this.metrics?.cpStateCache.stateReloadEpochDiff.observe(Math.abs(seedState.epochCtx.epoch - cp.epoch));
+    this.metrics?.cpStateCache.stateReloadEpochDiff.observe(Math.abs(seedState.epoch - cp.epoch));
     this.logger.debug("Reload: found seed state", {...logMeta, seedSlot: seedState.slot});
 
     try {
@@ -249,19 +244,16 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       if (validatorsBytes == null) {
         // fallback logic in case we can't use the buffer pool
         this.metrics?.cpStateCache.stateReloadValidatorsSerializeAllocCount.inc();
-        validatorsBytes = seedState.validators.serialize();
+        validatorsBytes = seedState.serializeValidators();
       }
       sszTimer?.();
       const timer = this.metrics?.cpStateCache.stateReloadDuration.startTimer();
-      const newCachedState = loadCachedBeaconState(seedState, stateBytes, {}, validatorsBytes);
+      const newCachedState = seedState.loadOtherState(stateBytes, validatorsBytes);
       // hashTreeRoot() calls the commit() inside
       // there is no modification inside the state, it's just that we want to compute and cache all roots
       const stateRoot = toRootHex(newCachedState.hashTreeRoot());
       timer?.();
 
-      // load all cache in order for consumers (usually regen.getState()) to process blocks faster
-      newCachedState.validators.getAllReadonlyValues();
-      newCachedState.balances.getAll();
       this.logger.debug("Reload: cached state load successful", {
         ...logMeta,
         stateSlot: newCachedState.slot,
@@ -284,9 +276,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Return either state or state bytes loaded from db.
    */
-  async getStateOrBytes(cp: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | Uint8Array | null> {
+  async getStateOrBytes(cp: CheckpointHexPayload): Promise<IBeaconStateView | Uint8Array | null> {
     const stateOrLoadedState = await this.getStateOrLoadDb(cp);
-    if (stateOrLoadedState === null || isCachedBeaconState(stateOrLoadedState)) {
+    if (stateOrLoadedState === null || isBeaconStateView(stateOrLoadedState)) {
       return stateOrLoadedState;
     }
     return stateOrLoadedState.stateBytes;
@@ -295,7 +287,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Return either state or state bytes with persisted key loaded from db.
    */
-  async getStateOrLoadDb(cp: CheckpointHexPayload): Promise<CachedBeaconStateAllForks | LoadedStateBytesData | null> {
+  async getStateOrLoadDb(cp: CheckpointHexPayload): Promise<IBeaconStateView | LoadedStateBytesData | null> {
     const cpKey = toCacheKey(cp);
     const inMemoryState = this.get(cpKey);
     if (inMemoryState) {
@@ -326,7 +318,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Similar to get() api without reloading from disk
    */
-  get(cpOrKey: CheckpointHexPayload | CacheKey): CachedBeaconStateAllForks | null {
+  get(cpOrKey: CheckpointHexPayload | CacheKey): IBeaconStateView | null {
     this.metrics?.cpStateCache.lookups.inc();
     const cpKey = typeof cpOrKey === "string" ? cpOrKey : toCacheKey(cpOrKey);
     const cacheItem = this.cache.get(cpKey);
@@ -355,7 +347,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * @param payloadPresent - For Gloas: true if this is payload state, false if block state.
    *                         Always true for pre-Gloas.
    */
-  add(cp: phase0.Checkpoint, state: CachedBeaconStateAllForks, payloadPresent: boolean): void {
+  add(cp: phase0.Checkpoint, state: IBeaconStateView, payloadPresent: boolean): void {
     const cpHex = toCheckpointHexPayload(cp, payloadPresent);
     const key = toCacheKey(cpHex);
     const cacheItem = this.cache.get(key);
@@ -385,7 +377,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Searches in-memory state for the latest cached state with a `root` without reload, starting with `epoch` and descending
    */
-  getLatest(rootHex: RootHex, maxEpoch: Epoch, payloadPresent: boolean): CachedBeaconStateAllForks | null {
+  getLatest(rootHex: RootHex, maxEpoch: Epoch, payloadPresent: boolean): IBeaconStateView | null {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
@@ -412,7 +404,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     rootHex: RootHex,
     maxEpoch: Epoch,
     payloadPresent: boolean
-  ): Promise<CachedBeaconStateAllForks | null> {
+  ): Promise<IBeaconStateView | null> {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
@@ -518,7 +510,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * For Gloas: Processes both block state and payload state variants together. The decision of which roots to persist/prune
    * is based on root canonicality (from state's view), not payload presence. Both variants are managed as a unit.
    */
-  async processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number> {
+  async processState(blockRootHex: RootHex, state: IBeaconStateView): Promise<number> {
     let persistCount = 0;
     // it's important to sort the epochs in ascending order, in case of big reorg we always want to keep the most recent checkpoint states
     const sortedEpochs = Array.from(this.epochIndex.keys()).sort((a, b) => a - b);
@@ -587,10 +579,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *
    * Use seed state from the block cache if cannot find any seed states within this cache.
    */
-  findSeedStateToReload(reloadedCp: CheckpointHexPayload): CachedBeaconStateAllForks {
+  findSeedStateToReload(reloadedCp: CheckpointHexPayload): IBeaconStateView {
     const maxEpoch = Math.max(...Array.from(this.epochIndex.keys()));
     const reloadedCpSlot = computeStartSlotAtEpoch(reloadedCp.epoch);
-    let firstState: CachedBeaconStateAllForks | null = null;
+    let firstState: IBeaconStateView | null = null;
     const logCtx = {reloadedCpEpoch: reloadedCp.epoch, reloadedCpRoot: reloadedCp.rootHex};
 
     // no need to check epochs before `maxEpoch - this.maxEpochsInMemory + 1` before they are all persisted
@@ -620,7 +612,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
               // amongst states of the same epoch, choose the one with the same view of reloadedCp
               if (
                 reloadedCpSlot < state.slot &&
-                toRootHex(getBlockRootAtSlot(state, reloadedCpSlot)) === reloadedCp.rootHex
+                toRootHex(state.getBlockRootAtSlot(reloadedCpSlot)) === reloadedCp.rootHex
               ) {
                 this.logger.verbose("Reload: use checkpoint state as seed state", {...cpLog, ...logCtx});
                 return state;
@@ -685,7 +677,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     });
   }
 
-  getStates(): IterableIterator<CachedBeaconStateAllForks> {
+  getStates(): IterableIterator<IBeaconStateView> {
     const items = Array.from(this.cache.values())
       .filter(isInMemoryCacheItem)
       .map((item) => item.state);
@@ -735,17 +727,13 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *   - In normal condition, we persist 1 checkpoint state per epoch.
    *   - In reorged condition, we may persist multiple (most likely 2) checkpoint states per epoch.
    */
-  private async processPastEpoch(
-    blockRootHex: RootHex,
-    state: CachedBeaconStateAllForks,
-    epoch: Epoch
-  ): Promise<number> {
+  private async processPastEpoch(blockRootHex: RootHex, state: IBeaconStateView, epoch: Epoch): Promise<number> {
     let persistCount = 0;
     const epochBoundarySlot = computeStartSlotAtEpoch(epoch);
     const epochBoundaryRoot =
-      epochBoundarySlot === state.slot ? fromHex(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
+      epochBoundarySlot === state.slot ? fromHex(blockRootHex) : state.getBlockRootAtSlot(epochBoundarySlot);
     const epochBoundaryHex = toRootHex(epochBoundaryRoot);
-    const prevEpochRoot = toRootHex(getBlockRootAtSlot(state, epochBoundarySlot - 1));
+    const prevEpochRoot = toRootHex(state.getBlockRootAtSlot(epochBoundarySlot - 1));
 
     // for each epoch, usually there are 2 rootHexes respective to the 2 checkpoint states: Previous Root Checkpoint State and Current Root Checkpoint State
     const cpRootHexMap = this.epochIndex.get(epoch) ?? new Map<RootHex, number>();
@@ -912,15 +900,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *   - Also `serializeState.test.ts` perf test shows a lot of differences allocating validators bytes once vs every time,
    * This is 2x - 3x faster than allocating memory every time.
    */
-  private serializeStateValidators(state: CachedBeaconStateAllForks): BufferWithKey | null {
-    const type = state.type.fields.validators;
-    const size = type.tree_serializedSize(state.validators.node);
+  private serializeStateValidators(state: IBeaconStateView): BufferWithKey | null {
+    const size = state.serializedValidatorsSize();
     if (this.bufferPool) {
       const bufferWithKey = this.bufferPool.alloc(size, AllocSource.PERSISTENT_CHECKPOINTS_CACHE_VALIDATORS);
       if (bufferWithKey) {
         const validatorsBytes = bufferWithKey.buffer;
         const dataView = new DataView(validatorsBytes.buffer, validatorsBytes.byteOffset, validatorsBytes.byteLength);
-        state.validators.serializeToBytes({uint8Array: validatorsBytes, dataView}, 0);
+        state.serializeValidatorsToBytes({uint8Array: validatorsBytes, dataView}, 0);
         return bufferWithKey;
       }
     }
@@ -983,10 +970,8 @@ function fromCacheKey(key: CacheKey): CheckpointHexPayload {
   };
 }
 
-function isCachedBeaconState(
-  stateOrBytes: CachedBeaconStateAllForks | LoadedStateBytesData
-): stateOrBytes is CachedBeaconStateAllForks {
-  return (stateOrBytes as CachedBeaconStateAllForks).slot !== undefined;
+function isBeaconStateView(stateOrBytes: IBeaconStateView | LoadedStateBytesData): stateOrBytes is IBeaconStateView {
+  return (stateOrBytes as IBeaconStateView).slot !== undefined;
 }
 
 function isInMemoryCacheItem(cacheItem: CacheItem): cacheItem is InMemoryCacheItem {

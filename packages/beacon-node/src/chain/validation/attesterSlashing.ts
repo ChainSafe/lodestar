@@ -48,7 +48,7 @@ export async function validateAttesterSlashing(
       chain.config,
       chain.pubkeyCache,
       state.slot,
-      state.validators.length,
+      state.validatorCount,
       attesterSlashing,
       false
     );
@@ -59,8 +59,8 @@ export async function validateAttesterSlashing(
     });
   }
 
-  const currentEpoch = state.epochCtx.epoch;
-  if (!intersectingIndices.some((index) => isSlashableValidator(state.validators.getReadonly(index), currentEpoch))) {
+  const currentEpoch = state.epoch;
+  if (!intersectingIndices.some((index) => isSlashableValidator(state.getValidator(index), currentEpoch))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
       error: Error("AttesterSlashing has no slashable validators"),

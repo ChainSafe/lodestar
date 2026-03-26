@@ -1,10 +1,5 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {
-  BeaconStateView,
-  CachedBeaconStateGloas,
-  computeStartSlotAtEpoch,
-  getExecutionPayloadEnvelopeSignatureSet,
-} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch, getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
@@ -119,11 +114,10 @@ async function validateExecutionPayloadEnvelope(
       });
     });
 
-  const state = blockState as CachedBeaconStateGloas;
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,
     chain.pubkeyCache,
-    new BeaconStateView(state),
+    blockState,
     executionPayloadEnvelope,
     payloadInput.proposerIndex
   );
