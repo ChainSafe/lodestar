@@ -173,7 +173,13 @@ describe("data column sidecars", () => {
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
     await expect(
-      validateFuluBlockDataColumnSidecars(null, slot, blockRoot, kzgCommitments.length, columnSidecars as fulu.DataColumnSidecar[])
+      validateFuluBlockDataColumnSidecars(
+        null,
+        slot,
+        blockRoot,
+        kzgCommitments.length,
+        columnSidecars as fulu.DataColumnSidecar[]
+      )
     ).resolves.toBeUndefined();
   });
 
@@ -209,8 +215,8 @@ describe("data column sidecars", () => {
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blobs.length);
 
-    await expect(validateFuluBlockDataColumnSidecars(chain, slot, blockRoot, 0, columnSidecars as fulu.DataColumnSidecar[])).rejects.toThrow(
-      "Block has no blob commitments but data column sidecars were provided"
-    );
+    await expect(
+      validateFuluBlockDataColumnSidecars(chain, slot, blockRoot, 0, columnSidecars as fulu.DataColumnSidecar[])
+    ).rejects.toThrow("Block has no blob commitments but data column sidecars were provided");
   });
 });
