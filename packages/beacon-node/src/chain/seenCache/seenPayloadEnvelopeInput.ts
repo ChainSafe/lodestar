@@ -84,8 +84,8 @@ export class SeenPayloadEnvelopeInput {
     return this.payloadInputs.get(blockRootHex);
   }
 
-  has(blockRootHex: RootHex): boolean {
-    return this.payloadInputs.has(blockRootHex);
+  hasEnvelope(blockRootHex: RootHex): boolean {
+    return this.payloadInputs.get(blockRootHex)?.hasPayloadEnvelope() ?? false;
   }
 
   prune(blockRootHex: RootHex): void {

@@ -504,11 +504,11 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenBlockInputCache.has(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+    return this.seenBlockInputCache.hasBlock(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
   }
 
   seenEnvelope(blockRoot: RootHex): boolean {
-    return this.seenPayloadEnvelopeInputCache.has(blockRoot) || this.forkChoice.hasEnvelopeHexUnsafe(blockRoot);
+    return this.seenPayloadEnvelopeInputCache.hasEnvelope(blockRoot) || this.forkChoice.hasEnvelopeHexUnsafe(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {
