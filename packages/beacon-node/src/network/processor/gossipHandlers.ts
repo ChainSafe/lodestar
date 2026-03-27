@@ -518,9 +518,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       return payloadInput;
     } catch (e) {
       if (e instanceof DataColumnSidecarGossipError && e.action === GossipAction.REJECT) {
-        const dataColumnFork = config.getForkName(slot);
         chain.persistInvalidSszValue(
-          sszTypesFor(dataColumnFork as ForkPostGloas).DataColumnSidecar,
+          sszTypesFor(payloadInput.forkName as ForkPostGloas).DataColumnSidecar,
           dataColumnSidecar,
           `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
         );
