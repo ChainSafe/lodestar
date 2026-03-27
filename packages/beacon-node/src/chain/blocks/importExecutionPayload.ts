@@ -54,7 +54,7 @@ export class PayloadError extends Error {
  * Import an execution payload envelope after all data is available.
  *
  * This function:
- * 1. Emits `execution_payload_available` for recent enough payloads once import begins
+ * 1. Emits `execution_payload_available` if payload is for current slot
  * 2. Gets the ProtoBlock from fork choice
  * 3. Applies write-queue backpressure (waitForSpace) early, before verification
  * 4. Regenerates the block state
