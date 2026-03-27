@@ -32,6 +32,7 @@ export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
+  // TODO GLOAS: pass PayloadEnvelopeInput instead of gloas.SignedExecutionPayloadEnvelope
   envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
@@ -130,6 +131,7 @@ export async function verifyBlocksInEpoch(
       verifyExecutionPayloadsPromise,
 
       // data availability for the blobs
+      // TODO GLOAS: modify this once we pass PayloadEnvelopeInput instead of gloas.SignedExecutionPayloadEnvelope
       verifyBlocksDataAvailability(blockInputs, abortController.signal),
 
       // Run state transition only
