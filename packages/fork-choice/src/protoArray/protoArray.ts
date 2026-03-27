@@ -653,9 +653,7 @@ export class ProtoArray {
     }
 
     // If payload is not locally available, it's not timely
-    // In our implementation, payload is locally available if proto array has FULL variant of the block
-    const fullNodeIndex = this.getNodeIndexByRootAndStatus(blockRoot, PayloadStatus.FULL);
-    if (fullNodeIndex === undefined) {
+    if (!this.hasPayload(blockRoot)) {
       return false;
     }
 

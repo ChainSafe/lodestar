@@ -179,7 +179,10 @@ export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot |
 }
 
 /**
- * Extract committee index from SingleAttestation serialized bytes.
+ * Extract index from SingleAttestation serialized bytes.
+ * Post-gloas, `index` field is repurposed:
+ *   - 0 — payload was not available (or attestation is same-slot, where availability is not yet known)
+ *   - 1 - payload was available
  * Return null if data is not long enough to extract slot.
  */
 export function getIndexFromSingleAttestationSerialized(fork: ForkName, data: Uint8Array): CommitteeIndex | null {
