@@ -4,7 +4,7 @@ import {
   IBeaconStateView,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {Slot, gloas} from "@lodestar/types";
+import {Slot, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -61,22 +61,22 @@ export async function verifyBlocksStateTransitionOnly(
       // this block's bid parentBlockHash, the proposer built on the FULL path
       if (
         prevPostEnvelopeState != null &&
+        isGloasBeaconBlock(block.message) &&
         byteArrayEquals(
           prevPostEnvelopeState.latestBlockHash,
-          (block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.parentBlockHash
+          block.message.body.signedExecutionPayloadBid.message.parentBlockHash
         )
       ) {
+        // gloas FULL path - use post-envelope state of previous block as pre-state for this block
         preState = prevPostEnvelopeState;
       } else {
-        // EMPTY path
-        if (prevPostEnvelopeState != null) {
+        // EMPTY path or pre-gloas block
+        if (prevPostEnvelopeState != null && isGloasBeaconBlock(block.message)) {
           // the envelope is orphaned
           logger.debug("Previous block had an execution payload envelope but this block did not build on it", {
             slot: block.message.slot,
             prevEnvelopeBlockHash: toRootHex(prevPostEnvelopeState.latestBlockHash),
-            currentBidParentHash: toRootHex(
-              (block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.parentBlockHash
-            ),
+            currentBidParentHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash),
           });
         }
         preState = postBlockStates[i - 1];
