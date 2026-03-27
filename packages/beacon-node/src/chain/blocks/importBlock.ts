@@ -168,7 +168,8 @@ export async function importBlock(
       toRootHex(postEnvelopeState.latestBlockHash),
       // TODO GLOAS: this is not right but we don't need to track it as part of consensus spec, lighthouse also does not track it
       0,
-      toRootHex(postEnvelopeState.hashTreeRoot())
+      toRootHex(postEnvelopeState.hashTreeRoot()),
+      fullyVerifiedBlock.executionStatus
     );
   }
 

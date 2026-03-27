@@ -1,3 +1,4 @@
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {SignedBeaconBlock, Slot, gloas} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -100,21 +101,32 @@ export async function processBlocks(
     }
 
     const {executionStatuses} = segmentExecStatus;
-    const fullyVerifiedBlocks = relevantBlocks.map(
-      (block, i): FullyVerifiedBlock => ({
+    const fullyVerifiedBlocks = relevantBlocks.map((block, i): FullyVerifiedBlock => {
+      const postEnvelopeState = postEnvelopeStates.get(block.getBlock().message.slot) ?? null;
+      const executionStatus = executionStatuses[i];
+      const baseFields = {
         blockInput: block,
         postBlockState: postBlockStates[i],
-        postEnvelopeState: postEnvelopeStates.get(block.getBlock().message.slot) ?? null,
         parentBlockSlot: parentSlots[i],
-        executionStatus: executionStatuses[i],
         // start supporting optimistic syncing/processing
         dataAvailabilityStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-      })
-    );
+      };
+
+      if (postEnvelopeState !== null) {
+        if (executionStatus !== ExecutionStatus.Valid && executionStatus !== ExecutionStatus.Syncing) {
+          throw new Error(
+            `postEnvelopeState is set but executionStatus is ${executionStatus}, expected Valid or Syncing. slot=${block.getBlock().message.slot} blockIndex=${i}`
+          );
+        }
+        return {...baseFields, postEnvelopeState, executionStatus};
+      }
+
+      return {...baseFields, postEnvelopeState: null, executionStatus};
+    });
 
     for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
       // TODO: Consider batching importBlock too if it takes significant time
