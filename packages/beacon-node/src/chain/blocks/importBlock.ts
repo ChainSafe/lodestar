@@ -163,6 +163,10 @@ export async function importBlock(
     // need a payloadInput in fullyVerifiedBlock
     const {postEnvelopeState} = fullyVerifiedBlock;
     this.regen.processPayloadState(postEnvelopeState);
+    if (postEnvelopeState.slot % SLOTS_PER_EPOCH === 0) {
+      const {checkpoint} = postEnvelopeState.computeAnchorCheckpoint();
+      this.regen.addCheckpointState(checkpoint, postEnvelopeState, true);
+    }
     this.forkChoice.onExecutionPayload(
       blockRootHex,
       toRootHex(postEnvelopeState.latestBlockHash),
