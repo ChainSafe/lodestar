@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -88,6 +89,13 @@ export async function validateGossipBlock(
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+  }
+
+  if (isForkPostBellatrix(fork) && parentBlock.executionStatus === ExecutionStatus.Invalid) {
+    throw new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.PARENT_EXECUTION_INVALID,
+      parentRoot,
+    });
   }
 
   // [IGNORE] The attestation head block is too far behind the attestation slot, causing many skip slots.

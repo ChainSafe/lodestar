@@ -10,6 +10,8 @@ export enum BlockErrorCode {
   PRESTATE_MISSING = "BLOCK_ERROR_PRESTATE_MISSING",
   /** The parent block was unknown. */
   PARENT_UNKNOWN = "BLOCK_ERROR_PARENT_UNKNOWN",
+  /** The parent block is known but its execution status is invalid. */
+  PARENT_EXECUTION_INVALID = "BLOCK_ERROR_PARENT_EXECUTION_INVALID",
   /** The block slot is greater than the present slot. */
   FUTURE_SLOT = "BLOCK_ERROR_FUTURE_SLOT",
   /** The block state_root does not match the generated state. */
@@ -80,6 +82,7 @@ type ExecutionErrorStatus = Exclude<
 export type BlockErrorType =
   | {code: BlockErrorCode.PRESTATE_MISSING; error: Error}
   | {code: BlockErrorCode.PARENT_UNKNOWN; parentRoot: RootHex}
+  | {code: BlockErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
   | {code: BlockErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlockErrorCode.STATE_ROOT_MISMATCH}
   | {code: BlockErrorCode.GENESIS_BLOCK}
