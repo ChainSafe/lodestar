@@ -1,5 +1,4 @@
 import {routes} from "@lodestar/api";
-import {ForkName} from "@lodestar/params";
 import {getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
@@ -55,14 +54,16 @@ export class PayloadError extends Error {
  * Import an execution payload envelope after all data is available.
  *
  * This function:
- * 1. Gets the ProtoBlock from fork choice
- * 2. Applies write-queue backpressure (waitForSpace) early, before verification
- * 3. Regenerates the block state
- * 4. Runs EL verification (notifyNewPayload) in parallel with signature verification and processExecutionPayloadEnvelope
- * 5. Persists verified payload envelope to hot DB
- * 6. Updates fork choice
- * 7. Caches the post-execution payload state
- * 8. Records metrics for column sources
+ * 1. Emits `execution_payload_available` for recent enough payloads once import begins
+ * 2. Gets the ProtoBlock from fork choice
+ * 3. Applies write-queue backpressure (waitForSpace) early, before verification
+ * 4. Regenerates the block state
+ * 5. Runs EL verification (notifyNewPayload) in parallel with signature verification and processExecutionPayloadEnvelope
+ * 6. Persists verified payload envelope to hot DB
+ * 7. Updates fork choice
+ * 8. Caches the post-execution payload state
+ * 9. Records metrics for column sources
+ * 10. Emits `execution_payload` for recent enough payloads after successful import
  *
  */
 export async function importExecutionPayload(
@@ -70,10 +71,25 @@ export async function importExecutionPayload(
   payloadInput: PayloadEnvelopeInput,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
-  const envelope = payloadInput.getPayloadEnvelope();
+  const {currentSlot} = this.clock;
+  const signedEnvelope = payloadInput.getPayloadEnvelope();
+  const envelope = signedEnvelope.message;
   const blockRootHex = payloadInput.blockRootHex;
+  const blockHashHex = toRootHex(envelope.payload.blockHash);
+  const fork = this.config.getForkName(envelope.slot);
 
-  // 1. Get ProtoBlock for parent root lookup
+  // 1. Emit `execution_payload_available` event at the start of import. At this point the payload input
+  // is already complete, so the payload and required data are available for payload attestation.
+  // This event is only about availability, not validity of the execution payload, hence we can emit
+  // it before getting a response from the execution client on whether the payload is valid or not.
+  if (currentSlot === envelope.slot) {
+    this.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
+      slot: envelope.slot,
+      blockRoot: blockRootHex,
+    });
+  }
+
+  // 2. Get ProtoBlock for parent root lookup
   const protoBlock = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
   if (!protoBlock) {
     throw new PayloadError({
@@ -82,11 +98,11 @@ export async function importExecutionPayload(
     });
   }
 
-  // 2. Apply backpressure from the write queue early, before doing verification work.
+  // 3. Apply backpressure from the write queue early, before doing verification work.
   // The actual DB write is deferred until after verification succeeds.
   await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
 
-  // 3. Get pre-state for processExecutionPayloadEnvelope
+  // 4. Get pre-state for processExecutionPayloadEnvelope
   // We need the block state (post-block, pre-payload) to process the envelope
   const blockState = await this.regen.getBlockSlotState(
     protoBlock,
@@ -95,16 +111,16 @@ export async function importExecutionPayload(
     RegenCaller.processBlock
   );
 
-  // 4. Run verification steps in parallel
+  // 5. Run verification steps in parallel
   // Note: No data availability check needed here - importExecutionPayload is only
   // called when payloadInput.isComplete() is true, so all data is already available.
   const [execResult, signatureValid, postPayloadResult] = await Promise.all([
     this.executionEngine.notifyNewPayload(
-      ForkName.gloas,
-      envelope.message.payload,
+      fork,
+      envelope.payload,
       payloadInput.getVersionedHashes(),
       fromHex(protoBlock.parentRoot),
-      envelope.message.executionRequests
+      envelope.executionRequests
     ),
 
     opts.validSignature === true
@@ -114,7 +130,7 @@ export async function importExecutionPayload(
             this.config,
             this.pubkeyCache,
             blockState,
-            envelope,
+            signedEnvelope,
             payloadInput.proposerIndex
           );
           return this.bls.verifySignatureSets([signatureSet]);
@@ -125,7 +141,7 @@ export async function importExecutionPayload(
     (async () => {
       try {
         return {
-          postPayloadState: blockState.processExecutionPayloadEnvelope(envelope, {
+          postPayloadState: blockState.processExecutionPayloadEnvelope(signedEnvelope, {
             verifySignature: false,
             verifyStateRoot: false,
           }),
@@ -142,12 +158,12 @@ export async function importExecutionPayload(
     })(),
   ]);
 
-  // 4b. Check signature verification result
+  // 5a. Check signature verification result
   if (!signatureValid) {
     throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
   }
 
-  // 5. Handle EL response
+  // 5b. Handle EL response
   switch (execResult.status) {
     case ExecutionPayloadStatus.VALID:
       break;
@@ -178,59 +194,63 @@ export async function importExecutionPayload(
       });
   }
 
-  // 5b. Verify envelope state root matches post-state
+  // 5c. Verify envelope state root matches post-state
   const postPayloadState = postPayloadResult.postPayloadState;
   const postPayloadStateRoot = postPayloadState.hashTreeRoot();
-  if (!byteArrayEquals(envelope.message.stateRoot, postPayloadStateRoot)) {
+  if (!byteArrayEquals(envelope.stateRoot, postPayloadStateRoot)) {
     throw new PayloadError({
       code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-      message: `Envelope state root mismatch expected=${toRootHex(envelope.message.stateRoot)} actual=${toRootHex(postPayloadStateRoot)}`,
+      message: `Envelope state root mismatch expected=${toRootHex(envelope.stateRoot)} actual=${toRootHex(postPayloadStateRoot)}`,
     });
   }
 
-  // 5c. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
+  // 6. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error(
         "Error pushing payload envelope to unfinalized write queue",
-        {slot: payloadInput.slot, root: blockRootHex},
+        {slot: envelope.slot, root: blockRootHex},
         e as Error
       );
     }
   });
 
-  // 6. Update fork choice
+  // 7. Update fork choice
   this.forkChoice.onExecutionPayload(
     blockRootHex,
-    payloadInput.getBlockHashHex(),
-    envelope.message.payload.blockNumber,
+    blockHashHex,
+    envelope.payload.blockNumber,
     toRootHex(postPayloadStateRoot)
   );
 
-  // 7. Cache payload state
+  // 8. Cache payload state
   // TODO GLOAS: Enable when PR #8868 merged (adds processPayloadState)
   // this.regen.processPayloadState(postPayloadState);
   // if epoch boundary also call
   // this.regen.addCheckpointState(cp, checkpointState, true);
 
-  // 8. Record metrics for payload envelope and column sources
+  // 9. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
 
-  this.logger.verbose("Execution payload imported", {
-    slot: payloadInput.slot,
-    root: blockRootHex,
-    blockHash: payloadInput.getBlockHashHex(),
-  });
-
-  // 9. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
-  const currentSlot = this.clock.currentSlot;
-  if (currentSlot - payloadInput.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
-    this.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
-      slot: payloadInput.slot,
+  // 10. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads.
+  if (currentSlot - envelope.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+    this.emitter.emit(routes.events.EventType.executionPayload, {
+      slot: envelope.slot,
+      builderIndex: envelope.builderIndex,
+      blockHash: blockHashHex,
       blockRoot: blockRootHex,
+      stateRoot: toRootHex(envelope.stateRoot),
+      // TODO GLOAS: revisit once we support optimistic import
+      executionOptimistic: false,
     });
   }
+
+  this.logger.verbose("Execution payload imported", {
+    slot: envelope.slot,
+    root: blockRootHex,
+    blockHash: blockHashHex,
+  });
 }

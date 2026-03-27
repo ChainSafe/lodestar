@@ -841,16 +841,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.execution_payload>) => {
       const {serializedData} = gossipData;
-      const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
+      const signedEnvelope = sszDeserialize(topic, serializedData);
+      const envelope = signedEnvelope.message;
       // TODO GLOAS: handle BLOCK_ROOT_UNKNOWN error to trigger sync
-      await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+      await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
 
-      const slot = executionPayloadEnvelope.message.slot;
+      const slot = envelope.slot;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
-      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, executionPayloadEnvelope);
+      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
 
-      const blockRootHex = toRootHex(executionPayloadEnvelope.message.beaconBlockRoot);
+      const blockRootHex = toRootHex(envelope.beaconBlockRoot);
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
 
       if (!payloadInput) {
@@ -861,16 +862,23 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         });
       }
 
-      chain.serializedCache.set(executionPayloadEnvelope, serializedData);
+      chain.serializedCache.set(signedEnvelope, serializedData);
 
       payloadInput.addPayloadEnvelope({
-        envelope: executionPayloadEnvelope,
+        envelope: signedEnvelope,
         source: PayloadEnvelopeInputSource.gossip,
         seenTimestampSec,
         peerIdStr,
       });
 
-      // TODO GLOAS: Emit execution_payload_gossip event for gossip receipt.
+      chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
+        slot,
+        builderIndex: envelope.builderIndex,
+        blockHash: toRootHex(envelope.payload.blockHash),
+        blockRoot: blockRootHex,
+        stateRoot: toRootHex(envelope.stateRoot),
+      });
+
       chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
         chain.logger.debug("Error processing execution payload from gossip", {slot, root: blockRootHex}, e as Error);
       });
