@@ -230,8 +230,8 @@ export interface IForkChoice {
    * Returns true if the FULL payload variant (execution payload envelope) exists for this block root,
    * without checking if the block is a descendant of the finalized root.
    */
-  hasEnvelopeUnsafe(blockRoot: Root): boolean;
-  hasEnvelopeHexUnsafe(blockRoot: RootHex): boolean;
+  hasPayloadUnsafe(blockRoot: Root): boolean;
+  hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.

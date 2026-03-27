@@ -858,6 +858,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const {slot, beaconBlockRoot} = signedEnvelope.message;
           logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
           if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN) {
+            // TODO GLOAS: UnknownBlockSync to handle this
             chain.emitter.emit(ChainEvent.envelopeUnknownBlockRoot, {
               envelope: signedEnvelope,
               peer: peerIdStr,

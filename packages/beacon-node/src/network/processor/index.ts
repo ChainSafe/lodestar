@@ -402,7 +402,7 @@ export class NetworkProcessor {
             topicType === GossipType.beacon_attestation
               ? getIndexFromSingleAttestationSerialized(fork, message.msg.data)
               : getIndexFromSignedAggregateAndProofSerialized(message.msg.data);
-          if (attIndex === 1 && !this.chain.forkChoice.hasEnvelopeHexUnsafe(root)) {
+          if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // ptc attestation votes for the payload but the envelope is not yet known
             this.searchUnknownEnvelope(
               {slot, root},
@@ -416,7 +416,7 @@ export class NetworkProcessor {
         case GossipType.payload_attestation_message: {
           if (root == null) break;
           const payloadPresent = getPayloadPresentFromPayloadAttestationMessageSerialized(message.msg.data);
-          if (payloadPresent && !this.chain.forkChoice.hasEnvelopeHexUnsafe(root)) {
+          if (payloadPresent && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             this.searchUnknownEnvelope(
               {slot, root},
               BlockInputSource.network_processor,
@@ -428,7 +428,7 @@ export class NetworkProcessor {
         }
         case GossipType.data_column_sidecar: {
           if (root == null) break;
-          if (!this.chain.forkChoice.hasEnvelopeHexUnsafe(root)) {
+          if (!this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             this.searchUnknownEnvelope(
               {slot, root},
               BlockInputSource.network_processor,
