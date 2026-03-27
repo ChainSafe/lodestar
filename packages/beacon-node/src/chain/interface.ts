@@ -223,6 +223,7 @@ export interface IBeaconChain {
     blockRootHex: string,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
+  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
