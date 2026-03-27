@@ -71,7 +71,6 @@ export async function importExecutionPayload(
   payloadInput: PayloadEnvelopeInput,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
-  const {currentSlot} = this.clock;
   const signedEnvelope = payloadInput.getPayloadEnvelope();
   const envelope = signedEnvelope.message;
   const blockRootHex = payloadInput.blockRootHex;
@@ -82,7 +81,7 @@ export async function importExecutionPayload(
   // is already complete, so the payload and required data are available for payload attestation.
   // This event is only about availability, not validity of the execution payload, hence we can emit
   // it before getting a response from the execution client on whether the payload is valid or not.
-  if (currentSlot === envelope.slot) {
+  if (this.clock.currentSlot === envelope.slot) {
     this.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
       slot: envelope.slot,
       blockRoot: blockRootHex,
@@ -236,7 +235,7 @@ export async function importExecutionPayload(
   }
 
   // 10. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads.
-  if (currentSlot - envelope.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+  if (this.clock.currentSlot - envelope.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
       slot: envelope.slot,
       builderIndex: envelope.builderIndex,
