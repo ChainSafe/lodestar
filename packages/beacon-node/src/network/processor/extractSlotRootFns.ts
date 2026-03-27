@@ -69,6 +69,8 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
       }
 
       const root = getBeaconBlockRootFromDataColumnSidecarSerialized(data);
+      // null root means the message is invalid here and will be rejected in gossip handler later
+      // returning the slot here helps check the earliest permissable slot in the network processor
       return root !== null ? {slot, root} : {slot};
     },
     [GossipType.execution_payload]: (data: Uint8Array): SlotOptionalRoot | null => {
