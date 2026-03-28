@@ -38,6 +38,9 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     genesisSlot
   );
