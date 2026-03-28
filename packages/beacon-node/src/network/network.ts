@@ -166,7 +166,7 @@ export class Network implements INetwork {
     const events = new NetworkEventBus();
     const aggregatorTracker = new AggregatorTracker();
 
-    const activeValidatorCount = chain.getHeadState().epochCtx.currentShuffling.activeIndices.length;
+    const activeValidatorCount = chain.getHeadState().activeValidatorCount;
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
 
@@ -641,6 +641,17 @@ export class Network implements INetwork {
     );
   }
 
+  async sendExecutionPayloadEnvelopesByRange(
+    peerId: PeerIdStr,
+    request: gloas.ExecutionPayloadEnvelopesByRangeRequest
+  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRange, [Version.V1], request),
+      request.count,
+      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRange]
+    );
+  }
+
   async sendExecutionPayloadEnvelopesByRoot(
     peerId: PeerIdStr,
     request: ExecutionPayloadEnvelopesByRootRequest
@@ -650,17 +661,6 @@ export class Network implements INetwork {
       request.length,
       responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRoot],
       this.chain.serializedCache
-    );
-  }
-
-  async sendExecutionPayloadEnvelopesByRange(
-    peerId: PeerIdStr,
-    request: gloas.ExecutionPayloadEnvelopesByRangeRequest
-  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
-    return collectMaxResponseTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRange, [Version.V1], request),
-      request.count,
-      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRange]
     );
   }
 

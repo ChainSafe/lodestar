@@ -1,11 +1,9 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostGloas} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateExecutions,
-  CachedBeaconStateGloas,
+  IBeaconStateView,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -121,9 +119,9 @@ export class PrepareNextSlotScheduler {
       );
 
       if (isForkPostBellatrix(fork)) {
-        const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
+        const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
-        let updatedPrepareState = prepareState as CachedBeaconStateExecutions | CachedBeaconStateGloas;
+        let updatedPrepareState = prepareState;
         let updatedHeadRoot = headRoot;
 
         if (feeRecipient) {
@@ -140,13 +138,13 @@ export class PrepareNextSlotScheduler {
               headRoot,
             });
             this.metrics?.weakHeadDetected.inc();
-            updatedPrepareState = (await this.chain.regen.getBlockSlotState(
+            updatedPrepareState = await this.chain.regen.getBlockSlotState(
               proposerHead,
               prepareSlot,
               // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
-            )) as CachedBeaconStateExecutions | CachedBeaconStateGloas;
+            );
             updatedHeadRoot = proposerHeadRoot;
           }
 
@@ -166,15 +164,6 @@ export class PrepareNextSlotScheduler {
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
 
-          // For Gloas, the CL state may be PENDING (payloadPresent=false), whose latestBlockHash
-          // is stale (parent's pre-envelope hash). The EL only knows about execution hashes that
-          // were delivered via newPayloadV5 (from envelope imports). Use the fork-choice FULL
-          // variant's execution hash for FCU so the EL can build a payload on the correct head.
-          // The bid.parent_block_hash is set separately from the state variant and is NOT affected.
-          const headExecutionBlockHashOverride = isForkPostGloas(fork as ForkPostBellatrix)
-            ? (this.chain.forkChoice.getHeadExecutionBlockHash() ?? undefined)
-            : undefined;
-
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice sematics to catch and log errors in the
           // try/catch wrapper here.
@@ -186,8 +175,7 @@ export class PrepareNextSlotScheduler {
             safeBlockHash,
             finalizedBlockHash,
             updatedPrepareState,
-            feeRecipient,
-            headExecutionBlockHashOverride
+            feeRecipient
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
@@ -250,7 +238,7 @@ export class PrepareNextSlotScheduler {
     }
   };
 
-  computeStateHashTreeRoot(state: CachedBeaconStateAllForks, isEpochTransition: boolean): void {
+  computeStateHashTreeRoot(state: IBeaconStateView, isEpochTransition: boolean): void {
     // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
     // see https://github.com/ChainSafe/lodestar/issues/6194
     const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({

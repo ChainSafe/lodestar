@@ -8,7 +8,6 @@ import {
   ForkSeq,
   NUMBER_OF_COLUMNS,
   isForkPostElectra,
-  isForkPostGloas,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {
@@ -20,7 +19,6 @@ import {
   UintNum64,
   deneb,
   fulu,
-  gloas,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -33,7 +31,6 @@ import {
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
-import type {BidInfo} from "../../chain/blocks/payloadEnvelopeInput.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -77,7 +74,6 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {ClockEvent} from "../../util/clock.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
@@ -139,22 +135,6 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
 
-  // Max pending envelopes to cache (shared with chain for block import access).
-  // Needs to be large enough to hold envelopes during UnknownBlockSync catch-up,
-  // where a chain of 32+ blocks may need their envelopes retained simultaneously.
-  const MAX_PENDING_ENVELOPES = 128;
-
-  // Evict stale pending envelopes on slot boundaries.
-  // Use a generous TTL (16 slots) because during UnknownBlockSync catch-up,
-  // envelopes may arrive via gossip many slots before their blocks are processed.
-  chain.clock.on(ClockEvent.slot, (clockSlot: Slot) => {
-    for (const [rootHex, envelope] of chain.pendingEnvelopes.entries()) {
-      if (envelope.message.slot < clockSlot - 16) {
-        chain.pendingEnvelopes.delete(rootHex);
-      }
-    }
-  });
-
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
     fork: ForkName,
@@ -202,16 +182,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       logger.debug("Validated gossip block", {...blockInputMeta, ...logCtx, recvToValidation, validationTime});
 
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
-      if (isForkPostGloas(fork)) {
-        const bid = (signedBlock.message as gloas.BeaconBlock).body.signedExecutionPayloadBid.message;
-        const bidInfo: BidInfo = {
-          blockRootHex,
-          slot,
-          builderIndex: bid.builderIndex,
-          blockHashFromBid: toRootHex(bid.blockHash),
-        };
-        chain.seenPayloadEnvelopeCache.createFromBid(bidInfo);
-      }
 
       return blockInput;
     } catch (e) {
@@ -885,18 +855,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const executionPayloadEnvelope = sszDeserialize(topic, serializedData);
       const blockRootHex = toRootHex(executionPayloadEnvelope.message.beaconBlockRoot);
-
-      // Cache envelope in chain.pendingEnvelopes so the block import path can consume it
-      // before running state transition on child blocks (avoids INVALID_STATE_ROOT when
-      // envelope arrives before or around the same time as its block).
-      if (!chain.forkChoice.hasBlockHexUnsafe(blockRootHex)) {
-        if (chain.pendingEnvelopes.size >= MAX_PENDING_ENVELOPES) {
-          const firstKey = chain.pendingEnvelopes.keys().next().value;
-          if (firstKey !== undefined) chain.pendingEnvelopes.delete(firstKey);
-        }
-        chain.pendingEnvelopes.set(blockRootHex, executionPayloadEnvelope);
-        return;
-      }
 
       await validateGossipExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
 

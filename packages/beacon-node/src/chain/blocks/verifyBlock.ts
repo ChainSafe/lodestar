@@ -1,14 +1,7 @@
-import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, isForkPostFulu} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateGloas,
-  DataAvailabilityStatus,
-  computeEpochAtSlot,
-  isStateValidatorsNodesPopulated,
-} from "@lodestar/state-transition";
-import {IndexedAttestation, Slot, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
+import {IndexedAttestation, Slot, deneb, gloas} from "@lodestar/types";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -23,6 +16,8 @@ import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
+
+type VerifyBlocksInEpochOpts = BlockProcessOpts & ImportBlockOpts;
 
 /**
  * Verifies 1 or more blocks are fully valid; from a linear sequence of blocks.
@@ -39,16 +34,19 @@ export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
-  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
-  opts: BlockProcessOpts & ImportBlockOpts
+  envelopesOrOpts?: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | VerifyBlocksInEpochOpts | null,
+  maybeOpts?: VerifyBlocksInEpochOpts
 ): Promise<{
-  postStates: CachedBeaconStateAllForks[];
-  postEnvelopeStates: Map<Slot, CachedBeaconStateGloas | null>;
+  postStates: IBeaconStateView[];
+  postEnvelopeStates: Map<Slot, IBeaconStateView | null>;
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
   dataAvailabilityStatuses: DataAvailabilityStatus[];
   indexedAttestationsByBlock: IndexedAttestation[][];
 }> {
+  const envelopes = envelopesOrOpts instanceof Map || envelopesOrOpts === null ? envelopesOrOpts : null;
+  const opts = (envelopesOrOpts instanceof Map || envelopesOrOpts === null ? maybeOpts : envelopesOrOpts) ?? {};
+
   const blocks = blockInputs.map((blockInput) => blockInput.getBlock());
   const lastBlock = blocks.at(-1);
   if (!lastBlock) {
@@ -69,75 +67,6 @@ export async function verifyBlocksInEpoch(
   // All blocks are in the same epoch
   const fork = this.config.getForkSeq(block0.message.slot);
 
-  // For Gloas blocks, only import/wait for the parent envelope if this child block was
-  // produced on the FULL parent path (spec: bid.parent_block_hash == parent.bid.block_hash).
-  //
-  // If the child was produced on the EMPTY/PENDING parent path, forcing parent FULL here can
-  // switch validation state variants and trigger ParentBlockHashMismatch during bid processing.
-  if (
-    parentBlock.parentBlockHash !== null &&
-    parentBlock.payloadStatus !== PayloadStatus.FULL &&
-    isGloasBeaconBlock(block0.message)
-  ) {
-    const parentRootHex = toRootHex(block0.message.parentRoot);
-    const childParentBlockHash = toRootHex(block0.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-    const parentPayloadInput = this.seenPayloadEnvelopeInputCache.get(parentRootHex);
-    const childWantsFullParent =
-      parentPayloadInput !== undefined && childParentBlockHash === parentPayloadInput.getBlockHashHex();
-
-    if (childWantsFullParent) {
-      // Try up to 20 times with 100ms delay (total max wait: ~2s)
-      // Needs to be long enough for envelopes to arrive via gossip, especially during
-      // UnknownBlockSync catch-up where multiple blocks are processed in sequence.
-      for (let attempt = 0; attempt < 20; attempt++) {
-        // Re-check fork-choice — envelope may have been imported by another path (gossip handler)
-        const updatedParent = this.forkChoice.getBlockHex(parentRootHex, PayloadStatus.FULL);
-        if (updatedParent) break;
-
-        const downloadedParentEnvelope = envelopes?.get(parentBlock.slot);
-        if (downloadedParentEnvelope && toRootHex(downloadedParentEnvelope.message.beaconBlockRoot) === parentRootHex) {
-          try {
-            await this.importExecutionPayloadEnvelope(downloadedParentEnvelope);
-            envelopes?.delete(parentBlock.slot);
-            this.logger.info("Imported downloaded parent envelope before block import", {
-              parentRoot: parentRootHex,
-              parentSlot: parentBlock.slot,
-              childSlot: block0.message.slot,
-              attempt,
-            });
-            break;
-          } catch (e) {
-            this.logger.debug("Failed importing downloaded parent envelope", {parentRoot: parentRootHex}, e as Error);
-          }
-        }
-
-        const pendingEnvelope = this.pendingEnvelopes.get(parentRootHex);
-        if (pendingEnvelope) {
-          try {
-            await this.importExecutionPayloadEnvelope(pendingEnvelope);
-            this.pendingEnvelopes.delete(parentRootHex);
-            this.logger.info("Imported pending parent envelope before block import", {
-              parentRoot: parentRootHex,
-              parentSlot: parentBlock.slot,
-              childSlot: block0.message.slot,
-              attempt,
-            });
-            break;
-          } catch (e) {
-            this.logger.debug("Failed importing pending parent envelope", {parentRoot: parentRootHex}, e as Error);
-            // Don't break — envelope stays in cache, retry on next iteration
-            // Import may succeed after EL catches up or state becomes available
-          }
-        }
-
-        // Envelope not available yet — yield to event loop so gossip can deliver it
-        if (attempt < 19) {
-          await sleep(100);
-        }
-      }
-    }
-  }
-
   // TODO: Skip in process chain segment
   // Retrieve preState from cache (regen)
   const preState0 = await this.regen
@@ -151,10 +80,10 @@ export async function verifyBlocksInEpoch(
   // otherwise it may fail to get indexed attestations from shuffling cache later
   this.shufflingCache.processState(preState0);
 
-  if (!isStateValidatorsNodesPopulated(preState0)) {
+  if (!preState0.isStateValidatorsNodesPopulated()) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
       slot: preState0.slot,
-      cache: isStateValidatorsNodesPopulated(preState0),
+      cache: preState0.isStateValidatorsNodesPopulated(),
       clonedCount: preState0.clonedCount,
       clonedCountWithTransferCache: preState0.clonedCountWithTransferCache,
       createdWithTransferCache: preState0.createdWithTransferCache,
@@ -191,7 +120,7 @@ export async function verifyBlocksInEpoch(
     for (const [i, block] of blocks.entries()) {
       indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
         const attEpoch = computeEpochAtSlot(attestation.data.slot);
-        const decisionRoot = preState0.epochCtx.getShufflingDecisionRoot(attEpoch);
+        const decisionRoot = preState0.getShufflingDecisionRoot(attEpoch);
         return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
       });
     }

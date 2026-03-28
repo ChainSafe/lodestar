@@ -1,7 +1,8 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
-import {ByteViews} from "@chainsafe/ssz";
+import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {
   BeaconBlock,
+  BeaconState,
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
@@ -93,11 +94,11 @@ export interface IBeaconStateView {
   proposerLookahead: fulu.ProposerLookahead;
 
   // gloas
-  executionPayloadAvailability: boolean[];
+  executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
-  validatorPTCCommitteeIndex(validatorIndex: ValidatorIndex, slot: Slot): number;
+  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
@@ -110,12 +111,11 @@ export interface IBeaconStateView {
   getCurrentShuffling(): EpochShuffling;
   getNextShuffling(): EpochShuffling;
 
-  // utils: proposers, anchor checkpoint
+  // Proposer shuffling
   previousProposers: ValidatorIndex[] | null;
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
-  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader};
 
   // Sync committees
   currentSyncCommittee: altair.SyncCommittee;
@@ -123,6 +123,8 @@ export interface IBeaconStateView {
   currentSyncCommitteeIndexed: SyncCommitteeCache;
   syncProposerReward: number;
   getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
+  /** Get indexed sync committee with slot+1 offset for duty lookups */
+  getIndexedSyncCommittee(slot: Slot): SyncCommitteeCache;
 
   // Validators and balances
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
@@ -149,6 +151,7 @@ export interface IBeaconStateView {
     expectedWithdrawals: capella.Withdrawal[];
     processedBuilderWithdrawalsCount: number;
     processedPartialWithdrawalsCount: number;
+    processedBuildersSweepCount: number;
     processedValidatorSweepCount: number;
   };
 
@@ -180,6 +183,7 @@ export interface IBeaconStateView {
     justifiedCheckpoint: phase0.Checkpoint;
     finalizedCheckpoint: phase0.Checkpoint;
   };
+  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader};
 
   // this is for backward compatible
   clonedCount: number;
@@ -190,6 +194,7 @@ export interface IBeaconStateView {
 
   // Serialization
   loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
+  toValue(): BeaconState;
   serialize(): Uint8Array;
   serializedSize(): number;
   serializeToBytes(output: ByteViews, offset: number): number;

@@ -127,6 +127,11 @@ export type ProtoBlock = BlockExtraMeta & {
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
 
+  // Gloas bid metadata, used by downstream payload-envelope validation.
+  // These may be unavailable for synthetic/checkpoint blocks.
+  builderIndex?: number | null;
+  blockHashFromBid?: RootHex | null;
+
   // Used to determine if this block extends EMPTY or FULL parent variant
   // Spec: gloas/fork-choice.md#new-get_parent_payload_status
   parentBlockHash: RootHex | null;

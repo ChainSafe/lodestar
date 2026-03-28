@@ -18,15 +18,12 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {
-  CachedBeaconStateAltair,
-  EpochCache,
+  IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isExecutionStateType,
   isStartSlotOfEpoch,
-  isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -148,7 +145,7 @@ export async function importBlock(
   this.regen.processBlockState(blockRootHex, postState);
 
   if (postEnvelopeState !== null) {
-    this.regen.processPayloadState(postEnvelopeState);
+    this.regen.processPayloadState(postEnvelopeState as unknown as IBeaconStateView);
     this.forkChoice.onExecutionPayload(
       blockRootHex,
       toRootHex(postEnvelopeState.latestBlockHash),
@@ -181,25 +178,7 @@ export async function importBlock(
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
-
-  // Post-Gloas: immediately import pending envelope for this block if available.
-  // This makes the block FULL right away, so child blocks won't need to wait
-  // for the envelope in their verifyBlock parent-envelope polling loop.
-  if (isGloasBlock(blockSummary)) {
-    const pendingEnvelope = this.pendingEnvelopes.get(blockRootHex);
-    if (pendingEnvelope) {
-      try {
-        await this.importExecutionPayloadEnvelope(pendingEnvelope);
-        this.pendingEnvelopes.delete(blockRootHex);
-        this.logger.debug("Imported pending envelope immediately after block import", {
-          slot: blockSlot,
-          root: blockRootHex,
-        });
-      } catch (e) {
-        this.logger.debug("Failed importing pending envelope after block import", {root: blockRootHex}, e as Error);
-      }
-    }
-  }
+  this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
   // 3. Import attestations to fork choice
   //
@@ -229,7 +208,7 @@ export async function importBlock(
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         addAttestation.call(
           this,
-          postState.epochCtx,
+          postState,
           target,
           attDataRoot,
           attestation as Attestation<ForkPostElectra>,
@@ -416,7 +395,7 @@ export async function importBlock(
         try {
           this.lightClientServer?.onImportBlockHead(
             block.message as BeaconBlock<ForkPostAltair>,
-            postState as CachedBeaconStateAltair,
+            postState,
             parentBlockSlot
           );
         } catch (e) {
@@ -437,11 +416,11 @@ export async function importBlock(
   // and the block is weak and can potentially be reorged out.
   let shouldOverrideFcu = false;
 
-  if (blockSlot >= currentSlot && isExecutionStateType(postState)) {
+  if (blockSlot >= currentSlot && postState.isExecutionStateType) {
     let notOverrideFcuReason = NotReorgedReason.Unknown;
     const proposalSlot = blockSlot + 1;
     try {
-      const proposerIndex = postState.epochCtx.getBeaconProposer(proposalSlot);
+      const proposerIndex = postState.getBeaconProposer(proposalSlot);
       const feeRecipient = this.beaconProposerCache.get(proposerIndex);
 
       if (feeRecipient) {
@@ -521,7 +500,7 @@ export async function importBlock(
     }
   }
 
-  if (!isStateValidatorsNodesPopulated(postState)) {
+  if (!postState.isStateValidatorsNodesPopulated()) {
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
 
@@ -543,7 +522,7 @@ export async function importBlock(
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHexPayload(cp, payloadPresent));
 
-    const activeValidatorsCount = checkpointState.epochCtx.currentShuffling.activeIndices.length;
+    const activeValidatorsCount = checkpointState.activeValidatorCount;
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
     this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
@@ -628,7 +607,7 @@ export async function importBlock(
     this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
-      fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
+      fullyVerifiedBlock.postState.currentSyncCommitteeIndexed.validatorIndices
     );
   }
 
@@ -670,7 +649,7 @@ export async function importBlock(
 export function addAttestationPreElectra(
   this: BeaconChain,
   // added to have the same signature as addAttestationPostElectra
-  _: EpochCache,
+  _: IBeaconStateView,
   target: phase0.Checkpoint,
   attDataRoot: string,
   attestation: Attestation,
@@ -687,7 +666,7 @@ export function addAttestationPreElectra(
 
 export function addAttestationPostElectra(
   this: BeaconChain,
-  epochCtx: EpochCache,
+  state: IBeaconStateView,
   target: phase0.Checkpoint,
   attDataRoot: string,
   attestation: Attestation<ForkPostElectra>,
@@ -705,7 +684,7 @@ export function addAttestationPostElectra(
   } else {
     const attSlot = attestation.data.slot;
     const attEpoch = computeEpochAtSlot(attSlot);
-    const decisionRoot = epochCtx.getShufflingDecisionRoot(attEpoch);
+    const decisionRoot = state.getShufflingDecisionRoot(attEpoch);
     const committees = this.shufflingCache.getBeaconCommittees(attEpoch, decisionRoot, attSlot, committeeIndices);
     const aggregationBools = attestation.aggregationBits.toBoolArray();
     let offset = 0;

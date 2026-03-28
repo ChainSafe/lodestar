@@ -2,8 +2,7 @@ import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {BUILDER_INDEX_SELF_BUILD} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateGloas,
+  IBeaconStateView,
   createSingleSignatureSetFromComponents,
   getBlockSignatureSets,
   getExecutionPayloadEnvelopeSigningRoot,
@@ -28,7 +27,7 @@ export async function verifyBlocksSignatures(
   bls: IBlsVerifier,
   logger: Logger,
   metrics: Metrics | null,
-  preState0: CachedBeaconStateAllForks,
+  preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
   envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   indexedAttestationsByBlock: IndexedAttestation[][],
@@ -36,40 +35,37 @@ export async function verifyBlocksSignatures(
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
-  const currentSyncCommitteeIndexed = preState0.epochCtx.currentSyncCommitteeIndexed;
+  const currentSyncCommitteeIndexed = preState0.currentSyncCommitteeIndexed;
 
   // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
   // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
   // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
   // so the attester and proposer shufflings are correct.
   for (const [i, block] of blocks.entries()) {
-    let blockSignaturesPromise: Promise<boolean>;
-    if (opts.validSignatures) {
-      // Skip all block signature verification
-      blockSignaturesPromise = Promise.resolve(true);
-    } else {
-      // Verify signatures per block to track which block is invalid
-      blockSignaturesPromise = bls.verifySignatureSets(
-        getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
-          skipProposerSignature: opts.validProposerSignature,
-        })
-      );
-    }
+    const blockSignaturesPromise = opts.validSignatures
+      ? // Skip all signature verification
+        Promise.resolve(true)
+      : //
+        // Verify signatures per block to track which block is invalid
+        bls.verifySignatureSets(
+          getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
+            skipProposerSignature: opts.validProposerSignature,
+          })
+        );
 
     const signedEnvelope = envelopes?.get(block.message.slot) ?? null;
     const envelopeSignaturePromise =
       signedEnvelope && isGloasBeaconBlock(block.message)
-        ? verifyExecutionPayloadEnvelopeSignature(bls, preState0 as CachedBeaconStateGloas, block, signedEnvelope)
+        ? verifyExecutionPayloadEnvelopeSignature(config, bls, preState0, block, signedEnvelope)
         : Promise.resolve(true);
-
-    // Use [i] to make clear that the index has to be correct to blame the right block below on BlockError()
-    isValidPromises[i] = Promise.all([blockSignaturesPromise, envelopeSignaturePromise]).then(
-      ([blockSigsValid, envelopeSigValid]) => blockSigsValid && envelopeSigValid
-    );
 
     // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
     // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to
     // yield, which will cause one block's state transition to run. However, the tradeoff is okay and doesn't slow sync
+    isValidPromises[i] = Promise.all([blockSignaturesPromise, envelopeSignaturePromise]).then(
+      ([blockSigsValid, envelopeSigValid]) => blockSigsValid && envelopeSigValid
+    );
+
     if ((i + 1) % 8 === 0) {
       await nextEventLoop();
     }
@@ -101,23 +97,20 @@ export async function verifyBlocksSignatures(
 }
 
 async function verifyExecutionPayloadEnvelopeSignature(
+  config: BeaconConfig,
   bls: IBlsVerifier,
-  state: CachedBeaconStateGloas,
+  state: IBeaconStateView,
   block: SignedBeaconBlock,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<boolean> {
   const envelope = signedEnvelope.message;
   const pubkey =
     envelope.builderIndex === BUILDER_INDEX_SELF_BUILD
-      ? state.epochCtx.getPubkey(block.message.proposerIndex)
-      : PublicKey.fromBytes(state.builders.getReadonly(envelope.builderIndex).pubkey);
-  if (pubkey == null) {
-    return false;
-  }
-  const publicKey = pubkey instanceof PublicKey ? pubkey : PublicKey.fromBytes(pubkey);
+      ? PublicKey.fromBytes(state.getValidator(block.message.proposerIndex).pubkey)
+      : PublicKey.fromBytes(state.getBuilder(envelope.builderIndex).pubkey);
   const signatureSet = createSingleSignatureSetFromComponents(
-    publicKey,
-    getExecutionPayloadEnvelopeSigningRoot(state.config, envelope),
+    pubkey,
+    getExecutionPayloadEnvelopeSigningRoot(config, envelope),
     signedEnvelope.signature
   );
 

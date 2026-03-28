@@ -8,7 +8,7 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
 } from "@lodestar/params";
-import {CachedBeaconStateAltair, PubkeyCache} from "@lodestar/state-transition";
+import {BeaconStateView, CachedBeaconStateAltair, PubkeyCache} from "@lodestar/state-transition";
 import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import {BlockType} from "../../../../src/chain/interface.js";
@@ -21,12 +21,12 @@ import {
 } from "../../../fixtures/phase0.js";
 
 describe("opPool", () => {
-  let originalState: CachedBeaconStateAltair;
+  let originalState: BeaconStateView;
   const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
 
   beforeAll(
     () => {
-      originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
+      originalState = new BeaconStateView(generatePerfTestCachedStateAltair({goBackOneSlot: true}));
     },
     2 * 60 * 1000 // Generating the states for the first time is very slow
   );
@@ -35,11 +35,12 @@ describe("opPool", () => {
     id: "getSlashingsAndExits - default max",
     beforeEach: () => {
       const pool = new OpPool(config);
-      fillAttesterSlashing(pool, originalState, MAX_ATTESTER_SLASHINGS);
-      fillProposerSlashing(pool, originalState, MAX_PROPOSER_SLASHINGS);
-      fillVoluntaryExits(pool, originalState, MAX_VOLUNTARY_EXITS);
+      const beaconState = originalState.cachedState as CachedBeaconStateAltair;
+      fillAttesterSlashing(pool, beaconState, MAX_ATTESTER_SLASHINGS);
+      fillProposerSlashing(pool, beaconState, MAX_PROPOSER_SLASHINGS);
+      fillVoluntaryExits(pool, beaconState, MAX_VOLUNTARY_EXITS);
       // TODO: feed pubkeyCache separately instead of getting from originalState
-      fillBlsToExecutionChanges(originalState.epochCtx.pubkeyCache, pool, originalState, MAX_BLS_TO_EXECUTION_CHANGES);
+      fillBlsToExecutionChanges(beaconState.epochCtx.pubkeyCache, pool, beaconState, MAX_BLS_TO_EXECUTION_CHANGES);
 
       return pool;
     },
@@ -53,12 +54,12 @@ describe("opPool", () => {
     beforeEach: () => {
       const pool = new OpPool(config);
       const maxItemsInPool = 2_000;
-
-      fillAttesterSlashing(pool, originalState, maxItemsInPool);
-      fillProposerSlashing(pool, originalState, maxItemsInPool);
-      fillVoluntaryExits(pool, originalState, maxItemsInPool);
+      const beaconState = originalState.cachedState as CachedBeaconStateAltair;
+      fillAttesterSlashing(pool, beaconState, maxItemsInPool);
+      fillProposerSlashing(pool, beaconState, maxItemsInPool);
+      fillVoluntaryExits(pool, beaconState, maxItemsInPool);
       // TODO: feed pubkeyCache separately instead of getting from originalState
-      fillBlsToExecutionChanges(originalState.epochCtx.pubkeyCache, pool, originalState, maxItemsInPool);
+      fillBlsToExecutionChanges(beaconState.epochCtx.pubkeyCache, pool, beaconState, maxItemsInPool);
 
       return pool;
     },

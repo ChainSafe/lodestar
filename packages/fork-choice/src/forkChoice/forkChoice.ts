@@ -1,20 +1,16 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
+  IBeaconStateView,
   ZERO_HASH,
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isExecutionBlockBodyType,
-  isExecutionEnabled,
-  isExecutionStateType,
 } from "@lodestar/state-transition";
-import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
 import {
   AttesterSlashing,
   BeaconBlock,
@@ -610,7 +606,7 @@ export class ForkChoice implements IForkChoice {
    */
   onBlock(
     block: BeaconBlock,
-    state: CachedBeaconStateAllForks,
+    state: IBeaconStateView,
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: MaybeValidExecutionStatus,
@@ -696,12 +692,16 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Get justified checkpoint with payload status for Gloas
-    const justifiedPayloadStatus = getCheckpointPayloadStatus(state, state.currentJustifiedCheckpoint.epoch);
+    const justifiedPayloadStatus = getCheckpointPayloadStatus(
+      this.config,
+      state,
+      state.currentJustifiedCheckpoint.epoch
+    );
     const justifiedCheckpoint = toCheckpointWithPayload(state.currentJustifiedCheckpoint, justifiedPayloadStatus);
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
 
     // Get finalized checkpoint with payload status for Gloas
-    const finalizedPayloadStatus = getCheckpointPayloadStatus(state, state.finalizedCheckpoint.epoch);
+    const finalizedPayloadStatus = getCheckpointPayloadStatus(this.config, state, state.finalizedCheckpoint.epoch);
     const finalizedCheckpoint = toCheckpointWithPayload(state.finalizedCheckpoint, finalizedPayloadStatus);
 
     // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on demand only if
@@ -734,6 +734,7 @@ export class ForkChoice implements IForkChoice {
         // reuse from parent, happens at 1/3 last blocks of epoch as monitored in mainnet
         // Get payload status for unrealized justified checkpoint
         const unrealizedJustifiedPayloadStatus = getCheckpointPayloadStatus(
+          this.config,
           state,
           parentBlock.unrealizedJustifiedEpoch
         );
@@ -745,6 +746,7 @@ export class ForkChoice implements IForkChoice {
         };
         // Get payload status for unrealized finalized checkpoint
         const unrealizedFinalizedPayloadStatus = getCheckpointPayloadStatus(
+          this.config,
           state,
           parentBlock.unrealizedFinalizedEpoch
         );
@@ -756,9 +758,10 @@ export class ForkChoice implements IForkChoice {
         };
       } else {
         // compute new, happens 2/3 first blocks of epoch as monitored in mainnet
-        const unrealized = computeUnrealizedCheckpoints(state);
+        const unrealized = state.computeUnrealizedCheckpoints();
         // Get payload status for unrealized justified checkpoint
         const unrealizedJustifiedPayloadStatus = getCheckpointPayloadStatus(
+          this.config,
           state,
           unrealized.justifiedCheckpoint.epoch
         );
@@ -768,6 +771,7 @@ export class ForkChoice implements IForkChoice {
         );
         // Get payload status for unrealized finalized checkpoint
         const unrealizedFinalizedPayloadStatus = getCheckpointPayloadStatus(
+          this.config,
           state,
           unrealized.finalizedCheckpoint.epoch
         );
@@ -795,7 +799,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
-    const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots.get(targetSlot % SLOTS_PER_HISTORICAL_ROOT);
+    const targetRoot = slot === targetSlot ? blockRoot : state.getBlockRootAtSlot(targetSlot);
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
@@ -818,6 +822,8 @@ export class ForkChoice implements IForkChoice {
 
       ...(isGloasBeaconBlock(block)
         ? {
+            builderIndex: block.body.signedExecutionPayloadBid.message.builderIndex,
+            blockHashFromBid: toRootHex(block.body.signedExecutionPayloadBid.message.blockHash),
             executionPayloadBlockHash: toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash), // post-gloas, we don't know payload hash until we import execution payload. Set to parent payload hash for now
             executionPayloadNumber: (() => {
               // Determine parent's execution payload number based on which variant the block extends
@@ -844,14 +850,18 @@ export class ForkChoice implements IForkChoice {
             executionStatus: this.getPostGloasExecStatus(executionStatus),
             dataAvailabilityStatus,
           }
-        : isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
+        : isExecutionBlockBodyType(block.body) && state.isExecutionStateType && state.isExecutionEnabled(block)
           ? {
+              builderIndex: null,
+              blockHashFromBid: null,
               executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
               executionPayloadNumber: block.body.executionPayload.blockNumber,
               executionStatus: this.getPreGloasExecStatus(executionStatus),
               dataAvailabilityStatus,
             }
           : {
+              builderIndex: null,
+              blockHashFromBid: null,
               executionPayloadBlockHash: null,
               executionStatus: this.getPreMergeExecStatus(executionStatus),
               dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
@@ -1891,10 +1901,14 @@ export function getCommitteeFraction(
  * @param state - The state to check execution_payload_availability
  * @param checkpointEpoch - The epoch of the checkpoint
  */
-export function getCheckpointPayloadStatus(state: CachedBeaconStateAllForks, checkpointEpoch: number): PayloadStatus {
+export function getCheckpointPayloadStatus(
+  config: ChainForkConfig,
+  state: IBeaconStateView,
+  checkpointEpoch: number
+): PayloadStatus {
   // Compute checkpoint slot first to determine the correct fork
   const checkpointSlot = computeStartSlotAtEpoch(checkpointEpoch);
-  const fork = state.config.getForkSeq(checkpointSlot);
+  const fork = config.getForkSeq(checkpointSlot);
 
   // Pre-Gloas: always FULL
   if (fork < ForkSeq.gloas) {
@@ -1904,8 +1918,7 @@ export function getCheckpointPayloadStatus(state: CachedBeaconStateAllForks, che
   // For Gloas, check state.execution_payload_availability
   // - For non-skipped slots at checkpoint: returns false (EMPTY) since payload hasn't arrived yet
   // - For skipped slots at checkpoint: returns the actual availability status from state
-  const gloasState = state as CachedBeaconStateGloas;
-  const payloadAvailable = gloasState.executionPayloadAvailability.get(checkpointSlot % SLOTS_PER_HISTORICAL_ROOT);
+  const payloadAvailable = state.executionPayloadAvailability.get(checkpointSlot % SLOTS_PER_HISTORICAL_ROOT);
 
   return payloadAvailable ? PayloadStatus.FULL : PayloadStatus.EMPTY;
 }

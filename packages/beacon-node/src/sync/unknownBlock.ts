@@ -8,6 +8,7 @@ import {RootHex, gloas} from "@lodestar/types";
 import {Logger, fromHex, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -543,6 +544,7 @@ export class BlockInputSync {
     childParentBlockHash?: RootHex;
     parentRoot?: RootHex;
     parentPayloadStatus?: PayloadStatus;
+    parentBlockHashFromBid?: RootHex;
     wantsFullParent?: boolean;
   } {
     const block = pendingBlock.blockInput.getBlock();
@@ -558,7 +560,7 @@ export class BlockInputSync {
     const parentRoot = pendingBlock.blockInput.parentRootHex;
     const parentBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
 
-    if (!parentBlock || parentBlock.executionPayloadBlockHash == null) {
+    if (!parentBlock || parentBlock.blockHashFromBid == null) {
       return {
         shouldRetry: false,
         forkName,
@@ -567,13 +569,9 @@ export class BlockInputSync {
       };
     }
 
+    const parentBlockHashFromBid = parentBlock.blockHashFromBid;
     const parentPayloadStatus = parentBlock.payloadStatus;
-    // The child extends FULL if its parentBlockHash does NOT match the default (PENDING/EMPTY)
-    // variant's executionPayloadBlockHash. For PENDING/EMPTY variants, executionPayloadBlockHash
-    // is the parentBlockHash from the parent's bid. For FULL, it's the actual payload block hash
-    // (which equals the bid's blockHash). If the child points to the FULL variant's hash,
-    // it won't match the default variant's hash.
-    const wantsFullParent = childParentBlockHash !== parentBlock.executionPayloadBlockHash;
+    const wantsFullParent = childParentBlockHash === parentBlockHashFromBid;
 
     return {
       shouldRetry: wantsFullParent && parentPayloadStatus !== PayloadStatus.FULL,
@@ -581,6 +579,7 @@ export class BlockInputSync {
       childParentBlockHash,
       parentRoot,
       parentPayloadStatus,
+      parentBlockHashFromBid,
       wantsFullParent,
     };
   }
@@ -590,19 +589,22 @@ export class BlockInputSync {
    * Tries gossip cache first, then falls back to reqresp (ExecutionPayloadEnvelopesByRoot).
    */
   private async resolveEnvelopeForBlock(blockRootHex: RootHex, blockSlot: number): Promise<void> {
-    // 1. Try gossip cache
-    const pendingEnvelope = this.chain.pendingEnvelopes.get(blockRootHex);
-    if (pendingEnvelope) {
+    // 1. Try payload-input cache
+    const payloadInput = this.chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
       try {
-        await this.chain.importExecutionPayloadEnvelope(pendingEnvelope);
-        this.chain.pendingEnvelopes.delete(blockRootHex);
-        this.logger.debug("Imported pending envelope from gossip cache", {
+        await this.chain.processExecutionPayload(payloadInput);
+        this.logger.debug("Imported pending envelope from payload-input cache", {
           slot: blockSlot,
           blockRoot: blockRootHex,
         });
         return;
       } catch (e) {
-        this.logger.debug("Failed to import pending envelope from gossip cache", {blockRoot: blockRootHex}, e as Error);
+        this.logger.debug(
+          "Failed to import pending envelope from payload-input cache",
+          {blockRoot: blockRootHex},
+          e as Error
+        );
       }
     }
 
@@ -613,7 +615,22 @@ export class BlockInputSync {
       try {
         const envelopes = await this.network.sendExecutionPayloadEnvelopesByRoot(peerId, [blockRoot]);
         if (envelopes.length > 0) {
-          await this.chain.importExecutionPayloadEnvelope(envelopes[0]);
+          const payloadInputByRoot = this.chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+          if (!payloadInputByRoot) {
+            this.logger.debug("Cannot import envelope fetched via reqresp without payload input", {
+              slot: blockSlot,
+              blockRoot: blockRootHex,
+              peer: peerId,
+            });
+            return;
+          }
+          payloadInputByRoot.addPayloadEnvelope({
+            envelope: envelopes[0],
+            source: PayloadEnvelopeInputSource.byRoot,
+            seenTimestampSec: Date.now() / 1000,
+            peerIdStr: peerId,
+          });
+          await this.chain.processExecutionPayload(payloadInputByRoot);
           this.logger.debug("Imported envelope via reqresp after block import", {
             slot: blockSlot,
             blockRoot: blockRootHex,

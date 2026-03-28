@@ -1,3 +1,4 @@
+import type {CachedBeaconStateGloas} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot, gloas} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -107,7 +108,7 @@ export async function processBlocks(
       (block, i): FullyVerifiedBlock => ({
         blockInput: block,
         postState: postStates[i],
-        postEnvelopeState: postEnvelopeStates.get(block.slot) ?? null,
+        postEnvelopeState: (postEnvelopeStates.get(block.slot) as CachedBeaconStateGloas | null | undefined) ?? null,
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
         // start supporting optimistic syncing/processing
@@ -145,7 +146,7 @@ export async function processBlocks(
         const {state} = err.type;
         const forkTypes = this.config.getForkTypes(blockSlot);
         this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
-        this.persistInvalidSszView(state, `${state.slot}_invalid_signature`);
+        this.persistInvalidSszBytes("BeaconState", state.serialize(), `${state.slot}_invalid_signature`);
       } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;

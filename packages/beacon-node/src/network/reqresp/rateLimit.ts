@@ -73,16 +73,6 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
       req.reduce((total, item) => total + item.columns.length, 0)
     ),
   },
-  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: {
-    // Rationale: bounded by payload request limits
-    byPeer: {quota: config.MAX_REQUEST_PAYLOADS, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(
-      fork,
-      config,
-      ReqRespMethod.ExecutionPayloadEnvelopesByRange,
-      (req) => req.count
-    ),
-  },
   [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: {
     // Rationale: similar to BeaconBlocksByRoot — one envelope per block
     byPeer: {quota: config.MAX_REQUEST_PAYLOADS, quotaTimeMs: 10_000},
@@ -91,6 +81,16 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
       config,
       ReqRespMethod.ExecutionPayloadEnvelopesByRoot,
       (req) => req.length
+    ),
+  },
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: {
+    // Rationale: bounded by payload request limits
+    byPeer: {quota: config.MAX_REQUEST_PAYLOADS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(
+      fork,
+      config,
+      ReqRespMethod.ExecutionPayloadEnvelopesByRange,
+      (req) => req.count
     ),
   },
   [ReqRespMethod.LightClientBootstrap]: {

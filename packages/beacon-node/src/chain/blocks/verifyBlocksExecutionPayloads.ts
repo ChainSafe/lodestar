@@ -8,12 +8,7 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkPostDeneb, ForkSeq} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  isExecutionBlockBodyType,
-  isExecutionEnabled,
-  isExecutionStateType,
-} from "@lodestar/state-transition";
+import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot, bellatrix, electra, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
@@ -66,7 +61,7 @@ export async function verifyBlocksExecutionPayload(
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
   envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
-  preState0: CachedBeaconStateAllForks,
+  preState0: IBeaconStateView,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
@@ -155,7 +150,7 @@ export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   blockInput: IBlockInput,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope | null,
-  preState0: CachedBeaconStateAllForks
+  preState0: IBeaconStateView
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
   const fork = blockInput.forkName;
@@ -169,9 +164,9 @@ export async function verifyBlockExecutionPayload(
 
   /** Not null if execution payload is embedded in the block body (pre-Gloas post-merge blocks) */
   const executionPayloadEnabled =
-    isExecutionStateType(preState0) &&
+    preState0.isExecutionStateType &&
     isExecutionBlockBodyType(block.message.body) &&
-    isExecutionEnabled(preState0, block.message)
+    preState0.isExecutionEnabled(block.message)
       ? block.message.body.executionPayload
       : null;
   const executionPayloadFromEnvelope = envelope ? envelope.payload : null;
@@ -181,6 +176,7 @@ export async function verifyBlockExecutionPayload(
     // Pre-merge block, no execution payload to verify
     return {executionStatus: ExecutionStatus.PreMerge, lvhResponse: undefined, execError: null};
   }
+
   const versionedHashes =
     isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput)
       ? blockInput.getVersionedHashes()

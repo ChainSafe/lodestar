@@ -54,6 +54,7 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
           return PeerAction.LowToleranceError;
         case ReqRespMethod.BeaconBlocksByRange:
         case ReqRespMethod.BeaconBlocksByRoot:
+        case ReqRespMethod.ExecutionPayloadEnvelopesByRoot:
         case ReqRespMethod.ExecutionPayloadEnvelopesByRange:
           return PeerAction.MidToleranceError;
         default:
@@ -67,6 +68,7 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
         return PeerAction.Fatal;
       case ReqRespMethod.Metadata:
       case ReqRespMethod.Status:
+      case ReqRespMethod.ExecutionPayloadEnvelopesByRoot:
       case ReqRespMethod.ExecutionPayloadEnvelopesByRange:
         return PeerAction.LowToleranceError;
       default:
