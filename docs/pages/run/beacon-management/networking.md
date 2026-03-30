@@ -88,21 +88,9 @@ Libp2p operates at the lower levels of the OSI model, particularly at the Transp
 
 Lodestar supports [QUIC](https://datatracker.ietf.org/doc/html/rfc9000) as a transport alongside TCP. QUIC is a UDP-based transport that provides built-in encryption (TLS 1.3), multiplexed streams, and faster connection establishment compared to TCP. QUIC is enabled by default. Lodestar will prefer QUIC when dialing peers that advertise QUIC support.
 
-#### Disabling QUIC
-
-To disable QUIC transport:
-
-```bash
-lodestar beacon --quic=false
-```
-
-You can also use `lodestar beacon --no-quic`.
-
-With the default QUIC-enabled configuration, the node listens on an additional UDP port and advertises QUIC support in its ENR.
-
 #### Port Configuration
 
-With QUIC enabled by default, Lodestar uses three ports for P2P networking:
+With QUIC enabled by default, the node listens on an additional UDP port and advertises QUIC support in its ENR. Lodestar uses three ports for P2P networking:
 
 | Port              | Protocol | Default                 | Purpose                   |
 | ----------------- | -------- | ----------------------- | ------------------------- |
@@ -116,7 +104,7 @@ For IPv6 dual-stack, equivalent flags are available: `--port6`, `--discoveryPort
 
 #### ENR Advertisement
 
-When QUIC is enabled, the node's ENR automatically includes QUIC port information so that other nodes can discover and connect via QUIC. The ENR fields can be overridden with `--enr.quic` and `--enr.quic6`. If QUIC is disabled, those ENR fields are omitted.
+The node's ENR automatically includes QUIC port information so that other nodes can discover and connect via QUIC. The ENR fields can be overridden with `--enr.quic` and `--enr.quic6`.
 
 ## Firewall Management
 
@@ -126,7 +114,7 @@ Ports that must be opened:
 
 - 30303/TCP+UDP - Execution layer P2P communication port
 - 9000/TCP+UDP - Beacon node P2P communication (TCP transport + discv5 discovery)
-- 9001/UDP - Beacon node QUIC transport (open by default; not needed if QUIC is disabled)
+- 9001/UDP - Beacon node QUIC transport
 
 Ports that must be protected:
 
