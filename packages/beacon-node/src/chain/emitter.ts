@@ -55,26 +55,27 @@ export enum ChainEvent {
    */
   updateStatus = "updateStatus",
   /**
-   * Trigger a BlockInputSync for blocks where the parentRoot is not known to fork choice
+   * Trigger BlockInputSync to find parent of a SignedBeaconBlock received
+   * Post-gloas, missing parent could be a SignedBeaconBlock and/or a SignedExecutionPayloadEnvelope
    */
   blockUnknownParent = "blockUnknownParent",
   /**
-   * Trigger a BlockInputSync for envelope (payload) with unknown block root
+   * Trigger BlockInputSync to find a SignedBeaconBlock given a SignedExecutionPayloadEnvelop received
    */
-  envelopeUnknownBlockRoot = "envelopeUnknownBlockRoot",
+  envelopeUnknownBlock = "envelopeUnknownBlock",
   /**
-   * Trigger BlockInputSync for objects that correspond to a block that is not known to fork choice
+   * Trigger BlockInputSync to find a SignedBeaconBlock with specified block root.
    */
   unknownBlockRoot = "unknownBlockRoot",
+  /**
+   * Trigger BlockInputSync to find a SignedExecutionPayloadEnvelope with specified block root.
+   */
+  unknownEnvelopeBlockRoot = "unknownEnvelopeBlockRoot",
   /**
    * Trigger BlockInputSync for blocks that are partially received via gossip but are not complete by time the
    * cut-off window passes for waiting on gossip
    */
   incompleteBlockInput = "incompleteBlockInput",
-  /**
-   * Trigger sync for objects that correspond to a payload envelope (SignedExecutionPayloadEnvelope) that is not yet known
-   */
-  unknownEnvelopeBlockRoot = "unknownEnvelopeBlockRoot",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -85,7 +86,7 @@ type ApiEvents = {[K in routes.events.EventType]: (data: routes.events.EventData
 
 export type ChainEventData = {
   [ChainEvent.blockUnknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
-  [ChainEvent.envelopeUnknownBlockRoot]: {
+  [ChainEvent.envelopeUnknownBlock]: {
     envelope: SignedExecutionPayloadEnvelope;
     peer?: PeerIdStr;
     source: BlockInputSource;
@@ -112,7 +113,7 @@ export type IChainEvents = ApiEvents & {
   // Sync events that are chain->chain. Initiated from network requests but do not cross the network
   // barrier so are considered ChainEvent(s).
   [ChainEvent.blockUnknownParent]: (data: ChainEventData[ChainEvent.blockUnknownParent]) => void;
-  [ChainEvent.envelopeUnknownBlockRoot]: (data: ChainEventData[ChainEvent.envelopeUnknownBlockRoot]) => void;
+  [ChainEvent.envelopeUnknownBlock]: (data: ChainEventData[ChainEvent.envelopeUnknownBlock]) => void;
   [ChainEvent.unknownBlockRoot]: (data: ChainEventData[ChainEvent.unknownBlockRoot]) => void;
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
   [ChainEvent.unknownEnvelopeBlockRoot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]) => void;
