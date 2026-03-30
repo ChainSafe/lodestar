@@ -21,7 +21,7 @@ on:
 
 jobs:
   run:
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     # Skip for dependabot PRs, secrets are not made available and will fail
     # Don't run on forks. Forks don't have access to the S3 credentials and the workflow will fail
     if: |
