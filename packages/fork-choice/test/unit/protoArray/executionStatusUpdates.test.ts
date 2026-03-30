@@ -1,9 +1,9 @@
 import {describe, expect, it} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {
+  BlockExecutionStatus,
   BlockExtraMeta,
   ExecutionStatus,
-  MaybeValidExecutionStatus,
   PayloadStatus,
   ProtoArray,
   ProtoBlock,
@@ -17,7 +17,7 @@ type ValidationTestCase = {
   executionStatus: ExecutionStatus | undefined;
 };
 
-type TestBlock = {slot: number; root: string; parent: string; executionStatus: MaybeValidExecutionStatus};
+type TestBlock = {slot: number; root: string; parent: string; executionStatus: BlockExecutionStatus};
 type TestCase = [string, string | undefined, string | undefined, ExecutionStatus];
 const blocks: TestBlock[] = [
   {slot: 1, root: "1A", parent: "0", executionStatus: ExecutionStatus.Syncing},

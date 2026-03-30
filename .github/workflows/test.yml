@@ -15,7 +15,7 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
       matrix:
@@ -85,7 +85,7 @@ jobs:
   unit-tests:
     name: Unit Tests
     needs: type-checks
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
       matrix:
@@ -123,7 +123,7 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     needs: build
     strategy:
       fail-fast: false
@@ -160,7 +160,7 @@ jobs:
 
   browser-tests:
     name: Browser Tests
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     needs: build
     strategy:
       fail-fast: false
@@ -183,7 +183,7 @@ jobs:
   spec-tests:
     name: Spec tests
     needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
       matrix:

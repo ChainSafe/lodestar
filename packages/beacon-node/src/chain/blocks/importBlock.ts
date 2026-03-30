@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import {
   AncestorStatus,
   EpochDifference,
+  ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
@@ -84,7 +85,7 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus, indexedAttestations} =
+  const {blockInput, postBlockState, parentBlockSlot, executionStatus, dataAvailabilityStatus, indexedAttestations} =
     fullyVerifiedBlock;
   const block = blockInput.getBlock();
   const source = blockInput.getBlockSource();
@@ -96,7 +97,7 @@ export async function importBlock(
   const blockEpoch = computeEpochAtSlot(blockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec =
-    fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
+    fullyVerifiedBlock.seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postBlockState.genesisTime);
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const fork = this.config.getForkSeq(blockSlot);
 
@@ -119,13 +120,13 @@ export async function importBlock(
   // 2. Import block to fork choice
 
   // Should compute checkpoint balances before forkchoice.onBlock
-  this.checkpointBalancesCache.processState(blockRootHex, postState);
+  this.checkpointBalancesCache.processState(blockRootHex, postBlockState);
   const blockSummary = this.forkChoice.onBlock(
     block.message,
-    postState,
+    postBlockState,
     blockDelaySec,
     currentSlot,
-    executionStatus,
+    fork >= ForkSeq.gloas ? ExecutionStatus.PayloadSeparated : executionStatus,
     dataAvailabilityStatus
   );
 
@@ -135,7 +136,7 @@ export async function importBlock(
   // Post-Gloas: blockSummary.payloadStatus is always PENDING, so payloadPresent = false (block state only, no payload processing yet)
   const payloadPresent = !isGloasBlock(blockSummary);
   // processState manages both block state and payload state variants together for memory/disk management
-  this.regen.processBlockState(blockRootHex, postState);
+  this.regen.processBlockState(blockRootHex, postBlockState);
 
   // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
   if (fork >= ForkSeq.gloas) {
@@ -188,7 +189,7 @@ export async function importBlock(
     (opts.importAttestations !== AttestationImportOpt.Skip && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
   ) {
     const attestations = block.message.body.attestations;
-    const rootCache = new RootCache(postState);
+    const rootCache = new RootCache(postBlockState);
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
     const addAttestation = fork >= ForkSeq.electra ? addAttestationPostElectra : addAttestationPreElectra;
@@ -202,7 +203,7 @@ export async function importBlock(
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         addAttestation.call(
           this,
-          postState,
+          postBlockState,
           target,
           attDataRoot,
           attestation as Attestation<ForkPostElectra>,
@@ -317,7 +318,7 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
-    this.regen.updateHeadState(newHead, postState);
+    this.regen.updateHeadState(newHead, postBlockState);
 
     try {
       this.emitter.emit(routes.events.EventType.head, {
@@ -389,7 +390,7 @@ export async function importBlock(
         try {
           this.lightClientServer?.onImportBlockHead(
             block.message as BeaconBlock<ForkPostAltair>,
-            postState,
+            postBlockState,
             parentBlockSlot
           );
         } catch (e) {
@@ -410,11 +411,11 @@ export async function importBlock(
   // and the block is weak and can potentially be reorged out.
   let shouldOverrideFcu = false;
 
-  if (blockSlot >= currentSlot && postState.isExecutionStateType) {
+  if (blockSlot >= currentSlot && postBlockState.isExecutionStateType) {
     let notOverrideFcuReason = NotReorgedReason.Unknown;
     const proposalSlot = blockSlot + 1;
     try {
-      const proposerIndex = postState.getBeaconProposer(proposalSlot);
+      const proposerIndex = postBlockState.getBeaconProposer(proposalSlot);
       const feeRecipient = this.beaconProposerCache.get(proposerIndex);
 
       if (feeRecipient) {
@@ -494,20 +495,20 @@ export async function importBlock(
     }
   }
 
-  if (!postState.isStateValidatorsNodesPopulated()) {
-    this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
+  if (!postBlockState.isStateValidatorsNodesPopulated()) {
+    this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postBlockState.slot});
   }
 
   // Cache shufflings when crossing an epoch boundary
   const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   if (parentEpoch < blockEpoch) {
-    this.shufflingCache.processState(postState);
+    this.shufflingCache.processState(postBlockState);
     this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
   }
 
   if (blockSlot % SLOTS_PER_EPOCH === 0) {
     // Cache state to preserve epoch transition work
-    const checkpointState = postState;
+    const checkpointState = postBlockState;
     const cp = getCheckpointFromState(checkpointState);
     this.regen.addCheckpointState(cp, checkpointState, payloadPresent);
     // consumers should not mutate state ever
@@ -601,7 +602,7 @@ export async function importBlock(
     this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
-      fullyVerifiedBlock.postState.currentSyncCommitteeIndexed.validatorIndices
+      fullyVerifiedBlock.postBlockState.currentSyncCommitteeIndexed.validatorIndices
     );
   }
 

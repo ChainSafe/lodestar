@@ -32,7 +32,7 @@ on:
 jobs:
   analyze:
     name: Analyze
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     permissions:
       actions: read
       contents: read

@@ -9,6 +9,7 @@ import {
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
@@ -541,7 +542,8 @@ export class ProtoArray {
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
     executionPayloadStateRoot: RootHex,
-    proposerBoostRoot: RootHex | null
+    proposerBoostRoot: RootHex | null,
+    executionStatus: PayloadExecutionStatus
   ): void {
     // First check if block exists
     const variants = this.indices.get(blockRoot);
@@ -591,7 +593,8 @@ export class ProtoArray {
       weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,
-      executionStatus: ExecutionStatus.Valid,
+      // TODO GLOAS: handle optimistic sync
+      executionStatus,
       executionPayloadBlockHash,
       executionPayloadNumber,
       stateRoot: executionPayloadStateRoot,

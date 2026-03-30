@@ -25,9 +25,9 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: buildjet-4vcpu-ubuntu-2204
+            runner: warp-ubuntu-2204-x64-4x
           - arch: arm64
-            runner: buildjet-4vcpu-ubuntu-2204-arm
+            runner: lodestar-arm64-runner # warp-ubuntu-latest-arm64-4x needs to get added to our account adding this one for now so we can get this merged. may break arm builds on unstable
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
