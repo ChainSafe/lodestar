@@ -3,7 +3,7 @@ import type {Upgrader} from "@libp2p/interface";
 import {defaultLogger} from "@libp2p/logger";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {streamPair} from "@libp2p/utils";
-import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
 
 describe("network / noise / sendData", () => {
@@ -13,18 +13,15 @@ describe("network / noise / sendData", () => {
   // This is a known race in @chainsafe/libp2p-noise where the encrypted stream's
   // drain handler fires after the underlying mock stream has started closing.
   // Without this handler the uncaught exception crashes the benchmark process.
-  const suppressStreamCloseErrors = (err: Error): void => {
-    if (err.name === "StreamStateError") return;
-    // Re-throw non-stream errors
+  // Kept installed for process lifetime since drain events can fire after afterAll.
+  const suppressStreamCloseErrors = (err: unknown): void => {
+    if (err instanceof Error && err.name === "StreamStateError") return;
+    // Re-throw non-stream errors — use original if Error, wrap otherwise
     throw err;
   };
 
   beforeAll(() => {
     process.on("uncaughtException", suppressStreamCloseErrors);
-  });
-
-  afterAll(() => {
-    process.removeListener("uncaughtException", suppressStreamCloseErrors);
   });
 
   for (const messageLength of [
