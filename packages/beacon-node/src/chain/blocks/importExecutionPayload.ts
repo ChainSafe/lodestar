@@ -89,7 +89,7 @@ export async function importExecutionPayload(
   const signedEnvelope = payloadInput.getPayloadEnvelope();
   const envelope = signedEnvelope.message;
   const blockRootHex = payloadInput.blockRootHex;
-  const blockHashHex = toRootHex(envelope.payload.blockHash);
+  const blockHashHex = payloadInput.getBlockHashHex();
   const fork = this.config.getForkName(envelope.slot);
 
   // 1. Emit `execution_payload_available` event at the start of import. At this point the payload input
