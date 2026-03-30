@@ -90,7 +90,7 @@ Lodestar supports [QUIC](https://datatracker.ietf.org/doc/html/rfc9000) as a tra
 
 #### Port Configuration
 
-With QUIC enabled by default, the node listens on an additional UDP port and advertises QUIC support in its ENR. Lodestar uses three ports for P2P networking:
+Lodestar uses three ports for P2P networking:
 
 | Port              | Protocol | Default                 | Purpose                   |
 | ----------------- | -------- | ----------------------- | ------------------------- |

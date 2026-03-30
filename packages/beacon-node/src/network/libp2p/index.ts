@@ -22,10 +22,7 @@ export type NodeJsLibp2pOpts = {
   metricsRegistry?: Registry;
 };
 
-export async function getDiscv5Multiaddrs(
-  bootEnrs: string[],
-  quicEnabled = defaultNetworkOptions.quic
-): Promise<string[]> {
+export async function getDiscv5Multiaddrs(bootEnrs: string[], quicEnabled: boolean): Promise<string[]> {
   const bootMultiaddrs = [];
   for (const enrStr of bootEnrs) {
     const enr = ENR.decodeTxt(enrStr);

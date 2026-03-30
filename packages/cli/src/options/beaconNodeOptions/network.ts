@@ -313,7 +313,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   quic: {
     type: "boolean",
-    description: "Enable QUIC transport (enabled by default)",
+    description: "Enable QUIC transport",
     default: true,
     group: "network",
   },

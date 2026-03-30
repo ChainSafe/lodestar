@@ -27,7 +27,7 @@ describe("network / libp2p / getDiscv5Multiaddrs", () => {
 
   it("should prefer quic by default when available", async () => {
     const enrTxt = await createEnrTxt({tcp: true, quic: true});
-    const result = await getDiscv5Multiaddrs([enrTxt]);
+    const result = await getDiscv5Multiaddrs([enrTxt], true);
     expect(result).toHaveLength(1);
     expect(result[0]).toContain("/quic-v1");
     expect(result[0]).not.toContain("/tcp/");
@@ -43,7 +43,7 @@ describe("network / libp2p / getDiscv5Multiaddrs", () => {
 
   it("should skip ENRs with no transport at all", async () => {
     const enrTxt = await createEnrTxt({});
-    const result = await getDiscv5Multiaddrs([enrTxt]);
+    const result = await getDiscv5Multiaddrs([enrTxt], true);
     expect(result).toHaveLength(0);
   });
 
