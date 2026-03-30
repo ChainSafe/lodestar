@@ -27,11 +27,16 @@ jobs:
           - arch: amd64
             runner: warp-ubuntu-2204-x64-4x
           - arch: arm64
-            runner: lodestar-arm64-runner # warp-ubuntu-latest-arm64-4x needs to get added to our account adding this one for now so we can get this merged. may break arm builds on unstable
+            runner: warp-ubuntu-2204-x64-4x
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.ref || github.sha }}
+      - name: Set up QEMU
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+        with:
+          platforms: arm64
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
       - name: Login to Docker Hub
@@ -47,6 +52,7 @@ jobs:
           --build-arg COMMIT=$(git rev-parse HEAD)
 
       - name: Sanity check lodestar (${{ matrix.arch }})
+        if: matrix.arch == 'amd64'
         run: |
           docker run -d --name lodestar-sanity-${{ matrix.arch }} -p 9596:9596 chainsafe/lodestar:${{ inputs.tag }}-${{ matrix.arch }} dev --rest.address 0.0.0.0
           sleep 30
