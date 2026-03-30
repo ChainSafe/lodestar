@@ -68,7 +68,7 @@ export function overwriteEnrWithCliArgs(
   const preSeq = enr.seq;
   const {port, discoveryPort, quicPort, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
   const tcp = args.tcp ?? true;
-  const quic = args.quic ?? false;
+  const quic = args.quic ?? true;
   maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
   maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
   maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
