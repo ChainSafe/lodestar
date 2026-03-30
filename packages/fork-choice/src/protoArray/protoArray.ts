@@ -593,6 +593,7 @@ export class ProtoArray {
       weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,
+      // TODO GLOAS: handle optimistic sync
       executionStatus,
       executionPayloadBlockHash,
       executionPayloadNumber,
