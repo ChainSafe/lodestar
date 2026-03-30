@@ -139,6 +139,7 @@ describe("options / beaconNodeOptions", () => {
         archiveDataEpochs: 10000,
         archiveMode: ArchiveMode.Frequency,
         nHistoricalStatesFileDataStore: true,
+        nativeStateView: false,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,

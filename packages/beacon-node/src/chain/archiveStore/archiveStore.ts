@@ -120,6 +120,7 @@ export class ArchiveStore {
         opts: {
           genesisTime: this.chain.clock.genesisTime,
           dbLocation: this.opts.dbName,
+          nativeStateView: this.opts.nativeStateView ?? false,
         },
         config: this.chain.config,
         metrics: this.metrics,

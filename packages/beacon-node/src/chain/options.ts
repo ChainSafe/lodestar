@@ -47,6 +47,7 @@ export type IChainOptions = BlockProcessOpts &
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
+    nativeStateView?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -124,6 +125,7 @@ export const defaultChainOptions: IChainOptions = {
   //   - users can prune the persisted checkpoint state files manually to save disc space
   //   - it helps debug easier when network is unfinalized
   nHistoricalStatesFileDataStore: true,
+  nativeStateView: false,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,
