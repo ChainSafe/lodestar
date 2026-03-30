@@ -435,7 +435,7 @@ export class NetworkProcessor {
               message.propagationSource.toString()
             );
             // do not await the envelope, we can do gossip validation
-            preprocessResult = {action: PreprocessAction.PushToQueue};
+            // also do not reset preprocessResult, we may already await for the block
           }
           break;
         }
