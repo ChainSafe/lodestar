@@ -4,28 +4,43 @@ import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {BeaconStateView, CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
+import {toRootHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BeaconChain} from "../../../../src/chain/index.js";
-import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
-import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
+import {
+  BlockType,
+  produceBlockBody,
+  produceCommonBlockBody,
+} from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
+import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.js";
 import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
 
 const logger = testLogger();
 
-// TODO: Re-enable once BeaconChain test setup supports Electra state
-// Currently fails with REGEN_ERROR_NO_SEED_STATE - the chain regen cannot find a seed state
-// because the perf test state has no blocks in forkChoice to iterate ancestors from.
-// This was silently failing before @chainsafe/benchmark@2.0.2 properly surfaced errors.
-describe.skip("produceBlockBody", () => {
+describe("produceBlockBody", () => {
   const stateOg = generatePerfTestCachedStateElectra({goBackOneSlot: false});
 
   let db: BeaconDb;
   let chain: BeaconChain;
   let state: CachedBeaconStateElectra;
 
+  const controller = new AbortController();
+
   beforeAll(async () => {
-    db = new BeaconDb(state.config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
     state = stateOg.clone();
+
+    const executionEngineBackend = new ExecutionEngineMockBackend({
+      genesisBlockHash: toRootHex(state.latestExecutionPayloadHeader.blockHash),
+      genesisTime: state.genesisTime,
+      config: state.config,
+    });
+    const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
+      signal: controller.signal,
+      logger: testLogger("executionEngine"),
+    });
+
+    db = new BeaconDb(state.config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
     chain = new BeaconChain(
       {
         proposerBoost: true,
@@ -51,12 +66,13 @@ describe.skip("produceBlockBody", () => {
         validatorMonitor: null,
         anchorState: new BeaconStateView(state),
         isAnchorStateFinalized: true,
-        executionEngine: new ExecutionEngineDisabled(),
+        executionEngine,
       }
     );
   });
 
   afterAll(async () => {
+    controller.abort();
     // If before blocks fail, db won't be declared
     if (db !== undefined) await db.close();
     if (chain !== undefined) await chain.close();
@@ -77,7 +93,7 @@ describe.skip("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
-      const commonBlockBodyPromise = chain.produceCommonBlockBody({
+      const commonBlockBodyPromise = produceCommonBlockBody.call(chain, BlockType.Full, state, {
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
