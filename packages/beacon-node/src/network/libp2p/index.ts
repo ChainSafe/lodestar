@@ -10,6 +10,7 @@ import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
 import {noise} from "@chainsafe/libp2p-noise";
 import {asCrypto, defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
+import {quic} from "@chainsafe/libp2p-quic";
 import {Libp2p, LodestarComponents} from "../interface.js";
 import {NetworkOptions, defaultNetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
@@ -92,7 +93,6 @@ export async function createNodeJsLibp2p(
     );
   }
   if (quicEnabled) {
-    const {quic} = await import("@chainsafe/libp2p-quic");
     const quicMultiaddrs = localMultiaddrs.filter((ma) => ma.includes("/quic-v1"));
     const hasIpv4Quic = quicMultiaddrs.some((ma) => ma.includes("/ip4/"));
     const hasIpv6Quic = quicMultiaddrs.some((ma) => ma.includes("/ip6/"));
