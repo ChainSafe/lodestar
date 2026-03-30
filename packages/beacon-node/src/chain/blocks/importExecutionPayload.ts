@@ -1,4 +1,6 @@
 import {routes} from "@lodestar/api";
+import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
@@ -47,6 +49,19 @@ export class PayloadError extends Error {
   constructor(type: PayloadErrorType, message?: string) {
     super(message ?? type.code);
     this.type = type;
+  }
+}
+
+function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExecutionStatus {
+  switch (status) {
+    case ExecutionPayloadStatus.VALID:
+      return ExecutionStatus.Valid;
+    // TODO GLOAS: Handle optimistic import for payload
+    case ExecutionPayloadStatus.SYNCING:
+    case ExecutionPayloadStatus.ACCEPTED:
+      return ExecutionStatus.Syncing;
+    default:
+      throw new Error(`Unexpected execution payload status for fork choice: ${status}`);
   }
 }
 
@@ -176,12 +191,7 @@ export async function importExecutionPayload(
 
     case ExecutionPayloadStatus.ACCEPTED:
     case ExecutionPayloadStatus.SYNCING:
-      // TODO GLOAS: Handle optimistic import for payload - for now treat as error
-      throw new PayloadError({
-        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError ?? "EL syncing, payload not yet validated",
-      });
+      break;
 
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
     case ExecutionPayloadStatus.ELERROR:
@@ -219,14 +229,16 @@ export async function importExecutionPayload(
     blockRootHex,
     blockHashHex,
     envelope.payload.blockNumber,
-    toRootHex(postPayloadStateRoot)
+    toRootHex(postPayloadStateRoot),
+    toForkChoiceExecutionStatus(execResult.status)
   );
 
   // 8. Cache payload state
-  // TODO GLOAS: Enable when PR #8868 merged (adds processPayloadState)
-  // this.regen.processPayloadState(postPayloadState);
-  // if epoch boundary also call
-  // this.regen.addCheckpointState(cp, checkpointState, true);
+  this.regen.processPayloadState(postPayloadState);
+  if (postPayloadState.slot % SLOTS_PER_EPOCH === 0) {
+    const {checkpoint} = postPayloadState.computeAnchorCheckpoint();
+    this.regen.addCheckpointState(checkpoint, postPayloadState, true);
+  }
 
   // 9. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});

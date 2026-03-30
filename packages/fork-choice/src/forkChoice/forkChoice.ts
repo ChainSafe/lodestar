@@ -29,11 +29,12 @@ import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
+  BlockExecutionStatus,
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
-  MaybeValidExecutionStatus,
   NULL_VOTE_INDEX,
+  PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
@@ -585,7 +586,7 @@ export class ForkChoice implements IForkChoice {
     state: IBeaconStateView,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus,
+    executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock {
     const {parentRoot, slot} = block;
@@ -977,7 +978,8 @@ export class ForkChoice implements IForkChoice {
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex
+    executionPayloadStateRoot: RootHex,
+    executionStatus: PayloadExecutionStatus
   ): void {
     this.protoArray.onExecutionPayload(
       blockRoot,
@@ -985,7 +987,8 @@ export class ForkChoice implements IForkChoice {
       executionPayloadBlockHash,
       executionPayloadNumber,
       executionPayloadStateRoot,
-      this.proposerBoostRoot
+      this.proposerBoostRoot,
+      executionStatus
     );
   }
 
@@ -1425,7 +1428,7 @@ export class ForkChoice implements IForkChoice {
     return secFromSlot * 1000 <= proposerReorgCutoff;
   }
 
-  private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
+  private getPreMergeExecStatus(executionStatus: BlockExecutionStatus): ExecutionStatus.PreMerge {
     if (executionStatus !== ExecutionStatus.PreMerge)
       throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
     return executionStatus;
@@ -1440,7 +1443,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   private getPreGloasExecStatus(
-    executionStatus: MaybeValidExecutionStatus
+    executionStatus: BlockExecutionStatus
   ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
     if (executionStatus === ExecutionStatus.PreMerge || executionStatus === ExecutionStatus.PayloadSeparated)
       throw Error(
@@ -1449,7 +1452,7 @@ export class ForkChoice implements IForkChoice {
     return executionStatus;
   }
 
-  private getPostGloasExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PayloadSeparated {
+  private getPostGloasExecStatus(executionStatus: BlockExecutionStatus): ExecutionStatus.PayloadSeparated {
     if (executionStatus !== ExecutionStatus.PayloadSeparated)
       throw Error(
         `Invalid post-gloas execution status: expected: ${ExecutionStatus.PayloadSeparated}, got ${executionStatus}`
@@ -1855,6 +1858,7 @@ export function getCommitteeFraction(
  * Pre-Gloas: always FULL (payload embedded in block)
  * Gloas: determined by state.execution_payload_availability
  *
+ * @param config - The chain fork config to determine fork at checkpoint slot
  * @param state - The state to check execution_payload_availability
  * @param checkpointEpoch - The epoch of the checkpoint
  */

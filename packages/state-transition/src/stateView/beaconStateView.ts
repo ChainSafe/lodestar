@@ -34,7 +34,6 @@ import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processV
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
@@ -48,7 +47,6 @@ import {
   isStateValidatorsNodesPopulated,
 } from "../cache/stateCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
-import {BeaconStateAllForks} from "../cache/types.js";
 import {computeUnrealizedCheckpoints} from "../epoch/computeUnrealizedCheckpoints.js";
 import {getFinalizedRootProof, getSyncCommitteesWitness} from "../lightClient/proofs.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
@@ -65,7 +63,6 @@ import {isExecutionEnabled, isExecutionStateType, isMergeTransitionComplete} fro
 import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
-import {getStateTypeFromBytes} from "../util/sszBytes.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
 import {IBeaconStateView} from "./interface.js";
 
@@ -785,43 +782,5 @@ export class BeaconStateView implements IBeaconStateView {
       opts
     );
     return new BeaconStateView(postPayloadState);
-  }
-}
-
-/**
- * Create BeaconStateView for historical state regen, this is called from a worker thread.
- */
-export function createBeaconStateViewForHistoricalRegen(
-  config: BeaconConfig,
-  stateBytes: Uint8Array,
-  pubkeyCache: PubkeyCache
-): IBeaconStateView {
-  const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-
-  syncPubkeyCache(state, pubkeyCache);
-  const cachedState = createCachedBeaconState(
-    state,
-    {
-      config,
-      pubkeyCache,
-    },
-    {
-      skipSyncPubkeys: true,
-    }
-  );
-
-  return new BeaconStateView(cachedState);
-}
-
-/**
- * Populate a PubkeyIndexMap with any new entries based on a BeaconState
- */
-function syncPubkeyCache(state: BeaconStateAllForks, pubkeyCache: PubkeyCache): void {
-  // Get the validators sub tree once for all the loop
-
-  const newCount = state.validators.length;
-  for (let i = pubkeyCache.size; i < newCount; i++) {
-    const pubkey = state.validators.getReadonly(i).pubkey;
-    pubkeyCache.set(i, pubkey);
   }
 }
