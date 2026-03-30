@@ -1068,7 +1068,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Same as hasEnvelopeUnsafe but accepts a hex-encoded block root.
+   * Same as hasPayloadUnsafe but accepts a hex-encoded block root.
    */
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean {
     return this.protoArray.hasPayload(blockRoot);
