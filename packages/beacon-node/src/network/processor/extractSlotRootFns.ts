@@ -75,8 +75,7 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
     },
     [GossipType.execution_payload]: (data: Uint8Array): SlotOptionalRoot | null => {
       const slot = getSlotFromExecutionPayloadEnvelopeSerialized(data);
-      // do not extract root now because network processor will await the block
-      // instead, we want network processor to extract root and search for block later if it's missing and BlockInputSync will queue it
+      // Do not extract the root here; the network processor will extract it in the 2nd round to trigger block search without awaiting.
       if (slot === null) {
         return null;
       }
