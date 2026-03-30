@@ -434,6 +434,7 @@ const GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK =
 // Within SignedExecutionPayloadBid, parentBlockHash is at byte 100 (msg_offset:4 + sig:96)
 const PARENT_BLOCK_HASH_OFFSET_IN_SIGNED_BID = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE; // = 100
 
+// CAUTION: update offsets if BeaconBlockBody fixed fields change after Gloas
 export function getParentBlockHashFromGloasSignedBeaconBlockSerialized(data: Uint8Array): RootHex | null {
   if (data.length < GLOAS_SIGNED_BID_OFFSET_POINTER_IN_SIGNED_BEACON_BLOCK + VARIABLE_FIELD_OFFSET) {
     return null;
