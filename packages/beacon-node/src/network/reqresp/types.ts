@@ -14,6 +14,7 @@ import {
   altair,
   deneb,
   fulu,
+  gloas,
   phase0,
   ssz,
   sszTypesFor,
@@ -25,6 +26,8 @@ import {
   BlobSidecarsByRootRequestType,
   DataColumnSidecarsByRootRequest,
   DataColumnSidecarsByRootRequestType,
+  ExecutionPayloadEnvelopesByRootRequest,
+  ExecutionPayloadEnvelopesByRootRequestType,
 } from "../../util/types.js";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
@@ -42,6 +45,8 @@ export enum ReqRespMethod {
   BlobSidecarsByRoot = "blob_sidecars_by_root",
   DataColumnSidecarsByRange = "data_column_sidecars_by_range",
   DataColumnSidecarsByRoot = "data_column_sidecars_by_root",
+  ExecutionPayloadEnvelopesByRoot = "execution_payload_envelopes_by_root",
+  ExecutionPayloadEnvelopesByRange = "execution_payload_envelopes_by_range",
   LightClientBootstrap = "light_client_bootstrap",
   LightClientUpdatesByRange = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
@@ -60,6 +65,8 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequest;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequest;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: gloas.ExecutionPayloadEnvelopesByRangeRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
@@ -78,6 +85,8 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecar;
   [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecar;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: gloas.SignedExecutionPayloadEnvelope;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: gloas.SignedExecutionPayloadEnvelope;
 
   [ReqRespMethod.LightClientBootstrap]: LightClientBootstrap;
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
@@ -105,6 +114,8 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequestType(config),
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest,
 
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
@@ -137,6 +148,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
   [ReqRespMethod.DataColumnSidecarsByRange]: () => ssz.fulu.DataColumnSidecar,
   [ReqRespMethod.DataColumnSidecarsByRoot]: () => ssz.fulu.DataColumnSidecar,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
 };

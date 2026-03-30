@@ -12,6 +12,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateView,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
   createCachedBeaconState,
@@ -153,7 +154,7 @@ export async function getDevBeaconNode(
     privateKey,
     dataDir: ".",
     peerStoreDir,
-    anchorState: cachedState,
+    anchorState: new BeaconStateView(cachedState),
     wsCheckpoint,
     isAnchorStateFinalized: true,
   });

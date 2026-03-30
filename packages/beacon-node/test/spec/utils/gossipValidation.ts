@@ -10,6 +10,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateView,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
@@ -17,7 +18,7 @@ import {
   isExecutionStateType,
   syncPubkeys,
 } from "@lodestar/state-transition";
-import {RootHex, sszTypesFor} from "@lodestar/types";
+import {RootHex, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
@@ -29,6 +30,8 @@ import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../..
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
+import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
+import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
@@ -128,11 +131,11 @@ class GossipTestClock extends EventEmitter implements IClock {
 interface MetaYaml {
   topic: GossipType;
   blocks?: {block: string; failed?: boolean}[];
-  finalized_checkpoint?: {epoch: number; root?: string; block?: string};
-  current_time_ms?: number;
+  finalized_checkpoint?: {epoch: bigint; root?: string; block?: string};
+  current_time_ms?: bigint;
   messages: {
-    offset_ms?: number;
-    subnet_id?: number;
+    offset_ms?: bigint;
+    subnet_id?: bigint;
     message: string;
     expected: "valid" | "ignore" | "reject";
     reason?: string;
@@ -146,6 +149,8 @@ const gossipTopicByHandler = {
   gossip_proposer_slashing: GossipType.proposer_slashing,
   gossip_attester_slashing: GossipType.attester_slashing,
   gossip_voluntary_exit: GossipType.voluntary_exit,
+  gossip_sync_committee_message: GossipType.sync_committee,
+  gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -333,7 +338,7 @@ export async function runGossipValidationTest(
       clock,
       metrics: null,
       validatorMonitor: null,
-      anchorState: cachedState,
+      anchorState: new BeaconStateView(cachedState),
       isAnchorStateFinalized: true,
       executionEngine,
       executionBuilder: undefined,
@@ -529,6 +534,22 @@ async function validateMessageForTopic(
       await validateGossipVoluntaryExit(chain, exit);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertVoluntaryExit(exit);
+      break;
+    }
+
+    case GossipType.sync_committee: {
+      const syncCommitteeMessage = rejectOnInvalidSerializedBytes(() =>
+        ssz.altair.SyncCommitteeMessage.deserialize(bytes)
+      );
+      await validateGossipSyncCommittee(chain, syncCommitteeMessage, Number(message.subnet_id ?? 0));
+      break;
+    }
+
+    case GossipType.sync_committee_contribution_and_proof: {
+      const signedContributionAndProof = rejectOnInvalidSerializedBytes(() =>
+        ssz.altair.SignedContributionAndProof.deserialize(bytes)
+      );
+      await validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof);
       break;
     }
 

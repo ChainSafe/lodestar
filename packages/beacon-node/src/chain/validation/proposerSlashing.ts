@@ -35,7 +35,7 @@ async function validateProposerSlashing(
 
   // [REJECT] All of the conditions within process_proposer_slashing pass validation.
   try {
-    const proposer = state.validators.getReadonly(proposerSlashing.signedHeader1.message.proposerIndex);
+    const proposer = state.getValidator(proposerSlashing.signedHeader1.message.proposerIndex);
     // verifySignature = false, verified in batch below
     assertValidProposerSlashing(chain.config, chain.pubkeyCache, state.slot, proposerSlashing, proposer, false);
   } catch (e) {

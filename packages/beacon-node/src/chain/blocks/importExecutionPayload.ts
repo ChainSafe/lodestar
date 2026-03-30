@@ -1,11 +1,7 @@
 import {routes} from "@lodestar/api";
-import {ForkName} from "@lodestar/params";
-import {
-  BeaconStateView,
-  CachedBeaconStateGloas,
-  getExecutionPayloadEnvelopeSignatureSet,
-} from "@lodestar/state-transition";
-import {processExecutionPayloadEnvelope} from "@lodestar/state-transition/block";
+import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -56,6 +52,19 @@ export class PayloadError extends Error {
   }
 }
 
+function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExecutionStatus {
+  switch (status) {
+    case ExecutionPayloadStatus.VALID:
+      return ExecutionStatus.Valid;
+    // TODO GLOAS: Handle optimistic import for payload
+    case ExecutionPayloadStatus.SYNCING:
+    case ExecutionPayloadStatus.ACCEPTED:
+      return ExecutionStatus.Syncing;
+    default:
+      throw new Error(`Unexpected execution payload status for fork choice: ${status}`);
+  }
+}
+
 /**
  * Import an execution payload envelope after all data is available.
  *
@@ -93,12 +102,12 @@ export async function importExecutionPayload(
 
   // 3. Get pre-state for processExecutionPayloadEnvelope
   // We need the block state (post-block, pre-payload) to process the envelope
-  const blockState = (await this.regen.getBlockSlotState(
+  const blockState = await this.regen.getBlockSlotState(
     protoBlock,
     protoBlock.slot,
     {dontTransferCache: true},
     RegenCaller.processBlock
-  )) as CachedBeaconStateGloas;
+  );
 
   // 4. Run verification steps in parallel
   // Note: No data availability check needed here - importExecutionPayload is only
@@ -117,8 +126,8 @@ export async function importExecutionPayload(
       : (async () => {
           const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
             this.config,
-            blockState.epochCtx.pubkeyCache,
-            new BeaconStateView(blockState),
+            this.pubkeyCache,
+            blockState,
             envelope,
             payloadInput.proposerIndex
           );
@@ -130,7 +139,7 @@ export async function importExecutionPayload(
     (async () => {
       try {
         return {
-          postPayloadState: processExecutionPayloadEnvelope(blockState, envelope, {
+          postPayloadState: blockState.processExecutionPayloadEnvelope(envelope, {
             verifySignature: false,
             verifyStateRoot: false,
           }),
@@ -166,12 +175,7 @@ export async function importExecutionPayload(
 
     case ExecutionPayloadStatus.ACCEPTED:
     case ExecutionPayloadStatus.SYNCING:
-      // TODO GLOAS: Handle optimistic import for payload - for now treat as error
-      throw new PayloadError({
-        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError ?? "EL syncing, payload not yet validated",
-      });
+      break;
 
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
     case ExecutionPayloadStatus.ELERROR:
@@ -209,14 +213,16 @@ export async function importExecutionPayload(
     blockRootHex,
     payloadInput.getBlockHashHex(),
     envelope.message.payload.blockNumber,
-    toRootHex(postPayloadStateRoot)
+    toRootHex(postPayloadStateRoot),
+    toForkChoiceExecutionStatus(execResult.status)
   );
 
   // 7. Cache payload state
-  // TODO GLOAS: Enable when PR #8868 merged (adds processPayloadState)
-  // this.regen.processPayloadState(postPayloadState);
-  // if epoch boundary also call
-  // this.regen.addCheckpointState(cp, checkpointState, true);
+  this.regen.processPayloadState(postPayloadState);
+  if (postPayloadState.slot % SLOTS_PER_EPOCH === 0) {
+    const {checkpoint} = postPayloadState.computeAnchorCheckpoint();
+    this.regen.addCheckpointState(checkpoint, postPayloadState, true);
+  }
 
   // 8. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
