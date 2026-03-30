@@ -6,6 +6,7 @@ import type {PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {SignableENR} from "@chainsafe/enr";
+import {defaultOptions} from "@lodestar/beacon-node";
 import {Logger} from "@lodestar/utils";
 import {exportToJSON, readPrivateKey} from "../../config/index.js";
 import {parseListenArgs} from "../../options/beaconNodeOptions/network.js";
@@ -67,8 +68,8 @@ export function overwriteEnrWithCliArgs(
 ): void {
   const preSeq = enr.seq;
   const {port, discoveryPort, quicPort, port6, discoveryPort6, quicPort6} = parseListenArgs(args);
-  const tcp = args.tcp ?? true;
-  const quic = args.quic ?? true;
+  const tcp = args.tcp ?? defaultOptions.network.tcp;
+  const quic = args.quic ?? defaultOptions.network.quic;
   maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
   maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
   maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);

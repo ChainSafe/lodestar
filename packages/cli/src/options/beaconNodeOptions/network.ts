@@ -87,7 +87,7 @@ export function parseListenArgs(args: NetworkArgs) {
 export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const {listenAddress, port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6} =
     parseListenArgs(args);
-  const quic = args.quic ?? true;
+  const quic = args.quic ?? defaultOptions.network.quic;
   const tcp = args.tcp ?? true;
 
   if (!quic && !tcp) {
