@@ -43,7 +43,7 @@
   "devDependencies": {
     "@actions/core": "^1.11.1",
     "@biomejs/biome": "^2.2.0",
-    "@chainsafe/benchmark": "^1.2.3",
+    "@chainsafe/benchmark": "^2.0.2",
     "@chainsafe/biomejs-config": "^1.0.0",
     "@lerna-lite/cli": "^4.9.4",
     "@lerna-lite/exec": "^4.9.4",

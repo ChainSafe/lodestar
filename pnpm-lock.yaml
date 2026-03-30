@@ -42,8 +42,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.2
       '@chainsafe/benchmark':
-        specifier: ^1.2.3
-        version: 1.2.3(encoding@0.1.13)
+        specifier: ^2.0.2
+        version: 2.0.2(encoding@0.1.13)
       '@chainsafe/biomejs-config':
         specifier: ^1.0.0
         version: 1.0.0(@biomejs/biome@2.2.2)
@@ -1310,8 +1310,8 @@ packages:
   '@chainsafe/as-sha256@1.2.0':
     resolution: {integrity: sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==}
 
-  '@chainsafe/benchmark@1.2.3':
-    resolution: {integrity: sha512-5rQKK2ar1k8DwqEMU5hTQlTrtrPzNdlfrMtbRgtrfYT/QpSADXGq1vBlywofY1D8HuEuv1LhRrn3p2rgibIXew==}
+  '@chainsafe/benchmark@2.0.2':
+    resolution: {integrity: sha512-qL8HpfP3922oPIDC7zarJpVNYddlf5Vv1DDGoOrKT/WRWKyQ0+INgrcs0Z67DbRp3tyZf70du1Oul0A93pAA5g==}
     hasBin: true
 
   '@chainsafe/biomejs-config@1.0.0':
@@ -7735,7 +7735,7 @@ snapshots:
 
   '@chainsafe/as-sha256@1.2.0': {}
 
-  '@chainsafe/benchmark@1.2.3(encoding@0.1.13)':
+  '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
     dependencies:
       '@actions/cache': 4.0.0(encoding@0.1.13)
       '@actions/github': 6.0.0
@@ -7748,7 +7748,7 @@ snapshots:
       debug: 4.4.3
       glob: 10.4.5
       log-symbols: 7.0.0
-      yaml: 2.7.0
+      yaml: 2.8.2
       yargs: 17.7.2
     transitivePeerDependencies:
       - encoding

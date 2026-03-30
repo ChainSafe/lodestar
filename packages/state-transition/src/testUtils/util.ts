@@ -25,9 +25,11 @@ import {
 } from "../index.js";
 import {
   BeaconStateAltair,
+  BeaconStateElectra,
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStateElectra,
   CachedBeaconStatePhase0,
 } from "../types.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
@@ -41,6 +43,9 @@ let phase0SignedBlock: phase0.SignedBeaconBlock | null = null;
 let altairState: BeaconStateAltair | null = null;
 let altairCachedState23637: CachedBeaconStateAltair | null = null;
 let altairCachedState23638: CachedBeaconStateAltair | null = null;
+let electraState: BeaconStateElectra | null = null;
+let electraCachedState23637: CachedBeaconStateElectra | null = null;
+let electraCachedState23638: CachedBeaconStateElectra | null = null;
 
 /**
  * Number of validators in prater is 210000 as of May 2021
@@ -234,6 +239,47 @@ export function generatePerfTestCachedStateAltair(opts?: {
 }
 
 /**
+ * Warning: This function has side effects on the cached state
+ * The order in which the caches are populated is important and can cause stable tests to fail.
+ */
+export function generatePerfTestCachedStateElectra(opts?: {
+  goBackOneSlot: boolean;
+  vc?: number;
+}): CachedBeaconStateElectra {
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
+  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+
+  const electraConfig = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
+  });
+
+  const origState = generatePerformanceStateElectra(pubkeys);
+
+  if (!electraCachedState23637) {
+    const state = origState.clone();
+    state.slot -= 1;
+    electraCachedState23637 = createCachedBeaconState(state, {
+      config: createBeaconConfig(electraConfig, state.genesisValidatorsRoot),
+      pubkeyCache,
+    });
+  }
+  if (!electraCachedState23638) {
+    electraCachedState23638 = processSlots(
+      electraCachedState23637,
+      electraCachedState23637.slot + 1
+    ) as CachedBeaconStateElectra;
+    electraCachedState23638.slot += 1;
+  }
+  const resultingState = opts?.goBackOneSlot ? electraCachedState23637 : electraCachedState23638;
+
+  return resultingState.clone();
+}
+
+/**
  * This is generated from Medalla state 756416
  */
 export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): BeaconStateAltair {
@@ -272,6 +318,54 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     altairState.hashTreeRoot();
   }
   return altairState.clone();
+}
+
+/**
+ * This is generated from the same performance state as Altair, upgraded to Electra fields.
+ */
+export function generatePerformanceStateElectra(pubkeysArg?: Uint8Array[]): BeaconStateElectra {
+  if (!electraState) {
+    const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+    const electraConfig = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+    });
+    const state = ssz.electra.BeaconState.defaultValue();
+
+    Object.assign(state, buildPerformanceStatePhase0(pubkeys));
+
+    state.fork.previousVersion = electraConfig.DENEB_FORK_VERSION;
+    state.fork.currentVersion = electraConfig.ELECTRA_FORK_VERSION;
+    state.fork.epoch = electraConfig.ELECTRA_FORK_EPOCH;
+    state.previousEpochParticipation = newFilledArray(pubkeys.length, 0b111);
+    state.currentEpochParticipation = state.previousEpochParticipation;
+    state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2);
+    state.currentSyncCommittee = ssz.altair.SyncCommittee.defaultValue();
+    state.nextSyncCommittee = state.currentSyncCommittee;
+    state.latestExecutionPayloadHeader = ssz.electra.ExecutionPayloadHeader.defaultValue();
+    state.depositRequestsStartIndex = 2023n;
+
+    electraState = ssz.electra.BeaconState.toViewDU(state);
+
+    const epoch = computeEpochAtSlot(state.slot);
+    const activeValidatorIndices = getActiveValidatorIndices(electraState, epoch);
+    const effectiveBalanceIncrements = getEffectiveBalanceIncrements(electraState);
+    const {syncCommittee} = getNextSyncCommittee(
+      ForkSeq.electra,
+      electraState,
+      activeValidatorIndices,
+      effectiveBalanceIncrements
+    );
+    state.currentSyncCommittee = syncCommittee;
+    state.nextSyncCommittee = syncCommittee;
+
+    electraState = ssz.electra.BeaconState.toViewDU(state);
+    electraState.hashTreeRoot();
+  }
+  return electraState.clone();
 }
 
 /**
