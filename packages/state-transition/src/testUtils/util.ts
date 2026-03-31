@@ -189,8 +189,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
   }
   const resultingState = opts?.goBackOneSlot ? phase0CachedState23637 : phase0CachedState23638;
 
-  // Use dontTransferCache to preserve the global cache for subsequent callers
-  return resultingState.clone(true);
+  return resultingState.clone();
 }
 
 export function cachedStateAltairPopulateCaches(state: CachedBeaconStateAltair): void {
@@ -224,7 +223,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
   const isDefaultVc = vc === numValidators;
   let cachedState23637 = isDefaultVc ? altairCachedState23637 : null;
   if (!cachedState23637) {
-    const state = origState.clone(isDefaultVc);
+    const state = origState.clone();
     state.slot -= 1;
     cachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
@@ -242,8 +241,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
 
   const resultingState = opts?.goBackOneSlot ? cachedState23637 : cachedState23638;
 
-  // dontTransferCache only when preserving the singleton for subsequent callers
-  return resultingState.clone(isDefaultVc);
+  return resultingState.clone();
 }
 
 /**
@@ -272,7 +270,7 @@ export function generatePerfTestCachedStateElectra(opts?: {
   const isDefaultVc = vc === numValidators;
   let cachedState23637 = isDefaultVc ? electraCachedState23637 : null;
   if (!cachedState23637) {
-    const state = origState.clone(isDefaultVc);
+    const state = origState.clone();
     state.slot -= 1;
     cachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(electraConfig, state.genesisValidatorsRoot),
@@ -288,8 +286,7 @@ export function generatePerfTestCachedStateElectra(opts?: {
   }
   const resultingState = opts?.goBackOneSlot ? cachedState23637 : cachedState23638;
 
-  // dontTransferCache only when preserving the singleton for subsequent callers
-  return resultingState.clone(isDefaultVc);
+  return resultingState.clone();
 }
 
 /**
@@ -335,8 +332,7 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     cached.hashTreeRoot();
     if (isDefaultVc) altairState = cached;
   }
-  // dontTransferCache only when preserving the singleton for subsequent callers
-  return cached.clone(isDefaultVc);
+  return cached.clone();
 }
 
 /**
@@ -389,8 +385,7 @@ export function generatePerformanceStateElectra(pubkeysArg?: Uint8Array[]): Beac
     cached.hashTreeRoot();
     if (isDefaultVc) electraState = cached;
   }
-  // dontTransferCache only when preserving the singleton for subsequent callers
-  return cached.clone(isDefaultVc);
+  return cached.clone();
 }
 
 /**
