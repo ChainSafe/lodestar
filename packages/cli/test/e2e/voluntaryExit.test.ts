@@ -5,11 +5,12 @@ import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {execCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
+import {ssz} from "@lodestar/types";
 import {retry} from "@lodestar/utils";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit cmd", () => {
-  vi.setConfig({testTimeout: 80_000});
+  vi.setConfig({testTimeout: 60_000});
 
   it("Perform a voluntary exit", async () => {
     const restPort = 9596;
@@ -90,9 +91,9 @@ describe("voluntaryExit cmd", () => {
     httpClientController.abort();
   });
 
-  it("Perform a voluntary exit and save to file", async () => {
+  it("Perform a voluntary exit and save to folder", async () => {
     const restPort = 9596;
-    const outputFile = path.join(testFilesDir, "voluntary-exit-output.json");
+    const saveExitsPath = path.join(testFilesDir, "saveExitsPath");
 
     const devBnProc = await spawnCliCommand(
       "packages/cli/bin/lodestar.js",
@@ -137,25 +138,37 @@ describe("voluntaryExit cmd", () => {
         "--interopIndexes=0..3",
         `--server=${baseUrl}`,
         `--pubkeys=${pubkeysToExit.join(",")}`,
-        `--outputFile=${outputFile}`,
+        `--saveExitsPath=${saveExitsPath}`,
       ],
       {pipeStdioToParent: false, logPrefix: "voluntary-exit-file"}
     );
 
     // Verify file was written with valid content
-    const fileContent = JSON.parse(fs.readFileSync(outputFile, "utf-8"));
-    expect(fileContent).toHaveLength(indexesToExit.length);
-    for (const exit of fileContent) {
+    const files = fs.readdirSync(saveExitsPath);
+    expect(files).toHaveLength(indexesToExit.length);
+
+    for (const file of files) {
+      const exit = JSON.parse(fs.readFileSync(path.join(saveExitsPath, file), "utf-8"));
       expect(exit).toHaveProperty("message");
       expect(exit).toHaveProperty("signature");
       expect(exit.message).toHaveProperty("epoch");
       expect(exit.message).toHaveProperty("validator_index");
+
+      const signedVoluntaryExit = ssz.phase0.SignedVoluntaryExit.fromJson(exit);
+      (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
     }
 
-    // Verify validators are NOT exiting (messages were saved, not published)
+    // Verify validators are exiting
     for (const pubkey of pubkeysToExit) {
-      const validator = (await client.beacon.getStateValidator({stateId: "head", validatorId: pubkey})).value();
-      expect(validator.status).not.toBe("active_exiting");
+      await retry(
+        async () => {
+          const validator = (await client.beacon.getStateValidator({stateId: "head", validatorId: pubkey})).value();
+          if (validator.status !== "active_exiting") {
+            throw Error("Validator not exiting");
+          }
+        },
+        {retryDelay: 1000, retries: 20}
+      );
     }
 
     httpClientController.abort();

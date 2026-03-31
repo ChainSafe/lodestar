@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import inquirer from "inquirer";
 import {Signature} from "@chainsafe/blst";
 import {ApiClient, getClient} from "@lodestar/api";
@@ -22,7 +23,7 @@ type VoluntaryExitArgs = {
   exitEpoch?: number;
   pubkeys?: string[];
   yes?: boolean;
-  outputFile?: string;
+  saveExitsPath?: string;
 };
 
 export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & GlobalArgs> = {
@@ -68,8 +69,8 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       type: "boolean",
     },
 
-    outputFile: {
-      description: "Write signed voluntary exit messages to a JSON file instead of publishing to the beacon node",
+    saveExitsPath: {
+      description: "Write signed voluntary exit messages to a folder instead of publishing to the beacon node",
       type: "string",
     },
   },
@@ -117,7 +118,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       }
     }
 
-    const signedExits: phase0.SignedVoluntaryExit[] = [];
+    const signedExits: {exit: phase0.SignedVoluntaryExit; pubkey: string}[] = [];
     const alreadySubmitted = [];
 
     for (const [i, validatorToExit] of validatorsToExit.entries()) {
@@ -131,8 +132,8 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
 
       const signedExit = res.result;
 
-      if (args.outputFile) {
-        signedExits.push(signedExit);
+      if (args.saveExitsPath) {
+        signedExits.push({exit: signedExit, pubkey});
         console.log(`Signed voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
       } else {
         const submitRes = await wrapError(
@@ -158,8 +159,24 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       }
     }
 
-    if (args.outputFile && signedExits.length > 0) {
-      writeSignedExitsToFile(signedExits, args.outputFile);
+    if (args.saveExitsPath && signedExits.length > 0) {
+      try {
+        fs.mkdirSync(args.saveExitsPath, {recursive: true});
+      } catch (e) {
+        throw new YargsError(`Failed to create a directory "${args.saveExitsPath}": ${(e as Error).message}`);
+      }
+
+      for (const {exit, pubkey} of signedExits) {
+        const pubkeyPrefix = pubkey.slice(2, 10);
+        const filename = path.join(args.saveExitsPath, `validator_${pubkeyPrefix}.json`);
+        try {
+          const json = JSON.stringify(ssz.phase0.SignedVoluntaryExit.toJson(exit), null, 2);
+          fs.writeFileSync(filename, json);
+          console.log(`Saved signed voluntary exit for ${pubkeyPrefix} to ${filename}`);
+        } catch (e) {
+          console.error(`Failed to save the signed exit of ${pubkeyPrefix} to ${filename}: ${(e as Error).message}`);
+        }
+      }
     }
   },
 };
@@ -255,19 +272,5 @@ function getSignerPubkeyHex(signer: Signer): string {
 
     case SignerType.Remote:
       return signer.pubkey;
-  }
-}
-
-function writeSignedExitsToFile(signedExits: phase0.SignedVoluntaryExit[], outputFile: string): void {
-  try {
-    const json = JSON.stringify(
-      signedExits.map((e) => ssz.phase0.SignedVoluntaryExit.toJson(e)),
-      null,
-      2
-    );
-    fs.writeFileSync(outputFile, json);
-    console.log(`Wrote ${signedExits.length} signed voluntary exit(s) to ${outputFile}`);
-  } catch (e) {
-    throw new YargsError(`Failed to write to output file "${outputFile}": ${(e as Error).message}`);
   }
 }
