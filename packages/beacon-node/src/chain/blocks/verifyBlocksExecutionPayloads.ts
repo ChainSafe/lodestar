@@ -201,7 +201,7 @@ export async function verifyBlockExecutionPayload(
       ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
   }
 
-  const logCtx = {slot: blockInput.slot, executionBlock: executionPayload.blockNumber};
+  const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex, executionBlock: executionPayload.blockNumber};
   chain.logger.verbose("Call engine api newPayload", logCtx);
   const execResult = await chain.executionEngine.notifyNewPayload(
     fork,

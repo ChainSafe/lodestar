@@ -140,19 +140,30 @@ export async function importBlock(
 
   // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
   if (fork >= ForkSeq.gloas) {
-    this.seenPayloadEnvelopeInputCache.add({
+    const {created} = this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,
       sampledColumns: this.custodyConfig.sampledColumns,
       custodyColumns: this.custodyConfig.custodyColumns,
       timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
     });
-    this.logger.debug("Created PayloadEnvelopeInput for block", {
-      slot: blockSlot,
-      root: blockRootHex,
-      source: source.source,
-      ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
-    });
+
+    // at gossip time, we usually create a PayloadEnvelopeInput here
+    // however, at range sync, we may have already created a PayloadEnvelopeInput
+    if (created) {
+      this.logger.debug("Created PayloadEnvelopeInput for block", {
+        slot: blockSlot,
+        root: blockRootHex,
+        source: source.source,
+        ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
+      });
+    } else {
+      this.logger.debug("PayloadEnvelopeInput already exists for block", {
+        slot: blockSlot,
+        root: blockRootHex,
+        source: source.source,
+      });
+    }
   }
 
   // For Gloas blocks whose envelope was pre-verified during state transition (sync/batch path),
