@@ -19,7 +19,7 @@ import {generateState, zeroProtoBlock} from "../../utils/state.js";
 
 let port = 9000;
 const tcpMu = "/ip4/127.0.0.1/tcp/0";
-const quicMu = tcpMu.replace(/\/tcp\/(\d+)/, "/udp/$1/quic-v1");
+const quicMu = "/ip4/127.0.0.1/udp/0/quic-v1";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("mdns", () => {
@@ -98,10 +98,9 @@ describe.skip("mdns", () => {
 
     const network = await Network.init({
       ...modules,
-      ...(await createNetworkModules(tcpMu, privateKey, {
+      ...(await createNetworkModules([quicMu, tcpMu], privateKey, {
         ...opts,
         mdns: true,
-        localMultiaddrs: [quicMu, tcpMu],
       })),
       logger,
     });
