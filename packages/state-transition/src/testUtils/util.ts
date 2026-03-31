@@ -40,12 +40,12 @@ let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
 let phase0CachedState23638: CachedBeaconStatePhase0 | null = null;
 let phase0SignedBlock: phase0.SignedBeaconBlock | null = null;
-let altairState: BeaconStateAltair | null = null;
-let altairCachedState23637: CachedBeaconStateAltair | null = null;
-let altairCachedState23638: CachedBeaconStateAltair | null = null;
-let electraState: BeaconStateElectra | null = null;
-let electraCachedState23637: CachedBeaconStateElectra | null = null;
-let electraCachedState23638: CachedBeaconStateElectra | null = null;
+const altairStateByVc = new Map<number, BeaconStateAltair>();
+const altairCachedState23637ByVc = new Map<number, CachedBeaconStateAltair>();
+const altairCachedState23638ByVc = new Map<number, CachedBeaconStateAltair>();
+const electraStateByVc = new Map<number, BeaconStateElectra>();
+const electraCachedState23637ByVc = new Map<number, CachedBeaconStateElectra>();
+const electraCachedState23638ByVc = new Map<number, CachedBeaconStateElectra>();
 
 /**
  * Number of validators in prater is 210000 as of May 2021
@@ -189,7 +189,8 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
   }
   const resultingState = opts?.goBackOneSlot ? phase0CachedState23637 : phase0CachedState23638;
 
-  return resultingState.clone();
+  // Use dontTransferCache to preserve the global cache for subsequent callers
+  return resultingState.clone(true);
 }
 
 export function cachedStateAltairPopulateCaches(state: CachedBeaconStateAltair): void {
@@ -211,31 +212,39 @@ export function generatePerfTestCachedStateAltair(opts?: {
   goBackOneSlot: boolean;
   vc?: number;
 }): CachedBeaconStateAltair {
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
+  const vc = opts?.vc ?? numValidators;
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
   const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
 
   const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   const origState = generatePerformanceStateAltair(pubkeys);
 
+  let altairCachedState23637 = altairCachedState23637ByVc.get(vc);
   if (!altairCachedState23637) {
-    const state = origState.clone();
+    const state = origState.clone(true);
     state.slot -= 1;
     altairCachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
       pubkeyCache,
     });
+    altairCachedState23637ByVc.set(vc, altairCachedState23637);
   }
+
+  let altairCachedState23638 = altairCachedState23638ByVc.get(vc);
   if (!altairCachedState23638) {
     altairCachedState23638 = processSlots(
       altairCachedState23637,
       altairCachedState23637.slot + 1
     ) as CachedBeaconStateAltair;
     altairCachedState23638.slot += 1;
+    altairCachedState23638ByVc.set(vc, altairCachedState23638);
   }
+
   const resultingState = opts?.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
 
-  return resultingState.clone();
+  // Use dontTransferCache to preserve the global cache for subsequent callers
+  return resultingState.clone(true);
 }
 
 /**
@@ -246,7 +255,8 @@ export function generatePerfTestCachedStateElectra(opts?: {
   goBackOneSlot: boolean;
   vc?: number;
 }): CachedBeaconStateElectra {
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
+  const vc = opts?.vc ?? numValidators;
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
   const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
 
   const electraConfig = createChainForkConfig({
@@ -259,32 +269,39 @@ export function generatePerfTestCachedStateElectra(opts?: {
 
   const origState = generatePerformanceStateElectra(pubkeys);
 
+  let electraCachedState23637 = electraCachedState23637ByVc.get(vc);
   if (!electraCachedState23637) {
-    const state = origState.clone();
+    const state = origState.clone(true);
     state.slot -= 1;
     electraCachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(electraConfig, state.genesisValidatorsRoot),
       pubkeyCache,
     });
+    electraCachedState23637ByVc.set(vc, electraCachedState23637);
   }
+  let electraCachedState23638 = electraCachedState23638ByVc.get(vc);
   if (!electraCachedState23638) {
     electraCachedState23638 = processSlots(
       electraCachedState23637,
       electraCachedState23637.slot + 1
     ) as CachedBeaconStateElectra;
     electraCachedState23638.slot += 1;
+    electraCachedState23638ByVc.set(vc, electraCachedState23638);
   }
   const resultingState = opts?.goBackOneSlot ? electraCachedState23637 : electraCachedState23638;
 
-  return resultingState.clone();
+  // Use dontTransferCache to preserve the global cache for subsequent callers
+  return resultingState.clone(true);
 }
 
 /**
  * This is generated from Medalla state 756416
  */
 export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): BeaconStateAltair {
+  const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+  const vc = pubkeys.length;
+  let altairState = altairStateByVc.get(vc);
   if (!altairState) {
-    const pubkeys = pubkeysArg || getPubkeys().pubkeys;
     const statePhase0 = buildPerformanceStatePhase0(pubkeys);
     const state = statePhase0 as BeaconState as BeaconState<ForkName.altair>;
 
@@ -316,16 +333,20 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     altairState = ssz.altair.BeaconState.toViewDU(state);
     // cache roots
     altairState.hashTreeRoot();
+    altairStateByVc.set(vc, altairState);
   }
-  return altairState.clone();
+  // Use dontTransferCache to preserve the global cache for subsequent callers
+  return altairState.clone(true);
 }
 
 /**
  * This is generated from the same performance state as Altair, upgraded to Electra fields.
  */
 export function generatePerformanceStateElectra(pubkeysArg?: Uint8Array[]): BeaconStateElectra {
+  const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+  const vc = pubkeys.length;
+  let electraState = electraStateByVc.get(vc);
   if (!electraState) {
-    const pubkeys = pubkeysArg || getPubkeys().pubkeys;
     const electraConfig = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
@@ -364,8 +385,10 @@ export function generatePerformanceStateElectra(pubkeysArg?: Uint8Array[]): Beac
 
     electraState = ssz.electra.BeaconState.toViewDU(state);
     electraState.hashTreeRoot();
+    electraStateByVc.set(vc, electraState);
   }
-  return electraState.clone();
+  // Use dontTransferCache to preserve the global cache for subsequent callers
+  return electraState.clone(true);
 }
 
 /**
