@@ -370,8 +370,11 @@ export class NetworkProcessor {
                 BlockInputSource.network_processor,
                 message.propagationSource.toString()
               );
-            }
-            if (protoBlock?.executionPayloadBlockHash && protoBlock.executionPayloadBlockHash !== parentBlockHash) {
+            } else if (
+              protoBlock.executionPayloadBlockHash &&
+              protoBlock.executionPayloadBlockHash !== parentBlockHash
+            ) {
+              // only search for the envelope by block root if we're sure there is one. Otherwise UnknownBlockSync will penalize the peer.
               this.searchUnknownEnvelope(
                 {slot, root: parentRoot},
                 BlockInputSource.network_processor,
