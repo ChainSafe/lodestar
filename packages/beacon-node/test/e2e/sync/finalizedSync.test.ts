@@ -12,13 +12,14 @@ import {connect, onPeerConnect} from "../../utils/network.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 
-describe("sync / finalized sync for fulu", () => {
+describe("sync / finalized sync for gloas", () => {
   // chain is finalized at slot 32, plus 4 slots for genesis delay => ~72s it should sync pretty fast
   vi.setConfig({testTimeout: 90_000});
 
   const validatorCount = 8;
   const ELECTRA_FORK_EPOCH = 0;
   const FULU_FORK_EPOCH = 1;
+  const GLOAS_FORK_EPOCH = 2;
   const SLOT_DURATION_MS = 2000;
   const testParams: Partial<ChainConfig> = {
     SLOT_DURATION_MS,
@@ -28,6 +29,7 @@ describe("sync / finalized sync for fulu", () => {
     DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
     ELECTRA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
     FULU_FORK_EPOCH: FULU_FORK_EPOCH,
+    GLOAS_FORK_EPOCH: GLOAS_FORK_EPOCH,
     BLOB_SCHEDULE: [
       {
         EPOCH: 1,
@@ -96,7 +98,7 @@ describe("sync / finalized sync for fulu", () => {
         bn.chain.emitter,
         ChainEvent.forkChoiceFinalized,
         240000,
-        (finalized) => finalized.epoch >= FULU_FORK_EPOCH
+        (finalized) => finalized.epoch >= GLOAS_FORK_EPOCH
       ),
       waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
         bn.chain.emitter,
@@ -106,7 +108,7 @@ describe("sync / finalized sync for fulu", () => {
         ({slot}) => slot === 32
       ),
     ]);
-    loggerNodeA.info("Node A emitted finalized checkpoint event for fulu");
+    loggerNodeA.info("Node A emitted finalized checkpoint event for gloas");
 
     const bn2 = await getDevBeaconNode({
       params: testParams,
@@ -139,7 +141,7 @@ describe("sync / finalized sync for fulu", () => {
 
     try {
       await waitForSynced;
-      loggerNodeB.info("Node B synced to Node A, received fulu head block", {slot: head.message.slot});
+      loggerNodeB.info("Node B synced to Node A, received gloas head block", {slot: head.message.slot});
     } catch (_e) {
       expect.fail("Failed to sync to other node in time");
     }

@@ -54,7 +54,7 @@ export type SyncChainFns = {
     peer: PeerSyncMeta,
     batch: Batch,
     syncType: RangeSyncType
-  ) => Promise<WarnResult<IBlockInput[], DownloadByRangeError>>;
+  ) => Promise<WarnResult<{blocks: IBlockInput[]; envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null}, DownloadByRangeError>>;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Gets current peer custodyColumns and earliestAvailableSlot */
@@ -519,8 +519,8 @@ export class SyncChain {
           peer: prettyPrintPeerIdStr(peer.peerId),
         });
         this.metrics?.syncRange.downloadByRange.success.inc();
-        const {warnings, result} = res.result;
-        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
+        const {warnings, result: {blocks: downloadedBlocks, envelopes: downloadedEnvelopes}} = res.result;
+        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, downloadedBlocks, downloadedEnvelopes);
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
         };
@@ -582,10 +582,10 @@ export class SyncChain {
    * Sends `batch` to the processor. Note: batch may be empty
    */
   private async processBatch(batch: Batch): Promise<void> {
-    const blocks = batch.startProcessing();
+    const {blocks, envelopes} = batch.startProcessing();
 
     // wrapError ensures to never call both batch success() and batch error()
-    const res = await wrapError(this.processChainSegment(blocks, null, this.syncType));
+    const res = await wrapError(this.processChainSegment(blocks, envelopes, this.syncType));
 
     if (!res.err) {
       batch.processingSuccess();

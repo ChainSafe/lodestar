@@ -285,16 +285,20 @@ describe("sync / range / batch", async () => {
     // retry download: AwaitingDownload -> Downloading
     // downloadingSuccess: Downloading -> AwaitingProcessing
     batch.startDownloading(peer);
-    batch.downloadingSuccess(peer, [
-      BlockInputPreData.createFromBlock({
-        block: ssz.capella.SignedBeaconBlock.defaultValue(),
-        blockRootHex: "0x1234",
-        source: BlockInputSource.byRoot,
-        seenTimestampSec: Date.now() / 1000,
-        forkName: ForkName.capella,
-        daOutOfRange: false,
-      }),
-    ]);
+    batch.downloadingSuccess(
+      peer,
+      [
+        BlockInputPreData.createFromBlock({
+          block: ssz.capella.SignedBeaconBlock.defaultValue(),
+          blockRootHex: "0x1234",
+          source: BlockInputSource.byRoot,
+          seenTimestampSec: Date.now() / 1000,
+          forkName: ForkName.capella,
+          daOutOfRange: false,
+        }),
+      ],
+      null
+    );
     expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
 
     // startProcessing: AwaitingProcessing -> Processing
@@ -334,7 +338,7 @@ describe("sync / range / batch", async () => {
     const batch = new Batch(startEpoch, config, clock, custodyConfig);
 
     expectThrowsLodestarError(
-      () => batch.downloadingSuccess(peer, []),
+      () => batch.downloadingSuccess(peer, [], null),
       new BatchError({
         code: BatchErrorCode.WRONG_STATUS,
         startEpoch,

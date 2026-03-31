@@ -117,7 +117,7 @@ describe("sync / range / chain", () => {
             })
           );
         }
-        return {result: blocks, warnings: null};
+        return {result: {blocks, envelopes: null}, warnings: null};
       };
 
       const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -172,7 +172,7 @@ describe("sync / range / chain", () => {
           })
         );
       }
-      return {result: blocks, warnings: null};
+      return {result: {blocks, envelopes: null}, warnings: null};
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
