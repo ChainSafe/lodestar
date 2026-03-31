@@ -143,8 +143,9 @@ describe("voluntaryExit cmd", () => {
     );
 
     // Verify file was written with valid content
-    const files = fs.readdirSync(saveExitsPath);
+    const files = fs.readdirSync(saveExitsPath).sort();
     expect(files).toHaveLength(indexesToExit.length);
+    expect(files).toEqual(indexesToExit.map((index) => `validator_${index}_exit.json`));
 
     for (const file of files) {
       const exit = JSON.parse(fs.readFileSync(path.join(saveExitsPath, file), "utf-8"));
