@@ -89,10 +89,10 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
   return sk;
 }
 
-function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>) {
+function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>, vc = numValidators) {
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkeyCache = createPubkeyCache();
-  for (let i = 0; i < numValidators; i++) {
+  for (let i = 0; i < vc; i++) {
     const pubkey = pubkeysMod[i % keypairsMod];
     pubkeyCache.set(i, pubkey);
   }
@@ -214,7 +214,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
 }): CachedBeaconStateAltair {
   const vc = opts?.vc ?? numValidators;
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj}, vc);
 
   const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
@@ -257,7 +257,7 @@ export function generatePerfTestCachedStateElectra(opts?: {
 }): CachedBeaconStateElectra {
   const vc = opts?.vc ?? numValidators;
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj}, vc);
 
   const electraConfig = createChainForkConfig({
     ALTAIR_FORK_EPOCH: 0,
