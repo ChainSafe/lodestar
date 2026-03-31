@@ -70,6 +70,10 @@ export enum BlockErrorCode {
   TOO_MANY_KZG_COMMITMENTS = "BLOCK_ERROR_TOO_MANY_KZG_COMMITMENTS",
   /** Bid parent block root does not match block parent root */
   BID_PARENT_ROOT_MISMATCH = "BLOCK_ERROR_BID_PARENT_ROOT_MISMATCH",
+  /** Block bid's parentBlockHash does not match the expected execution hash derived from the parent chain */
+  BID_PARENT_HASH_MISMATCH = "BLOCK_ERROR_BID_PARENT_HASH_MISMATCH",
+  /** Envelope's beacon_block_root does not match the block's hash tree root */
+  ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH = "BLOCK_ERROR_ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH",
 }
 
 type ExecutionErrorStatus = Exclude<
@@ -114,7 +118,9 @@ export type BlockErrorType =
   | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string}
   | {code: BlockErrorCode.DATA_UNAVAILABLE}
   | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number}
-  | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex};
+  | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex}
+  | {code: BlockErrorCode.BID_PARENT_HASH_MISMATCH; bidParentHash: RootHex; expectedHash: RootHex}
+  | {code: BlockErrorCode.ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 

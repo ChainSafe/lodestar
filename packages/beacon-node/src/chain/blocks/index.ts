@@ -1,4 +1,5 @@
-import {SignedBeaconBlock} from "@lodestar/types";
+import {ExecutionStatus} from "@lodestar/fork-choice";
+import {SignedBeaconBlock, Slot, gloas} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -21,20 +22,30 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[IBlockInput[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<
+    [IBlockInput[], Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null, ImportBlockOpts],
+    void
+  >;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[IBlockInput[], ImportBlockOpts], void>(
-      (job, importOpts) => {
-        return processBlocks.call(chain, job, {...opts, ...importOpts});
+    this.jobQueue = new JobItemQueue<
+      [IBlockInput[], Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null, ImportBlockOpts],
+      void
+    >(
+      (job, envelopes, importOpts) => {
+        return processBlocks.call(chain, job, envelopes, {...opts, ...importOpts});
       },
       {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.blockProcessorQueue ?? undefined
     );
   }
 
-  async processBlocksJob(job: IBlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
-    await this.jobQueue.push(job, opts);
+  async processBlocksJob(
+    job: IBlockInput[],
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    opts: ImportBlockOpts = {}
+  ): Promise<void> {
+    await this.jobQueue.push(job, envelopes, opts);
   }
 }
 
@@ -51,14 +62,11 @@ export class BlockProcessor {
 export async function processBlocks(
   this: BeaconChain,
   blocks: IBlockInput[],
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
     return; // TODO: or throw?
-  }
-
-  if (blocks.length > 1) {
-    assertLinearChainSegment(this.config, blocks);
   }
 
   try {
@@ -70,10 +78,18 @@ export async function processBlocks(
       return;
     }
 
+    assertLinearChainSegment(this.config, relevantBlocks, envelopes, parentBlock);
+
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock} =
-      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
+    const {
+      postBlockStates,
+      dataAvailabilityStatuses,
+      proposerBalanceDeltas,
+      segmentExecStatus,
+      indexedAttestationsByBlock,
+      postEnvelopeStates,
+    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, envelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -85,21 +101,32 @@ export async function processBlocks(
     }
 
     const {executionStatuses} = segmentExecStatus;
-    const fullyVerifiedBlocks = relevantBlocks.map(
-      (block, i): FullyVerifiedBlock => ({
+    const fullyVerifiedBlocks = relevantBlocks.map((block, i): FullyVerifiedBlock => {
+      const postEnvelopeState = postEnvelopeStates.get(block.getBlock().message.slot) ?? null;
+      const executionStatus = executionStatuses[i];
+      const baseFields = {
         blockInput: block,
-        postBlockState: postStates[i],
-        postEnvelopeState: null,
+        postBlockState: postBlockStates[i],
         parentBlockSlot: parentSlots[i],
-        executionStatus: executionStatuses[i],
         // start supporting optimistic syncing/processing
         dataAvailabilityStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-      })
-    );
+      };
+
+      if (postEnvelopeState !== null) {
+        if (executionStatus !== ExecutionStatus.Valid && executionStatus !== ExecutionStatus.Syncing) {
+          throw new Error(
+            `postEnvelopeState is set but executionStatus is ${executionStatus}, expected Valid or Syncing. slot=${block.getBlock().message.slot} blockIndex=${i}`
+          );
+        }
+        return {...baseFields, postEnvelopeState, executionStatus};
+      }
+
+      return {...baseFields, postEnvelopeState: null, executionStatus};
+    });
 
     for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
       // TODO: Consider batching importBlock too if it takes significant time

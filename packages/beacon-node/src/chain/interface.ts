@@ -18,6 +18,7 @@ import {
   altair,
   capella,
   deneb,
+  gloas,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -241,7 +242,11 @@ export interface IBeaconChain {
   /** Process a block until complete */
   processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(
+    blocks: IBlockInput[],
+    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    opts?: ImportBlockOpts
+  ): Promise<void>;
 
   /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
   processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;

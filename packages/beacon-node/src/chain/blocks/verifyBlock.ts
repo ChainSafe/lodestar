@@ -1,7 +1,7 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
-import {IndexedAttestation, deneb} from "@lodestar/types";
+import {IndexedAttestation, Slot, deneb, gloas} from "@lodestar/types";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -32,13 +32,16 @@ export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
+  // TODO GLOAS: pass PayloadEnvelopeInput instead of gloas.SignedExecutionPayloadEnvelope
+  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
-  postStates: IBeaconStateView[];
+  postBlockStates: IBeaconStateView[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
   dataAvailabilityStatuses: DataAvailabilityStatus[];
   indexedAttestationsByBlock: IndexedAttestation[][];
+  postEnvelopeStates: Map<Slot, IBeaconStateView | null>;
 }> {
   const blocks = blockInputs.map((blockInput) => blockInput.getBlock());
   const lastBlock = blocks.at(-1);
@@ -94,7 +97,15 @@ export async function verifyBlocksInEpoch(
     // Start execution payload verification first (async request to execution client)
     const verifyExecutionPayloadsPromise =
       opts.skipVerifyExecutionPayload !== true
-        ? verifyBlocksExecutionPayload(this, parentBlock, blockInputs, preState0, abortController.signal, opts)
+        ? verifyBlocksExecutionPayload(
+            this,
+            parentBlock,
+            blockInputs,
+            envelopes,
+            preState0,
+            abortController.signal,
+            opts
+          )
         : Promise.resolve({
             execAborted: null,
             executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
@@ -114,12 +125,13 @@ export async function verifyBlocksInEpoch(
     const [
       segmentExecStatus,
       {dataAvailabilityStatuses, availableTime},
-      {postStates, proposerBalanceDeltas, verifyStateTime},
+      {postBlockStates, proposerBalanceDeltas, verifyStateTime, postEnvelopeStates},
       {verifySignaturesTime},
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
 
       // data availability for the blobs
+      // TODO GLOAS: modify this once we pass PayloadEnvelopeInput instead of gloas.SignedExecutionPayloadEnvelope
       verifyBlocksDataAvailability(blockInputs, abortController.signal),
 
       // Run state transition only
@@ -127,6 +139,7 @@ export async function verifyBlocksInEpoch(
       verifyBlocksStateTransitionOnly(
         preState0,
         blockInputs,
+        envelopes,
         // hack availability for state transition eval as availability is separately determined
         blocks.map(() => DataAvailabilityStatus.Available),
         this.logger,
@@ -140,11 +153,13 @@ export async function verifyBlocksInEpoch(
       opts.skipVerifyBlockSignatures !== true
         ? verifyBlocksSignatures(
             this.config,
+            this.pubkeyCache,
             this.bls,
             this.logger,
             this.metrics,
             preState0,
             blocks,
+            envelopes,
             indexedAttestationsByBlock,
             opts
           )
@@ -229,7 +244,14 @@ export async function verifyBlocksInEpoch(
       );
     }
 
-    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock};
+    return {
+      postBlockStates,
+      dataAvailabilityStatuses,
+      proposerBalanceDeltas,
+      segmentExecStatus,
+      indexedAttestationsByBlock,
+      postEnvelopeStates,
+    };
   } finally {
     abortController.abort();
   }

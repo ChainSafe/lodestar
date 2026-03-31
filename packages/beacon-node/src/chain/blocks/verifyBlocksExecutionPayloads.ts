@@ -9,10 +9,11 @@ import {
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
-import {bellatrix, electra} from "@lodestar/types";
+import {ExecutionPayload, ExecutionRequests, Root, Slot, bellatrix, electra, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
-import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
+import {ExecutionPayloadStatus, IExecutionEngine, VersionedHashes} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -58,6 +59,7 @@ export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
+  signedEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
   preState0: IBeaconStateView,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
@@ -96,7 +98,8 @@ export async function verifyBlocksExecutionPayload(
     if (signal.aborted) {
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
-    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, preState0);
+    const signedEnvelope = signedEnvelopes?.get(blockInput.slot) ?? null;
+    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, signedEnvelope, preState0);
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
@@ -141,46 +144,73 @@ export async function verifyBlocksExecutionPayload(
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   blockInput: IBlockInput,
+  signedEnvelope: gloas.SignedExecutionPayloadEnvelope | null,
   preState0: IBeaconStateView
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
 
-  // Gloas block doesn't have execution payload. Return right away
-  if (isBlockInputNoData(blockInput)) {
+  // Gloas block doesn't have execution payload in block body. This happens at gossip time, or range sync with no payload.
+  if (isBlockInputNoData(blockInput) && signedEnvelope === null) {
+    const clockSlot = chain.clock.currentSlot;
+    const logMsg =
+      clockSlot === blockInput.slot
+        ? "Skipping engine api newPayload for gloas block"
+        : "Skipping engine api newPayload for gloas block without payload";
+    chain.logger.verbose(logMsg, {slot: blockInput.slot, root: blockInput.blockRootHex, clockSlot});
     return {executionStatus: ExecutionStatus.PayloadSeparated, lvhResponse: undefined, execError: null};
   }
 
-  /** Not null if execution is enabled */
-  const executionPayloadEnabled =
-    preState0.isExecutionStateType &&
-    isExecutionBlockBodyType(block.message.body) &&
-    preState0.isExecutionEnabled(block.message)
-      ? block.message.body.executionPayload
-      : null;
+  const fork = blockInput.forkName;
 
-  if (!executionPayloadEnabled) {
-    // Pre-merge block, no execution payload to verify
-    return {executionStatus: ExecutionStatus.PreMerge, lvhResponse: undefined, execError: null};
+  // For gloas, execution payload and execution requests come from the signed envelope;
+  // blob kzg commitments come from the execution payload bid in the block body.
+  // For other forks, all three come from the block body.
+  let executionPayload: ExecutionPayload;
+  let versionedHashes: VersionedHashes | undefined;
+  let parentBlockRoot: Root | undefined;
+  let executionRequests: ExecutionRequests | undefined;
+
+  if (isBlockInputNoData(blockInput)) {
+    // Should not happen - we returned early above if signedEnvelope is null
+    if (signedEnvelope === null)
+      throw Error(`signedEnvelope is null for gloas block slot=${blockInput.slot} root=${blockInput.blockRootHex}`);
+    executionPayload = signedEnvelope.message.payload;
+    versionedHashes = blockInput.getBlobKzgCommitments().map(kzgCommitmentToVersionedHash);
+    parentBlockRoot = block.message.parentRoot; // gloas is always post-deneb
+    executionRequests = signedEnvelope.message.executionRequests;
+  } else {
+    /** pre-gloas, not null if execution is enabled */
+    const executionPayloadEnabled =
+      preState0.isExecutionStateType &&
+      isExecutionBlockBodyType(block.message.body) &&
+      preState0.isExecutionEnabled(block.message)
+        ? block.message.body.executionPayload
+        : null;
+
+    if (!executionPayloadEnabled) {
+      // Pre-merge block, no execution payload to verify
+      return {executionStatus: ExecutionStatus.PreMerge, lvhResponse: undefined, execError: null};
+    }
+
+    executionPayload = executionPayloadEnabled;
+    // TODO GLOAs: Handle better notifyNewPayload() returning error is syncing
+    versionedHashes =
+      isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput) ? blockInput.getVersionedHashes() : undefined;
+    parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
+    executionRequests =
+      ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
   }
 
-  // TODO: Handle better notifyNewPayload() returning error is syncing
-  const fork = blockInput.forkName;
-  const versionedHashes =
-    isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput) ? blockInput.getVersionedHashes() : undefined;
-  const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
-  const executionRequests =
-    ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
-
-  const logCtx = {slot: blockInput.slot, executionBlock: executionPayloadEnabled.blockNumber};
-  chain.logger.debug("Call engine api newPayload", logCtx);
+  const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex, executionBlock: executionPayload.blockNumber};
+  chain.logger.verbose("Call engine api newPayload", logCtx);
   const execResult = await chain.executionEngine.notifyNewPayload(
     fork,
-    executionPayloadEnabled,
+    executionPayload,
     versionedHashes,
     parentBlockRoot,
     executionRequests
   );
-  chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
+  chain.logger.verbose("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
@@ -258,10 +288,12 @@ function getSegmentErrorResponse(
     let lvhFound = false;
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
       const block = blocks[mayBeLVHIndex].getBlock();
-      if (
-        toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
-        lvhResponse.latestValidExecHash
-      ) {
+      // For gloas blocks the payload may not arrive; fork choice tracks parentBlockHash
+      // from the bid as the executionPayloadBlockHash. Use the same field here.
+      const blockHashHex = isGloasBeaconBlock(block.message)
+        ? toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+        : toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash);
+      if (blockHashHex === lvhResponse.latestValidExecHash) {
         lvhFound = true;
         break;
       }

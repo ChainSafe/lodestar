@@ -190,7 +190,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache.add(payloadState);
   }
 
-  // TODO GLOAS: This should also be called when importing execution payload after we implement it
   addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView, payloadPresent: boolean): void {
     this.checkpointStateCache.add(cp, item, payloadPresent);
   }
