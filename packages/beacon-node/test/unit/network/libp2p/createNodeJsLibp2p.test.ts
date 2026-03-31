@@ -68,4 +68,21 @@ describe("network / libp2p / createNodeJsLibp2p", () => {
     );
     expect(createLibp2pMock).toHaveBeenCalledOnce();
   });
+
+  it("should skip QUIC transport when no QUIC listen addresses are configured", async () => {
+    const privateKey = await generateKeyPair("secp256k1");
+
+    await createNodeJsLibp2p(
+      privateKey,
+      {
+        tcp: true,
+        quic: true,
+        localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+      },
+      {disablePeerDiscovery: true}
+    );
+
+    expect(quicMock).not.toHaveBeenCalled();
+    expect(createLibp2pMock).toHaveBeenCalledOnce();
+  });
 });
