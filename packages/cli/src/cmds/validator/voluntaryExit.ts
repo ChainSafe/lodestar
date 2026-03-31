@@ -119,7 +119,6 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
     }
 
     const signedExits: {exit: phase0.SignedVoluntaryExit; index: ValidatorIndex; pubkey: string}[] = [];
-    const failedToSave: {index: ValidatorIndex; pubkey: string}[] = [];
     const alreadySubmitted = [];
 
     for (const [i, validatorToExit] of validatorsToExit.entries()) {
@@ -166,6 +165,9 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       } catch (e) {
         throw new YargsError(`Failed to create a directory "${args.saveExitsPath}": ${(e as Error).message}`);
       }
+
+      const failedToSave: {index: ValidatorIndex; pubkey: string}[] = [];
+
       for (const {exit, index, pubkey} of signedExits) {
         const filename = path.join(args.saveExitsPath, `validator_${index}_exit.json`);
         try {
