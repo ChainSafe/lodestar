@@ -209,13 +209,10 @@ export class NetworkProcessor {
       modules
     );
 
-    events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
-    this.chain.emitter.on(routes.events.EventType.block, this.onBlockProcessed.bind(this));
-    this.chain.emitter.on(
-      routes.events.EventType.executionPayloadAvailable,
-      this.onPayloadEnvelopeProcessed.bind(this)
-    );
-    this.chain.clock.on(ClockEvent.slot, this.onClockSlot.bind(this));
+    events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
+    this.chain.emitter.on(routes.events.EventType.block, this.onBlockProcessed);
+    this.chain.emitter.on(routes.events.EventType.executionPayload, this.onPayloadEnvelopeProcessed);
+    this.chain.clock.on(ClockEvent.slot, this.onClockSlot);
 
     this.awaitingMessagesByBlockRoot = new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set());
     this.awaitingMessagesByPayloadBlockRoot = new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set());
@@ -248,7 +245,7 @@ export class NetworkProcessor {
   async stop(): Promise<void> {
     this.events.off(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
     this.chain.emitter.off(routes.events.EventType.block, this.onBlockProcessed);
-    this.chain.emitter.off(routes.events.EventType.executionPayloadAvailable, this.onPayloadEnvelopeProcessed);
+    this.chain.emitter.off(routes.events.EventType.executionPayload, this.onPayloadEnvelopeProcessed);
     this.chain.emitter.off(ClockEvent.slot, this.onClockSlot);
   }
 
@@ -302,7 +299,7 @@ export class NetworkProcessor {
     this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, peer, source});
   }
 
-  private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
+  private onPendingGossipsubMessage = (message: PendingGossipsubMessage): void => {
     const topicType = message.topic.type;
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
 
@@ -475,8 +472,10 @@ export class NetworkProcessor {
                 message.propagationSource.toString()
               );
               preprocessResult = {action: PreprocessAction.AwaitBlock, root: parentBlockRoot};
-            }
-            if (protoBlock?.executionPayloadBlockHash && protoBlock?.executionPayloadBlockHash !== parentBlockHash) {
+            } else if (
+              protoBlock.executionPayloadBlockHash &&
+              protoBlock.executionPayloadBlockHash !== parentBlockHash
+            ) {
               this.searchUnknownEnvelope(
                 {slot, root: parentBlockRoot},
                 BlockInputSource.network_processor,
@@ -526,7 +525,7 @@ export class NetworkProcessor {
         break;
       }
     }
-  }
+  };
 
   private pushPendingGossipsubMessageToQueue(message: PendingGossipsubMessage): void {
     const topicType = message.topic.type;
@@ -540,7 +539,7 @@ export class NetworkProcessor {
     this.executeWork();
   }
 
-  private async onBlockProcessed({block: rootHex}: {block: string; executionOptimistic: boolean}): Promise<void> {
+  private onBlockProcessed = async ({block: rootHex}: {block: string; executionOptimistic: boolean}): Promise<void> => {
     const waitingGossipsubMessages = this.awaitingMessagesByBlockRoot.get(rootHex);
     if (!waitingGossipsubMessages || waitingGossipsubMessages.size === 0) {
       return;
@@ -567,9 +566,9 @@ export class NetworkProcessor {
     }
 
     this.awaitingMessagesByBlockRoot.delete(rootHex);
-  }
+  };
 
-  private async onPayloadEnvelopeProcessed({blockRoot: rootHex}: {blockRoot: RootHex}): Promise<void> {
+  private onPayloadEnvelopeProcessed = async ({blockRoot: rootHex}: {blockRoot: RootHex}): Promise<void> => {
     const waitingGossipsubMessages = this.awaitingMessagesByPayloadBlockRoot.get(rootHex);
     if (!waitingGossipsubMessages || waitingGossipsubMessages.size === 0) {
       return;
@@ -593,9 +592,9 @@ export class NetworkProcessor {
     }
 
     this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
-  }
+  };
 
-  private onClockSlot(clockSlot: Slot): void {
+  private onClockSlot = (clockSlot: Slot): void => {
     const nowSec = Date.now() / 1000;
     const minSlot = clockSlot - MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE;
 
@@ -644,7 +643,7 @@ export class NetworkProcessor {
       }
       this.unknownEnvelopesBySlot.delete(slot);
     }
-  }
+  };
 
   private executeWork(): void {
     // TODO: Maybe de-bounce by timing the last time executeWork was run
