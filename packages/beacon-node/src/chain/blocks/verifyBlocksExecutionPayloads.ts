@@ -9,7 +9,16 @@ import {
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
-import {ExecutionPayload, ExecutionRequests, Root, Slot, bellatrix, electra, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  Slot,
+  bellatrix,
+  electra,
+  gloas,
+  isGloasBeaconBlock,
+} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine, VersionedHashes} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
