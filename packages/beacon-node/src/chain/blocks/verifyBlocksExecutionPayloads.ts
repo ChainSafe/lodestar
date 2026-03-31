@@ -9,7 +9,7 @@ import {
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
-import {ExecutionPayload, ExecutionRequests, Root, Slot, bellatrix, electra, gloas} from "@lodestar/types";
+import {ExecutionPayload, ExecutionRequests, Root, Slot, bellatrix, electra, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine, VersionedHashes} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -193,7 +193,7 @@ export async function verifyBlockExecutionPayload(
     }
 
     executionPayload = executionPayloadEnabled;
-    // TODO: Handle better notifyNewPayload() returning error is syncing
+    // TODO GLOAs: Handle better notifyNewPayload() returning error is syncing
     versionedHashes =
       isBlockInputBlobs(blockInput) || isBlockInputColumns(blockInput) ? blockInput.getVersionedHashes() : undefined;
     parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
@@ -288,10 +288,12 @@ function getSegmentErrorResponse(
     let lvhFound = false;
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
       const block = blocks[mayBeLVHIndex].getBlock();
-      if (
-        toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash) ===
-        lvhResponse.latestValidExecHash
-      ) {
+      // For gloas blocks the payload may not arrive; fork choice tracks parentBlockHash
+      // from the bid as the executionPayloadBlockHash. Use the same field here.
+      const blockHashHex = isGloasBeaconBlock(block.message)
+        ? toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+        : toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash);
+      if (blockHashHex === lvhResponse.latestValidExecHash) {
         lvhFound = true;
         break;
       }
