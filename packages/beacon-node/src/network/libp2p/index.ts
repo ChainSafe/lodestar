@@ -22,7 +22,7 @@ export type NodeJsLibp2pOpts = {
   metricsRegistry?: Registry;
 };
 
-export async function getDiscv5Multiaddrs(bootEnrs: string[], quicEnabled: boolean): Promise<string[]> {
+export async function getDiscv5Multiaddrs(bootEnrs: string[], quicEnabled?: boolean): Promise<string[]> {
   const bootMultiaddrs = [];
   for (const enrStr of bootEnrs) {
     const enr = ENR.decodeTxt(enrStr);
@@ -44,8 +44,8 @@ export async function createNodeJsLibp2p(
 ): Promise<Libp2p> {
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
   const disconnectThreshold = networkOpts.disconnectThreshold ?? defaultNetworkOptions.disconnectThreshold;
-  const tcpEnabled = networkOpts.tcp ?? defaultNetworkOptions.tcp ?? true;
-  const quicEnabled = networkOpts.quic ?? defaultNetworkOptions.quic ?? true;
+  const tcpEnabled = networkOpts.tcp ?? defaultNetworkOptions.tcp;
+  const quicEnabled = networkOpts.quic ?? defaultNetworkOptions.quic;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
   let datastore: undefined | Eth2PeerDataStore = undefined;
