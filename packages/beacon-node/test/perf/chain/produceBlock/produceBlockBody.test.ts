@@ -3,7 +3,7 @@ import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {BeaconStateView, CachedBeaconStateElectra} from "@lodestar/state-transition";
-import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
+import {clearPerfStateCache, generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
 import {toRootHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BeaconChain} from "../../../../src/chain/index.js";
@@ -19,15 +19,26 @@ import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
 const logger = testLogger();
 
 describe("produceBlockBody", () => {
-  const stateOg = generatePerfTestCachedStateElectra({goBackOneSlot: false});
+  let stateOg: CachedBeaconStateElectra | undefined;
 
-  let db: BeaconDb;
-  let chain: BeaconChain;
-  let state: CachedBeaconStateElectra;
+  let db: BeaconDb | undefined;
+  let chain: BeaconChain | undefined;
+  let state: CachedBeaconStateElectra | undefined;
+
+  const requireChain = (): BeaconChain => {
+    if (!chain) throw Error("chain not initialized");
+    return chain;
+  };
+
+  const requireState = (): CachedBeaconStateElectra => {
+    if (!state) throw Error("state not initialized");
+    return state;
+  };
 
   const controller = new AbortController();
 
   beforeAll(async () => {
+    stateOg = generatePerfTestCachedStateElectra({goBackOneSlot: false});
     state = stateOg.clone();
 
     const executionEngineBackend = new ExecutionEngineMockBackend({
@@ -73,9 +84,13 @@ describe("produceBlockBody", () => {
 
   afterAll(async () => {
     controller.abort();
-    // If before blocks fail, db won't be declared
     if (db !== undefined) await db.close();
     if (chain !== undefined) await chain.close();
+    db = undefined;
+    chain = undefined;
+    state = undefined;
+    stateOg = undefined;
+    clearPerfStateCache();
   });
 
   bench({
@@ -84,11 +99,12 @@ describe("produceBlockBody", () => {
     maxMs: Infinity,
     timeoutBench: 60 * 1000,
     beforeEach: async () => {
-      const head = chain.forkChoice.getHead();
-      const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
-      const proposerPubKey = state.epochCtx.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+      const head = requireChain().forkChoice.getHead();
+      const currentState = requireState();
+      const proposerIndex = currentState.epochCtx.getBeaconProposer(currentState.slot);
+      const proposerPubKey = currentState.epochCtx.pubkeyCache.getOrThrow(proposerIndex).toBytes();
 
-      return {chain, state: new BeaconStateView(state), head, proposerIndex, proposerPubKey};
+      return {chain: requireChain(), state: new BeaconStateView(currentState), head, proposerIndex, proposerPubKey};
     },
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;

@@ -541,3 +541,21 @@ export function generateTestCachedBeaconStateOnlyValidators({
     {skipSyncPubkeys: true}
   );
 }
+
+/**
+ * Release all cached perf states to free memory.
+ * Call this before memory-intensive benchmarks (e.g. loadState with 1.5M validators)
+ * to avoid OOM from accumulated singletons.
+ */
+export function clearPerfStateCache(): void {
+  phase0State = null;
+  phase0CachedState23637 = null;
+  phase0CachedState23638 = null;
+  phase0SignedBlock = null;
+  altairState = null;
+  altairCachedState23637 = null;
+  altairCachedState23638 = null;
+  electraState = null;
+  electraCachedState23637 = null;
+  electraCachedState23638 = null;
+}
