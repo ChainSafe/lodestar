@@ -45,7 +45,7 @@ export async function createNodeJsLibp2p(
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
   const disconnectThreshold = networkOpts.disconnectThreshold ?? defaultNetworkOptions.disconnectThreshold;
   const tcpEnabled = networkOpts.tcp ?? defaultNetworkOptions.tcp;
-  const quicEnabled = networkOpts.quic ?? defaultNetworkOptions.quic ?? false;
+  const quicEnabled = networkOpts.quic ?? defaultNetworkOptions.quic;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
   let datastore: undefined | Eth2PeerDataStore = undefined;
