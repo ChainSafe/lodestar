@@ -231,14 +231,14 @@ export const options: CliCommandOptions<NetworkArgs> = {
   discoveryPort: {
     description: "The UDP port that discovery will listen on. Defaults to `port`",
     type: "number",
-    defaultDescription: "`port`",
+    defaultDescription: "port",
     group: "network",
   },
 
   quicPort: {
     description: "The UDP port that QUIC will listen on. Defaults to `port` + 1",
     type: "number",
-    defaultDescription: "`port` + 1",
+    defaultDescription: "port + 1",
     group: "network",
   },
 
@@ -260,14 +260,14 @@ export const options: CliCommandOptions<NetworkArgs> = {
   discoveryPort6: {
     description: "The UDP port that discovery will listen on. Defaults to `port6`",
     type: "number",
-    defaultDescription: "`port6`",
+    defaultDescription: "port6",
     group: "network",
   },
 
   quicPort6: {
     description: "The UDP port that QUIC will listen on. Defaults to `port6` + 1",
     type: "number",
-    defaultDescription: "`port6` + 1",
+    defaultDescription: "port6 + 1",
     group: "network",
   },
 
