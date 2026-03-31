@@ -14,11 +14,12 @@ import {NetworkOptions, defaultNetworkOptions} from "../../../src/network/option
 import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {memoOnce} from "../../utils/cache.js";
-import {createNetworkModules, onPeerConnect} from "../../utils/network.js";
+import {createNetworkModules, onPeerConnect, tcpToQuicMultiaddr} from "../../utils/network.js";
 import {generateState, zeroProtoBlock} from "../../utils/state.js";
 
 let port = 9000;
-const mu = "/ip4/127.0.0.1/tcp/0";
+const tcpMu = "/ip4/127.0.0.1/tcp/0";
+const quicMu = tcpToQuicMultiaddr(tcpMu);
 
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("mdns", () => {
@@ -97,7 +98,11 @@ describe.skip("mdns", () => {
 
     const network = await Network.init({
       ...modules,
-      ...(await createNetworkModules(mu, privateKey, {...opts, mdns: true})),
+      ...(await createNetworkModules(tcpMu, privateKey, {
+        ...opts,
+        mdns: true,
+        localMultiaddrs: [quicMu, tcpMu],
+      })),
       logger,
     });
 

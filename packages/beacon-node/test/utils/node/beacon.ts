@@ -28,6 +28,7 @@ import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {IBeaconNodeOptions, defaultOptions} from "../../../src/node/options.js";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
 import {initDevState} from "../../../src/node/utils/state.js";
+import {tcpToQuicMultiaddr} from "../network.js";
 
 export async function getDevBeaconNode(
   opts: {
@@ -108,7 +109,10 @@ export async function getDevBeaconNode(
         metrics: {enabled: false},
         network: {
           discv5: null,
-          localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
+          localMultiaddrs: options.network?.localMultiaddrs || [
+            tcpToQuicMultiaddr("/ip4/127.0.0.1/tcp/0"),
+            "/ip4/127.0.0.1/tcp/0",
+          ],
           // Increase of following value is just to circumvent the following error in e2e tests
           // > libp2p:mplex rate limit hit when receiving messages
           disconnectThreshold: 255,
