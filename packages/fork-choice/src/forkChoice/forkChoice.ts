@@ -921,7 +921,7 @@ export class ForkChoice implements IForkChoice {
     let payloadStatus: PayloadStatus;
 
     // We need to retrieve block to check if it's Gloas and to compare slot
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/fork-choice.md#new-is_supporting_vote
     const block = this.getBlockHexDefaultStatus(blockRootHex);
 
     if (block && isGloasBlock(block)) {
@@ -990,8 +990,13 @@ export class ForkChoice implements IForkChoice {
    * Updates the PTC votes for multiple validators attesting to a block
    * Spec: gloas/fork-choice.md#new-on_payload_attestation_message
    */
-  notifyPtcMessage(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void {
-    this.protoArray.notifyPtcMessage(blockRoot, ptcIndices, payloadPresent);
+  notifyPtcMessages(
+    blockRoot: RootHex,
+    ptcIndices: number[],
+    payloadPresent: boolean,
+    blobDataAvailable: boolean
+  ): void {
+    this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent, blobDataAvailable);
   }
 
   /**
@@ -1079,6 +1084,14 @@ export class ForkChoice implements IForkChoice {
    */
   hasBlockHexUnsafe(blockRoot: RootHex): boolean {
     return this.protoArray.hasBlock(blockRoot);
+  }
+
+  /**
+   * Check if an execution payload with the given block hash has been seen.
+   * For Gloas this only returns true once the FULL variant is present.
+   */
+  hasExecutionPayload(executionPayloadBlockHash: RootHex): boolean {
+    return this.protoArray.hasExecutionPayload(executionPayloadBlockHash);
   }
 
   /**
@@ -1703,6 +1716,19 @@ export class ForkChoice implements IForkChoice {
             index: attestationData.index,
           },
         });
+      }
+
+      if (attestationData.index === 1) {
+        const fullVariant = this.protoArray.getNodeIndexByRootAndStatus(beaconBlockRootHex, PayloadStatus.FULL);
+        if (fullVariant === undefined) {
+          throw new ForkChoiceError({
+            code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+            err: {
+              code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS,
+              beaconBlockRoot: beaconBlockRootHex,
+            },
+          });
+        }
       }
     }
 

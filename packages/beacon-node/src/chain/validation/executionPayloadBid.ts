@@ -109,7 +109,12 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] `bid.parent_block_hash` is the block hash of a known execution
   // payload in fork choice.
-  // TODO GLOAS: implement this
+  if (!chain.forkChoice.hasExecutionPayload(parentBlockHashHex)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
+      parentBlockHash: parentBlockHashHex,
+    });
+  }
 
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon
   // block in fork choice.

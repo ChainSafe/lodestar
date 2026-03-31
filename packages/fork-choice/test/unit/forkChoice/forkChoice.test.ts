@@ -163,7 +163,7 @@ describe("Forkchoice", () => {
       bestDescendant: undefined,
       parent: 0,
       weight: 0,
-      payloadStatus: 2, // Pre-Gloas blocks always have PAYLOAD_STATUS_FULL
+      payloadStatus: PayloadStatus.FULL, // Pre-Gloas blocks always have PAYLOAD_STATUS_FULL
     });
   });
 

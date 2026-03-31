@@ -907,6 +907,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const payloadAttestationMessage = sszDeserialize(topic, serializedData);
       const validationResult = await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
 
+      chain.forkChoice.notifyPtcMessages(
+        toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+        [validationResult.validatorCommitteeIndex],
+        payloadAttestationMessage.data.payloadPresent,
+        payloadAttestationMessage.data.blobDataAvailable
+      );
+
       try {
         const insertOutcome = chain.payloadAttestationPool.add(
           payloadAttestationMessage,

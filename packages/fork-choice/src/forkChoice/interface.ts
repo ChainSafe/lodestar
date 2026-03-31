@@ -84,7 +84,7 @@ export interface IForkChoice {
    * ## Specification
    *
    * Modified for Gloas to return ProtoNode instead of just root:
-   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#modified-get_ancestor
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/fork-choice.md#modified-get_ancestor
    *
    * Pre-Gloas: Returns (root, PAYLOAD_STATUS_FULL)
    * Gloas: Returns (root, payloadStatus) based on actual node state
@@ -183,20 +183,26 @@ export interface IForkChoice {
    *
    * ## Specification
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/gloas/fork-choice.md#new-notify_ptc_messages
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/fork-choice.md#new-on_payload_attestation_message
    *
    * @param blockRoot - The beacon block root being attested
    * @param ptcIndices - Array of PTC committee indices that voted
    * @param payloadPresent - Whether validators attest the payload is present
+   * @param blobDataAvailable - Whether validators attest blob data is available
    */
-  notifyPtcMessage(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void;
+  notifyPtcMessages(
+    blockRoot: RootHex,
+    ptcIndices: number[],
+    payloadPresent: boolean,
+    blobDataAvailable: boolean
+  ): void;
   /**
    * Notify fork choice that an execution payload has arrived (Gloas fork)
    * Creates the FULL variant of a Gloas block when the payload becomes available
    *
    * ## Specification
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-on_execution_payload
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/fork-choice.md#new-on_execution_payload
    *
    * @param blockRoot - The beacon block root for which the payload arrived
    * @param executionPayloadBlockHash - The block hash of the execution payload
@@ -228,6 +234,11 @@ export interface IForkChoice {
    */
   hasBlockUnsafe(blockRoot: Root): boolean;
   hasBlockHexUnsafe(blockRoot: RootHex): boolean;
+  /**
+   * Check if an execution payload with the given block hash has been seen.
+   * For Gloas: checks if any block has a FULL variant with matching execution payload block hash.
+   */
+  hasExecutionPayload(executionPayloadBlockHash: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.

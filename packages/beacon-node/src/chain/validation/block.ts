@@ -170,6 +170,17 @@ export async function validateGossipBlock(
       });
     }
 
+    // [IGNORE] The block's parent execution payload (defined by bid.parent_block_hash) has been seen
+    // (via gossip or non-gossip sources) (a client MAY queue blocks for processing once the parent
+    // payload is retrieved).
+    const parentBlockHashHex = toRootHex(bid.parentBlockHash);
+    if (!chain.forkChoice.hasExecutionPayload(parentBlockHashHex)) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+        parentBlockHash: parentBlockHashHex,
+      });
+    }
+
     // TODO GLOAS: [REJECT] The block's execution payload parent (defined by bid.parent_block_hash) passes all validation
     // This requires execution engine integration to verify the parent block hash
   }

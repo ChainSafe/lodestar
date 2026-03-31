@@ -17,7 +17,7 @@ export function processPayloadAttestation(
     throw Error("Payload attestation is not from previous slot");
   }
 
-  const indexedPayloadAttestation = state.epochCtx.getIndexedPayloadAttestation(data.slot, payloadAttestation);
+  const indexedPayloadAttestation = state.epochCtx.getIndexedPayloadAttestation(state, payloadAttestation);
 
   if (!isValidIndexedPayloadAttestation(state, indexedPayloadAttestation, true)) {
     throw Error("Invalid payload attestation");

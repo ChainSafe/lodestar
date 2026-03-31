@@ -6,6 +6,7 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   EpochTransitionCache,
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
@@ -52,6 +53,9 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
     epochFns.processProposerLookahead(fork, state as CachedBeaconStateFulu, epochTransitionCache);
   },
   builder_pending_payments: epochFns.processBuilderPendingPayments as EpochTransitionFn,
+  ptc_window: (state, epochTransitionCache) => {
+    epochFns.processPtcWindow(state as CachedBeaconStateGloas, epochTransitionCache);
+  },
 };
 
 /**

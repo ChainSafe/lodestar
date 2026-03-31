@@ -1,4 +1,5 @@
 import {
+  BitListType,
   ByteVectorType,
   ContainerType,
   ListBasicType,
@@ -143,4 +144,45 @@ export const SignedBlockContents = new ContainerType(
     blobs: denebSsz.Blobs,
   },
   {typeName: "SignedBlockContents", jsonCase: "eth2"}
+);
+
+// Cell-level dissemination types (new in alpha.4)
+
+/**
+ * PartialDataColumnHeader (Fulu version).
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/fulu/p2p-interface.md#partialdatacolumnheader
+ */
+export const PartialDataColumnHeader = new ContainerType(
+  {
+    kzgCommitments: denebSsz.BlobKzgCommitments,
+    signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
+    kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof,
+  },
+  {typeName: "PartialDataColumnHeader", jsonCase: "eth2"}
+);
+
+/**
+ * PartialDataColumnPartsMetadata.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/fulu/p2p-interface.md#partialdatacolumnpartsmetadata
+ */
+export const PartialDataColumnPartsMetadata = new ContainerType(
+  {
+    available: new BitListType(MAX_BLOB_COMMITMENTS_PER_BLOCK),
+    requests: new BitListType(MAX_BLOB_COMMITMENTS_PER_BLOCK),
+  },
+  {typeName: "PartialDataColumnPartsMetadata", jsonCase: "eth2"}
+);
+
+/**
+ * PartialDataColumnSidecar.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/fulu/p2p-interface.md#partialdatacolumnsidecar
+ */
+export const PartialDataColumnSidecar = new ContainerType(
+  {
+    cellsPresentBitmap: new BitListType(MAX_BLOB_COMMITMENTS_PER_BLOCK),
+    partialColumn: new ListCompositeType(Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK),
+    kzgProofs: new ListCompositeType(denebSsz.KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK),
+    header: new ListCompositeType(PartialDataColumnHeader, 1),
+  },
+  {typeName: "PartialDataColumnSidecar", jsonCase: "eth2"}
 );

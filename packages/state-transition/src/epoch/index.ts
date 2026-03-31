@@ -28,6 +28,7 @@ import {processParticipationRecordUpdates} from "./processParticipationRecordUpd
 import {processPendingConsolidations} from "./processPendingConsolidations.js";
 import {processPendingDeposits} from "./processPendingDeposits.js";
 import {processProposerLookahead} from "./processProposerLookahead.js";
+import {processPtcWindow} from "./processPtcWindow.js";
 import {processRandaoMixesReset} from "./processRandaoMixesReset.js";
 import {processRegistryUpdates} from "./processRegistryUpdates.js";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
@@ -55,6 +56,7 @@ export {
   processPendingDeposits,
   processPendingConsolidations,
   processProposerLookahead,
+  processPtcWindow,
   processBuilderPendingPayments,
 };
 
@@ -81,6 +83,7 @@ export enum EpochTransitionStep {
   processPendingDeposits = "processPendingDeposits",
   processPendingConsolidations = "processPendingConsolidations",
   processProposerLookahead = "processProposerLookahead",
+  processPtcWindow = "processPtcWindow",
   processBuilderPendingPayments = "processBuilderPendingPayments",
 }
 
@@ -209,6 +212,14 @@ export function processEpoch(
       step: EpochTransitionStep.processProposerLookahead,
     });
     processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
+    timer?.();
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: EpochTransitionStep.processPtcWindow,
+    });
+    processPtcWindow(state as CachedBeaconStateGloas, cache);
     timer?.();
   }
 }

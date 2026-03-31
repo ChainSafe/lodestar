@@ -1,20 +1,32 @@
+import {digest} from "@chainsafe/as-sha256";
 import {
   BUILDER_INDEX_FLAG,
   BUILDER_PAYMENT_THRESHOLD_DENOMINATOR,
   BUILDER_PAYMENT_THRESHOLD_NUMERATOR,
   BUILDER_WITHDRAWAL_PREFIX,
+  DOMAIN_PTC_ATTESTER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
+  MAX_EFFECTIVE_BALANCE_ELECTRA,
   MIN_DEPOSIT_AMOUNT,
+  MIN_SEED_LOOKAHEAD,
+  PTC_SIZE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {BuilderIndex, Epoch, ValidatorIndex, gloas} from "@lodestar/types";
+import {BuilderIndex, Epoch, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
-import {byteArrayEquals} from "@lodestar/utils";
-import {CachedBeaconStateGloas} from "../types.js";
+import {byteArrayEquals, bytesToInt, intToBytes} from "@lodestar/utils";
+import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
-import {computeEpochAtSlot} from "./epoch.js";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
+import {type EpochShuffling, computeEpochShuffling} from "./epochShuffling.js";
 import {RootCache} from "./rootCache.js";
+import {computeShuffledIndex, getSeed} from "./seed.js";
+import {getActiveValidatorIndices} from "./validator.js";
+
+const MAX_BALANCE_WEIGHTED_RANDOM_VALUE = 2 ** 16 - 1;
+
+type PtcState = CachedBeaconStateFulu | CachedBeaconStateGloas;
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
@@ -167,6 +179,106 @@ export function isAttestationSameSlotRootCache(rootCache: RootCache, data: Attes
   return isMatchingBlockRoot && isCurrentBlockRoot;
 }
 
+export function computeBalanceWeightedAcceptance(effectiveBalance: number, seed: Uint8Array, i: number): boolean {
+  const randomBytes = digest(Buffer.concat([seed, intToBytes(Math.floor(i / 16), 8)]));
+  const offset = (i % 16) * 2;
+  const randomValue = bytesToInt(randomBytes.subarray(offset, offset + 2));
+
+  return isBalanceWeightedAcceptance(effectiveBalance, randomValue);
+}
+
+export function computeBalanceWeightedSelection(
+  state: PtcState,
+  indices: ArrayLike<ValidatorIndex>,
+  seed: Uint8Array,
+  size: number,
+  shuffleIndices: boolean
+): Uint32Array {
+  const total = indices.length;
+  if (total === 0) {
+    throw Error("Validator indices must not be empty");
+  }
+
+  const effectiveBalances = new Array<number>(total);
+  for (let i = 0; i < total; i++) {
+    effectiveBalances[i] = state.validators.getReadonly(indices[i]).effectiveBalance;
+  }
+
+  const selected = new Uint32Array(size);
+  let selectedLen = 0;
+  let i = 0;
+  let randomBytes = digest(Buffer.concat([seed, intToBytes(0, 8)]));
+  let lastBlock = 0;
+
+  while (selectedLen < size) {
+    let nextIndex = i % total;
+    if (shuffleIndices) {
+      nextIndex = computeShuffledIndex(nextIndex, total, seed);
+    }
+
+    const block = Math.floor(i / 16);
+    if (block !== lastBlock) {
+      randomBytes = digest(Buffer.concat([seed, intToBytes(block, 8)]));
+      lastBlock = block;
+    }
+
+    const offset = (i % 16) * 2;
+    const randomValue = bytesToInt(randomBytes.subarray(offset, offset + 2));
+    if (isBalanceWeightedAcceptance(effectiveBalances[nextIndex], randomValue)) {
+      selected[selectedLen++] = indices[nextIndex];
+    }
+
+    i += 1;
+  }
+
+  return selected;
+}
+
+export function computePtc(state: PtcState, slot: Slot, shuffling?: EpochShuffling): Uint32Array {
+  const epoch = computeEpochAtSlot(slot);
+  const slotSeed = digest(Buffer.concat([getSeed(state, epoch, DOMAIN_PTC_ATTESTER), intToBytes(slot, 8)]));
+  const epochShuffling =
+    shuffling ??
+    state.epochCtx.getShufflingAtEpochOrNull(epoch) ??
+    computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+  const slotCommittees = epochShuffling.committees[slot % SLOTS_PER_EPOCH];
+  const totalIndices = slotCommittees.reduce((sum, committee) => sum + committee.length, 0);
+  const indices = new Uint32Array(totalIndices);
+  let offset = 0;
+
+  for (const committee of slotCommittees) {
+    indices.set(committee, offset);
+    offset += committee.length;
+  }
+
+  return computeBalanceWeightedSelection(state, indices, slotSeed, PTC_SIZE, false);
+}
+
+export function initializePtcWindow(state: PtcState): ValidatorIndex[][] {
+  const emptyCommittee = Array.from({length: PTC_SIZE}, () => 0);
+  const emptyPreviousEpoch = Array.from({length: SLOTS_PER_EPOCH}, () => [...emptyCommittee]);
+  const ptcWindow: ValidatorIndex[][] = [];
+  const currentEpoch = computeEpochAtSlot(state.slot);
+
+  for (let epochOffset = 0; epochOffset <= MIN_SEED_LOOKAHEAD; epochOffset++) {
+    const epoch = currentEpoch + epochOffset;
+    const startSlot = computeStartSlotAtEpoch(epoch);
+    const shuffling =
+      state.epochCtx.getShufflingAtEpochOrNull(epoch) ??
+      computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+
+    for (let slotOffset = 0; slotOffset < SLOTS_PER_EPOCH; slotOffset++) {
+      ptcWindow.push(Array.from(computePtc(state, startSlot + slotOffset, shuffling)));
+    }
+  }
+
+  return [...emptyPreviousEpoch, ...ptcWindow];
+}
+
 export function isParentBlockFull(state: CachedBeaconStateGloas): boolean {
   return byteArrayEquals(state.latestExecutionPayloadBid.blockHash, state.latestBlockHash);
+}
+
+function isBalanceWeightedAcceptance(effectiveBalance: number, randomValue: number): boolean {
+  return effectiveBalance * MAX_BALANCE_WEIGHTED_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_ELECTRA * randomValue;
 }

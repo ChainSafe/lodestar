@@ -57,6 +57,10 @@ export enum InvalidAttestationCode {
    * The attestation data index is invalid for a Gloas block (must be 0 or 1).
    */
   INVALID_DATA_INDEX = "INVALID_DATA_INDEX",
+  /**
+   * Attestation index=1 (full node) but the payload is not known/available.
+   */
+  UNKNOWN_PAYLOAD_STATUS = "UNKNOWN_PAYLOAD_STATUS",
 }
 
 export type InvalidAttestation =
@@ -69,7 +73,8 @@ export type InvalidAttestation =
   | {code: InvalidAttestationCode.INVALID_TARGET; attestation: RootHex; local: RootHex}
   | {code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
   | {code: InvalidAttestationCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot}
-  | {code: InvalidAttestationCode.INVALID_DATA_INDEX; index: number};
+  | {code: InvalidAttestationCode.INVALID_DATA_INDEX; index: number}
+  | {code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS; beaconBlockRoot: RootHex};
 
 export enum ForkChoiceErrorCode {
   INVALID_ATTESTATION = "FORKCHOICE_ERROR_INVALID_ATTESTATION",

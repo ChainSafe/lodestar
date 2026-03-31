@@ -5,7 +5,7 @@ import {isValidDepositSignature} from "../block/processDeposit.js";
 import {applyDepositForBuilder} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 
 /**
@@ -66,6 +66,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
     stateGloasView.executionPayloadAvailability.set(i, true);
   }
   stateGloasView.latestBlockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
+  stateGloasView.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(stateFulu));
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
 

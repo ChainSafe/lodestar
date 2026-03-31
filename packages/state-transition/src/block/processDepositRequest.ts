@@ -74,6 +74,35 @@ function addBuilderToRegistry(
   }
 }
 
+/**
+ * Check if a pending deposit with a valid signature is in the queue for the given pubkey.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/beacon-chain.md#new-is_pending_validator
+ *
+ * Note: This function naively revalidates deposit signatures on every call.
+ * Implementations SHOULD cache verification results to avoid repeated work.
+ */
+function isPendingValidator(state: CachedBeaconStateGloas, pubkey: BLSPubkey): boolean {
+  const pendingDepositsLen = state.pendingDeposits.length;
+  for (let i = 0; i < pendingDepositsLen; i++) {
+    const pendingDeposit = state.pendingDeposits.getReadonly(i);
+    if (!ssz.BLSPubkey.equals(pendingDeposit.pubkey, pubkey)) {
+      continue;
+    }
+    if (
+      isValidDepositSignature(
+        state.config,
+        pendingDeposit.pubkey,
+        pendingDeposit.withdrawalCredentials,
+        pendingDeposit.amount,
+        pendingDeposit.signature
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function processDepositRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
@@ -93,8 +122,8 @@ export function processDepositRequest(
     const isValidator = isValidatorKnown(state, validatorIndex);
     const isBuilderPrefix = isBuilderWithdrawalCredential(withdrawalCredentials);
 
-    // Route to builder if it's an existing builder OR has builder prefix and is not a validator
-    if (isBuilder || (isBuilderPrefix && !isValidator)) {
+    // Route to builder if it's an existing builder OR has builder prefix and is not a validator/pending validator
+    if (isBuilder || (isBuilderPrefix && !isValidator && !isPendingValidator(stateGloas, pubkey))) {
       // Apply builder deposits immediately
       applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
       return;
