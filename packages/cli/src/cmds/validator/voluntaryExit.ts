@@ -102,7 +102,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     const signersToExit = selectSignersToExit(args, signers);
     const validatorsToExit = await resolveValidatorIndexes(client, signersToExit);
 
-    if (!args.yes) {
+    if (!args.yes && !args.saveExitsPath) {
       console.log("\nWARNING: THIS IS AN IRREVERSIBLE OPERATION\n");
       const confirmation = await inquirer.prompt<{yes: boolean}>([
         {
