@@ -12,7 +12,6 @@ import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.j
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
 import {ClockStatic} from "./clock.js";
-import {tcpToQuicMultiaddr} from "./network.js";
 import {generateState} from "./state.js";
 
 export type NetworkForTestOpts = {
@@ -108,7 +107,7 @@ export async function getNetworkForTest(
       maxPeers: 10,
       targetPeers: 1,
       bootMultiaddrs: [],
-      localMultiaddrs: [tcpToQuicMultiaddr("/ip4/0.0.0.0/tcp/0"), "/ip4/0.0.0.0/tcp/0"],
+      localMultiaddrs: ["/ip4/0.0.0.0/udp/0/quic-v1", "/ip4/0.0.0.0/tcp/0"],
       discv5FirstQueryDelayMs: 0,
       discv5: null,
       skipParamsLog: true,
