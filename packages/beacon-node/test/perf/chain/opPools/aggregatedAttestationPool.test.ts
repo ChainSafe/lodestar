@@ -216,15 +216,10 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         );
         const shufflingCache = new ShufflingCache();
         shufflingCache.processState(state);
-        return {state, pool, shufflingCache};
+        return {state, pool, shufflingCache, forkchoice: requireForkchoice(), config: requireOriginalState().config};
       },
-      fn: ({state, pool, shufflingCache}) => {
-        pool.getAttestationsForBlock(
-          requireOriginalState().config.getForkName(state.slot),
-          requireForkchoice(),
-          shufflingCache,
-          state
-        );
+      fn: ({state, pool, shufflingCache, forkchoice, config}) => {
+        pool.getAttestationsForBlock(config.getForkName(state.slot), forkchoice, shufflingCache, state);
       },
     });
   }

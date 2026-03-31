@@ -52,10 +52,10 @@ describe("opPool", () => {
       // TODO: feed pubkeyCache separately instead of getting from originalState
       fillBlsToExecutionChanges(beaconState.epochCtx.pubkeyCache, pool, beaconState, MAX_BLS_TO_EXECUTION_CHANGES);
 
-      return pool;
+      return {pool, state: requireOriginalState()};
     },
-    fn: (pool) => {
-      pool.getSlashingsAndExits(requireOriginalState(), BlockType.Full, null);
+    fn: ({pool, state}) => {
+      pool.getSlashingsAndExits(state, BlockType.Full, null);
     },
   });
 
@@ -71,10 +71,10 @@ describe("opPool", () => {
       // TODO: feed pubkeyCache separately instead of getting from originalState
       fillBlsToExecutionChanges(beaconState.epochCtx.pubkeyCache, pool, beaconState, maxItemsInPool);
 
-      return pool;
+      return {pool, state: requireOriginalState()};
     },
-    fn: (pool) => {
-      pool.getSlashingsAndExits(requireOriginalState(), BlockType.Full, null);
+    fn: ({pool, state}) => {
+      pool.getSlashingsAndExits(state, BlockType.Full, null);
     },
   });
 });
