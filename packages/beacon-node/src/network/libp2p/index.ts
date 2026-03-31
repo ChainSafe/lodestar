@@ -46,6 +46,8 @@ export async function createNodeJsLibp2p(
   const disconnectThreshold = networkOpts.disconnectThreshold ?? defaultNetworkOptions.disconnectThreshold;
   const tcpEnabled = networkOpts.tcp ?? defaultNetworkOptions.tcp;
   const quicEnabled = networkOpts.quic ?? defaultNetworkOptions.quic;
+  // Check if QUIC transport will actually be active: flag enabled AND at least one QUIC listen address
+  const hasQuicTransport = quicEnabled && localMultiaddrs.some((ma) => ma.includes("/quic-v1"));
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
   let datastore: undefined | Eth2PeerDataStore = undefined;
@@ -60,7 +62,7 @@ export async function createNodeJsLibp2p(
       ...(networkOpts.bootMultiaddrs ?? defaultNetworkOptions.bootMultiaddrs ?? []),
       // Append discv5.bootEnrs to bootMultiaddrs if requested
       ...(networkOpts.connectToDiscv5Bootnodes
-        ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? [], quicEnabled)
+        ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? [], hasQuicTransport)
         : []),
     ];
 
