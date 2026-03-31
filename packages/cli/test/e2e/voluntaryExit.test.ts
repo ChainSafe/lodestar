@@ -134,7 +134,6 @@ describe("voluntaryExit cmd", () => {
         "validator",
         "voluntary-exit",
         "--network=dev",
-        "--yes",
         "--interopIndexes=0..3",
         `--server=${baseUrl}`,
         `--pubkeys=${pubkeysToExit.join(",")}`,
