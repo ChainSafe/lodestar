@@ -88,7 +88,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const {listenAddress, port, discoveryPort, quicPort, listenAddress6, port6, discoveryPort6, quicPort6} =
     parseListenArgs(args);
   const quic = args.quic ?? defaultOptions.network.quic;
-  const tcp = args.tcp ?? true;
+  const tcp = args.tcp ?? defaultOptions.network.tcp;
 
   if (!quic && !tcp) {
     throw new YargsError("Cannot disable both TCP and QUIC transports");
@@ -322,7 +322,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
     hidden: true,
     type: "boolean",
     description: "Enable TCP transport",
-    default: true,
+    defaultDescription: String(defaultOptions.network.tcp),
     group: "network",
   },
 
