@@ -14,8 +14,10 @@ vi.mock("libp2p", async (importActual) => {
   };
 });
 
-vi.mock("@chainsafe/libp2p-quic", () => {
+vi.mock("@chainsafe/libp2p-quic", async (importActual) => {
+  const mod = await importActual<typeof import("@chainsafe/libp2p-quic")>();
   return {
+    ...mod,
     quic: quicMock,
   };
 });
