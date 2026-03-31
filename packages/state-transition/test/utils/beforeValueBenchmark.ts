@@ -12,14 +12,14 @@ export type LazyValue<T> = {value: T};
  * ```
  */
 export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): LazyValue<T> {
-  let value: T | null = null;
+  let value: T = null as unknown as T;
 
   beforeAll(async () => {
     value = await fn();
   }, timeout ?? 300_000);
 
   afterAll(() => {
-    value = null;
+    value = null as unknown as T;
   });
 
   return new Proxy<{value: T}>(
