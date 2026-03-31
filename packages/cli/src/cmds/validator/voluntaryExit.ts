@@ -118,7 +118,8 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       }
     }
 
-    const signedExits: {exit: phase0.SignedVoluntaryExit; pubkey: string}[] = [];
+    const signedExits: {exit: phase0.SignedVoluntaryExit; index: ValidatorIndex; pubkey: string}[] = [];
+    const failedToSave: {index: ValidatorIndex; pubkey: string}[] = [];
     const alreadySubmitted = [];
 
     for (const [i, validatorToExit] of validatorsToExit.entries()) {
@@ -133,7 +134,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       const signedExit = res.result;
 
       if (args.saveExitsPath) {
-        signedExits.push({exit: signedExit, pubkey});
+        signedExits.push({exit: signedExit, index, pubkey});
         console.log(`Signed voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
       } else {
         const submitRes = await wrapError(
@@ -165,17 +166,22 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       } catch (e) {
         throw new YargsError(`Failed to create a directory "${args.saveExitsPath}": ${(e as Error).message}`);
       }
-
-      for (const {exit, pubkey} of signedExits) {
-        const pubkeyPrefix = pubkey.slice(2, 10);
-        const filename = path.join(args.saveExitsPath, `validator_${pubkeyPrefix}.json`);
+      for (const {exit, index, pubkey} of signedExits) {
+        const filename = path.join(args.saveExitsPath, `validator_${index}_exit.json`);
         try {
           const json = JSON.stringify(ssz.phase0.SignedVoluntaryExit.toJson(exit), null, 2);
           fs.writeFileSync(filename, json);
-          console.log(`Saved signed voluntary exit for ${pubkeyPrefix} to ${filename}`);
+          console.log(`Saved signed voluntary exit for ${pubkey} (${index}) to ${filename}`);
         } catch (e) {
-          console.error(`Failed to save the signed exit of ${pubkeyPrefix} to ${filename}: ${(e as Error).message}`);
+          failedToSave.push({index, pubkey});
+          console.error(
+            `Failed to save the signed exit of ${pubkey} (${index}) to ${filename}: ${(e as Error).message}`
+          );
         }
+      }
+
+      if (failedToSave.length > 0) {
+        throw new YargsError(`Failed to save ${failedToSave.length}/${signedExits.length} signed voluntary exits`);
       }
     }
   },
