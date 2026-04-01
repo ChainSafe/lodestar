@@ -463,6 +463,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+    const secFromSlot = chain.clock.secFromSlot(slot);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
@@ -508,6 +509,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
+        secFromSlot,
         gossipSubnet,
         columnIndex: dataColumnSidecar.index,
         recvToValLatency,
