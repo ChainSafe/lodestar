@@ -334,12 +334,6 @@ export async function requestByRange({
     const results = await Promise.allSettled(dataRequests);
     const rejected = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
     if (rejected) {
-      // Blocks succeeded but data requests failed — return partial results.
-      // The batch state machine handles this by staying in AwaitingDownload
-      // and regenerating only the missing requests on retry.
-      if (blocks != null) {
-        return {blocks, blobSidecars, columnSidecars, signedEnvelopes};
-      }
       throw rejected.reason;
     }
   }
