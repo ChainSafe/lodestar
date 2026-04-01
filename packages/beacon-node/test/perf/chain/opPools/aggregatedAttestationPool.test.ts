@@ -17,11 +17,11 @@ import {electra, ssz} from "@lodestar/types";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
-const vc = 250_000;
+const vc = 262_144;
 
 /**
  * Jan 2024
- *  getAttestationsForBlock vc=250000
+ *  getAttestationsForBlock vc=262144
  *   ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      10.48105 ops/s    95.41024 ms/op        -         12 runs   18.2 s
  *   ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       11.44517 ops/s    87.37307 ms/op        -         13 runs   14.5 s
  *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      23.86144 ops/s    41.90862 ms/op        -         18 runs   34.1 s
