@@ -220,6 +220,11 @@ export class ProtoArray {
       return PayloadStatus.FULL;
     }
 
+    // Genesis block has no parent (parentRoot is zero hash), treat as FULL
+    if (block.parentRoot === HEX_ZERO_HASH) {
+      return PayloadStatus.FULL;
+    }
+
     const parentVariants = this.indices.get(block.parentRoot);
     if (parentVariants === undefined) {
       throw new ProtoArrayError({

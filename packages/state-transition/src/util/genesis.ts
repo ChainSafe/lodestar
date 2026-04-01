@@ -292,36 +292,44 @@ export function initializeBeaconStateFromEth1(
     const stateBellatrix = state as CompositeViewDU<typeof ssz.bellatrix.BeaconState>;
     stateBellatrix.fork.previousVersion = config.BELLATRIX_FORK_VERSION;
     stateBellatrix.fork.currentVersion = config.BELLATRIX_FORK_VERSION;
-    stateBellatrix.latestExecutionPayloadHeader =
-      (executionPayloadHeader as CompositeViewDU<typeof ssz.bellatrix.ExecutionPayloadHeader>) ??
-      ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
+    if (fork < ForkSeq.gloas) {
+      stateBellatrix.latestExecutionPayloadHeader =
+        (executionPayloadHeader as CompositeViewDU<typeof ssz.bellatrix.ExecutionPayloadHeader>) ??
+        ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
+    }
   }
 
   if (fork >= ForkSeq.capella) {
     const stateCapella = state as CompositeViewDU<typeof ssz.capella.BeaconState>;
     stateCapella.fork.previousVersion = config.CAPELLA_FORK_VERSION;
     stateCapella.fork.currentVersion = config.CAPELLA_FORK_VERSION;
-    stateCapella.latestExecutionPayloadHeader =
-      (executionPayloadHeader as CompositeViewDU<typeof ssz.capella.ExecutionPayloadHeader>) ??
-      ssz.capella.ExecutionPayloadHeader.defaultViewDU();
+    if (fork < ForkSeq.gloas) {
+      stateCapella.latestExecutionPayloadHeader =
+        (executionPayloadHeader as CompositeViewDU<typeof ssz.capella.ExecutionPayloadHeader>) ??
+        ssz.capella.ExecutionPayloadHeader.defaultViewDU();
+    }
   }
 
   if (fork >= ForkSeq.deneb) {
     const stateDeneb = state as CompositeViewDU<typeof ssz.deneb.BeaconState>;
     stateDeneb.fork.previousVersion = config.DENEB_FORK_VERSION;
     stateDeneb.fork.currentVersion = config.DENEB_FORK_VERSION;
-    stateDeneb.latestExecutionPayloadHeader =
-      (executionPayloadHeader as CompositeViewDU<typeof ssz.deneb.ExecutionPayloadHeader>) ??
-      ssz.deneb.ExecutionPayloadHeader.defaultViewDU();
+    if (fork < ForkSeq.gloas) {
+      stateDeneb.latestExecutionPayloadHeader =
+        (executionPayloadHeader as CompositeViewDU<typeof ssz.deneb.ExecutionPayloadHeader>) ??
+        ssz.deneb.ExecutionPayloadHeader.defaultViewDU();
+    }
   }
 
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CompositeViewDU<typeof ssz.electra.BeaconState>;
     stateElectra.fork.previousVersion = config.ELECTRA_FORK_VERSION;
     stateElectra.fork.currentVersion = config.ELECTRA_FORK_VERSION;
-    stateElectra.latestExecutionPayloadHeader =
-      (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
-      ssz.electra.ExecutionPayloadHeader.defaultViewDU();
+    if (fork < ForkSeq.gloas) {
+      stateElectra.latestExecutionPayloadHeader =
+        (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
+        ssz.electra.ExecutionPayloadHeader.defaultViewDU();
+    }
     stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_REQUESTS_START_INDEX;
   }
 
@@ -329,9 +337,11 @@ export function initializeBeaconStateFromEth1(
     const stateFulu = state as CompositeViewDU<typeof ssz.fulu.BeaconState>;
     stateFulu.fork.previousVersion = config.FULU_FORK_VERSION;
     stateFulu.fork.currentVersion = config.FULU_FORK_VERSION;
-    stateFulu.latestExecutionPayloadHeader =
-      (executionPayloadHeader as CompositeViewDU<typeof ssz.fulu.ExecutionPayloadHeader>) ??
-      ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
+    if (fork < ForkSeq.gloas) {
+      stateFulu.latestExecutionPayloadHeader =
+        (executionPayloadHeader as CompositeViewDU<typeof ssz.fulu.ExecutionPayloadHeader>) ??
+        ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
+    }
   }
 
   if (fork >= ForkSeq.gloas) {
