@@ -5,7 +5,7 @@ import type { GossipsubOptsSpec } from './config.js'
 import type { DecodeRPCLimits } from './message/decodeRpc.js'
 import type { MetricsRegister, TopicStrToLabel } from './metrics.js'
 import type { PeerScoreParams, PeerScoreThresholds } from './score/index.js'
-import type { MsgIdFn, MsgIdStr, FastMsgIdFn, AddrInfo, DataTransform, MsgIdToStrFn, PartialMessage, PartialSubscriptionOpts, PartsMetadataMerger } from './types.js'
+import type { MsgIdFn, MsgIdStr, FastMsgIdFn, AddrInfo, DataTransform, MsgIdToStrFn, PartialMessage, PartialSubscriptionOpts, PartsMetadataMerger, PeerIdStr, TopicStr } from './types.js'
 import type {
   PeerId, PeerStore,
   ComponentLogger,
@@ -439,6 +439,22 @@ export interface GossipSub extends TypedEventTarget<GossipSubEvents> {
    * Publish a partial message to peers that support the partial messages extension.
    */
   publishPartial(partialMsg: PartialMessage): void
+
+  /**
+   * Publish a partial message to a specific peer.
+   * Respects the peer's advertised partial capabilities for the topic.
+   */
+  publishPartialToPeer(peerId: PeerIdStr, partialMsg: PartialMessage): void
+
+  /**
+   * Get peers on a topic that advertised partial-message support.
+   */
+  getPartialPeers(topic: TopicStr): PeerIdStr[]
+
+  /**
+   * Get metadata that a specific peer previously reported for a topic/group pair.
+   */
+  getPeerPartialMetadata(topic: TopicStr, groupID: Uint8Array, peerId: PeerIdStr): Uint8Array | undefined
 }
 
 export function gossipsub (

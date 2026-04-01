@@ -6,6 +6,7 @@ import { RPC } from '../../src/message/rpc.js'
 import { createComponents } from '../utils/create-pubsub.js'
 import { setupTwoNodes, teardownTwoNodes } from './utils.js'
 import type { TwoNodeContext } from './utils.js'
+import type { GossipsubPartialMessage } from '../../src/index.ts'
 import type { PartialMessage } from '../../src/types.js'
 
 describe('partial messages - handleReceivedPartial', () => {
@@ -33,8 +34,8 @@ describe('partial messages - handleReceivedPartial', () => {
 
     // Set up listener for the partial-message event
     const received = new Promise<PartialMessage>((resolve) => {
-      ctx.nodeB.pubsub.addEventListener('gossipsub:partial-message', (evt: CustomEvent<PartialMessage>) => {
-        resolve(evt.detail)
+      ctx.nodeB.pubsub.addEventListener('gossipsub:partial-message', (evt: CustomEvent<GossipsubPartialMessage>) => {
+        resolve(evt.detail.partialMsg)
       }, { once: true })
     })
 
@@ -337,8 +338,8 @@ describe('partial messages - handleReceivedPartial', () => {
     const topicIDBytes = new TextEncoder().encode(topic)
 
     const received = new Promise<PartialMessage>((resolve) => {
-      ctx.nodeB.pubsub.addEventListener('gossipsub:partial-message', (evt: CustomEvent<PartialMessage>) => {
-        resolve(evt.detail)
+      ctx.nodeB.pubsub.addEventListener('gossipsub:partial-message', (evt: CustomEvent<GossipsubPartialMessage>) => {
+        resolve(evt.detail.partialMsg)
       }, { once: true })
     })
 
@@ -372,8 +373,8 @@ describe('partial messages - handleReceivedPartial', () => {
     const topicIDBytes = new TextEncoder().encode(topic)
 
     const received = new Promise<PartialMessage>((resolve) => {
-      ctx.nodeB.pubsub.addEventListener('gossipsub:partial-message', (evt: CustomEvent<PartialMessage>) => {
-        resolve(evt.detail)
+      ctx.nodeB.pubsub.addEventListener('gossipsub:partial-message', (evt: CustomEvent<GossipsubPartialMessage>) => {
+        resolve(evt.detail.partialMsg)
       }, { once: true })
     })
 
@@ -411,8 +412,8 @@ describe('partial messages - handleReceivedPartial', () => {
     const topicIDBytes = new TextEncoder().encode(topic)
 
     const received = new Promise<PartialMessage>((resolve) => {
-      ctx.nodeB.pubsub.addEventListener('gossipsub:partial-message', (evt: CustomEvent<PartialMessage>) => {
-        resolve(evt.detail)
+      ctx.nodeB.pubsub.addEventListener('gossipsub:partial-message', (evt: CustomEvent<GossipsubPartialMessage>) => {
+        resolve(evt.detail.partialMsg)
       }, { once: true })
     })
 

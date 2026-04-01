@@ -1924,9 +1924,56 @@ export class GossipSub extends TypedEventEmitter<GossipSubEvents> implements Typ
       throw new Error('Pubsub has not started')
     }
 
-    const { topic, groupID, partialMessage, partsMetadata } = partialMsg
+    this.updateLocalPartialMessageState(partialMsg)
 
-    // Update our own state
+    // Send to all peers subscribed to this topic with partial support
+    const topicPeers = this.topics.get(partialMsg.topic)
+    if (topicPeers == null) {
+      return
+    }
+
+    for (const peerId of topicPeers) {
+      this.sendPartialRpc(peerId, partialMsg)
+    }
+  }
+
+  publishPartialToPeer (peerId: PeerIdStr, partialMsg: PartialMessage): void {
+    if (this.status.code !== GossipStatusCode.started) {
+      throw new Error('Pubsub has not started')
+    }
+
+    this.updateLocalPartialMessageState(partialMsg)
+    this.sendPartialRpc(peerId, partialMsg)
+  }
+
+  getPartialPeers (topic: TopicStr): PeerIdStr[] {
+    const topicPeers = this.topics.get(topic)
+    if (topicPeers == null) {
+      return []
+    }
+
+    const peers: PeerIdStr[] = []
+    for (const peerId of topicPeers) {
+      const peerOpts = this.peerPartialOpts.get(peerId)?.get(topic)
+      if (peerOpts == null) {
+        continue
+      }
+
+      if (peerOpts.requestsPartial || peerOpts.supportsSendingPartial) {
+        peers.push(peerId)
+      }
+    }
+
+    return peers
+  }
+
+  getPeerPartialMetadata (topic: TopicStr, groupID: Uint8Array, peerId: PeerIdStr): Uint8Array | undefined {
+    return this.partialMessageState.get(topic)?.getPeerMetadata(groupID, peerId)
+  }
+
+  private updateLocalPartialMessageState (partialMsg: PartialMessage): void {
+    const { topic, groupID, partsMetadata } = partialMsg
+
     let state = this.partialMessageState.get(topic)
     if (state == null) {
       state = new PartialMessageState(
@@ -1937,37 +1984,34 @@ export class GossipSub extends TypedEventEmitter<GossipSubEvents> implements Typ
       this.partialMessageState.set(topic, state)
     }
     state.updateMetadata(groupID, this.components.peerId.toString(), partsMetadata)
+  }
 
-    const topicIDBytes = this.textEncoder.encode(topic)
-
-    // Send to all peers subscribed to this topic with partial support
+  private sendPartialRpc (peerId: PeerIdStr, partialMsg: PartialMessage): void {
+    const { topic, groupID, partialMessage, partsMetadata } = partialMsg
     const topicPeers = this.topics.get(topic)
-    if (topicPeers == null) {
+    if (topicPeers == null || !topicPeers.has(peerId)) {
       return
     }
 
-    for (const peerId of topicPeers) {
-      const peerOpts = this.peerPartialOpts.get(peerId)?.get(topic)
-      if (peerOpts == null) {
-        continue
-      }
+    const peerOpts = this.peerPartialOpts.get(peerId)?.get(topic)
+    if (peerOpts == null) {
+      return
+    }
 
-      if (peerOpts.requestsPartial) {
-        // Send full partial message (with data + metadata)
-        this.sendRpc(peerId, createGossipRpc([], undefined, {
-          topicID: topicIDBytes,
-          groupID,
-          partialMessage,
-          partsMetadata
-        }))
-      } else if (peerOpts.supportsSendingPartial) {
-        // Send metadata only
-        this.sendRpc(peerId, createGossipRpc([], undefined, {
-          topicID: topicIDBytes,
-          groupID,
-          partsMetadata
-        }))
-      }
+    const topicIDBytes = this.textEncoder.encode(topic)
+    if (peerOpts.requestsPartial) {
+      this.sendRpc(peerId, createGossipRpc([], undefined, {
+        topicID: topicIDBytes,
+        groupID,
+        partialMessage,
+        partsMetadata
+      }))
+    } else if (peerOpts.supportsSendingPartial) {
+      this.sendRpc(peerId, createGossipRpc([], undefined, {
+        topicID: topicIDBytes,
+        groupID,
+        partsMetadata
+      }))
     }
   }
 
