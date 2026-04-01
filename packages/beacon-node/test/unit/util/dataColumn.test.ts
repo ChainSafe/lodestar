@@ -9,7 +9,6 @@ import {
 } from "../../../src/chain/validation/dataColumnSidecar.js";
 import {
   CustodyConfig,
-  getDataColumnSidecarBlockRoot,
   getDataColumnSidecarSlot,
   getDataColumnSidecarsFromBlock,
   getDataColumns,
@@ -209,19 +208,23 @@ describe("data column sidecars", () => {
     signedBeaconBlock.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = blockKzgCommitments;
 
     const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
-    const columnSidecars = getDataColumnSidecarsFromBlock(config, signedBeaconBlock, cellsAndProofs);
+    const columnSidecars = getDataColumnSidecarsFromBlock(
+      config,
+      signedBeaconBlock,
+      cellsAndProofs
+    ) as gloas.DataColumnSidecar[];
 
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blockKzgCommitments.length);
     expect(getDataColumnSidecarSlot(columnSidecars[0])).toEqual(signedBeaconBlock.message.slot);
-    expect(getDataColumnSidecarBlockRoot(columnSidecars[0])).toEqual(blockRoot);
+    expect(columnSidecars[0].beaconBlockRoot).toEqual(blockRoot);
 
     await expect(
       validateGloasBlockDataColumnSidecars(
         signedBeaconBlock.message.slot,
         blockRoot,
         blockKzgCommitments,
-        columnSidecars as gloas.DataColumnSidecar[]
+        columnSidecars
       )
     ).resolves.toBeUndefined();
   });

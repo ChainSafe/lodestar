@@ -389,14 +389,6 @@ export function getDataColumnSidecarSlot(sidecar: DataColumnSidecar): Slot {
   return sidecar.signedBlockHeader.message.slot;
 }
 
-export function getDataColumnSidecarBlockRoot(sidecar: DataColumnSidecar): Root {
-  if (isGloasDataColumnSidecar(sidecar)) {
-    return sidecar.beaconBlockRoot;
-  }
-
-  return ssz.phase0.BeaconBlockHeader.hashTreeRoot(sidecar.signedBlockHeader.message);
-}
-
 /**
  * In Gloas, data column sidecars have a simplified structure with `slot` and `beaconBlockRoot`
  * instead of `signedBlockHeader`, `kzgCommitments`, and `kzgCommitmentsInclusionProof`.
