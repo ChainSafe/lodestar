@@ -500,13 +500,19 @@ export class BlockInputSync {
             // envelope was already gossipped before we connected to the network.
             const retryCtx = this.getGloasInvalidStateRootRetryContext(pendingBlock);
             if (retryCtx.shouldRetry && retryCtx.parentRoot) {
-              this.logger.debug("PRESTATE_MISSING due to missing parent FULL variant, resolving envelope", {
-                ...errorData,
-                ...retryCtx,
-              });
-              const parentBlock = this.chain.forkChoice.getBlockHexDefaultStatus(retryCtx.parentRoot);
-              if (parentBlock) {
-                await this.resolveEnvelopeForBlock(retryCtx.parentRoot, parentBlock.slot);
+              // Only fetch envelope if parent FULL variant is actually absent.
+              // getGloasInvalidStateRootRetryContext uses the default (PENDING) variant,
+              // so wantsFullParent can be true even when FULL already exists.
+              const parentFullBlock = this.chain.forkChoice.getBlockHex(retryCtx.parentRoot, PayloadStatus.FULL);
+              if (!parentFullBlock) {
+                this.logger.debug("PRESTATE_MISSING due to missing parent FULL variant, resolving envelope", {
+                  ...errorData,
+                  ...retryCtx,
+                });
+                const parentBlock = this.chain.forkChoice.getBlockHexDefaultStatus(retryCtx.parentRoot);
+                if (parentBlock) {
+                  await this.resolveEnvelopeForBlock(retryCtx.parentRoot, parentBlock.slot);
+                }
               }
             } else {
               this.logger.debug("Attempted to process block but its parent was still unknown", errorData, res.err);
