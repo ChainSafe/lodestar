@@ -654,6 +654,8 @@ export function getBeaconBlockApi({
       const slot = envelope.slot;
       const fork = config.getForkName(slot);
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
+      const blockHashHex = toRootHex(envelope.payload.blockHash);
+      const stateRootHex = toRootHex(envelope.stateRoot);
 
       if (!isForkPostGloas(fork)) {
         throw new ApiError(400, `publishExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
@@ -737,6 +739,8 @@ export function getBeaconBlockApi({
       const valLogMeta = {
         slot,
         blockRoot: blockRootHex,
+        blockHash: blockHashHex,
+        stateRoot: stateRootHex,
         builderIndex: envelope.builderIndex,
         isSelfBuild,
         dataColumns: dataColumnSidecars.length,
@@ -757,7 +761,17 @@ export function getBeaconBlockApi({
         () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];
 
-      const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
+      const publishPromise = promiseAllMaybeAsync<number | void>(publishPromises);
+
+      chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
+        slot,
+        builderIndex: envelope.builderIndex,
+        blockHash: blockHashHex,
+        blockRoot: blockRootHex,
+        stateRoot: stateRootHex,
+      });
+
+      const sentPeersArr = await publishPromise;
 
       // Track metrics for data column publishing
       if (dataColumnSidecars.length > 0) {

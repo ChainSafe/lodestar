@@ -4,6 +4,7 @@ import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodest
 import {
   Attestation,
   AttesterSlashing,
+  BuilderIndex,
   Epoch,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -98,7 +99,11 @@ export enum EventType {
   blobSidecar = "blob_sidecar",
   /** The node has received a valid DataColumnSidecar (from P2P or API) */
   dataColumnSidecar = "data_column_sidecar",
-  /** The node has verified that the execution payload and blobs for a block are available */
+  /** The node has received an execution payload (from P2P or API) that is successfully imported on the fork-choice `on_execution_payload` handler */
+  executionPayload = "execution_payload",
+  /** The node has received an execution payload (from P2P or API) that passes validation rules of the `execution_payload` topic */
+  executionPayloadGossip = "execution_payload_gossip",
+  /** The node has verified that the execution payload and blobs for a block are available and ready for payload attestation */
   executionPayloadAvailable = "execution_payload_available",
 }
 
@@ -120,6 +125,8 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.payloadAttributes]: EventType.payloadAttributes,
   [EventType.blobSidecar]: EventType.blobSidecar,
   [EventType.dataColumnSidecar]: EventType.dataColumnSidecar,
+  [EventType.executionPayload]: EventType.executionPayload,
+  [EventType.executionPayloadGossip]: EventType.executionPayloadGossip,
   [EventType.executionPayloadAvailable]: EventType.executionPayloadAvailable,
 };
 
@@ -170,6 +177,21 @@ export type EventData = {
   [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
   [EventType.dataColumnSidecar]: DataColumnSidecarSSE;
+  [EventType.executionPayload]: {
+    slot: Slot;
+    builderIndex: BuilderIndex;
+    blockHash: RootHex;
+    blockRoot: RootHex;
+    stateRoot: RootHex;
+    executionOptimistic: boolean;
+  };
+  [EventType.executionPayloadGossip]: {
+    slot: Slot;
+    builderIndex: BuilderIndex;
+    blockHash: RootHex;
+    blockRoot: RootHex;
+    stateRoot: RootHex;
+  };
   [EventType.executionPayloadAvailable]: {
     slot: Slot;
     blockRoot: RootHex;
@@ -343,6 +365,27 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         return fuluDataColumnSidecarSSE.fromJson(data);
       },
     },
+    [EventType.executionPayload]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        builderIndex: ssz.BuilderIndex,
+        blockHash: stringType,
+        blockRoot: stringType,
+        stateRoot: stringType,
+        executionOptimistic: ssz.Boolean,
+      },
+      {jsonCase: "eth2"}
+    ),
+    [EventType.executionPayloadGossip]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        builderIndex: ssz.BuilderIndex,
+        blockHash: stringType,
+        blockRoot: stringType,
+        stateRoot: stringType,
+      },
+      {jsonCase: "eth2"}
+    ),
     [EventType.executionPayloadAvailable]: new ContainerType(
       {
         slot: ssz.Slot,
