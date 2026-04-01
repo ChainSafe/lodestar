@@ -22,8 +22,8 @@ export async function* onBeaconBlocksByRange(
 
   const finalized = db.blockArchive;
   // in the case of initializing from a non-finalized state, we don't have the finalized block so this api does not work
-  // chain.forkChoice.getFinalizeBlock().slot
-  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
+  const finalizedBlock = chain.forkChoice.getFinalizedBlock();
+  const finalizedSlot = finalizedBlock.slot;
 
   const forkName = chain.config.getForkName(startSlot);
   if (isForkPostFulu(forkName) && startSlot < chain.earliestAvailableSlot) {
@@ -36,11 +36,29 @@ export async function* onBeaconBlocksByRange(
 
   // Finalized range of blocks
   if (startSlot <= finalizedSlot) {
-    // Chain of blobs won't change
+    const finalizedEntries: Array<{slot: number; data: Uint8Array}> = [];
     for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+      finalizedEntries.push({slot: finalized.decodeKey(key), data: value});
+    }
+
+    // The finalized boundary block may still be in hot storage during archive transitions.
+    // Ensure the canonical finalized block is included when it falls inside the requested range,
+    // otherwise the response may incorrectly start at the next block (e.g. 97..127 instead of 96..127).
+    if (finalizedBlock.slot >= startSlot && finalizedBlock.slot < endSlot) {
+      const hasFinalizedBoundary = finalizedEntries.some((entry) => entry.slot === finalizedBlock.slot);
+      if (!hasFinalizedBoundary) {
+        const finalizedBoundaryBlock = await chain.getSerializedBlockByRoot(finalizedBlock.blockRoot);
+        if (finalizedBoundaryBlock) {
+          finalizedEntries.push({slot: finalizedBoundaryBlock.slot, data: finalizedBoundaryBlock.block});
+        }
+      }
+    }
+
+    finalizedEntries.sort((a, b) => a.slot - b.slot);
+    for (const {slot, data} of finalizedEntries) {
       yield {
-        data: value,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(finalized.decodeKey(key))),
+        data,
+        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
       };
     }
   }
