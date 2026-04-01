@@ -438,7 +438,7 @@ export class Eth2Gossipsub {
   private onPartialMessage(event: GossipSubEvents["gossipsub:partial-message"]): void {
     const {
       propagationSource,
-      partialMsg: {topic: topicStr, groupID, partialMessage},
+      partialMsg: {topic: topicStr, groupID, partialMessage, partsMetadata},
     } = event.detail;
 
     // Parse the base topic to check it's a data column sidecar topic
@@ -473,7 +473,20 @@ export class Eth2Gossipsub {
           startProcessUnixSec: null,
         });
       });
+      return;
     }
+
+    callInNextEventLoop(() => {
+      this.events.emit(NetworkEvent.pendingPartialMessageMetadata, {
+        topic: partialTopic,
+        groupID,
+        partsMetadata,
+        propagationSource: peerIdStr,
+        clientVersion,
+        clientAgent,
+        seenTimestampSec,
+      });
+    });
   }
 
   publishPartialMessage(partialMsg: PartialMessage): void {

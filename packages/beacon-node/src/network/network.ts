@@ -80,6 +80,7 @@ type NetworkModules = {
   aggregatorTracker: AggregatorTracker;
   networkProcessor: NetworkProcessor;
   core: INetworkCore;
+  partialColumnPublisher: PartialColumnPublisher;
 };
 
 export type NetworkInitModules = {
@@ -140,14 +141,11 @@ export class Network implements INetwork {
     this.networkProcessor = modules.networkProcessor;
     this.core = modules.core;
     this.aggregatorTracker = modules.aggregatorTracker;
-    this.partialColumnPublisher = new PartialColumnPublisher({
-      config: this.config,
-      core: this.core,
-      metrics: this.metrics,
-    });
+    this.partialColumnPublisher = modules.partialColumnPublisher;
 
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
+    this.events.on(NetworkEvent.pendingPartialMessageMetadata, this.onPendingPartialMessageMetadata);
     this.chain.emitter.on(routes.events.EventType.head, this.onHead);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) =>
       this.onLightClientFinalityUpdate(data)
@@ -180,6 +178,7 @@ export class Network implements INetwork {
     const activeValidatorCount = chain.getHeadState().activeValidatorCount;
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
+    const custodySubnets = getCustodySubnets(config, chain.custodyConfig.custodyColumns);
 
     if (opts.useWorker) {
       logger.info("running libp2p instance in worker thread");
@@ -218,7 +217,7 @@ export class Network implements INetwork {
           activeValidatorCount,
         });
 
-    const partialColumnPublisher = new PartialColumnPublisher({config, core, metrics});
+    const partialColumnPublisher = new PartialColumnPublisher({config, core, metrics, custodySubnets});
     const networkProcessor = new NetworkProcessor(
       {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker, partialColumnPublisher},
       opts
@@ -238,6 +237,7 @@ export class Network implements INetwork {
       aggregatorTracker,
       networkProcessor,
       core,
+      partialColumnPublisher,
     });
   }
 
@@ -251,6 +251,7 @@ export class Network implements INetwork {
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
+    this.events.off(NetworkEvent.pendingPartialMessageMetadata, this.onPendingPartialMessageMetadata);
     this.chain.emitter.off(routes.events.EventType.head, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
@@ -417,9 +418,7 @@ export class Network implements INetwork {
 
     await this.partialColumnPublisher.publishBlockProductionColumns(
       columns,
-      Array.from(
-        new Set(this.custodyConfig.custodyColumns.map((columnIndex) => columnIndex % this.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT))
-      ).sort((a, b) => a - b),
+      getCustodySubnets(this.config, this.custodyConfig.custodyColumns),
       this.opts.eagerlyPublishCells ?? false
     );
   }
@@ -851,6 +850,14 @@ export class Network implements INetwork {
     void this.core.setTargetGroupCount(count);
   };
 
+  private onPendingPartialMessageMetadata = ({
+    topic,
+    groupID,
+    propagationSource,
+  }: NetworkEventData[NetworkEvent.pendingPartialMessageMetadata]): void => {
+    void this.partialColumnPublisher.handleMetadataOnlyMessage(groupID, topic.subnet, propagationSource);
+  };
+
   private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar, {publishPartial: false})));
   };
@@ -866,4 +873,10 @@ export class Network implements INetwork {
   private onUpdateStatus = async (): Promise<void> => {
     await this.core.updateStatus(this.chain.getStatus());
   };
+}
+
+function getCustodySubnets(config: BeaconConfig, custodyColumns: number[]): SubnetID[] {
+  return Array.from(new Set(custodyColumns.map((columnIndex) => columnIndex % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT))).sort(
+    (a, b) => a - b
+  );
 }

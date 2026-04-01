@@ -540,12 +540,19 @@ export function getBlockRootHexFromPartialMessageGroupId(groupId: Uint8Array): R
  * Construct PartialDataColumnPartsMetadata from a bitmap of available cells.
  * Returns the SSZ serialized metadata bytes for the gossipsub partial message.
  */
-export function buildPartsMetadataBytes(cellsPresentBitmap: boolean[] | BitArray): Uint8Array {
+export function buildPartsMetadataBytes(
+  cellsPresentBitmap: boolean[] | BitArray,
+  requestsBitmap?: boolean[] | BitArray
+): Uint8Array {
   const available =
     cellsPresentBitmap instanceof BitArray ? cellsPresentBitmap : BitArray.fromBoolArray(cellsPresentBitmap);
+  const requests =
+    requestsBitmap instanceof BitArray
+      ? requestsBitmap
+      : BitArray.fromBoolArray(requestsBitmap ?? Array.from({length: available.bitLen}, () => false));
   const metadata: fulu.PartialDataColumnPartsMetadata = {
     available,
-    requests: BitArray.fromBoolArray(Array.from({length: available.bitLen}, () => false)),
+    requests,
   };
   return ssz.fulu.PartialDataColumnPartsMetadata.serialize(metadata);
 }

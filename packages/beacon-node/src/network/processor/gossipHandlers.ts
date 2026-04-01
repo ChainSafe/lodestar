@@ -1023,6 +1023,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           }
           shouldBroadcastHeader = !hadPartialHeader;
 
+          if (shouldBroadcastHeader) {
+            await partialColumnPublisher.registerReceivedHeader(
+              ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.signedBlockHeader.message),
+              header,
+              peerIdStr
+            );
+          }
+
           // Trigger getBlobsV3 — the partial header carries kzg_commitments needed for the call.
           // This may be the first gossip object for this block. getBlobsTracker deduplicates.
           chain.getBlobsTracker.triggerGetBlobs(blockInput);

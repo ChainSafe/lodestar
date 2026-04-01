@@ -11,7 +11,7 @@ import {GossipType} from "../../../src/network/gossip/interface.js";
 import {stringifyGossipTopic} from "../../../src/network/gossip/topic.js";
 import {PartialColumnPublisher} from "../../../src/network/partialColumnPublisher.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
-import {dataColumnToPartialSidecar} from "../../../src/util/dataColumns.js";
+import {computePartialMessageGroupId, dataColumnToPartialSidecar} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
 
 describe("PartialColumnPublisher", () => {
@@ -68,7 +68,7 @@ describe("PartialColumnPublisher", () => {
         published.push({peerId, partialMessage: partialMsg.partialMessage, topic: partialMsg.topic});
       }),
     } as Pick<INetworkCore, "getPartialPeers" | "publishPartialMessageToPeer"> as INetworkCore;
-    const publisher = new PartialColumnPublisher({config, core, metrics: null});
+    const publisher = new PartialColumnPublisher({config, core, metrics: null, custodySubnets: [1, 2]});
 
     const sidecar = buildColumnSidecarFixture(chainConfig);
 
@@ -129,11 +129,20 @@ describe("PartialColumnPublisher", () => {
     const core = {
       getPartialPeers: vi.fn(async (_topic: string) => ["peer-a", "peer-b", "peer-c"]),
       getPeerPartialMetadata: vi.fn(async (_topic: string, _groupId: Uint8Array, peerId: PeerIdStr) => peerMetadata.get(peerId)),
+      publishPartialMessage: vi.fn(async () => undefined),
       publishPartialMessageToPeer: vi.fn(async (peerId: PeerIdStr, partialMsg) => {
         published.push({peerId, partialMessage: partialMsg.partialMessage});
       }),
-    } as Pick<INetworkCore, "getPartialPeers" | "getPeerPartialMetadata" | "publishPartialMessageToPeer"> as INetworkCore;
-    const publisher = new PartialColumnPublisher({config, core, metrics: null});
+    } as Pick<
+      INetworkCore,
+      "getPartialPeers" | "getPeerPartialMetadata" | "publishPartialMessage" | "publishPartialMessageToPeer"
+    > as INetworkCore;
+    const publisher = new PartialColumnPublisher({config, core, metrics: null, custodySubnets: [sidecar.index]});
+    await publisher.registerReceivedHeader(blockRoot, {
+      kzgCommitments: sidecar.kzgCommitments,
+      signedBlockHeader: sidecar.signedBlockHeader,
+      kzgCommitmentsInclusionProof: sidecar.kzgCommitmentsInclusionProof,
+    });
 
     await publisher.publishFilteredPartialOnSubnet(
       partialSidecar,
@@ -155,11 +164,86 @@ describe("PartialColumnPublisher", () => {
     const unfilteredPartial = ssz.fulu.PartialDataColumnSidecar.deserialize(peerAMessage.partialMessage);
     const filteredPartial = ssz.fulu.PartialDataColumnSidecar.deserialize(peerBMessage.partialMessage);
 
-    expect(unfilteredPartial.cellsPresentBitmap.toBoolArray()).toEqual([true, true]);
-    expect(unfilteredPartial.partialColumn).toEqual(sidecar.column);
+    expect(unfilteredPartial.header).toHaveLength(1);
+    expect(unfilteredPartial.cellsPresentBitmap.toBoolArray()).toEqual([]);
+    expect(unfilteredPartial.partialColumn).toEqual([]);
 
     expect(filteredPartial.cellsPresentBitmap.toBoolArray()).toEqual([true, false]);
     expect(filteredPartial.partialColumn).toEqual([sidecar.column[0]]);
     expect(filteredPartial.kzgProofs).toEqual([sidecar.kzgProofs[0]]);
+  });
+
+  it("should publish request metadata across custody subnets when a new header is registered", async () => {
+    const chainConfig = createTestConfig();
+    const config = createBeaconConfig(chainConfig, new Uint8Array(32));
+    const sidecar = buildColumnSidecarFixture(chainConfig);
+    const publishedMetadata: Array<{topic: string; partsMetadata: Uint8Array}> = [];
+    const core = {
+      publishPartialMessage: vi.fn(async (partialMsg) => {
+        publishedMetadata.push({topic: partialMsg.topic, partsMetadata: partialMsg.partsMetadata});
+      }),
+    } as Pick<INetworkCore, "publishPartialMessage"> as INetworkCore;
+    const publisher = new PartialColumnPublisher({config, core, metrics: null, custodySubnets: [1, 2]});
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(sidecar.signedBlockHeader.message);
+
+    await publisher.registerReceivedHeader(blockRoot, {
+      kzgCommitments: sidecar.kzgCommitments,
+      signedBlockHeader: sidecar.signedBlockHeader,
+      kzgCommitmentsInclusionProof: sidecar.kzgCommitmentsInclusionProof,
+    });
+
+    expect(publishedMetadata).toHaveLength(2);
+    for (const {partsMetadata} of publishedMetadata) {
+      const metadata = ssz.fulu.PartialDataColumnPartsMetadata.deserialize(partsMetadata);
+      expect(metadata.available.toBoolArray()).toEqual([false, false]);
+      expect(metadata.requests.toBoolArray()).toEqual([true, true]);
+    }
+  });
+
+  it("should respond to metadata-only partial messages with requested cells", async () => {
+    const chainConfig = createTestConfig();
+    const config = createBeaconConfig(chainConfig, new Uint8Array(32));
+    const sidecar = buildColumnSidecarFixture(chainConfig);
+    const partialSidecar = dataColumnToPartialSidecar(sidecar, {includeHeader: false, includeCells: true});
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(sidecar.signedBlockHeader.message);
+    const published: Array<{peerId: PeerIdStr; partialMessage: Uint8Array}> = [];
+    const metadata = ssz.fulu.PartialDataColumnPartsMetadata.serialize({
+      available: BitArray.fromBoolArray([false, true]),
+      requests: BitArray.fromBoolArray([true, true]),
+    });
+    const core = {
+      getPartialPeers: vi.fn(async () => []),
+      getPeerPartialMetadata: vi.fn(async () => metadata),
+      publishPartialMessage: vi.fn(async () => undefined),
+      publishPartialMessageToPeer: vi.fn(async (peerId: PeerIdStr, partialMsg) => {
+        published.push({peerId, partialMessage: partialMsg.partialMessage});
+      }),
+    } as Pick<
+      INetworkCore,
+      "getPartialPeers" | "getPeerPartialMetadata" | "publishPartialMessage" | "publishPartialMessageToPeer"
+    > as INetworkCore;
+    const publisher = new PartialColumnPublisher({config, core, metrics: null, custodySubnets: [sidecar.index]});
+
+    await publisher.registerReceivedHeader(blockRoot, {
+      kzgCommitments: sidecar.kzgCommitments,
+      signedBlockHeader: sidecar.signedBlockHeader,
+      kzgCommitmentsInclusionProof: sidecar.kzgCommitmentsInclusionProof,
+    });
+    await publisher.publishFilteredPartialOnSubnet(
+      partialSidecar,
+      sidecar.index,
+      blockRoot,
+      sidecar.signedBlockHeader.message.slot,
+      new Set(),
+      "gossip_merge"
+    );
+    await publisher.handleMetadataOnlyMessage(computePartialMessageGroupId(blockRoot), sidecar.index, "peer-b");
+
+    expect(published).toHaveLength(1);
+
+    const response = ssz.fulu.PartialDataColumnSidecar.deserialize(published[0].partialMessage);
+    expect(response.header).toHaveLength(0);
+    expect(response.cellsPresentBitmap.toBoolArray()).toEqual([true, false]);
+    expect(response.partialColumn).toEqual([sidecar.column[0]]);
   });
 });
