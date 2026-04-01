@@ -22,6 +22,7 @@ import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr, toHex} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
+import type {PeerIdStr} from "../../util/peerId.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
@@ -199,7 +200,9 @@ export class Eth2Gossipsub {
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: 16829,
-    })(modules.libp2p.services.components) as GossipSubInternal;
+    })(
+      modules.libp2p.services.components as unknown as Parameters<ReturnType<typeof gossipsub>>[0]
+    ) as GossipSubInternal;
 
     if (metrics) {
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));

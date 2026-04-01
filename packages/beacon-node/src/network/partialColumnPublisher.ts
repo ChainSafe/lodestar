@@ -1,18 +1,18 @@
 import {BitArray} from "@chainsafe/ssz";
+import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex, SubnetID, fulu, ssz} from "@lodestar/types";
-import {BeaconConfig} from "@lodestar/config";
 import {toRootHex} from "@lodestar/utils";
-import type {INetworkCore} from "./core/types.js";
-import {PeerIdStr} from "../util/peerId.js";
+import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
+import {Metrics} from "../metrics/index.js";
 import {
   buildPartsMetadataBytes,
   computePartialMessageGroupId,
   dataColumnToPartialSidecar,
   getBlockRootHexFromPartialMessageGroupId,
 } from "../util/dataColumns.js";
-import {Metrics} from "../metrics/index.js";
-import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
+import {PeerIdStr} from "../util/peerId.js";
+import type {INetworkCore} from "./core/types.js";
 import {GossipType} from "./gossip/interface.js";
 import {stringifyGossipTopic} from "./gossip/topic.js";
 import {PartialColumnStateCache} from "./partialColumnStateCache.js";
@@ -64,7 +64,11 @@ export class PartialColumnPublisher {
       this.stateCache.markPeerHasHeader(blockRootHex, sourcePeerId);
     }
 
-    await this.publishRequestMetadataAcrossCustodySubnets(blockRootHex, blockRoot, header.signedBlockHeader.message.slot);
+    await this.publishRequestMetadataAcrossCustodySubnets(
+      blockRootHex,
+      blockRoot,
+      header.signedBlockHeader.message.slot
+    );
   }
 
   async handleMetadataOnlyMessage(groupID: Uint8Array, subnet: SubnetID, peerId: PeerIdStr): Promise<void> {
@@ -83,7 +87,10 @@ export class PartialColumnPublisher {
     await this.publishTrackedPartialToPeer(peerId, subnet, groupID.subarray(1), blockRootHex, slot, "metadata_request");
   }
 
-  async publishAvailableColumn(column: fulu.DataColumnSidecar, trigger: Exclude<PartialPublishTrigger, "block_production" | "gossip_merge">): Promise<void> {
+  async publishAvailableColumn(
+    column: fulu.DataColumnSidecar,
+    trigger: Exclude<PartialPublishTrigger, "block_production" | "gossip_merge">
+  ): Promise<void> {
     this.stateCache.storeFullColumn(column);
     this.observeStateCache();
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(column.signedBlockHeader.message);
@@ -142,7 +149,15 @@ export class PartialColumnPublisher {
           continue;
         }
 
-        await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, blockRootHex, slot, partialSidecar, "block_production");
+        await this.publishPartialSidecarToPeer(
+          peerId,
+          subnet,
+          blockRoot,
+          blockRootHex,
+          slot,
+          partialSidecar,
+          "block_production"
+        );
         sentPeers.add(peerId);
       }
     }
@@ -181,7 +196,15 @@ export class PartialColumnPublisher {
           continue;
         }
 
-        await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, blockRootHex, slot, partialToPublish, "gossip_merge");
+        await this.publishPartialSidecarToPeer(
+          peerId,
+          subnet,
+          blockRoot,
+          blockRootHex,
+          slot,
+          partialToPublish,
+          "gossip_merge"
+        );
         sentPeers.add(peerId);
       }
     }
@@ -194,8 +217,8 @@ export class PartialColumnPublisher {
     subnet: SubnetID,
     blockRoot: Uint8Array,
     slot: number,
-    skipPeers: ReadonlySet<PeerIdStr> = new Set(),
-    trigger: PartialPublishTrigger
+    trigger: PartialPublishTrigger,
+    skipPeers: ReadonlySet<PeerIdStr> = new Set()
   ): Promise<void> {
     const blockRootHex = toRootHex(blockRoot);
     this.stateCache.storePartialSidecar(blockRootHex, subnet, partialSidecar);
@@ -214,7 +237,8 @@ export class PartialColumnPublisher {
   ): Promise<void> {
     const {topic} = this.getTopicForSubnet(subnet, slot);
     const partsMetadata =
-      this.stateCache.buildPartsMetadataBytes(blockRootHex, subnet) ?? buildPartsMetadataBytes(partialSidecar.cellsPresentBitmap);
+      this.stateCache.buildPartsMetadataBytes(blockRootHex, subnet) ??
+      buildPartsMetadataBytes(partialSidecar.cellsPresentBitmap);
 
     await this.core.publishPartialMessageToPeer(peerId, {
       topic,
@@ -234,28 +258,6 @@ export class PartialColumnPublisher {
     if (trigger !== undefined && partialSidecar.partialColumn.length > 0) {
       this.metrics?.partialPublish.cellsSent.inc({trigger}, partialSidecar.partialColumn.length);
     }
-  }
-
-  private async publishPartialSidecar(
-    boundary: ReturnType<BeaconConfig["getForkBoundaryAtEpoch"]>,
-    subnet: SubnetID,
-    blockRoot: Uint8Array,
-    partialSidecar: fulu.PartialDataColumnSidecar
-  ): Promise<void> {
-    const topic = stringifyGossipTopic(this.config, {type: GossipType.data_column_sidecar, boundary, subnet});
-    const blockRootHex = toRootHex(blockRoot);
-    const partsMetadata =
-      this.stateCache.buildPartsMetadataBytes(blockRootHex, subnet) ?? buildPartsMetadataBytes(partialSidecar.cellsPresentBitmap);
-
-    await this.core.publishPartialMessage({
-      topic,
-      groupID: computePartialMessageGroupId(blockRoot),
-      partialMessage: ssz.fulu.PartialDataColumnSidecar.serialize(partialSidecar),
-      partsMetadata,
-    });
-
-    this.metrics?.partialColumns.headersPublished.inc(partialSidecar.header.length);
-    this.metrics?.partialColumns.cellsPublished.inc(partialSidecar.partialColumn.length);
   }
 
   private async getPartialPeersForSubnet(subnet: SubnetID, slot: number): Promise<PeerIdStr[]> {
@@ -352,7 +354,11 @@ export class PartialColumnPublisher {
     trigger: PartialPublishTrigger
   ): Promise<void> {
     const {topic} = this.getTopicForSubnet(subnet, slot);
-    const metadataBytes = await this.core.getPeerPartialMetadata(topic, computePartialMessageGroupId(blockRoot), peerId);
+    const metadataBytes = await this.core.getPeerPartialMetadata(
+      topic,
+      computePartialMessageGroupId(blockRoot),
+      peerId
+    );
 
     if (metadataBytes === undefined) {
       this.metrics?.partialPublish.peerNoMetadata.inc();
@@ -389,7 +395,15 @@ export class PartialColumnPublisher {
       return;
     }
 
-    await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, blockRootHex, slot, filteredResult.partialSidecar, trigger);
+    await this.publishPartialSidecarToPeer(
+      peerId,
+      subnet,
+      blockRoot,
+      blockRootHex,
+      slot,
+      filteredResult.partialSidecar,
+      trigger
+    );
   }
 
   private async publishRequestMetadataAcrossCustodySubnets(

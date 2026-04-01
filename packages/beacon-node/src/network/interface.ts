@@ -35,8 +35,8 @@ import {
   gloas,
   phase0,
 } from "@lodestar/types";
-import {PublishDataColumnsPartialTrigger} from "../chain/emitter.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import {PublishDataColumnsPartialTrigger} from "../chain/emitter.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {

@@ -35,7 +35,6 @@ import {
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
-import {emitPublishedDataColumns} from "../../chain/publishDataColumns.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -53,6 +52,7 @@ import {
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
+import {emitPublishedDataColumns} from "../../chain/publishDataColumns.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {validateGossipDataColumnSidecar} from "../../chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
@@ -82,6 +82,7 @@ import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {getBlobKzgCommitments, getBlockRootHexFromPartialMessageGroupId} from "../../util/dataColumns.js";
+import {PeerIdStr} from "../../util/peerId.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -1134,8 +1135,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                 columnIndex,
                 ssz.phase0.BeaconBlockHeader.hashTreeRoot(storedHeader.signedBlockHeader.message),
                 storedHeader.signedBlockHeader.message.slot,
-                broadcastedPeers,
-                "gossip_merge"
+                "gossip_merge",
+                broadcastedPeers
               );
             }
           }

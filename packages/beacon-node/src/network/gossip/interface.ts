@@ -145,9 +145,7 @@ export type GossipFnByType = {
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ) => Promise<void> | void;
   [GossipType.execution_payload_bid]: (executionPayloadBid: gloas.SignedExecutionPayloadBid) => Promise<void> | void;
-  [GossipType.partial_data_column_sidecar]: (
-    partialSidecar: fulu.PartialDataColumnSidecar
-  ) => Promise<void> | void;
+  [GossipType.partial_data_column_sidecar]: (partialSidecar: fulu.PartialDataColumnSidecar) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];
@@ -208,7 +206,9 @@ export type GossipHandlerParam = {
 
 export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam) => Promise<void>;
 
-export type BatchGossipHandlerFn = (gossipHandlerParam: GossipHandlerParam[]) => Promise<(null | AttestationError)[]>;
+export type BatchGossipHandlerFn = (
+  gossipHandlerParam: GossipHandlerParam[]
+) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
 
 export type GossipHandlerParamGeneric<T extends GossipType> = {
   gossipData: GossipData;

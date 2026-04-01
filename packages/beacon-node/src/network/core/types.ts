@@ -1,5 +1,5 @@
-import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PartialMessage} from "@libp2p/gossipsub";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";

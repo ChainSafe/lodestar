@@ -3,7 +3,7 @@ import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
-import {BeaconConfig, ForkBoundary} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
@@ -11,7 +11,6 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   DataColumnSidecar,
-  DataColumnSidecars,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -29,11 +28,15 @@ import {
   gloas,
   isGloasDataColumnSidecar,
   phase0,
-  ssz,
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
-import {ChainEvent, IBeaconChain, PublishDataColumnsEventData, PublishDataColumnsPartialTrigger} from "../chain/index.js";
+import {
+  ChainEvent,
+  IBeaconChain,
+  PublishDataColumnsEventData,
+  PublishDataColumnsPartialTrigger,
+} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
@@ -48,12 +51,14 @@ import {
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
+import {getFullDataColumnPublishOpts, shouldPublishPartialDataColumn} from "./dataColumnPublish.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
 import {INetwork} from "./interface.js";
 import {NetworkOptions} from "./options.js";
+import {PartialColumnPublisher} from "./partialColumnPublisher.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
@@ -68,8 +73,6 @@ import {
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
 import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
-import {PartialColumnPublisher} from "./partialColumnPublisher.js";
-import {getFullDataColumnPublishOpts, shouldPublishPartialDataColumn} from "./dataColumnPublish.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -113,6 +116,7 @@ export class Network implements INetwork {
   readonly events: INetworkEventBus;
 
   private readonly logger: LoggerNode;
+  private readonly opts: NetworkOptions;
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
   private readonly chain: IBeaconChain;
@@ -131,6 +135,7 @@ export class Network implements INetwork {
 
   constructor(modules: NetworkModules) {
     this.peerId = peerIdFromPrivateKey(modules.privateKey);
+    this.opts = modules.opts;
     this.config = modules.config;
     this.custodyConfig = modules.chain.custodyConfig;
     this.logger = modules.logger;
@@ -393,27 +398,35 @@ export class Network implements INetwork {
       this.core,
       topic,
       dataColumnSidecar,
-      this.opts.enablePartialColumns
+      this.opts.enablePartialColumns ?? false
     );
     if (publishOpts.excludePeerIds !== undefined) {
       this.metrics?.partialPublish.fullPeersSkipped.inc(publishOpts.excludePeerIds.length);
     }
-    const sentPeers = await this.publishGossip<GossipType.data_column_sidecar>(
-      topic,
-      dataColumnSidecar,
-      {
-        ignoreDuplicatePublishError: true,
-        // we ensure having all topic peers via prioritizePeers() function
-        // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
-        // because supernode will rebuild and publish missing data column sidecars for us
-        // hence we want to track sent peers as 0 instead of an error
-        allowPublishToZeroTopicPeers: true,
-        ...publishOpts,
-      }
-    );
+    const sentPeers = await this.publishGossip<GossipType.data_column_sidecar>(topic, dataColumnSidecar, {
+      ignoreDuplicatePublishError: true,
+      // we ensure having all topic peers via prioritizePeers() function
+      // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
+      // because supernode will rebuild and publish missing data column sidecars for us
+      // hence we want to track sent peers as 0 instead of an error
+      allowPublishToZeroTopicPeers: true,
+      ...publishOpts,
+    });
 
-    if (shouldPublishPartialDataColumn(dataColumnSidecar, this.opts.enablePartialColumns, opts?.publishPartial ?? true)) {
-      await this.partialColumnPublisher.publishAvailableColumn(dataColumnSidecar, opts?.partialTrigger ?? "full_column");
+    if (
+      shouldPublishPartialDataColumn(
+        dataColumnSidecar,
+        this.opts.enablePartialColumns ?? false,
+        opts?.publishPartial ?? true
+      )
+    ) {
+      if (isGloasDataColumnSidecar(dataColumnSidecar)) {
+        return sentPeers;
+      }
+      await this.partialColumnPublisher.publishAvailableColumn(
+        dataColumnSidecar,
+        opts?.partialTrigger ?? "full_column"
+      );
     }
 
     return sentPeers;
@@ -886,7 +899,7 @@ export class Network implements INetwork {
 }
 
 function getCustodySubnets(config: BeaconConfig, custodyColumns: number[]): SubnetID[] {
-  return Array.from(new Set(custodyColumns.map((columnIndex) => columnIndex % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT))).sort(
-    (a, b) => a - b
-  );
+  return Array.from(
+    new Set(custodyColumns.map((columnIndex) => columnIndex % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT))
+  ).sort((a, b) => a - b);
 }

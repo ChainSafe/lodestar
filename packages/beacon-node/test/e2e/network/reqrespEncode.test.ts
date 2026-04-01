@@ -76,6 +76,8 @@ describe("reqresp encoder", () => {
         nodeId,
         config,
       }),
+      enablePartialColumns: false,
+      eagerlyPublishCells: false,
     };
     const logger = testLogger();
     const modules: ReqRespBeaconNodeModules = {

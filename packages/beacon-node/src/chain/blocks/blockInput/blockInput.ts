@@ -1,6 +1,16 @@
 import {BitArray} from "@chainsafe/ssz";
 import {ForkName, ForkPostFulu, ForkPostGloas, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz} from "@lodestar/types";
+import {
+  BeaconBlockBody,
+  BlobIndex,
+  ColumnIndex,
+  SignedBeaconBlock,
+  Slot,
+  deneb,
+  fulu,
+  gloas,
+  ssz,
+} from "@lodestar/types";
 import {byteArrayEquals, fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
@@ -942,9 +952,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   addPartialHeader(header: fulu.PartialDataColumnHeader): void {
     if (this.partialHeader !== null) {
       // Spec: [REJECT] If a valid header was previously received, the received header MUST equal it
-      const existingRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(
-        this.partialHeader.signedBlockHeader.message
-      );
+      const existingRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(this.partialHeader.signedBlockHeader.message);
       const newRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.signedBlockHeader.message);
       if (!byteArrayEquals(existingRoot, newRoot)) {
         throw new BlockInputError(
@@ -1119,8 +1127,7 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
   }
 
   static createFromPartialHeader(
-    props: AddPartialHeader &
-      CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
+    props: AddPartialHeader & CreateBlockInputMeta & {sampledColumns: ColumnIndex[]; custodyColumns: ColumnIndex[]}
   ): BlockInputColumns {
     const blockHeader = props.partialHeader.signedBlockHeader.message;
     const state: BlockInputColumnsState = {
