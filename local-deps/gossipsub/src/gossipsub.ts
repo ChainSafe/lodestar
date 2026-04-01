@@ -2421,6 +2421,9 @@ export class GossipSub extends TypedEventEmitter<GossipSubEvents> implements Typ
     }
 
     const { tosend, tosendCount } = this.selectPeersToPublish(topic)
+    for (const peerId of opts?.excludePeerIds ?? []) {
+      tosend.delete(peerId)
+    }
     const willSendToSelf = this.opts.emitSelf && this.subscriptions.has(topic)
 
     // Current publish opt takes precedence global opts, while preserving false value
@@ -2536,7 +2539,12 @@ export class GossipSub extends TypedEventEmitter<GossipSubEvents> implements Typ
    *
    * This should only be called once per message.
    */
-  reportMessageValidationResult (msgId: MsgIdStr, propagationSource: PeerIdStr, acceptance: TopicValidatorResult): void {
+  reportMessageValidationResult (
+    msgId: MsgIdStr,
+    propagationSource: PeerIdStr,
+    acceptance: TopicValidatorResult,
+    excludePeerIds: PeerIdStr[] = []
+  ): void {
     let cacheEntry: MessageCacheRecord | null
 
     if (acceptance === TopicValidatorResult.Accept) {
@@ -2547,7 +2555,7 @@ export class GossipSub extends TypedEventEmitter<GossipSubEvents> implements Typ
         // message is fully validated inform peer_score
         this.score.deliverMessage(propagationSource, msgId, rawMsg.topic)
 
-        this.forwardMessage(msgId, cacheEntry.message, propagationSource, originatingPeers)
+        this.forwardMessage(msgId, cacheEntry.message, propagationSource, new Set([...originatingPeers, ...excludePeerIds]))
       }
       // else, Message not in cache. Ignoring forwarding
     } else {

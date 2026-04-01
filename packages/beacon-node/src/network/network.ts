@@ -69,6 +69,7 @@ import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialB
 import {CommitteeSubscription} from "./subnets/index.js";
 import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
 import {PartialColumnPublisher} from "./partialColumnPublisher.js";
+import {getFullDataColumnPublishOpts, shouldPublishPartialDataColumn} from "./dataColumnPublish.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -388,8 +389,16 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
+    const topic = {type: GossipType.data_column_sidecar, boundary, subnet} as const;
+    const publishOpts = await getFullDataColumnPublishOpts(
+      this.config,
+      this.core,
+      topic,
+      dataColumnSidecar,
+      this.opts.enablePartialColumns
+    );
     const sentPeers = await this.publishGossip<GossipType.data_column_sidecar>(
-      {type: GossipType.data_column_sidecar, boundary, subnet},
+      topic,
       dataColumnSidecar,
       {
         ignoreDuplicatePublishError: true,
@@ -398,14 +407,12 @@ export class Network implements INetwork {
         // because supernode will rebuild and publish missing data column sidecars for us
         // hence we want to track sent peers as 0 instead of an error
         allowPublishToZeroTopicPeers: true,
+        ...publishOpts,
       }
     );
 
-    if ((opts?.publishPartial ?? true) && this.opts.enablePartialColumns && !isGloasDataColumnSidecar(dataColumnSidecar)) {
-      await this.partialColumnPublisher.publishUniformColumn(dataColumnSidecar, {
-        includeHeader: true,
-        includeCells: this.opts.eagerlyPublishCells ?? false,
-      });
+    if (shouldPublishPartialDataColumn(dataColumnSidecar, this.opts.enablePartialColumns, opts?.publishPartial ?? true)) {
+      await this.partialColumnPublisher.publishAvailableColumn(dataColumnSidecar, "full_column");
     }
 
     return sentPeers;

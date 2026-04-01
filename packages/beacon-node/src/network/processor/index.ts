@@ -468,6 +468,8 @@ export class NetworkProcessor {
             msgId: msg.msgId,
             propagationSource: msg.propagationSource,
             acceptance: acceptanceArr[i],
+            topic: msg.topic,
+            excludePartialPeers: this.opts.enablePartialColumns === true && msg.topic.type === GossipType.data_column_sidecar,
           });
         });
       }
@@ -477,6 +479,9 @@ export class NetworkProcessor {
           msgId: messageOrArray.msgId,
           propagationSource: messageOrArray.propagationSource,
           acceptance: acceptanceArr[0],
+          topic: messageOrArray.topic,
+          excludePartialPeers:
+            this.opts.enablePartialColumns === true && messageOrArray.topic.type === GossipType.data_column_sidecar,
         });
       });
     }

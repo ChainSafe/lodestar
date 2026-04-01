@@ -246,4 +246,55 @@ describe("PartialColumnPublisher", () => {
     expect(response.cellsPresentBitmap.toBoolArray()).toEqual([true, false]);
     expect(response.partialColumn).toEqual([sidecar.column[0]]);
   });
+
+  it("should serve full-column availability through the peer-aware request path", async () => {
+    const chainConfig = createTestConfig();
+    const config = createBeaconConfig(chainConfig, new Uint8Array(32));
+    const boundary = config.getForkBoundaryAtEpoch(0);
+    const sidecar = buildColumnSidecarFixture(chainConfig);
+    const topic = stringifyGossipTopic(config, {type: GossipType.data_column_sidecar, boundary, subnet: sidecar.index});
+    const published: Array<{peerId: PeerIdStr; partialMessage: Uint8Array}> = [];
+    const peerMetadata = new Map<PeerIdStr, Uint8Array | undefined>([
+      ["peer-a", undefined],
+      [
+        "peer-b",
+        ssz.fulu.PartialDataColumnPartsMetadata.serialize({
+          available: BitArray.fromBoolArray([false, true]),
+          requests: BitArray.fromBoolArray([true, true]),
+        }),
+      ],
+    ]);
+    const core = {
+      getPartialPeers: vi.fn(async (_topic: string) => ["peer-a", "peer-b"]),
+      getPeerPartialMetadata: vi.fn(async (_topic: string, _groupId: Uint8Array, peerId: PeerIdStr) => peerMetadata.get(peerId)),
+      publishPartialMessageToPeer: vi.fn(async (peerId: PeerIdStr, partialMsg) => {
+        published.push({peerId, partialMessage: partialMsg.partialMessage});
+      }),
+    } as Pick<INetworkCore, "getPartialPeers" | "getPeerPartialMetadata" | "publishPartialMessageToPeer"> as INetworkCore;
+    const publisher = new PartialColumnPublisher({config, core, metrics: null, custodySubnets: [sidecar.index]});
+
+    await publisher.publishAvailableColumn(sidecar, "full_column");
+
+    expect(core.getPartialPeers).toHaveBeenCalledWith(topic);
+    expect(published).toHaveLength(2);
+
+    const peerAResponse = published.find(({peerId}) => peerId === "peer-a");
+    const peerBResponse = published.find(({peerId}) => peerId === "peer-b");
+
+    if (!peerAResponse || !peerBResponse) {
+      expect.fail("Expected both peer-a and peer-b to receive request-driven partial messages");
+    }
+
+    const headerOnly = ssz.fulu.PartialDataColumnSidecar.deserialize(peerAResponse.partialMessage);
+    const requestedCells = ssz.fulu.PartialDataColumnSidecar.deserialize(peerBResponse.partialMessage);
+
+    expect(headerOnly.header).toHaveLength(1);
+    expect(headerOnly.cellsPresentBitmap.toBoolArray()).toEqual([]);
+    expect(headerOnly.partialColumn).toEqual([]);
+
+    expect(requestedCells.header).toHaveLength(0);
+    expect(requestedCells.cellsPresentBitmap.toBoolArray()).toEqual([true, false]);
+    expect(requestedCells.partialColumn).toEqual([sidecar.column[0]]);
+    expect(requestedCells.kzgProofs).toEqual([sidecar.kzgProofs[0]]);
+  });
 });

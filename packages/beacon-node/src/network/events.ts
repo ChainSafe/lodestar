@@ -47,6 +47,8 @@ export type NetworkEventData = {
     msgId: string;
     propagationSource: PeerIdStr;
     acceptance: TopicValidatorResult;
+    topic?: GossipTopicMap[keyof GossipTopicMap];
+    excludePartialPeers?: boolean;
   };
 };
 

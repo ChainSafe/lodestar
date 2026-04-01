@@ -580,6 +580,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         seenTimestampSec
       );
       chain.serializedCache.set(dataColumnSidecar, serializedData);
+      await partialColumnPublisher.publishAvailableColumn(dataColumnSidecar, "full_gossip");
       const blockInputMeta = blockInput.getLogMeta();
       const {receivedColumns} = blockInputMeta;
       // it's not helpful to track every single column received
