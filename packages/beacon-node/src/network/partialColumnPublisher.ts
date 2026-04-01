@@ -19,6 +19,8 @@ export type PublishPartialColumnsOpts = {
   includeCells: boolean;
 };
 
+type PartialPublishTrigger = "block_production" | "gossip_merge" | "post_getblobs";
+
 type PartialColumnPublisherModules = {
   config: BeaconConfig;
   core: INetworkCore;
@@ -89,10 +91,11 @@ export class PartialColumnPublisher {
 
       for (const peerId of partialPeers) {
         if (sentPeers.has(peerId)) {
+          this.metrics?.partialPublish.headerDedup.inc();
           continue;
         }
 
-        await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, slot, partialSidecar);
+        await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, slot, partialSidecar, "block_production");
         sentPeers.add(peerId);
       }
     }
@@ -109,7 +112,9 @@ export class PartialColumnPublisher {
           partialSidecar,
           subnet,
           blockRoot,
-          column.signedBlockHeader.message.slot
+          column.signedBlockHeader.message.slot,
+          new Set(),
+          "post_getblobs"
         );
       })
     );
@@ -141,10 +146,11 @@ export class PartialColumnPublisher {
 
       for (const peerId of peers) {
         if (sentPeers.has(peerId)) {
+          this.metrics?.partialPublish.headerDedup.inc();
           continue;
         }
 
-        await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, slot, partialToPublish);
+        await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, slot, partialToPublish, "gossip_merge");
         sentPeers.add(peerId);
       }
     }
@@ -157,7 +163,8 @@ export class PartialColumnPublisher {
     subnet: SubnetID,
     blockRoot: Uint8Array,
     slot: number,
-    skipPeers: ReadonlySet<PeerIdStr> = new Set()
+    skipPeers: ReadonlySet<PeerIdStr> = new Set(),
+    trigger: PartialPublishTrigger
   ): Promise<void> {
     const groupID = computePartialMessageGroupId(blockRoot);
     const {topic} = this.getTopicForSubnet(subnet, slot);
@@ -169,13 +176,20 @@ export class PartialColumnPublisher {
       }
 
       const metadataBytes = await this.core.getPeerPartialMetadata(topic, groupID, peerId);
-      const filteredSidecar = this.filterCellsForPeer(partialSidecar, metadataBytes);
+      const filteredResult = this.filterCellsForPeer(partialSidecar, metadataBytes);
 
-      if (filteredSidecar === null) {
+      if (!filteredResult.hadMetadata) {
+        this.metrics?.partialPublish.peerNoMetadata.inc();
+      }
+      if (filteredResult.filteredCellCount > 0) {
+        this.metrics?.partialPublish.cellsFiltered.inc(filteredResult.filteredCellCount);
+      }
+      if (filteredResult.partialSidecar === null) {
+        this.metrics?.partialPublish.peerSkip.inc();
         continue;
       }
 
-      await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, slot, filteredSidecar);
+      await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, slot, filteredResult.partialSidecar, trigger);
     }
   }
 
@@ -184,7 +198,8 @@ export class PartialColumnPublisher {
     subnet: SubnetID,
     blockRoot: Uint8Array,
     slot: number,
-    partialSidecar: fulu.PartialDataColumnSidecar
+    partialSidecar: fulu.PartialDataColumnSidecar,
+    trigger?: PartialPublishTrigger
   ): Promise<void> {
     const {topic} = this.getTopicForSubnet(subnet, slot);
 
@@ -197,6 +212,12 @@ export class PartialColumnPublisher {
 
     this.metrics?.partialColumns.headersPublished.inc(partialSidecar.header.length);
     this.metrics?.partialColumns.cellsPublished.inc(partialSidecar.partialColumn.length);
+    if (trigger !== undefined && partialSidecar.header.length > 0) {
+      this.metrics?.partialPublish.headerBroadcast.inc({trigger}, partialSidecar.header.length);
+    }
+    if (trigger !== undefined && partialSidecar.partialColumn.length > 0) {
+      this.metrics?.partialPublish.cellsSent.inc({trigger}, partialSidecar.partialColumn.length);
+    }
   }
 
   private async publishPartialSidecar(
@@ -236,12 +257,17 @@ export class PartialColumnPublisher {
   private filterCellsForPeer(
     partialSidecar: fulu.PartialDataColumnSidecar,
     metadataBytes: Uint8Array | undefined
-  ): fulu.PartialDataColumnSidecar | null {
+  ): {partialSidecar: fulu.PartialDataColumnSidecar | null; hadMetadata: boolean; filteredCellCount: number} {
     if (metadataBytes === undefined) {
-      return partialSidecar;
+      return {partialSidecar, hadMetadata: false, filteredCellCount: 0};
     }
 
-    const metadata = ssz.fulu.PartialDataColumnPartsMetadata.deserialize(metadataBytes);
+    let metadata: fulu.PartialDataColumnPartsMetadata;
+    try {
+      metadata = ssz.fulu.PartialDataColumnPartsMetadata.deserialize(metadataBytes);
+    } catch {
+      return {partialSidecar, hadMetadata: false, filteredCellCount: 0};
+    }
     const bitLen = partialSidecar.cellsPresentBitmap.bitLen;
     const filteredBitmap = Array.from({length: bitLen}, () => false);
     const filteredCells: Uint8Array[] = [];
@@ -263,14 +289,18 @@ export class PartialColumnPublisher {
     }
 
     if (filteredCells.length === 0) {
-      return null;
+      return {partialSidecar: null, hadMetadata: true, filteredCellCount: partialSidecar.partialColumn.length};
     }
 
     return {
-      cellsPresentBitmap: BitArray.fromBoolArray(filteredBitmap),
-      partialColumn: filteredCells,
-      kzgProofs: filteredProofs,
-      header: partialSidecar.header,
+      partialSidecar: {
+        cellsPresentBitmap: BitArray.fromBoolArray(filteredBitmap),
+        partialColumn: filteredCells,
+        kzgProofs: filteredProofs,
+        header: partialSidecar.header,
+      },
+      hadMetadata: true,
+      filteredCellCount: partialSidecar.partialColumn.length - filteredCells.length,
     };
   }
 }

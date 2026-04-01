@@ -919,6 +919,34 @@ export function createLodestarMetrics(
         help: "Headers published via partial messages",
       }),
     },
+    partialPublish: {
+      headerBroadcast: register.counter<{trigger: string}>({
+        name: "lodestar_partial_publish_header_broadcast_total",
+        help: "Header broadcasts emitted by the partial column publisher",
+        labelNames: ["trigger"],
+      }),
+      headerDedup: register.counter({
+        name: "lodestar_partial_publish_header_dedup_total",
+        help: "Peers skipped during header fan-out because they were already reached on another custody subnet",
+      }),
+      cellsSent: register.counter<{trigger: string}>({
+        name: "lodestar_partial_publish_cells_sent_total",
+        help: "Cells sent by the partial column publisher",
+        labelNames: ["trigger"],
+      }),
+      cellsFiltered: register.counter({
+        name: "lodestar_partial_publish_cells_filtered_total",
+        help: "Cells held locally but filtered out because the peer did not request them",
+      }),
+      peerNoMetadata: register.counter({
+        name: "lodestar_partial_publish_peer_no_metadata_total",
+        help: "Peers that received all locally available cells because no partial metadata was known for them",
+      }),
+      peerSkip: register.counter({
+        name: "lodestar_partial_publish_peer_skip_total",
+        help: "Peers skipped because there were no cells to send after filtering",
+      }),
+    },
     // recovery in the case of specific blob rows required
     recoverBlobSidecars: {
       blobsReconstructed: register.counter({
