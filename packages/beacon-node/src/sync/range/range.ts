@@ -3,14 +3,15 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Status, fulu} from "@lodestar/types";
-import {Logger, toRootHex} from "@lodestar/utils";
-import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {cacheByRangeResponses, downloadByRange} from "../utils/downloadByRange.js";
+import {fetchAndValidateBlock} from "../utils/downloadByRoot.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
@@ -225,6 +226,33 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     }
   };
 
+  private processBlockByRoot: SyncChainFns["processBlockByRoot"] = async (peerId, blockRootHex, syncType) => {
+    const block = await fetchAndValidateBlock({
+      config: this.config,
+      network: this.network,
+      peerIdStr: peerId,
+      blockRoot: fromHex(blockRootHex),
+    });
+
+    const blockInput = this.chain.seenBlockInputCache.getByBlock({
+      block,
+      blockRootHex,
+      source: BlockInputSource.byRoot,
+      peerIdStr: peerId,
+      seenTimestampSec: Date.now() / 1000,
+    });
+
+    const flags: ImportBlockOpts = {
+      importAttestations: syncType === RangeSyncType.Finalized ? AttestationImportOpt.Skip : undefined,
+      ignoreIfKnown: true,
+      ignoreIfFinalized: true,
+      fromRangeSync: true,
+      blsVerifyOnMainThread: false,
+    };
+
+    await this.chain.processBlock(blockInput, flags);
+  };
+
   /** Convenience method for `SyncChain` */
   private reportPeer: SyncChainFns["reportPeer"] = (peer, action, actionName) => {
     this.network.reportPeer(peer, action, actionName);
@@ -257,6 +285,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           reportPeer: this.reportPeer,
           getConnectedPeerSyncMeta: this.getConnectedPeerSyncMeta,
           pruneBlockInputs: this.pruneBlockInputs,
+          processBlockByRoot: this.processBlockByRoot,
           onEnd: this.onSyncChainEnd,
         },
         {

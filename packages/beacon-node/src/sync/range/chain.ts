@@ -5,6 +5,7 @@ import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockIn
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
+import {BlockError, BlockErrorCode} from "../../chain/errors/blockError.js";
 import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
@@ -67,6 +68,8 @@ export type SyncChainFns = {
   onEnd: (err: Error | null, target: ChainTarget | null) => void;
   /** Deletes an array of BlockInputs from the BlockInputCache */
   pruneBlockInputs: (blockInputs: IBlockInput[]) => void;
+  /** Fetches a single block by root from a specific peer and imports it */
+  processBlockByRoot: (peer: PeerIdStr, blockRootHex: string, syncType: RangeSyncType) => Promise<void>;
 };
 
 /**
@@ -135,6 +138,7 @@ export class SyncChain {
   private readonly reportPeer: SyncChainFns["reportPeer"];
   private readonly getConnectedPeerSyncMeta: SyncChainFns["getConnectedPeerSyncMeta"];
   private readonly pruneBlockInputs: SyncChainFns["pruneBlockInputs"];
+  private readonly processBlockByRoot: SyncChainFns["processBlockByRoot"];
 
   /** AsyncIterable that guarantees processChainSegment is run only at once at anytime */
   private readonly batchProcessor = new ItTrigger();
@@ -167,6 +171,7 @@ export class SyncChain {
     this.reportPeer = fns.reportPeer;
     this.pruneBlockInputs = fns.pruneBlockInputs;
     this.getConnectedPeerSyncMeta = fns.getConnectedPeerSyncMeta;
+    this.processBlockByRoot = fns.processBlockByRoot;
     this.config = config;
     this.clock = clock;
     this.metrics = metrics;
@@ -682,7 +687,11 @@ export class SyncChain {
     });
 
     // wrapError ensures to never call both batch success() and batch error()
-    const res = await wrapError(this.processChainSegment(blocks, envelopes, this.syncType));
+    let res = await wrapError(this.processChainSegment(blocks, envelopes, this.syncType));
+
+    if (res.err && (await this.tryRecoverMissingBatchBoundaryParent(batch, blocks, res.err))) {
+      res = await wrapError(this.processChainSegment(blocks, envelopes, this.syncType));
+    }
 
     if (!res.err) {
       batch.processingSuccess();
@@ -718,6 +727,62 @@ export class SyncChain {
 
     // A batch is no longer in Processing status, queue has an empty spot to download next batch
     this.triggerBatchDownloader();
+  }
+
+  private async tryRecoverMissingBatchBoundaryParent(
+    batch: Batch,
+    blocks: IBlockInput[],
+    err: Error
+  ): Promise<boolean> {
+    if (this.syncType !== RangeSyncType.Finalized) {
+      return false;
+    }
+
+    if (!(err instanceof BlockError) || err.type.code !== BlockErrorCode.PARENT_UNKNOWN) {
+      return false;
+    }
+
+    const firstBlock = blocks[0];
+    if (firstBlock == null || !firstBlock.hasBlock()) {
+      return false;
+    }
+
+    // A peer may respond to the first finalized batch after a checkpoint boundary with
+    // slot N+1.. instead of including the boundary block at slot N. If the first block
+    // is exactly one slot after the requested batch start and its parent is unknown,
+    // recover that boundary parent by root and retry the batch immediately.
+    if (firstBlock.slot !== batch.startSlot + 1 || firstBlock.parentRootHex !== err.type.parentRoot) {
+      return false;
+    }
+
+    const attemptPeers = batch.state.status === BatchStatus.Processing ? batch.state.attempt.peers : [];
+    for (const peer of attemptPeers) {
+      const recovered = await wrapError(this.processBlockByRoot(peer, err.type.parentRoot, this.syncType));
+      if (!recovered.err) {
+        this.logger.debug("Recovered missing batch boundary parent by root", {
+          id: this.logId,
+          peer: prettyPrintPeerIdStr(peer),
+          batchStartSlot: batch.startSlot,
+          recoveredParentRoot: err.type.parentRoot,
+          childSlot: firstBlock.slot,
+        });
+        return true;
+      }
+
+      this.logger.verbose(
+        "Failed to recover missing batch boundary parent by root",
+        {
+          id: this.logId,
+          peer: prettyPrintPeerIdStr(peer),
+          batchStartSlot: batch.startSlot,
+          recoveredParentRoot: err.type.parentRoot,
+          childSlot: firstBlock.slot,
+        },
+        recovered.err
+      );
+    }
+
+    return false;
   }
 
   /**
