@@ -85,6 +85,8 @@ export interface PublishOpts {
   ignoreDuplicatePublishError?: boolean
   /** serialize message once and send to all peers without control messages */
   batchPublish?: boolean
+  /** peers that must be excluded from publish fanout */
+  excludePeerIds?: PeerIdStr[]
 }
 
 export enum PublishConfigType {
