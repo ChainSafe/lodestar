@@ -354,9 +354,15 @@ export class ProtoArray {
         continue;
       }
 
-      const currentBoost = proposerBoost && proposerBoost.root === node.blockRoot ? proposerBoost.score : 0;
+      // For Gloas blocks, PENDING/EMPTY/FULL all share the same blockRoot.
+      // Only apply proposer boost to EMPTY (for Gloas) or FULL (for pre-Gloas) — the variant
+      // that validator votes target — to avoid a 2x boost from the boost being applied to
+      // each variant and then propagated up to PENDING via delta back-propagation.
+      const isBoostVariant = isGloasBlock(node) ? node.payloadStatus === PayloadStatus.EMPTY : true; // pre-Gloas has only FULL, always boost
+      const currentBoost =
+        proposerBoost && proposerBoost.root === node.blockRoot && isBoostVariant ? proposerBoost.score : 0;
       const previousBoost =
-        this.previousProposerBoost && this.previousProposerBoost.root === node.blockRoot
+        this.previousProposerBoost && this.previousProposerBoost.root === node.blockRoot && isBoostVariant
           ? this.previousProposerBoost.score
           : 0;
 
