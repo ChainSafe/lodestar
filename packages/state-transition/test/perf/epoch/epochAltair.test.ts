@@ -21,7 +21,6 @@ import {
 } from "../../../src/index.js";
 import {altairState} from "../../../src/testUtils/params.js";
 import {getNetworkCachedState} from "../../../src/testUtils/testFileCache.js";
-import {clearPerfStateCache} from "../../../src/testUtils/util.js";
 import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
 import {StateEpoch} from "../types.js";
 
@@ -35,7 +34,6 @@ describe(`altair processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    clearPerfStateCache();
     const state = await getNetworkCachedState(altairState.network, slot, 300_000);
     state.hashTreeRoot();
     return state;
