@@ -1,5 +1,6 @@
 import {afterEach, describe, it} from "vitest";
-import {config} from "@lodestar/config/default";
+import {createChainForkConfig} from "@lodestar/config";
+import {chainConfig, config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
@@ -13,7 +14,7 @@ import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
 import {testLogger} from "../../../utils/logger.js";
-import {validPeerIdStr} from "../../../utils/peer.js";
+import {getRandPeerIdStr, validPeerIdStr} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -79,6 +80,7 @@ describe("sync / range / chain", () => {
     };
   };
   const pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (_) => {};
+  const processBlockByRoot: SyncChainFns["processBlockByRoot"] = async () => {};
 
   afterEach(() => {
     if (interval !== null) clearInterval(interval);
@@ -137,6 +139,7 @@ describe("sync / range / chain", () => {
             getConnectedPeerSyncMeta,
             reportPeer,
             pruneBlockInputs,
+            processBlockByRoot,
             onEnd,
           }),
           {config, logger, clock, custodyConfig, metrics: null}
@@ -192,6 +195,7 @@ describe("sync / range / chain", () => {
           reportPeer,
           pruneBlockInputs,
           getConnectedPeerSyncMeta,
+          processBlockByRoot,
           onEnd,
         }),
         {config, logger, clock, custodyConfig, metrics: null}
@@ -203,6 +207,95 @@ describe("sync / range / chain", () => {
       }, 20);
 
       initialSync.startSyncing(startEpoch);
+    });
+  });
+
+  it("should request later finalized batches from a late low-range peer after target promotion", async () => {
+    const testConfig = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0});
+    const startEpoch = 0;
+    const highTarget: ChainTarget = {slot: 6592, root: ZERO_HASH};
+    const lowTarget: ChainTarget = {slot: computeStartSlotAtEpoch(3), root: ZERO_HASH}; // 96
+    const highPeer1 = await getRandPeerIdStr();
+    const highPeer2 = await getRandPeerIdStr();
+    const lowPeer = await getRandPeerIdStr();
+
+    const peerMetaByPeer = new Map<string, ReturnType<SyncChainFns["getConnectedPeerSyncMeta"]>>([
+      [highPeer1, {peerId: highPeer1, client: "HIGH-1", custodyColumns: [0, 1, 2, 3], earliestAvailableSlot: 6592, headSlot: 6592}],
+      [highPeer2, {peerId: highPeer2, client: "HIGH-2", custodyColumns: [0, 1, 2, 3], earliestAvailableSlot: 6592, headSlot: 6592}],
+      [lowPeer, {peerId: lowPeer, client: "LOW", custodyColumns: [0, 1, 2, 3], earliestAvailableSlot: 0, headSlot: 256}],
+    ]);
+
+    await new Promise<void>((resolve, reject) => {
+      let resolved = false;
+      const timeout = setTimeout(() => {
+        if (!resolved) reject(new Error("late low-range peer never served startSlot=128"));
+      }, 500);
+
+      const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
+      let initialSync: SyncChain;
+      const downloadByRange: SyncChainFns["downloadByRange"] = async (peer, request, _partialDownload) => {
+        if (peer.peerId === lowPeer && request.startSlot === 128 && !resolved) {
+          resolved = true;
+          initialSync.stopSyncing();
+          clearTimeout(timeout);
+          resolve();
+        }
+
+        const blocks: IBlockInput[] = [];
+        for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+          blocks.push(
+            BlockInputPreData.createFromBlock({
+              block: {
+                message: generateEmptyBlock(i),
+                signature: ACCEPT_BLOCK,
+              },
+              blockRootHex: "0x00",
+              forkName: testConfig.getForkName(i),
+              seenTimestampSec: Math.floor(Date.now() / 1000),
+              daOutOfRange: false,
+              source: BlockInputSource.byRange,
+            })
+          );
+        }
+        return {result: {blocks, envelopes: null}, warnings: null};
+      };
+
+      const getConnectedPeerSyncMetaLate: SyncChainFns["getConnectedPeerSyncMeta"] = (peerId) => {
+        const meta = peerMetaByPeer.get(peerId);
+        if (!meta) throw new Error(`unknown peer ${peerId}`);
+        return meta;
+      };
+
+      const onEnd: SyncChainFns["onEnd"] = (err) => {
+        if (!resolved) {
+          clearTimeout(timeout);
+          err ? reject(err) : reject(new Error("SyncChain ended before low-range peer served startSlot=128"));
+        }
+      };
+      const clock = new Clock({config: testConfig, genesisTime: 0, signal: new AbortController().signal});
+      initialSync = new SyncChain(
+        startEpoch,
+        lowTarget,
+        RangeSyncType.Finalized,
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadByRange,
+          reportPeer,
+          pruneBlockInputs,
+          getConnectedPeerSyncMeta: getConnectedPeerSyncMetaLate,
+          processBlockByRoot,
+          onEnd,
+        }),
+        {config: testConfig, logger, clock, custodyConfig, metrics: null}
+      );
+
+      initialSync.addPeer(highPeer1, highTarget);
+      initialSync.addPeer(highPeer2, highTarget);
+      initialSync.startSyncing(startEpoch);
+
+      setTimeout(() => {
+        initialSync.addPeer(lowPeer, lowTarget);
+      }, 20);
     });
   });
 
