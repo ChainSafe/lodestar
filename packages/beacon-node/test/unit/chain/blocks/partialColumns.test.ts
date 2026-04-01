@@ -1,4 +1,3 @@
-import {BitArray} from "@chainsafe/ssz";
 import {describe, expect, it} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
@@ -70,6 +69,27 @@ describe("BlockInputColumns partial column support", () => {
   const custodyColumns = [0, 1];
 
   describe("addPartialHeader", () => {
+    it("should report no partial header before one is stored", () => {
+      const {blockRootHex} = buildPartialHeaderTestData(blobCount);
+      const columnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+      columnSidecar.signedBlockHeader.message.slot = fuluSlot;
+
+      const blockInput = BlockInputColumns.createFromColumn({
+        blockRootHex,
+        columnSidecar,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+        peerIdStr: "test-peer",
+        forkName: ForkName.fulu,
+        daOutOfRange: false,
+        sampledColumns,
+        custodyColumns,
+      });
+
+      expect(blockInput.hasPartialHeader()).toBe(false);
+      expect(blockInput.getPartialHeader()).toBeNull();
+    });
+
     it("should add and retrieve a partial header", () => {
       const {header, blockRootHex} = buildPartialHeaderTestData(blobCount);
 
@@ -151,9 +171,12 @@ describe("BlockInputColumns partial column support", () => {
 
       expect(blockInput.type).toBe(DAType.Columns);
       expect(blockInput.blockRootHex).toBe(blockRootHex);
+      expect(blockInput.parentRootHex).toBe(toRootHex(header.signedBlockHeader.message.parentRoot));
       expect(blockInput.slot).toBe(fuluSlot);
       expect(blockInput.hasBlock()).toBe(false);
+      expect(blockInput.hasAllData()).toBe(false);
       expect(blockInput.hasPartialHeader()).toBe(true);
+      expect(blockInput.getPartialHeader()).toEqual(header);
     });
   });
 
@@ -190,6 +213,7 @@ describe("BlockInputColumns partial column support", () => {
 
       expect(result).toBeNull();
       expect(blockInput.getCellCount(columnIndex)).toBe(1);
+      expect(blockInput.getCellCount(columnIndex + 1)).toBe(0);
       expect(blockInput.hasColumn(columnIndex)).toBe(false);
     });
 
@@ -238,6 +262,7 @@ describe("BlockInputColumns partial column support", () => {
 
       // Column should now be in columnsCache
       expect(blockInput.hasColumn(columnIndex)).toBe(true);
+      expect(blockInput.getColumn(columnIndex)).toEqual(result);
       expect(blockInput.getCellCount(columnIndex)).toBe(0); // cellsCache cleared
     });
 
@@ -292,6 +317,58 @@ describe("BlockInputColumns partial column support", () => {
       expect(result2).not.toBeNull();
       expect(result2!.column.length).toBe(blobCount);
       expect(blockInput.hasColumn(columnIndex)).toBe(true);
+    });
+
+    it("should ignore overlapping cells that were already cached", () => {
+      const {header, blockRootHex} = buildPartialHeaderTestData(blobCount);
+      const columnIndex = 8;
+
+      const blockInput = BlockInputColumns.createFromPartialHeader({
+        blockRootHex,
+        partialHeader: header,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+        peerIdStr: "test-peer",
+        forkName: ForkName.fulu,
+        daOutOfRange: false,
+        sampledColumns,
+        custodyColumns,
+      });
+
+      const {cell: cell0, proof: proof0} = makeCellAndProof(0, columnIndex);
+      const {cell: cell2, proof: proof2} = makeCellAndProof(2, columnIndex);
+      const firstBitmap = [true, false, true];
+
+      const firstResult = blockInput.addCells(
+        columnIndex,
+        firstBitmap,
+        [cell0, cell2],
+        [proof0, proof2],
+        BlockInputSource.gossip,
+        Date.now() / 1000,
+        "test-peer"
+      );
+
+      expect(firstResult).toBeNull();
+      expect(blockInput.getCellCount(columnIndex)).toBe(2);
+
+      const {cell: cell1, proof: proof1} = makeCellAndProof(1, columnIndex);
+      const duplicateBitmap = [false, true, true];
+
+      const completedColumn = blockInput.addCells(
+        columnIndex,
+        duplicateBitmap,
+        [cell1, cell2],
+        [proof1, proof2],
+        BlockInputSource.gossip,
+        Date.now() / 1000,
+        "test-peer"
+      );
+
+      expect(completedColumn).not.toBeNull();
+      expect(completedColumn!.column).toEqual([cell0, cell1, cell2]);
+      expect(completedColumn!.kzgProofs).toEqual([proof0, proof1, proof2]);
+      expect(blockInput.getCellCount(columnIndex)).toBe(0);
     });
 
     it("should return null for already-complete column", () => {
