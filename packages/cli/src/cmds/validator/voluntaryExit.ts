@@ -15,7 +15,7 @@ import {CliCommand, fromHex, toPubkeyHex} from "@lodestar/utils";
 import {SignableMessageType, Signer, SignerType, externalSignerPostSignature} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
-import {YargsError, ensure0xPrefix, wrapError} from "../../util/index.js";
+import {YargsError, ensure0xPrefix, wrapError, writeFile600Perm} from "../../util/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 
@@ -172,7 +172,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
         const filename = path.join(args.saveExitsPath, `validator_${index}_exit.json`);
         try {
           const json = JSON.stringify(ssz.phase0.SignedVoluntaryExit.toJson(exit), null, 2);
-          fs.writeFileSync(filename, json);
+          writeFile600Perm(filename, json);
           console.log(`Saved signed voluntary exit for ${pubkey} (${index}) to ${filename}`);
         } catch (e) {
           failedToSave.push({index, pubkey});
