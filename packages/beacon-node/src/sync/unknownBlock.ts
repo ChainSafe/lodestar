@@ -493,11 +493,27 @@ export class BlockInputSync {
           // case BlockErrorCode.GENESIS_BLOCK:
 
           case BlockErrorCode.PARENT_UNKNOWN:
-          case BlockErrorCode.PRESTATE_MISSING:
-            // Should not happen, mark as downloaded to try again latter
-            this.logger.debug("Attempted to process block but its parent was still unknown", errorData, res.err);
+          case BlockErrorCode.PRESTATE_MISSING: {
+            // For Gloas blocks: if the parent is missing its FULL variant (envelope not received),
+            // proactively fetch the parent's envelope via reqresp, then retry.
+            // This commonly happens after checkpoint sync + range sync where the head block's
+            // envelope was already gossipped before we connected to the network.
+            const retryCtx = this.getGloasInvalidStateRootRetryContext(pendingBlock);
+            if (retryCtx.shouldRetry && retryCtx.parentRoot) {
+              this.logger.debug("PRESTATE_MISSING due to missing parent FULL variant, resolving envelope", {
+                ...errorData,
+                ...retryCtx,
+              });
+              const parentBlock = this.chain.forkChoice.getBlockHexDefaultStatus(retryCtx.parentRoot);
+              if (parentBlock) {
+                await this.resolveEnvelopeForBlock(retryCtx.parentRoot, parentBlock.slot);
+              }
+            } else {
+              this.logger.debug("Attempted to process block but its parent was still unknown", errorData, res.err);
+            }
             pendingBlock.status = PendingBlockInputStatus.downloaded;
             break;
+          }
 
           case BlockErrorCode.EXECUTION_ENGINE_ERROR:
             // Removing the block(s) without penalizing the peers, hoping for EL to
