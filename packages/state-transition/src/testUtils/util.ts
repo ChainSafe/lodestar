@@ -544,8 +544,12 @@ export function generateTestCachedBeaconStateOnlyValidators({
 
 /**
  * Release all cached perf states to free memory.
- * Call this before memory-intensive benchmarks (e.g. loadState with 1.5M validators)
- * to avoid OOM from accumulated singletons.
+ * Only call this before memory-intensive benchmarks that need to allocate
+ * very large states (e.g. loadState with 1.5M validators) where the
+ * accumulated singletons would cause OOM.
+ *
+ * WARNING: Do NOT call this in epoch/block benchmark afterAll blocks —
+ * destroying singletons mid-suite causes GC storms that corrupt measurements.
  */
 export function clearPerfStateCache(): void {
   phase0State = null;

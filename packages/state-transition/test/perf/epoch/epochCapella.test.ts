@@ -21,7 +21,6 @@ import {
 } from "../../../src/index.js";
 import {capellaState} from "../../../src/testUtils/params.js";
 import {getNetworkCachedState} from "../../../src/testUtils/testFileCache.js";
-import {clearPerfStateCache} from "../../../src/testUtils/util.js";
 import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
 import {StateEpoch} from "../types.js";
 
@@ -35,7 +34,6 @@ describe(`capella processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    clearPerfStateCache();
     const state = await getNetworkCachedState(capellaState.network, slot, 300_000);
     state.hashTreeRoot();
     return state;

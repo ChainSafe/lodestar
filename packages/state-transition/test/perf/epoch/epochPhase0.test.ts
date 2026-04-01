@@ -19,7 +19,6 @@ import {
 } from "../../../src/index.js";
 import {phase0State} from "../../../src/testUtils/params.js";
 import {getNetworkCachedState} from "../../../src/testUtils/testFileCache.js";
-import {clearPerfStateCache} from "../../../src/testUtils/util.js";
 import {LazyValue, beforeValue} from "../../utils/beforeValueBenchmark.js";
 import {StateEpoch} from "../types.js";
 
@@ -33,7 +32,6 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    clearPerfStateCache();
     const state = await getNetworkCachedState(phase0State.network, slot, 300_000);
     state.hashTreeRoot();
     return state;
