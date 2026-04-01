@@ -92,6 +92,7 @@ import {
 } from "../gossip/interface.js";
 import {sszDeserialize, stringifyGossipTopic} from "../gossip/topic.js";
 import {INetwork} from "../interface.js";
+import {PartialColumnPublisher} from "../partialColumnPublisher.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 
@@ -111,6 +112,7 @@ export type ValidatorFnsModules = {
   events: NetworkEventBus;
   aggregatorTracker: AggregatorTracker;
   core: INetworkCore;
+  partialColumnPublisher: PartialColumnPublisher;
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
@@ -139,7 +141,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
 function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
-  const {chain, config, metrics, logger, core} = modules;
+  const {chain, config, metrics, logger, core, partialColumnPublisher} = modules;
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
@@ -982,8 +984,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         const cachedBlockInput = chain.seenBlockInputCache.get(blockRootHex);
         let blockInput =
           cachedBlockInput !== undefined && isBlockInputColumns(cachedBlockInput) ? cachedBlockInput : undefined;
+        let shouldBroadcastHeader = false;
+        let broadcastedPeers = new Set<PeerIdStr>();
 
         if (header !== undefined) {
+          const hadPartialHeader = blockInput?.hasPartialHeader() ?? false;
+
           // Check if block already processed
           if (chain.forkChoice.hasBlockHex(blockRootHex)) {
             throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
@@ -1015,6 +1021,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             }
             throw e;
           }
+          shouldBroadcastHeader = !hadPartialHeader;
 
           // Trigger getBlobsV3 — the partial header carries kzg_commitments needed for the call.
           // This may be the first gossip object for this block. getBlobsTracker deduplicates.
@@ -1028,6 +1035,22 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               columnIndex,
             });
           }
+        }
+
+        if (shouldBroadcastHeader && header !== undefined && !hasCells) {
+          broadcastedPeers = await partialColumnPublisher.broadcastHeaderAcrossCustodySubnets(
+            partialSidecar,
+            columnIndex,
+            ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.signedBlockHeader.message),
+            header.signedBlockHeader.message.slot,
+            Array.from(
+              new Set(
+                chain.custodyConfig.custodyColumns.map(
+                  (custodyColumn) => custodyColumn % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT
+                )
+              )
+            ).sort((a, b) => a - b)
+          );
         }
 
         // Validate and add cells if present
@@ -1053,6 +1076,22 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // Validate cells against the stored header
           await validateGossipPartialDataColumnCells(partialSidecar, storedHeader, columnIndex, metrics);
 
+          if (shouldBroadcastHeader) {
+            broadcastedPeers = await partialColumnPublisher.broadcastHeaderAcrossCustodySubnets(
+              partialSidecar,
+              columnIndex,
+              ssz.phase0.BeaconBlockHeader.hashTreeRoot(storedHeader.signedBlockHeader.message),
+              storedHeader.signedBlockHeader.message.slot,
+              Array.from(
+                new Set(
+                  chain.custodyConfig.custodyColumns.map(
+                    (custodyColumn) => custodyColumn % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT
+                  )
+                )
+              ).sort((a, b) => a - b)
+            );
+          }
+
           const existingCellCount = blockInput.getCellCount(columnIndex);
           const expectedCellCount = storedHeader.kzgCommitments.length;
 
@@ -1076,6 +1115,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             metrics?.partialColumns.usefulCells.inc(usefulCellCount);
             if (partialMessageGroupId !== undefined) {
               await core.reportUsefulPartialMessage(peerIdStr, partialTopicStr, partialMessageGroupId);
+            }
+
+            const accumulatedPartial = blockInput.getPartialColumnSidecar(columnIndex, false);
+            if (accumulatedPartial !== null) {
+              await partialColumnPublisher.publishFilteredPartialOnSubnet(
+                accumulatedPartial,
+                columnIndex,
+                ssz.phase0.BeaconBlockHeader.hashTreeRoot(storedHeader.signedBlockHeader.message),
+                storedHeader.signedBlockHeader.message.slot,
+                broadcastedPeers
+              );
             }
           }
 

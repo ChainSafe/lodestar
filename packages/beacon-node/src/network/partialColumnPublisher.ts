@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SubnetID, fulu, ssz} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
@@ -97,6 +98,87 @@ export class PartialColumnPublisher {
     }
   }
 
+  async publishPostGetBlobsColumns(columns: fulu.DataColumnSidecars): Promise<void[]> {
+    return Promise.all(
+      columns.map(async (column) => {
+        const partialSidecar = dataColumnToPartialSidecar(column, {includeHeader: false, includeCells: true});
+        const subnet = computeSubnetForDataColumnSidecar(this.config, column);
+        const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(column.signedBlockHeader.message);
+
+        await this.publishFilteredPartialOnSubnet(
+          partialSidecar,
+          subnet,
+          blockRoot,
+          column.signedBlockHeader.message.slot
+        );
+      })
+    );
+  }
+
+  async broadcastHeaderAcrossCustodySubnets(
+    partialSidecar: fulu.PartialDataColumnSidecar,
+    arrivingSubnet: SubnetID,
+    blockRoot: Uint8Array,
+    slot: number,
+    custodySubnets: SubnetID[]
+  ): Promise<Set<PeerIdStr>> {
+    if (partialSidecar.header.length === 0 || custodySubnets.length === 0) {
+      return new Set();
+    }
+
+    const sentPeers = new Set<PeerIdStr>();
+    const headerOnlySidecar: fulu.PartialDataColumnSidecar = {
+      cellsPresentBitmap: BitArray.fromBoolArray([]),
+      partialColumn: [],
+      kzgProofs: [],
+      header: partialSidecar.header,
+    };
+    const orderedSubnets = [arrivingSubnet, ...custodySubnets.filter((subnet) => subnet !== arrivingSubnet)];
+
+    for (const subnet of orderedSubnets) {
+      const partialToPublish = subnet === arrivingSubnet ? partialSidecar : headerOnlySidecar;
+      const peers = await this.getPartialPeersForSubnet(subnet, slot);
+
+      for (const peerId of peers) {
+        if (sentPeers.has(peerId)) {
+          continue;
+        }
+
+        await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, slot, partialToPublish);
+        sentPeers.add(peerId);
+      }
+    }
+
+    return sentPeers;
+  }
+
+  async publishFilteredPartialOnSubnet(
+    partialSidecar: fulu.PartialDataColumnSidecar,
+    subnet: SubnetID,
+    blockRoot: Uint8Array,
+    slot: number,
+    skipPeers: ReadonlySet<PeerIdStr> = new Set()
+  ): Promise<void> {
+    const groupID = computePartialMessageGroupId(blockRoot);
+    const {topic} = this.getTopicForSubnet(subnet, slot);
+    const peers = await this.core.getPartialPeers(topic);
+
+    for (const peerId of peers) {
+      if (skipPeers.has(peerId)) {
+        continue;
+      }
+
+      const metadataBytes = await this.core.getPeerPartialMetadata(topic, groupID, peerId);
+      const filteredSidecar = this.filterCellsForPeer(partialSidecar, metadataBytes);
+
+      if (filteredSidecar === null) {
+        continue;
+      }
+
+      await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, slot, filteredSidecar);
+    }
+  }
+
   async publishPartialSidecarToPeer(
     peerId: PeerIdStr,
     subnet: SubnetID,
@@ -104,9 +186,7 @@ export class PartialColumnPublisher {
     slot: number,
     partialSidecar: fulu.PartialDataColumnSidecar
   ): Promise<void> {
-    const epoch = computeEpochAtSlot(slot);
-    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
-    const topic = stringifyGossipTopic(this.config, {type: GossipType.data_column_sidecar, boundary, subnet});
+    const {topic} = this.getTopicForSubnet(subnet, slot);
 
     await this.core.publishPartialMessageToPeer(peerId, {
       topic,
@@ -136,5 +216,61 @@ export class PartialColumnPublisher {
 
     this.metrics?.partialColumns.headersPublished.inc(partialSidecar.header.length);
     this.metrics?.partialColumns.cellsPublished.inc(partialSidecar.partialColumn.length);
+  }
+
+  private async getPartialPeersForSubnet(subnet: SubnetID, slot: number): Promise<PeerIdStr[]> {
+    const {topic} = this.getTopicForSubnet(subnet, slot);
+    return this.core.getPartialPeers(topic);
+  }
+
+  private getTopicForSubnet(
+    subnet: SubnetID,
+    slot: number
+  ): {boundary: ReturnType<BeaconConfig["getForkBoundaryAtEpoch"]>; topic: string} {
+    const epoch = computeEpochAtSlot(slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+    const topic = stringifyGossipTopic(this.config, {type: GossipType.data_column_sidecar, boundary, subnet});
+    return {boundary, topic};
+  }
+
+  private filterCellsForPeer(
+    partialSidecar: fulu.PartialDataColumnSidecar,
+    metadataBytes: Uint8Array | undefined
+  ): fulu.PartialDataColumnSidecar | null {
+    if (metadataBytes === undefined) {
+      return partialSidecar;
+    }
+
+    const metadata = ssz.fulu.PartialDataColumnPartsMetadata.deserialize(metadataBytes);
+    const bitLen = partialSidecar.cellsPresentBitmap.bitLen;
+    const filteredBitmap = Array.from({length: bitLen}, () => false);
+    const filteredCells: Uint8Array[] = [];
+    const filteredProofs: Uint8Array[] = [];
+
+    let cellIndex = 0;
+    for (let i = 0; i < bitLen; i++) {
+      if (!partialSidecar.cellsPresentBitmap.get(i)) {
+        continue;
+      }
+
+      const shouldSend = metadata.requests.get(i) && !metadata.available.get(i);
+      if (shouldSend) {
+        filteredBitmap[i] = true;
+        filteredCells.push(partialSidecar.partialColumn[cellIndex]);
+        filteredProofs.push(partialSidecar.kzgProofs[cellIndex]);
+      }
+      cellIndex++;
+    }
+
+    if (filteredCells.length === 0) {
+      return null;
+    }
+
+    return {
+      cellsPresentBitmap: BitArray.fromBoolArray(filteredBitmap),
+      partialColumn: filteredCells,
+      kzgProofs: filteredProofs,
+      header: partialSidecar.header,
+    };
   }
 }
