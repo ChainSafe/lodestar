@@ -1,9 +1,10 @@
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PartialMessage} from "@libp2p/gossipsub";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
 import {routes} from "@lodestar/api";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {ForkSeq} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
@@ -37,7 +38,12 @@ import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnS
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {CustodyConfig} from "../util/dataColumns.js";
+import {
+  CustodyConfig,
+  buildPartsMetadataBytes,
+  computePartialMessageGroupId,
+  dataColumnToPartialSidecar,
+} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {
@@ -371,7 +377,7 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
-    return this.publishGossip<GossipType.data_column_sidecar>(
+    const sentPeers = await this.publishGossip<GossipType.data_column_sidecar>(
       {type: GossipType.data_column_sidecar, boundary, subnet},
       dataColumnSidecar,
       {
@@ -383,6 +389,12 @@ export class Network implements INetwork {
         allowPublishToZeroTopicPeers: true,
       }
     );
+
+    if (this.opts.enablePartialColumns && !isGloasDataColumnSidecar(dataColumnSidecar)) {
+      await this.publishPartialDataColumnSidecar(dataColumnSidecar, boundary, subnet);
+    }
+
+    return sentPeers;
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {
@@ -823,4 +835,27 @@ export class Network implements INetwork {
   private onUpdateStatus = async (): Promise<void> => {
     await this.core.updateStatus(this.chain.getStatus());
   };
+
+  private async publishPartialDataColumnSidecar(
+    dataColumnSidecar: fulu.DataColumnSidecar,
+    boundary: ForkBoundary,
+    subnet: SubnetID
+  ): Promise<void> {
+    const partialSidecar = dataColumnToPartialSidecar(dataColumnSidecar, {
+      includeHeader: true,
+      includeCells: this.opts.eagerlyPublishCells ?? false,
+    });
+    const groupID = computePartialMessageGroupId(
+      ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message)
+    );
+    const topic = stringifyGossipTopic(this.config, {type: GossipType.data_column_sidecar, boundary, subnet});
+    const partialMsg: PartialMessage = {
+      topic,
+      groupID,
+      partialMessage: ssz.fulu.PartialDataColumnSidecar.serialize(partialSidecar),
+      partsMetadata: buildPartsMetadataBytes(partialSidecar.cellsPresentBitmap),
+    };
+
+    await this.core.publishPartialMessage(partialMsg);
+  }
 }

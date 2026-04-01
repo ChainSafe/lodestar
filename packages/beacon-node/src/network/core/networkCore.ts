@@ -1,4 +1,5 @@
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PartialMessage} from "@libp2p/gossipsub";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {Connection, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
@@ -369,6 +370,10 @@ export class NetworkCore implements INetworkCore {
   async publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<number> {
     const {recipients} = await this.gossip.publish(topic, data, opts);
     return recipients.length;
+  }
+
+  async publishPartialMessage(partialMsg: PartialMessage): Promise<void> {
+    this.gossip.publishPartialMessage(partialMsg);
   }
 
   /**
