@@ -10,7 +10,9 @@ describe("network / gossip / topic", () => {
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
-  const testCases: {[K in GossipType]: {topic: GossipTopicMap[K]; topicStr: string}[]} = {
+  const testCases: {
+    [K in GossipType]: {parsedTopic?: GossipTopicMap[GossipType]; topic: GossipTopicMap[K]; topicStr: string}[];
+  } = {
     [GossipType.beacon_block]: [
       {
         topic: {type: GossipType.beacon_block, boundary: {fork: ForkName.phase0, epoch: GENESIS_EPOCH}, encoding},
@@ -43,6 +45,12 @@ describe("network / gossip / topic", () => {
       {
         topic: {
           type: GossipType.partial_data_column_sidecar,
+          subnet: 1,
+          boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
+          encoding,
+        },
+        parsedTopic: {
+          type: GossipType.data_column_sidecar,
           subnet: 1,
           boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
           encoding,
@@ -183,7 +191,7 @@ describe("network / gossip / topic", () => {
   for (const topics of Object.values(testCases)) {
     if (topics.length === 0) throw Error("Must have a least 1 testCase for each GossipType");
 
-    for (const {topic, topicStr} of topics) {
+    for (const {parsedTopic, topic, topicStr} of topics) {
       it(`should encode gossip topic ${topic.type} ${topic.boundary.fork} ${topic.encoding}`, async () => {
         const topicStrRes = stringifyGossipTopic(config, topic);
         expect(topicStrRes).toBe(topicStr);
@@ -191,7 +199,7 @@ describe("network / gossip / topic", () => {
 
       it(`should decode gossip topic ${topicStr}`, async () => {
         const outputTopic = parseGossipTopic(config, topicStr);
-        expect(outputTopic).toEqual(topic);
+        expect(outputTopic).toEqual(parsedTopic ?? topic);
       });
     }
   }
