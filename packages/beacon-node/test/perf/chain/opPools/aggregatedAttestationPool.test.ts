@@ -20,11 +20,11 @@ import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 const vc = 1_500_000;
 
 /**
- * Apr 2026
+ * Jan 2024
  *  getAttestationsForBlock vc=1500000
- *   ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      4507.753 ops/s    221.8400 us/op        -          5 runs    763 s
- *   ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       7019.071 ops/s    142.4690 us/op        -         32 runs    441 s
- *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      4401.060 ops/s    227.2180 us/op        -          7 runs    790 s
+ *   ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      10.48105 ops/s    95.41024 ms/op        -         12 runs   18.2 s
+ *   ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       11.44517 ops/s    87.37307 ms/op        -         13 runs   14.5 s
+ *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      23.86144 ops/s    41.90862 ms/op        -         18 runs   34.1 s
  */
 describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
   let originalState: CachedBeaconStateElectra;
