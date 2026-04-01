@@ -39,6 +39,17 @@ describe("network / gossip / topic", () => {
         topicStr: "/eth2/4ba67af9/data_column_sidecar_1/ssz_snappy",
       },
     ],
+    [GossipType.partial_data_column_sidecar]: [
+      {
+        topic: {
+          type: GossipType.partial_data_column_sidecar,
+          subnet: 1,
+          boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/4ba67af9/data_column_sidecar_1/ssz_snappy",
+      },
+    ],
     [GossipType.beacon_aggregate_and_proof]: [
       {
         topic: {
