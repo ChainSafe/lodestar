@@ -96,10 +96,21 @@ describe("data serialization through worker boundary", () => {
       seenTimestampSec: 1600000000,
       startProcessUnixSec: 1600000000,
     },
+    [NetworkEvent.pendingPartialMessageMetadata]: {
+      topic: {type: GossipType.partial_data_column_sidecar, boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH}, subnet: 1},
+      groupID: Uint8Array.from({length: 33}, (_value, index) => index),
+      partsMetadata: Uint8Array.from([1, 2, 3]),
+      propagationSource: peerId,
+      clientAgent: "Unknown",
+      clientVersion: "NA",
+      seenTimestampSec: 1600000000,
+    },
     [NetworkEvent.gossipMessageValidationResult]: {
       msgId: ZERO_HASH_HEX,
       propagationSource: peerId,
       acceptance: TopicValidatorResult.Accept,
+      topic: {type: GossipType.data_column_sidecar, boundary: {fork: ForkName.fulu, epoch: config.FULU_FORK_EPOCH}, subnet: 1},
+      excludePartialPeers: true,
     },
   });
 
@@ -132,7 +143,11 @@ describe("data serialization through worker boundary", () => {
     getConnectedPeers: [],
     getConnectedPeerCount: [],
     updateStatus: [statusZero],
-    publishGossip: ["test-topic", bytes, {allowPublishToZeroTopicPeers: true, ignoreDuplicatePublishError: true}],
+    publishGossip: [
+      "test-topic",
+      bytes,
+      {allowPublishToZeroTopicPeers: true, ignoreDuplicatePublishError: true, excludePeerIds: [peerId]},
+    ],
     close: [],
     scrapeMetrics: [],
     writeProfile: [0, ""],
