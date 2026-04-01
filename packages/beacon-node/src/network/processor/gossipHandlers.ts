@@ -35,6 +35,7 @@ import {
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
+import {emitPublishedDataColumns} from "../../chain/publishDataColumns.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -1142,7 +1143,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           // If column is now complete, publish it for non-partial peers
           if (completedColumn !== null) {
             metrics?.partialColumns.columnsCompleted.inc();
-            chain.emitter.emit(ChainEvent.publishDataColumns, [completedColumn]);
+            emitPublishedDataColumns(chain.emitter, [completedColumn]);
 
             // Trigger reconstruction if enough columns
             if (blockInput.columnCount >= NUMBER_OF_COLUMNS / 2) {

@@ -33,7 +33,7 @@ import {
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
-import {ChainEvent, IBeaconChain, PublishPartialColumnsEventData} from "../chain/index.js";
+import {ChainEvent, IBeaconChain, PublishDataColumnsEventData, PublishDataColumnsPartialTrigger} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
@@ -156,7 +156,6 @@ export class Network implements INetwork {
     );
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
-    this.chain.emitter.on(ChainEvent.publishPartialColumns, this.onPublishPartialColumns);
     this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
@@ -258,7 +257,6 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
-    this.chain.emitter.off(ChainEvent.publishPartialColumns, this.onPublishPartialColumns);
     this.chain.emitter.off(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
     await this.core.close();
@@ -380,7 +378,7 @@ export class Network implements INetwork {
 
   async publishDataColumnSidecar(
     dataColumnSidecar: DataColumnSidecar,
-    opts?: {publishPartial?: boolean}
+    opts?: {publishPartial?: boolean; partialTrigger?: PublishDataColumnsPartialTrigger}
   ): Promise<number> {
     const slot = isGloasDataColumnSidecar(dataColumnSidecar)
       ? dataColumnSidecar.slot
@@ -412,7 +410,7 @@ export class Network implements INetwork {
     );
 
     if (shouldPublishPartialDataColumn(dataColumnSidecar, this.opts.enablePartialColumns, opts?.publishPartial ?? true)) {
-      await this.partialColumnPublisher.publishAvailableColumn(dataColumnSidecar, "full_column");
+      await this.partialColumnPublisher.publishAvailableColumn(dataColumnSidecar, opts?.partialTrigger ?? "full_column");
     }
 
     return sentPeers;
@@ -865,12 +863,14 @@ export class Network implements INetwork {
     void this.partialColumnPublisher.handleMetadataOnlyMessage(groupID, topic.subnet, propagationSource);
   };
 
-  private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
-    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar, {publishPartial: false})));
-  };
-
-  private onPublishPartialColumns = ({columns}: PublishPartialColumnsEventData): Promise<void[]> => {
-    return this.partialColumnPublisher.publishPostGetBlobsColumns(columns);
+  private onPublishDataColumns = ({
+    columns,
+    publishPartial = false,
+    partialTrigger = "full_column",
+  }: PublishDataColumnsEventData): Promise<number[]> => {
+    return promiseAllMaybeAsync(
+      columns.map((sidecar) => () => this.publishDataColumnSidecar(sidecar, {publishPartial, partialTrigger}))
+    );
   };
 
   private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {

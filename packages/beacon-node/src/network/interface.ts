@@ -35,6 +35,7 @@ import {
   gloas,
   phase0,
 } from "@lodestar/types";
+import {PublishDataColumnsPartialTrigger} from "../chain/emitter.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
@@ -101,7 +102,10 @@ export interface INetwork extends INetworkCorePublic {
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number>;
-  publishDataColumnSidecar(dataColumnSideCar: DataColumnSidecar, opts?: {publishPartial?: boolean}): Promise<number>;
+  publishDataColumnSidecar(
+    dataColumnSideCar: DataColumnSidecar,
+    opts?: {publishPartial?: boolean; partialTrigger?: PublishDataColumnsPartialTrigger}
+  ): Promise<number>;
   publishBlockProductionPartialColumns(columns: fulu.DataColumnSidecars): Promise<void>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;

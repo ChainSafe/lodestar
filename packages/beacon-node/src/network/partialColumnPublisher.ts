@@ -17,11 +17,6 @@ import {GossipType} from "./gossip/interface.js";
 import {stringifyGossipTopic} from "./gossip/topic.js";
 import {PartialColumnStateCache} from "./partialColumnStateCache.js";
 
-export type PublishPartialColumnsOpts = {
-  includeHeader: boolean;
-  includeCells: boolean;
-};
-
 type PartialPublishTrigger =
   | "block_production"
   | "gossip_merge"
@@ -50,23 +45,6 @@ export class PartialColumnPublisher {
     this.core = core;
     this.metrics = metrics;
     this.custodySubnets = custodySubnets;
-  }
-
-  async publishUniformColumns(columns: fulu.DataColumnSidecars, opts: PublishPartialColumnsOpts): Promise<void[]> {
-    return Promise.all(columns.map((column) => this.publishUniformColumn(column, opts)));
-  }
-
-  async publishUniformColumn(column: fulu.DataColumnSidecar, opts: PublishPartialColumnsOpts): Promise<void> {
-    this.stateCache.storeFullColumn(column);
-
-    const slot = column.signedBlockHeader.message.slot;
-    const epoch = computeEpochAtSlot(slot);
-    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
-    const subnet = computeSubnetForDataColumnSidecar(this.config, column);
-    const partialSidecar = dataColumnToPartialSidecar(column, opts);
-    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(column.signedBlockHeader.message);
-
-    await this.publishPartialSidecar(boundary, subnet, blockRoot, partialSidecar);
   }
 
   async registerReceivedHeader(
@@ -159,10 +137,6 @@ export class PartialColumnPublisher {
         sentPeers.add(peerId);
       }
     }
-  }
-
-  async publishPostGetBlobsColumns(columns: fulu.DataColumnSidecars): Promise<void[]> {
-    return Promise.all(columns.map((column) => this.publishAvailableColumn(column, "post_getblobs")));
   }
 
   async broadcastHeaderAcrossCustodySubnets(
