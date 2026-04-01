@@ -38,6 +38,7 @@ export function getGossipValidatorBatchFn(
           gossipData: {
             serializedData: messageInfo.msg.data,
             msgSlot: messageInfo.msgSlot,
+            partialMessageGroupId: messageInfo.partialMessageGroupId,
             indexed: messageInfo.indexed,
           },
           topic: messageInfo.topic,
@@ -118,12 +119,13 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
     clientVersion,
     seenTimestampSec,
     msgSlot,
+    partialMessageGroupId,
   }) {
     const type = topic.type;
 
     try {
       await (gossipHandlers[type] as GossipHandlerFn)({
-        gossipData: {serializedData: msg.data, msgSlot},
+        gossipData: {serializedData: msg.data, msgSlot, partialMessageGroupId},
         topic,
         peerIdStr: propagationSource,
         seenTimestampSec,

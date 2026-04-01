@@ -178,6 +178,7 @@ export type GossipMessageInfo = {
   clientVersion: string;
   seenTimestampSec: number;
   msgSlot: Slot | null;
+  partialMessageGroupId?: Uint8Array;
   indexed?: string;
 };
 
@@ -194,6 +195,7 @@ export type GossipJobQueues = {
 export type GossipData = {
   serializedData: Uint8Array;
   msgSlot?: Slot | null;
+  partialMessageGroupId?: Uint8Array;
   indexed?: string;
 };
 

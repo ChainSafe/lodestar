@@ -5,6 +5,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
+import {fulu, ssz} from "@lodestar/types";
 import {
   BlockInputPreData,
   BlockInputSource,
@@ -25,6 +26,27 @@ import {
   generateBlockWithBlobSidecars,
   generateChainOfBlocks,
 } from "../../../utils/blocksAndData.js";
+
+function buildPartialHeader(): {blockRootHex: string; partialHeader: fulu.PartialDataColumnHeader} {
+  const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+  block.message.slot = config.FULU_FORK_EPOCH * config.SLOTS_PER_EPOCH;
+  block.message.body.blobKzgCommitments = [new Uint8Array(48)];
+
+  const signedBlockHeader = signedBlockToSignedHeader(config, block);
+  const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedBlockHeader.message));
+
+  return {
+    blockRootHex,
+    partialHeader: {
+      kzgCommitments: block.message.body.blobKzgCommitments,
+      signedBlockHeader,
+      kzgCommitmentsInclusionProof: Array.from(
+        {length: config.KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH},
+        () => new Uint8Array(32)
+      ),
+    },
+  };
+}
 
 describe("SeenBlockInputCache", async () => {
   let cache: SeenBlockInput;
@@ -108,6 +130,40 @@ describe("SeenBlockInputCache", async () => {
       blockRoot[1] = (blockRoot[1] + 1) % 255;
       blockRoot[2] = (blockRoot[2] + 1) % 255;
       expect(cache.get(toRootHex(blockRoot))).toBeUndefined();
+    });
+  });
+
+  describe("getByPartialHeader()", () => {
+    it("should reject a mismatched repeat header for the same block root", () => {
+      const {blockRootHex, partialHeader} = buildPartialHeader();
+      const seenTimestampSec = Date.now() / 1000;
+
+      const blockInput = cache.getByPartialHeader({
+        blockRootHex,
+        partialHeader,
+        source: BlockInputSource.gossip,
+        seenTimestampSec,
+      });
+
+      expect(blockInput.getPartialHeader()).toEqual(partialHeader);
+
+      const differentBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
+      differentBlock.message.slot = partialHeader.signedBlockHeader.message.slot + 1;
+      differentBlock.message.body.blobKzgCommitments = partialHeader.kzgCommitments;
+
+      const differentHeader: fulu.PartialDataColumnHeader = {
+        ...partialHeader,
+        signedBlockHeader: signedBlockToSignedHeader(config, differentBlock),
+      };
+
+      expect(() =>
+        cache.getByPartialHeader({
+          blockRootHex,
+          partialHeader: differentHeader,
+          source: BlockInputSource.gossip,
+          seenTimestampSec,
+        })
+      ).toThrow("PartialDataColumnHeader does not match");
     });
   });
 

@@ -42,6 +42,7 @@ export enum DataColumnSidecarErrorCode {
   PARTIAL_CELL_PROOF_COUNT_MISMATCH = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_CELL_PROOF_COUNT_MISMATCH",
   PARTIAL_BITMAP_LENGTH_MISMATCH = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_BITMAP_LENGTH_MISMATCH",
   PARTIAL_HEADER_MISMATCH = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_HEADER_MISMATCH",
+  PARTIAL_INVALID_GROUP_ID = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_INVALID_GROUP_ID",
   PARTIAL_NO_HEADER = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_NO_HEADER",
   PARTIAL_INVALID_KZG_PROOF = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_INVALID_KZG_PROOF",
 }
@@ -110,6 +111,7 @@ export type DataColumnSidecarErrorType =
   | {code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH; slot: Slot; columnIndex: number}
   | {code: DataColumnSidecarErrorCode.PARTIAL_BITMAP_LENGTH_MISMATCH; slot: Slot; columnIndex: number}
   | {code: DataColumnSidecarErrorCode.PARTIAL_HEADER_MISMATCH; slot: Slot; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.PARTIAL_INVALID_GROUP_ID; slot: Slot; columnIndex: number}
   | {code: DataColumnSidecarErrorCode.PARTIAL_NO_HEADER; slot: Slot; columnIndex: number}
   | {code: DataColumnSidecarErrorCode.PARTIAL_INVALID_KZG_PROOF; slot: Slot; columnIndex: number};
 

@@ -25,6 +25,8 @@ import {
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlockInput,
+  BlockInputError,
+  BlockInputErrorCode,
   BlockInputColumns,
   BlockInputSource,
   IBlockInput,
@@ -78,7 +80,7 @@ import {validateGossipPayloadAttestationMessage} from "../../chain/validation/pa
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
-import {getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {getBlobKzgCommitments, getBlockRootHexFromPartialMessageGroupId} from "../../util/dataColumns.js";
 import {INetworkCore} from "../core/index.js";
 import {NetworkEventBus} from "../events.js";
 import {
@@ -934,12 +936,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.partial_data_column_sidecar>) => {
-      const {serializedData} = gossipData;
+      const {serializedData, partialMessageGroupId} = gossipData;
       const partialSidecar = sszDeserialize(topic, serializedData) as fulu.PartialDataColumnSidecar;
       const columnIndex = topic.subnet;
 
       const hasHeader = partialSidecar.header.length > 0;
       const hasCells = partialSidecar.partialColumn.length > 0;
+      const header = hasHeader ? partialSidecar.header[0] : undefined;
+      const blockRootHex =
+        partialMessageGroupId !== undefined
+          ? getBlockRootHexFromPartialMessageGroupId(partialMessageGroupId)
+          : null;
 
       // [REJECT] A header and/or cells are present (not semantically empty)
       if (!hasHeader && !hasCells) {
@@ -959,12 +966,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         });
       }
 
-      let blockInput: BlockInputColumns;
-      const header = hasHeader ? partialSidecar.header[0] : undefined;
+      if (blockRootHex === null) {
+        throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+          code: DataColumnSidecarErrorCode.PARTIAL_INVALID_GROUP_ID,
+          slot: header?.signedBlockHeader.message.slot ?? 0,
+          columnIndex,
+        });
+      }
+
+      const cachedBlockInput = chain.seenBlockInputCache.get(blockRootHex);
+      let blockInput = cachedBlockInput !== undefined && isBlockInputColumns(cachedBlockInput) ? cachedBlockInput : undefined;
 
       if (header !== undefined) {
-        const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.signedBlockHeader.message));
-
         // Check if block already processed
         if (chain.forkChoice.hasBlockHex(blockRootHex)) {
           throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
@@ -978,29 +991,45 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         await validateGossipPartialDataColumnHeader(chain, header, blockRootHex, metrics);
 
         // Get or create BlockInput with the partial header
-        blockInput = chain.seenBlockInputCache.getByPartialHeader({
-          blockRootHex,
-          partialHeader: header,
-          seenTimestampSec,
-          source: BlockInputSource.gossip,
-          peerIdStr,
-        });
+        try {
+          blockInput = chain.seenBlockInputCache.getByPartialHeader({
+            blockRootHex,
+            partialHeader: header,
+            seenTimestampSec,
+            source: BlockInputSource.gossip,
+            peerIdStr,
+          });
+        } catch (e) {
+          if (e instanceof BlockInputError && e.type.code === BlockInputErrorCode.INVALID_CONSTRUCTION) {
+            throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+              code: DataColumnSidecarErrorCode.PARTIAL_HEADER_MISMATCH,
+              slot: header.signedBlockHeader.message.slot,
+              columnIndex,
+            });
+          }
+          throw e;
+        }
 
         // Trigger getBlobsV3 — the partial header carries kzg_commitments needed for the call.
         // This may be the first gossip object for this block. getBlobsTracker deduplicates.
         chain.getBlobsTracker.triggerGetBlobs(blockInput);
       } else {
-        // No header — cannot identify block without header
-        // TODO: wire groupID from gossipsub partial message metadata to look up existing BlockInput
-        throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
-          code: DataColumnSidecarErrorCode.PARTIAL_NO_HEADER,
-          slot: 0,
-          columnIndex,
-        });
+        // Cell-only partial messages can only be processed after we have already cached a valid header.
+        if (blockInput === undefined || !blockInput.hasPartialHeader()) {
+          throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+            code: DataColumnSidecarErrorCode.PARTIAL_NO_HEADER,
+            slot: 0,
+            columnIndex,
+          });
+        }
       }
 
       // Validate and add cells if present
       if (hasCells) {
+        if (blockInput === undefined) {
+          throw Error("Expected blockInput to exist before validating partial cells");
+        }
+
         const storedHeader = blockInput.getPartialHeader();
         if (storedHeader === null) {
           throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
