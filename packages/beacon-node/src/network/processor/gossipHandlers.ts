@@ -25,9 +25,9 @@ import {
 import {LogLevel, Logger, prettyBytes, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlockInput,
+  BlockInputColumns,
   BlockInputError,
   BlockInputErrorCode,
-  BlockInputColumns,
   BlockInputSource,
   IBlockInput,
   isBlockInputColumns,
@@ -54,10 +54,6 @@ import {
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {validateGossipDataColumnSidecar} from "../../chain/validation/dataColumnSidecar.js";
-import {
-  validateGossipPartialDataColumnCells,
-  validateGossipPartialDataColumnHeader,
-} from "../../chain/validation/partialDataColumnSidecar.js";
 import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
 import {
@@ -76,6 +72,10 @@ import {
 } from "../../chain/validation/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
+import {
+  validateGossipPartialDataColumnCells,
+  validateGossipPartialDataColumnHeader,
+} from "../../chain/validation/partialDataColumnSidecar.js";
 import {validateGossipPayloadAttestationMessage} from "../../chain/validation/payloadAttestationMessage.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
@@ -944,9 +944,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const hasCells = partialSidecar.partialColumn.length > 0;
       const header = hasHeader ? partialSidecar.header[0] : undefined;
       const blockRootHex =
-        partialMessageGroupId !== undefined
-          ? getBlockRootHexFromPartialMessageGroupId(partialMessageGroupId)
-          : null;
+        partialMessageGroupId !== undefined ? getBlockRootHexFromPartialMessageGroupId(partialMessageGroupId) : null;
+
+      if (hasCells) {
+        metrics?.partialColumns.cellsReceived.inc(partialSidecar.partialColumn.length);
+      }
 
       // [REJECT] A header and/or cells are present (not semantically empty)
       if (!hasHeader && !hasCells) {
@@ -975,7 +977,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       const cachedBlockInput = chain.seenBlockInputCache.get(blockRootHex);
-      let blockInput = cachedBlockInput !== undefined && isBlockInputColumns(cachedBlockInput) ? cachedBlockInput : undefined;
+      let blockInput =
+        cachedBlockInput !== undefined && isBlockInputColumns(cachedBlockInput) ? cachedBlockInput : undefined;
 
       if (header !== undefined) {
         // Check if block already processed
@@ -1047,6 +1050,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Validate cells against the stored header
         await validateGossipPartialDataColumnCells(partialSidecar, storedHeader, columnIndex, metrics);
 
+        const existingCellCount = blockInput.getCellCount(columnIndex);
+        const expectedCellCount = storedHeader.kzgCommitments.length;
+
         // Add validated cells to BlockInput
         const completedColumn = blockInput.addCells(
           columnIndex,
@@ -1058,8 +1064,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           peerIdStr
         );
 
+        const usefulCellCount =
+          completedColumn !== null
+            ? expectedCellCount - existingCellCount
+            : blockInput.getCellCount(columnIndex) - existingCellCount;
+
+        if (usefulCellCount > 0) {
+          metrics?.partialColumns.usefulCells.inc(usefulCellCount);
+        }
+
         // If column is now complete, publish it for non-partial peers
         if (completedColumn !== null) {
+          metrics?.partialColumns.columnsCompleted.inc();
           chain.emitter.emit(ChainEvent.publishDataColumns, [completedColumn]);
 
           // Trigger reconstruction if enough columns

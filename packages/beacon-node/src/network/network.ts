@@ -1,5 +1,5 @@
-import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PartialMessage} from "@libp2p/gossipsub";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {PeerId, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
@@ -30,6 +30,7 @@ import {
   gloas,
   isGloasDataColumnSidecar,
   phase0,
+  ssz,
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
@@ -118,6 +119,7 @@ export class Network implements INetwork {
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
   private readonly chain: IBeaconChain;
+  private readonly metrics: Metrics | null;
   // Used only for sleep() statements
   private readonly controller: AbortController;
 
@@ -135,6 +137,7 @@ export class Network implements INetwork {
     this.custodyConfig = modules.chain.custodyConfig;
     this.logger = modules.logger;
     this.chain = modules.chain;
+    this.metrics = modules.chain.metrics;
     this.clock = modules.chain.clock;
     this.controller = new AbortController();
     this.events = modules.networkEventBus;
@@ -821,7 +824,7 @@ export class Network implements INetwork {
   };
 
   private onTargetGroupCountUpdated = (count: number): void => {
-    this.core.setTargetGroupCount(count);
+    void this.core.setTargetGroupCount(count);
   };
 
   private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
@@ -857,5 +860,7 @@ export class Network implements INetwork {
     };
 
     await this.core.publishPartialMessage(partialMsg);
+    this.metrics?.partialColumns.headersPublished.inc(partialSidecar.header.length);
+    this.metrics?.partialColumns.cellsPublished.inc(partialSidecar.partialColumn.length);
   }
 }
