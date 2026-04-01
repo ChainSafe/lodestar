@@ -448,6 +448,7 @@ export class Eth2Gossipsub {
         this.events.emit(NetworkEvent.pendingGossipsubMessage, {
           topic: partialTopic,
           msg: {topic: topicStr, data: partialMessage, type: "unsigned"},
+          partialMessageGroupId: groupID,
           msgId: toHex(groupID),
           propagationSource: "partial",
           clientVersion: "",

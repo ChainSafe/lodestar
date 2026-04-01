@@ -417,13 +417,11 @@ export class SeenBlockInput {
           requestedType: DAType.Columns,
           ...blockInput.getLogMeta(),
         },
-        `BlockInputType mismatch adding partial header`
+        "BlockInputType mismatch adding partial header"
       );
     }
 
-    if (!blockInput.hasPartialHeader()) {
-      blockInput.addPartialHeader(partialHeader);
-    }
+    blockInput.addPartialHeader(partialHeader);
 
     return blockInput;
   }

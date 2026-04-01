@@ -17,6 +17,7 @@ import {
   ColumnIndex,
   CustodyIndex,
   Root,
+  RootHex,
   SSZTypesFor,
   SignedBeaconBlock,
   SignedBeaconBlockHeader,
@@ -26,7 +27,7 @@ import {
   gloas,
   ssz,
 } from "@lodestar/types";
-import {bytesToBigInt} from "@lodestar/utils";
+import {bytesToBigInt, toRootHex} from "@lodestar/utils";
 import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
@@ -478,6 +479,8 @@ export enum DataColumnReconstructionCode {
 
 // Partial column helpers for cell-level dissemination
 
+const PARTIAL_MESSAGE_GROUP_ID_VERSION = 0x00;
+
 /**
  * Construct a PartialDataColumnSidecar from a full DataColumnSidecar.
  * Includes all cells and optionally the header.
@@ -513,9 +516,22 @@ export function dataColumnToPartialSidecar(
  */
 export function computePartialMessageGroupId(blockRoot: Uint8Array): Uint8Array {
   const groupId = new Uint8Array(1 + blockRoot.length);
-  groupId[0] = 0x00;
+  groupId[0] = PARTIAL_MESSAGE_GROUP_ID_VERSION;
   groupId.set(blockRoot, 1);
   return groupId;
+}
+
+export function getBlockRootHexFromPartialMessageGroupId(groupId: Uint8Array): RootHex | null {
+  const rootLength = ssz.Root.fixedSize as number;
+  if (groupId.length !== rootLength + 1) {
+    return null;
+  }
+
+  if (groupId[0] !== PARTIAL_MESSAGE_GROUP_ID_VERSION) {
+    return null;
+  }
+
+  return toRootHex(groupId.subarray(1));
 }
 
 /**
