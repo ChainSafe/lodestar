@@ -148,7 +148,9 @@ describe("PartialColumnPublisher", () => {
       partialSidecar,
       sidecar.index,
       blockRoot,
-      sidecar.signedBlockHeader.message.slot
+      sidecar.signedBlockHeader.message.slot,
+      new Set(),
+      "gossip_merge"
     );
 
     expect(core.getPartialPeers).toHaveBeenCalledWith(topic);

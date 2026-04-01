@@ -7,6 +7,7 @@ import {toHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
+import {emitPublishedDataColumns} from "../chain/publishDataColumns.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
@@ -195,9 +196,8 @@ export async function getDataColumnSidecarsFromExecution(
   const sampledColumns = previouslyMissingColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
 
   // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
-  emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
+  emitPublishedDataColumns(emitter, sampledColumns, "post_getblobs");
   // TODO: Can we record dataColumns.sentPeersPerSubnet metric here somehow
-  emitter.emit(ChainEvent.publishPartialColumns, {columns: sampledColumns});
 
   // add all sampled columns to the block input, even if we didn't sample them
   const seenTimestampSec = Date.now() / 1000;

@@ -31,7 +31,8 @@ import {
 import {bytesToBigInt, toRootHex} from "@lodestar/utils";
 import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
-import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
+import {ChainEventEmitter} from "../chain/emitter.js";
+import {emitPublishedDataColumns} from "../chain/publishDataColumns.js";
 import {Metrics} from "../metrics/metrics.js";
 import {NodeId} from "../network/subnets/index.js";
 import {dataColumnMatrixRecovery} from "./blobs.js";
@@ -464,7 +465,7 @@ export async function recoverDataColumnSidecars(
   }
   metrics?.peerDas.reconstructedColumns.inc(sidecarsToPublish.length);
   metrics?.dataColumns.bySource.inc({source: BlockInputSource.recovery}, sidecarsToPublish.length);
-  emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);
+  emitPublishedDataColumns(emitter, sidecarsToPublish, "recovery");
   // TODO: Can we record dataColumns.sentPeersPerSubnet metric somehow
   return DataColumnReconstructionCode.SuccessResolved;
 }
