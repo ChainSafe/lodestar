@@ -20,8 +20,8 @@ import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 const vc = 1_500_000;
 
 /**
- * Jan 2024
- *  getAttestationsForBlock vc=1500000 (local run, 2026-04-01, skipped in default benchmark suite)
+ * Apr 2026
+ *  getAttestationsForBlock vc=1500000 (skipped in default benchmark suite)
  *   ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      3379.714 ops/s    295.8830 us/op        -         10 runs   41.0 s
  *   ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       5736.017 ops/s    174.3370 us/op        -         10 runs   36.1 s
  *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      2801.740 ops/s    356.9210 us/op        -         10 runs   40.1 s
