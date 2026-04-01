@@ -283,23 +283,31 @@ export async function requestByRange({
   network: INetwork;
   peerIdStr: PeerIdStr;
 }): Promise<DownloadByRangeResponses> {
+  // Fetch blocks first. For post-Gloas batches, each "batch" can fan out into blocks +
+  // columns + envelopes (3 concurrent RPCs to the same peer). This overwhelms peers
+  // and triggers rate limiting. By fetching blocks first, we can skip columns/envelopes
+  // entirely for empty epochs, reducing peer load significantly during sync through
+  // low-liveness periods.
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
   let columnSidecars: undefined | fulu.DataColumnSidecars | gloas.DataColumnSidecars;
   let signedEnvelopes: undefined | gloas.SignedExecutionPayloadEnvelope[];
 
-  const requests: Promise<unknown>[] = [];
-
   if (blocksRequest) {
-    requests.push(
-      network.sendBeaconBlocksByRange(peerIdStr, blocksRequest).then((blockResponse) => {
-        blocks = blockResponse;
-      })
-    );
+    blocks = await network.sendBeaconBlocksByRange(peerIdStr, blocksRequest);
   }
 
+  // If blocks response is empty, skip data requests entirely — no blocks means no
+  // blobs/columns/envelopes to validate. This avoids unnecessary peer load.
+  if (blocks != null && blocks.length === 0) {
+    return {blocks, blobSidecars, columnSidecars, signedEnvelopes};
+  }
+
+  // Fetch remaining data in parallel (blobs/columns and envelopes)
+  const dataRequests: Promise<unknown>[] = [];
+
   if (blobsRequest) {
-    requests.push(
+    dataRequests.push(
       network.sendBlobSidecarsByRange(peerIdStr, blobsRequest).then((blobResponse) => {
         blobSidecars = blobResponse;
       })
@@ -307,7 +315,7 @@ export async function requestByRange({
   }
 
   if (columnsRequest) {
-    requests.push(
+    dataRequests.push(
       network.sendDataColumnSidecarsByRange(peerIdStr, columnsRequest).then((columnResponse) => {
         columnSidecars = columnResponse;
       })
@@ -315,17 +323,25 @@ export async function requestByRange({
   }
 
   if (envelopesRequest) {
-    requests.push(
+    dataRequests.push(
       network.sendExecutionPayloadEnvelopesByRange(peerIdStr, envelopesRequest).then((envelopes) => {
         signedEnvelopes = envelopes;
       })
     );
   }
 
-  const results = await Promise.allSettled(requests);
-  const rejected = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
-  if (rejected) {
-    throw rejected.reason;
+  if (dataRequests.length > 0) {
+    const results = await Promise.allSettled(dataRequests);
+    const rejected = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+    if (rejected) {
+      // Blocks succeeded but data requests failed — return partial results.
+      // The batch state machine handles this by staying in AwaitingDownload
+      // and regenerating only the missing requests on retry.
+      if (blocks != null) {
+        return {blocks, blobSidecars, columnSidecars, signedEnvelopes};
+      }
+      throw rejected.reason;
+    }
   }
 
   return {

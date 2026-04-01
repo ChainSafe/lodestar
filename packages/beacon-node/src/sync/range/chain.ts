@@ -809,6 +809,8 @@ function shouldTreatAsTransientDownloadError(err: DownloadByRangeError): boolean
         reason.includes("RESPONSE_ERROR_RATE_LIMITED") ||
         reason.includes("REQUEST_ERROR_DIAL_ERROR") ||
         reason.includes("REQUEST_ERROR_INVALID_REQUEST") ||
+        reason.includes("REQUEST_ERROR_TTFB_TIMEOUT") ||
+        reason.includes("REQUEST_ERROR_BODY_TIMEOUT") ||
         reason.includes("Message was truncated")
       );
     }
