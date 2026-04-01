@@ -1,4 +1,4 @@
-import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, PayloadStatus, ProtoArray} from "@lodestar/fork-choice";
 import {HISTORICAL_ROOTS_LIMIT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -12,7 +12,7 @@ import {
   getBlockRootAtSlot,
   newFilledArray,
 } from "@lodestar/state-transition";
-import {clearPerfStateCache, generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
+import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
 import {electra, ssz} from "@lodestar/types";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
@@ -27,35 +27,25 @@ const vc = 1_500_000;
  *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      23.86144 ops/s    41.90862 ms/op        -         18 runs   34.1 s
  */
 describe(`getAttestationsForBlock vc=${vc}`, () => {
-  let originalState: CachedBeaconStateElectra | undefined;
-  let protoArray: ProtoArray | undefined;
-  let forkchoice: ForkChoice | undefined;
-
-  const requireOriginalState = (): CachedBeaconStateElectra => {
-    if (!originalState) throw Error("originalState not initialized");
-    return originalState;
-  };
-
-  const requireForkchoice = (): ForkChoice => {
-    if (!forkchoice) throw Error("forkchoice not initialized");
-    return forkchoice;
-  };
+  let originalState: CachedBeaconStateElectra;
+  let protoArray: ProtoArray;
+  let forkchoice: ForkChoice;
 
   beforeAll(
     () => {
       originalState = generatePerfTestCachedStateElectra({goBackOneSlot: true, vc});
 
-      const {blockHeader, checkpoint} = computeAnchorCheckpoint(requireOriginalState().config, requireOriginalState());
+      const {blockHeader, checkpoint} = computeAnchorCheckpoint(originalState.config, originalState);
       // TODO figure out why getBlockRootAtSlot(originalState, justifiedSlot) is not the same to justifiedCheckpoint.root
-      const finalizedEpoch = requireOriginalState().finalizedCheckpoint.epoch;
+      const finalizedEpoch = originalState.finalizedCheckpoint.epoch;
       const finalizedCheckpoint = {
         epoch: finalizedEpoch,
-        root: getBlockRootAtSlot(requireOriginalState(), computeStartSlotAtEpoch(finalizedEpoch)),
+        root: getBlockRootAtSlot(originalState, computeStartSlotAtEpoch(finalizedEpoch)),
       };
-      const justifiedEpoch = requireOriginalState().currentJustifiedCheckpoint.epoch;
+      const justifiedEpoch = originalState.currentJustifiedCheckpoint.epoch;
       const justifiedCheckpoint = {
         epoch: justifiedEpoch,
-        root: getBlockRootAtSlot(requireOriginalState(), computeStartSlotAtEpoch(justifiedEpoch)),
+        root: getBlockRootAtSlot(originalState, computeStartSlotAtEpoch(justifiedEpoch)),
       };
 
       protoArray = ProtoArray.initialize(
@@ -82,18 +72,18 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           parentBlockHash: null,
           payloadStatus: 2, // PayloadStatus.FULL
         },
-        requireOriginalState().slot
+        originalState.slot
       );
 
-      for (let slot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch); slot < requireOriginalState().slot; slot++) {
+      for (let slot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch); slot < originalState.slot; slot++) {
         const epoch = computeEpochAtSlot(slot);
         protoArray.onBlock(
           {
             slot,
-            blockRoot: toHexString(getBlockRootAtSlot(requireOriginalState(), slot)),
-            parentRoot: toHexString(getBlockRootAtSlot(requireOriginalState(), slot - 1)),
-            stateRoot: toHexString(requireOriginalState().stateRoots.get(slot % HISTORICAL_ROOTS_LIMIT)),
-            targetRoot: toHexString(getBlockRootAtSlot(requireOriginalState(), computeStartSlotAtEpoch(epoch))),
+            blockRoot: toHexString(getBlockRootAtSlot(originalState, slot)),
+            parentRoot: toHexString(getBlockRootAtSlot(originalState, slot - 1)),
+            stateRoot: toHexString(originalState.stateRoots.get(slot % HISTORICAL_ROOTS_LIMIT)),
+            targetRoot: toHexString(getBlockRootAtSlot(originalState, computeStartSlotAtEpoch(epoch))),
             justifiedEpoch: justifiedCheckpoint.epoch,
             justifiedRoot: toHexString(justifiedCheckpoint.root),
             finalizedEpoch: finalizedCheckpoint.epoch,
@@ -116,19 +106,19 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
       }
 
       let totalBalance = 0;
-      for (let i = 0; i < requireOriginalState().epochCtx.effectiveBalanceIncrements.length; i++) {
-        totalBalance += requireOriginalState().epochCtx.effectiveBalanceIncrements[i];
+      for (let i = 0; i < originalState.epochCtx.effectiveBalanceIncrements.length; i++) {
+        totalBalance += originalState.epochCtx.effectiveBalanceIncrements[i];
       }
 
       const fcStore: IForkChoiceStore = {
-        currentSlot: requireOriginalState().slot,
+        currentSlot: originalState.slot,
         justified: {
           checkpoint: {
             ...justifiedCheckpoint,
             rootHex: toHexString(justifiedCheckpoint.root),
             payloadStatus: PayloadStatus.FULL,
           },
-          balances: requireOriginalState().epochCtx.effectiveBalanceIncrements,
+          balances: originalState.epochCtx.effectiveBalanceIncrements,
           totalBalance,
         },
         unrealizedJustified: {
@@ -137,7 +127,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
             rootHex: toHexString(justifiedCheckpoint.root),
             payloadStatus: PayloadStatus.FULL,
           },
-          balances: requireOriginalState().epochCtx.effectiveBalanceIncrements,
+          balances: originalState.epochCtx.effectiveBalanceIncrements,
         },
         finalizedCheckpoint: {
           ...finalizedCheckpoint,
@@ -149,26 +139,13 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           rootHex: toHexString(finalizedCheckpoint.root),
           payloadStatus: PayloadStatus.FULL,
         },
-        justifiedBalancesGetter: () => requireOriginalState().epochCtx.effectiveBalanceIncrements,
+        justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
       };
-      forkchoice = new ForkChoice(
-        requireOriginalState().config,
-        fcStore,
-        protoArray,
-        requireOriginalState().validators.length,
-        null
-      );
+      forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, originalState.validators.length, null);
     },
     5 * 60 * 1000
   );
-
-  afterAll(() => {
-    originalState = undefined;
-    protoArray = undefined;
-    forkchoice = undefined;
-    clearPerfStateCache();
-  });
 
   // notSeenSlots should be >=1
   for (const [notSeenSlots, numMissedVotes, numBadVotes] of [
@@ -180,7 +157,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
     bench({
       id: `notSeenSlots=${notSeenSlots} numMissedVotes=${numMissedVotes} numBadVotes=${numBadVotes}`,
       before: () => {
-        const state = requireOriginalState().clone();
+        const state = originalState.clone();
         // by default make all validators have full participation
         const previousParticipation = newFilledArray(vc, 0b111);
         // origState is at slot 0 of epoch so there is no currentParticipation
@@ -216,10 +193,10 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         );
         const shufflingCache = new ShufflingCache();
         shufflingCache.processState(state);
-        return {state, pool, shufflingCache, forkchoice: requireForkchoice(), config: requireOriginalState().config};
+        return {state, pool, shufflingCache};
       },
-      fn: ({state, pool, shufflingCache, forkchoice, config}) => {
-        pool.getAttestationsForBlock(config.getForkName(state.slot), forkchoice, shufflingCache, state);
+      fn: ({state, pool, shufflingCache}) => {
+        pool.getAttestationsForBlock(originalState.config.getForkName(state.slot), forkchoice, shufflingCache, state);
       },
     });
   }
