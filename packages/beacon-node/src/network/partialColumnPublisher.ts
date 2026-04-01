@@ -26,6 +26,7 @@ type PartialPublishTrigger =
   | "block_production"
   | "gossip_merge"
   | "post_getblobs"
+  | "full_column"
   | "full_gossip"
   | "metadata_request"
   | "recovery";

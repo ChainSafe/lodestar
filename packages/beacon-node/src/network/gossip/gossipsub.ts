@@ -99,7 +99,12 @@ type GossipSubInternal = GossipSub & {
   getMeshPeers: (topic: TopicStr) => string[];
   dumpPeerScoreStats: () => PeerScoreStatsDump;
   getScore: (peerIdStr: string) => number;
-  reportMessageValidationResult: (msgId: string, propagationSource: string, acceptance: TopicValidatorResult) => void;
+  reportMessageValidationResult: (
+    msgId: string,
+    propagationSource: string,
+    acceptance: TopicValidatorResult,
+    excludePeerIds?: PeerIdStr[]
+  ) => void;
   subscribePartial: (topic: TopicStr, opts: PartialSubscriptionOpts) => void;
   publishPartial: (partialMsg: PartialMessage) => void;
   publishPartialToPeer: (peerIdStr: string, partialMsg: PartialMessage) => void;
@@ -431,7 +436,11 @@ export class Eth2Gossipsub {
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
     callInNextEventLoop(() => {
-      this.gossipsub.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
+      const excludePeerIds =
+        data.excludePartialPeers && data.topic?.type === GossipType.data_column_sidecar
+          ? this.gossipsub.getPartialPeers(stringifyGossipTopic(this.config, data.topic))
+          : undefined;
+      this.gossipsub.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance, excludePeerIds);
     });
   }
 
