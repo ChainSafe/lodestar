@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
-import {DataColumnSidecars, RootHex, deneb, phase0} from "@lodestar/types";
+import {DataColumnSidecars, RootHex, deneb, fulu, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 
@@ -45,6 +45,10 @@ export enum ChainEvent {
    */
   publishDataColumns = "publishDataColumns",
   /**
+   * This event signals that partial data columns are ready to be published.
+   */
+  publishPartialColumns = "publishPartialColumns",
+  /**
    * This event signals that blobs have been fetched from the execution engine
    * and are ready to be published.
    */
@@ -80,6 +84,12 @@ export type ChainEventData = {
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
 };
 
+export type PublishPartialColumnsEventData = {
+  columns: fulu.DataColumnSidecars;
+  includeHeader: boolean;
+  includeCells: boolean;
+};
+
 export type IChainEvents = ApiEvents & {
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: IBeaconStateView) => void;
 
@@ -89,6 +99,8 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
   [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecars) => void;
+
+  [ChainEvent.publishPartialColumns]: (data: PublishPartialColumnsEventData) => void;
 
   [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
 
