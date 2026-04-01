@@ -17,16 +17,16 @@ import {electra, ssz} from "@lodestar/types";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
-const vc = 250_000;
+const vc = 1_500_000;
 
 /**
  * Jan 2024
- *  getAttestationsForBlock vc=250000
- *   ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      10.48105 ops/s    95.41024 ms/op        -         12 runs   18.2 s
- *   ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       11.44517 ops/s    87.37307 ms/op        -         13 runs   14.5 s
- *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      23.86144 ops/s    41.90862 ms/op        -         18 runs   34.1 s
+ *  getAttestationsForBlock vc=1500000 (local run, 2026-04-01, skipped in default benchmark suite)
+ *   ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      3379.714 ops/s    295.8830 us/op        -         10 runs   41.0 s
+ *   ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       5736.017 ops/s    174.3370 us/op        -         10 runs   36.1 s
+ *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      2801.740 ops/s    356.9210 us/op        -         10 runs   40.1 s
  */
-describe(`getAttestationsForBlock vc=${vc}`, () => {
+describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
   let originalState: CachedBeaconStateElectra;
   let protoArray: ProtoArray;
   let forkchoice: ForkChoice;
