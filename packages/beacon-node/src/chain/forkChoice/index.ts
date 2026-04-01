@@ -115,6 +115,68 @@ export function initializeForkChoiceFromFinalizedState(
   // Determine finalized checkpoint payload status
   const finalizedPayloadStatus = getCheckpointPayloadStatus(state, finalizedCheckpoint.epoch);
 
+  const blockRootHex = toRootHex(checkpoint.root);
+  const isGloasPayloadFull = isForkPostGloas && isParentBlockFull(state as CachedBeaconStateGloas);
+
+  const protoArray = ProtoArray.initialize(
+    {
+      slot: blockHeader.slot,
+      parentRoot: toRootHex(blockHeader.parentRoot),
+      stateRoot: toRootHex(blockHeader.stateRoot),
+      blockRoot: blockRootHex,
+      timeliness: true, // Optimistically assume is timely
+
+      justifiedEpoch: justifiedCheckpoint.epoch,
+      justifiedRoot: toRootHex(justifiedCheckpoint.root),
+      finalizedEpoch: finalizedCheckpoint.epoch,
+      finalizedRoot: toRootHex(finalizedCheckpoint.root),
+      unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
+      unrealizedJustifiedRoot: toRootHex(justifiedCheckpoint.root),
+      unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
+      unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
+
+      ...(isForkPostGloas
+        ? {
+            executionPayloadBlockHash: toRootHex((state as CachedBeaconStateGloas).latestBlockHash),
+            executionPayloadNumber: 0,
+            executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+          }
+        : isExecutionStateType(state) && isMergeTransitionComplete(state)
+          ? {
+              executionPayloadBlockHash: toRootHex(state.latestExecutionPayloadHeader.blockHash),
+              executionPayloadNumber: state.latestExecutionPayloadHeader.blockNumber,
+              executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+            }
+          : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+      payloadStatus: isForkPostGloas
+        ? isGloasPayloadFull
+          ? PayloadStatus.FULL
+          : PayloadStatus.EMPTY
+        : PayloadStatus.FULL,
+      builderIndex: isForkPostGloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex : null,
+      blockHashFromBid: isForkPostGloas
+        ? toRootHex((state as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash)
+        : null,
+      parentBlockHash: isForkPostGloas ? toRootHex((state as CachedBeaconStateGloas).latestBlockHash) : null,
+    },
+    currentSlot
+  );
+
+  // For gloas with payload available, create the FULL variant in the proto array.
+  // onBlock() only creates PENDING + EMPTY; FULL must be created via onExecutionPayload.
+  if (isGloasPayloadFull) {
+    const gloasState = state as CachedBeaconStateGloas;
+    protoArray.onExecutionPayload(
+      blockRootHex,
+      currentSlot,
+      toRootHex(gloasState.latestBlockHash),
+      0,
+      toRootHex(blockHeader.stateRoot)
+    );
+  }
+
   return new forkchoiceConstructor(
     config,
 
@@ -132,51 +194,7 @@ export function initializeForkChoiceFromFinalizedState(
       }
     ),
 
-    ProtoArray.initialize(
-      {
-        slot: blockHeader.slot,
-        parentRoot: toRootHex(blockHeader.parentRoot),
-        stateRoot: toRootHex(blockHeader.stateRoot),
-        blockRoot: toRootHex(checkpoint.root),
-        timeliness: true, // Optimistically assume is timely
-
-        justifiedEpoch: justifiedCheckpoint.epoch,
-        justifiedRoot: toRootHex(justifiedCheckpoint.root),
-        finalizedEpoch: finalizedCheckpoint.epoch,
-        finalizedRoot: toRootHex(finalizedCheckpoint.root),
-        unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
-        unrealizedJustifiedRoot: toRootHex(justifiedCheckpoint.root),
-        unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
-        unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
-
-        ...(isForkPostGloas
-          ? {
-              executionPayloadBlockHash: toRootHex((state as CachedBeaconStateGloas).latestBlockHash),
-              executionPayloadNumber: 0,
-              executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
-            }
-          : isExecutionStateType(state) && isMergeTransitionComplete(state)
-            ? {
-                executionPayloadBlockHash: toRootHex(state.latestExecutionPayloadHeader.blockHash),
-                executionPayloadNumber: state.latestExecutionPayloadHeader.blockNumber,
-                executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
-              }
-            : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
-
-        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-        payloadStatus: isForkPostGloas
-          ? isParentBlockFull(state as CachedBeaconStateGloas)
-            ? PayloadStatus.FULL
-            : PayloadStatus.EMPTY
-          : PayloadStatus.FULL,
-        builderIndex: isForkPostGloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.builderIndex : null,
-        blockHashFromBid: isForkPostGloas
-          ? toRootHex((state as CachedBeaconStateGloas).latestExecutionPayloadBid.blockHash)
-          : null,
-        parentBlockHash: isForkPostGloas ? toRootHex((state as CachedBeaconStateGloas).latestBlockHash) : null,
-      },
-      currentSlot
-    ),
+    protoArray,
     state.validators.length,
     metrics,
     opts,
