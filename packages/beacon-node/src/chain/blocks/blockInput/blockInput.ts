@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ForkName, ForkPostFulu, ForkPostGloas, ForkPreDeneb, ForkPreGloas, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {BeaconBlockBody, BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, fromHex, prettyBytes, toRootHex, withTimeout} from "@lodestar/utils";
@@ -1061,6 +1062,60 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
 
   getCellCount(columnIndex: ColumnIndex): number {
     return this.cellsCache.get(columnIndex)?.size ?? 0;
+  }
+
+  getPartialColumnSidecar(columnIndex: ColumnIndex, includeHeader: boolean): fulu.PartialDataColumnSidecar | null {
+    const header = includeHeader && this.partialHeader !== null ? [this.partialHeader] : [];
+    const fullColumn = this.getColumn(columnIndex);
+
+    if (fullColumn !== undefined) {
+      return {
+        cellsPresentBitmap: BitArray.fromBoolArray(Array.from({length: fullColumn.column.length}, () => true)),
+        partialColumn: fullColumn.column,
+        kzgProofs: fullColumn.kzgProofs,
+        header,
+      };
+    }
+
+    if (this.partialHeader === null) {
+      return null;
+    }
+
+    const cellMap = this.cellsCache.get(columnIndex);
+    if (cellMap === undefined || cellMap.size === 0) {
+      if (header.length === 0) {
+        return null;
+      }
+
+      return {
+        cellsPresentBitmap: BitArray.fromBoolArray([]),
+        partialColumn: [],
+        kzgProofs: [],
+        header,
+      };
+    }
+
+    const bitmap = Array.from({length: this.partialHeader.kzgCommitments.length}, () => false);
+    const partialColumn: Uint8Array[] = [];
+    const kzgProofs: Uint8Array[] = [];
+
+    for (let blobIndex = 0; blobIndex < bitmap.length; blobIndex++) {
+      const cellWithProof = cellMap.get(blobIndex);
+      if (cellWithProof === undefined) {
+        continue;
+      }
+
+      bitmap[blobIndex] = true;
+      partialColumn.push(cellWithProof.cell);
+      kzgProofs.push(cellWithProof.proof);
+    }
+
+    return {
+      cellsPresentBitmap: BitArray.fromBoolArray(bitmap),
+      partialColumn,
+      kzgProofs,
+      header,
+    };
   }
 
   static createFromPartialHeader(

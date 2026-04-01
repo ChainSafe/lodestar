@@ -218,8 +218,9 @@ export class Network implements INetwork {
           activeValidatorCount,
         });
 
+    const partialColumnPublisher = new PartialColumnPublisher({config, core, metrics});
     const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
+      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker, partialColumnPublisher},
       opts
     );
 
@@ -851,15 +852,11 @@ export class Network implements INetwork {
   };
 
   private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
-    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar, {publishPartial: false})));
   };
 
-  private onPublishPartialColumns = ({
-    columns,
-    includeHeader,
-    includeCells,
-  }: PublishPartialColumnsEventData): Promise<void[]> => {
-    return this.partialColumnPublisher.publishUniformColumns(columns, {includeHeader, includeCells});
+  private onPublishPartialColumns = ({columns}: PublishPartialColumnsEventData): Promise<void[]> => {
+    return this.partialColumnPublisher.publishPostGetBlobsColumns(columns);
   };
 
   private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {

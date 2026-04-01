@@ -177,6 +177,12 @@ describe("BlockInputColumns partial column support", () => {
       expect(blockInput.hasAllData()).toBe(false);
       expect(blockInput.hasPartialHeader()).toBe(true);
       expect(blockInput.getPartialHeader()).toEqual(header);
+      expect(blockInput.getPartialColumnSidecar(0, true)).toEqual({
+        cellsPresentBitmap: expect.objectContaining({bitLen: 0}),
+        partialColumn: [],
+        kzgProofs: [],
+        header: [header],
+      });
     });
   });
 
@@ -215,6 +221,9 @@ describe("BlockInputColumns partial column support", () => {
       expect(blockInput.getCellCount(columnIndex)).toBe(1);
       expect(blockInput.getCellCount(columnIndex + 1)).toBe(0);
       expect(blockInput.hasColumn(columnIndex)).toBe(false);
+      expect(blockInput.getPartialColumnSidecar(columnIndex, false)?.cellsPresentBitmap.toBoolArray()).toEqual(bitmap);
+      expect(blockInput.getPartialColumnSidecar(columnIndex, false)?.partialColumn).toEqual([cell]);
+      expect(blockInput.getPartialColumnSidecar(columnIndex, false)?.kzgProofs).toEqual([proof]);
     });
 
     it("should return completed DataColumnSidecar when all cells arrive", () => {
@@ -369,6 +378,7 @@ describe("BlockInputColumns partial column support", () => {
       expect(completedColumn!.column).toEqual([cell0, cell1, cell2]);
       expect(completedColumn!.kzgProofs).toEqual([proof0, proof1, proof2]);
       expect(blockInput.getCellCount(columnIndex)).toBe(0);
+      expect(blockInput.getPartialColumnSidecar(columnIndex, false)?.cellsPresentBitmap.toBoolArray()).toEqual([true, true, true]);
     });
 
     it("should return null for already-complete column", () => {

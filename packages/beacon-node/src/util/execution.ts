@@ -197,6 +197,7 @@ export async function getDataColumnSidecarsFromExecution(
   // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
   emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
   // TODO: Can we record dataColumns.sentPeersPerSubnet metric here somehow
+  emitter.emit(ChainEvent.publishPartialColumns, {columns: sampledColumns});
 
   // add all sampled columns to the block input, even if we didn't sample them
   const seenTimestampSec = Date.now() / 1000;

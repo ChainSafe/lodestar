@@ -86,8 +86,6 @@ export type ChainEventData = {
 
 export type PublishPartialColumnsEventData = {
   columns: fulu.DataColumnSidecars;
-  includeHeader: boolean;
-  includeCells: boolean;
 };
 
 export type IChainEvents = ApiEvents & {
