@@ -40,6 +40,8 @@ export type NetworkProcessorModules = ValidatorFnsModules &
   };
 
 export type NetworkProcessorOpts = GossipHandlerOpts & {
+  enablePartialColumns?: boolean;
+  eagerlyPublishCells?: boolean;
   maxGossipTopicConcurrency?: number;
 };
 
@@ -469,7 +471,8 @@ export class NetworkProcessor {
             propagationSource: msg.propagationSource,
             acceptance: acceptanceArr[i],
             topic: msg.topic,
-            excludePartialPeers: this.opts.enablePartialColumns === true && msg.topic.type === GossipType.data_column_sidecar,
+            excludePartialPeers:
+              this.opts.enablePartialColumns === true && msg.topic.type === GossipType.data_column_sidecar,
           });
         });
       }

@@ -3,7 +3,7 @@ import type {BeaconConfig} from "@lodestar/config";
 import type {DataColumnSidecar} from "@lodestar/types";
 import {isGloasDataColumnSidecar} from "@lodestar/types";
 import type {INetworkCore} from "./core/types.js";
-import {GossipType, type GossipTopicMap} from "./gossip/interface.js";
+import {type GossipTopicMap, GossipType} from "./gossip/interface.js";
 import {stringifyGossipTopic} from "./gossip/topic.js";
 
 export async function getFullDataColumnPublishOpts(

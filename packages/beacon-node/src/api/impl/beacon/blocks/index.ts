@@ -297,8 +297,8 @@ export function getBeaconBlockApi({
       //        import latency and hopefully bandwidth
       //
       () => network.publishBeaconBlock(signedBlock),
-      ...dataColumnSidecars.map((dataColumnSidecar) => () =>
-        network.publishDataColumnSidecar(dataColumnSidecar, {publishPartial: false})
+      ...dataColumnSidecars.map(
+        (dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar, {publishPartial: false})
       ),
       () => network.publishBlockProductionPartialColumns(dataColumnSidecars),
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
@@ -752,10 +752,9 @@ export function getBeaconBlockApi({
         // Gossip the signed execution payload envelope first
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // For self-builds, publish all data column sidecars
-        ...dataColumnSidecars.map((dataColumnSidecar) => () =>
-          network.publishDataColumnSidecar(dataColumnSidecar, {publishPartial: false})
+        ...dataColumnSidecars.map(
+          (dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar, {publishPartial: false})
         ),
-        () => network.publishBlockProductionPartialColumns(dataColumnSidecars),
         // Import execution payload. Signature already verified above
         () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];

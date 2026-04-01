@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {BlobIndex, ColumnIndex, DataColumnSidecars, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecars, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
@@ -100,7 +100,7 @@ export type AddPartialHeader = {
   partialHeader: fulu.PartialDataColumnHeader;
   source: BlockInputSource;
   seenTimestampSec: number;
-  peerIdStr: string;
+  peerIdStr?: string;
 };
 
 export type BlobMeta = {

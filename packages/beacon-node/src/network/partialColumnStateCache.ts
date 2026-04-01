@@ -1,8 +1,8 @@
 import {BitArray} from "@chainsafe/ssz";
 import {RootHex, SubnetID, fulu, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {PeerIdStr} from "../util/peerId.js";
 import {buildPartsMetadataBytes} from "../util/dataColumns.js";
+import {PeerIdStr} from "../util/peerId.js";
 
 const DEFAULT_MAX_BLOCKS = 64;
 
@@ -213,7 +213,10 @@ export class PartialColumnStateCache {
     }
 
     const column = state.columns.get(subnet);
-    const available = Array.from({length: state.header.kzgCommitments.length}, (_v, index) => column?.cells.has(index) ?? false);
+    const available = Array.from(
+      {length: state.header.kzgCommitments.length},
+      (_v, index) => column?.cells.has(index) ?? false
+    );
     const requests = available.map((hasCell) => !hasCell);
 
     return buildPartsMetadataBytes(available, requests);

@@ -2,10 +2,10 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {toRootHex} from "@lodestar/utils";
 import {fulu, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {
   BlockInputPreData,
   BlockInputSource,
@@ -29,7 +29,7 @@ import {
 
 function buildPartialHeader(): {blockRootHex: string; partialHeader: fulu.PartialDataColumnHeader} {
   const block = ssz.fulu.SignedBeaconBlock.defaultValue();
-  block.message.slot = config.FULU_FORK_EPOCH * config.SLOTS_PER_EPOCH;
+  block.message.slot = config.FULU_FORK_EPOCH * SLOTS_PER_EPOCH;
   block.message.body.blobKzgCommitments = [new Uint8Array(48)];
 
   const signedBlockHeader = signedBlockToSignedHeader(config, block);
@@ -41,7 +41,7 @@ function buildPartialHeader(): {blockRootHex: string; partialHeader: fulu.Partia
       kzgCommitments: block.message.body.blobKzgCommitments,
       signedBlockHeader,
       kzgCommitmentsInclusionProof: Array.from(
-        {length: config.KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH},
+        {length: KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH},
         () => new Uint8Array(32)
       ),
     },

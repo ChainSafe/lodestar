@@ -1,5 +1,5 @@
-import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PartialMessage} from "@libp2p/gossipsub";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {Connection, PrivateKey} from "@libp2p/interface";
 import {peerIdFromPrivateKey} from "@libp2p/peer-id";
@@ -384,11 +384,7 @@ export class NetworkCore implements INetworkCore {
     return this.gossip.getPartialPeers(topic);
   }
 
-  async getPeerPartialMetadata(
-    topic: string,
-    groupID: Uint8Array,
-    peerId: PeerIdStr
-  ): Promise<Uint8Array | undefined> {
+  async getPeerPartialMetadata(topic: string, groupID: Uint8Array, peerId: PeerIdStr): Promise<Uint8Array | undefined> {
     return this.gossip.getPeerPartialMetadata(topic, groupID, peerId);
   }
 

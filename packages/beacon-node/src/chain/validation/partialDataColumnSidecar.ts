@@ -150,7 +150,7 @@ export async function validateGossipPartialDataColumnHeader(
 
     // [REJECT] Expected proposer_index
     const proposerIndex = blockHeader.proposerIndex;
-    const expectedProposerIndex = blockState.epochCtx.getBeaconProposer(blockHeader.slot);
+    const expectedProposerIndex = blockState.getBeaconProposer(blockHeader.slot);
     if (proposerIndex !== expectedProposerIndex) {
       throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
         code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER,

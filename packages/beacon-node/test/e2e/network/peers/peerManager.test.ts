@@ -53,6 +53,8 @@ describe("network / peers / PeerManager", () => {
         nodeId,
         config,
       }),
+      enablePartialColumns: false,
+      eagerlyPublishCells: false,
     };
     const controller = new AbortController();
     const clock = new Clock({config: beaconConfig, genesisTime: 0, signal: controller.signal});
