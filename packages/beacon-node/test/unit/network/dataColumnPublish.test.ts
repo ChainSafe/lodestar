@@ -1,8 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
-import {GossipType} from "../../../src/network/gossip/interface.js";
 import {getFullDataColumnPublishOpts, shouldPublishPartialDataColumn} from "../../../src/network/dataColumnPublish.js";
+import {GossipType} from "../../../src/network/gossip/interface.js";
 
 function createTestConfig() {
   return createChainForkConfig({

@@ -4,11 +4,7 @@ import {ForkName} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {
-  BlockInputColumns,
-  BlockInputSource,
-  DAType,
-} from "../../../../src/chain/blocks/blockInput/index.js";
+import {BlockInputColumns, BlockInputSource, DAType} from "../../../../src/chain/blocks/blockInput/index.js";
 
 const FULU_FORK_EPOCH = 3;
 const config = createChainForkConfig({
@@ -147,9 +143,7 @@ describe("BlockInputColumns partial column support", () => {
       // Create a different header (different slot -> different hash)
       const {header: differentHeader} = buildPartialHeaderTestData(blobCount + 1);
 
-      expect(() => blockInput.addPartialHeader(differentHeader)).toThrow(
-        "PartialDataColumnHeader does not match"
-      );
+      expect(() => blockInput.addPartialHeader(differentHeader)).toThrow("PartialDataColumnHeader does not match");
     });
   });
 
@@ -263,11 +257,14 @@ describe("BlockInputColumns partial column support", () => {
       );
 
       expect(result).not.toBeNull();
-      expect(result!.index).toBe(columnIndex);
-      expect(result!.column.length).toBe(blobCount);
-      expect(result!.kzgProofs.length).toBe(blobCount);
-      expect(result!.kzgCommitments).toEqual(header.kzgCommitments);
-      expect(result!.signedBlockHeader).toEqual(header.signedBlockHeader);
+      if (result === null) {
+        expect.fail("Expected addCells to complete the column");
+      }
+      expect(result.index).toBe(columnIndex);
+      expect(result.column.length).toBe(blobCount);
+      expect(result.kzgProofs.length).toBe(blobCount);
+      expect(result.kzgCommitments).toEqual(header.kzgCommitments);
+      expect(result.signedBlockHeader).toEqual(header.signedBlockHeader);
 
       // Column should now be in columnsCache
       expect(blockInput.hasColumn(columnIndex)).toBe(true);
@@ -324,7 +321,10 @@ describe("BlockInputColumns partial column support", () => {
       );
 
       expect(result2).not.toBeNull();
-      expect(result2!.column.length).toBe(blobCount);
+      if (result2 === null) {
+        expect.fail("Expected the second addCells call to complete the column");
+      }
+      expect(result2.column.length).toBe(blobCount);
       expect(blockInput.hasColumn(columnIndex)).toBe(true);
     });
 
@@ -375,10 +375,17 @@ describe("BlockInputColumns partial column support", () => {
       );
 
       expect(completedColumn).not.toBeNull();
-      expect(completedColumn!.column).toEqual([cell0, cell1, cell2]);
-      expect(completedColumn!.kzgProofs).toEqual([proof0, proof1, proof2]);
+      if (completedColumn === null) {
+        expect.fail("Expected overlapping cells to complete the column");
+      }
+      expect(completedColumn.column).toEqual([cell0, cell1, cell2]);
+      expect(completedColumn.kzgProofs).toEqual([proof0, proof1, proof2]);
       expect(blockInput.getCellCount(columnIndex)).toBe(0);
-      expect(blockInput.getPartialColumnSidecar(columnIndex, false)?.cellsPresentBitmap.toBoolArray()).toEqual([true, true, true]);
+      expect(blockInput.getPartialColumnSidecar(columnIndex, false)?.cellsPresentBitmap.toBoolArray()).toEqual([
+        true,
+        true,
+        true,
+      ]);
     });
 
     it("should return null for already-complete column", () => {

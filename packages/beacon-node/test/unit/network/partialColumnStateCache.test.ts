@@ -1,7 +1,7 @@
-import {BitArray} from "@chainsafe/ssz";
-import {describe, expect, it, vi} from "vitest";
 import {BYTES_PER_BLOB} from "@crate-crypto/node-eth-kzg";
+import {describe, expect, it, vi} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {KZG_COMMITMENTS_GINDEX} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
