@@ -1,4 +1,3 @@
-import type {PartialMessage} from "@libp2p/gossipsub";
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {PeerId, PrivateKey} from "@libp2p/interface";
@@ -34,17 +33,12 @@ import {
 } from "@lodestar/types";
 import {prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
-import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {ChainEvent, IBeaconChain, PublishPartialColumnsEventData} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
-import {
-  CustodyConfig,
-  buildPartsMetadataBytes,
-  computePartialMessageGroupId,
-  dataColumnToPartialSidecar,
-} from "../util/dataColumns.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {
@@ -74,6 +68,7 @@ import {
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
 import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
+import {PartialColumnPublisher} from "./partialColumnPublisher.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -127,6 +122,7 @@ export class Network implements INetwork {
   private readonly networkProcessor: NetworkProcessor;
   private readonly core: INetworkCore;
   private readonly aggregatorTracker: AggregatorTracker;
+  private readonly partialColumnPublisher: PartialColumnPublisher;
 
   private subscribedToCoreTopics = false;
   private connectedPeersSyncMeta = new Map<PeerIdStr, Omit<PeerSyncMeta, "peerId">>();
@@ -144,6 +140,11 @@ export class Network implements INetwork {
     this.networkProcessor = modules.networkProcessor;
     this.core = modules.core;
     this.aggregatorTracker = modules.aggregatorTracker;
+    this.partialColumnPublisher = new PartialColumnPublisher({
+      config: this.config,
+      core: this.core,
+      metrics: this.metrics,
+    });
 
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -156,6 +157,7 @@ export class Network implements INetwork {
     );
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.on(ChainEvent.publishPartialColumns, this.onPublishPartialColumns);
     this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
@@ -253,6 +255,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
+    this.chain.emitter.off(ChainEvent.publishPartialColumns, this.onPublishPartialColumns);
     this.chain.emitter.off(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
     await this.core.close();
@@ -394,7 +397,10 @@ export class Network implements INetwork {
     );
 
     if (this.opts.enablePartialColumns && !isGloasDataColumnSidecar(dataColumnSidecar)) {
-      await this.publishPartialDataColumnSidecar(dataColumnSidecar, boundary, subnet);
+      await this.partialColumnPublisher.publishUniformColumn(dataColumnSidecar, {
+        includeHeader: true,
+        includeCells: this.opts.eagerlyPublishCells ?? false,
+      });
     }
 
     return sentPeers;
@@ -831,6 +837,14 @@ export class Network implements INetwork {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 
+  private onPublishPartialColumns = ({
+    columns,
+    includeHeader,
+    includeCells,
+  }: PublishPartialColumnsEventData): Promise<void[]> => {
+    return this.partialColumnPublisher.publishUniformColumns(columns, {includeHeader, includeCells});
+  };
+
   private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishBlobSidecar(sidecar)));
   };
@@ -838,29 +852,4 @@ export class Network implements INetwork {
   private onUpdateStatus = async (): Promise<void> => {
     await this.core.updateStatus(this.chain.getStatus());
   };
-
-  private async publishPartialDataColumnSidecar(
-    dataColumnSidecar: fulu.DataColumnSidecar,
-    boundary: ForkBoundary,
-    subnet: SubnetID
-  ): Promise<void> {
-    const partialSidecar = dataColumnToPartialSidecar(dataColumnSidecar, {
-      includeHeader: true,
-      includeCells: this.opts.eagerlyPublishCells ?? false,
-    });
-    const groupID = computePartialMessageGroupId(
-      ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnSidecar.signedBlockHeader.message)
-    );
-    const topic = stringifyGossipTopic(this.config, {type: GossipType.data_column_sidecar, boundary, subnet});
-    const partialMsg: PartialMessage = {
-      topic,
-      groupID,
-      partialMessage: ssz.fulu.PartialDataColumnSidecar.serialize(partialSidecar),
-      partsMetadata: buildPartsMetadataBytes(partialSidecar.cellsPresentBitmap),
-    };
-
-    await this.core.publishPartialMessage(partialMsg);
-    this.metrics?.partialColumns.headersPublished.inc(partialSidecar.header.length);
-    this.metrics?.partialColumns.cellsPublished.inc(partialSidecar.partialColumn.length);
-  }
 }
