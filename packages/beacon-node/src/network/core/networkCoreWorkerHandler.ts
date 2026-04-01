@@ -236,6 +236,12 @@ export class WorkerNetworkCore implements INetworkCore {
   publishPartialMessage(partialMsg: PartialMessage): Promise<void> {
     return this.getApi().publishPartialMessage(partialMsg);
   }
+  reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void> {
+    return this.getApi().reportInvalidPartialMessage(peerId, topic);
+  }
+  reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void> {
+    return this.getApi().reportUsefulPartialMessage(peerId, topic, groupID);
+  }
 
   // Custody
 

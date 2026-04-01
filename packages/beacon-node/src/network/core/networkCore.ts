@@ -376,6 +376,14 @@ export class NetworkCore implements INetworkCore {
     this.gossip.publishPartialMessage(partialMsg);
   }
 
+  async reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void> {
+    this.gossip.reportInvalidPartialMessage(peerId, topic);
+  }
+
+  async reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void> {
+    this.gossip.reportUsefulPartialMessage(peerId, topic, groupID);
+  }
+
   /**
    * Handler of ChainEvent.updateTargetCustodyGroupCount event
    * Updates the target custody group count in the network config and metadata.

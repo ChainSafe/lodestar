@@ -43,6 +43,7 @@ import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./top
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
 const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
+const PARTIAL_SCORE_CACHE_MAX_ENTRIES = 16_384;
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -85,7 +86,11 @@ export type ForkBoundaryLabel = string;
 type GossipSubInternal = GossipSub & {
   mesh: Map<string, Set<string>>;
   peers: Map<string, PeerId>;
-  score: {score: (peerIdStr: string) => number};
+  score: {
+    score: (peerIdStr: string) => number;
+    markFirstMessageDelivery: (peerIdStr: string, topic: TopicStr) => void;
+    rejectInvalidMessage: (peerIdStr: string, topic: TopicStr) => void;
+  };
   direct: Set<string>;
   topics: Map<string, Set<string>>;
   start: () => Promise<void>;
@@ -124,6 +129,8 @@ export class Eth2Gossipsub {
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
+  private readonly rewardedPartialDeliveries = new Map<string, number>();
+  private lastPartialScorePruneMs = 0;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
@@ -426,7 +433,10 @@ export class Eth2Gossipsub {
   }
 
   private onPartialMessage(event: GossipSubEvents["gossipsub:partial-message"]): void {
-    const {topic: topicStr, groupID, partialMessage} = event.detail;
+    const {
+      propagationSource,
+      partialMsg: {topic: topicStr, groupID, partialMessage},
+    } = event.detail;
 
     // Parse the base topic to check it's a data column sidecar topic
     const baseTopic = this.gossipTopicCache.getTopic(topicStr);
@@ -441,6 +451,9 @@ export class Eth2Gossipsub {
     };
 
     const seenTimestampSec = Date.now() / 1000;
+    const peerIdStr = propagationSource.toString();
+    const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
+    const clientVersion = this.peersData.getAgentVersion(peerIdStr);
 
     // Route partial message data through the standard gossip pipeline
     if (partialMessage !== undefined && partialMessage.length > 0) {
@@ -450,9 +463,9 @@ export class Eth2Gossipsub {
           msg: {topic: topicStr, data: partialMessage, type: "unsigned"},
           partialMessageGroupId: groupID,
           msgId: toHex(groupID),
-          propagationSource: "partial",
-          clientVersion: "",
-          clientAgent: "",
+          propagationSource: peerIdStr,
+          clientVersion,
+          clientAgent,
           seenTimestampSec,
           startProcessUnixSec: null,
         });
@@ -462,6 +475,32 @@ export class Eth2Gossipsub {
 
   publishPartialMessage(partialMsg: PartialMessage): void {
     this.gossipsub.publishPartial(partialMsg);
+  }
+
+  reportInvalidPartialMessage(peerIdStr: string, topic: TopicStr): void {
+    if (!this.hasTopicScoreParams(topic)) {
+      return;
+    }
+
+    this.gossipsub.score.rejectInvalidMessage(peerIdStr, topic);
+  }
+
+  reportUsefulPartialMessage(peerIdStr: string, topic: TopicStr, groupID: Uint8Array): void {
+    if (!this.hasTopicScoreParams(topic)) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    this.pruneRewardedPartialDeliveries(nowMs);
+
+    const rewardKey = `${peerIdStr}:${topic}:${toHex(groupID)}`;
+    const lastRewardMs = this.rewardedPartialDeliveries.get(rewardKey);
+    if (lastRewardMs !== undefined && nowMs - lastRewardMs < this.partialScoreCacheTtlMs) {
+      return;
+    }
+
+    this.rewardedPartialDeliveries.set(rewardKey, nowMs);
+    this.gossipsub.score.markFirstMessageDelivery(peerIdStr, topic);
   }
 
   /**
@@ -513,6 +552,39 @@ export class Eth2Gossipsub {
       this.logger.info("Removed direct peer via API", {peerId: peerIdStr});
     }
     return removed;
+  }
+
+  private get partialScoreCacheTtlMs(): number {
+    return this.config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2;
+  }
+
+  private hasTopicScoreParams(topic: TopicStr): boolean {
+    return this.scoreParams.topics?.[topic] !== undefined;
+  }
+
+  private pruneRewardedPartialDeliveries(nowMs: number): void {
+    if (
+      this.rewardedPartialDeliveries.size < PARTIAL_SCORE_CACHE_MAX_ENTRIES &&
+      nowMs - this.lastPartialScorePruneMs < this.partialScoreCacheTtlMs / 2
+    ) {
+      return;
+    }
+
+    this.lastPartialScorePruneMs = nowMs;
+    for (const [rewardKey, lastRewardMs] of this.rewardedPartialDeliveries) {
+      if (nowMs - lastRewardMs > this.partialScoreCacheTtlMs) {
+        this.rewardedPartialDeliveries.delete(rewardKey);
+      }
+    }
+
+    while (this.rewardedPartialDeliveries.size > PARTIAL_SCORE_CACHE_MAX_ENTRIES) {
+      const oldestRewardKey = this.rewardedPartialDeliveries.keys().next().value;
+      if (oldestRewardKey === undefined) {
+        return;
+      }
+
+      this.rewardedPartialDeliveries.delete(oldestRewardKey);
+    }
   }
 
   /**

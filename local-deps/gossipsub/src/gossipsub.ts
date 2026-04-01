@@ -2025,8 +2025,11 @@ export class GossipSub extends TypedEventEmitter<GossipSubEvents> implements Typ
       partsMetadata: partial.partsMetadata
     }
 
-    this.safeDispatchEvent<PartialMessage>('gossipsub:partial-message', {
-      detail: partialMsg
+    this.safeDispatchEvent('gossipsub:partial-message', {
+      detail: {
+        propagationSource: from,
+        partialMsg
+      }
     })
   }
 
