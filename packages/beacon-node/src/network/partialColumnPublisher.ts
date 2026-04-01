@@ -1,6 +1,7 @@
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SubnetID, fulu, ssz} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
+import type {INetworkCore} from "./core/types.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {
   buildPartsMetadataBytes,
@@ -9,7 +10,6 @@ import {
 } from "../util/dataColumns.js";
 import {Metrics} from "../metrics/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
-import {INetworkCore} from "./core/index.js";
 import {GossipType} from "./gossip/interface.js";
 import {stringifyGossipTopic} from "./gossip/topic.js";
 
@@ -48,6 +48,53 @@ export class PartialColumnPublisher {
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(column.signedBlockHeader.message);
 
     await this.publishPartialSidecar(boundary, subnet, blockRoot, partialSidecar);
+  }
+
+  async publishBlockProductionColumns(
+    columns: fulu.DataColumnSidecars,
+    custodySubnets: SubnetID[],
+    includeCells: boolean
+  ): Promise<void> {
+    if (columns.length === 0 || custodySubnets.length === 0) {
+      return;
+    }
+
+    const firstColumn = columns[0];
+    const slot = firstColumn.signedBlockHeader.message.slot;
+    const epoch = computeEpochAtSlot(slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstColumn.signedBlockHeader.message);
+    const headerOnlySidecar = dataColumnToPartialSidecar(firstColumn, {includeHeader: true, includeCells: false});
+    const columnsBySubnet = new Map<SubnetID, fulu.DataColumnSidecar>();
+    const sentPeers = new Set<PeerIdStr>();
+
+    for (const column of columns) {
+      columnsBySubnet.set(computeSubnetForDataColumnSidecar(this.config, column), column);
+    }
+
+    for (const subnet of custodySubnets) {
+      const topic = stringifyGossipTopic(this.config, {type: GossipType.data_column_sidecar, boundary, subnet});
+      const partialPeers = await this.core.getPartialPeers(topic);
+
+      if (partialPeers.length === 0) {
+        continue;
+      }
+
+      const column = columnsBySubnet.get(subnet);
+      const partialSidecar =
+        includeCells && column !== undefined
+          ? dataColumnToPartialSidecar(column, {includeHeader: true, includeCells: true})
+          : headerOnlySidecar;
+
+      for (const peerId of partialPeers) {
+        if (sentPeers.has(peerId)) {
+          continue;
+        }
+
+        await this.publishPartialSidecarToPeer(peerId, subnet, blockRoot, slot, partialSidecar);
+        sentPeers.add(peerId);
+      }
+    }
   }
 
   async publishPartialSidecarToPeer(

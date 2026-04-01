@@ -1,5 +1,6 @@
 import {digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkAll,
@@ -491,7 +492,7 @@ export function dataColumnToPartialSidecar(
 ): fulu.PartialDataColumnSidecar {
   const cellCount = columnSidecar.column.length;
   const includeCells = opts.includeCells;
-  const bitmap = includeCells ? Array.from({length: cellCount}, () => true) : [];
+  const bitmap = BitArray.fromBoolArray(includeCells ? Array.from({length: cellCount}, () => true) : []);
 
   const header: fulu.PartialDataColumnHeader[] = opts.includeHeader
     ? [
@@ -539,10 +540,12 @@ export function getBlockRootHexFromPartialMessageGroupId(groupId: Uint8Array): R
  * Construct PartialDataColumnPartsMetadata from a bitmap of available cells.
  * Returns the SSZ serialized metadata bytes for the gossipsub partial message.
  */
-export function buildPartsMetadataBytes(cellsPresentBitmap: boolean[]): Uint8Array {
+export function buildPartsMetadataBytes(cellsPresentBitmap: boolean[] | BitArray): Uint8Array {
+  const available =
+    cellsPresentBitmap instanceof BitArray ? cellsPresentBitmap : BitArray.fromBoolArray(cellsPresentBitmap);
   const metadata: fulu.PartialDataColumnPartsMetadata = {
-    available: cellsPresentBitmap,
-    requests: Array.from({length: cellsPresentBitmap.length}, () => false),
+    available,
+    requests: BitArray.fromBoolArray(Array.from({length: available.bitLen}, () => false)),
   };
   return ssz.fulu.PartialDataColumnPartsMetadata.serialize(metadata);
 }

@@ -44,7 +44,7 @@ describe("dataColumnToPartialSidecar", () => {
     });
 
     expect(partialSidecar.header).toHaveLength(1);
-    expect(partialSidecar.cellsPresentBitmap).toEqual([]);
+    expect(partialSidecar.cellsPresentBitmap.toBoolArray()).toEqual([]);
     expect(partialSidecar.partialColumn).toEqual([]);
     expect(partialSidecar.kzgProofs).toEqual([]);
   });
@@ -61,7 +61,7 @@ describe("dataColumnToPartialSidecar", () => {
     });
 
     expect(partialSidecar.header).toHaveLength(1);
-    expect(partialSidecar.cellsPresentBitmap).toEqual([true]);
+    expect(partialSidecar.cellsPresentBitmap.toBoolArray()).toEqual([true]);
     expect(partialSidecar.partialColumn).toEqual(sidecar.column);
     expect(partialSidecar.kzgProofs).toEqual(sidecar.kzgProofs);
   });
