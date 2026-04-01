@@ -686,6 +686,10 @@ export class SyncChain {
       ...(envelopesMeta ?? {}),
     });
 
+    if (this.handleMalformedFinalizedBoundaryBatch(batch, blocks)) {
+      return;
+    }
+
     // wrapError ensures to never call both batch success() and batch error()
     let res = await wrapError(this.processChainSegment(blocks, envelopes, this.syncType));
 
@@ -727,6 +731,52 @@ export class SyncChain {
 
     // A batch is no longer in Processing status, queue has an empty spot to download next batch
     this.triggerBatchDownloader();
+  }
+
+  private handleMalformedFinalizedBoundaryBatch(batch: Batch, blocks: IBlockInput[]): boolean {
+    if (this.syncType !== RangeSyncType.Finalized) {
+      return false;
+    }
+
+    const firstBlock = blocks[0];
+    if (firstBlock == null) {
+      return false;
+    }
+
+    const attemptPeers = batch.state.status === BatchStatus.Processing ? batch.state.attempt.peers : [];
+    for (const peer of attemptPeers) {
+      const peerTarget = this.peerset.get(peer);
+      if (peerTarget == null) {
+        continue;
+      }
+
+      const peerTargetRootHex = toRootHex(peerTarget.root);
+      const peerTargetInBatchRange =
+        peerTarget.slot >= batch.startSlot && peerTarget.slot < batch.startSlot + batch.count;
+      const missingBoundaryFromThisPeer =
+        peerTargetInBatchRange && firstBlock.slot > peerTarget.slot && firstBlock.parentRootHex === peerTargetRootHex;
+
+      if (!missingBoundaryFromThisPeer) {
+        continue;
+      }
+
+      this.logger.verbose("Malformed finalized boundary batch from peer", {
+        id: this.logId,
+        peer: prettyPrintPeerIdStr(peer),
+        batchStartSlot: batch.startSlot,
+        firstBlockSlot: firstBlock.slot,
+        missingBoundarySlot: peerTarget.slot,
+        missingBoundaryRoot: peerTargetRootHex,
+      });
+
+      this.pruneBlockInputs(blocks);
+      batch.retryDownload();
+      this.quarantinePeer(peer, `missing finalized boundary block slot=${peerTarget.slot} root=${peerTargetRootHex}`);
+      this.triggerBatchDownloader();
+      return true;
+    }
+
+    return false;
   }
 
   private async tryRecoverMissingBatchBoundaryParent(

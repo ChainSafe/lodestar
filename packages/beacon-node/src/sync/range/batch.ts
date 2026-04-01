@@ -443,6 +443,18 @@ export class Batch {
   }
 
   /**
+   * Processing -> AwaitingDownload without counting as a processing failure.
+   * Used when the downloaded response is later recognized as malformed for retry purposes.
+   */
+  retryDownload(): void {
+    if (this.state.status !== BatchStatus.Processing) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
+    }
+
+    this.state = {status: BatchStatus.AwaitingDownload, blocks: [], envelopes: null};
+  }
+
+  /**
    * AwaitingValidation -> Done
    */
   validationSuccess(): Attempt {
