@@ -9,7 +9,6 @@ import {
 } from "../../../src/chain/validation/dataColumnSidecar.js";
 import {
   CustodyConfig,
-  getDataColumnSidecarSlot,
   getDataColumnSidecarsFromBlock,
   getDataColumns,
   getValidatorsCustodyRequirement,
@@ -216,7 +215,7 @@ describe("data column sidecars", () => {
 
     expect(columnSidecars.length).toEqual(NUMBER_OF_COLUMNS);
     expect(columnSidecars[0].column.length).toEqual(blockKzgCommitments.length);
-    expect(getDataColumnSidecarSlot(columnSidecars[0])).toEqual(signedBeaconBlock.message.slot);
+    expect(columnSidecars[0].slot).toEqual(signedBeaconBlock.message.slot);
     expect(columnSidecars[0].beaconBlockRoot).toEqual(blockRoot);
 
     await expect(
