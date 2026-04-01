@@ -1,7 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {PubkeyCache, createPubkeyCache} from "../../../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
-import {clearPerfStateCache, generatePerfTestCachedStateAltair} from "../../../../src/testUtils/util.js";
+import {generatePerfTestCachedStateAltair} from "../../../../src/testUtils/util.js";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 
 /**
@@ -19,7 +19,6 @@ describe("loadState", () => {
     bench({
       id: `migrate state ${seedValidators} validators, ${numModifiedValidators} modified, ${numNewValidators} new`,
       before: () => {
-        clearPerfStateCache();
         const seedState = generatePerfTestCachedStateAltair({vc: seedValidators, goBackOneSlot: false});
         // cache all HashObjects
         seedState.hashTreeRoot();

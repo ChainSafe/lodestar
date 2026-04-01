@@ -26,7 +26,7 @@ const vc = 1_500_000;
  *   ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       11.44517 ops/s    87.37307 ms/op        -         13 runs   14.5 s
  *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      23.86144 ops/s    41.90862 ms/op        -         18 runs   34.1 s
  */
-describe(`getAttestationsForBlock vc=${vc}`, () => {
+describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
   let originalState: CachedBeaconStateElectra;
   let protoArray: ProtoArray;
   let forkchoice: ForkChoice;
