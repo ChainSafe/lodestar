@@ -122,7 +122,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
     const alreadySubmitted = [];
 
     for (const [i, validatorToExit] of validatorsToExit.entries()) {
-      const res = await wrapError(processVoluntaryExit({config}, exitEpoch, validatorToExit));
+      const res = await wrapError(createSignedVoluntaryExit({config}, exitEpoch, validatorToExit));
       const {pubkey, index} = validatorToExit;
 
       if (res.err !== null) {
@@ -189,7 +189,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
   },
 };
 
-async function processVoluntaryExit(
+async function createSignedVoluntaryExit(
   {config}: {config: BeaconConfig},
   exitEpoch: Epoch,
   validatorToExit: {index: ValidatorIndex; signer: Signer; pubkey: string}
