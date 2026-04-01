@@ -390,13 +390,8 @@ export async function validateResponses({
     );
 
     if (!blocksForDataValidation.length) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-          ...requestsLogMeta({blobsRequest, columnsRequest, envelopesRequest}),
-        },
-        "No blocks in data request slot range to validate data response against"
-      );
+      // No blocks means no data to validate — skip data validation for empty epochs
+      return {result: validatedResponses, warnings};
     }
   }
 
@@ -483,22 +478,19 @@ export function validateBlockByRangeResponse(
   // liveness issues. See comment https://github.com/ChainSafe/lodestar/issues/8147#issuecomment-3246434697
   // There are instances where clients return no blocks though.  Need to monitor this via the warns to see
   // if what the correct behavior should be
+  // Empty responses are valid — epochs can have 0 blocks during periods of poor liveness.
+  // Return empty result instead of throwing to avoid stalling the sync chain.
+  // The sync chain's processBatch must also advance past empty epochs (see chain.ts).
   if (!blocks.length) {
-    throw new DownloadByRangeError({
-      code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-      ...requestsLogMeta({blocksRequest}),
-    });
-    // TODO: this was causing deadlock again. need to come back and fix this so that its possible to process through
-    //       an empty epoch for periods with poor liveness
-    // return {
-    //   result: [],
-    //   warnings: [
-    //     new DownloadByRangeError({
-    //       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-    //       ...requestsLogMeta({blocksRequest}),
-    //     }),
-    //   ],
-    // };
+    return {
+      result: [],
+      warnings: [
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+          ...requestsLogMeta({blocksRequest}),
+        }),
+      ],
+    };
   }
 
   if (blocks.length > count) {

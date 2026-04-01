@@ -687,10 +687,10 @@ export class SyncChain {
     if (!res.err) {
       batch.processingSuccess();
 
-      // If the processed batch is not empty, validate previous AwaitingValidation blocks.
-      if (blocks.length > 0) {
-        this.advanceChain(batch.startEpoch);
-      }
+      // Advance chain for all successfully processed batches, including empty ones.
+      // Empty epochs (0 blocks) occur during periods of poor liveness — the sync
+      // chain must still advance past them to avoid deadlock.
+      this.advanceChain(batch.startEpoch);
 
       // Potentially process next AwaitingProcessing batch
       this.triggerBatchProcessor();
