@@ -240,6 +240,52 @@ describe('partial messages - publishPartial', () => {
     expect(state.hasGroup(new Uint8Array([1, 2, 3]))).to.be.true()
   })
 
+  it('should publish partial to a specific eligible peer', () => {
+    const topic = 'test-topic'
+    const bId = ctx.nodeB.components.peerId.toString()
+    const gsA = ctx.nodeA.pubsub as any
+
+    ctx.nodeA.pubsub.subscribePartial(topic, {
+      requestsPartial: true,
+      supportsSendingPartial: true
+    })
+
+    if (!gsA.topics.has(topic)) {
+      gsA.topics.set(topic, new Set())
+    }
+    gsA.topics.get(topic).add(bId)
+
+    gsA.peerPartialOpts.set(bId, new Map())
+    gsA.peerPartialOpts.get(bId).set(topic, {
+      requestsPartial: true,
+      supportsSendingPartial: true
+    } as PartialSubscriptionOpts)
+
+    const sentRpcs: Array<{ peerId: string, rpc: RPC }> = []
+    const origSendRpc = gsA.sendRpc.bind(gsA)
+    gsA.sendRpc = (id: string, rpc: RPC): boolean => {
+      sentRpcs.push({ peerId: id, rpc })
+      return origSendRpc(id, rpc)
+    }
+
+    const partialMsg = {
+      topic,
+      groupID: new Uint8Array([9, 9, 9]),
+      partialMessage: new Uint8Array([4, 5, 6]),
+      partsMetadata: new Uint8Array([0b1010])
+    }
+
+    ctx.nodeA.pubsub.publishPartialToPeer(bId, partialMsg)
+
+    expect(sentRpcs).to.have.length(1)
+    expect(sentRpcs[0].peerId).to.equal(bId)
+    expect(sentRpcs[0].rpc.partial?.groupID).to.deep.equal(partialMsg.groupID)
+    expect(sentRpcs[0].rpc.partial?.partialMessage).to.deep.equal(partialMsg.partialMessage)
+    expect(ctx.nodeA.pubsub.getPartialPeers(topic)).to.deep.equal([bId])
+    expect(ctx.nodeA.pubsub.getPeerPartialMetadata(topic, partialMsg.groupID, ctx.nodeA.components.peerId.toString()))
+      .to.deep.equal(partialMsg.partsMetadata)
+  })
+
   it('should send partial data to eligible non-mesh peers', () => {
     const topic = 'test-topic'
     const bId = ctx.nodeB.components.peerId.toString()

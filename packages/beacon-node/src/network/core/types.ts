@@ -68,6 +68,9 @@ export interface INetworkCore extends INetworkCorePublic {
   /** Publish gossip message to peers */
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
   publishPartialMessage(partialMsg: PartialMessage): Promise<void>;
+  publishPartialMessageToPeer(peerId: PeerIdStr, partialMsg: PartialMessage): Promise<void>;
+  getPartialPeers(topic: string): Promise<PeerIdStr[]>;
+  getPeerPartialMetadata(topic: string, groupID: Uint8Array, peerId: PeerIdStr): Promise<Uint8Array | undefined>;
   reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void>;
   reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void>;
 
@@ -119,6 +122,9 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   // sendReqRespRequest - implemented via events
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
   publishPartialMessage(partialMsg: PartialMessage): Promise<void>;
+  publishPartialMessageToPeer(peerId: PeerIdStr, partialMsg: PartialMessage): Promise<void>;
+  getPartialPeers(topic: string): Promise<PeerIdStr[]>;
+  getPeerPartialMetadata(topic: string, groupID: Uint8Array, peerId: PeerIdStr): Promise<Uint8Array | undefined>;
   reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void>;
   reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void>;
 
