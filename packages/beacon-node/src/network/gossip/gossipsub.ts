@@ -102,6 +102,9 @@ type GossipSubInternal = GossipSub & {
   reportMessageValidationResult: (msgId: string, propagationSource: string, acceptance: TopicValidatorResult) => void;
   subscribePartial: (topic: TopicStr, opts: PartialSubscriptionOpts) => void;
   publishPartial: (partialMsg: PartialMessage) => void;
+  publishPartialToPeer: (peerIdStr: string, partialMsg: PartialMessage) => void;
+  getPartialPeers: (topic: TopicStr) => string[];
+  getPeerPartialMetadata: (topic: TopicStr, groupID: Uint8Array, peerIdStr: string) => Uint8Array | undefined;
 };
 
 /**
@@ -475,6 +478,18 @@ export class Eth2Gossipsub {
 
   publishPartialMessage(partialMsg: PartialMessage): void {
     this.gossipsub.publishPartial(partialMsg);
+  }
+
+  publishPartialMessageToPeer(peerIdStr: string, partialMsg: PartialMessage): void {
+    this.gossipsub.publishPartialToPeer(peerIdStr, partialMsg);
+  }
+
+  getPartialPeers(topic: TopicStr): string[] {
+    return this.gossipsub.getPartialPeers(topic);
+  }
+
+  getPeerPartialMetadata(topic: TopicStr, groupID: Uint8Array, peerIdStr: string): Uint8Array | undefined {
+    return this.gossipsub.getPeerPartialMetadata(topic, groupID, peerIdStr);
   }
 
   reportInvalidPartialMessage(peerIdStr: string, topic: TopicStr): void {

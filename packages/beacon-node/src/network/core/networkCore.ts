@@ -376,6 +376,22 @@ export class NetworkCore implements INetworkCore {
     this.gossip.publishPartialMessage(partialMsg);
   }
 
+  async publishPartialMessageToPeer(peerId: PeerIdStr, partialMsg: PartialMessage): Promise<void> {
+    this.gossip.publishPartialMessageToPeer(peerId, partialMsg);
+  }
+
+  async getPartialPeers(topic: string): Promise<PeerIdStr[]> {
+    return this.gossip.getPartialPeers(topic);
+  }
+
+  async getPeerPartialMetadata(
+    topic: string,
+    groupID: Uint8Array,
+    peerId: PeerIdStr
+  ): Promise<Uint8Array | undefined> {
+    return this.gossip.getPeerPartialMetadata(topic, groupID, peerId);
+  }
+
   async reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void> {
     this.gossip.reportInvalidPartialMessage(peerId, topic);
   }
