@@ -6,6 +6,11 @@ import {buildPartsMetadataBytes} from "../util/dataColumns.js";
 
 const DEFAULT_MAX_BLOCKS = 64;
 
+type PartialColumnStateCacheOpts = {
+  maxBlocks?: number;
+  onPrune?: (prunedCount: number) => void;
+};
+
 type CellWithProof = {
   cell: Uint8Array;
   proof: Uint8Array;
@@ -25,8 +30,13 @@ type PartialBlockState = {
 
 export class PartialColumnStateCache {
   private readonly blocks = new Map<RootHex, PartialBlockState>();
+  private readonly maxBlocks: number;
+  private readonly onPrune?: (prunedCount: number) => void;
 
-  constructor(private readonly maxBlocks = DEFAULT_MAX_BLOCKS) {}
+  constructor(opts: PartialColumnStateCacheOpts = {}) {
+    this.maxBlocks = opts.maxBlocks ?? DEFAULT_MAX_BLOCKS;
+    this.onPrune = opts.onPrune;
+  }
 
   upsertHeader(blockRootHex: RootHex, header: fulu.PartialDataColumnHeader): void {
     const existing = this.blocks.get(blockRootHex);
@@ -233,12 +243,18 @@ export class PartialColumnStateCache {
   }
 
   private prune(): void {
+    let prunedCount = 0;
     while (this.blocks.size > this.maxBlocks) {
       const oldestRoot = this.blocks.keys().next().value;
       if (oldestRoot === undefined) {
-        return;
+        break;
       }
       this.blocks.delete(oldestRoot);
+      prunedCount++;
+    }
+
+    if (prunedCount > 0) {
+      this.onPrune?.(prunedCount);
     }
   }
 }

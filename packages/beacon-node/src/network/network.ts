@@ -395,6 +395,9 @@ export class Network implements INetwork {
       dataColumnSidecar,
       this.opts.enablePartialColumns
     );
+    if (publishOpts.excludePeerIds !== undefined) {
+      this.metrics?.partialPublish.fullPeersSkipped.inc(publishOpts.excludePeerIds.length);
+    }
     const sentPeers = await this.publishGossip<GossipType.data_column_sidecar>(
       topic,
       dataColumnSidecar,

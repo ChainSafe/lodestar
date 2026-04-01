@@ -929,6 +929,14 @@ export function createLodestarMetrics(
         name: "lodestar_partial_publish_header_dedup_total",
         help: "Peers skipped during header fan-out because they were already reached on another custody subnet",
       }),
+      requestMetadataSent: register.counter({
+        name: "lodestar_partial_publish_request_metadata_sent_total",
+        help: "Metadata-only request advertisements sent by the partial column publisher",
+      }),
+      metadataOnlyReceived: register.counter({
+        name: "lodestar_partial_publish_metadata_only_received_total",
+        help: "Metadata-only partial messages received from peers",
+      }),
       cellsSent: register.counter<{trigger: string}>({
         name: "lodestar_partial_publish_cells_sent_total",
         help: "Cells sent by the partial column publisher",
@@ -940,11 +948,23 @@ export function createLodestarMetrics(
       }),
       peerNoMetadata: register.counter({
         name: "lodestar_partial_publish_peer_no_metadata_total",
-        help: "Peers that received all locally available cells because no partial metadata was known for them",
+        help: "Peers that required a header-only fallback because no partial metadata was known for them",
       }),
       peerSkip: register.counter({
         name: "lodestar_partial_publish_peer_skip_total",
         help: "Peers skipped because there were no cells to send after filtering",
+      }),
+      fullPeersSkipped: register.counter({
+        name: "lodestar_partial_publish_full_peers_skipped_total",
+        help: "Partial-capable peers excluded from full data column gossip",
+      }),
+      stateCacheBlocks: register.gauge({
+        name: "lodestar_partial_publish_state_cache_blocks",
+        help: "Number of block entries currently retained in the partial availability cache",
+      }),
+      stateCachePruned: register.counter({
+        name: "lodestar_partial_publish_state_cache_pruned_total",
+        help: "Partial availability cache entries pruned because the bounded cache was full",
       }),
     },
     // recovery in the case of specific blob rows required

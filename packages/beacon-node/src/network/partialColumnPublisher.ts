@@ -38,13 +38,18 @@ export class PartialColumnPublisher {
   private readonly core: INetworkCore;
   private readonly metrics: Metrics | null;
   private readonly custodySubnets: SubnetID[];
-  private readonly stateCache = new PartialColumnStateCache();
+  private readonly stateCache: PartialColumnStateCache;
 
   constructor({config, core, metrics, custodySubnets}: PartialColumnPublisherModules) {
     this.config = config;
     this.core = core;
     this.metrics = metrics;
     this.custodySubnets = custodySubnets;
+    this.stateCache = new PartialColumnStateCache({
+      onPrune: (prunedCount) => {
+        this.metrics?.partialPublish.stateCachePruned.inc(prunedCount);
+      },
+    });
   }
 
   async registerReceivedHeader(
@@ -54,6 +59,7 @@ export class PartialColumnPublisher {
   ): Promise<void> {
     const blockRootHex = toRootHex(blockRoot);
     this.stateCache.upsertHeader(blockRootHex, header);
+    this.observeStateCache();
     if (sourcePeerId !== undefined) {
       this.stateCache.markPeerHasHeader(blockRootHex, sourcePeerId);
     }
@@ -62,6 +68,7 @@ export class PartialColumnPublisher {
   }
 
   async handleMetadataOnlyMessage(groupID: Uint8Array, subnet: SubnetID, peerId: PeerIdStr): Promise<void> {
+    this.metrics?.partialPublish.metadataOnlyReceived.inc();
     const blockRootHex = getBlockRootHexFromPartialMessageGroupId(groupID);
     if (blockRootHex === null) {
       return;
@@ -78,6 +85,7 @@ export class PartialColumnPublisher {
 
   async publishAvailableColumn(column: fulu.DataColumnSidecar, trigger: Exclude<PartialPublishTrigger, "block_production" | "gossip_merge">): Promise<void> {
     this.stateCache.storeFullColumn(column);
+    this.observeStateCache();
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(column.signedBlockHeader.message);
     await this.publishTrackedPartialOnSubnet(
       computeSubnetForDataColumnSidecar(this.config, column),
@@ -111,6 +119,7 @@ export class PartialColumnPublisher {
       this.stateCache.storeFullColumn(column);
       columnsBySubnet.set(computeSubnetForDataColumnSidecar(this.config, column), column);
     }
+    this.observeStateCache();
     const blockRootHex = toRootHex(blockRoot);
 
     for (const subnet of custodySubnets) {
@@ -152,6 +161,7 @@ export class PartialColumnPublisher {
 
     const blockRootHex = toRootHex(blockRoot);
     this.stateCache.storePartialSidecar(blockRootHex, arrivingSubnet, partialSidecar);
+    this.observeStateCache();
     const sentPeers = new Set<PeerIdStr>();
     const orderedSubnets = [arrivingSubnet, ...custodySubnets.filter((subnet) => subnet !== arrivingSubnet)];
 
@@ -189,6 +199,7 @@ export class PartialColumnPublisher {
   ): Promise<void> {
     const blockRootHex = toRootHex(blockRoot);
     this.stateCache.storePartialSidecar(blockRootHex, subnet, partialSidecar);
+    this.observeStateCache();
     await this.publishTrackedPartialOnSubnet(subnet, blockRoot, blockRootHex, slot, skipPeers, trigger);
   }
 
@@ -399,7 +410,12 @@ export class PartialColumnPublisher {
           groupID: computePartialMessageGroupId(blockRoot),
           partsMetadata,
         });
+        this.metrics?.partialPublish.requestMetadataSent.inc();
       })
     );
+  }
+
+  private observeStateCache(): void {
+    this.metrics?.partialPublish.stateCacheBlocks.set(this.stateCache.getBlockCount());
   }
 }
