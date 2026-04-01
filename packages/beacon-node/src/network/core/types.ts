@@ -68,6 +68,8 @@ export interface INetworkCore extends INetworkCorePublic {
   /** Publish gossip message to peers */
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
   publishPartialMessage(partialMsg: PartialMessage): Promise<void>;
+  reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void>;
+  reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void>;
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
@@ -117,6 +119,8 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   // sendReqRespRequest - implemented via events
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
   publishPartialMessage(partialMsg: PartialMessage): Promise<void>;
+  reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void>;
+  reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void>;
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;

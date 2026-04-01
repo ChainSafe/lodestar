@@ -4,9 +4,9 @@ import {createBeaconConfig} from "@lodestar/config";
 import {mainnetChainConfig} from "@lodestar/config/configs";
 import {ATTESTATION_SUBNET_COUNT, ForkName, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {GossipType} from "../../../../src/network/gossip/interface.js";
 import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters.js";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
-import {GossipType} from "../../../../src/network/index.js";
 
 /**
  * Refer to Teku tests at
@@ -14,9 +14,12 @@ import {GossipType} from "../../../../src/network/index.js";
  */
 describe("computeGossipPeerScoreParams", () => {
   const config = createBeaconConfig(mainnetChainConfig, ZERO_HASH);
+  const fuluConfig = createBeaconConfig({...mainnetChainConfig, FULU_FORK_EPOCH: GENESIS_EPOCH}, ZERO_HASH);
   // Cheap stub on new BeaconConfig instance
   config.forkBoundary2ForkDigest = () => Buffer.alloc(4, 1);
   config.forkDigest2ForkBoundary = () => ({fork: ForkName.phase0, epoch: GENESIS_EPOCH});
+  fuluConfig.forkBoundary2ForkDigest = () => Buffer.alloc(4, 2);
+  fuluConfig.forkDigest2ForkBoundary = () => ({fork: ForkName.fulu, epoch: GENESIS_EPOCH});
 
   const TOLERANCE = 0.00005;
 
@@ -64,6 +67,31 @@ describe("computeGossipPeerScoreParams", () => {
     validateAggregateTopicParams(allTopics, true);
     validateBlockTopicParams(allTopics, true);
     validateAllAttestationSubnetTopicParams(allTopics, true);
+  });
+
+  it("adds data column topic scoring after fulu", () => {
+    const eth2Context = {
+      activeValidatorCount: mainnetChainConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT,
+      currentSlot: 10_000,
+      currentEpoch: Math.floor(10_000 / SLOTS_PER_EPOCH),
+    };
+    const params = computeGossipPeerScoreParams({config: fuluConfig, eth2Context});
+    const allTopics = params.topics;
+    if (!allTopics) {
+      throw new Error("No scoring params for topics");
+    }
+
+    const topicString = stringifyGossipTopic(fuluConfig, {
+      type: GossipType.data_column_sidecar,
+      boundary: {fork: ForkName.fulu, epoch: GENESIS_EPOCH},
+      subnet: 0,
+    });
+    const topicParams = allTopics[topicString];
+
+    expect(topicParams).toBeDefined();
+    expect(topicParams.topicWeight).toEqual(1 / fuluConfig.DATA_COLUMN_SIDECAR_SUBNET_COUNT);
+    expect(topicParams.firstMessageDeliveriesWeight).closeTo(1.14716, TOLERANCE);
+    expect(topicParams.meshMessageDeliveriesWeight).not.toEqual(0);
   });
 
   function validateVoluntaryExitTopicParams(topics: Record<string, TopicScoreParams>): void {

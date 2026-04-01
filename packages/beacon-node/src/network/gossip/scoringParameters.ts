@@ -5,10 +5,16 @@ import {
   defaultTopicScoreParams,
 } from "@libp2p/gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, PTC_SIZE, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  PTC_SIZE,
+  SLOTS_PER_EPOCH,
+  TARGET_AGGREGATORS_PER_COMMITTEE,
+  isForkPostFulu,
+} from "@lodestar/params";
 import {computeCommitteeCount} from "@lodestar/state-transition";
 import {getActiveForkBoundaries} from "../forks.js";
-import {Eth2Context} from "./gossipsub.js";
+import type {Eth2Context} from "./gossipsub.js";
 import {GossipType} from "./interface.js";
 import {stringifyGossipTopic} from "./topic.js";
 
@@ -232,6 +238,31 @@ function getAllTopicsScoreParams(
         currentSlot: eth2Context.currentSlot,
       },
     });
+
+    if (isForkPostFulu(boundary.fork)) {
+      const dataColumnSidecarSubnetWeight = 1 / config.DATA_COLUMN_SIDECAR_SUBNET_COUNT;
+      const dataColumnSidecarParams = getTopicScoreParams(config, precomputedParams, {
+        topicWeight: dataColumnSidecarSubnetWeight,
+        expectedMessageRate: 1,
+        firstMessageDecayTime: epochDurationMs * 20,
+        meshMessageInfo: {
+          decaySlots: SLOTS_PER_EPOCH * 5,
+          capFactor: 3,
+          activationWindow: epochDurationMs,
+          currentSlot: eth2Context.currentSlot,
+        },
+      });
+
+      for (let subnet = 0; subnet < config.DATA_COLUMN_SIDECAR_SUBNET_COUNT; subnet++) {
+        topicsParams[
+          stringifyGossipTopic(config, {
+            type: GossipType.data_column_sidecar,
+            subnet,
+            boundary,
+          })
+        ] = dataColumnSidecarParams;
+      }
+    }
 
     const activeValidatorCount = eth2Context.activeValidatorCount;
     const {aggregatorsPerslot, committeesPerSlot} = expectedAggregatorCountPerSlot(activeValidatorCount);
