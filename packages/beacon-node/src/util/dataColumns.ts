@@ -483,16 +483,17 @@ const PARTIAL_MESSAGE_GROUP_ID_VERSION = 0x00;
 
 /**
  * Construct a PartialDataColumnSidecar from a full DataColumnSidecar.
- * Includes all cells and optionally the header.
+ * The caller decides whether to include the header, the cells, or both.
  */
 export function dataColumnToPartialSidecar(
   columnSidecar: fulu.DataColumnSidecar,
-  includeHeader: boolean
+  opts: {includeHeader: boolean; includeCells: boolean}
 ): fulu.PartialDataColumnSidecar {
   const cellCount = columnSidecar.column.length;
-  const bitmap = Array.from({length: cellCount}, () => true);
+  const includeCells = opts.includeCells;
+  const bitmap = includeCells ? Array.from({length: cellCount}, () => true) : [];
 
-  const header: fulu.PartialDataColumnHeader[] = includeHeader
+  const header: fulu.PartialDataColumnHeader[] = opts.includeHeader
     ? [
         {
           kzgCommitments: columnSidecar.kzgCommitments,
@@ -504,8 +505,8 @@ export function dataColumnToPartialSidecar(
 
   return {
     cellsPresentBitmap: bitmap,
-    partialColumn: columnSidecar.column,
-    kzgProofs: columnSidecar.kzgProofs,
+    partialColumn: includeCells ? columnSidecar.column : [],
+    kzgProofs: includeCells ? columnSidecar.kzgProofs : [],
     header,
   };
 }

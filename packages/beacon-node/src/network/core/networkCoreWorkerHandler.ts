@@ -2,6 +2,7 @@ import path from "node:path";
 import workerThreads from "node:worker_threads";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PartialMessage} from "@libp2p/gossipsub";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {PrivateKey} from "@libp2p/interface";
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
@@ -231,6 +232,9 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     return this.getApi().publishGossip(topic, data, opts);
+  }
+  publishPartialMessage(partialMsg: PartialMessage): Promise<void> {
+    return this.getApi().publishPartialMessage(partialMsg);
   }
 
   // Custody
