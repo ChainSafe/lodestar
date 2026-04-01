@@ -197,6 +197,7 @@ describe("sync / range / peerBalancer", () => {
           custodyColumns: [0, 1, 2, 3],
           target: {slot: blocksRequest.startSlot + blocksRequest.count - 1, root: ZERO_HASH},
           earliestAvailableSlot: 0,
+          headSlot: blocksRequest.startSlot + blocksRequest.count - 1,
         },
         {
           peerId: peer3.peerId,
@@ -204,6 +205,7 @@ describe("sync / range / peerBalancer", () => {
           custodyColumns: [0, 1, 2, 3],
           target: {slot: blocksRequest.startSlot + blocksRequest.count - 2, root: ZERO_HASH},
           earliestAvailableSlot: 0,
+          headSlot: blocksRequest.startSlot + blocksRequest.count - 2,
         },
       ];
 
@@ -211,6 +213,90 @@ describe("sync / range / peerBalancer", () => {
 
       expect(peerBalancer.bestPeerToRetryBatch(batch0)?.peerId).toBe(peer2.peerId);
     });
+
+    it("allows finalized peers to retry beyond their finalized target when headSlot permits", async () => {
+      const peerFinalized96 = await getRandPeerSyncMeta("peer-finalized-96-retry");
+      const peerCheckpoint6592 = await getRandPeerSyncMeta("peer-checkpoint-6592-retry");
+
+      const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0});
+      const batch = new Batch(4, config, clock, custodyConfig); // startSlot = 128
+      batch.startDownloading(peerFinalized96.peerId);
+      batch.downloadingError(peerFinalized96.peerId);
+
+      const peerInfos: PeerSyncInfo[] = [
+        {
+          ...peerFinalized96,
+          custodyColumns: [0, 1, 2, 3],
+          target: {slot: computeStartSlotAtEpoch(3), root: ZERO_HASH},
+          earliestAvailableSlot: 0,
+          headSlot: 256,
+        },
+        {
+          ...peerCheckpoint6592,
+          custodyColumns: [0, 1, 2, 3],
+          target: {slot: 6592, root: ZERO_HASH},
+          earliestAvailableSlot: 6592,
+          headSlot: 6592,
+        },
+      ];
+
+      const finalizedPeerBalancer = new ChainPeersBalancer(peerInfos, [batch], custodyConfig, RangeSyncType.Finalized);
+      expect(finalizedPeerBalancer.bestPeerToRetryBatch(batch)?.peerId).toBe(peerFinalized96.peerId);
+
+      const headPeerBalancer = new ChainPeersBalancer(peerInfos, [batch], custodyConfig, RangeSyncType.Head);
+      expect(headPeerBalancer.bestPeerToRetryBatch(batch)?.peerId).toBeUndefined();
+    });
+  });
+
+  it("allows finalized peers to serve beyond their finalized target when earliestAvailableSlot permits", async () => {
+    const peer1 = await getRandPeerSyncMeta("peer-finalized-96");
+    const peer2 = await getRandPeerSyncMeta("peer-checkpoint-6592");
+
+    const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0});
+    const batch = new Batch(4, config, clock, custodyConfig); // startSlot = 128
+
+    const peerInfos: PeerSyncInfo[] = [
+      {
+        ...peer1,
+        custodyColumns: [0, 1, 2, 3],
+        target: {slot: computeStartSlotAtEpoch(3), root: ZERO_HASH}, // finalized boundary at slot 96
+        earliestAvailableSlot: 0,
+        headSlot: 256,
+      },
+      {
+        ...peer2,
+        custodyColumns: [0, 1, 2, 3],
+        target: {slot: 6592, root: ZERO_HASH},
+        earliestAvailableSlot: 6592,
+        headSlot: 6592,
+      },
+    ];
+
+    const finalizedPeerBalancer = new ChainPeersBalancer(peerInfos, [], custodyConfig, RangeSyncType.Finalized);
+    expect(finalizedPeerBalancer.idlePeerForBatch(batch)?.peerId).toBe(peer1.peerId);
+
+    const headPeerBalancer = new ChainPeersBalancer(peerInfos, [], custodyConfig, RangeSyncType.Head);
+    expect(headPeerBalancer.idlePeerForBatch(batch)?.peerId).toBeUndefined();
+  });
+
+  it("does not allow finalized peers when headSlot is below the batch start slot", async () => {
+    const peer1 = await getRandPeerSyncMeta("peer-finalized-too-low");
+
+    const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0});
+    const batch = new Batch(4, config, clock, custodyConfig); // startSlot = 128
+
+    const peerInfos: PeerSyncInfo[] = [
+      {
+        ...peer1,
+        custodyColumns: [0, 1, 2, 3],
+        target: {slot: computeStartSlotAtEpoch(3), root: ZERO_HASH},
+        earliestAvailableSlot: 0,
+        headSlot: 127,
+      },
+    ];
+
+    const finalizedPeerBalancer = new ChainPeersBalancer(peerInfos, [], custodyConfig, RangeSyncType.Finalized);
+    expect(finalizedPeerBalancer.idlePeerForBatch(batch)?.peerId).toBeUndefined();
   });
 
   describe("idlePeerForBatch", async () => {

@@ -30,6 +30,7 @@ describe("downloadByRoot.ts", () => {
     client: "N/A",
     custodyColumns: Array.from({length: NUMBER_OF_COLUMNS}, (_, i) => i),
     earliestAvailableSlot: 0,
+    headSlot: 0,
   };
   let network: INetwork;
 

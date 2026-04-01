@@ -142,6 +142,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
           client: "test-client",
           custodyColumns: [],
           earliestAvailableSlot: 0,
+          headSlot: 0,
         }),
         custodyConfig: {sampledColumns: []} as unknown as CustodyConfig,
         sendBeaconBlocksByRoot: async (_peerId, roots) => {

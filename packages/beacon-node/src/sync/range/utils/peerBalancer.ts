@@ -131,7 +131,8 @@ export class ChainPeersBalancer {
         continue;
       }
 
-      if (target.slot < batch.startSlot) {
+      const peerUpperBoundSlot = this.syncType === RangeSyncType.Finalized ? peer.headSlot : target.slot;
+      if (peerUpperBoundSlot < batch.startSlot) {
         continue;
       }
 

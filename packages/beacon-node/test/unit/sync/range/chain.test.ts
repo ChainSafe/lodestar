@@ -75,6 +75,7 @@ describe("sync / range / chain", () => {
       peerId,
       client: "CLIENT_AGENT",
       custodyColumns: [],
+      headSlot: Number.MAX_SAFE_INTEGER,
     };
   };
   const pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (_) => {};

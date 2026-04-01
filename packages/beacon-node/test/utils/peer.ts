@@ -23,6 +23,7 @@ export async function getRandPeerSyncMeta(peerId?: string): Promise<PeerSyncMeta
     client: "PEER_CLIENT",
     custodyColumns: [],
     earliestAvailableSlot: 0,
+    headSlot: 0,
   };
 }
 

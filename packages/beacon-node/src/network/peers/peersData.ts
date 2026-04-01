@@ -11,6 +11,7 @@ export type PeerSyncMeta = {
   client: string;
   custodyColumns: CustodyIndex[];
   earliestAvailableSlot?: Slot;
+  headSlot: Slot;
 };
 
 export enum RelevantPeerStatus {

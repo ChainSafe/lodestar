@@ -800,6 +800,7 @@ export class Network implements INetwork {
       client: clientAgent,
       custodyColumns,
       earliestAvailableSlot, // can be undefined pre-fulu
+      headSlot: status.headSlot,
     });
   };
 
