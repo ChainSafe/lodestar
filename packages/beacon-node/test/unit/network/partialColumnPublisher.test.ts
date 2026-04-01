@@ -1,18 +1,18 @@
-import type {INetworkCore} from "../../../src/network/core/types.js";
 import {BYTES_PER_BLOB} from "@crate-crypto/node-eth-kzg";
+import {describe, expect, it, vi} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
-import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {KZG_COMMITMENTS_GINDEX} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
+import type {INetworkCore} from "../../../src/network/core/types.js";
 import {GossipType} from "../../../src/network/gossip/interface.js";
 import {stringifyGossipTopic} from "../../../src/network/gossip/topic.js";
 import {PartialColumnPublisher} from "../../../src/network/partialColumnPublisher.js";
-import {PeerIdStr} from "../../../src/util/peerId.js";
 import {computePartialMessageGroupId, dataColumnToPartialSidecar} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
+import {PeerIdStr} from "../../../src/util/peerId.js";
 
 describe("PartialColumnPublisher", () => {
   function createTestConfig() {
@@ -30,10 +30,7 @@ describe("PartialColumnPublisher", () => {
     const block = ssz.fulu.SignedBeaconBlock.defaultValue();
     block.message.slot = 1;
 
-    const blobs = [
-      new Uint8Array(BYTES_PER_BLOB),
-      new Uint8Array(BYTES_PER_BLOB).fill(1),
-    ];
+    const blobs = [new Uint8Array(BYTES_PER_BLOB), new Uint8Array(BYTES_PER_BLOB).fill(1)];
     const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
     block.message.body.blobKzgCommitments = kzgCommitments;
 
@@ -87,13 +84,19 @@ describe("PartialColumnPublisher", () => {
     const fullPartial = ssz.fulu.PartialDataColumnSidecar.deserialize(peerAMessage.partialMessage);
     const headerOnlyPartial = ssz.fulu.PartialDataColumnSidecar.deserialize(peerBMessage.partialMessage);
 
-    expect(peerAMessage.topic).toBe(stringifyGossipTopic(config, {type: GossipType.data_column_sidecar, boundary, subnet: 1}));
+    expect(peerAMessage.topic).toBe(
+      stringifyGossipTopic(config, {type: GossipType.data_column_sidecar, boundary, subnet: 1})
+    );
     expect(fullPartial.header).toHaveLength(1);
-    expect(fullPartial.cellsPresentBitmap.toBoolArray()).toEqual(Array.from({length: sidecar.column.length}, () => true));
+    expect(fullPartial.cellsPresentBitmap.toBoolArray()).toEqual(
+      Array.from({length: sidecar.column.length}, () => true)
+    );
     expect(fullPartial.partialColumn).toEqual(sidecar.column);
     expect(fullPartial.kzgProofs).toEqual(sidecar.kzgProofs);
 
-    expect(peerBMessage.topic).toBe(stringifyGossipTopic(config, {type: GossipType.data_column_sidecar, boundary, subnet: 2}));
+    expect(peerBMessage.topic).toBe(
+      stringifyGossipTopic(config, {type: GossipType.data_column_sidecar, boundary, subnet: 2})
+    );
     expect(headerOnlyPartial.header).toHaveLength(1);
     expect(headerOnlyPartial.cellsPresentBitmap.toBoolArray()).toEqual([]);
     expect(headerOnlyPartial.partialColumn).toEqual([]);
@@ -128,7 +131,9 @@ describe("PartialColumnPublisher", () => {
     ]);
     const core = {
       getPartialPeers: vi.fn(async (_topic: string) => ["peer-a", "peer-b", "peer-c"]),
-      getPeerPartialMetadata: vi.fn(async (_topic: string, _groupId: Uint8Array, peerId: PeerIdStr) => peerMetadata.get(peerId)),
+      getPeerPartialMetadata: vi.fn(async (_topic: string, _groupId: Uint8Array, peerId: PeerIdStr) =>
+        peerMetadata.get(peerId)
+      ),
       publishPartialMessage: vi.fn(async () => undefined),
       publishPartialMessageToPeer: vi.fn(async (peerId: PeerIdStr, partialMsg) => {
         published.push({peerId, partialMessage: partialMsg.partialMessage});
@@ -149,8 +154,8 @@ describe("PartialColumnPublisher", () => {
       sidecar.index,
       blockRoot,
       sidecar.signedBlockHeader.message.slot,
-      new Set(),
-      "gossip_merge"
+      "gossip_merge",
+      new Set()
     );
 
     expect(core.getPartialPeers).toHaveBeenCalledWith(topic);
@@ -236,8 +241,8 @@ describe("PartialColumnPublisher", () => {
       sidecar.index,
       blockRoot,
       sidecar.signedBlockHeader.message.slot,
-      new Set(),
-      "gossip_merge"
+      "gossip_merge",
+      new Set()
     );
     await publisher.handleMetadataOnlyMessage(computePartialMessageGroupId(blockRoot), sidecar.index, "peer-b");
 
@@ -268,11 +273,16 @@ describe("PartialColumnPublisher", () => {
     ]);
     const core = {
       getPartialPeers: vi.fn(async (_topic: string) => ["peer-a", "peer-b"]),
-      getPeerPartialMetadata: vi.fn(async (_topic: string, _groupId: Uint8Array, peerId: PeerIdStr) => peerMetadata.get(peerId)),
+      getPeerPartialMetadata: vi.fn(async (_topic: string, _groupId: Uint8Array, peerId: PeerIdStr) =>
+        peerMetadata.get(peerId)
+      ),
       publishPartialMessageToPeer: vi.fn(async (peerId: PeerIdStr, partialMsg) => {
         published.push({peerId, partialMessage: partialMsg.partialMessage});
       }),
-    } as Pick<INetworkCore, "getPartialPeers" | "getPeerPartialMetadata" | "publishPartialMessageToPeer"> as INetworkCore;
+    } as Pick<
+      INetworkCore,
+      "getPartialPeers" | "getPeerPartialMetadata" | "publishPartialMessageToPeer"
+    > as INetworkCore;
     const publisher = new PartialColumnPublisher({config, core, metrics: null, custodySubnets: [sidecar.index]});
 
     await publisher.publishAvailableColumn(sidecar, "full_column");

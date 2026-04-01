@@ -839,10 +839,13 @@ describe("Gloas Fork Choice", () => {
       expect(pendingIdx).not.toBeUndefined();
       expect(emptyIdx).not.toBeUndefined();
       expect(fullIdx).not.toBeUndefined();
+      if (pendingIdx === undefined || emptyIdx === undefined || fullIdx === undefined) {
+        expect.fail("Expected all payload-status variants to be indexed");
+      }
 
       // Verify PENDING is stored at the smallest index among the variants
-      expect(pendingIdx! < emptyIdx!).toBe(true);
-      expect(pendingIdx! < fullIdx!).toBe(true);
+      expect(pendingIdx < emptyIdx).toBe(true);
+      expect(pendingIdx < fullIdx).toBe(true);
 
       // Prune - all block1 variants should be deleted even though they're at different indices
       protoArray.maybePrune("0x03");

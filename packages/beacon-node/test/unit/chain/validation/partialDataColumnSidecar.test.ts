@@ -1,7 +1,7 @@
 import {BYTES_PER_BLOB} from "@crate-crypto/node-eth-kzg";
-import {BitArray} from "@chainsafe/ssz";
-import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {describe, expect, it} from "vitest";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {KZG_COMMITMENTS_GINDEX} from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
@@ -47,10 +47,7 @@ function buildColumnSidecarFixture(): fulu.DataColumnSidecar {
   const block = ssz.fulu.SignedBeaconBlock.defaultValue();
   block.message.slot = fuluSlot;
 
-  const blobs = [
-    new Uint8Array(BYTES_PER_BLOB),
-    new Uint8Array(BYTES_PER_BLOB).fill(1),
-  ];
+  const blobs = [new Uint8Array(BYTES_PER_BLOB), new Uint8Array(BYTES_PER_BLOB).fill(1)];
   const kzgCommitments = blobs.map((blob) => kzg.blobToKzgCommitment(blob));
   block.message.body.blobKzgCommitments = kzgCommitments;
 
