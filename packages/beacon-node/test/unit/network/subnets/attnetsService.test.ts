@@ -30,6 +30,8 @@ describe("AttnetsService", () => {
       nodeId,
       config,
     }),
+    enablePartialColumns: false,
+    eagerlyPublishCells: false,
   };
 
   let service: AttnetsService;
