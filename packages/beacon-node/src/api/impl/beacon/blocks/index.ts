@@ -297,7 +297,10 @@ export function getBeaconBlockApi({
       //        import latency and hopefully bandwidth
       //
       () => network.publishBeaconBlock(signedBlock),
-      ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
+      ...dataColumnSidecars.map((dataColumnSidecar) => () =>
+        network.publishDataColumnSidecar(dataColumnSidecar, {publishPartial: false})
+      ),
+      () => network.publishBlockProductionPartialColumns(dataColumnSidecars),
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
@@ -749,7 +752,10 @@ export function getBeaconBlockApi({
         // Gossip the signed execution payload envelope first
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // For self-builds, publish all data column sidecars
-        ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
+        ...dataColumnSidecars.map((dataColumnSidecar) => () =>
+          network.publishDataColumnSidecar(dataColumnSidecar, {publishPartial: false})
+        ),
+        () => network.publishBlockProductionPartialColumns(dataColumnSidecars),
         // Import execution payload. Signature already verified above
         () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];
@@ -770,7 +776,7 @@ export function getBeaconBlockApi({
       if (dataColumnSidecars.length > 0) {
         let columnsPublishedWithZeroPeers = 0;
         // Skip first entry (envelope), track data columns
-        for (let i = 1; i < sentPeersArr.length; i++) {
+        for (let i = 1; i <= dataColumnSidecars.length; i++) {
           const sentPeers = sentPeersArr[i] as number;
           metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
           if (sentPeers === 0) {

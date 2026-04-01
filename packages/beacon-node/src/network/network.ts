@@ -375,7 +375,10 @@ export class Network implements INetwork {
     });
   }
 
-  async publishDataColumnSidecar(dataColumnSidecar: DataColumnSidecar): Promise<number> {
+  async publishDataColumnSidecar(
+    dataColumnSidecar: DataColumnSidecar,
+    opts?: {publishPartial?: boolean}
+  ): Promise<number> {
     const slot = isGloasDataColumnSidecar(dataColumnSidecar)
       ? dataColumnSidecar.slot
       : dataColumnSidecar.signedBlockHeader.message.slot;
@@ -396,7 +399,7 @@ export class Network implements INetwork {
       }
     );
 
-    if (this.opts.enablePartialColumns && !isGloasDataColumnSidecar(dataColumnSidecar)) {
+    if ((opts?.publishPartial ?? true) && this.opts.enablePartialColumns && !isGloasDataColumnSidecar(dataColumnSidecar)) {
       await this.partialColumnPublisher.publishUniformColumn(dataColumnSidecar, {
         includeHeader: true,
         includeCells: this.opts.eagerlyPublishCells ?? false,
@@ -404,6 +407,20 @@ export class Network implements INetwork {
     }
 
     return sentPeers;
+  }
+
+  async publishBlockProductionPartialColumns(columns: fulu.DataColumnSidecars): Promise<void> {
+    if (!this.opts.enablePartialColumns || columns.length === 0) {
+      return;
+    }
+
+    await this.partialColumnPublisher.publishBlockProductionColumns(
+      columns,
+      Array.from(
+        new Set(this.custodyConfig.custodyColumns.map((columnIndex) => columnIndex % this.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT))
+      ).sort((a, b) => a - b),
+      this.opts.eagerlyPublishCells ?? false
+    );
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {
