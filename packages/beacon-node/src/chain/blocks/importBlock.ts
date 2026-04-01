@@ -7,6 +7,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  PayloadStatus,
   getSafeExecutionBlockHash,
   isGloasBlock,
 } from "@lodestar/fork-choice";
@@ -332,7 +333,7 @@ export async function importBlock(
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
-  if (newHead.blockRoot !== oldHead.blockRoot) {
+  if (newHead.blockRoot !== oldHead.blockRoot || newHead.payloadStatus !== oldHead.payloadStatus || newHead.stateRoot !== oldHead.stateRoot) {
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postBlockState);
 
@@ -355,6 +356,7 @@ export async function importBlock(
     this.logger.verbose("New chain head", {
       slot: newHead.slot,
       root: newHead.blockRoot,
+      variant: newHead.payloadStatus === PayloadStatus.FULL ? "FULL" : "EMPTY",
       delaySec,
     });
 

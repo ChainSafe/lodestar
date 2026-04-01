@@ -19,6 +19,7 @@ import {
   forkPostAltair,
   highestFork,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   IBeaconStateView,
@@ -285,6 +286,13 @@ export class LightClientServer {
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
       }
     });
+
+    const fork = this.config.getForkName(block.slot);
+    // TODO GLOAS: fix this
+    if (isForkPostGloas(fork)) {
+      this.logger.debug("Skipping light client post-block persistence for Gloas block", {slot: block.slot});
+      return;
+    }
 
     this.persistPostBlockImportData(block, postState, parentBlockSlot).catch((e) => {
       if (!this.signal.aborted) {

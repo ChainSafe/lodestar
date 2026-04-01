@@ -1,11 +1,13 @@
 import {routes} from "@lodestar/api";
-import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
+import {EpochDifference, ExecutionStatus, PayloadExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {BeaconChain} from "../chain.js";
+import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {ImportPayloadOpts} from "./types.js";
@@ -104,7 +106,7 @@ export async function importExecutionPayload(
   }
 
   // 2. Get ProtoBlock for parent root lookup
-  const protoBlock = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  const protoBlock = this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
   if (!protoBlock) {
     throw new PayloadError({
       code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE,
@@ -225,6 +227,7 @@ export async function importExecutionPayload(
   });
 
   // 7. Update fork choice
+  const oldHead = this.forkChoice.getHead();
   this.forkChoice.onExecutionPayload(
     blockRootHex,
     blockHashHex,
@@ -232,6 +235,17 @@ export async function importExecutionPayload(
     toRootHex(postPayloadStateRoot),
     toForkChoiceExecutionStatus(execResult.status)
   );
+  const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importPayload);
+  if (newHead.blockRoot !== oldHead.blockRoot || newHead.payloadStatus !== oldHead.payloadStatus || newHead.stateRoot !== oldHead.stateRoot) {
+    this.regen.updateHeadState(newHead, postPayloadState);
+    this.logger.verbose("New chain head", {
+      slot: newHead.slot,
+      root: newHead.blockRoot,
+      variant: newHead.payloadStatus === PayloadStatus.FULL ? "FULL" : "EMPTY",
+    });
+
+    // TODO GLOAS: emit routes.events.EventType.head or not
+  }
 
   // 8. Cache payload state
   this.regen.processPayloadState(postPayloadState);

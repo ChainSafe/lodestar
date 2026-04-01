@@ -916,6 +916,12 @@ export function getValidatorApi(
 
       // TODO GLOAS: needs to be updated after fork choice changes are merged
       const parentBlock = chain.getProposerHead(slot);
+      logger.verbose("Producing block", {
+        slot,
+        parentSlot: parentBlock.slot,
+        parentRoot: parentBlock.blockRoot,
+        parentVariant: parentBlock.payloadStatus === PayloadStatus.FULL ? "FULL" : "EMPTY",
+      });
       const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
       const parentBlockRoot = fromHex(parentBlockRootHex);
       notOnOutOfRangeData(parentBlockRoot);

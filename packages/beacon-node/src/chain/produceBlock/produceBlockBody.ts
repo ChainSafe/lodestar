@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {IForkChoice, PayloadStatus, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
@@ -203,6 +203,8 @@ export async function produceBlockBody<T extends BlockType>(
     this.logger.verbose("Preparing execution payload from engine", {
       slot: blockSlot,
       parentBlockRoot: toRootHex(parentBlockRoot),
+      parentBlockSlot: parentBlock.slot,
+      parentVariant: parentBlock.payloadStatus === PayloadStatus.FULL ? "FULL" : "EMPTY",
       feeRecipient,
     });
 

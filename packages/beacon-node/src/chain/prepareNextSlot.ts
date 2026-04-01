@@ -99,6 +99,7 @@ export class PrepareNextSlotScheduler {
         prepareSlot,
         headSlot,
         headRoot,
+        headVariant: headBlock.payloadStatus === PayloadStatus.FULL ? "FULL" : "EMPTY",
         isEpochTransition,
       });
       const precomputeEpochTransitionTimer = isEpochTransition
