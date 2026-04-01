@@ -66,7 +66,8 @@ export enum UpdateHeadOpt {
 }
 
 export type UpdateAndGetHeadOpt =
-  | {mode: UpdateHeadOpt.GetCanonicalHead}
+  // When slot is provided, it means we are preparing for the next slot and want to get the canonical head for that slot to prepare for gloas tie-breaker logic.
+  | {mode: UpdateHeadOpt.GetCanonicalHead; slot?: Slot}
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
 
@@ -223,7 +224,8 @@ export class ForkChoice implements IForkChoice {
   } {
     const {mode} = opt;
 
-    const canonicalHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
+    const canonicalHeadBlock =
+      mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead(opt.slot);
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
         return {head: this.predictProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot)};
@@ -460,7 +462,7 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_head
    */
-  updateHead(): ProtoBlock {
+  updateHead(slot?: Slot): ProtoBlock {
     // balances is not changed but votes are changed
 
     // NOTE: In current Lodestar metrics, 100% of forkChoiceRequests this.synced = false.
@@ -517,7 +519,9 @@ export class ForkChoice implements IForkChoice {
       this.justifiedProposerBoostScore = proposerBoostScore;
     }
 
-    const currentSlot = this.fcStore.currentSlot;
+    // when preparing for the next slot, beacon-node will pass slot as currentSlot + 1 to choose FULL vs EMPTY
+    // this is important for Gloas tie-breaker logic
+    const currentSlot = slot ?? this.fcStore.currentSlot;
     this.protoArray.applyScoreChanges({
       deltas,
       proposerBoost,
