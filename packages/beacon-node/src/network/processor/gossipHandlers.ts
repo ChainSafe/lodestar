@@ -347,6 +347,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const verificationTimer = metrics?.peerDas.dataColumnSidecarGossipVerificationTime.startTimer();
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+    const secFromSlot = chain.clock.secFromSlot(slot);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
@@ -380,6 +381,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
         delaySec,
+        secFromSlot,
         gossipSubnet,
         columnIndex: dataColumnSidecar.index,
         recvToValLatency,
@@ -437,7 +439,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
 
     if (!payloadInput) {
-      // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
+      // This should not happen for gossip because the network processor queues `data_column_sidecar`
+      // until block import creates the corresponding PayloadEnvelopeInput.
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
         code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
         slot,
