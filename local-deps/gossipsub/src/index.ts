@@ -285,6 +285,11 @@ export interface GossipsubMessage {
   msg: Message
 }
 
+export interface GossipsubPartialMessage {
+  propagationSource: PeerId
+  partialMsg: PartialMessage
+}
+
 export interface MeshPeer {
   peerId: string
   topic: string
@@ -298,7 +303,7 @@ export interface GossipSubEvents {
   'gossipsub:message': CustomEvent<GossipsubMessage>
   'gossipsub:graft': CustomEvent<MeshPeer>
   'gossipsub:prune': CustomEvent<MeshPeer>
-  'gossipsub:partial-message': CustomEvent<PartialMessage>
+  'gossipsub:partial-message': CustomEvent<GossipsubPartialMessage>
 }
 
 export interface GossipSubComponents {
