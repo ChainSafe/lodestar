@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {BYTES_PER_BLOB} from "@crate-crypto/node-eth-kzg";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
@@ -104,7 +104,8 @@ describe("PartialColumnStateCache", () => {
 
   it("should prune old block entries once the cache exceeds its max size", () => {
     const chainConfig = createTestConfig();
-    const cache = new PartialColumnStateCache(1);
+    const onPrune = vi.fn();
+    const cache = new PartialColumnStateCache({maxBlocks: 1, onPrune});
     const firstColumn = buildColumnSidecarFixture(chainConfig);
     const secondColumn = buildColumnSidecarFixture(chainConfig);
     secondColumn.signedBlockHeader.message.slot = 2;
@@ -118,5 +119,6 @@ describe("PartialColumnStateCache", () => {
     expect(cache.getBlockCount()).toBe(1);
     expect(cache.hasBlock(firstRootHex)).toBe(false);
     expect(cache.hasBlock(secondRootHex)).toBe(true);
+    expect(onPrune).toHaveBeenCalledWith(1);
   });
 });
