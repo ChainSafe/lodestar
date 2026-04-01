@@ -72,129 +72,130 @@ export async function validateGossipPartialDataColumnHeader(
   blockRootHex: string,
   metrics: Metrics | null
 ): Promise<void> {
-  const blockHeader = header.signedBlockHeader.message;
+  const validationTimer = metrics?.partialColumns.headerValidationTime.startTimer();
 
-  // [REJECT] The header's kzg_commitments list is non-empty
-  if (header.kzgCommitments.length === 0) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.NO_COMMITMENTS,
-      slot: blockHeader.slot,
-      columnIndex: 0,
-    });
-  }
+  try {
+    const blockHeader = header.signedBlockHeader.message;
 
-  // [REJECT] The hash of the block header matches the group id
-  const headerBlockRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
-  if (headerBlockRoot !== blockRootHex) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.PARTIAL_HEADER_MISMATCH,
-      slot: blockHeader.slot,
-      columnIndex: 0,
-    });
-  }
+    // [REJECT] The header's kzg_commitments list is non-empty
+    if (header.kzgCommitments.length === 0) {
+      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+        code: DataColumnSidecarErrorCode.NO_COMMITMENTS,
+        slot: blockHeader.slot,
+        columnIndex: 0,
+      });
+    }
 
-  // [IGNORE] Not from future slot (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-  const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
-  if (currentSlotWithGossipDisparity < blockHeader.slot) {
-    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
-      code: DataColumnSidecarErrorCode.FUTURE_SLOT,
-      currentSlot: currentSlotWithGossipDisparity,
-      blockSlot: blockHeader.slot,
-    });
-  }
+    // [REJECT] The hash of the block header matches the group id
+    const headerBlockRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
+    if (headerBlockRoot !== blockRootHex) {
+      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+        code: DataColumnSidecarErrorCode.PARTIAL_HEADER_MISMATCH,
+        slot: blockHeader.slot,
+        columnIndex: 0,
+      });
+    }
 
-  // [IGNORE] From slot greater than finalized
-  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-  const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
-  if (blockHeader.slot <= finalizedSlot) {
-    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
-      code: DataColumnSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT,
-      blockSlot: blockHeader.slot,
-      finalizedSlot,
-    });
-  }
+    // [IGNORE] Not from future slot (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+    const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
+    if (currentSlotWithGossipDisparity < blockHeader.slot) {
+      throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+        code: DataColumnSidecarErrorCode.FUTURE_SLOT,
+        currentSlot: currentSlotWithGossipDisparity,
+        blockSlot: blockHeader.slot,
+      });
+    }
 
-  // [IGNORE] Parent has been seen (via gossip or non-gossip sources)
-  const parentRoot = toRootHex(blockHeader.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
-  if (parentBlock === null) {
-    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
-      code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
-      parentRoot,
-      slot: blockHeader.slot,
-    });
-  }
+    // [IGNORE] From slot greater than finalized
+    const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
+    const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+    if (blockHeader.slot <= finalizedSlot) {
+      throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+        code: DataColumnSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT,
+        blockSlot: blockHeader.slot,
+        finalizedSlot,
+      });
+    }
 
-  // [REJECT] From higher slot than parent
-  if (parentBlock.slot >= blockHeader.slot) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.NOT_LATER_THAN_PARENT,
-      parentSlot: parentBlock.slot,
-      slot: blockHeader.slot,
-    });
-  }
-
-  // Get block state for proposer verification
-  const blockState = await chain.regen
-    .getBlockSlotState(
-      parentBlock,
-      blockHeader.slot,
-      {dontTransferCache: true},
-      RegenCaller.validateGossipDataColumn
-    )
-    .catch(() => {
+    // [IGNORE] Parent has been seen (via gossip or non-gossip sources)
+    const parentRoot = toRootHex(blockHeader.parentRoot);
+    const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+    if (parentBlock === null) {
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
         code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
         parentRoot,
         slot: blockHeader.slot,
       });
-    });
+    }
 
-  // [REJECT] Expected proposer_index
-  const proposerIndex = blockHeader.proposerIndex;
-  const expectedProposerIndex = blockState.epochCtx.getBeaconProposer(blockHeader.slot);
-  if (proposerIndex !== expectedProposerIndex) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER,
-      actualProposerIndex: proposerIndex,
-      expectedProposerIndex,
-    });
-  }
-
-  // [REJECT] Proposer signature valid
-  const signature = header.signedBlockHeader.signature;
-  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
-    const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
-      chain.config,
-      blockState.slot,
-      header.signedBlockHeader
-    );
-    if (
-      !(await chain.bls.verifySignatureSets([signatureSet], {
-        verifyOnMainThread: true,
-      }))
-    ) {
+    // [REJECT] From higher slot than parent
+    if (parentBlock.slot >= blockHeader.slot) {
       throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-        code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
-        blockRoot: blockRootHex,
-        index: 0,
+        code: DataColumnSidecarErrorCode.NOT_LATER_THAN_PARENT,
+        parentSlot: parentBlock.slot,
         slot: blockHeader.slot,
       });
     }
-    chain.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
-  }
 
-  // [REJECT] Inclusion proof valid
-  const timer = metrics?.peerDas.dataColumnSidecarInclusionProofVerificationTime.startTimer();
-  const valid = verifyPartialDataColumnHeaderInclusionProof(header);
-  timer?.();
+    // Get block state for proposer verification
+    const blockState = await chain.regen
+      .getBlockSlotState(parentBlock, blockHeader.slot, {dontTransferCache: true}, RegenCaller.validateGossipDataColumn)
+      .catch(() => {
+        throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+          code: DataColumnSidecarErrorCode.PARENT_UNKNOWN,
+          parentRoot,
+          slot: blockHeader.slot,
+        });
+      });
 
-  if (!valid) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
-      slot: blockHeader.slot,
-      columnIndex: 0,
-    });
+    // [REJECT] Expected proposer_index
+    const proposerIndex = blockHeader.proposerIndex;
+    const expectedProposerIndex = blockState.epochCtx.getBeaconProposer(blockHeader.slot);
+    if (proposerIndex !== expectedProposerIndex) {
+      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+        code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER,
+        actualProposerIndex: proposerIndex,
+        expectedProposerIndex,
+      });
+    }
+
+    // [REJECT] Proposer signature valid
+    const signature = header.signedBlockHeader.signature;
+    if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
+      const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+        chain.config,
+        blockState.slot,
+        header.signedBlockHeader
+      );
+      if (
+        !(await chain.bls.verifySignatureSets([signatureSet], {
+          verifyOnMainThread: true,
+        }))
+      ) {
+        throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+          code: DataColumnSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+          blockRoot: blockRootHex,
+          index: 0,
+          slot: blockHeader.slot,
+        });
+      }
+      chain.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
+    }
+
+    // [REJECT] Inclusion proof valid
+    const timer = metrics?.peerDas.dataColumnSidecarInclusionProofVerificationTime.startTimer();
+    const valid = verifyPartialDataColumnHeaderInclusionProof(header);
+    timer?.();
+
+    if (!valid) {
+      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+        code: DataColumnSidecarErrorCode.INCLUSION_PROOF_INVALID,
+        slot: blockHeader.slot,
+        columnIndex: 0,
+      });
+    }
+  } finally {
+    validationTimer?.();
   }
 }
 
@@ -210,50 +211,56 @@ export async function validateGossipPartialDataColumnCells(
   columnIndex: ColumnIndex,
   metrics: Metrics | null
 ): Promise<void> {
-  // [REJECT] bitmap length equals number of commitments
-  if (sidecar.cellsPresentBitmap.bitLen !== header.kzgCommitments.length) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.PARTIAL_BITMAP_LENGTH_MISMATCH,
-      slot: header.signedBlockHeader.message.slot,
-      columnIndex,
-    });
-  }
+  const validationTimer = metrics?.partialColumns.cellValidationTime.startTimer();
 
-  // [REJECT] Same number of cells and proofs
-  if (sidecar.partialColumn.length !== sidecar.kzgProofs.length) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH,
-      slot: header.signedBlockHeader.message.slot,
-      columnIndex,
-    });
-  }
-
-  // [REJECT] Number of cells matches bitmap popcount
-  let bitmapPopcount = 0;
-  for (let i = 0; i < sidecar.cellsPresentBitmap.bitLen; i++) {
-    if (sidecar.cellsPresentBitmap.get(i)) bitmapPopcount++;
-  }
-  if (sidecar.partialColumn.length !== bitmapPopcount) {
-    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-      code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH,
-      slot: header.signedBlockHeader.message.slot,
-      columnIndex,
-    });
-  }
-
-  // [REJECT] KZG proofs valid
-  if (sidecar.partialColumn.length > 0) {
-    const kzgTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
-    try {
-      await verifyPartialDataColumnSidecarKzgProofs(sidecar, header.kzgCommitments, columnIndex);
-    } catch {
+  try {
+    // [REJECT] bitmap length equals number of commitments
+    if (sidecar.cellsPresentBitmap.bitLen !== header.kzgCommitments.length) {
       throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-        code: DataColumnSidecarErrorCode.PARTIAL_INVALID_KZG_PROOF,
+        code: DataColumnSidecarErrorCode.PARTIAL_BITMAP_LENGTH_MISMATCH,
         slot: header.signedBlockHeader.message.slot,
         columnIndex,
       });
-    } finally {
-      kzgTimer?.();
     }
+
+    // [REJECT] Same number of cells and proofs
+    if (sidecar.partialColumn.length !== sidecar.kzgProofs.length) {
+      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+        code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH,
+        slot: header.signedBlockHeader.message.slot,
+        columnIndex,
+      });
+    }
+
+    // [REJECT] Number of cells matches bitmap popcount
+    let bitmapPopcount = 0;
+    for (let i = 0; i < sidecar.cellsPresentBitmap.bitLen; i++) {
+      if (sidecar.cellsPresentBitmap.get(i)) bitmapPopcount++;
+    }
+    if (sidecar.partialColumn.length !== bitmapPopcount) {
+      throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+        code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH,
+        slot: header.signedBlockHeader.message.slot,
+        columnIndex,
+      });
+    }
+
+    // [REJECT] KZG proofs valid
+    if (sidecar.partialColumn.length > 0) {
+      const kzgTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
+      try {
+        await verifyPartialDataColumnSidecarKzgProofs(sidecar, header.kzgCommitments, columnIndex);
+      } catch {
+        throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+          code: DataColumnSidecarErrorCode.PARTIAL_INVALID_KZG_PROOF,
+          slot: header.signedBlockHeader.message.slot,
+          columnIndex,
+        });
+      } finally {
+        kzgTimer?.();
+      }
+    }
+  } finally {
+    validationTimer?.();
   }
 }

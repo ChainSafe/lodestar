@@ -887,6 +887,38 @@ export function createLodestarMetrics(
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
+    partialColumns: {
+      cellsReceived: register.counter({
+        name: "lodestar_partial_column_cells_received_total",
+        help: "Total cells received via partial messages",
+      }),
+      usefulCells: register.counter({
+        name: "lodestar_partial_column_useful_cells_total",
+        help: "Cells received via partial messages that extended local partial-column state",
+      }),
+      columnsCompleted: register.counter({
+        name: "lodestar_partial_column_columns_completed_total",
+        help: "Columns completed from partial cells",
+      }),
+      headerValidationTime: register.histogram({
+        name: "lodestar_partial_column_header_validation_seconds",
+        help: "Time to validate partial column headers",
+        buckets: [0.001, 0.002, 0.004, 0.008, 0.016, 0.05, 0.1, 0.25, 0.5, 1],
+      }),
+      cellValidationTime: register.histogram({
+        name: "lodestar_partial_column_cell_validation_seconds",
+        help: "Time to validate partial column cells",
+        buckets: [0.001, 0.002, 0.004, 0.008, 0.016, 0.05, 0.1, 0.25, 0.5, 1],
+      }),
+      cellsPublished: register.counter({
+        name: "lodestar_partial_column_cells_published_total",
+        help: "Cells published via partial messages",
+      }),
+      headersPublished: register.counter({
+        name: "lodestar_partial_column_headers_published_total",
+        help: "Headers published via partial messages",
+      }),
+    },
     // recovery in the case of specific blob rows required
     recoverBlobSidecars: {
       blobsReconstructed: register.counter({
