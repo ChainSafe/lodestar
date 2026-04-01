@@ -1124,7 +1124,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
                 columnIndex,
                 ssz.phase0.BeaconBlockHeader.hashTreeRoot(storedHeader.signedBlockHeader.message),
                 storedHeader.signedBlockHeader.message.slot,
-                broadcastedPeers
+                broadcastedPeers,
+                "gossip_merge"
               );
             }
           }
