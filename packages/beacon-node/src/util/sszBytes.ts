@@ -183,7 +183,7 @@ export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot |
 
 /**
  * Extract committee index from serialized `beacon_attestation` gossip bytes.
- * Return null if data is not long enough to extract the field.
+ * Return null if data is not long enough to extract the committee index.
  */
 export function getCommitteeIndexFromSingleAttestationSerialized(
   fork: ForkName,
