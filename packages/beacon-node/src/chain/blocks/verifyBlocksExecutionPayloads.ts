@@ -112,7 +112,7 @@ export async function verifyBlocksExecutionPayload(
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
-      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs);
+      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs, signedEnvelopes);
     }
 
     // If we are here then its because executionStatus is one of BlockExecutionStatus
@@ -284,7 +284,8 @@ export async function verifyBlockExecutionPayload(
 function getSegmentErrorResponse(
   {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
   parentBlock: ProtoBlock,
-  blocks: IBlockInput[]
+  blocks: IBlockInput[],
+  signedEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null
 ): SegmentExecStatus {
   const {executionStatus, lvhResponse, execError} = verifyResponse;
   let invalidSegmentLVH: LVHInvalidResponse | undefined = undefined;
@@ -296,11 +297,13 @@ function getSegmentErrorResponse(
   ) {
     let lvhFound = false;
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
-      const block = blocks[mayBeLVHIndex].getBlock();
-      // For gloas blocks the payload may not arrive; fork choice tracks parentBlockHash
-      // from the bid as the executionPayloadBlockHash. Use the same field here.
+      const blockInput = blocks[mayBeLVHIndex];
+      const block = blockInput.getBlock();
       const blockHashHex = isGloasBeaconBlock(block.message)
-        ? toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+        ? toRootHex(
+            signedEnvelopes?.get(blockInput.slot)?.message.payload.blockHash ??
+              block.message.body.signedExecutionPayloadBid.message.parentBlockHash
+          )
         : toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash);
       if (blockHashHex === lvhResponse.latestValidExecHash) {
         lvhFound = true;
