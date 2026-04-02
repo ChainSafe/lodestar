@@ -7,7 +7,6 @@
     "useUnknownInCatchVariables": true,
   },
   "include": [
-    "src",
-    "test"
+    "src"
   ]
 }

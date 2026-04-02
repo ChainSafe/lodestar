@@ -127,7 +127,7 @@
     "@fastify/swagger-ui": "^5.0.1",
     "@libp2p/bootstrap": "^12.0.14",
     "@libp2p/crypto": "^5.1.13",
-    "@libp2p/gossipsub": "link:../../local-deps/gossipsub",
+    "@libp2p/gossipsub": "workspace:*",
     "@libp2p/identify": "^4.0.13",
     "@libp2p/interface": "^3.1.0",
     "@libp2p/mdns": "^12.0.14",
