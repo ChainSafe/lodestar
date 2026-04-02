@@ -57,6 +57,7 @@ function makePayloadEnvelopeInput(blockInput: IBlockInput, payloadBlockHash: Uin
   const block = blockInput.getBlock() as gloas.SignedBeaconBlock;
   const input = PayloadEnvelopeInput.createFromBlock({
     block,
+    forkName: ForkName.gloas,
     blockRootHex: toRootHex(blockRoot(blockInput)),
     sampledColumns: [],
     custodyColumns: [],

@@ -55,7 +55,12 @@ export const defaultNetworkOptions: NetworkOptions = {
   maxPeers: 210, // Allow some room above targetPeers for new inbound peers
   targetPeers: 200,
   // In CLI usage this is typically overridden; when unset it serves as a fallback default (e.g. programmatic usage/tests)
-  localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000", "/ip6/::/tcp/9000"],
+  localMultiaddrs: [
+    "/ip4/0.0.0.0/udp/9001/quic-v1",
+    "/ip6/::/udp/9001/quic-v1",
+    "/ip4/0.0.0.0/tcp/9000",
+    "/ip6/::/tcp/9000",
+  ],
   bootMultiaddrs: [],
   /** disabled by default */
   discv5: null,
@@ -69,7 +74,7 @@ export const defaultNetworkOptions: NetworkOptions = {
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // This will enable the light client server by default
   disableLightClientServer: false,
-  quic: false,
+  quic: true,
   tcp: true,
   // specific option for fulu
   //   - this is the same to TARGET_SUBNET_PEERS

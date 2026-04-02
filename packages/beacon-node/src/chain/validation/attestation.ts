@@ -44,7 +44,7 @@ import {
   getAttDataFromSignedAggregateAndProofElectra,
   getAttDataFromSignedAggregateAndProofPhase0,
   getAttesterIndexFromSingleAttestationSerialized,
-  getCommitteeIndexFromSingleAttestationSerialized,
+  getIndexFromSingleAttestationSerialized,
   getSignatureFromAttestationSerialized,
   getSignatureFromSingleAttestationSerialized,
 } from "../../util/sszBytes.js";
@@ -882,12 +882,12 @@ export function getCommitteeIndexFromAttestationOrBytes(
 
   if (isForkPostElectra(fork)) {
     if (isGossipAttestation) {
-      return getCommitteeIndexFromSingleAttestationSerialized(ForkName.electra, attestationOrBytes.serializedData);
+      return getIndexFromSingleAttestationSerialized(ForkName.electra, attestationOrBytes.serializedData);
     }
     return (attestationOrBytes.attestation as SingleAttestation<ForkPostElectra>).committeeIndex;
   }
   if (isGossipAttestation) {
-    return getCommitteeIndexFromSingleAttestationSerialized(ForkName.phase0, attestationOrBytes.serializedData);
+    return getIndexFromSingleAttestationSerialized(ForkName.phase0, attestationOrBytes.serializedData);
   }
   return (attestationOrBytes.attestation as SingleAttestation<ForkPreElectra>).data.index;
 }

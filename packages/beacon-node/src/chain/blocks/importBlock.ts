@@ -141,9 +141,10 @@ export async function importBlock(
 
   // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
   if (fork >= ForkSeq.gloas) {
-    const {created} = this.seenPayloadEnvelopeInputCache.add({
+    const {payloadInput, created} = this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,
+      forkName: blockInput.forkName,
       sampledColumns: this.custodyConfig.sampledColumns,
       custodyColumns: this.custodyConfig.custodyColumns,
       timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
@@ -165,6 +166,22 @@ export async function importBlock(
         source: source.source,
       });
     }
+
+    // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
+    // which is all the information we need so there is no reason to delay until execution payload arrives
+    // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
+    // (for example later in the slot). Do not couple retries to incoming gossip columns.
+    this.getBlobsTracker.triggerGetBlobs(payloadInput, () => {
+      // TODO GLOAS: come up with a better mechanism to trigger processExecutionPayload after data becomes available,
+      // similar to how pre-gloas uses waitForBlockAndAllData with a cutoff timeout and incompleteBlockInput event
+      this.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+        this.logger.debug(
+          "Error processing execution payload after getBlobs",
+          {slot: blockSlot, root: blockRootHex},
+          e as Error
+        );
+      });
+    });
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});

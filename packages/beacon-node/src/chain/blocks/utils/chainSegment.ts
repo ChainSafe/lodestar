@@ -65,9 +65,7 @@ export function assertLinearChainSegment(
         });
       }
 
-      const payloadEnvelope = payloadEnvelopes?.get(slot)?.hasPayloadEnvelope()
-        ? payloadEnvelopes.get(slot)!.getPayloadEnvelope()
-        : undefined;
+      const payloadEnvelope = payloadEnvelopes?.get(slot)?.getPayloadEnvelope();
       if (payloadEnvelope !== undefined && payloadEnvelope !== null) {
         // Verify the envelope references this block's root
         const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));

@@ -46,7 +46,7 @@ import {
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
@@ -240,7 +240,7 @@ const forkChoiceTest =
                     columns = [];
                   }
 
-                  await validateBlockDataColumnSidecars(
+                  await validateFuluBlockDataColumnSidecars(
                     chain,
                     slot,
                     blockRoot,
