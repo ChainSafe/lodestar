@@ -5,12 +5,13 @@ import {
   getBlockSignatureSets,
   getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, SignedBeaconBlock, Slot, gloas} from "@lodestar/types";
+import {IndexedAttestation, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
+import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -28,7 +29,7 @@ export async function verifyBlocksSignatures(
   metrics: Metrics | null,
   preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
-  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   indexedAttestationsByBlock: IndexedAttestation[][],
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
@@ -55,14 +56,15 @@ export async function verifyBlocksSignatures(
             indexedAttestationsByBlock[i],
             {skipProposerSignature: opts.validProposerSignature}
           );
-          const envelope = envelopes?.get(block.message.slot);
-          if (envelope) {
+          const payloadInput = payloadEnvelopes?.get(block.message.slot);
+          const payloadEnvelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
+          if (payloadEnvelope) {
             signatureSets.push(
               getExecutionPayloadEnvelopeSignatureSet(
                 config,
                 pubkeyCache,
                 preState0,
-                envelope,
+                payloadEnvelope,
                 block.message.proposerIndex
               )
             );

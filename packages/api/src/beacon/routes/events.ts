@@ -1,6 +1,6 @@
 import {ContainerType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK} from "@lodestar/params";
+import {ForkName, MAX_BLOB_COMMITMENTS_PER_BLOCK, isForkPostGloas} from "@lodestar/params";
 import {
   Attestation,
   AttesterSlashing,
@@ -38,7 +38,7 @@ export const blobSidecarSSE = new ContainerType(
 );
 type BlobSidecarSSE = ValueOf<typeof blobSidecarSSE>;
 
-export const dataColumnSidecarSSE = new ContainerType(
+export const fuluDataColumnSidecarSSE = new ContainerType(
   {
     blockRoot: stringType,
     index: ssz.ColumnIndex,
@@ -47,7 +47,17 @@ export const dataColumnSidecarSSE = new ContainerType(
   },
   {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
 );
-type DataColumnSidecarSSE = ValueOf<typeof dataColumnSidecarSSE>;
+const gloasDataColumnSidecarSSE = new ContainerType(
+  {
+    blockRoot: stringType,
+    index: ssz.ColumnIndex,
+    slot: ssz.Slot,
+  },
+  {typeName: "DataColumnSidecarSSE", jsonCase: "eth2"}
+);
+type FuluDataColumnSidecarSSE = ValueOf<typeof fuluDataColumnSidecarSSE>;
+type GloasDataColumnSidecarSSE = ValueOf<typeof gloasDataColumnSidecarSSE>;
+type DataColumnSidecarSSE = FuluDataColumnSidecarSSE | GloasDataColumnSidecarSSE;
 
 export enum EventType {
   /**
@@ -339,7 +349,22 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
     [EventType.payloadAttributes]: WithVersion((fork) => getPostBellatrixForkTypes(fork).SSEPayloadAttributes),
     [EventType.blobSidecar]: blobSidecarSSE,
-    [EventType.dataColumnSidecar]: dataColumnSidecarSSE,
+    [EventType.dataColumnSidecar]: {
+      toJson: (data) => {
+        const fork = config.getForkName(data.slot);
+        if (isForkPostGloas(fork)) {
+          return gloasDataColumnSidecarSSE.toJson(data);
+        }
+        return fuluDataColumnSidecarSSE.toJson(data as FuluDataColumnSidecarSSE);
+      },
+      fromJson: (data) => {
+        const fork = config.getForkName(Number((data as DataColumnSidecarSSE).slot));
+        if (isForkPostGloas(fork)) {
+          return gloasDataColumnSidecarSSE.fromJson(data);
+        }
+        return fuluDataColumnSidecarSSE.fromJson(data);
+      },
+    },
     [EventType.executionPayload]: new ContainerType(
       {
         slot: ssz.Slot,

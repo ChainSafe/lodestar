@@ -6,6 +6,7 @@ import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
 import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
+import {PayloadEnvelopeInput} from "../../chain/seenCache/seenPayloadEnvelopeInput.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {PeerAction, prettyPrintPeerIdStr} from "../../network/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
@@ -46,7 +47,7 @@ export type SyncChainFns = {
    */
   processChainSegment: (
     blocks: IBlockInput[],
-    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    envelopes: Map<Slot, PayloadEnvelopeInput> | null,
     syncType: RangeSyncType
   ) => Promise<void>;
   /** Must download blocks, and validate their range */

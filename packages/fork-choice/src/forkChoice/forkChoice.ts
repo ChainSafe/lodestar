@@ -1050,17 +1050,32 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Same to hasBlock but without checking if the block is a descendant of the finalized root.
+   * Same as hasBlock but without checking if the block is a descendant of the finalized root.
    */
   hasBlockUnsafe(blockRoot: Root): boolean {
     return this.hasBlockHexUnsafe(toRootHex(blockRoot));
   }
 
   /**
-   * Same to hasBlockHex but without checking if the block is a descendant of the finalized root.
+   * Same as hasBlockHex but without checking if the block is a descendant of the finalized root.
    */
   hasBlockHexUnsafe(blockRoot: RootHex): boolean {
     return this.protoArray.hasBlock(blockRoot);
+  }
+
+  /**
+   * Returns true if the FULL payload variant (execution payload envelope) exists for this block root,
+   * without checking if the block is a descendant of the finalized root.
+   */
+  hasPayloadUnsafe(blockRoot: Root): boolean {
+    return this.hasPayloadHexUnsafe(toRootHex(blockRoot));
+  }
+
+  /**
+   * Same as hasPayloadUnsafe but accepts a hex-encoded block root.
+   */
+  hasPayloadHexUnsafe(blockRoot: RootHex): boolean {
+    return this.protoArray.hasPayload(blockRoot);
   }
 
   /**

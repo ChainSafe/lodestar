@@ -15,6 +15,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   EFFECTIVE_BALANCE_INCREMENT,
   type ForkPostFulu,
+  type ForkPostGloas,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   isForkPostElectra,
@@ -34,7 +35,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
-  DataColumnSidecars,
+  DataColumnSidecar,
   Epoch,
   Root,
   RootHex,
@@ -504,7 +505,11 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenBlockInputCache.has(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+    return this.seenBlockInputCache.hasBlock(blockRoot) || this.forkChoice.hasBlockHexUnsafe(blockRoot);
+  }
+
+  seenPayloadEnvelope(blockRoot: RootHex): boolean {
+    return this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) || this.forkChoice.hasPayloadHexUnsafe(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {
@@ -873,20 +878,32 @@ export class BeaconChain implements IBeaconChain {
     );
   }
 
-  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputColumns(blockInput)) {
-        throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
+    const fork = this.config.getForkName(blockSlot);
+
+    if (isForkPostGloas(fork)) {
+      // After gloas, columns are tracked in PayloadEnvelopeInput
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput) {
+        return payloadInput.getAllColumns();
       }
-      return blockInput.getAllColumns();
+    } else {
+      // Before gloas, columns are tracked in BlockInput
+      const blockInput = this.seenBlockInputCache.get(blockRootHex);
+      if (blockInput) {
+        if (!isBlockInputColumns(blockInput)) {
+          throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+        }
+        return blockInput.getAllColumns();
+      }
     }
+
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {
-      return sidecarsUnfinalized as DataColumnSidecars;
+      return sidecarsUnfinalized;
     }
     const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
-    return sidecarsFinalized as DataColumnSidecars;
+    return sidecarsFinalized;
   }
 
   async getSerializedDataColumnSidecars(
@@ -894,23 +911,45 @@ export class BeaconChain implements IBeaconChain {
     blockRootHex: string,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputColumns(blockInput)) {
-        throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+    const fork = this.config.getForkName(blockSlot);
+
+    if (isForkPostGloas(fork)) {
+      // After gloas, columns are tracked in PayloadEnvelopeInput
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput) {
+        return indices.map((index) => {
+          const sidecar = payloadInput.getColumn(index);
+          if (!sidecar) {
+            return undefined;
+          }
+          const serialized = this.serializedCache.get(sidecar);
+          if (serialized) {
+            return serialized;
+          }
+          return sszTypesFor(fork as ForkPostGloas).DataColumnSidecar.serialize(sidecar);
+        });
       }
-      return indices.map((index) => {
-        const sidecar = blockInput.getColumn(index);
-        if (!sidecar) {
-          return undefined;
+    } else {
+      // Before gloas, columns are tracked in BlockInput
+      const blockInput = this.seenBlockInputCache.get(blockRootHex);
+      if (blockInput) {
+        if (!isBlockInputColumns(blockInput)) {
+          throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
         }
-        const serialized = this.serializedCache.get(sidecar);
-        if (serialized) {
-          return serialized;
-        }
-        return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
-      });
+        return indices.map((index) => {
+          const sidecar = blockInput.getColumn(index);
+          if (!sidecar) {
+            return undefined;
+          }
+          const serialized = this.serializedCache.get(sidecar);
+          if (serialized) {
+            return serialized;
+          }
+          return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
+        });
+      }
     }
+
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
     if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
       return sidecarsUnfinalized;
@@ -1054,11 +1093,10 @@ export class BeaconChain implements IBeaconChain {
 
   async processChainSegment(
     blocks: IBlockInput[],
-    // TODO GLOAS: need PayloadEnvelopeInput instead for data availability check + persist in `importBlock` flow
-    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts?: ImportBlockOpts
   ): Promise<void> {
-    return this.blockProcessor.processBlocksJob(blocks, envelopes, opts);
+    return this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
   }
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {

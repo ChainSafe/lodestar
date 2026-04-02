@@ -51,7 +51,7 @@ describe("sync / unknown block sync for fulu", () => {
   const testCases: {id: string; event: ChainEvent}[] = [
     {
       id: "should do an unknown block parent sync from another BN",
-      event: ChainEvent.unknownParent,
+      event: ChainEvent.blockUnknownParent,
     },
     {
       id: "should do an unknown block sync from another BN",
@@ -167,12 +167,12 @@ describe("sync / unknown block sync for fulu", () => {
       });
 
       switch (event) {
-        case ChainEvent.unknownParent:
+        case ChainEvent.blockUnknownParent:
           await bn2.chain.processBlock(headInput).catch((e) => {
             loggerNodeB.info("Error processing block", {slot: headInput.slot, code: e.type.code});
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               // Expected
-              bn2.chain.emitter.emit(ChainEvent.unknownParent, {
+              bn2.chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: headInput,
                 peer: bn2.network.peerId.toString(),
                 source: BlockInputSource.gossip,

@@ -659,9 +659,7 @@ export class ProtoArray {
     }
 
     // If payload is not locally available, it's not timely
-    // In our implementation, payload is locally available if proto array has FULL variant of the block
-    const fullNodeIndex = this.getNodeIndexByRootAndStatus(blockRoot, PayloadStatus.FULL);
-    if (fullNodeIndex === undefined) {
+    if (!this.hasPayload(blockRoot)) {
       return false;
     }
 
@@ -1684,6 +1682,16 @@ export class ProtoArray {
    */
   hasBlock(blockRoot: RootHex): boolean {
     return this.getDefaultNodeIndex(blockRoot) !== undefined;
+  }
+
+  /**
+   * Check if a FULL payload variant (execution payload envelope) exists for this block root.
+   * Returns true once the SignedExecutionPayloadEnvelope for this block has been received and processed.
+   */
+  hasPayload(blockRoot: RootHex): boolean {
+    // we should also make sure this blockRoot is a gloas block, however we only call this function
+    // starting from GLOAS_FORK_EPOCH, so we can assume the blockRoot is from gloas block
+    return this.getNodeIndexByRootAndStatus(blockRoot, PayloadStatus.FULL) !== undefined;
   }
 
   /**

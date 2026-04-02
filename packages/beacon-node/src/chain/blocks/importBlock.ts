@@ -141,9 +141,10 @@ export async function importBlock(
 
   // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
   if (fork >= ForkSeq.gloas) {
-    const {created} = this.seenPayloadEnvelopeInputCache.add({
+    const {payloadInput, created} = this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,
+      forkName: blockInput.forkName,
       sampledColumns: this.custodyConfig.sampledColumns,
       custodyColumns: this.custodyConfig.custodyColumns,
       timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
@@ -165,28 +166,22 @@ export async function importBlock(
         source: source.source,
       });
     }
-  }
 
-  // For Gloas blocks whose envelope was pre-verified during state transition (sync/batch path),
-  // immediately transition the block to FULL status in fork choice and cache the payload state.
-  // Mirrors steps 6–7 of importExecutionPayload, but reuses the already-computed postEnvelopeState.
-  if (fullyVerifiedBlock.postEnvelopeState !== null) {
-    // TODO GLOAS: this.unfinalizedPayloadEnvelopeWrites.push(payloadInput)
-    // need a payloadInput in fullyVerifiedBlock
-    const {postEnvelopeState} = fullyVerifiedBlock;
-    this.regen.processPayloadState(postEnvelopeState);
-    if (postEnvelopeState.slot % SLOTS_PER_EPOCH === 0) {
-      const {checkpoint} = postEnvelopeState.computeAnchorCheckpoint();
-      this.regen.addCheckpointState(checkpoint, postEnvelopeState, true);
-    }
-    this.forkChoice.onExecutionPayload(
-      blockRootHex,
-      toRootHex(postEnvelopeState.latestBlockHash),
-      // TODO GLOAS: this is not right but we don't need to track it as part of consensus spec, lighthouse also does not track it
-      0,
-      toRootHex(postEnvelopeState.hashTreeRoot()),
-      fullyVerifiedBlock.executionStatus
-    );
+    // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
+    // which is all the information we need so there is no reason to delay until execution payload arrives
+    // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
+    // (for example later in the slot). Do not couple retries to incoming gossip columns.
+    this.getBlobsTracker.triggerGetBlobs(payloadInput, () => {
+      // TODO GLOAS: come up with a better mechanism to trigger processExecutionPayload after data becomes available,
+      // similar to how pre-gloas uses waitForBlockAndAllData with a cutoff timeout and incompleteBlockInput event
+      this.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
+        this.logger.debug(
+          "Error processing execution payload after getBlobs",
+          {slot: blockSlot, root: blockRootHex},
+          e as Error
+        );
+      });
+    });
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
@@ -356,7 +351,7 @@ export async function importBlock(
     this.logger.verbose("New chain head", {
       slot: newHead.slot,
       root: newHead.blockRoot,
-      variant: newHead.payloadStatus === PayloadStatus.FULL ? "FULL" : "EMPTY",
+      payloadStatus: newHead.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
       delaySec,
     });
 

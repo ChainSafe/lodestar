@@ -59,7 +59,7 @@ describe("network / peers / PeerManager", () => {
     const status = ssz.phase0.Status.defaultValue();
     const statusCache = new LocalStatusCache(status);
     const privateKey = await generateKeyPair("secp256k1");
-    const libp2p = await createNode("/ip4/127.0.0.1/tcp/0", privateKey);
+    const libp2p = await createNode(["/ip4/127.0.0.1/udp/0/quic-v1", "/ip4/127.0.0.1/tcp/0"], privateKey);
 
     afterEachCallbacks.push(async () => {
       controller.abort();

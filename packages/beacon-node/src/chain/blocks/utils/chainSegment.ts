@@ -1,9 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {Slot, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
+import {Slot, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../../errors/index.js";
 import {IBlockInput} from "../blockInput/types.js";
+import {PayloadEnvelopeInput} from "../payloadEnvelopeInput/payloadEnvelopeInput.js";
 
 /**
  * Assert this chain segment of blocks is linear with slot numbers and hashes,
@@ -21,7 +22,7 @@ import {IBlockInput} from "../blockInput/types.js";
 export function assertLinearChainSegment(
   config: ChainForkConfig,
   blocks: IBlockInput[],
-  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   parentBlock: ProtoBlock
 ): void {
   // Track the expected execution payload block hash through the segment.
@@ -64,11 +65,11 @@ export function assertLinearChainSegment(
         });
       }
 
-      const envelope = envelopes?.get(slot);
-      if (envelope !== undefined) {
+      const payloadEnvelope = payloadEnvelopes?.get(slot)?.getPayloadEnvelope();
+      if (payloadEnvelope !== undefined && payloadEnvelope !== null) {
         // Verify the envelope references this block's root
         const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
-        const envelopeBlockRoot = toRootHex(envelope.message.beaconBlockRoot);
+        const envelopeBlockRoot = toRootHex(payloadEnvelope.message.beaconBlockRoot);
         if (blockRoot !== envelopeBlockRoot) {
           throw new BlockError(block, {
             code: BlockErrorCode.ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH,
@@ -78,7 +79,7 @@ export function assertLinearChainSegment(
         }
 
         // FULL variant: advance execution hash to the delivered payload's block hash
-        currentExecHash = toRootHex(envelope.message.payload.blockHash);
+        currentExecHash = toRootHex(payloadEnvelope.message.payload.blockHash);
       }
       // EMPTY variant: currentExecHash unchanged
     }

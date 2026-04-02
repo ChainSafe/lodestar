@@ -840,9 +840,13 @@ describe("Gloas Fork Choice", () => {
       expect(emptyIdx).not.toBeUndefined();
       expect(fullIdx).not.toBeUndefined();
 
+      if (pendingIdx === undefined || emptyIdx === undefined || fullIdx === undefined) {
+        throw new Error("Expected pending/empty/full variants to exist");
+      }
+
       // Verify PENDING is stored at the smallest index among the variants
-      expect(pendingIdx! < emptyIdx!).toBe(true);
-      expect(pendingIdx! < fullIdx!).toBe(true);
+      expect(pendingIdx < emptyIdx).toBe(true);
+      expect(pendingIdx < fullIdx).toBe(true);
 
       // Prune - all block1 variants should be deleted even though they're at different indices
       protoArray.maybePrune("0x03");

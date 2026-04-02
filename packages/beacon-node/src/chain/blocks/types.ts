@@ -2,8 +2,9 @@ import type {ChainForkConfig} from "@lodestar/config";
 import {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
-import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
+import type {IndexedAttestation, Slot, fulu, gloas} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
+import type {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 
 export enum GossipedInputType {
   block = "block",
@@ -103,7 +104,7 @@ type FullyVerifiedBlockBase = {
 /**
  * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import.
  *
- * Discriminated union on `postEnvelopeState`:
+ * Discriminated union on `postPayloadEnvelopeState`:
  * - `null`  → block has no pre-verified envelope; `executionStatus` is any `BlockExecutionStatus`
  * - non-null → envelope was pre-verified during state transition; `executionStatus` is narrowed to
  *              `Valid | Syncing` (matching what `forkChoice.onExecutionPayload` expects)
@@ -111,12 +112,14 @@ type FullyVerifiedBlockBase = {
 export type FullyVerifiedBlock = FullyVerifiedBlockBase &
   (
     | {
-        postEnvelopeState: null;
+        postPayloadEnvelopeState: null;
         /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync or for merge block */
         executionStatus: BlockExecutionStatus;
       }
     | {
-        postEnvelopeState: IBeaconStateView;
+        postPayloadEnvelopeState: IBeaconStateView;
+        payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
+        payloadEnvelopeInput: PayloadEnvelopeInput;
         executionStatus: PayloadExecutionStatus;
       }
   );

@@ -5,4 +5,4 @@ import {fileURLToPath} from "node:url";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const testCachePath = path.join(__dirname, "../../test/test-cache");
+export const testCachePath = path.join(__dirname, "../../test-cache");

@@ -9,7 +9,16 @@ import {
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
-import {ExecutionPayload, ExecutionRequests, Root, Slot, bellatrix, electra, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {
+  ExecutionPayload,
+  ExecutionRequests,
+  Root,
+  Slot,
+  bellatrix,
+  electra,
+  gloas,
+  isGloasBeaconBlock,
+} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine, VersionedHashes} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -19,6 +28,7 @@ import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
+import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
@@ -59,7 +69,7 @@ export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
-  signedEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   preState0: IBeaconStateView,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
@@ -98,12 +108,13 @@ export async function verifyBlocksExecutionPayload(
     if (signal.aborted) {
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
-    const signedEnvelope = signedEnvelopes?.get(blockInput.slot) ?? null;
+    const payloadInput = payloadEnvelopes?.get(blockInput.slot) ?? null;
+    const signedEnvelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : null;
     const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, signedEnvelope, preState0);
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
-      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs);
+      return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs, payloadEnvelopes);
     }
 
     // If we are here then its because executionStatus is one of BlockExecutionStatus
@@ -275,7 +286,8 @@ export async function verifyBlockExecutionPayload(
 function getSegmentErrorResponse(
   {verifyResponse, blockIndex}: {verifyResponse: VerifyExecutionErrorResponse; blockIndex: number},
   parentBlock: ProtoBlock,
-  blocks: IBlockInput[]
+  blocks: IBlockInput[],
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null
 ): SegmentExecStatus {
   const {executionStatus, lvhResponse, execError} = verifyResponse;
   let invalidSegmentLVH: LVHInvalidResponse | undefined = undefined;
@@ -287,11 +299,13 @@ function getSegmentErrorResponse(
   ) {
     let lvhFound = false;
     for (let mayBeLVHIndex = blockIndex - 1; mayBeLVHIndex >= 0; mayBeLVHIndex--) {
-      const block = blocks[mayBeLVHIndex].getBlock();
-      // For gloas blocks the payload may not arrive; fork choice tracks parentBlockHash
-      // from the bid as the executionPayloadBlockHash. Use the same field here.
+      const blockInput = blocks[mayBeLVHIndex];
+      const block = blockInput.getBlock();
       const blockHashHex = isGloasBeaconBlock(block.message)
-        ? toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+        ? toRootHex(
+            payloadEnvelopes?.get(blockInput.slot)?.getPayloadEnvelope()?.message.payload.blockHash ??
+              block.message.body.signedExecutionPayloadBid.message.parentBlockHash
+          )
         : toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash);
       if (blockHashHex === lvhResponse.latestValidExecHash) {
         lvhFound = true;

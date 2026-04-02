@@ -70,23 +70,23 @@ export class SeenPayloadEnvelopeInput {
     this.logger?.debug("SeenPayloadEnvelopeInput.onFinalized deleted cached entries", {deletedCount});
   };
 
-  add(props: CreateFromBlockProps): {input: PayloadEnvelopeInput; created: boolean} {
+  add(props: CreateFromBlockProps): {payloadInput: PayloadEnvelopeInput; created: boolean} {
     const existing = this.payloadInputs.get(props.blockRootHex);
     if (existing !== undefined) {
-      return {input: existing, created: false};
+      return {payloadInput: existing, created: false};
     }
     const input = PayloadEnvelopeInput.createFromBlock(props);
     this.payloadInputs.set(props.blockRootHex, input);
     this.metrics?.seenCache.payloadEnvelopeInput.createdByBlock.inc();
-    return {input, created: true};
+    return {payloadInput: input, created: true};
   }
 
   get(blockRootHex: RootHex): PayloadEnvelopeInput | undefined {
     return this.payloadInputs.get(blockRootHex);
   }
 
-  has(blockRootHex: RootHex): boolean {
-    return this.payloadInputs.has(blockRootHex);
+  hasPayload(blockRootHex: RootHex): boolean {
+    return this.payloadInputs.get(blockRootHex)?.hasPayloadEnvelope() ?? false;
   }
 
   prune(blockRootHex: RootHex): void {

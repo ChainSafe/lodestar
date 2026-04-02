@@ -17,6 +17,7 @@ import {
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
 import {
+  BlockWithColumnsTestSet,
   config,
   generateBlock,
   generateBlockWithBlobSidecars,
@@ -237,7 +238,7 @@ describe("downloadByRoot.ts", () => {
 
   describe("fetchAndValidateColumns", () => {
     const forkName = ForkName.fulu;
-    let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
+    let fuluBlockWithColumns: BlockWithColumnsTestSet<ForkName.fulu>;
     let missing: ColumnIndex[];
 
     beforeEach(() => {
@@ -320,7 +321,7 @@ describe("downloadByRoot.ts", () => {
   });
 
   describe("fetchColumnsByRoot", () => {
-    let fuluBlockWithColumns: ReturnType<typeof generateBlockWithColumnSidecars>;
+    let fuluBlockWithColumns: BlockWithColumnsTestSet<ForkName.fulu>;
     beforeAll(() => {
       fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
       network = {
