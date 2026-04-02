@@ -1,14 +1,11 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, SignedBeaconBlock, Status, fulu} from "@lodestar/types";
+import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
-import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/types.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetwork} from "../../network/index.js";
@@ -204,7 +201,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
     const batchBlocks = batch.getBlocks();
     const {
-      result: {responses, payloadEnvelopes: rawPayloadEnvelopes},
+      result: {responses, payloadEnvelopes: batchPayloadEnvelopes},
       warnings,
     } = await downloadByRange({
       config: this.config,
@@ -215,40 +212,19 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       peerDasMetrics: this.chain.metrics?.peerDas,
       ...batch.getRequestsForPeer(peer),
     });
-    const cached = cacheByRangeResponses({
+
+    const {blocks, payloadEnvelopes} = cacheByRangeResponses({
       cache: this.chain.seenBlockInputCache,
       peerIdStr: peer.peerId,
       responses,
       batchBlocks,
+      downloadedPayloadEnvelopes: batchPayloadEnvelopes,
+      existingPayloadEnvelopes: batch.getPayloadEnvelopes(),
+      custodyConfig: this.chain.custodyConfig,
+      seenTimestampSec: Date.now() / 1000,
     });
 
-    let payloadEnvelopes: Map<number, PayloadEnvelopeInput> | null = null;
-    if (rawPayloadEnvelopes !== null) {
-      payloadEnvelopes = new Map();
-      const {sampledColumns, custodyColumns} = this.chain.custodyConfig;
-      const seenTimestampSec = Date.now() / 1000;
-      for (const [slot, envelope] of rawPayloadEnvelopes) {
-        const blockInput = cached.find((b) => b.slot === slot);
-        if (blockInput?.hasBlock() && isForkPostGloas(blockInput.forkName)) {
-          const payloadEnvelopeInput = PayloadEnvelopeInput.createFromBlock({
-            blockRootHex: blockInput.blockRootHex,
-            block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
-            forkName: blockInput.forkName,
-            sampledColumns,
-            custodyColumns,
-            timeCreatedSec: blockInput.timeCreatedSec,
-          });
-          payloadEnvelopeInput.addPayloadEnvelope({
-            envelope,
-            source: PayloadEnvelopeInputSource.byRange,
-            seenTimestampSec,
-          });
-          payloadEnvelopes.set(slot, payloadEnvelopeInput);
-        }
-      }
-    }
-
-    return {result: {blocks: cached, payloadEnvelopes}, warnings};
+    return {result: {blocks, payloadEnvelopes}, warnings};
   };
 
   private pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (blocks: IBlockInput[]) => {

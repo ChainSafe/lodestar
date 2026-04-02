@@ -291,6 +291,10 @@ export class Batch {
     return this.state.blocks;
   }
 
+  getPayloadEnvelopes(): Map<Slot, PayloadEnvelopeInput> | null {
+    return this.state.payloadEnvelopes;
+  }
+
   /**
    * AwaitingDownload -> Downloading
    */

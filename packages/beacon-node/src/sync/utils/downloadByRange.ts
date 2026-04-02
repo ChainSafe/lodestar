@@ -1,6 +1,22 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
-import {SignedBeaconBlock, Slot, deneb, fulu, gloas, phase0} from "@lodestar/types";
+import {
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPostGloas,
+  ForkPreFulu,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
+import {
+  DataColumnSidecar,
+  SignedBeaconBlock,
+  Slot,
+  deneb,
+  fulu,
+  gloas,
+  isGloasDataColumnSidecar,
+  phase0,
+} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
@@ -9,12 +25,17 @@ import {
   isBlockInputBlobs,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/types.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
-import {validateFuluBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
+import {
+  validateFuluBlockDataColumnSidecars,
+  validateGloasBlockDataColumnSidecars,
+} from "../../chain/validation/dataColumnSidecar.js";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {INetwork} from "../../network/index.js";
-import {getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {CustodyConfig, getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
 
@@ -28,7 +49,7 @@ export type DownloadByRangeRequests = {
 export type DownloadByRangeResponses = {
   blocks?: SignedBeaconBlock[];
   blobSidecars?: deneb.BlobSidecars;
-  columnSidecars?: fulu.DataColumnSidecars;
+  columnSidecars?: DataColumnSidecar[];
   payloadEnvelopes?: gloas.SignedExecutionPayloadEnvelope[];
 };
 
@@ -46,6 +67,10 @@ export type CacheByRangeResponsesProps = {
   peerIdStr: string;
   responses: ValidatedResponses;
   batchBlocks: IBlockInput[];
+  downloadedPayloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
+  existingPayloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+  custodyConfig: Pick<CustodyConfig, "sampledColumns" | "custodyColumns">;
+  seenTimestampSec: number;
 };
 
 export type ValidatedBlock = {
@@ -60,7 +85,7 @@ export type ValidatedBlobSidecars = {
 
 export type ValidatedColumnSidecars = {
   blockRoot: Uint8Array;
-  columnSidecars: fulu.DataColumnSidecar[];
+  columnSidecars: DataColumnSidecar[];
 };
 
 export type ValidatedResponses = {
@@ -77,9 +102,12 @@ export function cacheByRangeResponses({
   peerIdStr,
   responses,
   batchBlocks,
-}: CacheByRangeResponsesProps): IBlockInput[] {
+  downloadedPayloadEnvelopes,
+  existingPayloadEnvelopes,
+  custodyConfig,
+  seenTimestampSec,
+}: CacheByRangeResponsesProps): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null} {
   const source = BlockInputSource.byRange;
-  const seenTimestampSec = Date.now() / 1000;
   const updatedBatchBlocks = new Map<Slot, IBlockInput>(batchBlocks.map((block) => [block.slot, block]));
 
   const blocks = responses.validatedBlocks ?? [];
@@ -152,12 +180,17 @@ export function cacheByRangeResponses({
   }
 
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
-    const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
-    if (dataSlot === undefined) {
+    const firstColumn = columnSidecars[0];
+    if (!firstColumn) {
       throw new Error(
         `Coding Error: empty columnSidecars returned for blockRoot=${toRootHex(blockRoot)} from validation functions`
       );
     }
+    // Gloas columns are added to PayloadEnvelopeInput below, not to IBlockInput
+    if (isGloasDataColumnSidecar(firstColumn)) continue;
+
+    const fuluColumns = columnSidecars as fulu.DataColumnSidecar[];
+    const dataSlot = firstColumn.signedBlockHeader.message.slot;
     const existing = updatedBatchBlocks.get(dataSlot);
     const blockRootHex = toRootHex(blockRoot);
 
@@ -174,7 +207,7 @@ export function cacheByRangeResponses({
         actual: existing.type,
       });
     }
-    for (const columnSidecar of columnSidecars) {
+    for (const columnSidecar of fuluColumns) {
       // will throw if root hex does not match (meaning we are following the wrong chain)
       existing.addColumn(
         {
@@ -189,7 +222,48 @@ export function cacheByRangeResponses({
     }
   }
 
-  return Array.from(updatedBatchBlocks.values());
+  // Build payloadEnvelopes map for gloas: start from existing (partial download) state
+  let payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null = null;
+  if (downloadedPayloadEnvelopes !== null) {
+    payloadEnvelopes = new Map(existingPayloadEnvelopes ?? []);
+    for (const [slot, envelope] of downloadedPayloadEnvelopes) {
+      const blockInput = updatedBatchBlocks.get(slot);
+      if (blockInput?.hasBlock() && isForkPostGloas(blockInput.forkName)) {
+        const payloadEnvelopeInput = PayloadEnvelopeInput.createFromBlock({
+          blockRootHex: blockInput.blockRootHex,
+          block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
+          forkName: blockInput.forkName,
+          sampledColumns: custodyConfig.sampledColumns,
+          custodyColumns: custodyConfig.custodyColumns,
+          timeCreatedSec: blockInput.timeCreatedSec,
+        });
+        payloadEnvelopeInput.addPayloadEnvelope({
+          envelope,
+          source: PayloadEnvelopeInputSource.byRange,
+          seenTimestampSec,
+          peerIdStr,
+        });
+        payloadEnvelopes.set(slot, payloadEnvelopeInput);
+      }
+    }
+    // Add gloas DataColumnSidecars to their corresponding PayloadEnvelopeInput
+    for (const {columnSidecars} of responses.validatedColumnSidecars ?? []) {
+      const firstColumn = columnSidecars[0];
+      if (!firstColumn || !isGloasDataColumnSidecar(firstColumn)) continue;
+      const payloadEnvelopeInput = payloadEnvelopes.get(firstColumn.slot);
+      if (!payloadEnvelopeInput) continue;
+      for (const columnSidecar of columnSidecars as gloas.DataColumnSidecar[]) {
+        payloadEnvelopeInput.addColumn({
+          columnSidecar,
+          source: PayloadEnvelopeInputSource.byRange,
+          seenTimestampSec,
+          peerIdStr,
+        });
+      }
+    }
+  }
+
+  return {blocks: Array.from(updatedBatchBlocks.values()), payloadEnvelopes};
 }
 
 export async function downloadByRange({
@@ -651,19 +725,19 @@ export async function validateColumnsByRangeResponse(
   config: ChainForkConfig,
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedBlock[],
-  columnSidecars: fulu.DataColumnSidecar[],
+  columnSidecars: DataColumnSidecar[],
   peerDasMetrics?: BeaconMetrics["peerDas"] | null
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
 
-  // TODO GLOAS: Extend by range column sync to support gloas.DataColumnSidecar and
-  // validate against the block bid commitments instead of the fulu signed header shape
-  const seenColumns = new Map<Slot, Map<number, fulu.DataColumnSidecar>>();
+  const seenColumns = new Map<Slot, Map<number, DataColumnSidecar>>();
   let currentSlot = -1;
   let currentIndex = -1;
   // Check for duplicates and order
   for (const columnSidecar of columnSidecars) {
-    const slot = columnSidecar.signedBlockHeader.message.slot;
+    const slot = isGloasDataColumnSidecar(columnSidecar)
+      ? columnSidecar.slot
+      : columnSidecar.signedBlockHeader.message.slot;
     let seenSlotColumns = seenColumns.get(slot);
     if (!seenSlotColumns) {
       seenSlotColumns = new Map();
@@ -722,12 +796,16 @@ export async function validateColumnsByRangeResponse(
     const slot = block.message.slot;
     const rootHex = toRootHex(blockRoot);
     const forkName = config.getForkName(slot);
-    const columnSidecarsMap: Map<number, fulu.DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
+    const columnSidecarsMap: Map<number, DataColumnSidecar> = seenColumns.get(slot) ?? new Map();
     const columnSidecars = Array.from(columnSidecarsMap.values()).sort((a, b) => a.index - b.index);
 
-    let blobCount: number;
     if (!isForkPostFulu(forkName)) {
-      const dataSlot = columnSidecars.at(0)?.signedBlockHeader.message.slot;
+      const firstData = columnSidecars.at(0);
+      const dataSlot = firstData
+        ? isGloasDataColumnSidecar(firstData)
+          ? firstData.slot
+          : firstData.signedBlockHeader.message.slot
+        : undefined;
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.MISMATCH_BLOCK_FORK,
         slot,
@@ -735,7 +813,8 @@ export async function validateColumnsByRangeResponse(
         dataFork: dataSlot ? config.getForkName(dataSlot) : "unknown",
       });
     }
-    blobCount = getBlobKzgCommitments(forkName, block as SignedBeaconBlock<ForkPostFulu>).length;
+    const kzgCommitments = getBlobKzgCommitments(forkName, block as SignedBeaconBlock<ForkPostFulu>);
+    const blobCount = kzgCommitments.length;
 
     if (columnSidecars.length === 0) {
       if (!blobCount) {
@@ -804,15 +883,24 @@ export async function validateColumnsByRangeResponse(
       );
     }
 
+    const validatePromise = isForkPostGloas(forkName)
+      ? validateGloasBlockDataColumnSidecars(
+          slot,
+          blockRoot,
+          kzgCommitments,
+          columnSidecars as gloas.DataColumnSidecar[],
+          peerDasMetrics
+        )
+      : validateFuluBlockDataColumnSidecars(
+          null, // do not pass chain here so we do not validate header signature
+          slot,
+          blockRoot,
+          blobCount,
+          columnSidecars as fulu.DataColumnSidecar[],
+          peerDasMetrics
+        );
     validationPromises.push(
-      validateFuluBlockDataColumnSidecars(
-        null, // do not pass chain here so we do not validate header signature
-        slot,
-        blockRoot,
-        blobCount,
-        columnSidecars,
-        peerDasMetrics
-      ).then(() => ({
+      validatePromise.then(() => ({
         blockRoot,
         columnSidecars,
       }))

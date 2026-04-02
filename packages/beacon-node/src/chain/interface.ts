@@ -18,7 +18,6 @@ import {
   altair,
   capella,
   deneb,
-  gloas,
   phase0,
   rewards,
 } from "@lodestar/types";
