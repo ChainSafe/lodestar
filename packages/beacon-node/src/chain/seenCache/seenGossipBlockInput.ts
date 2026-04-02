@@ -153,6 +153,10 @@ export class SeenBlockInput {
     return this.blockInputs.get(rootHex)?.hasBlock() ?? false;
   }
 
+  has(rootHex: RootHex): boolean {
+    return this.blockInputs.has(rootHex);
+  }
+
   get(rootHex: RootHex): IBlockInput | undefined {
     return this.blockInputs.get(rootHex);
   }

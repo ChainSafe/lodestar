@@ -23,6 +23,7 @@ import {
   config,
   generateBlock,
   generateBlockWithBlobSidecars,
+  generateBlockWithColumnSidecars,
   generateChainOfBlocks,
 } from "../../../utils/blocksAndData.js";
 
@@ -80,6 +81,22 @@ describe("SeenBlockInputCache", async () => {
       blockRoot[1] = (blockRoot[1] + 1) % 255;
       blockRoot[2] = (blockRoot[2] + 1) % 255;
       expect(cache.hasBlock(toRootHex(blockRoot))).toBeFalsy();
+    });
+  });
+
+  describe("has()", () => {
+    it("should return true for a cached fulu column-only BlockInput", () => {
+      const {columnSidecars, rootHex} = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+
+      cache.getByColumn({
+        columnSidecar: columnSidecars[0],
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+
+      expect(cache.has(rootHex)).toBeTruthy();
+      expect(cache.hasBlock(rootHex)).toBeFalsy();
     });
   });
 
