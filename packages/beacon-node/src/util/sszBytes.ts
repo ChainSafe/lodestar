@@ -182,7 +182,7 @@ export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot |
 }
 
 /**
- * Extract committee index from serialized `beacon_attestation` gossip bytes.
+ * Extract committee index from SingleAttestation serialized bytes.
  * Return null if data is not long enough to extract the committee index.
  */
 export function getCommitteeIndexFromSingleAttestationSerialized(
@@ -205,7 +205,7 @@ export function getCommitteeIndexFromSingleAttestationSerialized(
 }
 
 /**
- * Extract data index from serialized `beacon_attestation` gossip bytes.
+ * Extract data index from SingleAttestation serialized bytes.
  * Post-gloas, `data.index` field is repurposed:
  *   - 0 - payload was not available (or attestation is same-slot, where availability is not yet known)
  *   - 1 - payload was available
