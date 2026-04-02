@@ -403,7 +403,7 @@ export class NetworkProcessor {
               ? getDataIndexFromSingleAttestationSerialized(fork, message.msg.data)
               : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
-            // ptc attestation votes for the payload but the envelope is not yet known
+            // attestation votes that the payload was available but it is not yet known
             this.searchUnknownEnvelope(
               {slot, root},
               BlockInputSource.network_processor,
