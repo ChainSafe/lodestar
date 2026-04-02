@@ -17,6 +17,8 @@ export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
 // electra, CommitteeBits
 export type CommitteeBitsBase64 = string;
+/** `attestation.data.index` from gossip-serialized attestations / aggregates */
+export type AttDataIndex = number;
 
 // pre-electra
 // class Attestation(Container):
@@ -205,11 +207,11 @@ export function getCommitteeIndexFromSingleAttestationSerialized(
 /**
  * Extract data index from SingleAttestation serialized bytes.
  * Post-gloas, `data.index` field is repurposed:
- *   - 0 — payload was not available (or attestation is same-slot, where availability is not yet known)
+ *   - 0 - payload was not available (or attestation is same-slot, where availability is not yet known)
  *   - 1 - payload was available
- * Return null if data is not long enough to extract the field.
+ * Return null if data is not long enough to extract the index.
  */
-export function getDataIndexFromSingleAttestationSerialized(data: Uint8Array): CommitteeIndex | null {
+export function getDataIndexFromSingleAttestationSerialized(data: Uint8Array): AttDataIndex | null {
   if (data.length !== SINGLE_ATTESTATION_SIZE) {
     return null;
   }
@@ -322,10 +324,10 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
 
 /**
  * Extract data index from signed aggregate and proof serialized bytes.
- * Return null if data is not long enough to extract the field.
+ * Return null if data is not long enough to extract the index.
  * This works for both phase0 + electra (index is in attestation data at the same offset).
  */
-export function getDataIndexFromSignedAggregateAndProofSerialized(data: Uint8Array): CommitteeIndex | null {
+export function getDataIndexFromSignedAggregateAndProofSerialized(data: Uint8Array): AttDataIndex | null {
   if (data.length < SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET + COMMITTEE_INDEX_SIZE) {
     return null;
   }
