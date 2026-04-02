@@ -22,7 +22,7 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: amd64
-          - os: lodestar-arm64-runner
+          - os: warp-ubuntu-latest-arm64-4x
             platform: linux
             arch: arm64
     runs-on: ${{matrix.os}}

@@ -5,7 +5,7 @@ import {EpochShuffling, IBeaconStateView, PubkeyCache} from "@lodestar/state-tra
 import {
   BeaconBlock,
   BlindedBeaconBlock,
-  DataColumnSidecars,
+  DataColumnSidecar,
   Epoch,
   Root,
   RootHex,
@@ -217,12 +217,13 @@ export interface IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
-  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars>;
+  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]>;
   getSerializedDataColumnSidecars(
     blockSlot: Slot,
     blockRootHex: string,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
+  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{

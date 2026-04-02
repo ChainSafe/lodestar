@@ -31,10 +31,11 @@ export {
 } from "./forkChoice/store.js";
 export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
 export type {
+  BlockExecutionStatus,
   BlockExtraMeta,
   LVHInvalidResponse,
   LVHValidResponse,
-  MaybeValidExecutionStatus,
+  PayloadExecutionStatus,
   ProtoBlock,
   ProtoNode,
 } from "./protoArray/interface.js";
