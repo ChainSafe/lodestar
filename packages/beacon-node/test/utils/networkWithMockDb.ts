@@ -10,7 +10,7 @@ import {ArchiveMode} from "../../src/index.js";
 import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from "../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
-import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
+import {MockedBeaconDb, getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
 import {ClockStatic} from "./clock.js";
 import {generateState} from "./state.js";
 
@@ -21,11 +21,18 @@ export type NetworkForTestOpts = {
   getReqRespHandler?: GetReqRespHandlerFn;
 };
 
-export async function getNetworkForTest(
+export type NetworkForTestModules = {
+  network: Network;
+  chain: BeaconChain;
+  db: MockedBeaconDb;
+  closeAll: () => Promise<void>;
+};
+
+export async function getNetworkForTestModules(
   loggerId: string,
   config: ChainForkConfig,
   opts: NetworkForTestOpts
-): Promise<[network: Network, closeAll: () => Promise<void>]> {
+): Promise<NetworkForTestModules> {
   const logger = testLogger(loggerId);
   const startSlot = opts.startSlot ?? 0;
 
@@ -121,9 +128,11 @@ export async function getNetworkForTest(
     logger,
   });
 
-  return [
+  return {
     network,
-    async function closeAll() {
+    chain,
+    db,
+    async closeAll() {
       await network.close();
       await chain.close();
 
@@ -135,5 +144,14 @@ export async function getNetworkForTest(
        */
       await sleep(100);
     },
-  ];
+  };
+}
+
+export async function getNetworkForTest(
+  loggerId: string,
+  config: ChainForkConfig,
+  opts: NetworkForTestOpts
+): Promise<[network: Network, closeAll: () => Promise<void>]> {
+  const {network, closeAll} = await getNetworkForTestModules(loggerId, config, opts);
+  return [network, closeAll];
 }
