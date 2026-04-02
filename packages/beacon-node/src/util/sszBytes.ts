@@ -205,18 +205,26 @@ export function getCommitteeIndexFromSingleAttestationSerialized(
 }
 
 /**
- * Extract data index from SingleAttestation serialized bytes.
+ * Extract data index from serialized `beacon_attestation` gossip bytes.
  * Post-gloas, `data.index` field is repurposed:
  *   - 0 - payload was not available (or attestation is same-slot, where availability is not yet known)
  *   - 1 - payload was available
  * Return null if data is not long enough to extract the index.
  */
-export function getDataIndexFromSingleAttestationSerialized(data: Uint8Array): AttDataIndex | null {
-  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+export function getDataIndexFromSingleAttestationSerialized(fork: ForkName, data: Uint8Array): AttDataIndex | null {
+  if (isForkPostElectra(fork)) {
+    if (data.length !== SINGLE_ATTESTATION_SIZE) {
+      return null;
+    }
+
+    return getIndexFromOffset(data, SINGLE_ATTESTATION_DATA_INDEX_OFFSET);
+  }
+
+  if (data.length < VARIABLE_FIELD_OFFSET + SLOT_SIZE + COMMITTEE_INDEX_SIZE) {
     return null;
   }
 
-  return getIndexFromOffset(data, SINGLE_ATTESTATION_DATA_INDEX_OFFSET);
+  return getIndexFromOffset(data, VARIABLE_FIELD_OFFSET + SLOT_SIZE);
 }
 
 /**

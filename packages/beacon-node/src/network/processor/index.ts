@@ -400,7 +400,7 @@ export class NetworkProcessor {
           if (root == null) break;
           const attIndex =
             topicType === GossipType.beacon_attestation
-              ? getDataIndexFromSingleAttestationSerialized(message.msg.data)
+              ? getDataIndexFromSingleAttestationSerialized(fork, message.msg.data)
               : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // ptc attestation votes for the payload but the envelope is not yet known

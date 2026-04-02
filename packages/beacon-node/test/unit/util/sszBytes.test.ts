@@ -93,7 +93,7 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
         expect(getCommitteeIndexFromSingleAttestationSerialized(ForkName.electra, bytes)).toEqual(
           attestation.committeeIndex
         );
-        expect(getDataIndexFromSingleAttestationSerialized(bytes)).toEqual(attestation.data.index);
+        expect(getDataIndexFromSingleAttestationSerialized(ForkName.electra, bytes)).toEqual(attestation.data.index);
         expect(getAttesterIndexFromSingleAttestationSerialized(bytes)).toEqual(attestation.attesterIndex);
         expect(getBlockRootFromSingleAttestationSerialized(bytes)).toEqual(toRootHex(attestation.data.beaconBlockRoot));
         // base64, not hex
@@ -173,8 +173,20 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
   it("getDataIndexFromSingleAttestationSerialized - invalid data", () => {
     const invalidDataIndexSizes = [0, 4, 11];
     for (const size of invalidDataIndexSizes) {
-      expect(getDataIndexFromSingleAttestationSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getDataIndexFromSingleAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
     }
+  });
+
+  it("getDataIndexFromSingleAttestationSerialized - phase0 attestation layout", () => {
+    const attestation = phase0SingleAttestationFromValues(
+      4_000_000,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      200_00,
+      "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
+    );
+    attestation.data.index = 5;
+    const bytes = ssz.phase0.Attestation.serialize(attestation);
+    expect(getDataIndexFromSingleAttestationSerialized(ForkName.phase0, bytes)).toBe(5);
   });
 
   it("getBlockRootFromSingleAttestationSerialized - invalid data", () => {
