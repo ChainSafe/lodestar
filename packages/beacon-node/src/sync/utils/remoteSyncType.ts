@@ -25,7 +25,8 @@ export function getPeerSyncType(
   local: Status,
   remote: Status,
   forkChoice: IForkChoice,
-  slotImportTolerance: number
+  slotImportTolerance: number,
+  currentSlot: Slot
 ): PeerSyncType {
   // Aux vars: Inclusive boundaries of the range to consider a peer's head synced to ours.
   const nearRangeStart = local.headSlot - slotImportTolerance;
@@ -51,12 +52,19 @@ export function getPeerSyncType(
   }
 
   if (remote.finalizedEpoch > local.finalizedEpoch) {
+    if (forkChoice.hasBlock(remote.headRoot)) {
+      return PeerSyncType.FullySynced;
+    }
+
+    const localIsBehindClock = currentSlot > local.headSlot + slotImportTolerance;
+    if (localIsBehindClock && remote.headSlot > local.headSlot) {
+      return PeerSyncType.Advanced;
+    }
+
     if (
       // Peer is in next epoch, and head is within range => SYNCED
-      (local.finalizedEpoch + 1 === remote.finalizedEpoch &&
-        withinRangeOf(remote.headSlot, local.headSlot, slotImportTolerance)) ||
-      // Peer's head is known => SYNCED
-      forkChoice.hasBlock(remote.headRoot)
+      local.finalizedEpoch + 1 === remote.finalizedEpoch &&
+      withinRangeOf(remote.headSlot, local.headSlot, slotImportTolerance)
     ) {
       return PeerSyncType.FullySynced;
     }

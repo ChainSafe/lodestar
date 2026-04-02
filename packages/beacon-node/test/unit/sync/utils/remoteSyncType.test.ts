@@ -27,6 +27,7 @@ describe("network / peers / remoteSyncType", () => {
       local: Partial<phase0.Status>;
       remote: Partial<phase0.Status>;
       blocks?: Root[];
+      currentSlot?: number;
       syncType: PeerSyncType;
     }[] = [
       {
@@ -61,6 +62,13 @@ describe("network / peers / remoteSyncType", () => {
         syncType: PeerSyncType.FullySynced,
       },
       {
+        id: "Remote has higher finalizedEpoch and close head but local is stalled behind clock",
+        local: {finalizedEpoch: 10, headSlot: 10},
+        remote: {finalizedEpoch: 10 + 1, headSlot: 10 + 1},
+        currentSlot: 10 + slotImportTolerance + 1,
+        syncType: PeerSyncType.Advanced,
+      },
+      {
         id: "Remote has higher finalizedEpoch",
         local: {finalizedEpoch: 10},
         remote: {finalizedEpoch: 10 + 5},
@@ -68,12 +76,14 @@ describe("network / peers / remoteSyncType", () => {
       },
     ];
 
-    for (const {id, local: localPartial, remote: remotePartial, blocks, syncType} of testCases) {
+    for (const {id, local: localPartial, remote: remotePartial, blocks, currentSlot, syncType} of testCases) {
       it(id, () => {
         const local = {...status, ...localPartial};
         const remote = {...status, ...remotePartial};
         const forkChoice = getMockForkChoice(blocks || []);
-        expect(getPeerSyncType(local, remote, forkChoice, slotImportTolerance)).toBe(syncType);
+        expect(getPeerSyncType(local, remote, forkChoice, slotImportTolerance, currentSlot ?? local.headSlot)).toBe(
+          syncType
+        );
       });
     }
   });

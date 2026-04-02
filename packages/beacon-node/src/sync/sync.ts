@@ -187,7 +187,13 @@ export class BeaconSync implements IBeaconSync {
    */
   private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const localStatus = this.chain.getStatus();
-    const syncType = getPeerSyncType(localStatus, data.status, this.chain.forkChoice, this.slotImportTolerance);
+    const syncType = getPeerSyncType(
+      localStatus,
+      data.status,
+      this.chain.forkChoice,
+      this.slotImportTolerance,
+      this.chain.clock.currentSlot
+    );
 
     // For metrics only
     this.peerSyncType.set(data.peer, syncType);
