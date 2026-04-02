@@ -69,6 +69,28 @@ describe("network / peers / remoteSyncType", () => {
         syncType: PeerSyncType.Advanced,
       },
       {
+        id: "Remote has higher finalizedEpoch and stalled local but known head root still returns FullySynced",
+        local: {finalizedEpoch: 10, headSlot: 10},
+        remote: {finalizedEpoch: 10 + 1, headSlot: 10 + 1, headRoot: knownRoot},
+        blocks: [knownRoot],
+        currentSlot: 10 + slotImportTolerance + 1,
+        syncType: PeerSyncType.FullySynced,
+      },
+      {
+        id: "Remote has higher finalizedEpoch but local stalled at exact tolerance boundary stays FullySynced",
+        local: {finalizedEpoch: 10, headSlot: 10},
+        remote: {finalizedEpoch: 10 + 1, headSlot: 10 + 1},
+        currentSlot: 10 + slotImportTolerance,
+        syncType: PeerSyncType.FullySynced,
+      },
+      {
+        id: "Remote has higher finalizedEpoch and local stalled but remote head not ahead stays FullySynced",
+        local: {finalizedEpoch: 10, headSlot: 10},
+        remote: {finalizedEpoch: 10 + 1, headSlot: 10},
+        currentSlot: 10 + slotImportTolerance + 1,
+        syncType: PeerSyncType.FullySynced,
+      },
+      {
         id: "Remote has higher finalizedEpoch",
         local: {finalizedEpoch: 10},
         remote: {finalizedEpoch: 10 + 5},
