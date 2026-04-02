@@ -498,6 +498,11 @@ export class BlockInputSync {
             // proactively fetch the parent's envelope via reqresp, then retry.
             // This commonly happens after checkpoint sync + range sync where the head block's
             // envelope was already gossipped before we connected to the network.
+            // Mark as downloaded before envelope resolution so that if the import
+            // triggers executionPayloadAvailable -> triggerUnknownBlockSearch, this
+            // block is already retryable instead of stuck in processing state.
+            pendingBlock.status = PendingBlockInputStatus.downloaded;
+
             const retryCtx = this.getGloasInvalidStateRootRetryContext(pendingBlock);
             if (retryCtx.shouldRetry && retryCtx.parentRoot) {
               // Only fetch envelope if parent FULL variant is actually absent.
@@ -517,7 +522,6 @@ export class BlockInputSync {
             } else {
               this.logger.debug("Attempted to process block but its parent was still unknown", errorData, res.err);
             }
-            pendingBlock.status = PendingBlockInputStatus.downloaded;
             break;
           }
 
