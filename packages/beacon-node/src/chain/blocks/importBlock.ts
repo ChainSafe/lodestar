@@ -328,7 +328,11 @@ export async function importBlock(
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
-  if (newHead.blockRoot !== oldHead.blockRoot || newHead.payloadStatus !== oldHead.payloadStatus || newHead.stateRoot !== oldHead.stateRoot) {
+  if (
+    newHead.blockRoot !== oldHead.blockRoot ||
+    newHead.payloadStatus !== oldHead.payloadStatus ||
+    newHead.stateRoot !== oldHead.stateRoot
+  ) {
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postBlockState);
 

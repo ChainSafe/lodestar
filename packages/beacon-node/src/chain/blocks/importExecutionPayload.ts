@@ -1,11 +1,11 @@
 import {routes} from "@lodestar/api";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ExecutionStatus, PayloadExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconStateView, getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
-import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/interface.js";

@@ -29,7 +29,7 @@ export type DownloadByRangeResponses = {
   blocks?: SignedBeaconBlock[];
   blobSidecars?: deneb.BlobSidecars;
   columnSidecars?: fulu.DataColumnSidecars;
-  envelopes?: gloas.SignedExecutionPayloadEnvelope[];
+  payloadEnvelopes?: gloas.SignedExecutionPayloadEnvelope[];
 };
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
@@ -203,7 +203,10 @@ export async function downloadByRange({
   envelopesRequest,
   peerDasMetrics,
 }: DownloadAndCacheByRangeProps): Promise<
-  WarnResult<{responses: ValidatedResponses; envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null}, DownloadByRangeError>
+  WarnResult<
+    {responses: ValidatedResponses; payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null},
+    DownloadByRangeError
+  >
 > {
   let response: DownloadByRangeResponses;
   try {
@@ -254,7 +257,7 @@ export async function requestByRange({
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
   let columnSidecars: undefined | fulu.DataColumnSidecars;
-  let envelopes: undefined | gloas.SignedExecutionPayloadEnvelope[];
+  let payloadEnvelopes: undefined | gloas.SignedExecutionPayloadEnvelope[];
 
   const requests: Promise<unknown>[] = [];
 
@@ -285,7 +288,7 @@ export async function requestByRange({
   if (envelopesRequest) {
     requests.push(
       network.sendExecutionPayloadEnvelopesByRange(peerIdStr, envelopesRequest).then((envelopeResponse) => {
-        envelopes = envelopeResponse;
+        payloadEnvelopes = envelopeResponse;
       })
     );
   }
@@ -296,7 +299,7 @@ export async function requestByRange({
     blocks,
     blobSidecars,
     columnSidecars,
-    envelopes,
+    payloadEnvelopes,
   };
 }
 
@@ -313,7 +316,7 @@ export async function validateResponses({
   blocks,
   blobSidecars,
   columnSidecars,
-  envelopes,
+  payloadEnvelopes,
   peerDasMetrics,
 }: DownloadByRangeRequests &
   DownloadByRangeResponses & {
@@ -321,7 +324,10 @@ export async function validateResponses({
     batchBlocks?: IBlockInput[];
     peerDasMetrics?: BeaconMetrics["peerDas"] | null;
   }): Promise<
-  WarnResult<{responses: ValidatedResponses; envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null}, DownloadByRangeError>
+  WarnResult<
+    {responses: ValidatedResponses; payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null},
+    DownloadByRangeError
+  >
 > {
   // Blocks are always required for blob/column validation
   // If a blocksRequest is provided, blocks have just been downloaded
@@ -406,16 +412,16 @@ export async function validateResponses({
   }
 
   // Validate envelopes if an envelopes request was made
-  let validatedEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null;
+  let validatedPayloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null;
   if (envelopesRequest) {
-    validatedEnvelopes = validateEnvelopesByRangeResponse(
+    validatedPayloadEnvelopes = validateEnvelopesByRangeResponse(
       validatedResponses.validatedBlocks ?? [],
       batchBlocks,
-      envelopes ?? []
+      payloadEnvelopes ?? []
     );
   }
 
-  return {result: {responses: validatedResponses, envelopes: validatedEnvelopes}, warnings};
+  return {result: {responses: validatedResponses, payloadEnvelopes: validatedPayloadEnvelopes}, warnings};
 }
 
 /**
@@ -833,7 +839,7 @@ export async function validateColumnsByRangeResponse(
 export function validateEnvelopesByRangeResponse(
   validatedBlocks: ValidatedBlock[],
   batchBlocks: IBlockInput[] | undefined,
-  envelopes: gloas.SignedExecutionPayloadEnvelope[]
+  payloadEnvelopes: gloas.SignedExecutionPayloadEnvelope[]
 ): Map<Slot, gloas.SignedExecutionPayloadEnvelope> {
   // Build a map of slot -> blockRoot for all blocks in the batch (both cached and newly downloaded)
   const batchBlockRoots = new Map<Slot, Uint8Array>();
@@ -846,10 +852,10 @@ export function validateEnvelopesByRangeResponse(
     batchBlockRoots.set(block.message.slot, blockRoot);
   }
 
-  const envelopeMap = new Map<Slot, gloas.SignedExecutionPayloadEnvelope>();
+  const payloadEnvelopeMap = new Map<Slot, gloas.SignedExecutionPayloadEnvelope>();
 
-  for (const envelope of envelopes) {
-    const slot = envelope.message.slot;
+  for (const payloadEnvelope of payloadEnvelopes) {
+    const slot = payloadEnvelope.message.slot;
     const batchBlockRoot = batchBlockRoots.get(slot);
 
     // Envelopes for slots not in the batch are silently ignored (orphaned payloads)
@@ -858,19 +864,19 @@ export function validateEnvelopesByRangeResponse(
     }
 
     // Verify beaconBlockRoot matches the block's root
-    if (!byteArrayEquals(envelope.message.beaconBlockRoot, batchBlockRoot)) {
+    if (!byteArrayEquals(payloadEnvelope.message.beaconBlockRoot, batchBlockRoot)) {
       throw new DownloadByRangeError({
         code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT,
         slot,
         expected: toRootHex(batchBlockRoot),
-        actual: toRootHex(envelope.message.beaconBlockRoot),
+        actual: toRootHex(payloadEnvelope.message.beaconBlockRoot),
       });
     }
 
-    envelopeMap.set(slot, envelope);
+    payloadEnvelopeMap.set(slot, payloadEnvelope);
   }
 
-  return envelopeMap;
+  return payloadEnvelopeMap;
 }
 
 /**
