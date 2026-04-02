@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
-import {DataColumnSidecars, RootHex, deneb, phase0} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, deneb, phase0} from "@lodestar/types";
 import {SignedExecutionPayloadEnvelope} from "@lodestar/types/gloas";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
@@ -104,7 +104,7 @@ export type IChainEvents = ApiEvents & {
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
-  [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecars) => void;
+  [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
 
   [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
 

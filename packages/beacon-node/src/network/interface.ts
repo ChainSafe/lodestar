@@ -83,11 +83,11 @@ export interface INetwork extends INetworkCorePublic {
   sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
-  ): Promise<fulu.DataColumnSidecar[]>;
+  ): Promise<DataColumnSidecar[]>;
   sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
     request: DataColumnSidecarsByRootRequest
-  ): Promise<fulu.DataColumnSidecar[]>;
+  ): Promise<DataColumnSidecar[]>;
   sendExecutionPayloadEnvelopesByRange(
     peerId: PeerIdStr,
     request: gloas.ExecutionPayloadEnvelopesByRangeRequest

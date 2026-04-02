@@ -57,7 +57,11 @@ import {
   kzgCommitmentToVersionedHash,
   reconstructBlobs,
 } from "../../../../util/blobs.js";
-import {getDataColumnSidecarsForGloas, getDataColumnSidecarsFromBlock} from "../../../../util/dataColumns.js";
+import {
+  getBlobKzgCommitments,
+  getDataColumnSidecarsFromBlock,
+  getGloasDataColumnSidecars,
+} from "../../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -99,17 +103,20 @@ export function getBeaconBlockApi({
     const fork = config.getForkName(slot);
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
-    // TODO GLOAS: handle new BlockInput type
     const blockForImport = chain.seenBlockInputCache.getByBlock({
       block: signedBlock,
       source: BlockInputSource.api,
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
-    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
+    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
 
     if (isDenebBlockContents(signedBlockContents)) {
-      if (isForkPostFulu(fork)) {
+      if (isForkPostGloas(fork)) {
+        // After gloas, data columns are not published with the block but when publishing the execution payload envelope
+        blobSidecars = [];
+        dataColumnSidecars = [];
+      } else if (isForkPostFulu(fork)) {
         const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
         // If the block was produced by this node, we will already have computed cells
         // Otherwise, we will compute them from the blobs in this function
@@ -124,7 +131,7 @@ export function getBeaconBlockApi({
           config,
           signedBlock as SignedBeaconBlock<ForkPostFulu>,
           cellsAndProofs
-        );
+        ) as fulu.DataColumnSidecar[];
         timer?.();
         blobSidecars = [];
       } else if (isForkPostDeneb(fork)) {
@@ -666,7 +673,7 @@ export function getBeaconBlockApi({
       await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
-      let dataColumnSidecars: gloas.DataColumnSidecars = [];
+      let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
 
       if (isSelfBuild) {
         // For self-builds, construct and publish data column sidecars from cached block production data
@@ -691,7 +698,7 @@ export function getBeaconBlockApi({
             ),
           }));
 
-          dataColumnSidecars = getDataColumnSidecarsForGloas(slot, envelope.beaconBlockRoot, cellsAndProofs);
+          dataColumnSidecars = getGloasDataColumnSidecars(slot, envelope.beaconBlockRoot, cellsAndProofs);
           timer?.();
         }
       } else {
@@ -788,15 +795,11 @@ export function getBeaconBlockApi({
         metrics?.dataColumns.bySource.inc({source: BlockInputSource.api}, dataColumnSidecars.length);
 
         if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
-          // TODO GLOAS: revisit this, we likely don't wanna emit KZG commitments anymore
-          const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
-          const kzgCommitments = cachedResult?.blobsBundle.commitments.map(toHex) ?? [];
           for (const dataColumnSidecar of dataColumnSidecars) {
             chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
               blockRoot: blockRootHex,
               slot,
               index: dataColumnSidecar.index,
-              kzgCommitments,
             });
           }
         }
@@ -920,7 +923,7 @@ export function getBeaconBlockApi({
           );
         }
 
-        const blobKzgCommitments = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments;
+        const blobKzgCommitments = getBlobKzgCommitments(fork, block as SignedBeaconBlock<ForkPostFulu>);
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {

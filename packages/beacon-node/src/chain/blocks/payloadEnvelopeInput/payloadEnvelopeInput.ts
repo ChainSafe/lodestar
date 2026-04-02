@@ -1,8 +1,9 @@
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
-import {ColumnIndex, DataColumnSidecars, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
+import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ColumnIndex, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
 import {toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
+import {MissingColumnMeta} from "../blockInput/types.js";
 import {AddPayloadEnvelopeProps, ColumnWithSource, CreateFromBlockProps, SourceMeta} from "./types.js";
 
 export type PayloadEnvelopeInputState =
@@ -59,6 +60,7 @@ function createPromise<T>(): PromiseParts<T> {
 export class PayloadEnvelopeInput {
   readonly blockRootHex: RootHex;
   readonly slot: Slot;
+  readonly forkName: ForkName;
   readonly proposerIndex: ValidatorIndex;
   readonly bid: gloas.ExecutionPayloadBid;
   readonly versionedHashes: VersionedHashes;
@@ -71,13 +73,14 @@ export class PayloadEnvelopeInput {
   private timeCreatedSec: number;
 
   private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
-  private readonly columnsDataPromise: PromiseParts<DataColumnSidecars>;
+  private readonly columnsDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
 
   state: PayloadEnvelopeInputState;
 
   private constructor(props: {
     blockRootHex: RootHex;
     slot: Slot;
+    forkName: ForkName;
     proposerIndex: ValidatorIndex;
     bid: gloas.ExecutionPayloadBid;
     sampledColumns: ColumnIndex[];
@@ -86,6 +89,7 @@ export class PayloadEnvelopeInput {
   }) {
     this.blockRootHex = props.blockRootHex;
     this.slot = props.slot;
+    this.forkName = props.forkName;
     this.proposerIndex = props.proposerIndex;
     this.bid = props.bid;
     this.versionedHashes = props.bid.blobKzgCommitments.map(kzgCommitmentToVersionedHash);
@@ -112,6 +116,7 @@ export class PayloadEnvelopeInput {
     return new PayloadEnvelopeInput({
       blockRootHex: props.blockRootHex,
       slot: props.block.message.slot,
+      forkName: props.forkName,
       proposerIndex: props.block.message.proposerIndex,
       bid,
       sampledColumns: props.sampledColumns,
@@ -173,8 +178,12 @@ export class PayloadEnvelopeInput {
     }
   }
 
-  addColumn(columnWithSource: ColumnWithSource): void {
+  addColumn(columnWithSource: ColumnWithSource): boolean {
     const {columnSidecar, seenTimestampSec} = columnWithSource;
+    if (this.columnsCache.has(columnSidecar.index)) {
+      return false;
+    }
+
     this.columnsCache.set(columnSidecar.index, columnWithSource);
 
     const sampledColumns = this.getSampledColumns();
@@ -191,7 +200,7 @@ export class PayloadEnvelopeInput {
       sampledColumns.length === this.sampledColumns.length;
 
     if (!hasAllData) {
-      return;
+      return true;
     }
 
     if (hasComputedAllData) {
@@ -217,6 +226,20 @@ export class PayloadEnvelopeInput {
         hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
       };
     }
+
+    return true;
+  }
+
+  hasColumn(index: ColumnIndex): boolean {
+    return this.columnsCache.has(index);
+  }
+
+  getColumn(index: ColumnIndex): gloas.DataColumnSidecar | undefined {
+    return this.columnsCache.get(index)?.columnSidecar;
+  }
+
+  getAllColumns(): gloas.DataColumnSidecar[] {
+    return [...this.columnsCache.values()].map(({columnSidecar}) => columnSidecar);
   }
 
   getVersionedHashes(): VersionedHashes {
@@ -237,8 +260,8 @@ export class PayloadEnvelopeInput {
     return this.state.payloadEnvelopeSource;
   }
 
-  getSampledColumns(): gloas.DataColumnSidecars {
-    const columns: gloas.DataColumnSidecars = [];
+  getSampledColumns(): gloas.DataColumnSidecar[] {
+    const columns: gloas.DataColumnSidecar[] = [];
     for (const index of this.sampledColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
@@ -259,8 +282,8 @@ export class PayloadEnvelopeInput {
     return columns;
   }
 
-  getCustodyColumns(): gloas.DataColumnSidecars {
-    const columns: gloas.DataColumnSidecars = [];
+  getCustodyColumns(): gloas.DataColumnSidecar[] {
+    const columns: gloas.DataColumnSidecar[] = [];
     for (const index of this.custodyColumns) {
       const column = this.columnsCache.get(index);
       if (column) {
@@ -270,11 +293,29 @@ export class PayloadEnvelopeInput {
     return columns;
   }
 
+  hasAllData(): boolean {
+    return this.state.hasAllData;
+  }
+
+  getMissingSampledColumnMeta(): MissingColumnMeta {
+    if (this.state.hasAllData) {
+      return {missing: [], versionedHashes: this.versionedHashes};
+    }
+
+    const missing: ColumnIndex[] = [];
+    for (const index of this.sampledColumns) {
+      if (!this.columnsCache.has(index)) {
+        missing.push(index);
+      }
+    }
+    return {missing, versionedHashes: this.versionedHashes};
+  }
+
   hasComputedAllData(): boolean {
     return this.state.hasComputedAllData;
   }
 
-  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecars> {
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<gloas.DataColumnSidecar[]> {
     if (this.state.hasComputedAllData) {
       return Promise.resolve(this.getSampledColumns());
     }
@@ -319,7 +360,7 @@ export class PayloadEnvelopeInput {
     hasAllData: boolean;
     hasComputedAllData: boolean;
     isComplete: boolean;
-    columnsCount: number;
+    receivedColumns: number;
     sampledColumnsCount: number;
   } {
     return {
@@ -329,7 +370,7 @@ export class PayloadEnvelopeInput {
       hasAllData: this.state.hasAllData,
       hasComputedAllData: this.state.hasComputedAllData,
       isComplete: this.isComplete(),
-      columnsCount: this.columnsCache.size,
+      receivedColumns: this.columnsCache.size,
       sampledColumnsCount: this.sampledColumns.length,
     };
   }
