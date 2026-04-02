@@ -7,6 +7,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  PayloadStatus,
   getSafeExecutionBlockHash,
   isGloasBlock,
 } from "@lodestar/fork-choice";
@@ -164,30 +165,6 @@ export async function importBlock(
         source: source.source,
       });
     }
-  }
-
-  // For Gloas blocks whose envelope was pre-verified during state transition (sync/batch path),
-  // immediately transition the block to FULL status in fork choice and cache the payload state.
-  // Mirrors steps 6–7 of importExecutionPayload, but reuses the already-computed postPayloadEnvelopeState.
-  if (fullyVerifiedBlock.postPayloadEnvelopeState !== null) {
-    const {postPayloadEnvelopeState, payloadEnvelopeInput} = fullyVerifiedBlock;
-    this.unfinalizedPayloadEnvelopeWrites.push(payloadEnvelopeInput).catch((e) => {
-      if (!isQueueErrorAborted(e)) {
-        this.logger.error("Error pushing payload envelope to write queue", {slot: blockSlot}, e as Error);
-      }
-    });
-    this.regen.processPayloadState(postPayloadEnvelopeState);
-    if (postPayloadEnvelopeState.slot % SLOTS_PER_EPOCH === 0) {
-      const {checkpoint} = postPayloadEnvelopeState.computeAnchorCheckpoint();
-      this.regen.addCheckpointState(checkpoint, postPayloadEnvelopeState, true);
-    }
-    this.forkChoice.onExecutionPayload(
-      blockRootHex,
-      toRootHex(postPayloadEnvelopeState.latestBlockHash),
-      fullyVerifiedBlock.payloadEnvelope.message.payload.blockNumber,
-      toRootHex(postPayloadEnvelopeState.hashTreeRoot()),
-      fullyVerifiedBlock.executionStatus
-    );
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
@@ -357,6 +334,7 @@ export async function importBlock(
     this.logger.verbose("New chain head", {
       slot: newHead.slot,
       root: newHead.blockRoot,
+      payloadStatus: newHead.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
       delaySec,
     });
 

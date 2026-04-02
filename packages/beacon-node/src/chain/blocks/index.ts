@@ -9,6 +9,7 @@ import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.j
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock} from "./importBlock.js";
+import {importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
@@ -132,6 +133,10 @@ export async function processBlocks(
     for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
       // TODO: Consider batching importBlock too if it takes significant time
       await importBlock.call(this, fullyVerifiedBlock, opts);
+      if (fullyVerifiedBlock.postPayloadEnvelopeState !== null) {
+        const {postPayloadEnvelopeState, payloadEnvelopeInput, executionStatus} = fullyVerifiedBlock;
+        await importExecutionPayload.call(this, payloadEnvelopeInput, postPayloadEnvelopeState, executionStatus);
+      }
       await nextEventLoop();
     }
   } catch (e) {

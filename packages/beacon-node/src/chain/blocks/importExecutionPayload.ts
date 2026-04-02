@@ -1,11 +1,13 @@
 import {routes} from "@lodestar/api";
-import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
+import {IBeaconStateView, getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
+import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {ImportPayloadOpts} from "./types.js";
@@ -65,32 +67,33 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
   }
 }
 
+type VerifyExecutionPayloadResult = {
+  postPayloadState: IBeaconStateView;
+  execStatus: PayloadExecutionStatus;
+};
+
 /**
- * Import an execution payload envelope after all data is available.
+ * Verify an execution payload envelope:
+ * 1. Emit `execution_payload_available` if payload is for current slot
+ * 2. Get the ProtoBlock from fork choice
+ * 3. Regenerate the block state
+ * 4. Run EL verification, signature verification, and state transition in parallel
+ * 5. Validate results (signature, EL status, state root)
  *
- * This function:
- * 1. Emits `execution_payload_available` if payload is for current slot
- * 2. Gets the ProtoBlock from fork choice
- * 3. Applies write-queue backpressure (waitForSpace) early, before verification
- * 4. Regenerates the block state
- * 5. Runs EL verification (notifyNewPayload) in parallel with signature verification and processExecutionPayloadEnvelope
- * 6. Persists verified payload envelope to hot DB
- * 7. Updates fork choice
- * 8. Caches the post-execution payload state
- * 9. Records metrics for column sources
- * 10. Emits `execution_payload` for recent enough payloads after successful import
- *
+ * Returns the verified post-payload state and fork-choice execution status.
  */
-export async function importExecutionPayload(
+export async function verifyExecutionPayload(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
   opts: ImportPayloadOpts = {}
-): Promise<void> {
+): Promise<VerifyExecutionPayloadResult> {
   const signedEnvelope = payloadInput.getPayloadEnvelope();
   const envelope = signedEnvelope.message;
   const blockRootHex = payloadInput.blockRootHex;
-  const blockHashHex = payloadInput.getBlockHashHex();
   const fork = this.config.getForkName(envelope.slot);
+
+  // TODO GLOAS: also wait for payload data availability
+  // see https://github.com/ChainSafe/lodestar/issues/9150
 
   // 1. Emit `execution_payload_available` event at the start of import. At this point the payload input
   // is already complete, so the payload and required data are available for payload attestation.
@@ -112,11 +115,7 @@ export async function importExecutionPayload(
     });
   }
 
-  // 3. Apply backpressure from the write queue early, before doing verification work.
-  // The actual DB write is deferred until after verification succeeds.
-  await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
-
-  // 4. Get pre-state for processExecutionPayloadEnvelope
+  // 3. Get pre-state for processExecutionPayloadEnvelope
   // We need the block state (post-block, pre-payload) to process the envelope
   const blockState = await this.regen.getBlockSlotState(
     protoBlock,
@@ -125,8 +124,8 @@ export async function importExecutionPayload(
     RegenCaller.processBlock
   );
 
-  // 5. Run verification steps in parallel
-  // Note: No data availability check needed here - importExecutionPayload is only
+  // 4. Run verification steps in parallel
+  // Note: No data availability check needed here - verifyExecutionPayload is only
   // called when payloadInput.isComplete() is true, so all data is already available.
   const [execResult, signatureValid, postPayloadResult] = await Promise.all([
     this.executionEngine.notifyNewPayload(
@@ -213,7 +212,37 @@ export async function importExecutionPayload(
     });
   }
 
-  // 6. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
+  return {postPayloadState, execStatus: toForkChoiceExecutionStatus(execResult.status)};
+}
+
+/**
+ * Import a pre-verified execution payload envelope:
+ * 6. Applies write-queue backpressure (waitForSpace)
+ * 7. Persists payload envelope to hot DB
+ * 8. Updates fork choice
+ * 9. Caches the post-payload state
+ * 10. Records metrics for column sources
+ * 11. Emits `execution_payload` for recent enough payloads
+ *
+ * Assumes verification already passed. Accepts pre-computed postPayloadState and execStatus,
+ * so it can be reused from both processExecutionPayload() and the pre-verified processChainSegment path.
+ */
+export async function importExecutionPayload(
+  this: BeaconChain,
+  payloadInput: PayloadEnvelopeInput,
+  postPayloadState: IBeaconStateView,
+  execStatus: PayloadExecutionStatus
+): Promise<void> {
+  const signedEnvelope = payloadInput.getPayloadEnvelope();
+  const envelope = signedEnvelope.message;
+  const blockRootHex = payloadInput.blockRootHex;
+  const blockHashHex = payloadInput.getBlockHashHex();
+  const postPayloadStateRoot = postPayloadState.hashTreeRoot();
+
+  // 6. Apply backpressure from the write queue before doing persistence work.
+  await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
+
+  // 7. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error(
@@ -224,29 +253,46 @@ export async function importExecutionPayload(
     }
   });
 
-  // 7. Update fork choice
+  // 8. Update fork choice
+  const oldHead = this.forkChoice.getHead();
   this.forkChoice.onExecutionPayload(
     blockRootHex,
     blockHashHex,
     envelope.payload.blockNumber,
     toRootHex(postPayloadStateRoot),
-    toForkChoiceExecutionStatus(execResult.status)
+    execStatus
   );
+  const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
-  // 8. Cache payload state
+  if (newHead.blockRoot !== oldHead.blockRoot) {
+    this.regen.updateHeadState(newHead, postPayloadState);
+    this.logger.verbose("New chain head after execution payload import", {
+      slot: newHead.slot,
+      root: newHead.blockRoot,
+      payloadStatus: newHead.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+      executionOptimistic: isOptimisticBlock(newHead),
+    });
+    if (this.metrics) {
+      this.metrics.headSlot.set(newHead.slot);
+    }
+    this.onNewHead(newHead);
+    this.metrics?.forkChoice.changedHead.inc();
+  }
+
+  // 9. Cache payload state
   this.regen.processPayloadState(postPayloadState);
   if (postPayloadState.slot % SLOTS_PER_EPOCH === 0) {
     const {checkpoint} = postPayloadState.computeAnchorCheckpoint();
     this.regen.addCheckpointState(checkpoint, postPayloadState, true);
   }
 
-  // 9. Record metrics for payload envelope and column sources
+  // 10. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
 
-  // 10. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
+  // 11. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
   if (this.clock.currentSlot - envelope.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
       slot: envelope.slot,
@@ -264,4 +310,20 @@ export async function importExecutionPayload(
     root: blockRootHex,
     blockHash: blockHashHex,
   });
+}
+
+/**
+ * Process an execution payload envelope end-to-end:
+ * verifies it (steps 1-5) then imports it (steps 6-11).
+ *
+ * Used by PayloadEnvelopeProcessor for the normal gossip/req-resp path.
+ * For the pre-verified processChainSegment path, call importExecutionPayload() directly.
+ */
+export async function processExecutionPayload(
+  this: BeaconChain,
+  payloadInput: PayloadEnvelopeInput,
+  opts: ImportPayloadOpts = {}
+): Promise<void> {
+  const {postPayloadState, execStatus} = await verifyExecutionPayload.call(this, payloadInput, opts);
+  await importExecutionPayload.call(this, payloadInput, postPayloadState, execStatus);
 }
