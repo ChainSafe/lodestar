@@ -41,7 +41,10 @@ export async function verifyBlocksInEpoch(
   segmentExecStatus: SegmentExecStatus;
   dataAvailabilityStatuses: DataAvailabilityStatus[];
   indexedAttestationsByBlock: IndexedAttestation[][];
-  postEnvelopeStates: Map<Slot, IBeaconStateView | null>;
+  postEnvelopeStates: Map<
+    Slot,
+    {postEnvelopeState: IBeaconStateView; signedEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
+  >;
 }> {
   const blocks = blockInputs.map((blockInput) => blockInput.getBlock());
   const lastBlock = blocks.at(-1);

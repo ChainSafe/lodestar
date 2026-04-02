@@ -181,8 +181,7 @@ export async function importBlock(
     this.forkChoice.onExecutionPayload(
       blockRootHex,
       toRootHex(postEnvelopeState.latestBlockHash),
-      // TODO GLOAS: this is not right but we don't need to track it as part of consensus spec, lighthouse also does not track it
-      0,
+      fullyVerifiedBlock.signedEnvelope.message.payload.blockNumber,
       toRootHex(postEnvelopeState.hashTreeRoot()),
       fullyVerifiedBlock.executionStatus
     );

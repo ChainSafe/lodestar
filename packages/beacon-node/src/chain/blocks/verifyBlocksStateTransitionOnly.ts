@@ -39,11 +39,17 @@ export async function verifyBlocksStateTransitionOnly(
   postBlockStates: IBeaconStateView[];
   proposerBalanceDeltas: number[];
   verifyStateTime: number;
-  postEnvelopeStates: Map<Slot, IBeaconStateView | null>;
+  postEnvelopeStates: Map<
+    Slot,
+    {postEnvelopeState: IBeaconStateView; signedEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
+  >;
 }> {
   const postBlockStates: IBeaconStateView[] = [];
   const proposerBalanceDeltas: number[] = [];
-  const postEnvelopeStates = new Map<Slot, IBeaconStateView | null>();
+  const postEnvelopeStates = new Map<
+    Slot,
+    {postEnvelopeState: IBeaconStateView; signedEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
+  >();
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
@@ -56,26 +62,26 @@ export async function verifyBlocksStateTransitionOnly(
       preState = preState0;
     } else {
       const prevSlot = blocks[i - 1].getBlock().message.slot;
-      const prevPostEnvelopeState = postEnvelopeStates.get(prevSlot);
+      const prevEnvelopeResult = postEnvelopeStates.get(prevSlot) ?? null;
       // If previous slot had an envelope and its latestBlockHash matches
       // this block's bid parentBlockHash, the proposer built on the FULL path
       if (
-        prevPostEnvelopeState != null &&
+        prevEnvelopeResult != null &&
         isGloasBeaconBlock(block.message) &&
         byteArrayEquals(
-          prevPostEnvelopeState.latestBlockHash,
+          prevEnvelopeResult.postEnvelopeState.latestBlockHash,
           block.message.body.signedExecutionPayloadBid.message.parentBlockHash
         )
       ) {
         // gloas FULL path - use post-envelope state of previous block as pre-state for this block
-        preState = prevPostEnvelopeState;
+        preState = prevEnvelopeResult.postEnvelopeState;
       } else {
         // EMPTY path or pre-gloas block
-        if (prevPostEnvelopeState != null && isGloasBeaconBlock(block.message)) {
+        if (prevEnvelopeResult != null && isGloasBeaconBlock(block.message)) {
           // the envelope is orphaned
           logger.debug("Previous block had an execution payload envelope but this block did not build on it", {
             slot: block.message.slot,
-            prevEnvelopeBlockHash: toRootHex(prevPostEnvelopeState.latestBlockHash),
+            prevEnvelopeBlockHash: toRootHex(prevEnvelopeResult.postEnvelopeState.latestBlockHash),
             currentBidParentHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash),
           });
         }
@@ -151,7 +157,7 @@ export async function verifyBlocksStateTransitionOnly(
         });
       }
 
-      postEnvelopeStates.set(slot, postEnvelopeState);
+      postEnvelopeStates.set(slot, {postEnvelopeState, signedEnvelope});
     } else {
       postEnvelopeStates.set(slot, null);
     }

@@ -102,7 +102,7 @@ export async function processBlocks(
 
     const {executionStatuses} = segmentExecStatus;
     const fullyVerifiedBlocks = relevantBlocks.map((block, i): FullyVerifiedBlock => {
-      const postEnvelopeState = postEnvelopeStates.get(block.getBlock().message.slot) ?? null;
+      const envelopeResult = postEnvelopeStates.get(block.getBlock().message.slot) ?? null;
       const executionStatus = executionStatuses[i];
       const baseFields = {
         blockInput: block,
@@ -116,13 +116,14 @@ export async function processBlocks(
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
       };
 
-      if (postEnvelopeState !== null) {
+      if (envelopeResult !== null) {
+        const {postEnvelopeState, signedEnvelope} = envelopeResult;
         if (executionStatus !== ExecutionStatus.Valid && executionStatus !== ExecutionStatus.Syncing) {
           throw new Error(
             `postEnvelopeState is set but executionStatus is ${executionStatus}, expected Valid or Syncing. slot=${block.getBlock().message.slot} blockIndex=${i}`
           );
         }
-        return {...baseFields, postEnvelopeState, executionStatus};
+        return {...baseFields, postEnvelopeState, signedEnvelope, executionStatus};
       }
 
       return {...baseFields, postEnvelopeState: null, executionStatus};

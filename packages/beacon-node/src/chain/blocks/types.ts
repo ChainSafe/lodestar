@@ -2,7 +2,7 @@ import type {ChainForkConfig} from "@lodestar/config";
 import {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
-import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
+import type {IndexedAttestation, Slot, fulu, gloas} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
 
 export enum GossipedInputType {
@@ -117,6 +117,7 @@ export type FullyVerifiedBlock = FullyVerifiedBlockBase &
       }
     | {
         postEnvelopeState: IBeaconStateView;
+        signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
         executionStatus: PayloadExecutionStatus;
       }
   );
