@@ -99,6 +99,8 @@ type FullyVerifiedBlockBase = {
   indexedAttestations: IndexedAttestation[];
   /** Seen timestamp seconds */
   seenTimestampSec: number;
+  /** Whether this block came from range sync; used to skip unnecessary EL data fetches */
+  fromRangeSync?: boolean;
 };
 
 /**
