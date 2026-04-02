@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkPostDeneb, ZERO_HASH_HEX, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
-import {BeaconState, DataColumnSidecars, type SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
+import {BeaconState, DataColumnSidecar, DataColumnSidecars, type SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
@@ -98,7 +98,7 @@ export function getDebugApi({
       const fork = config.getForkName(block.message.slot);
       const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
 
-      let dataColumnSidecars: DataColumnSidecars;
+      let dataColumnSidecars: DataColumnSidecar[];
 
       const blobCount = isForkPostDeneb(fork)
         ? getBlobKzgCommitments(fork, block as SignedBeaconBlock<ForkPostDeneb>).length
