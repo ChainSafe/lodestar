@@ -14,8 +14,8 @@ import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
-  getIndexFromSignedAggregateAndProofSerialized,
-  getIndexFromSingleAttestationSerialized,
+  getDataIndexFromSignedAggregateAndProofSerialized,
+  getDataIndexFromSingleAttestationSerialized,
   getParentBlockHashFromGloasSignedBeaconBlockSerialized,
   getParentBlockHashFromSignedExecutionPayloadBidSerialized,
   getParentBlockRootFromSignedExecutionPayloadBidSerialized,
@@ -400,8 +400,8 @@ export class NetworkProcessor {
           if (root == null) break;
           const attIndex =
             topicType === GossipType.beacon_attestation
-              ? getIndexFromSingleAttestationSerialized(fork, message.msg.data)
-              : getIndexFromSignedAggregateAndProofSerialized(message.msg.data);
+              ? getDataIndexFromSingleAttestationSerialized(message.msg.data)
+              : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
             // ptc attestation votes for the payload but the envelope is not yet known
             this.searchUnknownEnvelope(

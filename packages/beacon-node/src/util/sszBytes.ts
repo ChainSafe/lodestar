@@ -57,6 +57,7 @@ const SIGNATURE_SIZE = 96;
 const SINGLE_ATTESTATION_ATTDATA_OFFSET = 8 + 8;
 const SINGLE_ATTESTATION_SLOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET;
 const SINGLE_ATTESTATION_COMMITTEE_INDEX_OFFSET = 0;
+const SINGLE_ATTESTATION_DATA_INDEX_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + 8;
 const SINGLE_ATTESTATION_ATTESTER_INDEX_OFFSET = 8;
 const SINGLE_ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + 8 + 8;
 const SINGLE_ATTESTATION_SIGNATURE_OFFSET = SINGLE_ATTESTATION_ATTDATA_OFFSET + ATTESTATION_DATA_SIZE;
@@ -179,13 +180,13 @@ export function getSlotFromSingleAttestationSerialized(data: Uint8Array): Slot |
 }
 
 /**
- * Extract index from SingleAttestation serialized bytes.
- * Post-gloas, `index` field is repurposed:
- *   - 0 — payload was not available (or attestation is same-slot, where availability is not yet known)
- *   - 1 - payload was available
- * Return null if data is not long enough to extract slot.
+ * Extract committee index from SingleAttestation serialized bytes.
+ * Return null if data is not long enough to extract the field.
  */
-export function getIndexFromSingleAttestationSerialized(fork: ForkName, data: Uint8Array): CommitteeIndex | null {
+export function getCommitteeIndexFromSingleAttestationSerialized(
+  fork: ForkName,
+  data: Uint8Array
+): CommitteeIndex | null {
   if (isForkPostElectra(fork)) {
     if (data.length !== SINGLE_ATTESTATION_SIZE) {
       return null;
@@ -199,6 +200,21 @@ export function getIndexFromSingleAttestationSerialized(fork: ForkName, data: Ui
   }
 
   return getIndexFromOffset(data, VARIABLE_FIELD_OFFSET + SLOT_SIZE);
+}
+
+/**
+ * Extract data index from SingleAttestation serialized bytes.
+ * Post-gloas, `data.index` field is repurposed:
+ *   - 0 — payload was not available (or attestation is same-slot, where availability is not yet known)
+ *   - 1 - payload was available
+ * Return null if data is not long enough to extract the field.
+ */
+export function getDataIndexFromSingleAttestationSerialized(data: Uint8Array): CommitteeIndex | null {
+  if (data.length !== SINGLE_ATTESTATION_SIZE) {
+    return null;
+  }
+
+  return getIndexFromOffset(data, SINGLE_ATTESTATION_DATA_INDEX_OFFSET);
 }
 
 /**
@@ -269,7 +285,7 @@ export function getSignatureFromSingleAttestationSerialized(data: Uint8Array): B
 const AGGREGATE_AND_PROOF_OFFSET = 4 + 96;
 const AGGREGATE_OFFSET = AGGREGATE_AND_PROOF_OFFSET + 8 + 4 + 96;
 const SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET = AGGREGATE_OFFSET + VARIABLE_FIELD_OFFSET;
-const SIGNED_AGGREGATE_AND_PROOF_COMMITTEE_INDEX_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + SLOT_SIZE;
+const SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + SLOT_SIZE;
 const SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + 8 + 8;
 
 /**
@@ -305,16 +321,16 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
 }
 
 /**
- * Extract index from signed aggregate and proof serialized bytes.
- * Return null if data is not long enough to extract index.
+ * Extract data index from signed aggregate and proof serialized bytes.
+ * Return null if data is not long enough to extract the field.
  * This works for both phase0 + electra (index is in attestation data at the same offset).
  */
-export function getIndexFromSignedAggregateAndProofSerialized(data: Uint8Array): CommitteeIndex | null {
-  if (data.length < SIGNED_AGGREGATE_AND_PROOF_COMMITTEE_INDEX_OFFSET + COMMITTEE_INDEX_SIZE) {
+export function getDataIndexFromSignedAggregateAndProofSerialized(data: Uint8Array): CommitteeIndex | null {
+  if (data.length < SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET + COMMITTEE_INDEX_SIZE) {
     return null;
   }
 
-  return getIndexFromOffset(data, SIGNED_AGGREGATE_AND_PROOF_COMMITTEE_INDEX_OFFSET);
+  return getIndexFromOffset(data, SIGNED_AGGREGATE_AND_PROOF_ATTESTATION_DATA_INDEX_OFFSET);
 }
 
 /**
