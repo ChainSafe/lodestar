@@ -160,7 +160,7 @@ export interface IBeaconChain {
   /** Chain has seen the specified block root or not. The block may not be processed yet, use forkchoice.hasBlock to check it  */
   seenBlock(blockRoot: RootHex): boolean;
   /** Chain has seen a SignedExecutionPayloadEnvelope for this block root (via seenCache or fork choice FULL variant) */
-  seenEnvelope(blockRoot: RootHex): boolean;
+  seenPayloadEnvelope(blockRoot: RootHex): boolean;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */

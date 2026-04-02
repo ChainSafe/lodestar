@@ -289,7 +289,7 @@ export class NetworkProcessor {
    */
   searchUnknownEnvelope({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
     if (
-      this.chain.seenEnvelope(root) ||
+      this.chain.seenPayloadEnvelope(root) ||
       this.awaitingMessagesByPayloadBlockRoot.has(root) ||
       this.unknownEnvelopesBySlot.getOrDefault(slot).has(root)
     ) {
