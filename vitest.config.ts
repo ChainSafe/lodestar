@@ -52,6 +52,7 @@ export default defineConfig({
       },
     ],
     exclude: [
+      "**/packages/gossipsub/**",
       "**/spec-tests/**",
       "**/spec-tests-bls/**",
       "**/*.browser.test.ts",
