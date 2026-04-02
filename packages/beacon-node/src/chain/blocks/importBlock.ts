@@ -168,21 +168,24 @@ export async function importBlock(
 
   // For Gloas blocks whose envelope was pre-verified during state transition (sync/batch path),
   // immediately transition the block to FULL status in fork choice and cache the payload state.
-  // Mirrors steps 6–7 of importExecutionPayload, but reuses the already-computed postEnvelopeState.
-  if (fullyVerifiedBlock.postEnvelopeState !== null) {
-    // TODO GLOAS: this.unfinalizedPayloadEnvelopeWrites.push(payloadInput)
-    // need a payloadInput in fullyVerifiedBlock
-    const {postEnvelopeState} = fullyVerifiedBlock;
-    this.regen.processPayloadState(postEnvelopeState);
-    if (postEnvelopeState.slot % SLOTS_PER_EPOCH === 0) {
-      const {checkpoint} = postEnvelopeState.computeAnchorCheckpoint();
-      this.regen.addCheckpointState(checkpoint, postEnvelopeState, true);
+  // Mirrors steps 6–7 of importExecutionPayload, but reuses the already-computed postPayloadEnvelopeState.
+  if (fullyVerifiedBlock.postPayloadEnvelopeState !== null) {
+    const {postPayloadEnvelopeState, payloadEnvelopeInput} = fullyVerifiedBlock;
+    this.unfinalizedPayloadEnvelopeWrites.push(payloadEnvelopeInput).catch((e) => {
+      if (!isQueueErrorAborted(e)) {
+        this.logger.error("Error pushing payload envelope to write queue", {slot: blockSlot}, e as Error);
+      }
+    });
+    this.regen.processPayloadState(postPayloadEnvelopeState);
+    if (postPayloadEnvelopeState.slot % SLOTS_PER_EPOCH === 0) {
+      const {checkpoint} = postPayloadEnvelopeState.computeAnchorCheckpoint();
+      this.regen.addCheckpointState(checkpoint, postPayloadEnvelopeState, true);
     }
     this.forkChoice.onExecutionPayload(
       blockRootHex,
-      toRootHex(postEnvelopeState.latestBlockHash),
-      fullyVerifiedBlock.signedEnvelope.message.payload.blockNumber,
-      toRootHex(postEnvelopeState.hashTreeRoot()),
+      toRootHex(postPayloadEnvelopeState.latestBlockHash),
+      fullyVerifiedBlock.payloadEnvelope.message.payload.blockNumber,
+      toRootHex(postPayloadEnvelopeState.hashTreeRoot()),
       fullyVerifiedBlock.executionStatus
     );
   }

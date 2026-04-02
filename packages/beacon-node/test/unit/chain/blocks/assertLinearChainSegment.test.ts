@@ -7,6 +7,8 @@ import {Slot, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chainSegment.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
@@ -50,13 +52,22 @@ function blockRoot(blockInput: IBlockInput): Uint8Array {
   return config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 }
 
-/** Build a valid envelope that references the given block and carries a given payload block hash */
-function makeEnvelope(blockInput: IBlockInput, payloadBlockHash: Uint8Array): gloas.SignedExecutionPayloadEnvelope {
+/** Build a PayloadEnvelopeInput that references the given block and carries a given payload block hash */
+function makePayloadEnvelopeInput(blockInput: IBlockInput, payloadBlockHash: Uint8Array): PayloadEnvelopeInput {
+  const block = blockInput.getBlock() as gloas.SignedBeaconBlock;
+  const input = PayloadEnvelopeInput.createFromBlock({
+    block,
+    blockRootHex: toRootHex(blockRoot(blockInput)),
+    sampledColumns: [],
+    custodyColumns: [],
+    timeCreatedSec: 0,
+  });
   const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
   envelope.message.beaconBlockRoot = blockRoot(blockInput);
   envelope.message.slot = blockInput.getBlock().message.slot;
   envelope.message.payload.blockHash = payloadBlockHash;
-  return envelope;
+  input.addPayloadEnvelope({envelope, source: PayloadEnvelopeInputSource.byRange, seenTimestampSec: 0});
+  return input;
 }
 
 /** Build a mock parent ProtoBlock seeded with the given execution payload block hash */
@@ -125,7 +136,7 @@ describe("chain / blocks / assertLinearChainSegment", () => {
       const block0 = makeBlockInput(GLOAS_SLOT, new Uint8Array(32), HASH_A);
       // Envelope for block0 delivers HASH_B, so block1 must use HASH_B as parentBlockHash
       const block1 = makeBlockInput(GLOAS_SLOT + 1, blockRoot(block0), HASH_B);
-      const envelopes = new Map([[GLOAS_SLOT, makeEnvelope(block0, HASH_B)]]);
+      const envelopes = new Map([[GLOAS_SLOT, makePayloadEnvelopeInput(block0, HASH_B)]]);
       assertLinearChainSegment(config, [block0, block1], envelopes, parentBlock);
     });
 
@@ -145,7 +156,7 @@ describe("chain / blocks / assertLinearChainSegment", () => {
       const block1 = makeBlockInput(GLOAS_SLOT + 1, blockRoot(block0), HASH_B);
       // block1 EMPTY: hash stays HASH_B
       const block2 = makeBlockInput(GLOAS_SLOT + 2, blockRoot(block1), HASH_B);
-      const envelopes = new Map([[GLOAS_SLOT, makeEnvelope(block0, HASH_B)]]);
+      const envelopes = new Map([[GLOAS_SLOT, makePayloadEnvelopeInput(block0, HASH_B)]]);
       assertLinearChainSegment(config, [block0, block1, block2], envelopes, parentBlock);
     });
 
@@ -156,8 +167,8 @@ describe("chain / blocks / assertLinearChainSegment", () => {
       // block1 FULL: delivers HASH_C
       const block2 = makeBlockInput(GLOAS_SLOT + 2, blockRoot(block1), HASH_C);
       const envelopes = new Map([
-        [GLOAS_SLOT, makeEnvelope(block0, HASH_B)],
-        [GLOAS_SLOT + 1, makeEnvelope(block1, HASH_C)],
+        [GLOAS_SLOT, makePayloadEnvelopeInput(block0, HASH_B)],
+        [GLOAS_SLOT + 1, makePayloadEnvelopeInput(block1, HASH_C)],
       ]);
       assertLinearChainSegment(config, [block0, block1, block2], envelopes, parentBlock);
     });
@@ -166,15 +177,17 @@ describe("chain / blocks / assertLinearChainSegment", () => {
   describe("envelope beacon_block_root validation", () => {
     it("ok - envelope beaconBlockRoot matches the block's hash tree root", () => {
       const block0 = makeBlockInput(GLOAS_SLOT, new Uint8Array(32), HASH_A);
-      const envelopes = new Map([[GLOAS_SLOT, makeEnvelope(block0, HASH_B)]]);
+      const envelopes = new Map([[GLOAS_SLOT, makePayloadEnvelopeInput(block0, HASH_B)]]);
       assertLinearChainSegment(config, [block0], envelopes, parentBlock);
     });
 
     it("ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH - envelope references a different block root", () => {
       const block0 = makeBlockInput(GLOAS_SLOT, new Uint8Array(32), HASH_A);
-      const envelope = makeEnvelope(block0, HASH_B);
-      envelope.message.beaconBlockRoot = HASH_WRONG; // tamper the root
-      const envelopes = new Map([[GLOAS_SLOT, envelope]]);
+      // Build a PayloadEnvelopeInput for a *different* block (different parentRoot → different HTR)
+      // so its stored beaconBlockRoot won't match block0's root
+      const blockOther = makeBlockInput(GLOAS_SLOT, HASH_WRONG, HASH_A);
+      const wrongInput = makePayloadEnvelopeInput(blockOther, HASH_B);
+      const envelopes = new Map([[GLOAS_SLOT, wrongInput]]);
       expectThrowsLodestarError(
         () => assertLinearChainSegment(config, [block0], envelopes, parentBlock),
         BlockErrorCode.ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH
@@ -183,9 +196,10 @@ describe("chain / blocks / assertLinearChainSegment", () => {
 
     it("ok - envelope for a slot not in segment is silently ignored", () => {
       const block0 = makeBlockInput(GLOAS_SLOT, new Uint8Array(32), HASH_A);
-      // Orphan envelope for a slot outside the segment — no error expected
-      const orphanEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      const envelopes = new Map([[GLOAS_SLOT + 99, orphanEnvelope]]);
+      // Orphan PayloadEnvelopeInput for a slot outside the segment — no error expected
+      const orphanBlock = makeBlockInput(GLOAS_SLOT + 99, new Uint8Array(32), HASH_A);
+      const orphanInput = makePayloadEnvelopeInput(orphanBlock, HASH_B);
+      const envelopes = new Map([[GLOAS_SLOT + 99, orphanInput]]);
       assertLinearChainSegment(config, [block0], envelopes, parentBlock);
     });
   });

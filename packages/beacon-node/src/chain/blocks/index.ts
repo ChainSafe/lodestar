@@ -1,5 +1,5 @@
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {SignedBeaconBlock, Slot, gloas} from "@lodestar/types";
+import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -9,6 +9,7 @@ import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.j
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock} from "./importBlock.js";
+import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
@@ -22,16 +23,10 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<
-    [IBlockInput[], Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null, ImportBlockOpts],
-    void
-  >;
+  readonly jobQueue: JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<
-      [IBlockInput[], Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null, ImportBlockOpts],
-      void
-    >(
+    this.jobQueue = new JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>(
       (job, envelopes, importOpts) => {
         return processBlocks.call(chain, job, envelopes, {...opts, ...importOpts});
       },
@@ -42,7 +37,7 @@ export class BlockProcessor {
 
   async processBlocksJob(
     job: IBlockInput[],
-    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    envelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts: ImportBlockOpts = {}
   ): Promise<void> {
     await this.jobQueue.push(job, envelopes, opts);
@@ -62,7 +57,7 @@ export class BlockProcessor {
 export async function processBlocks(
   this: BeaconChain,
   blocks: IBlockInput[],
-  envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
@@ -78,7 +73,7 @@ export async function processBlocks(
       return;
     }
 
-    assertLinearChainSegment(this.config, relevantBlocks, envelopes, parentBlock);
+    assertLinearChainSegment(this.config, relevantBlocks, payloadEnvelopes, parentBlock);
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
@@ -88,8 +83,8 @@ export async function processBlocks(
       proposerBalanceDeltas,
       segmentExecStatus,
       indexedAttestationsByBlock,
-      postEnvelopeStates,
-    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, envelopes, opts);
+      postPayloadEnvelopeStates,
+    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -102,7 +97,8 @@ export async function processBlocks(
 
     const {executionStatuses} = segmentExecStatus;
     const fullyVerifiedBlocks = relevantBlocks.map((block, i): FullyVerifiedBlock => {
-      const envelopeResult = postEnvelopeStates.get(block.getBlock().message.slot) ?? null;
+      const slot = block.getBlock().message.slot;
+      const payloadEnvelopeResult = postPayloadEnvelopeStates.get(slot) ?? null;
       const executionStatus = executionStatuses[i];
       const baseFields = {
         blockInput: block,
@@ -116,17 +112,21 @@ export async function processBlocks(
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
       };
 
-      if (envelopeResult !== null) {
-        const {postEnvelopeState, signedEnvelope} = envelopeResult;
+      if (payloadEnvelopeResult !== null) {
+        const {postPayloadEnvelopeState, payloadEnvelope} = payloadEnvelopeResult;
         if (executionStatus !== ExecutionStatus.Valid && executionStatus !== ExecutionStatus.Syncing) {
           throw new Error(
-            `postEnvelopeState is set but executionStatus is ${executionStatus}, expected Valid or Syncing. slot=${block.getBlock().message.slot} blockIndex=${i}`
+            `postPayloadEnvelopeState is set but executionStatus is ${executionStatus}, expected Valid or Syncing. slot=${slot} blockIndex=${i}`
           );
         }
-        return {...baseFields, postEnvelopeState, signedEnvelope, executionStatus};
+        const payloadEnvelopeInput = payloadEnvelopes?.get(slot);
+        if (!payloadEnvelopeInput) {
+          throw new Error(`Expected PayloadEnvelopeInput for slot ${slot} with payloadEnvelopeResult`);
+        }
+        return {...baseFields, postPayloadEnvelopeState, payloadEnvelope, payloadEnvelopeInput, executionStatus};
       }
 
-      return {...baseFields, postEnvelopeState: null, executionStatus};
+      return {...baseFields, postPayloadEnvelopeState: null, executionStatus};
     });
 
     for (const fullyVerifiedBlock of fullyVerifiedBlocks) {

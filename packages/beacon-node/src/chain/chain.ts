@@ -1054,11 +1054,10 @@ export class BeaconChain implements IBeaconChain {
 
   async processChainSegment(
     blocks: IBlockInput[],
-    // TODO GLOAS: need PayloadEnvelopeInput instead for data availability check + persist in `importBlock` flow
-    envelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     opts?: ImportBlockOpts
   ): Promise<void> {
-    return this.blockProcessor.processBlocksJob(blocks, envelopes, opts);
+    return this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
   }
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
