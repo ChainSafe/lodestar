@@ -351,40 +351,29 @@ export class NetworkProcessor {
     // 2nd extract round for some specific topics
     // we separate the search action from the await action
 
-    // beacon_block: proactively search for parent block/envelope across all forks, but never queue.
-    // BlockInputSync handles cascading recovery if the gossip handler throws.
+    // beacon_block: starting from GLOAS, proactively search for parent block/envelope, but never queue.
+    // Pre-GLOAS, keep the old behavior and let the gossip handler decide whether an unknown parent should trigger sync.
     if (topicType === GossipType.beacon_block) {
       const parentRoot = getParentRootFromSignedBeaconBlockSerialized(message.msg.data);
-      if (parentRoot) {
-        if (ForkSeq[fork] >= ForkSeq.gloas) {
-          // GLOAS: also check parent envelope, same logic as execution_payload_bid
-          const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data);
-          if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
-            const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
-            if (protoBlock === null) {
-              this.searchUnknownBlock(
-                {slot, root: parentRoot},
-                BlockInputSource.network_processor,
-                message.propagationSource.toString()
-              );
-            } else if (
-              protoBlock.executionPayloadBlockHash &&
-              protoBlock.executionPayloadBlockHash !== parentBlockHash
-            ) {
-              // only search for the envelope by block root if we're sure there is one. Otherwise UnknownBlockSync will penalize the peer.
-              this.searchUnknownEnvelope(
-                {slot, root: parentRoot},
-                BlockInputSource.network_processor,
-                message.propagationSource.toString()
-              );
-            }
+      if (parentRoot && ForkSeq[fork] >= ForkSeq.gloas) {
+        // GLOAS: also check parent envelope, same logic as execution_payload_bid
+        const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data);
+        if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
+          const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+          if (protoBlock === null) {
+            this.searchUnknownBlock(
+              {slot, root: parentRoot},
+              BlockInputSource.network_processor,
+              message.propagationSource.toString()
+            );
+          } else if (protoBlock.executionPayloadBlockHash && protoBlock.executionPayloadBlockHash !== parentBlockHash) {
+            // only search for the envelope by block root if we're sure there is one. Otherwise UnknownBlockSync will penalize the peer.
+            this.searchUnknownEnvelope(
+              {slot, root: parentRoot},
+              BlockInputSource.network_processor,
+              message.propagationSource.toString()
+            );
           }
-        } else if (!this.chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
-          this.searchUnknownBlock(
-            {slot, root: parentRoot},
-            BlockInputSource.network_processor,
-            message.propagationSource.toString()
-          );
         }
       }
       preprocessResult = {action: PreprocessAction.PushToQueue};
