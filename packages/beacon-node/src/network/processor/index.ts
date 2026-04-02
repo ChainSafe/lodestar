@@ -351,8 +351,8 @@ export class NetworkProcessor {
     // 2nd extract round for some specific topics
     // we separate the search action from the await action
 
-    // beacon_block: starting from GLOAS, proactively search for parent block/envelope, but never queue.
-    // Pre-GLOAS, keep the old behavior and let the gossip handler decide whether an unknown parent should trigger sync.
+    // beacon_block: starting from gloas, proactively search for parent block/envelope, but never queue.
+    // Pre-gloas, keep the old behavior and let the gossip handler decide whether an unknown parent should trigger sync.
     if (topicType === GossipType.beacon_block) {
       const parentRoot = getParentRootFromSignedBeaconBlockSerialized(message.msg.data);
       if (parentRoot && ForkSeq[fork] >= ForkSeq.gloas) {
