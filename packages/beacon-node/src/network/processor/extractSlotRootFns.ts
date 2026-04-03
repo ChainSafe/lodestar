@@ -2,6 +2,7 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {SlotOptionalRoot, SlotRootHex} from "@lodestar/types";
 import {
   getBeaconBlockRootFromDataColumnSidecarSerialized,
+  getBeaconBlockRootFromFuluDataColumnSidecarSerialized,
   getBlockRootFromBeaconAttestationSerialized,
   getBlockRootFromPayloadAttestationMessageSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
@@ -65,7 +66,8 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
       }
 
       if (ForkSeq[fork] < ForkSeq.gloas) {
-        return {slot};
+        const root = getBeaconBlockRootFromFuluDataColumnSidecarSerialized(data);
+        return root !== null ? {slot, root} : {slot};
       }
 
       const root = getBeaconBlockRootFromDataColumnSidecarSerialized(data);

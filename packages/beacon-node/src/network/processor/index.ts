@@ -390,6 +390,12 @@ export class NetworkProcessor {
       preprocessResult = {action: PreprocessAction.PushToQueue};
     }
 
+    if (topicType === GossipType.data_column_sidecar && ForkSeq[fork] < ForkSeq.gloas) {
+      // Fulu sidecar validation only needs the parent block/state, not the block referenced by the sidecar itself.
+      // Trigger unknown block sync above, but continue validation without waiting for the full block.
+      preprocessResult = {action: PreprocessAction.PushToQueue};
+    }
+
     if (ForkSeq[fork] >= ForkSeq.gloas) {
       // specific check for each topic
       // note that it's supposed to NOT queue beacon_block (handled above) and execution_payload because it's not a one-off;

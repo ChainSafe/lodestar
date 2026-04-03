@@ -29,6 +29,7 @@ import {
   getAttesterIndexFromSingleAttestationSerialized,
   getBeaconBlockRootFromDataColumnSidecarSerialized,
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
+  getBeaconBlockRootFromFuluDataColumnSidecarSerialized,
   getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromPayloadAttestationMessageSerialized,
@@ -57,6 +58,7 @@ import {
   getSlotFromSignedExecutionPayloadBidSerialized,
   getSlotFromSingleAttestationSerialized,
 } from "../../../src/util/sszBytes.js";
+import {generateBlockWithColumnSidecars} from "../../utils/blocksAndData.js";
 import {generateRandomBlob} from "../../utils/kzg.js";
 
 describe("SinlgeAttestation SSZ serialized picking", () => {
@@ -611,11 +613,25 @@ describe("DataColumnSidecar SSZ serialized picking (fork-aware)", () => {
       });
     }
 
+    it("getBeaconBlockRootFromFuluDataColumnSidecarSerialized", () => {
+      const {columnSidecars, rootHex} = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+      const bytes = ssz.fulu.DataColumnSidecar.serialize(columnSidecars[0]);
+
+      expect(getBeaconBlockRootFromFuluDataColumnSidecarSerialized(bytes)).toBe(rootHex);
+    });
+
     it("getSlotFromDataColumnSidecarSerialized - invalid data", () => {
       // Slot is at offset 20 for pre-Gloas, need at least 28 bytes
       const invalidSizes = [0, 10, 27];
       for (const size of invalidSizes) {
         expect(getSlotFromDataColumnSidecarSerialized(Buffer.alloc(size), ForkName.fulu)).toBeNull();
+      }
+    });
+
+    it("getBeaconBlockRootFromFuluDataColumnSidecarSerialized - invalid data", () => {
+      const invalidSizes = [0, 20, 131];
+      for (const size of invalidSizes) {
+        expect(getBeaconBlockRootFromFuluDataColumnSidecarSerialized(Buffer.alloc(size))).toBeNull();
       }
     });
   });

@@ -524,6 +524,7 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
 const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS = 20;
 const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_POST_GLOAS = 16;
 const BEACON_BLOCK_ROOT_POSITION_IN_GLOAS_DATA_COLUMN_SIDECAR = 24;
+const BEACON_BLOCK_HEADER_SIZE = SLOT_SIZE + 8 + ROOT_SIZE + ROOT_SIZE + ROOT_SIZE;
 
 export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array, fork: ForkName): Slot | null {
   const offset = isForkPostGloas(fork)
@@ -549,6 +550,22 @@ export function getBeaconBlockRootFromDataColumnSidecarSerialized(data: Uint8Arr
     )
   );
   return "0x" + blockRootBuf.toString("hex");
+}
+
+export function getBeaconBlockRootFromFuluDataColumnSidecarSerialized(data: Uint8Array): RootHex | null {
+  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS + BEACON_BLOCK_HEADER_SIZE) {
+    return null;
+  }
+
+  const blockHeader = ssz.phase0.BeaconBlockHeader.deserialize(
+    data.subarray(
+      SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS,
+      SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS + BEACON_BLOCK_HEADER_SIZE
+    )
+  );
+  const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
+  blockRootBuf.set(blockRoot);
+  return `0x${blockRootBuf.toString("hex")}`;
 }
 
 /**
