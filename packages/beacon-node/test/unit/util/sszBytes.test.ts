@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
@@ -633,6 +633,18 @@ describe("DataColumnSidecar SSZ serialized picking (fork-aware)", () => {
       for (const size of invalidSizes) {
         expect(getBeaconBlockRootFromFuluDataColumnSidecarSerialized(Buffer.alloc(size))).toBeNull();
       }
+    });
+
+    it("getBeaconBlockRootFromFuluDataColumnSidecarSerialized - returns null if header parsing throws", () => {
+      const {columnSidecars} = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+      const bytes = ssz.fulu.DataColumnSidecar.serialize(columnSidecars[0]);
+      const deserializeSpy = vi.spyOn(ssz.phase0.BeaconBlockHeader, "deserialize").mockImplementation(() => {
+        throw new Error();
+      });
+
+      expect(getBeaconBlockRootFromFuluDataColumnSidecarSerialized(bytes)).toBeNull();
+
+      deserializeSpy.mockRestore();
     });
   });
 

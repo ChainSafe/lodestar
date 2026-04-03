@@ -557,15 +557,19 @@ export function getBeaconBlockRootFromFuluDataColumnSidecarSerialized(data: Uint
     return null;
   }
 
-  const blockHeader = ssz.phase0.BeaconBlockHeader.deserialize(
-    data.subarray(
-      SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS,
-      SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS + BEACON_BLOCK_HEADER_SIZE
-    )
-  );
-  const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
-  blockRootBuf.set(blockRoot);
-  return `0x${blockRootBuf.toString("hex")}`;
+  try {
+    const blockHeader = ssz.phase0.BeaconBlockHeader.deserialize(
+      data.subarray(
+        SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS,
+        SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR_PRE_GLOAS + BEACON_BLOCK_HEADER_SIZE
+      )
+    );
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    blockRootBuf.set(blockRoot);
+    return `0x${blockRootBuf.toString("hex")}`;
+  } catch {
+    return null;
+  }
 }
 
 /**
