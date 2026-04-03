@@ -229,8 +229,8 @@ export class NetworkProcessor {
           metrics.gossipValidationQueue.keySize.set({topic}, this.gossipQueues[topic].keySize);
           metrics.gossipValidationQueue.concurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
-        metrics.awaitingBlockGossipMessages.countPerSlot.set(this.unknownBlockGossipsubMessagesCount);
-        metrics.awaitingPayloadGossipMessages.countPerSlot.set(this.unknownPayloadGossipsubMessagesCount);
+        metrics.awaitingBlockGossipMessages.countPerSlot.set(this.awaitingBlockMessageCount);
+        metrics.awaitingPayloadGossipMessages.countPerSlot.set(this.awaitingPayloadMessageCount);
         // specific metric for beacon_attestation topic
         metrics.gossipValidationQueue.keyAge.reset();
         for (const ageMs of this.gossipQueues.beacon_attestation.getDataAgeMs()) {
@@ -498,7 +498,7 @@ export class NetworkProcessor {
         this.pushPendingGossipsubMessageToQueue(message);
         break;
       case PreprocessAction.AwaitBlock: {
-        if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
+        if (this.awaitingBlockMessageCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
           // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           this.metrics?.awaitingBlockGossipMessages.reject.inc({
             reason: ReprocessRejectReason.reached_limit,
@@ -514,7 +514,7 @@ export class NetworkProcessor {
         break;
       }
       case PreprocessAction.AwaitEnvelope: {
-        if (this.unknownPayloadGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_PAYLOAD_GOSSIP_OBJECTS) {
+        if (this.awaitingPayloadMessageCount > MAX_QUEUED_UNKNOWN_PAYLOAD_GOSSIP_OBJECTS) {
           this.metrics?.awaitingPayloadGossipMessages.reject.inc({
             reason: ReprocessRejectReason.reached_limit,
             topic: topicType,
@@ -800,11 +800,4 @@ export class NetworkProcessor {
     return null;
   }
 
-  private get unknownBlockGossipsubMessagesCount(): number {
-    return this.awaitingBlockMessageCount;
-  }
-
-  private get unknownPayloadGossipsubMessagesCount(): number {
-    return this.awaitingPayloadMessageCount;
-  }
 }
