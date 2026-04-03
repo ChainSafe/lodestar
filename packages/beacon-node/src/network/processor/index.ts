@@ -799,5 +799,4 @@ export class NetworkProcessor {
 
     return null;
   }
-
 }
