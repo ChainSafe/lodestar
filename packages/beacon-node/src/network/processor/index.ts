@@ -551,10 +551,11 @@ export class NetworkProcessor {
       return;
     }
 
-    // Remove from map and update counter before async iteration to prevent
-    // double-decrement race with onClockSlot during yield points below
-    this.awaitingBlockMessageCount -= waitingGossipsubMessages.size;
-    this.awaitingMessagesByBlockRoot.delete(rootHex);
+    // Atomically remove from map and update counter before async iteration to
+    // prevent double-decrement race with onClockSlot during yield points below
+    if (this.awaitingMessagesByBlockRoot.delete(rootHex)) {
+      this.awaitingBlockMessageCount -= waitingGossipsubMessages.size;
+    }
 
     const nowSec = Date.now() / 1000;
     let count = 0;
@@ -583,10 +584,11 @@ export class NetworkProcessor {
       return;
     }
 
-    // Remove from map and update counter before async iteration to prevent
-    // double-decrement race with onClockSlot during yield points below
-    this.awaitingPayloadMessageCount -= waitingGossipsubMessages.size;
-    this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
+    // Atomically remove from map and update counter before async iteration to
+    // prevent double-decrement race with onClockSlot during yield points below
+    if (this.awaitingMessagesByPayloadBlockRoot.delete(rootHex)) {
+      this.awaitingPayloadMessageCount -= waitingGossipsubMessages.size;
+    }
 
     const nowSec = Date.now() / 1000;
     let count = 0;
@@ -627,8 +629,9 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          this.awaitingBlockMessageCount -= gossipMessages.size;
-          this.awaitingMessagesByBlockRoot.delete(rootHex);
+          if (this.awaitingMessagesByBlockRoot.delete(rootHex)) {
+            this.awaitingBlockMessageCount -= gossipMessages.size;
+          }
         }
       }
       this.unknownBlocksBySlot.delete(slot);
@@ -651,8 +654,9 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
-          this.awaitingPayloadMessageCount -= gossipMessages.size;
-          this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
+          if (this.awaitingMessagesByPayloadBlockRoot.delete(rootHex)) {
+            this.awaitingPayloadMessageCount -= gossipMessages.size;
+          }
         }
       }
       this.unknownEnvelopesBySlot.delete(slot);
