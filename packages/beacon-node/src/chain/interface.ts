@@ -248,7 +248,8 @@ export interface IBeaconChain {
 
   getStatus(): Status;
 
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
+  /** @param slot - If provided, overrides fcStore.currentSlot for Gloas FULL vs EMPTY tie-breaker logic */
+  recomputeForkChoiceHead(caller: ForkchoiceCaller, slot?: Slot): ProtoBlock;
 
   /** When proposerBoostReorg is enabled, this is called at slot n-1 to predict the head block to build on if we are proposing at slot n */
   predictProposerHead(slot: Slot): ProtoBlock;

@@ -78,7 +78,7 @@ export class PrepareNextSlotScheduler {
       await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
-      const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
+      const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot, prepareSlot);
       const {slot: headSlot, blockRoot: headRoot} = headBlock;
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
