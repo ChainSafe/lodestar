@@ -23,15 +23,16 @@ export function getExecutionPayloadEnvelopeSignatureSet(
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   proposerIndex: ValidatorIndex
 ): SingleSignatureSet {
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for execution payload envelope signature, got fork=${state.forkName}`);
+  }
+
   const envelope = signedEnvelope.message;
   let pubkey: PublicKey;
 
   if (envelope.builderIndex === BUILDER_INDEX_SELF_BUILD) {
     pubkey = pubkeyCache.getOrThrow(proposerIndex);
   } else {
-    if (!isStatePostGloas(state)) {
-      throw new Error(`Expected gloas+ state for execution payload envelope signature, got fork=${state.forkName}`);
-    }
     pubkey = PublicKey.fromBytes(state.getBuilder(envelope.builderIndex).pubkey);
   }
 

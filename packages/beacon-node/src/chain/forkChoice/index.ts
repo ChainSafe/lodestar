@@ -109,14 +109,6 @@ export function initializeForkChoiceFromFinalizedState(
 
   // Determine finalized checkpoint payload status
   const finalizedPayloadStatus = getCheckpointPayloadStatus(config, state, finalizedCheckpoint.epoch);
-  const parentBlockHash = isForkPostGloas
-    ? (() => {
-        if (!isStatePostGloas(state)) {
-          throw new Error(`Expected gloas+ state for anchor checkpoint, got fork=${state.forkName}`);
-        }
-        return toRootHex(state.latestBlockHash);
-      })()
-    : null;
 
   return new forkchoiceConstructor(
     config,
@@ -164,7 +156,7 @@ export function initializeForkChoiceFromFinalizedState(
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
-        parentBlockHash,
+        parentBlockHash: isStatePostGloas(state) ? toRootHex(state.latestBlockHash) : null,
       },
       currentSlot
     ),
@@ -214,14 +206,6 @@ export function initializeForkChoiceFromUnfinalizedState(
   // It checks state.execution_payload_availability to determine EMPTY vs FULL.
   const justifiedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, justifiedCheckpoint.epoch);
   const finalizedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, finalizedCheckpoint.epoch);
-  const parentBlockHash = isForkPostGloas
-    ? (() => {
-        if (!isStatePostGloas(unfinalizedState)) {
-          throw new Error(`Expected gloas+ state for unfinalized anchor, got fork=${unfinalizedState.forkName}`);
-        }
-        return toRootHex(unfinalizedState.latestBlockHash);
-      })()
-    : null;
 
   const store = new ForkChoiceStore(
     currentSlot,
@@ -269,7 +253,7 @@ export function initializeForkChoiceFromUnfinalizedState(
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
-    parentBlockHash,
+    parentBlockHash: isStatePostGloas(unfinalizedState) ? toRootHex(unfinalizedState.latestBlockHash) : null,
   };
 
   const parentSlot = blockHeader.slot - 1;
