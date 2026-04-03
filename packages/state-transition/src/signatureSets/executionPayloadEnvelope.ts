@@ -28,13 +28,10 @@ export function getExecutionPayloadEnvelopeSignatureSet(
   }
 
   const envelope = signedEnvelope.message;
-  let pubkey: PublicKey;
-
-  if (envelope.builderIndex === BUILDER_INDEX_SELF_BUILD) {
-    pubkey = pubkeyCache.getOrThrow(proposerIndex);
-  } else {
-    pubkey = PublicKey.fromBytes(state.getBuilder(envelope.builderIndex).pubkey);
-  }
+  const pubkey =
+    envelope.builderIndex === BUILDER_INDEX_SELF_BUILD
+      ? pubkeyCache.getOrThrow(proposerIndex)
+      : PublicKey.fromBytes(state.getBuilder(envelope.builderIndex).pubkey);
 
   return createSingleSignatureSetFromComponents(
     pubkey,
