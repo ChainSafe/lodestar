@@ -1,7 +1,7 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconState,
@@ -64,9 +64,9 @@ import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {IBeaconStateView} from "./interface.js";
+import {IBeaconStateView, IBeaconStateViewLatestFork} from "./interface.js";
 
-export class BeaconStateView implements IBeaconStateView {
+export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
   // Cached values extracted from the tree
   // phase0
@@ -98,6 +98,10 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   // phase0
+
+  get forkName(): ForkName {
+    return this.config.getForkName(this.cachedState.slot);
+  }
 
   get slot(): number {
     return this.cachedState.slot;

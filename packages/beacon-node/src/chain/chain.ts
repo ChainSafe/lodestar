@@ -18,7 +18,6 @@ import {
   type ForkPostGloas,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
-  isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
@@ -30,6 +29,9 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getEffectiveBalancesFromStateBytes,
+  isStatePostAltair,
+  isStatePostElectra,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -1076,6 +1078,9 @@ export class BeaconChain implements IBeaconChain {
         slot,
         stateRoot: ZERO_HASH,
       };
+      if (!isStatePostGloas(postState)) {
+        throw Error(`Expected gloas+ post-state for execution payload envelope, got fork=${postState.forkName}`);
+      }
       const envelopeStateRoot = computeEnvelopeStateRoot(this.metrics, postState, envelope);
       gloasResult.envelopeStateRoot = envelopeStateRoot;
     }
@@ -1404,9 +1409,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
     const headState = this.getHeadState();
-    const fork = this.config.getForkName(headState.slot);
-
-    if (isForkPostElectra(fork)) {
+    if (isStatePostElectra(headState)) {
       metrics.pendingDeposits.set(headState.pendingDepositsCount);
       metrics.pendingPartialWithdrawals.set(headState.pendingPartialWithdrawalsCount);
       metrics.pendingConsolidations.set(headState.pendingConsolidationsCount);
@@ -1653,6 +1656,9 @@ export class BeaconChain implements IBeaconChain {
     }
 
     preState = preState.processSlots(block.slot); // Dial preState's slot to block.slot
+    if (!isStatePostAltair(preState)) {
+      throw new Error("Sync committee rewards are not supported before Altair");
+    }
 
     return preState.computeSyncCommitteeRewards(block, validatorIds ?? []);
   }
