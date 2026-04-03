@@ -61,7 +61,7 @@
     "bun-types": "^1.2.21",
     "crypto-browserify": "^3.12.0",
     "dotenv": "^16.4.5",
-    "electron": "^26.2.2",
+    "electron": "^39.8.4",
     "https-browserify": "^1.0.0",
     "inquirer": "^9.1.5",
     "jsdom": "^23.0.1",
