@@ -5,6 +5,8 @@ import * as ssz from "./sszTypes.js";
 import {sszTypesFor} from "./sszTypes.js";
 export {sszTypesFor, SSZTypesFor, ssz};
 
+// Fork choice
+export * from "./forkChoice.js";
 export * from "./utils/array.js";
 // Container utils
 export * from "./utils/container.js";

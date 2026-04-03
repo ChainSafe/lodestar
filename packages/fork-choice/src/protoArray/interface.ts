@@ -1,5 +1,8 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
+import {Epoch, PayloadStatus, RootHex, Slot, UintNum64} from "@lodestar/types";
+
+// Re-export from @lodestar/types for backward compatibility
+export {PayloadStatus} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison
@@ -34,16 +37,6 @@ export enum ExecutionStatus {
   PreMerge = "PreMerge",
   Invalid = "Invalid",
   PayloadSeparated = "PayloadSeparated",
-}
-
-/**
- * Payload status for ePBS (Gloas fork)
- * Spec: gloas/fork-choice.md#constants
- */
-export enum PayloadStatus {
-  PENDING = 0,
-  EMPTY = 1,
-  FULL = 2,
 }
 
 /**

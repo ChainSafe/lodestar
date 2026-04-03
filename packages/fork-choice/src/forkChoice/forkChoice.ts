@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -669,16 +669,18 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Get justified checkpoint with payload status for Gloas
-    const justifiedPayloadStatus = getCheckpointPayloadStatus(
-      this.config,
-      state,
+    const justifiedPayloadStatus = this.getCheckpointPayloadStatusFromAncestor(
+      parentRootHex,
       state.currentJustifiedCheckpoint.epoch
     );
     const justifiedCheckpoint = toCheckpointWithPayload(state.currentJustifiedCheckpoint, justifiedPayloadStatus);
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
 
     // Get finalized checkpoint with payload status for Gloas
-    const finalizedPayloadStatus = getCheckpointPayloadStatus(this.config, state, state.finalizedCheckpoint.epoch);
+    const finalizedPayloadStatus = this.getCheckpointPayloadStatusFromAncestor(
+      parentRootHex,
+      state.finalizedCheckpoint.epoch
+    );
     const finalizedCheckpoint = toCheckpointWithPayload(state.finalizedCheckpoint, finalizedPayloadStatus);
 
     // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on demand only if
@@ -709,10 +711,8 @@ export class ForkChoice implements IForkChoice {
         parentBlock.unrealizedFinalizedEpoch + 1 >= blockEpoch
       ) {
         // reuse from parent, happens at 1/3 last blocks of epoch as monitored in mainnet
-        // Get payload status for unrealized justified checkpoint
-        const unrealizedJustifiedPayloadStatus = getCheckpointPayloadStatus(
-          this.config,
-          state,
+        const unrealizedJustifiedPayloadStatus = this.getCheckpointPayloadStatusFromAncestor(
+          parentRootHex,
           parentBlock.unrealizedJustifiedEpoch
         );
         unrealizedJustifiedCheckpoint = {
@@ -721,10 +721,8 @@ export class ForkChoice implements IForkChoice {
           rootHex: parentBlock.unrealizedJustifiedRoot,
           payloadStatus: unrealizedJustifiedPayloadStatus,
         };
-        // Get payload status for unrealized finalized checkpoint
-        const unrealizedFinalizedPayloadStatus = getCheckpointPayloadStatus(
-          this.config,
-          state,
+        const unrealizedFinalizedPayloadStatus = this.getCheckpointPayloadStatusFromAncestor(
+          parentRootHex,
           parentBlock.unrealizedFinalizedEpoch
         );
         unrealizedFinalizedCheckpoint = {
@@ -736,20 +734,16 @@ export class ForkChoice implements IForkChoice {
       } else {
         // compute new, happens 2/3 first blocks of epoch as monitored in mainnet
         const unrealized = state.computeUnrealizedCheckpoints();
-        // Get payload status for unrealized justified checkpoint
-        const unrealizedJustifiedPayloadStatus = getCheckpointPayloadStatus(
-          this.config,
-          state,
+        const unrealizedJustifiedPayloadStatus = this.getCheckpointPayloadStatusFromAncestor(
+          parentRootHex,
           unrealized.justifiedCheckpoint.epoch
         );
         unrealizedJustifiedCheckpoint = toCheckpointWithPayload(
           unrealized.justifiedCheckpoint,
           unrealizedJustifiedPayloadStatus
         );
-        // Get payload status for unrealized finalized checkpoint
-        const unrealizedFinalizedPayloadStatus = getCheckpointPayloadStatus(
-          this.config,
-          state,
+        const unrealizedFinalizedPayloadStatus = this.getCheckpointPayloadStatusFromAncestor(
+          parentRootHex,
           unrealized.finalizedCheckpoint.epoch
         );
         unrealizedFinalizedCheckpoint = toCheckpointWithPayload(
@@ -1143,6 +1137,27 @@ export class ForkChoice implements IForkChoice {
   getFinalizedCheckpointSlot(): Slot {
     const finalizedEpoch = this.fcStore.finalizedCheckpoint.epoch;
     return computeStartSlotAtEpoch(finalizedEpoch);
+  }
+
+  /**
+   * Get checkpoint payload status using proto array ancestor lookup.
+   * For state-based lookup during initialization, see IBeaconStateView.getCheckpointPayloadStatus().
+   */
+  getCheckpointPayloadStatusFromAncestor(blockRoot: RootHex, checkpointEpoch: Epoch): PayloadStatus {
+    const checkpointSlot = computeStartSlotAtEpoch(checkpointEpoch);
+
+    if (this.config.getForkSeq(checkpointSlot) >= ForkSeq.gloas) {
+      const ancestorNode = this.getAncestor(blockRoot, checkpointSlot);
+      if (ancestorNode.slot === checkpointSlot) {
+        // Non-skipped: payload not arrived at the time block is processed
+        return PayloadStatus.EMPTY;
+      }
+      // Skipped: use proto node's status
+      return ancestorNode.payloadStatus;
+    }
+
+    // Pre-Gloas: always FULL
+    return PayloadStatus.FULL;
   }
 
   /**
@@ -1865,36 +1880,4 @@ export function getCommitteeFraction(
 ): number {
   const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
   return Math.floor((committeeWeight * config.committeePercent) / 100);
-}
-
-/**
- * Get the payload status for a checkpoint.
- *
- * Pre-Gloas: always FULL (payload embedded in block)
- * Gloas: determined by state.execution_payload_availability
- *
- * @param config - The chain fork config to determine fork at checkpoint slot
- * @param state - The state to check execution_payload_availability
- * @param checkpointEpoch - The epoch of the checkpoint
- */
-export function getCheckpointPayloadStatus(
-  config: ChainForkConfig,
-  state: IBeaconStateView,
-  checkpointEpoch: number
-): PayloadStatus {
-  // Compute checkpoint slot first to determine the correct fork
-  const checkpointSlot = computeStartSlotAtEpoch(checkpointEpoch);
-  const fork = config.getForkSeq(checkpointSlot);
-
-  // Pre-Gloas: always FULL
-  if (fork < ForkSeq.gloas) {
-    return PayloadStatus.FULL;
-  }
-
-  // For Gloas, check state.execution_payload_availability
-  // - For non-skipped slots at checkpoint: returns false (EMPTY) since payload hasn't arrived yet
-  // - For skipped slots at checkpoint: returns the actual availability status from state
-  const payloadAvailable = state.executionPayloadAvailability.get(checkpointSlot % SLOTS_PER_HISTORICAL_ROOT);
-
-  return payloadAvailable ? PayloadStatus.FULL : PayloadStatus.EMPTY;
 }

@@ -6,12 +6,7 @@ export {
   type InvalidBlock,
   InvalidBlockCode,
 } from "./forkChoice/errors.js";
-export {
-  ForkChoice,
-  type ForkChoiceOpts,
-  UpdateHeadOpt,
-  getCheckpointPayloadStatus,
-} from "./forkChoice/forkChoice.js";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,
   AncestorStatus,

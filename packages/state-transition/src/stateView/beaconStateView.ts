@@ -11,6 +11,7 @@ import {
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
+  PayloadStatus,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -28,6 +29,7 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
+import {byteArrayEquals} from "@lodestar/utils";
 import {processExecutionPayloadEnvelope} from "../block/index.js";
 import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.js";
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
@@ -463,8 +465,66 @@ export class BeaconStateView implements IBeaconStateView {
     return this.cachedState.epochCtx.getBeaconProposer(slot);
   }
 
-  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
-    return computeAnchorCheckpoint(this.config, this.cachedState);
+  /**
+   * Compute anchor checkpoint and its payload status from state.
+   * For proto array-based lookup during block processing, see
+   * ForkChoice.getCheckpointPayloadStatusFromAncestor().
+   */
+  computeAnchorCheckpoint(): {
+    checkpoint: phase0.Checkpoint;
+    checkpointPayloadStatus: PayloadStatus;
+    blockHeader: phase0.BeaconBlockHeader;
+  } {
+    const result = computeAnchorCheckpoint(this.config, this.cachedState);
+
+    if (this.config.getForkSeq(this.cachedState.slot) >= ForkSeq.gloas) {
+      const blockSlot = this.cachedState.latestBlockHeader.slot;
+
+      // Non-skipped: payload not arrived at the time block is processed
+      if (this.cachedState.slot === blockSlot) {
+        return {...result, checkpointPayloadStatus: PayloadStatus.EMPTY};
+      }
+
+      // Skipped slot: check executionPayloadAvailability at actual block's slot
+      const payloadAvailable = this.executionPayloadAvailability.get(blockSlot % SLOTS_PER_HISTORICAL_ROOT);
+      return {...result, checkpointPayloadStatus: payloadAvailable ? PayloadStatus.FULL : PayloadStatus.EMPTY};
+    }
+
+    // Pre-Gloas: always FULL
+    return {...result, checkpointPayloadStatus: PayloadStatus.FULL};
+  }
+
+  /**
+   * Get checkpoint payload status for an arbitrary checkpoint epoch using state blockRoots.
+   * Used during fork choice initialization from unfinalized state.
+   * For anchor checkpoint, see computeAnchorCheckpoint() which uses a more efficient approach.
+   * For proto array-based lookup during block processing, see
+   * ForkChoice.getCheckpointPayloadStatusFromAncestor().
+   */
+  getCheckpointPayloadStatus(checkpointEpoch: Epoch): PayloadStatus {
+    const checkpointSlot = computeStartSlotAtEpoch(checkpointEpoch);
+
+    if (this.config.getForkSeq(checkpointSlot) >= ForkSeq.gloas) {
+      // Non-skipped: blockRoot at checkpoint slot differs from blockRoot at slot-1
+      if (!byteArrayEquals(this.getBlockRootAtSlot(checkpointSlot), this.getBlockRootAtSlot(checkpointSlot - 1))) {
+        // Non-skipped: payload not arrived at the time block is processed
+        return PayloadStatus.EMPTY;
+      }
+
+      // Skipped: walk back to find actual block slot, check executionPayloadAvailability there
+      let actualSlot = checkpointSlot;
+      while (
+        actualSlot > 0 &&
+        byteArrayEquals(this.getBlockRootAtSlot(actualSlot), this.getBlockRootAtSlot(actualSlot - 1))
+      ) {
+        actualSlot--;
+      }
+      const payloadAvailable = this.executionPayloadAvailability.get(actualSlot % SLOTS_PER_HISTORICAL_ROOT);
+      return payloadAvailable ? PayloadStatus.FULL : PayloadStatus.EMPTY;
+    }
+
+    // Pre-Gloas: always FULL
+    return PayloadStatus.FULL;
   }
 
   // Sync committees

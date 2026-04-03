@@ -8,7 +8,6 @@ import {
   ProtoArray,
   ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
-  getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
 import {ForkSeq, ZERO_HASH_HEX} from "@lodestar/params";
 import {
@@ -83,7 +82,7 @@ export function initializeForkChoiceFromFinalizedState(
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
-  const {blockHeader, checkpoint} = state.computeAnchorCheckpoint();
+  const {blockHeader, checkpoint, checkpointPayloadStatus} = state.computeAnchorCheckpoint();
   const finalizedCheckpoint = {...checkpoint};
   const justifiedCheckpoint = {
     ...checkpoint,
@@ -102,11 +101,9 @@ export function initializeForkChoiceFromFinalizedState(
 
   const isForkPostGloas = computeEpochAtSlot(state.slot) >= config.GLOAS_FORK_EPOCH;
 
-  // Determine justified checkpoint payload status
-  const justifiedPayloadStatus = getCheckpointPayloadStatus(config, state, justifiedCheckpoint.epoch);
-
-  // Determine finalized checkpoint payload status
-  const finalizedPayloadStatus = getCheckpointPayloadStatus(config, state, finalizedCheckpoint.epoch);
+  // Both justified and finalized derive from the same anchor checkpoint
+  const justifiedPayloadStatus = checkpointPayloadStatus;
+  const finalizedPayloadStatus = checkpointPayloadStatus;
 
   return new forkchoiceConstructor(
     config,
@@ -200,10 +197,8 @@ export function initializeForkChoiceFromUnfinalizedState(
 
   const isForkPostGloas = computeEpochAtSlot(unfinalizedState.slot) >= config.GLOAS_FORK_EPOCH;
 
-  // For unfinalized state, use getCheckpointPayloadStatus to determine the correct status.
-  // It checks state.execution_payload_availability to determine EMPTY vs FULL.
-  const justifiedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, justifiedCheckpoint.epoch);
-  const finalizedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, finalizedCheckpoint.epoch);
+  const justifiedPayloadStatus = unfinalizedState.getCheckpointPayloadStatus(justifiedCheckpoint.epoch);
+  const finalizedPayloadStatus = unfinalizedState.getCheckpointPayloadStatus(finalizedCheckpoint.epoch);
 
   const store = new ForkChoiceStore(
     currentSlot,

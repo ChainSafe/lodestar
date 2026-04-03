@@ -9,6 +9,7 @@ import {
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
+  PayloadStatus,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -183,7 +184,12 @@ export interface IBeaconStateView {
     justifiedCheckpoint: phase0.Checkpoint;
     finalizedCheckpoint: phase0.Checkpoint;
   };
-  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader};
+  computeAnchorCheckpoint(): {
+    checkpoint: phase0.Checkpoint;
+    checkpointPayloadStatus: PayloadStatus;
+    blockHeader: phase0.BeaconBlockHeader;
+  };
+  getCheckpointPayloadStatus(checkpointEpoch: Epoch): PayloadStatus;
 
   // this is for backward compatible
   clonedCount: number;

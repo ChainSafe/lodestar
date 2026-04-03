@@ -2,14 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {
-  CheckpointWithPayloadStatus,
-  IForkChoice,
-  PayloadStatus,
-  ProtoBlock,
-  UpdateHeadOpt,
-  getCheckpointPayloadStatus,
-} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -37,6 +30,7 @@ import {
   BlindedBeaconBlockBody,
   DataColumnSidecar,
   Epoch,
+  PayloadStatus,
   Root,
   RootHex,
   SignedBeaconBlock,
@@ -385,10 +379,10 @@ export class BeaconChain implements IBeaconChain {
       this.opts
     );
 
-    const {checkpoint} = anchorState.computeAnchorCheckpoint();
+    const {checkpoint, checkpointPayloadStatus} = anchorState.computeAnchorCheckpoint();
     blockStateCache.add(anchorState);
     blockStateCache.setHeadState(anchorState);
-    const payloadPresent = getCheckpointPayloadStatus(config, anchorState, checkpoint.epoch) === PayloadStatus.FULL;
+    const payloadPresent = checkpointPayloadStatus === PayloadStatus.FULL;
     checkpointStateCache.add(checkpoint, anchorState, payloadPresent);
 
     const forkChoice = initializeForkChoice(
