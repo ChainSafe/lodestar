@@ -285,6 +285,10 @@ export class Network implements INetwork {
     this.networkProcessor.searchUnknownBlock(slotRoot, source, peer);
   }
 
+  searchUnknownEnvelope(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownEnvelope(slotRoot, source, peer);
+  }
+
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
     return this.core.reportPeer(peer, action, actionName);
   }

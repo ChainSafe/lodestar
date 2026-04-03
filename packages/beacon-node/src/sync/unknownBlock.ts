@@ -115,7 +115,7 @@ export class BlockInputSync {
       this.logger.verbose("BlockInputSync enabled.");
       this.chain.emitter.on(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
       this.chain.emitter.on(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
-      this.chain.emitter.on(ChainEvent.unknownParent, this.onUnknownParent);
+      this.chain.emitter.on(ChainEvent.blockUnknownParent, this.onUnknownParent);
       this.network.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
       this.network.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
       this.subscribedToNetworkEvents = true;
@@ -126,7 +126,7 @@ export class BlockInputSync {
     this.logger.verbose("BlockInputSync disabled.");
     this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
-    this.chain.emitter.off(ChainEvent.unknownParent, this.onUnknownParent);
+    this.chain.emitter.off(ChainEvent.blockUnknownParent, this.onUnknownParent);
     this.network.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.network.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
     this.subscribedToNetworkEvents = false;
@@ -171,7 +171,7 @@ export class BlockInputSync {
   /**
    * Process an unknownBlockParent event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownParent = (data: ChainEventData[ChainEvent.unknownParent]): void => {
+  private onUnknownParent = (data: ChainEventData[ChainEvent.blockUnknownParent]): void => {
     try {
       this.addByRootHex(data.blockInput.parentRootHex, data.peer);
       this.addByBlockInput(data.blockInput, data.peer);
