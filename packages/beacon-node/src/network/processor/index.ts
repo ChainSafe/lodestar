@@ -185,9 +185,11 @@ export class NetworkProcessor {
   // we may not receive the block for messages like Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
   private readonly awaitingMessagesByBlockRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
+  private awaitingBlockMessageCount = 0;
   // we may not receive the payload for messages that require the FULL payload variant to be processed,
   // in that case PendingGossipsubMessage needs to be stored in this Map and reprocessed once the payload comes
   private readonly awaitingMessagesByPayloadBlockRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
+  private awaitingPayloadMessageCount = 0;
   private unknownBlocksBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
   private unknownEnvelopesBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
 
@@ -508,6 +510,7 @@ export class NetworkProcessor {
         this.metrics?.awaitingBlockGossipMessages.queue.inc({topic: topicType});
         const awaitingGossipsubMessages = this.awaitingMessagesByBlockRoot.getOrDefault(preprocessResult.root);
         awaitingGossipsubMessages.add(message);
+        this.awaitingBlockMessageCount++;
         break;
       }
       case PreprocessAction.AwaitEnvelope: {
@@ -524,6 +527,7 @@ export class NetworkProcessor {
           preprocessResult.root
         );
         awaitingPayloadGossipsubMessages.add(message);
+        this.awaitingPayloadMessageCount++;
         break;
       }
     }
@@ -567,6 +571,7 @@ export class NetworkProcessor {
       }
     }
 
+    this.awaitingBlockMessageCount -= waitingGossipsubMessages.size;
     this.awaitingMessagesByBlockRoot.delete(rootHex);
   };
 
@@ -593,6 +598,7 @@ export class NetworkProcessor {
       }
     }
 
+    this.awaitingPayloadMessageCount -= waitingGossipsubMessages.size;
     this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
   };
 
@@ -617,6 +623,7 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
+          this.awaitingBlockMessageCount -= gossipMessages.size;
           this.awaitingMessagesByBlockRoot.delete(rootHex);
         }
       }
@@ -640,6 +647,7 @@ export class NetworkProcessor {
             );
             // No need to report the dropped job to gossip. It will be eventually pruned from the mcache
           }
+          this.awaitingPayloadMessageCount -= gossipMessages.size;
           this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
         }
       }
@@ -785,18 +793,10 @@ export class NetworkProcessor {
   }
 
   private get unknownBlockGossipsubMessagesCount(): number {
-    let count = 0;
-    for (const messages of this.awaitingMessagesByBlockRoot.values()) {
-      count += messages.size;
-    }
-    return count;
+    return this.awaitingBlockMessageCount;
   }
 
   private get unknownPayloadGossipsubMessagesCount(): number {
-    let count = 0;
-    for (const messages of this.awaitingMessagesByPayloadBlockRoot.values()) {
-      count += messages.size;
-    }
-    return count;
+    return this.awaitingPayloadMessageCount;
   }
 }
