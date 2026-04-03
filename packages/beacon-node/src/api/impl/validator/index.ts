@@ -920,7 +920,7 @@ export function getValidatorApi(
         slot,
         parentSlot: parentBlock.slot,
         parentRoot: parentBlock.blockRoot,
-        parentVariant: parentBlock.payloadStatus === PayloadStatus.FULL ? "FULL" : "EMPTY",
+        parentPayloadStatus: PayloadStatus[parentBlock.payloadStatus],
       });
       const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
       const parentBlockRoot = fromHex(parentBlockRootHex);

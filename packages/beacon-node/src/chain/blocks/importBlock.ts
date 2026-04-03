@@ -355,7 +355,7 @@ export async function importBlock(
     this.logger.verbose("New chain head", {
       slot: newHead.slot,
       root: newHead.blockRoot,
-      payloadStatus: newHead.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+      payloadStatus: PayloadStatus[newHead.payloadStatus],
       delaySec,
     });
 

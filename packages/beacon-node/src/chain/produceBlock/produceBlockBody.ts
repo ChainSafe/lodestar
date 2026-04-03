@@ -204,7 +204,7 @@ export async function produceBlockBody<T extends BlockType>(
       slot: blockSlot,
       parentBlockRoot: toRootHex(parentBlockRoot),
       parentBlockSlot: parentBlock.slot,
-      parentVariant: parentBlock.payloadStatus === PayloadStatus.FULL ? "FULL" : "EMPTY",
+      parentPayloadStatus: PayloadStatus[parentBlock.payloadStatus],
       feeRecipient,
     });
 

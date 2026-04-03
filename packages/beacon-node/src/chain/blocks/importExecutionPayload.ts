@@ -269,7 +269,7 @@ export async function importExecutionPayload(
     this.logger.verbose("New chain head after execution payload import", {
       slot: newHead.slot,
       root: newHead.blockRoot,
-      payloadStatus: newHead.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+      payloadStatus: PayloadStatus[newHead.payloadStatus],
       executionOptimistic: isOptimisticBlock(newHead),
     });
     if (this.metrics) {
