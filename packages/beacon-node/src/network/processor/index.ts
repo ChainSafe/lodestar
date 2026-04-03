@@ -551,6 +551,11 @@ export class NetworkProcessor {
       return;
     }
 
+    // Remove from map and update counter before async iteration to prevent
+    // double-decrement race with onClockSlot during yield points below
+    this.awaitingBlockMessageCount -= waitingGossipsubMessages.size;
+    this.awaitingMessagesByBlockRoot.delete(rootHex);
+
     const nowSec = Date.now() / 1000;
     let count = 0;
     // TODO: we can group attestations to process in batches but since we have the SeenAttestationDatas
@@ -570,9 +575,6 @@ export class NetworkProcessor {
         await sleep(AWAITING_GOSSIP_OBJECTS_YIELD_EVERY_MS);
       }
     }
-
-    this.awaitingBlockMessageCount -= waitingGossipsubMessages.size;
-    this.awaitingMessagesByBlockRoot.delete(rootHex);
   };
 
   private onPayloadEnvelopeProcessed = async ({blockRoot: rootHex}: {blockRoot: RootHex}): Promise<void> => {
@@ -580,6 +582,11 @@ export class NetworkProcessor {
     if (!waitingGossipsubMessages || waitingGossipsubMessages.size === 0) {
       return;
     }
+
+    // Remove from map and update counter before async iteration to prevent
+    // double-decrement race with onClockSlot during yield points below
+    this.awaitingPayloadMessageCount -= waitingGossipsubMessages.size;
+    this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
 
     const nowSec = Date.now() / 1000;
     let count = 0;
@@ -597,9 +604,6 @@ export class NetworkProcessor {
         await sleep(AWAITING_GOSSIP_OBJECTS_YIELD_EVERY_MS);
       }
     }
-
-    this.awaitingPayloadMessageCount -= waitingGossipsubMessages.size;
-    this.awaitingMessagesByPayloadBlockRoot.delete(rootHex);
   };
 
   private onClockSlot = (clockSlot: Slot): void => {
