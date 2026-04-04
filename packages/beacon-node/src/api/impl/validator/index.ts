@@ -1642,7 +1642,7 @@ export function getValidatorApi(
         throw Error("Cached block production result is not full block");
       }
 
-      const {executionPayload, executionRequests, payloadStateRoot} = produceResult as ProduceFullGloas;
+      const {executionPayload, executionRequests, payloadEnvelopeStateRoot} = produceResult as ProduceFullGloas;
 
       const envelope: gloas.ExecutionPayloadEnvelope = {
         payload: executionPayload,
@@ -1650,7 +1650,7 @@ export function getValidatorApi(
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
         slot,
-        stateRoot: payloadStateRoot,
+        stateRoot: payloadEnvelopeStateRoot,
       };
 
       logger.info("Produced execution payload envelope", {
