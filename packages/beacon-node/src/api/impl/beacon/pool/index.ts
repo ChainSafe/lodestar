@@ -1,6 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
+import {isStatePostAltair} from "@lodestar/state-transition";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {
   AttestationError,
@@ -249,6 +250,9 @@ export function getBeaconPoolApi({
 
       // TODO: Fetch states at signature slots
       const state = chain.getHeadState();
+      if (!isStatePostAltair(state)) {
+        throw new ApiError(400, "Sync committee pool is not supported before Altair");
+      }
 
       const failures: FailureList = [];
 
