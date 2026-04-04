@@ -10,6 +10,8 @@ export async function* onExecutionPayloadEnvelopesByRoot(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
+  // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
+  // Archival nodes may still serve older retained payloads to allow genesis sync.
   for (const root of requestBody) {
     const rootHex = toRootHex(root);
     const block = chain.forkChoice.getBlockHexDefaultStatus(rootHex);

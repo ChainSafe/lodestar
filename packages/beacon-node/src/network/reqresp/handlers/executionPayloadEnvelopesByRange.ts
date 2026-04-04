@@ -85,7 +85,7 @@ export function validateExecutionPayloadEnvelopesByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  // The gloas req/resp spec defines the recent range peers MUST support serving.
+  // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained payloads to allow genesis sync.
 
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {

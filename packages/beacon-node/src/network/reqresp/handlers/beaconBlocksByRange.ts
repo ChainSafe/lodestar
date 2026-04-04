@@ -100,7 +100,7 @@ export function validateBeaconBlocksByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  // The phase0 req/resp spec defines the recent range peers MUST support serving.
+  // The phase0 req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained blocks to allow genesis sync.
 
   // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
