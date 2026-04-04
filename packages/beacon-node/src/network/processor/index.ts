@@ -351,9 +351,11 @@ export class NetworkProcessor {
     // 2nd extract round for some specific topics
     // we separate the search action from the await action
 
-    // beacon_block: proactively search for parent block/envelope across all forks, but never queue.
-    // BlockInputSync handles cascading recovery if the gossip handler throws.
+    // beacon_block: proactively search for parent block/envelope across all forks.
+    // Pre-Gloas and unknown parent: push to queue, BlockInputSync handles cascading recovery if the gossip handler throws.
+    // Gloas with known parent but unknown parent payload: await the envelope so the block is held until the parent payload arrives.
     if (topicType === GossipType.beacon_block) {
+      preprocessResult = {action: PreprocessAction.PushToQueue};
       const parentRoot = getParentRootFromSignedBeaconBlockSerialized(message.msg.data);
       if (parentRoot) {
         if (ForkSeq[fork] >= ForkSeq.gloas) {
@@ -377,6 +379,8 @@ export class NetworkProcessor {
                 BlockInputSource.network_processor,
                 message.propagationSource.toString()
               );
+              // Parent block known but payload missing, queue block for processing once the parent payload is retrieved
+              preprocessResult = {action: PreprocessAction.AwaitEnvelope, root: parentRoot};
             }
           }
         } else if (!this.chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
@@ -387,7 +391,6 @@ export class NetworkProcessor {
           );
         }
       }
-      preprocessResult = {action: PreprocessAction.PushToQueue};
     }
 
     if (ForkSeq[fork] >= ForkSeq.gloas) {
