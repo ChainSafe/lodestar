@@ -58,7 +58,7 @@ export enum InvalidAttestationCode {
    */
   INVALID_DATA_INDEX = "INVALID_DATA_INDEX",
   /**
-   * The attestation votes for a full payload (index=1) but the payload state is not known.
+   * The attestation votes for a full payload (index=1) but the payload status is not known.
    */
   UNKNOWN_PAYLOAD_STATUS = "UNKNOWN_PAYLOAD_STATUS",
 }
