@@ -100,7 +100,7 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {computeEnvelopeStateRoot, computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {computePayloadEnvelopeStateRoot, computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlockType, ProduceFullGloas, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -1081,8 +1081,8 @@ export class BeaconChain implements IBeaconChain {
       if (!isStatePostGloas(postState)) {
         throw Error(`Expected gloas+ post-state for execution payload envelope, got fork=${postState.forkName}`);
       }
-      const envelopeStateRoot = computeEnvelopeStateRoot(this.metrics, postState, envelope);
-      gloasResult.envelopeStateRoot = envelopeStateRoot;
+      const payloadStateRoot = computePayloadEnvelopeStateRoot(this.metrics, postState, envelope);
+      gloasResult.payloadStateRoot = payloadStateRoot;
     }
 
     // Track the produced block for consensus broadcast validations, later validation, etc.

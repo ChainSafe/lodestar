@@ -59,7 +59,7 @@ export function computeNewStateRoot(
  * Similar to `computeNewStateRoot` but for payload envelope processing.
  *
  */
-export function computeEnvelopeStateRoot(
+export function computePayloadEnvelopeStateRoot(
   metrics: Metrics | null,
   postBlockState: IBeaconStateViewGloas,
   envelope: gloas.ExecutionPayloadEnvelope
@@ -70,7 +70,7 @@ export function computeEnvelopeStateRoot(
   };
 
   const processEnvelopeTimer = metrics?.blockPayload.executionPayloadEnvelopeProcessingTime.startTimer();
-  const postEnvelopeState = postBlockState.processExecutionPayloadEnvelope(signedEnvelope, {
+  const postPayloadState = postBlockState.processExecutionPayloadEnvelope(signedEnvelope, {
     // Signature is zero-ed (G2_POINT_AT_INFINITY), skip verification
     verifySignature: false,
     // State root is being computed here, the envelope doesn't have it yet
@@ -81,9 +81,9 @@ export function computeEnvelopeStateRoot(
   processEnvelopeTimer?.();
 
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-    source: StateHashTreeRootSource.computeEnvelopeStateRoot,
+    source: StateHashTreeRootSource.computePayloadEnvelopeStateRoot,
   });
-  const stateRoot = postEnvelopeState.hashTreeRoot();
+  const stateRoot = postPayloadState.hashTreeRoot();
   hashTreeRootTimer?.();
 
   return stateRoot;
