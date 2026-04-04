@@ -81,11 +81,12 @@ export function validateExecutionPayloadEnvelopesByRangeRequest(
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
-  // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
+  // Retained historical envelopes remain serveable. Actual availability is determined
+  // by earliestAvailableSlot / archive retention, not by a current-epoch floor here.
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
     count = config.MAX_REQUEST_BLOCKS_DENEB;
   }

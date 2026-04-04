@@ -3,7 +3,7 @@ import {ChainConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {ColumnIndex, fulu} from "@lodestar/types";
+import {ColumnIndex, Epoch, fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -21,7 +21,11 @@ export async function* onDataColumnSidecarsByRange(
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of columns
-  const {startSlot, count, columns: requestedColumns} = validateDataColumnSidecarsByRangeRequest(chain.config, request);
+  const {
+    startSlot,
+    count,
+    columns: requestedColumns,
+  } = validateDataColumnSidecarsByRangeRequest(chain.config, chain.clock.currentEpoch, request);
   const availableColumns = validateRequestedDataColumns(chain, requestedColumns);
   const endSlot = startSlot + count;
 
@@ -139,6 +143,7 @@ export async function* onDataColumnSidecarsByRange(
 
 export function validateDataColumnSidecarsByRangeRequest(
   config: ChainConfig,
+  currentEpoch: Epoch,
   request: fulu.DataColumnSidecarsByRangeRequest
 ): fulu.DataColumnSidecarsByRangeRequest {
   const {startSlot, columns} = request;
@@ -147,9 +152,20 @@ export function validateDataColumnSidecarsByRangeRequest(
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
-  // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
+  }
+
+  // Spec: [max(current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, FULU_FORK_EPOCH), current_epoch]
+  const minimumRequestEpoch = Math.max(
+    currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS,
+    config.FULU_FORK_EPOCH
+  );
+  if (computeEpochAtSlot(startSlot) < minimumRequestEpoch) {
+    throw new ResponseError(
+      RespStatus.RESOURCE_UNAVAILABLE,
+      "startSlot is before MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS"
+    );
   }
 
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {

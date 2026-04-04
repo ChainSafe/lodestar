@@ -10,13 +10,6 @@ export async function* onExecutionPayloadEnvelopesByRoot(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
-  // Spec: [max(GLOAS_FORK_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOCK_REQUESTS), current_epoch]
-  const currentEpoch = chain.clock.currentEpoch;
-  const minimumRequestEpoch = Math.max(
-    currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOCK_REQUESTS,
-    chain.config.GLOAS_FORK_EPOCH
-  );
-
   for (const root of requestBody) {
     const rootHex = toRootHex(root);
     const block = chain.forkChoice.getBlockHexDefaultStatus(rootHex);
@@ -27,16 +20,11 @@ export async function* onExecutionPayloadEnvelopesByRoot(
       continue;
     }
 
-    const requestedEpoch = computeEpochAtSlot(slot);
-    if (requestedEpoch < minimumRequestEpoch) {
-      continue;
-    }
-
     const envelopeBytes = await chain.getSerializedExecutionPayloadEnvelope(slot, rootHex);
     if (envelopeBytes) {
       yield {
         data: envelopeBytes,
-        boundary: chain.config.getForkBoundaryAtEpoch(requestedEpoch),
+        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
       };
     }
   }

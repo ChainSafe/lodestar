@@ -96,11 +96,12 @@ export function validateBeaconBlocksByRangeRequest(
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
-  // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
+  // The phase0 req/resp spec defines the recent range peers MUST support serving.
+  // Archival peers may still serve older retained blocks.
   // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
 
   const maxRequestBlocks = isForkPostDeneb(config.getForkName(startSlot))
