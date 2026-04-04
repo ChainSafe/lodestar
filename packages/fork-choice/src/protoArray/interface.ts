@@ -41,9 +41,9 @@ export enum ExecutionStatus {
  * Spec: gloas/fork-choice.md#constants
  */
 export enum PayloadStatus {
-  PENDING = 0,
-  EMPTY = 1,
-  FULL = 2,
+  EMPTY = 0,
+  FULL = 1,
+  PENDING = 2,
 }
 
 /**

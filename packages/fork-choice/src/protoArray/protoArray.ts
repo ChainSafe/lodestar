@@ -30,11 +30,12 @@ const ZERO_HASH_HEX = toRootHex(Buffer.alloc(32, 0));
 /** Pre-Gloas: single element, FULL index (for backward compatibility) */
 type PreGloasVariantIndex = number;
 /**
- * Post-Gloas: array length is 2 or 3
- *   - Length 2: [PENDING_INDEX, EMPTY_INDEX] when payload hasn't arrived yet
- *   - Length 3: [PENDING_INDEX, EMPTY_INDEX, FULL_INDEX] when payload has arrived
+ * Post-Gloas: always length 3, indexed by PayloadStatus enum value
+ *   - [EMPTY_INDEX, FULL_INDEX | undefined, PENDING_INDEX]
+ *   - PayloadStatus.EMPTY=0, PayloadStatus.FULL=1, PayloadStatus.PENDING=2
+ *   - FULL starts as undefined until execution payload arrives
  */
-type GloasVariantIndices = [number, number] | [number, number, number];
+type GloasVariantIndices = [number, number | undefined, number];
 type VariantIndices = PreGloasVariantIndex | GloasVariantIndices;
 
 export class ProtoArray {
@@ -49,10 +50,10 @@ export class ProtoArray {
   /**
    * Maps block root to array of node indices for each payload status variant
    *
-   * Array structure: [PENDING, EMPTY, FULL] where indices correspond to PayloadStatus enum values
-   * - number[0] = PENDING variant index (PayloadStatus.PENDING = 0)
-   * - number[1] = EMPTY variant index (PayloadStatus.EMPTY = 1)
-   * - number[2] = FULL variant index (PayloadStatus.FULL = 2)
+   * Array structure: [EMPTY, FULL, PENDING] indexed by PayloadStatus enum values
+   * - number[0] = EMPTY variant index (PayloadStatus.EMPTY = 0)
+   * - number[1] = FULL variant index (PayloadStatus.FULL = 1), undefined until payload arrives
+   * - number[2] = PENDING variant index (PayloadStatus.PENDING = 2)
    *
    * Note: undefined array elements indicate that variant doesn't exist for this block
    */
@@ -143,7 +144,7 @@ export class ProtoArray {
       });
     }
 
-    // Gloas: return the specified variant, or PENDING if not specified
+    // Gloas: return the specified variant
     return variantOrArr[payloadStatus];
   }
 
@@ -441,11 +442,11 @@ export class ProtoArray {
       // Check if parent exists by getting variants array
       const parentVariants = this.indices.get(block.parentRoot);
       if (parentVariants != null) {
-        const anyParentIndex = Array.isArray(parentVariants) ? parentVariants[0] : parentVariants;
+        const anyParentIndex = Array.isArray(parentVariants) ? parentVariants[PayloadStatus.PENDING] : parentVariants;
         const anyParentNode = this.nodes[anyParentIndex];
 
         if (!isGloasBlock(anyParentNode)) {
-          // Fork transition: parent is pre-Gloas, so it only has FULL variant at variants[0]
+          // Fork transition: parent is pre-Gloas, so it only has FULL variant
           parentIndex = anyParentIndex;
         } else {
           // Both blocks are Gloas: determine which parent payload status to extend
@@ -481,9 +482,9 @@ export class ProtoArray {
       const emptyIndex = this.nodes.length;
       this.nodes.push(emptyNode);
 
-      // Store both variants in the indices array
-      // [PENDING, EMPTY, undefined] - FULL will be added later if payload arrives
-      this.indices.set(block.blockRoot, [pendingIndex, emptyIndex]);
+      // Store variants indexed by PayloadStatus enum values
+      // [EMPTY=0, FULL=1(undefined), PENDING=2] - FULL set when payload arrives
+      this.indices.set(block.blockRoot, [emptyIndex, undefined, pendingIndex]);
 
       // Update bestChild pointers
       if (parentIndex !== undefined) {
@@ -603,7 +604,7 @@ export class ProtoArray {
     const fullIndex = this.nodes.length;
     this.nodes.push(fullNode);
 
-    // Add FULL variant to the indices array
+    // Append FULL variant to the indices array
     variants[PayloadStatus.FULL] = fullIndex;
 
     // Update bestChild for PENDING node (may now prefer FULL over EMPTY)
@@ -1060,7 +1061,7 @@ export class ProtoArray {
       });
     }
 
-    // For Gloas, PENDING variant (index 0) is always the smallest since it's inserted first
+    // For Gloas, PENDING variant is always the smallest since it's inserted first
     const finalizedIndex = Array.isArray(variants) ? variants[PayloadStatus.PENDING] : variants;
 
     if (finalizedIndex < this.pruneThreshold) {
@@ -1397,7 +1398,7 @@ export class ProtoArray {
    * Gloas: Returns (root, payloadStatus) based on actual node state
    */
   getAncestor(blockRoot: RootHex, ancestorSlot: Slot): ProtoNode {
-    // Get any variant to check the block (use variants[0])
+    // Get any variant to check the block (PENDING for Gloas, FULL for pre-Gloas)
     const variantOrArr = this.indices.get(blockRoot);
     if (variantOrArr == null) {
       throw new ForkChoiceError({
@@ -1406,13 +1407,11 @@ export class ProtoArray {
       });
     }
 
-    const blockIndex = Array.isArray(variantOrArr) ? variantOrArr[0] : variantOrArr;
+    const blockIndex = Array.isArray(variantOrArr) ? variantOrArr[PayloadStatus.PENDING] : variantOrArr;
     const block = this.nodes[blockIndex];
 
-    // If block is at or before queried slot, return PENDING variant (or FULL for pre-Gloas)
+    // If block is at or before queried slot, return any variant (PENDING for Gloas, FULL for pre-Gloas)
     if (block.slot <= ancestorSlot) {
-      // For pre-Gloas: only FULL exists at variants[0]
-      // For Gloas: PENDING is at variants[0]
       return block;
     }
 
@@ -1428,7 +1427,7 @@ export class ProtoArray {
       });
     }
 
-    let parentIndex = Array.isArray(parentVariants) ? parentVariants[0] : parentVariants;
+    let parentIndex = Array.isArray(parentVariants) ? parentVariants[PayloadStatus.PENDING] : parentVariants;
     let parentBlock = this.nodes[parentIndex];
 
     // Walk backwards while parent.slot > ancestorSlot
@@ -1444,7 +1443,7 @@ export class ProtoArray {
         });
       }
 
-      parentIndex = Array.isArray(nextParentVariants) ? nextParentVariants[0] : nextParentVariants;
+      parentIndex = Array.isArray(nextParentVariants) ? nextParentVariants[PayloadStatus.PENDING] : nextParentVariants;
       parentBlock = this.nodes[parentIndex];
     }
 

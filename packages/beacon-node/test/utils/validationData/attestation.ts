@@ -1,5 +1,5 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {
@@ -82,7 +82,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
     parentBlockHash: null,
-    payloadStatus: 2, // PayloadStatus.FULL
+    payloadStatus: PayloadStatus.FULL,
   };
 
   const shufflingCache = new ShufflingCache(null, null, {}, [

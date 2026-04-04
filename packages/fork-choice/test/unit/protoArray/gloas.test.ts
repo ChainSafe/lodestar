@@ -82,7 +82,7 @@ describe("Gloas Fork Choice", () => {
 
       const variants = (protoArray as any).indices.get("0x02");
       expect(variants).toBeDefined();
-      // Gloas: variants[PENDING] and variants[EMPTY] should be defined
+      // Gloas: variants indexed by PayloadStatus [EMPTY, FULL|undefined, PENDING]
       expect(variants[PayloadStatus.PENDING]).toBeDefined();
       expect(variants[PayloadStatus.EMPTY]).toBeDefined();
       expect(variants[PayloadStatus.FULL]).toBeUndefined();

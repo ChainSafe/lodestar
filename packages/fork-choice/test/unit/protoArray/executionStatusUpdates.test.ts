@@ -302,7 +302,7 @@ describe("executionStatus / invalidate all postmerge chain", () => {
     // findHead returns ProtoNode
     // For pre-Gloas blocks, this should have blockRoot "0" and payloadStatus FULL (2)
     expect(fcHead.blockRoot).toBe("0");
-    expect(fcHead.payloadStatus).toBe(2); // PayloadStatus.FULL
+    expect(fcHead.payloadStatus).toBe(PayloadStatus.FULL);
   });
 });
 
