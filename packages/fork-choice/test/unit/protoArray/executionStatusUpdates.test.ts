@@ -300,7 +300,7 @@ describe("executionStatus / invalidate all postmerge chain", () => {
   const fcHead = fc.findHead("0", 3);
   it("pre merge block should be the FC head", () => {
     // findHead returns ProtoNode
-    // For pre-Gloas blocks, this should have blockRoot "0" and payloadStatus FULL (2)
+    // For pre-Gloas blocks, this should have blockRoot "0" and payloadStatus FULL
     expect(fcHead.blockRoot).toBe("0");
     expect(fcHead.payloadStatus).toBe(PayloadStatus.FULL);
   });

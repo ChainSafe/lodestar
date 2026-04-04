@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {IBeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
 import {Logger, MapDef, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
@@ -930,8 +930,6 @@ export function toCheckpointHexPayload(checkpoint: phase0.Checkpoint, payloadPre
  * @throws Error if checkpoint has PENDING payload status (ambiguous which variant to use)
  */
 export function fcCheckpointToHexPayload(checkpoint: CheckpointWithPayloadStatus): CheckpointHexPayload {
-  const PayloadStatus = {PENDING: 0, EMPTY: 1, FULL: 2} as const;
-
   if (checkpoint.payloadStatus === PayloadStatus.PENDING) {
     throw Error(
       `Cannot convert checkpoint with PENDING payload status at epoch ${checkpoint.epoch} root ${checkpoint.rootHex}`

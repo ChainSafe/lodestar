@@ -938,32 +938,26 @@ export class ProtoArray {
    * Get payload status tiebreaker for fork choice comparison
    * Spec: gloas/fork-choice.md#new-get_payload_status_tiebreaker
    *
-   * For PENDING nodes: always returns 0
-   * For EMPTY/FULL variants from slot n-1: implements tiebreaker logic based on should_extend_payload
-   * For older blocks: returns node.payloadStatus
+   * For PENDING or not-previous-slot: returns node.payloadStatus
+   * For EMPTY/FULL from slot n-1: returns hardcoded tiebreaker values per spec
+   *   - EMPTY → 1, FULL+extend → 2, FULL+!extend → 0
    *
-   * Note: pre-gloas logic won't reach here. Pre-Gloas blocks have different roots, so they are always resolved by the weight and root tiebreaker before reaching here.
+   * Note: pre-gloas logic won't reach here. Pre-Gloas blocks have different roots,
+   * so they are always resolved by the weight and root tiebreaker before reaching here.
    */
   private getPayloadStatusTiebreaker(node: ProtoNode, currentSlot: Slot, proposerBoostRoot: RootHex | null): number {
-    // PENDING nodes always return PENDING (no tiebreaker needed)
-    // PENDING=0, EMPTY=1, FULL=2
-    if (node.payloadStatus === PayloadStatus.PENDING) {
+    // PENDING or not from previous slot: return raw PayloadStatus value
+    if (node.payloadStatus === PayloadStatus.PENDING || node.slot + 1 !== currentSlot) {
       return node.payloadStatus;
     }
 
-    // For Gloas: check if from previous slot
-    if (node.slot + 1 !== currentSlot) {
-      return node.payloadStatus;
-    }
-
-    // For previous slot blocks in Gloas, decide between FULL and EMPTY
-    // based on should_extend_payload
+    // Previous slot EMPTY/FULL: use spec-defined tiebreaker values (not PayloadStatus enum values)
+    // Spec: return 1 for EMPTY, 2 for FULL+extend, 0 for FULL+!extend
     if (node.payloadStatus === PayloadStatus.EMPTY) {
-      return PayloadStatus.EMPTY;
+      return 1;
     }
     // FULL - check should_extend_payload
-    const shouldExtend = this.shouldExtendPayload(node.blockRoot, proposerBoostRoot);
-    return shouldExtend ? PayloadStatus.FULL : PayloadStatus.PENDING;
+    return this.shouldExtendPayload(node.blockRoot, proposerBoostRoot) ? 2 : 0;
   }
 
   /**
@@ -1061,7 +1055,7 @@ export class ProtoArray {
       });
     }
 
-    // For Gloas, PENDING variant is always the smallest since it's inserted first
+    // For Gloas, PENDING has the smallest node index since it's pushed to this.nodes first
     const finalizedIndex = Array.isArray(variants) ? variants[PayloadStatus.PENDING] : variants;
 
     if (finalizedIndex < this.pruneThreshold) {
