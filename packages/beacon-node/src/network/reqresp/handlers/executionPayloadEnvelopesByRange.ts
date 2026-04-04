@@ -85,8 +85,9 @@ export function validateExecutionPayloadEnvelopesByRangeRequest(
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  // Retained historical envelopes remain serveable. Actual availability is determined
-  // by earliestAvailableSlot / archive retention, not by a current-epoch floor here.
+  // The gloas req/resp spec defines the recent range peers MUST support serving.
+  // Archival nodes may still serve older retained payloads to allow genesis sync.
+
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
     count = config.MAX_REQUEST_BLOCKS_DENEB;
   }

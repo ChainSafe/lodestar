@@ -101,7 +101,8 @@ export function validateBeaconBlocksByRangeRequest(
   }
 
   // The phase0 req/resp spec defines the recent range peers MUST support serving.
-  // Archival peers may still serve older retained blocks.
+  // Archival nodes may still serve older retained blocks to allow genesis sync.
+
   // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
 
   const maxRequestBlocks = isForkPostDeneb(config.getForkName(startSlot))
