@@ -3,6 +3,7 @@ import {
   ExecutionPayloadStatus,
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
+  IBeaconStateViewGloas,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {BeaconBlock, BlindedBeaconBlock, Gwei, Root, gloas} from "@lodestar/types";
@@ -60,7 +61,7 @@ export function computeNewStateRoot(
  */
 export function computeEnvelopeStateRoot(
   metrics: Metrics | null,
-  postBlockState: IBeaconStateView,
+  postBlockState: IBeaconStateViewGloas,
   envelope: gloas.ExecutionPayloadEnvelope
 ): Root {
   const signedEnvelope: gloas.SignedExecutionPayloadEnvelope = {
