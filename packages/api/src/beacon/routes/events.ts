@@ -22,7 +22,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
-import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
+import {getPostAltairForkTypes, getPostBellatrixForkTypes, getPostGloasForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
 
@@ -398,7 +398,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       },
       {jsonCase: "eth2"}
     ),
-    [EventType.executionPayloadBid]: WithVersion(() => ssz.gloas.SignedExecutionPayloadBid),
+    [EventType.executionPayloadBid]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid),
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
       (fork) => getPostAltairForkTypes(fork).LightClientOptimisticUpdate
