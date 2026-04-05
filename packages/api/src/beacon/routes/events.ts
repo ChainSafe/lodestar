@@ -106,7 +106,7 @@ export enum EventType {
   executionPayloadGossip = "execution_payload_gossip",
   /** The node has verified that the execution payload and blobs for a block are available and ready for payload attestation */
   executionPayloadAvailable = "execution_payload_available",
-  /** The node has received a SignedExecutionPayloadBid (from P2P or API) that passes gossip validation on the execution_payload_bid topic */
+  /** The node has received a `SignedExecutionPayloadBid` (from P2P or API) that passes gossip validation on the `execution_payload_bid` topic */
   executionPayloadBid = "execution_payload_bid",
 }
 
