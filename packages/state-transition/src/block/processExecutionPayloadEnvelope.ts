@@ -7,7 +7,7 @@ import {CachedBeaconStateGloas} from "../types.js";
 import {computeTimeAtSlot} from "../util/index.js";
 import {verifySignatureSet} from "../util/signatureSets.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
-import {processDepositRequest} from "./processDepositRequest.js";
+import {getPendingValidatorPubkeys, processDepositRequest} from "./processDepositRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 export type ProcessExecutionPayloadEnvelopeOpts = {
@@ -40,8 +40,11 @@ export function processExecutionPayloadEnvelope(
 
   const requests = envelope.executionRequests;
 
+  // Build cache of pending validator pubkeys once, shared across all deposit requests
+  const pendingValidatorPubkeys = getPendingValidatorPubkeys(postState.config, postState);
+
   for (const deposit of requests.deposits) {
-    processDepositRequest(fork, postState, deposit);
+    processDepositRequest(fork, postState, deposit, pendingValidatorPubkeys);
   }
 
   for (const withdrawal of requests.withdrawals) {
