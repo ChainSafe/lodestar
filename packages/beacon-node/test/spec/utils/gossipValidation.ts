@@ -338,7 +338,7 @@ function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
   }
   // Some validation paths throw raw errors instead of GossipActionError
   // (e.g., validator index out of range → TypeError on undefined access).
-  if (e instanceof TypeError || e instanceof RangeError || e instanceof Error) {
+  if (e instanceof TypeError || e instanceof RangeError) {
     return "reject";
   }
   throw e;
