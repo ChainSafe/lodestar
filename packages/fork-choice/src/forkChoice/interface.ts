@@ -198,13 +198,13 @@ export interface IForkChoice {
    * @param blockRoot - The beacon block root for which the payload arrived
    * @param executionPayloadBlockHash - The block hash of the execution payload
    * @param executionPayloadNumber - The block number of the execution payload
-   * @param executionPayloadStateRoot - The execution payload state root ie. the root of post-state after processExecutionPayloadEnvelope()
+   * @param payloadStateRoot - The payload state root ie. the root of post-state after processExecutionPayloadEnvelope()
    */
   onExecutionPayload(
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex,
+    payloadStateRoot: RootHex,
     executionStatus: PayloadExecutionStatus
   ): void;
   /**

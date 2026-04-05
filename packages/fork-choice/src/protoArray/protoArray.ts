@@ -541,7 +541,7 @@ export class ProtoArray {
     currentSlot: Slot,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex,
+    payloadStateRoot: RootHex,
     proposerBoostRoot: RootHex | null,
     executionStatus: PayloadExecutionStatus
   ): void {
@@ -597,7 +597,7 @@ export class ProtoArray {
       executionStatus,
       executionPayloadBlockHash,
       executionPayloadNumber,
-      stateRoot: executionPayloadStateRoot,
+      stateRoot: payloadStateRoot,
     };
 
     const fullIndex = this.nodes.length;
