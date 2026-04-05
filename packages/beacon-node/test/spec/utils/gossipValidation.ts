@@ -184,14 +184,16 @@ function loadTestCaseChainConfig(testCaseDir: string, fork: ForkName) {
 
   // Parse config scalars as raw strings so byte values such as `0x00000001`
   // keep their leading zeros before passing through `chainConfigFromJson()`.
+  // FAILSAFE_SCHEMA produces strings for scalars and preserves arrays/objects
+  // (e.g. `BLOB_SCHEDULE`) as-is for `chainConfigFromJson` to deserialize.
   const parsed = jsyaml.load(fs.readFileSync(configPath, "utf8"), {
     schema: jsyaml.FAILSAFE_SCHEMA,
   }) as Record<string, unknown>;
-  const configJson: Record<string, string> = {};
+  const configJson: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(parsed)) {
     if (key in chainConfigTypes) {
-      configJson[key] = String(value);
+      configJson[key] = value;
     }
   }
 
@@ -459,24 +461,29 @@ export async function runGossipValidationTest(
           throw new Error(`Missing parent state for ${blockEntry.block} with parent ${parentRootHex}`);
         }
 
+        // Failed blocks only need a post-state if they'll be imported into fork-choice
+        // (payload_status=VALID). Skip the state transition otherwise — it would be wasted
+        // work, and would throw for fixtures that intentionally include consensus-invalid blocks.
+        if (blockEntry.failed && blockEntry.payload_status !== "VALID") {
+          rejectedFailedBlockRoots.add(blockRootHex);
+          continue;
+        }
+
         const postState = computePostState(parentState, signedBlock, fork);
 
         if (blockEntry.failed) {
-          if (blockEntry.payload_status === "VALID") {
-            clock.setSlot(slot);
-            chain.forkChoice.updateTime(slot);
-            chain.forkChoice.onBlock(
-              signedBlock.message,
-              postState,
-              0,
-              slot,
-              ExecutionStatus.Valid,
-              getDataAvailabilityStatusForFork(fork)
-            );
-            blockStatesByRoot.set(blockRootHex, postState);
-          } else {
-            rejectedFailedBlockRoots.add(blockRootHex);
-          }
+          // payload_status === "VALID" (filtered above)
+          clock.setSlot(slot);
+          chain.forkChoice.updateTime(slot);
+          chain.forkChoice.onBlock(
+            signedBlock.message,
+            postState,
+            0,
+            slot,
+            ExecutionStatus.Valid,
+            getDataAvailabilityStatusForFork(fork)
+          );
+          blockStatesByRoot.set(blockRootHex, postState);
           continue;
         }
 
