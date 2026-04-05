@@ -197,6 +197,11 @@ export async function validateGossipBlock(
     }
   }
 
+  // [REJECT] The proposer index is a valid validator index
+  if (proposerIndex >= blockState.validatorCount) {
+    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
+  }
+
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
     const signatureSet = getBlockProposerSignatureSet(chain.config, signedBlock);
