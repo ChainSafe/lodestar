@@ -40,11 +40,13 @@ export function processExecutionPayloadEnvelope(
 
   const requests = envelope.executionRequests;
 
-  // Build cache of pending validator pubkeys once, shared across all deposit requests
-  const pendingValidatorPubkeys = getPendingValidatorPubkeys(postState.config, postState);
+  if (requests.deposits.length > 0) {
+    // Build cache of pending validator pubkeys once, shared across all deposit requests
+    const pendingValidatorPubkeys = getPendingValidatorPubkeys(postState.config, postState);
 
-  for (const deposit of requests.deposits) {
-    processDepositRequest(fork, postState, deposit, pendingValidatorPubkeys);
+    for (const deposit of requests.deposits) {
+      processDepositRequest(fork, postState, deposit, pendingValidatorPubkeys);
+    }
   }
 
   for (const withdrawal of requests.withdrawals) {
