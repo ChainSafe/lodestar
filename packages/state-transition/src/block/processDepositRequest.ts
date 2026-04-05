@@ -87,6 +87,7 @@ export function processDepositRequest(
   // Check if this is a builder or validator deposit
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
+    pendingValidatorPubkeys ??= getPendingValidatorPubkeys(state.config, stateGloas);
     const builderIndex = findBuilderIndexByPubkey(stateGloas, pubkey);
     const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
 
@@ -94,13 +95,9 @@ export function processDepositRequest(
     // already exists with this pubkey, apply the deposit to their balance
     const isBuilder = builderIndex !== null;
     const isValidator = isValidatorKnown(state, validatorIndex);
+    const isPendingValidator = pendingValidatorPubkeys.has(toHex(pubkey));
 
-    if (
-      isBuilder ||
-      (isBuilderWithdrawalCredential(withdrawalCredentials) &&
-        !isValidator &&
-        !(pendingValidatorPubkeys ?? getPendingValidatorPubkeys(state.config, stateGloas)).has(toHex(pubkey)))
-    ) {
+    if (isBuilder || (isBuilderWithdrawalCredential(withdrawalCredentials) && !isValidator && !isPendingValidator)) {
       // Apply builder deposits immediately
       applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
       return;
