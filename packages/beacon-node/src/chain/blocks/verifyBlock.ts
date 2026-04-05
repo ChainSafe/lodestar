@@ -1,11 +1,6 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, isForkPostFulu} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  DataAvailabilityStatus,
-  computeEpochAtSlot,
-  isStateValidatorsNodesPopulated,
-} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import {IndexedAttestation, deneb} from "@lodestar/types";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -39,7 +34,7 @@ export async function verifyBlocksInEpoch(
   blockInputs: IBlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
-  postStates: CachedBeaconStateAllForks[];
+  postStates: IBeaconStateView[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
   dataAvailabilityStatuses: DataAvailabilityStatus[];
@@ -78,10 +73,10 @@ export async function verifyBlocksInEpoch(
   // otherwise it may fail to get indexed attestations from shuffling cache later
   this.shufflingCache.processState(preState0);
 
-  if (!isStateValidatorsNodesPopulated(preState0)) {
+  if (!preState0.isStateValidatorsNodesPopulated()) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
       slot: preState0.slot,
-      cache: isStateValidatorsNodesPopulated(preState0),
+      cache: preState0.isStateValidatorsNodesPopulated(),
       clonedCount: preState0.clonedCount,
       clonedCountWithTransferCache: preState0.clonedCountWithTransferCache,
       createdWithTransferCache: preState0.createdWithTransferCache,
@@ -110,7 +105,7 @@ export async function verifyBlocksInEpoch(
     for (const [i, block] of blocks.entries()) {
       indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
         const attEpoch = computeEpochAtSlot(attestation.data.slot);
-        const decisionRoot = preState0.epochCtx.getShufflingDecisionRoot(attEpoch);
+        const decisionRoot = preState0.getShufflingDecisionRoot(attEpoch);
         return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
       });
     }

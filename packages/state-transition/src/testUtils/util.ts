@@ -25,9 +25,11 @@ import {
 } from "../index.js";
 import {
   BeaconStateAltair,
+  BeaconStateElectra,
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  CachedBeaconStateElectra,
   CachedBeaconStatePhase0,
 } from "../types.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
@@ -41,6 +43,9 @@ let phase0SignedBlock: phase0.SignedBeaconBlock | null = null;
 let altairState: BeaconStateAltair | null = null;
 let altairCachedState23637: CachedBeaconStateAltair | null = null;
 let altairCachedState23638: CachedBeaconStateAltair | null = null;
+let electraState: BeaconStateElectra | null = null;
+let electraCachedState23637: CachedBeaconStateElectra | null = null;
+let electraCachedState23638: CachedBeaconStateElectra | null = null;
 
 /**
  * Number of validators in prater is 210000 as of May 2021
@@ -84,10 +89,10 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
   return sk;
 }
 
-function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>) {
+function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>, vc = numValidators) {
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
   const pubkeyCache = createPubkeyCache();
-  for (let i = 0; i < numValidators; i++) {
+  for (let i = 0; i < vc; i++) {
     const pubkey = pubkeysMod[i % keypairsMod];
     pubkeyCache.set(i, pubkey);
   }
@@ -206,29 +211,80 @@ export function generatePerfTestCachedStateAltair(opts?: {
   goBackOneSlot: boolean;
   vc?: number;
 }): CachedBeaconStateAltair {
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const vc = opts?.vc ?? numValidators;
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
+  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj}, vc);
 
   const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   const origState = generatePerformanceStateAltair(pubkeys);
 
-  if (!altairCachedState23637) {
+  // For non-default vc, generate fresh without caching to avoid accumulating large states in memory
+  const isDefaultVc = vc === numValidators;
+  let cachedState23637 = isDefaultVc ? altairCachedState23637 : null;
+  if (!cachedState23637) {
     const state = origState.clone();
     state.slot -= 1;
-    altairCachedState23637 = createCachedBeaconState(state, {
+    cachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
       pubkeyCache,
     });
+    if (isDefaultVc) altairCachedState23637 = cachedState23637;
   }
-  if (!altairCachedState23638) {
-    altairCachedState23638 = processSlots(
-      altairCachedState23637,
-      altairCachedState23637.slot + 1
-    ) as CachedBeaconStateAltair;
-    altairCachedState23638.slot += 1;
+
+  let cachedState23638 = isDefaultVc ? altairCachedState23638 : null;
+  if (!cachedState23638) {
+    cachedState23638 = processSlots(cachedState23637, cachedState23637.slot + 1) as CachedBeaconStateAltair;
+    cachedState23638.slot += 1;
+    if (isDefaultVc) altairCachedState23638 = cachedState23638;
   }
-  const resultingState = opts?.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
+
+  const resultingState = opts?.goBackOneSlot ? cachedState23637 : cachedState23638;
+
+  return resultingState.clone();
+}
+
+/**
+ * Warning: This function has side effects on the cached state
+ * The order in which the caches are populated is important and can cause stable tests to fail.
+ */
+export function generatePerfTestCachedStateElectra(opts?: {
+  goBackOneSlot: boolean;
+  vc?: number;
+}): CachedBeaconStateElectra {
+  const vc = opts?.vc ?? numValidators;
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
+  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj}, vc);
+
+  const electraConfig = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
+  });
+
+  const origState = generatePerformanceStateElectra(pubkeys);
+
+  // For non-default vc, generate fresh without caching to avoid accumulating large states in memory
+  const isDefaultVc = vc === numValidators;
+  let cachedState23637 = isDefaultVc ? electraCachedState23637 : null;
+  if (!cachedState23637) {
+    const state = origState.clone();
+    state.slot -= 1;
+    cachedState23637 = createCachedBeaconState(state, {
+      config: createBeaconConfig(electraConfig, state.genesisValidatorsRoot),
+      pubkeyCache,
+    });
+    if (isDefaultVc) electraCachedState23637 = cachedState23637;
+  }
+  let cachedState23638 = isDefaultVc ? electraCachedState23638 : null;
+  if (!cachedState23638) {
+    cachedState23638 = processSlots(cachedState23637, cachedState23637.slot + 1) as CachedBeaconStateElectra;
+    cachedState23638.slot += 1;
+    if (isDefaultVc) electraCachedState23638 = cachedState23638;
+  }
+  const resultingState = opts?.goBackOneSlot ? cachedState23637 : cachedState23638;
 
   return resultingState.clone();
 }
@@ -237,8 +293,12 @@ export function generatePerfTestCachedStateAltair(opts?: {
  * This is generated from Medalla state 756416
  */
 export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): BeaconStateAltair {
-  if (!altairState) {
-    const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+  const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+  const vc = pubkeys.length;
+  const isDefaultVc = vc === numValidators;
+  // Only use cached state for default vc to avoid accumulating large states in memory
+  let cached = isDefaultVc ? altairState : null;
+  if (!cached) {
     const statePhase0 = buildPerformanceStatePhase0(pubkeys);
     const state = statePhase0 as BeaconState as BeaconState<ForkName.altair>;
 
@@ -251,27 +311,81 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     state.nextSyncCommittee = state.currentSyncCommittee;
 
     // Now the state is fully populated to convert to ViewDU
-    altairState = ssz.altair.BeaconState.toViewDU(state);
+    cached = ssz.altair.BeaconState.toViewDU(state);
 
     // Now set correct syncCommittees
     const epoch = computeEpochAtSlot(state.slot);
-    const activeValidatorIndices = getActiveValidatorIndices(altairState, epoch);
+    const activeValidatorIndices = getActiveValidatorIndices(cached, epoch);
 
-    const effectiveBalanceIncrements = getEffectiveBalanceIncrements(altairState);
+    const effectiveBalanceIncrements = getEffectiveBalanceIncrements(cached);
     const {syncCommittee} = getNextSyncCommittee(
       ForkSeq.altair,
-      altairState,
+      cached,
       activeValidatorIndices,
       effectiveBalanceIncrements
     );
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
 
-    altairState = ssz.altair.BeaconState.toViewDU(state);
+    cached = ssz.altair.BeaconState.toViewDU(state);
     // cache roots
-    altairState.hashTreeRoot();
+    cached.hashTreeRoot();
+    if (isDefaultVc) altairState = cached;
   }
-  return altairState.clone();
+  return cached.clone();
+}
+
+/**
+ * This is generated from the same performance state as Altair, upgraded to Electra fields.
+ */
+export function generatePerformanceStateElectra(pubkeysArg?: Uint8Array[]): BeaconStateElectra {
+  const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+  const vc = pubkeys.length;
+  const isDefaultVc = vc === numValidators;
+  // Only use cached state for default vc to avoid accumulating large states in memory
+  let cached = isDefaultVc ? electraState : null;
+  if (!cached) {
+    const electraConfig = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+    });
+    const state = ssz.electra.BeaconState.defaultValue();
+
+    Object.assign(state, buildPerformanceStatePhase0(pubkeys));
+
+    state.fork.previousVersion = electraConfig.DENEB_FORK_VERSION;
+    state.fork.currentVersion = electraConfig.ELECTRA_FORK_VERSION;
+    state.fork.epoch = electraConfig.ELECTRA_FORK_EPOCH;
+    state.previousEpochParticipation = newFilledArray(pubkeys.length, 0b111);
+    state.currentEpochParticipation = state.previousEpochParticipation;
+    state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2);
+    state.currentSyncCommittee = ssz.altair.SyncCommittee.defaultValue();
+    state.nextSyncCommittee = state.currentSyncCommittee;
+    state.latestExecutionPayloadHeader = ssz.electra.ExecutionPayloadHeader.defaultValue();
+    state.depositRequestsStartIndex = 2023n;
+
+    cached = ssz.electra.BeaconState.toViewDU(state);
+
+    const epoch = computeEpochAtSlot(state.slot);
+    const activeValidatorIndices = getActiveValidatorIndices(cached, epoch);
+    const effectiveBalanceIncrements = getEffectiveBalanceIncrements(cached);
+    const {syncCommittee} = getNextSyncCommittee(
+      ForkSeq.electra,
+      cached,
+      activeValidatorIndices,
+      effectiveBalanceIncrements
+    );
+    state.currentSyncCommittee = syncCommittee;
+    state.nextSyncCommittee = syncCommittee;
+
+    cached = ssz.electra.BeaconState.toViewDU(state);
+    cached.hashTreeRoot();
+    if (isDefaultVc) electraState = cached;
+  }
+  return cached.clone();
 }
 
 /**

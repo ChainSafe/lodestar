@@ -88,7 +88,8 @@ export async function processBlocks(
     const fullyVerifiedBlocks = relevantBlocks.map(
       (block, i): FullyVerifiedBlock => ({
         blockInput: block,
-        postState: postStates[i],
+        postBlockState: postStates[i],
+        postEnvelopeState: null,
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
         // start supporting optimistic syncing/processing
@@ -126,7 +127,7 @@ export async function processBlocks(
         const {state} = err.type;
         const forkTypes = this.config.getForkTypes(blockSlot);
         this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
-        this.persistInvalidSszView(state, `${state.slot}_invalid_signature`);
+        this.persistInvalidSszBytes("BeaconState", state.serialize(), `${state.slot}_invalid_signature`);
       } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;

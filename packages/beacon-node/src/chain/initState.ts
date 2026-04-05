@@ -1,6 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ZERO_HASH} from "@lodestar/params";
-import {BeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  IBeaconStateView,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Logger, byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
@@ -119,7 +124,7 @@ export async function checkAndPersistAnchorState(
   }
 }
 
-export function initBeaconMetrics(metrics: Metrics, state: BeaconStateAllForks): void {
+export function initBeaconMetrics(metrics: Metrics, state: IBeaconStateView): void {
   metrics.headSlot.set(state.slot);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);

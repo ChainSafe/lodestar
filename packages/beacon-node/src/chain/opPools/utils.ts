@@ -1,6 +1,6 @@
 import {Signature} from "@chainsafe/lodestar-z/blst";
 import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {Slot, capella} from "@lodestar/types";
 import {AggregateFast, AggregateFastElectra} from "./attestationPool.js";
 
@@ -38,17 +38,17 @@ export function signatureFromBytesNoCheck(signature: Uint8Array): Signature {
  * can become invalid for certain forks.
  */
 export function isValidBlsToExecutionChangeForBlockInclusion(
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): boolean {
-  // For each condition from https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/beacon-chain.md#new-process_bls_to_execution_change
+  // For each condition from https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/capella/beacon-chain.md#new-process_bls_to_execution_change
   //
   // 1. assert address_change.validator_index < len(state.validators):
   //    If valid before will always be valid in the future, no need to check
   //
   // 2. assert validator.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX:
   //    Must be checked again, since it can already be changed by now.
-  const validator = state.validators.getReadonly(signedBLSToExecutionChange.message.validatorIndex);
+  const validator = state.getValidator(signedBLSToExecutionChange.message.validatorIndex);
   const {withdrawalCredentials} = validator;
   if (withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
     return false;

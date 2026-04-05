@@ -1,4 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
+import {BeaconStateView} from "../../../src/stateView/beaconStateView.js";
 import {generatePerfTestCachedStatePhase0, perfStateEpoch, perfStateId} from "../../../src/testUtils/util.js";
 import {RootCache, computeStartSlotAtEpoch, getBlockRootAtSlot} from "../../../src/util/index.js";
 import {State} from "../types.js";
@@ -8,7 +9,7 @@ const slot = computeStartSlotAtEpoch(perfStateEpoch) - 1;
 describe("RootCache.getBlockRootAtSlot from rootCache", () => {
   bench<RootCache, RootCache>({
     id: `RootCache.getBlockRootAtSlot - ${perfStateId}`,
-    before: () => new RootCache(generatePerfTestCachedStatePhase0()),
+    before: () => new RootCache(new BeaconStateView(generatePerfTestCachedStatePhase0())),
     beforeEach: (rootCache) => rootCache,
     fn: (rootCache) => {
       for (let i = 0; i <= 100; i++) {

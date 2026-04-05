@@ -45,8 +45,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.2
       '@chainsafe/benchmark':
-        specifier: ^1.2.3
-        version: 1.2.3(encoding@0.1.13)
+        specifier: ^2.0.2
+        version: 2.0.2(encoding@0.1.13)
       '@chainsafe/biomejs-config':
         specifier: ^1.0.0
         version: 1.0.0(@biomejs/biome@2.2.2)
@@ -235,8 +235,8 @@ importers:
         specifier: ^17.0.0
         version: 17.0.0
       '@chainsafe/libp2p-quic':
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^2.0.1
+        version: 2.0.1
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
         version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b
@@ -1319,8 +1319,8 @@ packages:
   '@chainsafe/as-sha256@1.2.0':
     resolution: {integrity: sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==}
 
-  '@chainsafe/benchmark@1.2.3':
-    resolution: {integrity: sha512-5rQKK2ar1k8DwqEMU5hTQlTrtrPzNdlfrMtbRgtrfYT/QpSADXGq1vBlywofY1D8HuEuv1LhRrn3p2rgibIXew==}
+  '@chainsafe/benchmark@2.0.2':
+    resolution: {integrity: sha512-qL8HpfP3922oPIDC7zarJpVNYddlf5Vv1DDGoOrKT/WRWKyQ0+INgrcs0Z67DbRp3tyZf70du1Oul0A93pAA5g==}
     hasBin: true
 
   '@chainsafe/biomejs-config@1.0.0':
@@ -1455,54 +1455,54 @@ packages:
   '@chainsafe/libp2p-noise@17.0.0':
     resolution: {integrity: sha512-vwrmY2Y+L1xYhIDiEpl61KHxwrLCZoXzTpwhyk34u+3+6zCAZPL3GxH3i2cs+u5IYNoyLptORdH17RKFXy7upA==}
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.0.0':
-    resolution: {integrity: sha512-dY/LEALfn4qRUjY8i3+V5YcmPRzJdeiaE/6eoS92KZr6UoWdVuxUCUz24+3jTl9Ke+EqvqsjZxfIS08CuhWhRA==}
+  '@chainsafe/libp2p-quic-darwin-arm64@2.0.1':
+    resolution: {integrity: sha512-IdtYFNixSEhmAMl3oEGWd8S1G5u0Ucy++ML4JTr+fCR+eIaS5cqaTzZ82r3LAcjHPtB9bLbXhjYHprF93MXxaA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.0.0':
-    resolution: {integrity: sha512-XOt+rxMUjJ7W+ainDVUJ76kkmFO/LZYjGI8D9ecVL4P1+SIfxc90awrjikGUDqlozvsk96vjNzvUO6Obw+ftXA==}
+  '@chainsafe/libp2p-quic-darwin-x64@2.0.1':
+    resolution: {integrity: sha512-04kRCyN7SNMw7Apr2xhYNzcs/P9gZ8PyXpE2xya3IYgEW9yfEGaRkQx2MqUA/XaLQ6XXxbxQVqXUUNalwYuKZw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.0.0':
-    resolution: {integrity: sha512-TgRv12gyZMWm8G9RMi7j0Uwjmk272ikqXVvYkDICD5yS13vIkvxueVuvAOtFnkt7qO+pPh2hciPUkdfYeqVjuA==}
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.0.1':
+    resolution: {integrity: sha512-QOEprwUHnLBpQajvsvDxUACdOMNWIkNH/aOEDmzrIUJLIuLpu7ZLltXD8M0eIGmuUzx91UJKvHjAAcd0JsKz+A==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.0.0':
-    resolution: {integrity: sha512-cax7qIL8fGeN41ydH6yRXcYhbYZbSQOYXa9tSr5lLSDJE24JEOjy8BugeP618kXydNFEbbt3VmyjNc+8XrGd4g==}
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.0.1':
+    resolution: {integrity: sha512-vtIjDUM+ZasuPgQMZQg9tzGGVCv01Rrdb8G+7F7LqzKP3uuhqDnwBKsdcU0Hp8PoL2MKpD8GAyUFqZ8kC95+Mw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.0.0':
-    resolution: {integrity: sha512-LiiaS3lmebt4USDQAFQCM+t5n1wuMoGeEDmHco6moSmZ9FJhBaM4CryUS3bXey31tpxEyQIx3q6Ub8SOUyLJ/g==}
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.0.1':
+    resolution: {integrity: sha512-3DcKCGF1k071fJ2TyKM8SPMsFeGOVcFdfbYN0ZI7uvQN+zSq6jABvD9b1laMOfdXg6Kt/arjS5hlwJ6URf5/3g==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.0.0':
-    resolution: {integrity: sha512-G3SS24AoY/1xkAA9IvL7alq2fp4GJwp+YXM8lOaez3cTCZuhwq4CksQFjy11VzyKrNCs/D9H02l0Aat8UeQaBw==}
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.0.1':
+    resolution: {integrity: sha512-smklgWlu7GutWUDjnvaIz51i4+3XBweIpczKVtiVJTSu/ZoeAVme5XUBPhYHctp7+nO+M5XGYC0jgCb6ytanbg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.0.0':
-    resolution: {integrity: sha512-IxLdu8uVcus/KmFTiXHX6xqZE51uazKRJSbEn/9r94UY+uA7AEAeu497Zug7LOfzg3j++vFwd/AOJRSbk4U9Lw==}
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.0.1':
+    resolution: {integrity: sha512-Zzez2uYoMdHmccLUkJFisTT9w+Hr6LlLtxurHmk9JswuOsT8EbDeHo7GHcLh629X3DHL9anRHuGMR79rqo8fuQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
 
-  '@chainsafe/libp2p-quic@2.0.0':
-    resolution: {integrity: sha512-RNxHNdo22XhS5DEFbT0fAaZFfrEmuIVRP5InqgMq8md6r0f61AATZdmYqAuNkcj6VSBareLlCAJ/iuhhNZYt7A==}
+  '@chainsafe/libp2p-quic@2.0.1':
+    resolution: {integrity: sha512-vXpS0MOC97z019X9Vxjr1pAPaKk97Jc4AC9G1IKnx3fhL+1utZOHeKf6MHd75QXcJgVyUDmL56LSLrUrcrN25g==}
     engines: {node: '>= 22'}
 
   '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b':
@@ -7745,7 +7745,7 @@ snapshots:
 
   '@chainsafe/as-sha256@1.2.0': {}
 
-  '@chainsafe/benchmark@1.2.3(encoding@0.1.13)':
+  '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
     dependencies:
       '@actions/cache': 4.0.0(encoding@0.1.13)
       '@actions/github': 6.0.0
@@ -7758,7 +7758,7 @@ snapshots:
       debug: 4.4.3
       glob: 10.4.5
       log-symbols: 7.0.0
-      yaml: 2.7.0
+      yaml: 2.8.2
       yargs: 17.7.2
     transitivePeerDependencies:
       - encoding
@@ -7896,28 +7896,28 @@ snapshots:
       uint8arrays: 5.1.0
       wherearewe: 2.0.1
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.0.0':
+  '@chainsafe/libp2p-quic-darwin-arm64@2.0.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.0.0':
+  '@chainsafe/libp2p-quic-darwin-x64@2.0.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.0.0':
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.0.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.0.0':
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.0.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.0.0':
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.0.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.0.0':
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.0.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.0.0':
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.0.1':
     optional: true
 
-  '@chainsafe/libp2p-quic@2.0.0':
+  '@chainsafe/libp2p-quic@2.0.1':
     dependencies:
       '@libp2p/crypto': 5.1.13
       '@libp2p/interface': 3.1.0
@@ -7928,13 +7928,13 @@ snapshots:
       race-signal: 1.1.3
       uint8arraylist: 2.4.8
     optionalDependencies:
-      '@chainsafe/libp2p-quic-darwin-arm64': 2.0.0
-      '@chainsafe/libp2p-quic-darwin-x64': 2.0.0
-      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.0.0
-      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.0.0
-      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.0.0
-      '@chainsafe/libp2p-quic-linux-x64-musl': 2.0.0
-      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.0.0
+      '@chainsafe/libp2p-quic-darwin-arm64': 2.0.1
+      '@chainsafe/libp2p-quic-darwin-x64': 2.0.1
+      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.0.1
+      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.0.1
+      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.0.1
+      '@chainsafe/libp2p-quic-linux-x64-musl': 2.0.1
+      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.0.1
 
   '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b':
     dependencies:

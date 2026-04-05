@@ -574,7 +574,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "beacon_target_custody_group_count",
+          "expr": "beacon_custody_groups",
           "instant": true,
           "legendFormat": "__auto",
           "range": false,

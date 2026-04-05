@@ -18,6 +18,9 @@ const versions: string[] = (() => {
 // Default to the latest stable version (skip RC pre-releases)
 const lastVersion = versions.find((v) => !v.includes("-"));
 
+const siteUrl = "https://chainsafe.github.io";
+const basePath = "/lodestar";
+
 const config: Config = {
   title: "Lodestar",
   tagline: "TypeScript Implementation of Ethereum Consensus",
@@ -159,6 +162,47 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
   scripts: [{src: "https://plausible.io/js/script.js", defer: true, "data-domain": "chainsafe.github.io/lodestar"}],
+
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "apple-touch-icon",
+        sizes: "180x180",
+        href: `${basePath}/images/apple-touch-icon.png`,
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        sizes: "192x192",
+        href: `${basePath}/images/favicon-192x192.png`,
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:image",
+        content: `${siteUrl}${basePath}/images/favicon-512x512.png`,
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:image",
+        content: `${siteUrl}${basePath}/images/favicon-512x512.png`,
+      },
+    },
+  ],
 };
 
 export default config;

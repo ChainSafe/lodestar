@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import inquirer from "inquirer";
 import {Signature} from "@chainsafe/lodestar-z/blst";
 import {ApiClient, getClient} from "@lodestar/api";
@@ -13,7 +15,7 @@ import {CliCommand, fromHex, toPubkeyHex} from "@lodestar/utils";
 import {SignableMessageType, Signer, SignerType, externalSignerPostSignature} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
-import {YargsError, ensure0xPrefix, wrapError} from "../../util/index.js";
+import {YargsError, ensure0xPrefix, wrapError, writeFile600Perm} from "../../util/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 
@@ -21,6 +23,7 @@ type VoluntaryExitArgs = {
   exitEpoch?: number;
   pubkeys?: string[];
   yes?: boolean;
+  saveExitsPath?: string;
 };
 
 export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & GlobalArgs> = {
@@ -65,6 +68,11 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       description: "Skip confirmation prompt",
       type: "boolean",
     },
+
+    saveExitsPath: {
+      description: "Write signed voluntary exit messages to a folder instead of publishing to the beacon node",
+      type: "string",
+    },
   },
 
   handler: async (args) => {
@@ -94,7 +102,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     const signersToExit = selectSignersToExit(args, signers);
     const validatorsToExit = await resolveValidatorIndexes(client, signersToExit);
 
-    if (!args.yes) {
+    if (!args.yes && !args.saveExitsPath) {
       console.log("\nWARNING: THIS IS AN IRREVERSIBLE OPERATION\n");
       const confirmation = await inquirer.prompt<{yes: boolean}>([
         {
@@ -110,18 +118,34 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       }
     }
 
+    const signedExits: {exit: phase0.SignedVoluntaryExit; index: ValidatorIndex; pubkey: string}[] = [];
     const alreadySubmitted = [];
+
     for (const [i, validatorToExit] of validatorsToExit.entries()) {
-      const {err} = await wrapError(processVoluntaryExit({config, client}, exitEpoch, validatorToExit));
+      const res = await wrapError(createSignedVoluntaryExit({config}, exitEpoch, validatorToExit));
       const {pubkey, index} = validatorToExit;
-      if (err === null) {
-        console.log(`Submitted voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
+
+      if (res.err !== null) {
+        console.log(`Signing errored for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}: ${res.err.message}`);
+        continue;
+      }
+
+      const signedExit = res.result;
+
+      if (args.saveExitsPath) {
+        signedExits.push({exit: signedExit, index, pubkey});
+        console.log(`Signed voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
       } else {
-        if (err.message.includes("ALREADY_EXISTS")) {
+        const submitRes = await wrapError(
+          client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit: signedExit}).then((r) => r.assertOk())
+        );
+        if (submitRes.err === null) {
+          console.log(`Submitted voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
+        } else if (submitRes.err.message.includes("ALREADY_EXISTS")) {
           alreadySubmitted.push(validatorToExit);
         } else {
           console.log(
-            `Voluntary exit errored for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}: ${err.message}`
+            `Voluntary exit errored for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}: ${submitRes.err.message}`
           );
         }
       }
@@ -134,14 +158,42 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
         console.log(`  - ${pubkey} (${index})`);
       }
     }
+
+    if (args.saveExitsPath && signedExits.length > 0) {
+      try {
+        fs.mkdirSync(args.saveExitsPath, {recursive: true});
+      } catch (e) {
+        throw new YargsError(`Failed to create a directory "${args.saveExitsPath}": ${(e as Error).message}`);
+      }
+
+      const failedToSave: {index: ValidatorIndex; pubkey: string}[] = [];
+
+      for (const {exit, index, pubkey} of signedExits) {
+        const filename = path.join(args.saveExitsPath, `validator_${index}_exit.json`);
+        try {
+          const json = JSON.stringify(ssz.phase0.SignedVoluntaryExit.toJson(exit), null, 2);
+          writeFile600Perm(filename, json);
+          console.log(`Saved signed voluntary exit for ${pubkey} (${index}) to ${filename}`);
+        } catch (e) {
+          failedToSave.push({index, pubkey});
+          console.error(
+            `Failed to save the signed exit of ${pubkey} (${index}) to ${filename}: ${(e as Error).message}`
+          );
+        }
+      }
+
+      if (failedToSave.length > 0) {
+        throw new YargsError(`Failed to save ${failedToSave.length}/${signedExits.length} signed voluntary exits`);
+      }
+    }
   },
 };
 
-async function processVoluntaryExit(
-  {config, client}: {config: BeaconConfig; client: ApiClient},
+async function createSignedVoluntaryExit(
+  {config}: {config: BeaconConfig},
   exitEpoch: Epoch,
   validatorToExit: {index: ValidatorIndex; signer: Signer; pubkey: string}
-): Promise<void> {
+): Promise<phase0.SignedVoluntaryExit> {
   const {index, signer, pubkey} = validatorToExit;
   const slot = computeStartSlotAtEpoch(exitEpoch);
   const domain = config.getDomainForVoluntaryExit(slot);
@@ -170,7 +222,7 @@ async function processVoluntaryExit(
     signature: signature.toBytes(),
   };
 
-  (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
+  return signedVoluntaryExit;
 }
 
 type SignerPubkey = {signer: Signer; pubkey: string};

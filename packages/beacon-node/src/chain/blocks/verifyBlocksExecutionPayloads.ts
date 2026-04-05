@@ -1,19 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BlockExecutionStatus,
   ExecutionStatus,
   IForkChoice,
   LVHInvalidResponse,
   LVHValidResponse,
-  MaybeValidExecutionStatus,
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  isExecutionBlockBodyType,
-  isExecutionEnabled,
-  isExecutionStateType,
-} from "@lodestar/state-transition";
+import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
@@ -38,7 +33,7 @@ type ExecAbortType = {blockIndex: number; execError: BlockError};
 export type SegmentExecStatus =
   | {
       execAborted: null;
-      executionStatuses: MaybeValidExecutionStatus[];
+      executionStatuses: BlockExecutionStatus[];
       executionTime: number;
     }
   | {execAborted: ExecAbortType; invalidSegmentLVH?: LVHInvalidResponse};
@@ -63,11 +58,11 @@ export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
-  preState0: CachedBeaconStateAllForks,
+  preState0: IBeaconStateView,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
-  const executionStatuses: MaybeValidExecutionStatus[] = [];
+  const executionStatuses: BlockExecutionStatus[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const lastBlock = blockInputs.at(-1);
 
@@ -108,7 +103,7 @@ export async function verifyBlocksExecutionPayload(
       return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs);
     }
 
-    // If we are here then its because executionStatus is one of MaybeValidExecutionStatus
+    // If we are here then its because executionStatus is one of BlockExecutionStatus
     const {executionStatus} = verifyResponse;
     executionStatuses.push(executionStatus);
   }
@@ -146,7 +141,7 @@ export async function verifyBlocksExecutionPayload(
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   blockInput: IBlockInput,
-  preState0: CachedBeaconStateAllForks
+  preState0: IBeaconStateView
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
 
@@ -157,9 +152,10 @@ export async function verifyBlockExecutionPayload(
 
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
-    isExecutionStateType(preState0) &&
+    isStatePostBellatrix(preState0) &&
+    preState0.isExecutionStateType &&
     isExecutionBlockBodyType(block.message.body) &&
-    isExecutionEnabled(preState0, block.message)
+    preState0.isExecutionEnabled(block.message)
       ? block.message.body.executionPayload
       : null;
 

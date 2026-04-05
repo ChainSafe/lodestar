@@ -78,9 +78,11 @@ runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, 
 
 const ignoredTopics: string[] = [
   // TODO GLOAS: required by v5.0.0-alpha.0
-  "execution_payload_available",
   "execution_payload_bid",
   "payload_attestation_message",
+  // TODO GLOAS: beacon-APIs v5.0.0-alpha.0 still documents the Fulu-shaped
+  // data_column_sidecar event example. Remove once v5.0.0-alpha.1 is released.
+  "data_column_sidecar",
 ];
 
 // eventstream types are defined as comments in the description of "examples".

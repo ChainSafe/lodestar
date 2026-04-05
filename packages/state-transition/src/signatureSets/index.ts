@@ -3,6 +3,7 @@ import {ForkSeq} from "@lodestar/params";
 import {IndexedAttestation, SignedBeaconBlock, altair, capella} from "@lodestar/types";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
+import {IBeaconStateView} from "../stateView/interface.js";
 import {ISignatureSet} from "../util/index.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
 import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
@@ -30,6 +31,7 @@ export * from "./voluntaryExits.js";
 export function getBlockSignatureSets(
   config: BeaconConfig,
   currentSyncCommitteeIndexed: SyncCommitteeCache,
+  state: IBeaconStateView,
   signedBlock: SignedBeaconBlock,
   indexedAttestations: IndexedAttestation[],
   opts?: {
@@ -45,7 +47,7 @@ export function getBlockSignatureSets(
     ...getProposerSlashingsSignatureSets(config, signedBlock),
     ...getAttesterSlashingsSignatureSets(config, signedBlock),
     ...getAttestationsSignatureSets(config, signedBlock, indexedAttestations),
-    ...getVoluntaryExitsSignatureSets(config, signedBlock),
+    ...getVoluntaryExitsSignatureSets(config, state, signedBlock),
   ];
 
   if (!opts?.skipProposerSignature) {

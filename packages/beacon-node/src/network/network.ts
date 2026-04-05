@@ -11,7 +11,6 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {
   AttesterSlashing,
   DataColumnSidecar,
-  DataColumnSidecars,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -40,7 +39,12 @@ import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
-import {BeaconBlocksByRootRequest, BlobSidecarsByRootRequest, DataColumnSidecarsByRootRequest} from "../util/types.js";
+import {
+  BeaconBlocksByRootRequest,
+  BlobSidecarsByRootRequest,
+  DataColumnSidecarsByRootRequest,
+  ExecutionPayloadEnvelopesByRootRequest,
+} from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
@@ -161,7 +165,7 @@ export class Network implements INetwork {
     const events = new NetworkEventBus();
     const aggregatorTracker = new AggregatorTracker();
 
-    const activeValidatorCount = chain.getHeadState().epochCtx.currentShuffling.activeIndices.length;
+    const activeValidatorCount = chain.getHeadState().activeValidatorCount;
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
 
@@ -277,8 +281,12 @@ export class Network implements INetwork {
     return this.core.reStatusPeers(peers);
   }
 
-  searchUnknownSlotRoot(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
-    this.networkProcessor.searchUnknownSlotRoot(slotRoot, source, peer);
+  searchUnknownBlock(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownBlock(slotRoot, source, peer);
+  }
+
+  searchUnknownEnvelope(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownEnvelope(slotRoot, source, peer);
   }
 
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
@@ -616,7 +624,7 @@ export class Network implements INetwork {
   async sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
-  ): Promise<fulu.DataColumnSidecar[]> {
+  ): Promise<DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       request.count * request.columns.length,
@@ -627,11 +635,34 @@ export class Network implements INetwork {
   async sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
     request: DataColumnSidecarsByRootRequest
-  ): Promise<fulu.DataColumnSidecar[]> {
+  ): Promise<DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
       request.reduce((total, {columns}) => total + columns.length, 0),
       responseSszTypeByMethod[ReqRespMethod.DataColumnSidecarsByRoot],
+      this.chain.serializedCache
+    );
+  }
+
+  async sendExecutionPayloadEnvelopesByRange(
+    peerId: PeerIdStr,
+    request: gloas.ExecutionPayloadEnvelopesByRangeRequest
+  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRange, [Version.V1], request),
+      request.count,
+      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRange]
+    );
+  }
+
+  async sendExecutionPayloadEnvelopesByRoot(
+    peerId: PeerIdStr,
+    request: ExecutionPayloadEnvelopesByRootRequest
+  ): Promise<gloas.SignedExecutionPayloadEnvelope[]> {
+    return collectMaxResponseTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.ExecutionPayloadEnvelopesByRoot, [Version.V1], request),
+      request.length,
+      responseSszTypeByMethod[ReqRespMethod.ExecutionPayloadEnvelopesByRoot],
       this.chain.serializedCache
     );
   }
@@ -721,7 +752,7 @@ export class Network implements INetwork {
 
     try {
       // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
-      // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+      // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/light-client/p2p-interface.md#sync-committee
       await this.waitForSyncMessageCutoff(finalityUpdate.signatureSlot);
       await this.publishLightClientFinalityUpdate(finalityUpdate);
     } catch (e) {
@@ -738,7 +769,7 @@ export class Network implements INetwork {
 
     try {
       // messages SHOULD be broadcast after SYNC_MESSAGE_DUE_BPS of slot has transpired
-      // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
+      // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/light-client/p2p-interface.md#sync-committee
       await this.waitForSyncMessageCutoff(optimisticUpdate.signatureSlot);
       await this.publishLightClientOptimisticUpdate(optimisticUpdate);
     } catch (e) {
@@ -784,7 +815,7 @@ export class Network implements INetwork {
     this.core.setTargetGroupCount(count);
   };
 
-  private onPublishDataColumns = (sidecars: DataColumnSidecars): Promise<number[]> => {
+  private onPublishDataColumns = (sidecars: DataColumnSidecar[]): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 

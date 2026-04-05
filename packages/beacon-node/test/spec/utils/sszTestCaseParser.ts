@@ -18,7 +18,7 @@ export type ValidTestCaseData = {
  *     | serialized.ssz_snappy
  *     | value.yaml
  *
- * Docs: https://github.com/ethereum/consensus-specs/blob/master/tests/formats/ssz_static/core.md
+ * Docs: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/ssz_static/core.md
  */
 export function parseSszStaticTestcase(dirpath: string): ValidTestCaseData {
   return parseSszValidTestcase(dirpath, "roots.yaml");
@@ -33,7 +33,7 @@ export function parseSszStaticTestcase(dirpath: string): ValidTestCaseData {
  *       | serialized.ssz_snappy
  *       | value.yaml
  *
- * Docs: https://github.com/ethereum/eth2.0-specs/blob/master/tests/formats/ssz_generic/README.md
+ * Docs: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/ssz_generic/README.md
  */
 export function parseSszGenericValidTestcase(dirpath: string): ValidTestCaseData {
   return parseSszValidTestcase(dirpath, "meta.yaml");
@@ -71,7 +71,7 @@ export function parseSszValidTestcase(dirpath: string, metaFilename: string): Va
  *     | vec_bool_0
  *       | serialized.ssz_snappy
  *
- * Docs: https://github.com/ethereum/eth2.0-specs/blob/master/tests/formats/ssz_generic/README.md
+ * Docs: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/ssz_generic/README.md
  */
 export function parseSszGenericInvalidTestcase(dirpath: string) {
   // The serialized value is stored in serialized.ssz_snappy

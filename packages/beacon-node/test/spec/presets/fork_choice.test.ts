@@ -18,6 +18,7 @@ import {
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
+  BeaconStateView,
   createCachedBeaconState,
   createPubkeyCache,
   isExecutionStateType,
@@ -45,7 +46,7 @@ import {
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
@@ -139,7 +140,7 @@ const forkChoiceTest =
             clock,
             metrics: null,
             validatorMonitor: null,
-            anchorState: cachedState,
+            anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
             executionEngine,
             executionBuilder: undefined,
@@ -167,10 +168,10 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState();
+              const headState = chain.getHeadState() as BeaconStateView;
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               chain.forkChoice.onAttestation(
-                headState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
+                headState.cachedState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
                 attDataRootHex
               );
             }
@@ -239,7 +240,7 @@ const forkChoiceTest =
                     columns = [];
                   }
 
-                  await validateBlockDataColumnSidecars(
+                  await validateFuluBlockDataColumnSidecars(
                     chain,
                     slot,
                     blockRoot,

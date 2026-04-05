@@ -16,10 +16,12 @@ import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeac
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateState} from "../../../utils/state.js";
+import {TestBeaconStateView} from "../../../utils/stateView.js";
 
 describe("validate voluntary exit", () => {
   let chainStub: MockedBeaconChain;
-  let state: CachedBeaconStateAllForks;
+  let state: TestBeaconStateView;
+  let originalState: CachedBeaconStateAllForks;
   let signedVoluntaryExit: phase0.SignedVoluntaryExit;
   let opPool: MockedBeaconChain["opPool"];
   let config: BeaconConfig;
@@ -59,10 +61,11 @@ describe("validate voluntary exit", () => {
     const _state = generateState(stateEmpty, createChainForkConfig(chainConfig));
     config = createBeaconConfig(chainConfig, _state.genesisValidatorsRoot);
 
-    state = createCachedBeaconStateTest(_state, config);
+    originalState = createCachedBeaconStateTest(_state, config);
   });
 
   beforeEach(() => {
+    state = new TestBeaconStateView(createCachedBeaconStateTest(originalState.clone(), config));
     chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
@@ -107,15 +110,14 @@ describe("validate voluntary exit", () => {
   });
 
   it("should return invalid Voluntary Exit - inactive validator", async () => {
-    const inactiveValidator = ssz.phase0.Validator.toViewDU({
-      ...state.validators.get(0).toValue(),
+    const inactiveValidator: phase0.Validator = {
+      ...state.getValidator(0),
       activationEpoch: FAR_FUTURE_EPOCH, // Make validator inactive
-    });
+    };
 
-    const stateWithInactive = state.clone();
-    stateWithInactive.validators.set(0, inactiveValidator);
+    state.setValidator(0, inactiveValidator);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(stateWithInactive);
+    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
@@ -125,16 +127,15 @@ describe("validate voluntary exit", () => {
 
   it("should return invalid Voluntary Exit - already exited", async () => {
     const currentEpoch = computeEpochAtSlot(state.slot);
-    const exitedValidator = ssz.phase0.Validator.toViewDU({
-      ...state.validators.get(0).toValue(),
+    const exitedValidator: phase0.Validator = {
+      ...state.getValidator(0),
       exitEpoch: currentEpoch + 10,
       activationEpoch: 0,
-    });
+    };
 
-    const stateWithExited = state.clone();
-    stateWithExited.validators.set(0, exitedValidator);
+    state.setValidator(0, exitedValidator);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(stateWithExited);
+    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),
@@ -143,15 +144,14 @@ describe("validate voluntary exit", () => {
   });
 
   it("should return invalid Voluntary Exit - short time active", async () => {
-    const recentlyActivated = ssz.phase0.Validator.toViewDU({
-      ...state.validators.get(0).toValue(),
+    const recentlyActivated: phase0.Validator = {
+      ...state.getValidator(0),
       activationEpoch: computeEpochAtSlot(state.slot) - 1, // Recently activated
-    });
+    };
 
-    const stateRecent = state.clone();
-    stateRecent.validators.set(0, recentlyActivated);
+    state.setValidator(0, recentlyActivated);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(stateRecent);
+    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExit),

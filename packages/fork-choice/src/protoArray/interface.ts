@@ -64,7 +64,18 @@ export type LVHInvalidResponse = {
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
-export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
+/**
+ * Any execution status that is not definitively invalid.
+ * Pre-Gloas: Valid | Syncing | PreMerge
+ * Post-Gloas: execution status must be PayloadSeparated (beacon block imported before its payload arrives via SignedExecutionPayloadEnvelope)
+ */
+export type BlockExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
+
+/**
+ * Execution status for a block whose execution payload is present and has been submitted to the EL.
+ * Used post-Gloas when transitioning a PayloadSeparated block to FULL via onExecutionPayload().
+ */
+export type PayloadExecutionStatus = ExecutionStatus.Valid | ExecutionStatus.Syncing;
 
 export type BlockExtraMeta =
   | {
@@ -126,12 +137,6 @@ export type ProtoBlock = BlockExtraMeta & {
 
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
-
-  // GLOAS: The followings are from bids. They are null in pre-gloas
-  // Used for execution payload gossip validation
-  builderIndex: number | null;
-  // Used for execution payload gossip validation. Not to be confused with executionPayloadBlockHash
-  blockHashFromBid: RootHex | null;
 
   // Used to determine if this block extends EMPTY or FULL parent variant
   // Spec: gloas/fork-choice.md#new-get_parent_payload_status
