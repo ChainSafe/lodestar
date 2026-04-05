@@ -76,7 +76,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
   ],
   skippedTests: [
-    // Broken in v1.7.0-alpha.3 due to missing voluntary_exit.ssz_snappy input file
+    // TODO GLOAS: broken in v1.7.0-alpha.3 due to missing voluntary_exit.ssz_snappy input file
     // Fixed by https://github.com/ethereum/consensus-specs/pull/5005 in v1.7.0-alpha.4
     /^gloas\/operations\/voluntary_exit\/pyspec_tests\/builder_voluntary_exit__success$/,
   ],
