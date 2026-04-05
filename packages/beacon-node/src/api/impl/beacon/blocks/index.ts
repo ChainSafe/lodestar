@@ -812,7 +812,7 @@ export function getBeaconBlockApi({
       });
     },
 
-    async getSignedExecutionPayloadEnvelope({blockId}) {
+    async getSignedExecutionPayloadEnvelope({blockId}, context) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       const slot = block.message.slot;
       const fork = config.getForkName(slot);
@@ -827,7 +827,9 @@ export function getBeaconBlockApi({
       const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
       const blockRootHex = toRootHex(blockRoot);
 
-      const data = await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex);
+      const data = context?.returnBytes
+        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
+        : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
 
       if (!data) {
         throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
