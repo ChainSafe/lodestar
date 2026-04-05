@@ -197,7 +197,7 @@ export async function validateGossipBlock(
     }
   }
 
-  // [REJECT] The proposer_index is valid -- i.e. block.proposer_index < len(state.validators)
+  // [REJECT] The proposer index is a valid validator index
   if (proposerIndex >= blockState.validatorCount) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
   }
