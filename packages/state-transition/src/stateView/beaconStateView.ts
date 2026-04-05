@@ -92,6 +92,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   // gloas
   private _executionPayloadAvailability: BitArray | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
+  private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
@@ -361,7 +362,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   get executionPayloadAvailability(): BitArray {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("executionPayloadAvailability is not available before GLOAS");
+      throw new Error("executionPayloadAvailability is not available before Gloas");
     }
 
     if (this._executionPayloadAvailability === null) {
@@ -375,7 +376,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   get latestExecutionPayloadBid(): ExecutionPayloadBid {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("latestExecutionPayloadBid is not available before GLOAS");
+      throw new Error("latestExecutionPayloadBid is not available before Gloas");
     }
 
     if (this._latestExecutionPayloadBid === null) {
@@ -386,9 +387,22 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this._latestExecutionPayloadBid;
   }
 
+  get payloadExpectedWithdrawals(): capella.Withdrawal[] {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("payloadExpectedWithdrawals is not available before Gloas");
+    }
+
+    if (this._payloadExpectedWithdrawals === null) {
+      this._payloadExpectedWithdrawals = (
+        this.cachedState as CachedBeaconStateGloas
+      ).payloadExpectedWithdrawals.toValue();
+    }
+    return this._payloadExpectedWithdrawals;
+  }
+
   getBuilder(index: BuilderIndex): gloas.Builder {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("Builders are not supported before GLOAS");
+      throw new Error("Builders are not supported before Gloas");
     }
 
     return (this.cachedState as CachedBeaconStateGloas).builders.getReadonly(index);
@@ -396,7 +410,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("Builders are not supported before GLOAS");
+      throw new Error("Builders are not supported before Gloas");
     }
 
     return canBuilderCoverBid(this.cachedState as CachedBeaconStateGloas, builderIndex, bidAmount);
@@ -408,7 +422,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
    */
   getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("PTC committees are not supported before GLOAS");
+      throw new Error("PTC committees are not supported before Gloas");
     }
 
     const ptcCommittee = (this.cachedState as CachedBeaconStateGloas).epochCtx.getPayloadTimelinessCommittee(slot);
