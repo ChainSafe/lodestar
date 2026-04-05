@@ -812,6 +812,32 @@ export function getBeaconBlockApi({
       });
     },
 
+    async getSignedExecutionPayloadEnvelope({blockId}) {
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const slot = block.message.slot;
+      const fork = config.getForkName(slot);
+
+      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(
+          400,
+          `Execution payload envelopes are not available before Gloas fork, block slot=${slot} fork=${fork}`
+        );
+      }
+
+      const data = await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex);
+
+      if (!data) {
+        throw new ApiError(404, `Execution payload envelope not found for slot=${slot} root=${blockRootHex}`);
+      }
+
+      return {
+        data,
+        meta: {executionOptimistic, finalized, version: fork},
+      };
+    },
+
     async getBlobSidecars({blockId, indices}) {
       assertUniqueItems(indices, "Duplicate indices provided");
 
