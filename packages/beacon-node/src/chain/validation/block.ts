@@ -92,7 +92,8 @@ export async function validateGossipBlock(
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
   }
 
-  // [IGNORE] The block's parent has been verified to have an invalid execution payload.
+  // [IGNORE] The block's parent (defined by `block.parent_root`) passes all validation
+  // (including execution node verification of the `block.body.execution_payload`)
   if (isForkPostBellatrix(fork) && parentBlock.executionStatus === ExecutionStatus.Invalid) {
     throw new BlockGossipError(GossipAction.IGNORE, {
       code: BlockErrorCode.PARENT_EXECUTION_INVALID,

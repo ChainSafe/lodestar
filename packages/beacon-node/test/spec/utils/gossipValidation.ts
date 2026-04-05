@@ -435,6 +435,16 @@ export async function runGossipValidationTest(
         blockRootsByName.set(blockEntry.block, blockRootHex);
 
         if (index === 0) {
+          // We assume the first block in meta.blocks is the anchor block whose post-state is
+          // the loaded anchor state. Assert this to avoid silently mis-seeding the state map.
+          if (blockEntry.failed) {
+            throw new Error(`First block ${blockEntry.block} must not be marked as failed`);
+          }
+          if (slot !== anchorState.latestBlockHeader.slot) {
+            throw new Error(
+              `First block slot ${slot} does not match anchor state slot ${anchorState.latestBlockHeader.slot}`
+            );
+          }
           blockStatesByRoot.set(blockRootHex, anchorStateView);
           continue;
         }
