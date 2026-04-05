@@ -102,6 +102,15 @@ export function processDepositRequest(
       applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
       return;
     }
+
+    // Keep the shared cache in sync: if this deposit has a valid signature, subsequent
+    // deposit requests for the same pubkey in this envelope must see it as a pending validator
+    if (
+      !isPendingValidator &&
+      isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)
+    ) {
+      pendingValidatorPubkeys.add(toHex(pubkey));
+    }
   }
 
   // Only set deposit_requests_start_index in Electra fork, not Gloas
