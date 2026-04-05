@@ -1141,6 +1141,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const executionPayloadBid = sszDeserialize(topic, serializedData);
       await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
 
+      chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
+        version: config.getForkName(executionPayloadBid.message.slot),
+        data: executionPayloadBid,
+      });
+
       // Handle valid payload bid by storing in a bid pool
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid.message);
