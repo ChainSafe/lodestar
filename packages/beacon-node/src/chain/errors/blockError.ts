@@ -70,6 +70,8 @@ export enum BlockErrorCode {
   TOO_MANY_KZG_COMMITMENTS = "BLOCK_ERROR_TOO_MANY_KZG_COMMITMENTS",
   /** Bid parent block root does not match block parent root */
   BID_PARENT_ROOT_MISMATCH = "BLOCK_ERROR_BID_PARENT_ROOT_MISMATCH",
+  /** The parent block's execution payload has been verified as invalid */
+  PARENT_EXECUTION_INVALID = "BLOCK_ERROR_PARENT_EXECUTION_INVALID",
 }
 
 type ExecutionErrorStatus = Exclude<
@@ -114,7 +116,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string}
   | {code: BlockErrorCode.DATA_UNAVAILABLE}
   | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number}
-  | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex};
+  | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex}
+  | {code: BlockErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
