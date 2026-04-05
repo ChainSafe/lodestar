@@ -100,9 +100,9 @@ export enum EventType {
   blobSidecar = "blob_sidecar",
   /** The node has received a valid DataColumnSidecar (from P2P or API) */
   dataColumnSidecar = "data_column_sidecar",
-  /** The node has received an execution payload (from P2P or API) that is successfully imported on the fork-choice `on_execution_payload` handler */
+  /** The node has received a `SignedExecutionPayloadEnvelope` (from P2P or API) that is successfully imported on the fork-choice `on_execution_payload` handler */
   executionPayload = "execution_payload",
-  /** The node has received an execution payload (from P2P or API) that passes validation rules of the `execution_payload` topic */
+  /** The node has received a `SignedExecutionPayloadEnvelope` (from P2P or API) that passes validation rules of the `execution_payload` topic*/
   executionPayloadGossip = "execution_payload_gossip",
   /** The node has verified that the execution payload and blobs for a block are available and ready for payload attestation */
   executionPayloadAvailable = "execution_payload_available",
