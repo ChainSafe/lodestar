@@ -49,6 +49,7 @@ export interface NetworkOptions
   disconnectThreshold?: number;
   quic?: boolean;
   tcp?: boolean;
+  maxPeersPerIp?: number;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -84,4 +85,5 @@ export const defaultNetworkOptions: NetworkOptions = {
   // Keep this high enough for normal req/resp bursts on stable connections.
   // libp2p-mplex default (5) is too low and can cause frequent connection resets.
   disconnectThreshold: 50,
+  maxPeersPerIp: 10,
 };

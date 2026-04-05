@@ -17,6 +17,10 @@ export type RestApiServerOpts = {
   bodyLimit?: number;
   stacktraces?: boolean;
   swaggerUI?: boolean;
+  rateLimit?: {
+    max: number;
+    timeWindowMs: number;
+  };
 };
 
 export type RestApiServerModules = {
@@ -62,6 +66,7 @@ export class RestApiServer {
   protected readonly server: FastifyInstance;
   protected readonly logger: Logger;
   private readonly activeSockets: HttpActiveSocketsTracker;
+  private readonly rateLimiter = new Map<string, {count: number; startTime: number}>();
 
   constructor(
     protected readonly opts: RestApiServerOpts,
@@ -136,8 +141,30 @@ export class RestApiServer {
 
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
-    server.addHook("onRequest", async (req, _res) => {
+    server.addHook("onRequest", async (req, res) => {
       const operationId = getOperationId(req);
+      const {ip} = req;
+
+      if (opts.rateLimit) {
+        const now = Date.now();
+        const clientLimit = this.rateLimiter.get(ip) ?? {count: 0, startTime: now};
+
+        if (now - clientLimit.startTime > opts.rateLimit.timeWindowMs) {
+          clientLimit.count = 1;
+          clientLimit.startTime = now;
+        } else {
+          clientLimit.count++;
+        }
+
+        this.rateLimiter.set(ip, clientLimit);
+
+        if (clientLimit.count > opts.rateLimit.max) {
+          this.logger.warn(`Rate limit exceeded for IP ${ip}`, {operationId, count: clientLimit.count});
+          void res.status(429).send({code: 429, message: "Too Many Requests"});
+          return;
+        }
+      }
+
       this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
     });

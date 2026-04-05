@@ -255,11 +255,15 @@ export function getBeaconBlockApi({
         chain.logger.debug("Consensus validated while publishing block", valLogMeta);
 
         if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
-          const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
-          if (chain.opts.broadcastValidationStrictness === "error") {
-            throw Error(message);
+          if (chain.seenBlockProposers.isKnown(slot, signedBlock.message.proposerIndex)) {
+            // Check if the block root is different to distinguish between a simple re-publish and an actual equivocation
+            if (chain.forkChoice.getBlockHexDefaultStatus(blockRoot) === null) {
+              throw new ApiError(
+                400,
+                `Equivocation detected: Proposer ${signedBlock.message.proposerIndex} already proposed a block for slot ${slot}`
+              );
+            }
           }
-          chain.logger.warn(message, valLogMeta);
         }
         break;
       }

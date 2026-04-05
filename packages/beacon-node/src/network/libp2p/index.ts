@@ -7,6 +7,7 @@ import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
 import {Libp2pInit, createLibp2p} from "libp2p";
 import {Registry} from "prom-client";
+import {Multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {noise} from "@chainsafe/libp2p-noise";
 import {asCrypto, defaultCrypto} from "@chainsafe/libp2p-noise/crypto";
@@ -119,7 +120,9 @@ export async function createNodeJsLibp2p(
     noiseCrypto.chaCha20Poly1305Encrypt = asCrypto.chaCha20Poly1305Encrypt;
   }
 
-  return createLibp2p({
+  let libp2pInstance: Libp2p;
+
+  libp2pInstance = await createLibp2p({
     privateKey,
     nodeInfo: {
       name: "lodestar",
@@ -161,6 +164,27 @@ export async function createNodeJsLibp2p(
       maxPeerAge: Infinity,
     },
     datastore,
+    connectionGater: {
+      denyInboundConnection: async (ma: Multiaddr) => {
+        const maxPeersPerIp = networkOpts.maxPeersPerIp ?? defaultNetworkOptions.maxPeersPerIp;
+        if (!maxPeersPerIp || maxPeersPerIp === Infinity) return false;
+
+        const ip = ma.toOptions().host;
+        if (!ip) return false;
+
+        // Note: libp2p.getConnections() may be expensive on high-load,
+        // but is the most reliable way to count active connections.
+        // We use libp2pInstance which is assigned after createLibp2p returns.
+        const connections = libp2pInstance?.getConnections() ?? [];
+        let count = 0;
+        for (const conn of connections) {
+          if (conn.remoteAddr.toOptions().host === ip) {
+            count++;
+          }
+        }
+        return count >= maxPeersPerIp;
+      },
+    },
     services: {
       identify: identify({
         runOnConnectionOpen: false,
@@ -188,4 +212,6 @@ export async function createNodeJsLibp2p(
       }),
     },
   });
+
+  return libp2pInstance;
 }

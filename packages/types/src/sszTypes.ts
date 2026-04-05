@@ -82,5 +82,29 @@ export function sszTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F
     throw Error(`SSZ types for fork ${fork} are not defined`);
   }
 
-  return (typeName === undefined ? sszTypes : sszTypes[typeName as keyof SSZTypesByFork[F]]) as SSZTypesFor<F, K>;
+  const type = (typeName === undefined ? sszTypes : sszTypes[typeName as keyof SSZTypesByFork[F]]) as SSZTypesFor<F, K>;
+
+  if (typeName !== undefined) {
+    const originalDeserialize = (type as any).deserialize;
+    if (originalDeserialize) {
+      (type as any).deserialize = function (...args: any[]) {
+        const value = originalDeserialize.apply(this, args);
+        assertMaxDepth(value, 0, 100); // Strict depth limit for consensus objects
+        return value;
+      };
+    }
+  }
+
+  return type;
+}
+
+function assertMaxDepth(obj: any, depth: number, maxDepth: number): void {
+  if (depth > maxDepth) {
+    throw new Error(`SSZ depth limit exceeded: ${depth} > ${maxDepth}`);
+  }
+  if (obj && typeof obj === "object" && !ArrayBuffer.isView(obj) && !(obj instanceof ArrayBuffer)) {
+    for (const key in obj) {
+      assertMaxDepth(obj[key], depth + 1, maxDepth);
+    }
+  }
 }
