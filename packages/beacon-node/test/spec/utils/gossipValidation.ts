@@ -698,13 +698,12 @@ async function validateMessageForTopic(
     }
 
     case GossipType.bls_to_execution_change: {
-      if (chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH) {
-        throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_PRE_CAPELLA"});
-      }
-
       const blsToExecutionChange = rejectOnInvalidSerializedBytes(() =>
         ssz.capella.SignedBLSToExecutionChange.deserialize(bytes)
       );
+      if (chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH) {
+        throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_PRE_CAPELLA"});
+      }
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
