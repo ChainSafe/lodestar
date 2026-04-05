@@ -229,7 +229,6 @@ export type Endpoints = {
   /**
    * Get signed execution payload envelope.
    * Retrieves signed execution payload envelope for a given block id.
-   * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ.
    */
   getSignedExecutionPayloadEnvelope: Endpoint<
     "GET",
@@ -652,7 +651,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "GET",
       req: blockIdOnlyReq,
       resp: {
-        data: ssz.gloas.SignedExecutionPayloadEnvelope,
+        data: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

@@ -817,19 +817,20 @@ export function getBeaconBlockApi({
       const slot = block.message.slot;
       const fork = config.getForkName(slot);
 
-      const blockRoot = sszTypesFor(fork).BeaconBlock.hashTreeRoot(block.message);
-      const blockRootHex = toRootHex(blockRoot);
       if (!isForkPostGloas(fork)) {
         throw new ApiError(
           400,
-          `Execution payload envelopes are not available before Gloas fork, block slot=${slot} fork=${fork}`
+          `Execution payload envelopes are not available for pre-gloas fork=${fork}, slot=${slot}`
         );
       }
+
+      const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
 
       const data = await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex);
 
       if (!data) {
-        throw new ApiError(404, `Execution payload envelope not found for slot=${slot} root=${blockRootHex}`);
+        throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
       }
 
       return {
