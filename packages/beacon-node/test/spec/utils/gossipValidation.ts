@@ -692,11 +692,12 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_PRE_CAPELLA"});
       }
 
-      const change = rejectOnInvalidSerializedBytes(() =>
-        sszTypesFor(fork).SignedBLSToExecutionChange.deserialize(bytes)
+      const blsToExecutionChange = rejectOnInvalidSerializedBytes(() =>
+        ssz.capella.SignedBLSToExecutionChange.deserialize(bytes)
       );
-      await validateGossipBlsToExecutionChange(chain, change);
-      chain.opPool.insertBlsToExecutionChange(change);
+      await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
+      // Mirror gossip handler: insert into opPool so duplicate detection works
+      chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
       break;
     }
 
