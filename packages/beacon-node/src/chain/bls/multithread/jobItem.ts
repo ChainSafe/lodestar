@@ -48,11 +48,7 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export function jobItemWorkReq(
-  job: JobQueueItem,
-  pubkeyCache: PubkeyCache,
-  metrics: Metrics | null
-): BlsWorkReq {
+export function jobItemWorkReq(job: JobQueueItem, pubkeyCache: PubkeyCache, metrics: Metrics | null): BlsWorkReq {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
