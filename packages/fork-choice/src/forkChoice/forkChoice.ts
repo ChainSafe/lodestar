@@ -1696,6 +1696,20 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
+    // If attesting for a full node, the payload must be known
+    if (isGloasBlock(block) && attestationData.index === 1) {
+      const fullNodeIndex = this.protoArray.getNodeIndexByRootAndStatus(beaconBlockRootHex, PayloadStatus.FULL);
+      if (fullNodeIndex === undefined) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+          err: {
+            code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS,
+            beaconBlockRoot: beaconBlockRootHex,
+          },
+        });
+      }
+    }
+
     this.validatedAttestationDatas.add(attDataRoot);
   }
 
