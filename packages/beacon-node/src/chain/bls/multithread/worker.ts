@@ -20,7 +20,7 @@ if (!workerData) throw Error("workerData must be defined");
 const {workerId} = workerData || {};
 
 expose({
-  async verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
+  verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
     return verifyManySignatureSets(workReqArr);
   },
 });
@@ -39,20 +39,27 @@ async function verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWor
   for (let i = 0; i < workReqArr.length; i++) {
     const workReq = workReqArr[i];
 
-    // sameMessage jobs need aggregation with randomness before verification
     if (workReq.type === "same_message") {
-      try {
-        const {pk, sig} = await asyncAggregateWithRandomness(
-          workReq.sets.map((set) => ({pk: PublicKey.fromBytes(set.publicKey), sig: set.signature}))
-        );
+      const aggregateResult = await new Promise<{pk: PublicKey; sig: {toBytes(): Uint8Array}} | null>((resolve) => {
+        try {
+          const mappedSets = workReq.sets.map((set) => ({pk: PublicKey.fromBytes(set.publicKey), sig: set.signature}));
+          asyncAggregateWithRandomness(mappedSets).then(resolve, () => resolve(null));
+        } catch (_e) {
+          resolve(null);
+        }
+      });
+
+      if (aggregateResult === null) {
+        // Malformed input, return false so the caller retries each individually
+        results[i] = {code: WorkResultCode.success, result: false};
+      } else {
+        const {pk, sig} = aggregateResult;
         const sets: SignatureSetDeserialized[] = [{publicKey: pk, message: workReq.message, signature: sig.toBytes()}];
         if (workReq.opts.batchable) {
           batchableSets.push({idx: i, sets});
         } else {
           nonBatchableSets.push({idx: i, sets});
         }
-      } catch (e) {
-        results[i] = {code: WorkResultCode.error, error: e as Error};
       }
       continue;
     }
