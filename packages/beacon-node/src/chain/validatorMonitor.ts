@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   IBeaconStateView,
   ParticipationFlags,
@@ -7,6 +7,7 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getCurrentSlot,
+  isStatePostAltair,
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
@@ -740,7 +741,7 @@ export function createValidatorMonitor(
 
       const rootCache = new RootHexCache(headState);
 
-      if (config.getForkSeq(headState.slot) >= ForkSeq.altair) {
+      if (isStatePostAltair(headState)) {
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
         const prevEpochTargetRoot = toRootHex(headState.getBlockRootAtSlot(prevEpochStartSlot));
 

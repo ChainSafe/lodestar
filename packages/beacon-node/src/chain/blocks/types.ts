@@ -1,7 +1,12 @@
 import type {ChainForkConfig} from "@lodestar/config";
 import {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
+import {
+  DataAvailabilityStatus,
+  IBeaconStateView,
+  IBeaconStateViewGloas,
+  computeEpochAtSlot,
+} from "@lodestar/state-transition";
 import type {IndexedAttestation, Slot, fulu, gloas} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
 import type {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -119,7 +124,7 @@ export type FullyVerifiedBlock = FullyVerifiedBlockBase &
         executionStatus: BlockExecutionStatus;
       }
     | {
-        postPayloadEnvelopeState: IBeaconStateView;
+        postPayloadEnvelopeState: IBeaconStateViewGloas;
         payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
         payloadEnvelopeInput: PayloadEnvelopeInput;
         executionStatus: PayloadExecutionStatus;

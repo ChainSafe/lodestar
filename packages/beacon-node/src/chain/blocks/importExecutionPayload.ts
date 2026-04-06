@@ -1,7 +1,11 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IBeaconStateView, getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
+import {
+  IBeaconStateViewGloas,
+  getExecutionPayloadEnvelopeSignatureSet,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -68,7 +72,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 }
 
 type VerifyExecutionPayloadResult = {
-  postPayloadState: IBeaconStateView;
+  postPayloadState: IBeaconStateViewGloas;
   execStatus: PayloadExecutionStatus;
 };
 
@@ -123,6 +127,12 @@ export async function verifyExecutionPayload(
     {dontTransferCache: true},
     RegenCaller.processBlock
   );
+  if (!isStatePostGloas(blockState)) {
+    throw new PayloadError({
+      code: PayloadErrorCode.STATE_TRANSITION_ERROR,
+      message: `Expected gloas+ block state for payload import, got fork=${blockState.forkName}`,
+    });
+  }
 
   // 4. Run verification steps in parallel
   // Note: No data availability check needed here - verifyExecutionPayload is only
@@ -212,6 +222,12 @@ export async function verifyExecutionPayload(
     });
   }
 
+  if (!isStatePostGloas(postPayloadState)) {
+    throw Error(
+      `Expected gloas+ post-envelope-state for execution payload envelope, got fork=${postPayloadState.forkName}`
+    );
+  }
+
   return {postPayloadState, execStatus: toForkChoiceExecutionStatus(execResult.status)};
 }
 
@@ -230,7 +246,7 @@ export async function verifyExecutionPayload(
 export async function importExecutionPayload(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
-  postPayloadState: IBeaconStateView,
+  postPayloadState: IBeaconStateViewGloas,
   execStatus: PayloadExecutionStatus
 ): Promise<void> {
   const signedEnvelope = payloadInput.getPayloadEnvelope();

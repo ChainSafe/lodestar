@@ -1,6 +1,11 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, isForkPostFulu} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
+import {
+  DataAvailabilityStatus,
+  IBeaconStateView,
+  IBeaconStateViewGloas,
+  computeEpochAtSlot,
+} from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb, gloas} from "@lodestar/types";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -43,7 +48,7 @@ export async function verifyBlocksInEpoch(
   indexedAttestationsByBlock: IndexedAttestation[][];
   postPayloadEnvelopeStates: Map<
     Slot,
-    {postPayloadEnvelopeState: IBeaconStateView; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
+    {postPayloadEnvelopeState: IBeaconStateViewGloas; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
   >;
 }> {
   const blocks = blockInputs.map((blockInput) => blockInput.getBlock());

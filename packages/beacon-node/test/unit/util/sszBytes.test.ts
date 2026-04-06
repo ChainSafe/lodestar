@@ -35,8 +35,9 @@ import {
   getBlockRootFromSignedAggregateAndProofSerialized,
   getBlockRootFromSingleAttestationSerialized,
   getCommitteeBitsFromSignedAggregateAndProofElectra,
-  getIndexFromSignedAggregateAndProofSerialized,
-  getIndexFromSingleAttestationSerialized,
+  getCommitteeIndexFromSingleAttestationSerialized,
+  getDataIndexFromSignedAggregateAndProofSerialized,
+  getDataIndexFromSingleAttestationSerialized,
   getLastProcessedSlotFromBeaconStateSerialized,
   getParentBlockHashFromGloasSignedBeaconBlockSerialized,
   getParentBlockHashFromSignedExecutionPayloadBidSerialized,
@@ -89,7 +90,10 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
 
       if (isElectra) {
         expect(getSlotFromSingleAttestationSerialized(bytes)).toEqual(attestation.data.slot);
-        expect(getIndexFromSingleAttestationSerialized(ForkName.electra, bytes)).toEqual(attestation.committeeIndex);
+        expect(getCommitteeIndexFromSingleAttestationSerialized(ForkName.electra, bytes)).toEqual(
+          attestation.committeeIndex
+        );
+        expect(getDataIndexFromSingleAttestationSerialized(ForkName.electra, bytes)).toEqual(attestation.data.index);
         expect(getAttesterIndexFromSingleAttestationSerialized(bytes)).toEqual(attestation.attesterIndex);
         expect(getBlockRootFromSingleAttestationSerialized(bytes)).toEqual(toRootHex(attestation.data.beaconBlockRoot));
         // base64, not hex
@@ -99,7 +103,10 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
         expect(getSignatureFromSingleAttestationSerialized(bytes)).toEqual(attestation.signature);
       } else {
         expect(getSlotFromAttestationSerialized(bytes)).toBe(attestation.data.slot);
-        expect(getIndexFromSingleAttestationSerialized(ForkName.phase0, bytes)).toEqual(attestation.data.index);
+        expect(getCommitteeIndexFromSingleAttestationSerialized(ForkName.phase0, bytes)).toEqual(
+          attestation.data.index
+        );
+        expect(getDataIndexFromSingleAttestationSerialized(ForkName.phase0, bytes)).toEqual(attestation.data.index);
         expect(getBlockRootFromAttestationSerialized(bytes)).toBe(toRootHex(attestation.data.beaconBlockRoot));
         expect(getAggregationBitsFromAttestationSerialized(bytes)?.toBoolArray()).toEqual(
           attestation.aggregationBits.toBoolArray()
@@ -157,10 +164,17 @@ describe("SinlgeAttestation SSZ serialized picking", () => {
     }
   });
 
-  it("getIndexFromSingleAttestationSerialized - invalid data", () => {
+  it("getCommitteeIndexFromSingleAttestationSerialized - invalid data", () => {
     const invalidCommitteeIndexDataSizes = [0, 4, 11];
     for (const size of invalidCommitteeIndexDataSizes) {
-      expect(getIndexFromSingleAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
+      expect(getCommitteeIndexFromSingleAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
+    }
+  });
+
+  it("getDataIndexFromSingleAttestationSerialized - invalid data", () => {
+    const invalidDataIndexSizes = [0, 4, 11];
+    for (const size of invalidDataIndexSizes) {
+      expect(getDataIndexFromSingleAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
     }
   });
 
@@ -300,7 +314,7 @@ describe("electra SignedAggregateAndProof SSZ serialized picking", () => {
   });
 });
 
-describe("getIndexFromSignedAggregateAndProofSerialized", () => {
+describe("getDataIndexFromSignedAggregateAndProofSerialized", () => {
   it("phase0 - extracts data.index from aggregate", () => {
     const agg = phase0SignedAggregateAndProofFromValues(
       4_000_000,
@@ -310,7 +324,7 @@ describe("getIndexFromSignedAggregateAndProofSerialized", () => {
     );
     agg.message.aggregate.data.index = 3;
     const bytes = ssz.phase0.SignedAggregateAndProof.serialize(agg);
-    expect(getIndexFromSignedAggregateAndProofSerialized(bytes)).toBe(3);
+    expect(getDataIndexFromSignedAggregateAndProofSerialized(bytes)).toBe(3);
   });
 
   it("electra - extracts data.index from aggregate", () => {
@@ -322,12 +336,12 @@ describe("getIndexFromSignedAggregateAndProofSerialized", () => {
     );
     agg.message.aggregate.data.index = 7;
     const bytes = ssz.electra.SignedAggregateAndProof.serialize(agg);
-    expect(getIndexFromSignedAggregateAndProofSerialized(bytes)).toBe(7);
+    expect(getDataIndexFromSignedAggregateAndProofSerialized(bytes)).toBe(7);
   });
 
   it("invalid data returns null", () => {
     for (const size of [0, 4, 219]) {
-      expect(getIndexFromSignedAggregateAndProofSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getDataIndexFromSignedAggregateAndProofSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 });

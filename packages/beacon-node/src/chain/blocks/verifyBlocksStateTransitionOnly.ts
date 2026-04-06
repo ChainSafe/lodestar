@@ -2,7 +2,9 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
+  IBeaconStateViewGloas,
   StateHashTreeRootSource,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Slot, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals, toRootHex} from "@lodestar/utils";
@@ -42,14 +44,14 @@ export async function verifyBlocksStateTransitionOnly(
   verifyStateTime: number;
   postPayloadEnvelopeStates: Map<
     Slot,
-    {postPayloadEnvelopeState: IBeaconStateView; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
+    {postPayloadEnvelopeState: IBeaconStateViewGloas; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
   >;
 }> {
   const postBlockStates: IBeaconStateView[] = [];
   const proposerBalanceDeltas: number[] = [];
   const postPayloadEnvelopeStates = new Map<
     Slot,
-    {postPayloadEnvelopeState: IBeaconStateView; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
+    {postPayloadEnvelopeState: IBeaconStateViewGloas; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
   >();
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
@@ -136,12 +138,18 @@ export async function verifyBlocksStateTransitionOnly(
     const slot = block.message.slot;
     const payloadInput = payloadEnvelopes?.get(slot) ?? null;
     const payloadEnvelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : null;
-    if (payloadEnvelope !== null) {
+    if (payloadEnvelope !== null && isStatePostGloas(postBlockState)) {
       // verifyStateRoot: false — we verify manually below with BlockError for proper error typing
       const postPayloadEnvelopeState = postBlockState.processExecutionPayloadEnvelope(payloadEnvelope, {
         verifySignature: false,
         verifyStateRoot: false,
       });
+
+      if (!isStatePostGloas(postPayloadEnvelopeState)) {
+        throw Error(
+          `Expected gloas+ post-envelope-state for execution payload envelope, got fork=${postBlockState.forkName}`
+        );
+      }
 
       const hashTreeRootTimerEnvelope = metrics?.stateHashTreeRootTime.startTimer({
         source: StateHashTreeRootSource.envelopeTransition,

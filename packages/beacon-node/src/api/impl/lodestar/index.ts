@@ -3,6 +3,7 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {isStatePostCapella} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
@@ -217,6 +218,9 @@ export function getLodestarApi({
       const fork = config.getForkName(stateView.slot);
       if (ForkSeq[fork] < ForkSeq.capella) {
         throw new Error("Historical summaries are not supported before Capella");
+      }
+      if (!isStatePostCapella(stateView)) {
+        throw new Error("Expected Capella state for historical summaries");
       }
 
       const {gindex} = ssz[fork].BeaconState.getPathInfo(["historicalSummaries"]);

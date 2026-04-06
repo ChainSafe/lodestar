@@ -14,8 +14,8 @@ import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {
   getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized,
-  getIndexFromSignedAggregateAndProofSerialized,
-  getIndexFromSingleAttestationSerialized,
+  getDataIndexFromSignedAggregateAndProofSerialized,
+  getDataIndexFromSingleAttestationSerialized,
   getParentBlockHashFromGloasSignedBeaconBlockSerialized,
   getParentBlockHashFromSignedExecutionPayloadBidSerialized,
   getParentBlockRootFromSignedExecutionPayloadBidSerialized,
@@ -185,8 +185,8 @@ export class NetworkProcessor {
   // we may not receive the block for messages like Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
   private readonly awaitingMessagesByBlockRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
-  // we may not receive the payload for messages like payload_attestation_message messages, in that case PendingGossipsubMessage needs
-  // to be stored in this Map and reprocessed once the payload comes
+  // we may not receive the payload for messages that require the FULL payload variant to be processed,
+  // in that case PendingGossipsubMessage needs to be stored in this Map and reprocessed once the payload comes
   private readonly awaitingMessagesByPayloadBlockRoot: MapDef<RootHex, Set<PendingGossipsubMessage>>;
   private unknownBlocksBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
   private unknownEnvelopesBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
@@ -400,10 +400,10 @@ export class NetworkProcessor {
           if (root == null) break;
           const attIndex =
             topicType === GossipType.beacon_attestation
-              ? getIndexFromSingleAttestationSerialized(fork, message.msg.data)
-              : getIndexFromSignedAggregateAndProofSerialized(message.msg.data);
+              ? getDataIndexFromSingleAttestationSerialized(fork, message.msg.data)
+              : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
           if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
-            // ptc attestation votes for the payload but the envelope is not yet known
+            // attestation votes that the payload is available but it is not yet known
             this.searchUnknownEnvelope(
               {slot, root},
               BlockInputSource.network_processor,
@@ -417,12 +417,14 @@ export class NetworkProcessor {
           if (root == null) break;
           const payloadPresent = getPayloadPresentFromPayloadAttestationMessageSerialized(message.msg.data);
           if (payloadPresent && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+            // payload attestation votes that the payload is available but it is not yet known
             this.searchUnknownEnvelope(
               {slot, root},
               BlockInputSource.network_processor,
               message.propagationSource.toString()
             );
-            preprocessResult = {action: PreprocessAction.AwaitEnvelope, root};
+            // do not await the envelope, payload attestation processing only requires that the block is known
+            // also do not reset preprocessResult, we may already await for the block
           }
           break;
         }

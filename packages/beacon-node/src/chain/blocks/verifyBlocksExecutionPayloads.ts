@@ -8,7 +8,7 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
+import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
 import {
   ExecutionPayload,
   ExecutionRequests,
@@ -192,6 +192,7 @@ export async function verifyBlockExecutionPayload(
   } else {
     /** pre-gloas, not null if execution is enabled */
     const executionPayloadEnabled =
+      isStatePostBellatrix(preState0) &&
       preState0.isExecutionStateType &&
       isExecutionBlockBodyType(block.message.body) &&
       preState0.isExecutionEnabled(block.message)
