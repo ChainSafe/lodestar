@@ -10,10 +10,20 @@ export type SerializedSet = {
   signature: Uint8Array;
 };
 
-export type BlsWorkReq = {
+export type BlsWorkReqDefault = {
+  type: "default";
   opts: VerifySignatureOpts;
   sets: SerializedSet[];
 };
+
+export type BlsWorkReqSameMessage = {
+  type: "same_message";
+  opts: VerifySignatureOpts;
+  sets: {publicKey: Uint8Array; signature: Uint8Array}[];
+  message: Uint8Array;
+};
+
+export type BlsWorkReq = BlsWorkReqDefault | BlsWorkReqSameMessage;
 
 export enum WorkResultCode {
   success = "success",

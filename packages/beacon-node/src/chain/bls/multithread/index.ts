@@ -398,7 +398,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         try {
           // Note: This can throw, must be handled per-job.
           // Pubkey and signature aggregation is defered here
-          workReq = await jobItemWorkReq(job, this.pubkeyCache, this.metrics);
+          workReq = jobItemWorkReq(job, this.pubkeyCache, this.metrics);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
 

@@ -1,5 +1,5 @@
 import worker from "node:worker_threads";
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
 import {expose} from "@chainsafe/threads/worker";
 import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
@@ -25,7 +25,7 @@ expose({
   },
 });
 
-function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
+async function verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
   const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
@@ -38,6 +38,25 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
     const workReq = workReqArr[i];
+
+    // sameMessage jobs need aggregation with randomness before verification
+    if (workReq.type === "same_message") {
+      try {
+        const {pk, sig} = await asyncAggregateWithRandomness(
+          workReq.sets.map((set) => ({pk: PublicKey.fromBytes(set.publicKey), sig: set.signature}))
+        );
+        const sets: SignatureSetDeserialized[] = [{publicKey: pk, message: workReq.message, signature: sig.toBytes()}];
+        if (workReq.opts.batchable) {
+          batchableSets.push({idx: i, sets});
+        } else {
+          nonBatchableSets.push({idx: i, sets});
+        }
+      } catch (e) {
+        results[i] = {code: WorkResultCode.error, error: e as Error};
+      }
+      continue;
+    }
+
     const sets = workReq.sets.map(deserializeSet);
 
     if (workReq.opts.batchable) {

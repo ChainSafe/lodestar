@@ -1,4 +1,4 @@
-import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {ISignatureSet, PubkeyCache, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/metrics.js";
 import {LinkedList} from "../../../util/array.js";
@@ -48,14 +48,15 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export async function jobItemWorkReq(
+export function jobItemWorkReq(
   job: JobQueueItem,
   pubkeyCache: PubkeyCache,
   metrics: Metrics | null
-): Promise<BlsWorkReq> {
+): BlsWorkReq {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
+        type: "default",
         opts: job.opts,
         sets: job.sets.map((set) => ({
           // this can throw, handled in the consumer code
@@ -64,24 +65,16 @@ export async function jobItemWorkReq(
           message: set.signingRoot,
         })),
       };
-    case JobQueueItemType.sameMessage: {
-      const timer = metrics?.blsThreadPool.aggregateWithRandomnessAsyncDuration.startTimer();
-      const {pk, sig} = await asyncAggregateWithRandomness(
-        job.sets.map((set) => ({pk: set.publicKey, sig: set.signature}))
-      );
-      timer?.();
-
+    case JobQueueItemType.sameMessage:
       return {
+        type: "same_message",
         opts: job.opts,
-        sets: [
-          {
-            publicKey: pk.toBytes(),
-            signature: sig.toBytes(),
-            message: job.message,
-          },
-        ],
+        sets: job.sets.map((set) => ({
+          publicKey: set.publicKey.toBytes(),
+          signature: set.signature,
+        })),
+        message: job.message,
       };
-    }
   }
 }
 
