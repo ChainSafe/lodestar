@@ -11,7 +11,7 @@ Stable release process is a normal cadence release of features and generally fol
 
 Generally all code that gets released will follow The RC, Release Candidate, Selection Process which includes a period of testing. The RC process will apply to all stable releases and is a critical part of the stable release workflow. The RC process is optional for the hotfix process and conditional on the type of fix being applied and released. As an example, a simple configuration change like scheduling a fork will not need to be tested. A critical security bug that can compromise the network might not want to be "soaked" for several days leaving unpatched nodes vulnerable for an extended period. This is where team judgement comes in. How and when to test the code prior to release falls on the team, and the decision should not be made in isolation.
 
-This document is broken a few major sections
+This document is broken into a few major sections
 
 - [Dev Releases](#dev-release)
 - [Stable Releases](#stable-releases-example-v1410)
@@ -112,7 +112,7 @@ The Hotfix Release Process goes through the following steps
 
 ### Creating a Hotfix Release Branch and PR
 
-A hotfix release is cut from the HEAD of `stable` because that represents the last stable release. We do not support backporting of fixes to older releases so we are always patching the tip is `stable`. The overall flow is as follows:
+A hotfix release is cut from the HEAD of `stable` because that represents the last stable release. We do not support backporting of fixes to older releases so we are always patching the tip of `stable`. The overall flow is as follows:
 
 - Checkout `stable`
 - Create a branch `rc/v1.41.1` from `stable` for the Release Candidate
@@ -126,7 +126,7 @@ A hotfix release is cut from the HEAD of `stable` because that represents the la
 
 #### Hotfix Branch Manual Steps Process
 
-- `git checkout -b rc/v1.41.1 unstable` or `git checkout -b rc/v1.41.1 b00855`
+- `git checkout -b rc/v1.41.1 stable`
 - `lerna version v1.41.1 --no-git-tag-version --force-publish --yes`
 - `git commit -am "v1.41.1"`
 - `git push origin rc/v1.41.1`
@@ -160,7 +160,7 @@ The RC is allowed to soak on the `beta` group for around 3 days. During the soak
 
 ## Merging a Release
 
-The critical piece of this process is using a merge commit to preserve the git history for all the the PR's that were merged into `unstable`. You must have admin privileges to go through this process.
+The critical piece of this process is using a merge commit to preserve the git history for all the PR's that were merged into `unstable`. You must have admin privileges to go through this process.
 
 - Approval of the release PR when ready for release
 - Notifying the team that merge commits are enabled in [#lodestar-private](https://discord.com/channels/593655374469660673/605818244036821012) with "🚨 Merge Commits Enabled 🚨"
@@ -238,7 +238,7 @@ Breaking change: Node.js v22 is no longer supported. If you are building from so
 
 Supernode stability and overall node health have been greatly improved. You will see drastic reduction in head selection time and much greater head accuracy through an improvement of block processing latency. The underlying changes will also improve sync latency to get your nodes up to head even faster than before.
 
-We have have added a couple of helpful api endpoints with this release. The first is targeted at operators running many validators and will allow api access to see which validator indices are connected to a node. This is also printed in the logs on an epoch basis to help infrastructure management teams with migrations and to avoid slashable incidents because of human or process reasons. We also added a nice to have feature, along with accompanying new flag --directPeers, to allow direct connection to specific peers as well as the ability to drop specific peers at runtime. You can also list the peerIds of all direct connections. You can also now query your peerDAS custody information for a running node.
+We have added a couple of helpful api endpoints with this release. The first is targeted at operators running many validators and will allow api access to see which validator indices are connected to a node. This is also printed in the logs on an epoch basis to help infrastructure management teams with migrations and to avoid slashable incidents because of human or process reasons. We also added a nice to have feature, along with accompanying new flag --directPeers, to allow direct connection to specific peers as well as the ability to drop specific peers at runtime. You can also list the peerIds of all direct connections. You can also now query your peerDAS custody information for a running node.
 
 For the full changelog, please see: https://github.com/ChainSafe/lodestar/releases/v1.40.0
 
@@ -253,7 +253,7 @@ You can see the [example](#release-notes-example) above posted [on Github here](
 
 #### Updating the GitHub Release
 
-To update the Github you simply go to the release page, click the pencil/edit icon and insert the release notes at the top of the markdown editor window. Click save and thats it. Easy peasy.
+To update the Github you simply go to the release page, click the pencil/edit icon and insert the release notes at the top of the markdown editor window. Click save and that's it. Easy peasy.
 
 #### Announcing the Release on Discord
 
