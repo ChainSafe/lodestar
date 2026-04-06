@@ -1148,6 +1148,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       } catch (e) {
         logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
+        version: config.getForkName(executionPayloadBid.message.slot),
+        data: executionPayloadBid,
+      });
     },
   };
 }
