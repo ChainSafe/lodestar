@@ -6,6 +6,13 @@ import {BlockError, BlockErrorCode} from "../../errors/index.js";
 import {IBlockInput} from "../blockInput/types.js";
 import {PayloadEnvelopeInput} from "../payloadEnvelopeInput/payloadEnvelopeInput.js";
 
+export type OrphanedPayloadEnvelope = {
+  slot: Slot;
+  payloadEnvelopeInput: PayloadEnvelopeInput;
+};
+
+export type ChainSegmentResult = {warnings: OrphanedPayloadEnvelope[] | null};
+
 /**
  * Assert this chain segment of blocks is linear with slot numbers and hashes,
  * and that the provided envelopes are consistent with their respective blocks.
@@ -24,13 +31,20 @@ export function assertLinearChainSegment(
   blocks: IBlockInput[],
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   parentBlock: ProtoBlock
-): void {
+): ChainSegmentResult {
+  const warnings: OrphanedPayloadEnvelope[] = [];
+
   // Track the expected execution payload block hash through the segment.
   // Starts from the known forkchoice parent's execution hash.
   // - FULL variant (envelope present for slot): advances to envelope.payload.blockHash
   // - EMPTY variant (no envelope for slot): execution hash is unchanged
   // null only for pre-merge parents, which cannot precede gloas blocks.
   let currentExecHash: string | null = parentBlock.executionPayloadBlockHash;
+  // Track the execution hash before the last FULL advancement so we can recover
+  // if the next block reveals that envelope was orphaned.
+  let prevExecHash: string | null = currentExecHash;
+  // The slot whose envelope last advanced currentExecHash (for warning context).
+  let lastFullSlot: Slot | null = null;
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i].getBlock();
@@ -58,15 +72,18 @@ export function assertLinearChainSegment(
       // This ensures the block was built on the correct FULL or EMPTY variant of its parent.
       const bidParentHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
       if (bidParentHash !== currentExecHash) {
-        throw new BlockError(block, {
-          code: BlockErrorCode.BID_PARENT_HASH_MISMATCH,
-          bidParentHash,
-          expectedHash: currentExecHash,
-        });
+        // The previous slot's envelope was orphaned — fall back to prevExecHash
+        if (lastFullSlot !== null && payloadEnvelopes !== null) {
+          const orphanedInput = payloadEnvelopes.get(lastFullSlot);
+          if (orphanedInput != null) {
+            warnings.push({slot: lastFullSlot, payloadEnvelopeInput: orphanedInput});
+          }
+        }
+        currentExecHash = prevExecHash;
       }
 
       const payloadEnvelope = payloadEnvelopes?.get(slot)?.getPayloadEnvelope();
-      if (payloadEnvelope !== undefined && payloadEnvelope !== null) {
+      if (payloadEnvelope != null) {
         // Verify the envelope references this block's root
         const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
         const envelopeBlockRoot = toRootHex(payloadEnvelope.message.beaconBlockRoot);
@@ -78,10 +95,14 @@ export function assertLinearChainSegment(
           });
         }
 
-        // FULL variant: advance execution hash to the delivered payload's block hash
+        // FULL variant: save state before advancing, then advance
+        prevExecHash = currentExecHash;
+        lastFullSlot = slot;
         currentExecHash = toRootHex(payloadEnvelope.message.payload.blockHash);
       }
       // EMPTY variant: currentExecHash unchanged
     }
   }
+
+  return {warnings: warnings.length > 0 ? warnings : null};
 }

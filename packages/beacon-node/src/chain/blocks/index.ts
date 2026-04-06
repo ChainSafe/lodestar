@@ -74,7 +74,20 @@ export async function processBlocks(
       return;
     }
 
-    assertLinearChainSegment(this.config, relevantBlocks, payloadEnvelopes, parentBlock);
+    const {warnings: orphanedPayloads} = assertLinearChainSegment(
+      this.config,
+      relevantBlocks,
+      payloadEnvelopes,
+      parentBlock
+    );
+    if (orphanedPayloads != null) {
+      for (const orphaned of orphanedPayloads) {
+        this.logger.debug("Orphaned payload envelope in chain segment", {
+          slot: orphaned.slot,
+          blockRoot: orphaned.payloadEnvelopeInput.blockRootHex,
+        });
+      }
+    }
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
