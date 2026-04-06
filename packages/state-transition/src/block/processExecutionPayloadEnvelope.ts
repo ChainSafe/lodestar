@@ -1,15 +1,14 @@
-import { PublicKey, Signature, verify } from "@chainsafe/lodestar-z/blst";
-import { SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT } from "@lodestar/params";
-import { gloas, ssz } from "@lodestar/types";
-import { byteArrayEquals, toHex, toRootHex } from "@lodestar/utils";
-import { getExecutionPayloadEnvelopeSignatureSet } from "../signatureSets/executionPayloadEnvelope.js";
-import { BeaconStateView } from "../stateView/beaconStateView.js";
-import { CachedBeaconStateGloas } from "../types.js";
-import { computeTimeAtSlot } from "../util/index.js";
-import { verifySignatureSet } from "../util/signatureSets.js";
-import { processConsolidationRequest } from "./processConsolidationRequest.js";
-import { processDepositRequest } from "./processDepositRequest.js";
-import { processWithdrawalRequest } from "./processWithdrawalRequest.js";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {gloas, ssz} from "@lodestar/types";
+import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {getExecutionPayloadEnvelopeSignatureSet} from "../signatureSets/executionPayloadEnvelope.js";
+import {BeaconStateView} from "../stateView/beaconStateView.js";
+import {CachedBeaconStateGloas} from "../types.js";
+import {computeTimeAtSlot} from "../util/index.js";
+import {verifySignatureSet} from "../util/signatureSets.js";
+import {processConsolidationRequest} from "./processConsolidationRequest.js";
+import {processDepositRequest} from "./processDepositRequest.js";
+import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 export type ProcessExecutionPayloadEnvelopeOpts = {
   verifySignature?: boolean;
@@ -25,7 +24,7 @@ export function processExecutionPayloadEnvelope(
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   opts?: ProcessExecutionPayloadEnvelopeOpts
 ): CachedBeaconStateGloas {
-  const { verifySignature = true, verifyStateRoot = true } = opts ?? {};
+  const {verifySignature = true, verifyStateRoot = true} = opts ?? {};
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(envelope.slot);

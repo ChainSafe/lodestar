@@ -1,4 +1,3 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {
   computeStartSlotAtEpoch,
