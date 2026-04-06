@@ -272,6 +272,14 @@ export class LightClientServer {
       return;
     }
 
+    // TODO GLOAS: Light client updates for gloas are not yet updated in the spec.
+    // The block body no longer contains execution payload, so `blockToLightClientHeader`
+    // cannot construct a header from a gloas block. Skip all light client processing
+    // for post-gloas blocks, revisit once there is a spec for it.
+    if (this.config.getForkSeq(block.slot) >= ForkSeq.gloas) {
+      return;
+    }
+
     // What is the syncAggregate signing?
     // From the state-transition
     // ```

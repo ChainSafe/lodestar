@@ -103,7 +103,7 @@ export async function verifyExecutionPayload(
   // is already complete, so the payload and required data are available for payload attestation.
   // This event is only about availability, not validity of the execution payload, hence we can emit
   // it before getting a response from the execution client on whether the payload is valid or not.
-  if (this.clock.currentSlot === envelope.slot) {
+  if (this.clock.currentSlot - envelope.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
       slot: envelope.slot,
       blockRoot: blockRootHex,
@@ -263,7 +263,7 @@ export async function importExecutionPayload(
     if (!isQueueErrorAborted(e)) {
       this.logger.error(
         "Error pushing payload envelope to unfinalized write queue",
-        {slot: envelope.slot, root: blockRootHex},
+        {slot: envelope.slot, blockRoot: blockRootHex},
         e as Error
       );
     }
@@ -308,6 +308,8 @@ export async function importExecutionPayload(
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
 
+  const stateRootHex = toRootHex(envelope.stateRoot);
+
   // 11. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
   if (this.clock.currentSlot - envelope.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
@@ -315,7 +317,7 @@ export async function importExecutionPayload(
       builderIndex: envelope.builderIndex,
       blockHash: blockHashHex,
       blockRoot: blockRootHex,
-      stateRoot: toRootHex(envelope.stateRoot),
+      stateRoot: stateRootHex,
       // TODO GLOAS: revisit once we support optimistic import
       executionOptimistic: false,
     });
@@ -323,8 +325,10 @@ export async function importExecutionPayload(
 
   this.logger.verbose("Execution payload imported", {
     slot: envelope.slot,
-    root: blockRootHex,
+    builderIndex: envelope.builderIndex,
+    blockRoot: blockRootHex,
     blockHash: blockHashHex,
+    stateRoot: stateRootHex,
   });
 }
 
