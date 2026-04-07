@@ -7,7 +7,7 @@ settings:
 catalogs:
   default:
     '@chainsafe/lodestar-z':
-      specifier: github:chainsafe/lodestar-z#bing/native-mt-blst-pointers
+      specifier: github:chainsafe/lodestar-z#bing/production-bls
       version: 0.1.0
     '@vitest/browser':
       specifier: ^4.0.7
@@ -239,7 +239,7 @@ importers:
         version: 2.0.1
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -450,7 +450,7 @@ importers:
         version: 6.0.1
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -629,7 +629,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -656,7 +656,7 @@ importers:
         version: 0.4.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -982,7 +982,7 @@ importers:
         version: 1.2.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.1
         version: 1.2.1
@@ -1025,7 +1025,7 @@ importers:
         version: 3.1.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -1096,7 +1096,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd
       '@chainsafe/ssz':
         specifier: ^1.2.2
         version: 1.2.2
@@ -1505,8 +1505,8 @@ packages:
     resolution: {integrity: sha512-vXpS0MOC97z019X9Vxjr1pAPaKk97Jc4AC9G1IKnx3fhL+1utZOHeKf6MHd75QXcJgVyUDmL56LSLrUrcrN25g==}
     engines: {node: '>= 22'}
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b':
-    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b}
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd':
+    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd}
     version: 0.1.0
 
   '@chainsafe/netmask@2.0.0':
@@ -7936,7 +7936,7 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.0.1
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.0.1
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/e7dfe9b07eb836d7a4870b61014b7ecca6d90f2b':
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b0a2c35b3d8a1eb2ab22a2b96ebcc7baaa0f84fd':
     dependencies:
       '@chainsafe/zapi': 0.1.1
 
