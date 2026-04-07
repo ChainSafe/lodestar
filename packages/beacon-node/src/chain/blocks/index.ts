@@ -89,7 +89,7 @@ export async function processBlocks(
       (block, i): FullyVerifiedBlock => ({
         blockInput: block,
         postBlockState: postStates[i],
-        postEnvelopeState: null,
+        postPayloadState: null,
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
         // start supporting optimistic syncing/processing
