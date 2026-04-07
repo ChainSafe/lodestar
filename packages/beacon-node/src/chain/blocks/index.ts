@@ -172,7 +172,7 @@ export async function processBlocks(
         const forkTypes = this.config.getForkTypes(blockSlot);
         this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
         this.persistInvalidSszBytes("BeaconState", state.serialize(), `${state.slot}_invalid_signature`);
-      } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
+      } else if (err.type.code === BlockErrorCode.INVALID_BLOCK_STATE_ROOT) {
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
         const {preState, postState} = err.type;

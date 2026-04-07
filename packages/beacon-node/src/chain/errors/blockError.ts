@@ -33,7 +33,9 @@ export enum BlockErrorCode {
   /** A signature in the block is invalid (exactly which is unknown). */
   INVALID_SIGNATURE = "BLOCK_ERROR_INVALID_SIGNATURE",
   /** Block transition returns invalid state root. */
-  INVALID_STATE_ROOT = "BLOCK_ERROR_INVALID_STATE_ROOT",
+  INVALID_BLOCK_STATE_ROOT = "BLOCK_ERROR_INVALID_BLOCK_STATE_ROOT",
+  /** Payload transition returns invalid state root. */
+  INVALID_PAYLOAD_STATE_ROOT = "BLOCK_ERROR_INVALID_PAYLOAD_STATE_ROOT",
   /** Block (its parent) is not a descendant of current finalized block */
   NOT_FINALIZED_DESCENDANT = "BLOCK_ERROR_NOT_FINALIZED_DESCENDANT",
   /** The provided block is from an later slot than its parent. */
@@ -73,7 +75,7 @@ export enum BlockErrorCode {
   /** Block bid's parentBlockHash does not match the expected execution hash derived from the parent chain */
   BID_PARENT_HASH_MISMATCH = "BLOCK_ERROR_BID_PARENT_HASH_MISMATCH",
   /** Envelope's beacon_block_root does not match the block's hash tree root */
-  ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH = "BLOCK_ERROR_ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH",
+  ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH = "BLOCK_ERROR_ENVELOPE_BLOCK_ROOT_MISMATCH",
   /** The block's parent execution payload (defined by bid.parent_block_hash) has not been seen */
   PARENT_PAYLOAD_UNKNOWN = "BLOCK_ERROR_PARENT_PAYLOAD_UNKNOWN",
 }
@@ -99,7 +101,14 @@ export type BlockErrorType =
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.INVALID_SIGNATURE; state: IBeaconStateView}
   | {
-      code: BlockErrorCode.INVALID_STATE_ROOT;
+      code: BlockErrorCode.INVALID_BLOCK_STATE_ROOT;
+      root: Uint8Array;
+      expectedRoot: Uint8Array;
+      preState: IBeaconStateView;
+      postState: IBeaconStateView;
+    }
+  | {
+      code: BlockErrorCode.INVALID_PAYLOAD_STATE_ROOT;
       root: Uint8Array;
       expectedRoot: Uint8Array;
       preState: IBeaconStateView;
@@ -164,7 +173,8 @@ export function renderBlockErrorType(type: BlockErrorType): Record<string, strin
         slot: type.state.slot,
       };
 
-    case BlockErrorCode.INVALID_STATE_ROOT:
+    case BlockErrorCode.INVALID_BLOCK_STATE_ROOT:
+    case BlockErrorCode.INVALID_PAYLOAD_STATE_ROOT:
       return {
         code: type.code,
         slot: type.postState.slot,

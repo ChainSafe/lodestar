@@ -7,7 +7,7 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
 } from "@lodestar/state-transition";
-import type {IndexedAttestation, Slot, fulu, gloas} from "@lodestar/types";
+import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
 import type {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 

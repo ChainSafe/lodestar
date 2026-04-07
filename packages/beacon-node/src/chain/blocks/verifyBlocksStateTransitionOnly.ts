@@ -6,7 +6,7 @@ import {
   StateHashTreeRootSource,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {Slot, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -121,12 +121,18 @@ export async function verifyBlocksStateTransitionOnly(
     // Check state root matches
     if (!byteArrayEquals(block.message.stateRoot, stateRootAfterStateTransition)) {
       throw new BlockError(block, {
-        code: BlockErrorCode.INVALID_STATE_ROOT,
+        code: BlockErrorCode.INVALID_BLOCK_STATE_ROOT,
         root: postBlockState.hashTreeRoot(),
         expectedRoot: block.message.stateRoot,
         preState,
         postState: postBlockState,
       });
+    }
+
+    // If blocks are invalid in execution the main promise could resolve before this loop ends.
+    // In that case stop processing blocks and return early.
+    if (signal.aborted) {
+      throw new ErrorAborted("verifyBlockStateTransitionOnly");
     }
 
     postBlockStates[i] = postBlockState;
@@ -137,19 +143,15 @@ export async function verifyBlocksStateTransitionOnly(
 
     const slot = block.message.slot;
     const payloadEnvelopeInput = payloadEnvelopes?.get(slot) ?? null;
-    const payloadEnvelope = payloadEnvelopeInput?.hasPayloadEnvelope() ? payloadEnvelopeInput.getPayloadEnvelope() : null;
+    const payloadEnvelope = payloadEnvelopeInput?.hasPayloadEnvelope()
+      ? payloadEnvelopeInput.getPayloadEnvelope()
+      : null;
     if (payloadEnvelope !== null && isStatePostGloas(postBlockState)) {
       // verifyStateRoot: false — we verify manually below with BlockError for proper error typing
       const postPayloadState = postBlockState.processExecutionPayloadEnvelope(payloadEnvelope, {
         verifySignature: false,
         verifyStateRoot: false,
       });
-
-      if (!isStatePostGloas(postPayloadState)) {
-        throw Error(
-          `Expected gloas+ post-envelope-state for execution payload envelope, got fork=${postBlockState.forkName}`
-        );
-      }
 
       const hashTreeRootTimerEnvelope = metrics?.stateHashTreeRootTime.startTimer({
         source: StateHashTreeRootSource.envelopeTransition,
@@ -159,7 +161,7 @@ export async function verifyBlocksStateTransitionOnly(
 
       if (!byteArrayEquals(payloadEnvelope.message.stateRoot, stateRootAfterEnvelope)) {
         throw new BlockError(block, {
-          code: BlockErrorCode.INVALID_STATE_ROOT,
+          code: BlockErrorCode.INVALID_PAYLOAD_STATE_ROOT,
           root: stateRootAfterEnvelope,
           expectedRoot: payloadEnvelope.message.stateRoot,
           preState: postBlockState,
@@ -172,7 +174,7 @@ export async function verifyBlocksStateTransitionOnly(
         throw Error("Expected PayloadEnvelopeInput");
       }
 
-      postPayloadStates.set(slot, {postPayloadState, payloadEnvelopeInput});
+      postPayloadStates.set(slot, {postPayloadState: postPayloadState as IBeaconStateViewGloas, payloadEnvelopeInput});
     } else {
       postPayloadStates.set(slot, null);
     }

@@ -6,7 +6,7 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
 } from "@lodestar/state-transition";
-import {IndexedAttestation, Slot, deneb, gloas} from "@lodestar/types";
+import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
