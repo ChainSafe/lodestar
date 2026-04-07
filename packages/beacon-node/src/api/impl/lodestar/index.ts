@@ -3,7 +3,12 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeStartSlotAtEpoch, getIndexedAttestation, isStatePostCapella} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getIndexedAttestation,
+  isStatePostCapella,
+} from "@lodestar/state-transition";
 import {Attestation, Epoch, IndexedAttestation, ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
@@ -285,7 +290,7 @@ export function getLodestarApi({
       for (const block of signedBlocks) {
         const attestationsOfABlock = block.message.body.attestations;
         for (const attestation of attestationsOfABlock) {
-          const epoch = attestation.data.target.epoch;
+          const epoch = computeEpochAtSlot(attestation.data.slot);
           let attestationsPerEpoch = attestations.get(epoch);
           if (!attestationsPerEpoch) {
             attestationsPerEpoch = [];
