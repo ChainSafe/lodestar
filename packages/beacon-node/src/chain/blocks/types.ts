@@ -111,7 +111,7 @@ type FullyVerifiedBlockBase = {
 /**
  * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import.
  *
- * Discriminated union on `postPayloadEnvelopeState`:
+ * Discriminated union on `postPayloadState`:
  * - `null`  → block has no pre-verified envelope; `executionStatus` is any `BlockExecutionStatus`
  * - non-null → envelope was pre-verified during state transition; `executionStatus` is narrowed to
  *              `Valid | Syncing` (matching what `forkChoice.onExecutionPayload` expects)
@@ -119,13 +119,12 @@ type FullyVerifiedBlockBase = {
 export type FullyVerifiedBlock = FullyVerifiedBlockBase &
   (
     | {
-        postPayloadEnvelopeState: null;
+        postPayloadState: null;
         /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync or for merge block */
         executionStatus: BlockExecutionStatus;
       }
     | {
-        postPayloadEnvelopeState: IBeaconStateViewGloas;
-        payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
+        postPayloadState: IBeaconStateViewGloas;
         payloadEnvelopeInput: PayloadEnvelopeInput;
         executionStatus: PayloadExecutionStatus;
       }

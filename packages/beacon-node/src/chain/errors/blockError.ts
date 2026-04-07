@@ -74,6 +74,8 @@ export enum BlockErrorCode {
   BID_PARENT_HASH_MISMATCH = "BLOCK_ERROR_BID_PARENT_HASH_MISMATCH",
   /** Envelope's beacon_block_root does not match the block's hash tree root */
   ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH = "BLOCK_ERROR_ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH",
+  /** The block's parent execution payload (defined by bid.parent_block_hash) has not been seen */
+  PARENT_PAYLOAD_UNKNOWN = "BLOCK_ERROR_PARENT_PAYLOAD_UNKNOWN",
 }
 
 type ExecutionErrorStatus = Exclude<
@@ -120,7 +122,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number}
   | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex}
   | {code: BlockErrorCode.BID_PARENT_HASH_MISMATCH; bidParentHash: RootHex; expectedHash: RootHex}
-  | {code: BlockErrorCode.ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex};
+  | {code: BlockErrorCode.ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex}
+  | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentBlockHash: RootHex};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 

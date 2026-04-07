@@ -46,9 +46,9 @@ export async function verifyBlocksInEpoch(
   segmentExecStatus: SegmentExecStatus;
   dataAvailabilityStatuses: DataAvailabilityStatus[];
   indexedAttestationsByBlock: IndexedAttestation[][];
-  postPayloadEnvelopeStates: Map<
+  postPayloadStates: Map<
     Slot,
-    {postPayloadEnvelopeState: IBeaconStateViewGloas; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
+    {postPayloadState: IBeaconStateViewGloas; payloadEnvelopeInput: PayloadEnvelopeInput} | null
   >;
 }> {
   const blocks = blockInputs.map((blockInput) => blockInput.getBlock());
@@ -133,7 +133,7 @@ export async function verifyBlocksInEpoch(
     const [
       segmentExecStatus,
       {dataAvailabilityStatuses, availableTime},
-      {postBlockStates, proposerBalanceDeltas, verifyStateTime, postPayloadEnvelopeStates},
+      {postBlockStates, proposerBalanceDeltas, verifyStateTime, postPayloadStates},
       {verifySignaturesTime},
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
@@ -259,7 +259,7 @@ export async function verifyBlocksInEpoch(
       proposerBalanceDeltas,
       segmentExecStatus,
       indexedAttestationsByBlock,
-      postPayloadEnvelopeStates,
+      postPayloadStates,
     };
   } finally {
     abortController.abort();

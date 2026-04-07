@@ -121,6 +121,8 @@ async function validateExecutionPayloadEnvelope(
     throw new Error(`Expected gloas+ state for execution payload envelope validation, got fork=${blockState.forkName}`);
   }
 
+  // [REJECT] `signed_execution_payload_envelope.signature` is valid as verified
+  // by `verify_execution_payload_envelope_signature`.
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,
     chain.pubkeyCache,

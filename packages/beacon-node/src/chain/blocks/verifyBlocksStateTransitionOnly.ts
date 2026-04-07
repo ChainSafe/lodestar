@@ -42,16 +42,16 @@ export async function verifyBlocksStateTransitionOnly(
   postBlockStates: IBeaconStateView[];
   proposerBalanceDeltas: number[];
   verifyStateTime: number;
-  postPayloadEnvelopeStates: Map<
+  postPayloadStates: Map<
     Slot,
-    {postPayloadEnvelopeState: IBeaconStateViewGloas; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
+    {postPayloadState: IBeaconStateViewGloas; payloadEnvelopeInput: PayloadEnvelopeInput} | null
   >;
 }> {
   const postBlockStates: IBeaconStateView[] = [];
   const proposerBalanceDeltas: number[] = [];
-  const postPayloadEnvelopeStates = new Map<
+  const postPayloadStates = new Map<
     Slot,
-    {postPayloadEnvelopeState: IBeaconStateViewGloas; payloadEnvelope: gloas.SignedExecutionPayloadEnvelope} | null
+    {postPayloadState: IBeaconStateViewGloas; payloadEnvelopeInput: PayloadEnvelopeInput} | null
   >();
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
@@ -65,26 +65,26 @@ export async function verifyBlocksStateTransitionOnly(
       preState = preState0;
     } else {
       const prevSlot = blocks[i - 1].getBlock().message.slot;
-      const prevEnvelopeResult = postPayloadEnvelopeStates.get(prevSlot) ?? null;
+      const prevEnvelopeResult = postPayloadStates.get(prevSlot) ?? null;
       // If previous slot had an envelope and its latestBlockHash matches
       // this block's bid parentBlockHash, the proposer built on the FULL path
       if (
         prevEnvelopeResult != null &&
         isGloasBeaconBlock(block.message) &&
         byteArrayEquals(
-          prevEnvelopeResult.postPayloadEnvelopeState.latestBlockHash,
+          prevEnvelopeResult.postPayloadState.latestBlockHash,
           block.message.body.signedExecutionPayloadBid.message.parentBlockHash
         )
       ) {
         // gloas FULL path - use post-envelope state of previous block as pre-state for this block
-        preState = prevEnvelopeResult.postPayloadEnvelopeState;
+        preState = prevEnvelopeResult.postPayloadState;
       } else {
         // EMPTY path or pre-gloas block
         if (prevEnvelopeResult != null && isGloasBeaconBlock(block.message)) {
           // the envelope is orphaned
           logger.debug("Previous block had an execution payload envelope but this block did not build on it", {
             slot: block.message.slot,
-            prevEnvelopeBlockHash: toRootHex(prevEnvelopeResult.postPayloadEnvelopeState.latestBlockHash),
+            prevEnvelopeBlockHash: toRootHex(prevEnvelopeResult.postPayloadState.latestBlockHash),
             currentBidParentHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash),
           });
         }
@@ -136,16 +136,16 @@ export async function verifyBlocksStateTransitionOnly(
     proposerBalanceDeltas[i] = postBlockState.getBalance(proposerIndex) - preState.getBalance(proposerIndex);
 
     const slot = block.message.slot;
-    const payloadInput = payloadEnvelopes?.get(slot) ?? null;
-    const payloadEnvelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : null;
+    const payloadEnvelopeInput = payloadEnvelopes?.get(slot) ?? null;
+    const payloadEnvelope = payloadEnvelopeInput?.hasPayloadEnvelope() ? payloadEnvelopeInput.getPayloadEnvelope() : null;
     if (payloadEnvelope !== null && isStatePostGloas(postBlockState)) {
       // verifyStateRoot: false — we verify manually below with BlockError for proper error typing
-      const postPayloadEnvelopeState = postBlockState.processExecutionPayloadEnvelope(payloadEnvelope, {
+      const postPayloadState = postBlockState.processExecutionPayloadEnvelope(payloadEnvelope, {
         verifySignature: false,
         verifyStateRoot: false,
       });
 
-      if (!isStatePostGloas(postPayloadEnvelopeState)) {
+      if (!isStatePostGloas(postPayloadState)) {
         throw Error(
           `Expected gloas+ post-envelope-state for execution payload envelope, got fork=${postBlockState.forkName}`
         );
@@ -154,7 +154,7 @@ export async function verifyBlocksStateTransitionOnly(
       const hashTreeRootTimerEnvelope = metrics?.stateHashTreeRootTime.startTimer({
         source: StateHashTreeRootSource.envelopeTransition,
       });
-      const stateRootAfterEnvelope = postPayloadEnvelopeState.hashTreeRoot();
+      const stateRootAfterEnvelope = postPayloadState.hashTreeRoot();
       hashTreeRootTimerEnvelope?.();
 
       if (!byteArrayEquals(payloadEnvelope.message.stateRoot, stateRootAfterEnvelope)) {
@@ -163,13 +163,18 @@ export async function verifyBlocksStateTransitionOnly(
           root: stateRootAfterEnvelope,
           expectedRoot: payloadEnvelope.message.stateRoot,
           preState: postBlockState,
-          postState: postPayloadEnvelopeState,
+          postState: postPayloadState,
         });
       }
 
-      postPayloadEnvelopeStates.set(slot, {postPayloadEnvelopeState, payloadEnvelope});
+      if (payloadEnvelopeInput === null) {
+        // should not happen
+        throw Error("Expected PayloadEnvelopeInput");
+      }
+
+      postPayloadStates.set(slot, {postPayloadState, payloadEnvelopeInput});
     } else {
-      postPayloadEnvelopeStates.set(slot, null);
+      postPayloadStates.set(slot, null);
     }
 
     // If blocks are invalid in execution the main promise could resolve before this loop ends.
@@ -196,5 +201,5 @@ export async function verifyBlocksStateTransitionOnly(
     logger.debug("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
   }
 
-  return {postBlockStates, proposerBalanceDeltas, verifyStateTime, postPayloadEnvelopeStates};
+  return {postBlockStates, proposerBalanceDeltas, verifyStateTime, postPayloadStates};
 }

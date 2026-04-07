@@ -100,7 +100,7 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {computeEnvelopeStateRoot, computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {computeNewStateRoot, computePayloadEnvelopeStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlockType, ProduceFullGloas, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -1054,7 +1054,7 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    const {newStateRoot, proposerReward, postState} = computeNewStateRoot(this.metrics, state, block);
+    const {newStateRoot, proposerReward, postBlockState} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full
@@ -1078,11 +1078,11 @@ export class BeaconChain implements IBeaconChain {
         slot,
         stateRoot: ZERO_HASH,
       };
-      if (!isStatePostGloas(postState)) {
-        throw Error(`Expected gloas+ post-state for execution payload envelope, got fork=${postState.forkName}`);
+      if (!isStatePostGloas(postBlockState)) {
+        throw Error(`Expected gloas+ post-state for execution payload envelope, got fork=${postBlockState.forkName}`);
       }
-      const envelopeStateRoot = computeEnvelopeStateRoot(this.metrics, postState, envelope);
-      gloasResult.envelopeStateRoot = envelopeStateRoot;
+      const payloadEnvelopeStateRoot = computePayloadEnvelopeStateRoot(this.metrics, postBlockState, envelope);
+      gloasResult.payloadEnvelopeStateRoot = payloadEnvelopeStateRoot;
     }
 
     // Track the produced block for consensus broadcast validations, later validation, etc.

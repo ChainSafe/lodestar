@@ -97,7 +97,7 @@ export async function processBlocks(
       proposerBalanceDeltas,
       segmentExecStatus,
       indexedAttestationsByBlock,
-      postPayloadEnvelopeStates,
+      postPayloadStates,
     } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
@@ -112,11 +112,12 @@ export async function processBlocks(
     const {executionStatuses} = segmentExecStatus;
     const fullyVerifiedBlocks = relevantBlocks.map((block, i): FullyVerifiedBlock => {
       const slot = block.getBlock().message.slot;
-      const payloadEnvelopeResult = postPayloadEnvelopeStates.get(slot) ?? null;
+      const payloadEnvelopeResult = postPayloadStates.get(slot) ?? null;
       const executionStatus = executionStatuses[i];
       const baseFields = {
         blockInput: block,
         postBlockState: postBlockStates[i],
+        postPayloadState: null,
         parentBlockSlot: parentSlots[i],
         // start supporting optimistic syncing/processing
         dataAvailabilityStatus: dataAvailabilityStatuses[i],
@@ -128,28 +129,24 @@ export async function processBlocks(
       };
 
       if (payloadEnvelopeResult !== null) {
-        const {postPayloadEnvelopeState, payloadEnvelope} = payloadEnvelopeResult;
+        const {postPayloadState, payloadEnvelopeInput} = payloadEnvelopeResult;
         if (executionStatus !== ExecutionStatus.Valid && executionStatus !== ExecutionStatus.Syncing) {
           throw new Error(
             `postPayloadEnvelopeState is set but executionStatus is ${executionStatus}, expected Valid or Syncing. slot=${slot} blockIndex=${i}`
           );
         }
-        const payloadEnvelopeInput = payloadEnvelopes?.get(slot);
-        if (!payloadEnvelopeInput) {
-          throw new Error(`Expected PayloadEnvelopeInput for slot ${slot} with payloadEnvelopeResult`);
-        }
-        return {...baseFields, postPayloadEnvelopeState, payloadEnvelope, payloadEnvelopeInput, executionStatus};
+        return {...baseFields, postPayloadState, payloadEnvelopeInput, executionStatus};
       }
 
-      return {...baseFields, postPayloadEnvelopeState: null, executionStatus};
+      return {...baseFields, postPayloadState: null, executionStatus};
     });
 
     for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
       // TODO: Consider batching importBlock too if it takes significant time
       await importBlock.call(this, fullyVerifiedBlock, opts);
-      if (fullyVerifiedBlock.postPayloadEnvelopeState !== null) {
-        const {postPayloadEnvelopeState, payloadEnvelopeInput, executionStatus} = fullyVerifiedBlock;
-        await importExecutionPayload.call(this, payloadEnvelopeInput, postPayloadEnvelopeState, executionStatus);
+      if (fullyVerifiedBlock.postPayloadState !== null) {
+        const {postPayloadState, payloadEnvelopeInput, executionStatus} = fullyVerifiedBlock;
+        await importExecutionPayload.call(this, payloadEnvelopeInput, postPayloadState, executionStatus);
       }
       await nextEventLoop();
     }
