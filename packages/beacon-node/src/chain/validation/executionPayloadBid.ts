@@ -87,9 +87,9 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] this bid is the highest value bid seen for the corresponding slot
-  // and the given parent block hash.
-  const bestBid = chain.executionPayloadBidPool.getBestBid(parentBlockRootHex, parentBlockHashHex, bid.slot);
+  // [IGNORE] this bid is the highest value bid seen for the tuple
+  // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
+  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, parentBlockHashHex, parentBlockRootHex);
   if (bestBid !== null && bestBid.value >= bid.value) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
