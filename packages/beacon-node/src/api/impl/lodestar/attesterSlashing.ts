@@ -14,6 +14,8 @@ export function getAttesterSlashingsFromIndexedAttestations(
 
   for (let i = 0; i < indexedAttestations.length; i++) {
     for (let j = i + 1; j < indexedAttestations.length; j++) {
+      // Order by source epoch so the surrounding attestation is always first,
+      // matching what isSlashableAttestationData expects (one-directional check).
       const [first, second] =
         indexedAttestations[j].data.source.epoch < indexedAttestations[i].data.source.epoch
           ? [indexedAttestations[j], indexedAttestations[i]]
