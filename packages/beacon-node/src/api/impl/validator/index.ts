@@ -66,7 +66,7 @@ import {
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
 import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
-import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
+import {getPrepareNextSlotMs} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHexPayload} from "../../../chain/stateCache/types.js";
@@ -1102,8 +1102,7 @@ export function getValidatorApi(
       const head = chain.forkChoice.getHead();
       let state: IBeaconStateView | undefined = undefined;
       const startSlot = computeStartSlotAtEpoch(epoch);
-      const prepareNextSlotLookAheadMs =
-        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
+      const prepareNextSlotLookAheadMs = config.SLOT_DURATION_MS - getPrepareNextSlotMs(config, startSlot);
       const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch
       // this is to avoid missed block proposal due to 0 epoch look ahead

@@ -20,9 +20,22 @@ import {IBeaconChain} from "./interface.js";
 import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
 
-// TODO GLOAS: re-evaluate this timing
-/* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 - 0.6667 * 12 = 4`). */
-export const PREPARE_NEXT_SLOT_BPS = 6667;
+/* Pre-Gloas: prepare at 6667 BPS (~8s into a 12s slot), leaving 4s for preparation. */
+const PREPARE_NEXT_SLOT_BPS = 6667;
+
+/**
+ * Gloas+: prepare at 8333 BPS (~10s into a 12s slot), leaving 2s for preparation.
+ * This is after PAYLOAD_ATTESTATION_DUE_BPS (7500 / 9s) so that fork choice
+ * incorporates PTC votes (payload PRESENT/ABSENT) before computing the head
+ * and preparing the execution payload for the next slot.
+ * TODO GLOAS: re-check before Gloas mainnet
+ */
+const PREPARE_NEXT_SLOT_BPS_GLOAS = 8333;
+
+export function getPrepareNextSlotMs(config: ChainForkConfig, slot: Slot): number {
+  const bps = ForkSeq[config.getForkName(slot)] >= ForkSeq.gloas ? PREPARE_NEXT_SLOT_BPS_GLOAS : PREPARE_NEXT_SLOT_BPS;
+  return config.getSlotComponentDurationMs(bps);
+}
 
 /* We don't want to do more epoch transition than this */
 const PREPARE_EPOCH_LIMIT = 1;
@@ -73,9 +86,8 @@ export class PrepareNextSlotScheduler {
     }
 
     try {
-      // At PREPARE_NEXT_SLOT_BPS (~67%) of the current slot we prepare payload for the next slot
-      // or precompute epoch transition
-      await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
+      // Wait until the appropriate point in the slot to prepare payload or precompute epoch transition
+      await sleep(getPrepareNextSlotMs(this.config, prepareSlot), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot, prepareSlot);
