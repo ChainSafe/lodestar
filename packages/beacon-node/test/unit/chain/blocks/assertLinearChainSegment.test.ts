@@ -229,7 +229,7 @@ describe("chain / blocks / assertLinearChainSegment", () => {
       const envelopes = new Map([[GLOAS_SLOT, wrongInput]]);
       expectThrowsLodestarError(
         () => assertLinearChainSegment(config, [block0], envelopes, parentBlock),
-        BlockErrorCode.ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH
+        BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH
       );
     });
 

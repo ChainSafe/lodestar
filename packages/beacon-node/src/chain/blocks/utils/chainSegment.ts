@@ -89,7 +89,7 @@ export function assertLinearChainSegment(
         const envelopeBlockRoot = toRootHex(payloadEnvelope.message.beaconBlockRoot);
         if (blockRoot !== envelopeBlockRoot) {
           throw new BlockError(block, {
-            code: BlockErrorCode.ENVELOPE_BEACON_BLOCK_ROOT_MISMATCH,
+            code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH,
             envelopeBlockRoot,
             blockRoot,
           });
