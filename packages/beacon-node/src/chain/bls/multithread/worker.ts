@@ -1,9 +1,9 @@
 import worker from "node:worker_threads";
-import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
-import {expose} from "@chainsafe/threads/worker";
-import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
-import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
-import {chunkifyMaximizeChunkSize} from "./utils.js";
+import { PublicKey } from "@chainsafe/lodestar-z/blst";
+import { expose } from "@chainsafe/threads/worker";
+import { SignatureSetDeserialized, verifySignatureSetsMaybeBatch } from "../maybeBatch.js";
+import { BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData } from "./types.js";
+import { chunkifyMaximizeChunkSize } from "./utils.js";
 
 /**
  * Split batchable sets in chunks of minimum size 16.
@@ -17,59 +17,33 @@ const BATCHABLE_MIN_PER_CHUNK = 16;
 // Cloned data from instatiation
 const workerData = worker.workerData as WorkerData;
 if (!workerData) throw Error("workerData must be defined");
-const {workerId} = workerData || {};
+const { workerId } = workerData || {};
 
 expose({
-  verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
+  async verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
     return verifyManySignatureSets(workReqArr);
   },
 });
 
-async function verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
+function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
 
   // If there are multiple batchable sets attempt batch verification with them
-  const batchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
-  const nonBatchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
+  const batchableSets: { idx: number; sets: SignatureSetDeserialized[] }[] = [];
+  const nonBatchableSets: { idx: number; sets: SignatureSetDeserialized[] }[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
     const workReq = workReqArr[i];
-
-    if (workReq.type === "same_message") {
-      const aggregateResult = await new Promise<{pk: PublicKey; sig: {toBytes(): Uint8Array}} | null>((resolve) => {
-        try {
-          const mappedSets = workReq.sets.map((set) => ({pk: PublicKey.fromBytes(set.publicKey), sig: set.signature}));
-          asyncAggregateWithRandomness(mappedSets).then(resolve, () => resolve(null));
-        } catch (_e) {
-          resolve(null);
-        }
-      });
-
-      if (aggregateResult === null) {
-        // Malformed input, return false so the caller retries each individually
-        results[i] = {code: WorkResultCode.success, result: false};
-      } else {
-        const {pk, sig} = aggregateResult;
-        const sets: SignatureSetDeserialized[] = [{publicKey: pk, message: workReq.message, signature: sig.toBytes()}];
-        if (workReq.opts.batchable) {
-          batchableSets.push({idx: i, sets});
-        } else {
-          nonBatchableSets.push({idx: i, sets});
-        }
-      }
-      continue;
-    }
-
     const sets = workReq.sets.map(deserializeSet);
 
     if (workReq.opts.batchable) {
-      batchableSets.push({idx: i, sets});
+      batchableSets.push({ idx: i, sets });
     } else {
-      nonBatchableSets.push({idx: i, sets});
+      nonBatchableSets.push({ idx: i, sets });
     }
   }
 
@@ -79,7 +53,7 @@ async function verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWor
 
     for (const batchableChunk of batchableChunks) {
       const allSets: SignatureSetDeserialized[] = [];
-      for (const {sets} of batchableChunk) {
+      for (const { sets } of batchableChunk) {
         for (const set of sets) {
           allSets.push(set);
         }
@@ -91,9 +65,9 @@ async function verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWor
 
         if (isValid) {
           // The entire batch is valid, return success to all
-          for (const {idx, sets} of batchableChunk) {
+          for (const { idx, sets } of batchableChunk) {
             batchSigsSuccess += sets.length;
-            results[idx] = {code: WorkResultCode.success, result: isValid};
+            results[idx] = { code: WorkResultCode.success, result: isValid };
           }
         } else {
           batchRetries++;
@@ -110,12 +84,12 @@ async function verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWor
     }
   }
 
-  for (const {idx, sets} of nonBatchableSets) {
+  for (const { idx, sets } of nonBatchableSets) {
     try {
       const isValid = verifySignatureSetsMaybeBatch(sets);
-      results[idx] = {code: WorkResultCode.success, result: isValid};
+      results[idx] = { code: WorkResultCode.success, result: isValid };
     } catch (e) {
-      results[idx] = {code: WorkResultCode.error, error: e as Error};
+      results[idx] = { code: WorkResultCode.error, error: e as Error };
     }
   }
 
