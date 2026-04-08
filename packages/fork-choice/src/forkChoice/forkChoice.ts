@@ -49,6 +49,7 @@ import {
   IForkChoice,
   NotReorgedReason,
   ShouldOverrideForkChoiceUpdateResult,
+  SlotPhase,
 } from "./interface.js";
 import {CheckpointWithPayloadStatus, IForkChoiceStore, JustifiedBalances, toCheckpointWithPayload} from "./store.js";
 
@@ -65,8 +66,8 @@ export enum UpdateHeadOpt {
 }
 
 export type UpdateAndGetHeadOpt =
-  // When slot is provided, it overrides fcStore.currentSlot for Gloas FULL vs EMPTY tie-breaker logic
-  | {mode: UpdateHeadOpt.GetCanonicalHead; slot?: Slot}
+  // When slotPhase is provided, it allows for early Gloas FULL vs EMPTY tie-breaker logic
+  | {mode: UpdateHeadOpt.GetCanonicalHead; slotPhase?: SlotPhase}
   | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
 
@@ -224,7 +225,9 @@ export class ForkChoice implements IForkChoice {
     const {mode} = opt;
 
     const canonicalHeadBlock =
-      mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead(opt.slot);
+      mode === UpdateHeadOpt.GetPredictedProposerHead
+        ? this.getHead()
+        : this.updateHead(mode === UpdateHeadOpt.GetCanonicalHead ? opt.slotPhase : undefined);
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
         return {head: this.predictProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot)};
@@ -461,9 +464,9 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_head
    *
-   * @param slot - If provided, overrides fcStore.currentSlot for Gloas FULL vs EMPTY tie-breaker logic
+   * @param slotPhase - If provided, overrides fcStore.currentSlot for Gloas FULL vs EMPTY tie-breaker logic
    */
-  updateHead(slot?: Slot): ProtoBlock {
+  updateHead(slotPhase: SlotPhase = SlotPhase.Start): ProtoBlock {
     // balances is not changed but votes are changed
 
     // NOTE: In current Lodestar metrics, 100% of forkChoiceRequests this.synced = false.
@@ -520,9 +523,9 @@ export class ForkChoice implements IForkChoice {
       this.justifiedProposerBoostScore = proposerBoostScore;
     }
 
-    // When preparing for the next slot, pass slot as currentSlot + 1 to choose FULL vs EMPTY
+    // When preparing for the next slot, the slot phase will be PostPayload
     // This is important for Gloas tie-breaker logic
-    const currentSlot = slot ?? this.fcStore.currentSlot;
+    const currentSlot = slotPhase === SlotPhase.PostPayload ? this.fcStore.currentSlot + 1 : this.fcStore.currentSlot;
     this.protoArray.applyScoreChanges({
       deltas,
       proposerBoost,

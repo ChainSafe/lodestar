@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {PayloadStatus, SlotPhase, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
   IBeaconStateView,
@@ -90,7 +90,7 @@ export class PrepareNextSlotScheduler {
       await sleep(getPrepareNextSlotMs(this.config, prepareSlot), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
-      const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot, prepareSlot);
+      const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot, SlotPhase.PostPayload);
       const {slot: headSlot, blockRoot: headRoot} = headBlock;
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped

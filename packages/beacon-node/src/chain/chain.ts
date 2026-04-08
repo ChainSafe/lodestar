@@ -7,6 +7,7 @@ import {
   IForkChoice,
   PayloadStatus,
   ProtoBlock,
+  SlotPhase,
   UpdateHeadOpt,
   getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
@@ -1080,12 +1081,12 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
-  recomputeForkChoiceHead(caller: ForkchoiceCaller, slot?: Slot): ProtoBlock {
+  recomputeForkChoiceHead(caller: ForkchoiceCaller, slotPhase?: SlotPhase): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead, slot}).head;
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead, slotPhase}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;

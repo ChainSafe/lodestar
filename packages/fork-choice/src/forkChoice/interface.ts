@@ -29,6 +29,15 @@ export type CheckpointWithPayloadAndTotalBalance = CheckpointWithPayloadAndBalan
   totalBalance: number;
 };
 
+/**
+ * Phases of a slot that matter to fork choice.
+ * Used for Gloas fork to determine when to apply proposer boost and how to break ties.
+ */
+export enum SlotPhase {
+  Start = 0,
+  PostPayload = 1,
+}
+
 export enum EpochDifference {
   current = 0,
   previous = 1,

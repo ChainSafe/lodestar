@@ -20,6 +20,7 @@ export {
   EpochDifference,
   type IForkChoice,
   NotReorgedReason,
+  SlotPhase,
 } from "./forkChoice/interface.js";
 export * from "./forkChoice/safeBlocks.js";
 export {
