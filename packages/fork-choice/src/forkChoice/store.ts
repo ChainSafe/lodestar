@@ -120,15 +120,19 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this._finalizedCheckpoint = toCheckpointWithPayload(finalizedCheckpoint, finalizedPayloadStatus);
     this.unrealizedFinalizedCheckpoint = this._finalizedCheckpoint;
 
-    // Initialize Fast Confirmation fields
-    const anchorRoot = toCheckpointWithHex(finalizedCheckpoint).rootHex;
-    this.previousEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
-    this.currentEpochObservedJustifiedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
-    this.previousEpochGreatestUnrealizedCheckpoint = toCheckpointWithHex(justifiedCheckpoint);
+    // Initialize Fast Confirmation fields conservatively from finalized, matching
+    // the spec's get_fast_confirmation_store() behavior.
+    const finalizedCheckpointWithHex = toCheckpointWithHex(finalizedCheckpoint);
+    const finalizedState = stateGetter({checkpoint: finalizedCheckpointWithHex});
+    const finalizedBalances = finalizedState?.epochCtx.effectiveBalanceIncrements ?? justifiedBalances;
+    const anchorRoot = finalizedCheckpointWithHex.rootHex;
+    this.previousEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
+    this.currentEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
+    this.previousEpochGreatestUnrealizedCheckpoint = finalizedCheckpointWithHex;
     this.confirmedRoot = anchorRoot;
-    this.previousEpochObservedJustifiedBalances = justifiedBalances;
-    this.currentEpochObservedJustifiedBalances = justifiedBalances;
-    this.previousEpochGreatestUnrealizedBalances = justifiedBalances;
+    this.previousEpochObservedJustifiedBalances = finalizedBalances;
+    this.currentEpochObservedJustifiedBalances = finalizedBalances;
+    this.previousEpochGreatestUnrealizedBalances = finalizedBalances;
     this.previousSlotHead = anchorRoot;
     this.currentSlotHead = anchorRoot;
   }

@@ -9,6 +9,7 @@ import {
   EpochDifference,
   ExecutionStatus,
   ForkChoice,
+  ForkChoiceStore,
   IForkChoiceStore,
   PayloadStatus,
   ProtoArray,
@@ -168,6 +169,34 @@ describe("Forkchoice", () => {
       }
     }
   };
+
+  it("initializes fast confirmation checkpoints from finalized checkpoint", () => {
+    const justifiedRoot = getBlockRoot(genesisSlot + 1);
+    const finalizedCheckpoint = {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+    };
+    const justifiedCheckpoint = {
+      epoch: genesisEpoch + 1,
+      root: fromHexString(justifiedRoot),
+    };
+
+    const store = new ForkChoiceStore(
+      (genesisSlot + 1) as Slot,
+      justifiedCheckpoint,
+      finalizedCheckpoint,
+      new Uint16Array([32]),
+      () => new Uint16Array([32]),
+      PayloadStatus.FULL,
+      PayloadStatus.FULL,
+      () => null
+    );
+
+    expect(store.previousEpochObservedJustifiedCheckpoint.rootHex).toBe(finalizedRoot);
+    expect(store.currentEpochObservedJustifiedCheckpoint.rootHex).toBe(finalizedRoot);
+    expect(store.previousEpochGreatestUnrealizedCheckpoint.rootHex).toBe(finalizedRoot);
+    expect(store.confirmedRoot).toBe(finalizedRoot);
+  });
 
   it("getAllAncestorBlocks", () => {
     // Add block that is a finalized descendant.
