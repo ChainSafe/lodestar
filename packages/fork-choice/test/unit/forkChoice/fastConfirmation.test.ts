@@ -8,8 +8,10 @@ import {
 import {FastConfirmationRule} from "../../../src/forkChoice/fastConfirmation/fastConfirmationRule.js";
 import {runFastConfirmationRules} from "../../../src/forkChoice/fastConfirmation/rules.js";
 import {
+  adjustCommitteeWeightEstimateToEnsureSafety,
   computeSafetyThreshold,
   findLatestConfirmedDescendant,
+  getBlockSupportBetweenSlots,
   isConfirmedChainSafe,
   isOneConfirmed,
 } from "../../../src/forkChoice/fastConfirmation/utils.js";
@@ -51,6 +53,11 @@ describe("fast confirmation", () => {
     expect(maximumSupport).toBeGreaterThan(0);
     expect(supportDiscount).toBeGreaterThan(maximumSupport + 2 * adversarialWeight);
     expect(threshold).toBe(0);
+  });
+
+  it("adjustCommitteeWeightEstimateToEnsureSafety applies the spec safety bump in effective balance increments", () => {
+    expect(adjustCommitteeWeightEstimateToEnsureSafety(999)).toBe(1004);
+    expect(adjustCommitteeWeightEstimateToEnsureSafety(1001)).toBe(1007);
   });
 
   it("isOneConfirmed returns true only when support exceeds the computed threshold", () => {
@@ -97,6 +104,33 @@ describe("fast confirmation", () => {
         "current"
       )
     ).toBe(false);
+  });
+
+  it("getBlockSupportBetweenSlots counts validators whose latest message is exactly the target block", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    const state = makeState(4, 32, [2 as Slot]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    const latestMessages = new Map([
+      [0, {root: parent.blockRoot, epoch: 0}],
+      [1, {root: parent.blockRoot, epoch: 0}],
+      [2, {root: child.blockRoot, epoch: 0}],
+      [3, {root: child.blockRoot, epoch: 0}],
+    ]);
+    const ctx = makeContext(3 as Slot, child.blockRoot, blocks, latestMessages, {epoch: 0, rootHex: ZERO_ROOT}, state);
+
+    const support = getBlockSupportBetweenSlots(
+      ctx,
+      store,
+      createFastConfirmationCache(),
+      {state, balances: state.epochCtx.effectiveBalanceIncrements},
+      parent.blockRoot,
+      2 as Slot,
+      2 as Slot
+    );
+
+    expect(support).toBe(64);
   });
 
   it("isConfirmedChainSafe fails when a block in the confirmed chain cannot be re-confirmed", () => {

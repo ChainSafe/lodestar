@@ -4,6 +4,7 @@ import {
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
+  isActiveValidator,
   isStartSlotOfEpoch,
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
@@ -282,11 +283,17 @@ export function estimateCommitteeWeightBetweenSlots(
 }
 
 export function adjustCommitteeWeightEstimateToEnsureSafety(estimate: number): number {
-  const estimateInThousands = Math.floor(estimate / 1000);
-  if (estimateInThousands === 0) {
-    return estimate;
-  }
-  return estimateInThousands * (1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR);
+  // The spec applies this adjustment in raw Gwei:
+  //   ceil(estimate_gwei / 1000) * (1000 + factor)
+  //
+  // Lodestar carries effective balance increments instead, where:
+  //   1 increment = EFFECTIVE_BALANCE_INCREMENT = 1e9 Gwei
+  //
+  // Since each increment is already far larger than 1000 Gwei, the spec's
+  // `ceil(... / 1000)` becomes a no-op at our unit scale. The equivalent
+  // conservative adjustment in increments is therefore:
+  //   ceil(estimate_increments * (1000 + factor) / 1000)
+  return Math.floor((estimate * (1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR) + 999) / 1000);
 }
 
 export function isFullValidatorSetCovered(startSlot: Slot, endSlot: Slot): boolean {
@@ -378,6 +385,8 @@ export function getBlockSupportBetweenSlots(
 ): number {
   if (startSlot > endSlot) return 0;
   const balances = balanceSource.balances;
+  const state = balanceSource.state;
+  const stateEpoch = state ? computeEpochAtSlot(state.slot) : null;
   const participants = getSlotRangeParticipants(ctx, store, cache, startSlot, endSlot);
   if (participants.size === 0) return 0;
 
@@ -385,10 +394,12 @@ export function getBlockSupportBetweenSlots(
   let score = 0;
   for (const i of participants) {
     if (i >= balances.length) continue;
-    if (balanceSource.state?.validators.get(i)?.slashed) continue;
+    const validator = state?.validators.get(i);
+    if (validator?.slashed) continue;
+    if (validator && stateEpoch !== null && !isActiveValidator(validator, stateEpoch)) continue;
     if (equivocating.has(i)) continue;
     const latestMessage = ctx.getLatestMessage(i);
-    if (latestMessage && isDescendantCached(ctx, cache, blockRoot, latestMessage.root)) {
+    if (latestMessage?.root === blockRoot) {
       score += balances[i] ?? 0;
     }
   }
@@ -405,6 +416,8 @@ export function getEquivocationScore(
 ): number {
   if (startSlot > endSlot) return 0;
   const balances = balanceSource.balances;
+  const state = balanceSource.state;
+  const stateEpoch = state ? computeEpochAtSlot(state.slot) : null;
   const participants = getSlotRangeParticipants(ctx, store, cache, startSlot, endSlot);
   if (participants.size === 0) return 0;
 
@@ -413,6 +426,8 @@ export function getEquivocationScore(
   for (const i of participants) {
     if (!equivocating.has(i)) continue;
     if (i >= balances.length) continue;
+    const validator = state?.validators.get(i);
+    if (validator && stateEpoch !== null && !isActiveValidator(validator, stateEpoch)) continue;
     score += balances[i] ?? 0;
   }
   return score;
@@ -711,7 +726,7 @@ export function willNoConflictingCheckpointBeJustified(
   if (!targetState) return false;
   const totalActiveBalance = targetState.epochCtx.totalActiveBalanceIncrements;
   const honestSupport = computeHonestFfgSupportForCurrentTarget(ctx, store, cache);
-  return 3 * honestSupport >= 1 * totalActiveBalance;
+  return 3 * honestSupport > 1 * totalActiveBalance;
 }
 
 export function willCurrentTargetBeJustified(

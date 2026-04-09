@@ -1,4 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
+import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateAllForks, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {
@@ -66,6 +67,7 @@ export function makeState(
   const committees = new Map<Slot, ValidatorIndex[]>(committeeSlots.map((slot) => [slot, activeIndices]));
 
   return {
+    slot: (committeeSlots.length > 0 ? Math.max(...committeeSlots) : 0) as Slot,
     epochCtx: {
       totalActiveBalanceIncrements: validatorCount * balancePerValidator,
       effectiveBalanceIncrements: balances,
@@ -74,7 +76,11 @@ export function makeState(
       getBeaconCommittee: (slot: Slot) => committees.get(slot) ?? activeIndices,
     },
     validators: {
-      get: (index: ValidatorIndex) => ({slashed: slashed.has(index)}),
+      get: (index: ValidatorIndex) => ({
+        slashed: slashed.has(index),
+        activationEpoch: 0,
+        exitEpoch: FAR_FUTURE_EPOCH,
+      }),
     },
   } as unknown as CachedBeaconStateAllForks;
 }

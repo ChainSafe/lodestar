@@ -243,6 +243,58 @@ describe("fast confirmation rules", () => {
     expect(unchanged.confirmedRoot).toBe(confirmed.blockRoot);
   });
 
+  it("advanceIfObservedJustified does not restart to a checkpoint whose block is older than the previous epoch", () => {
+    const finalized = makeBlock(3 * SLOTS_PER_EPOCH, ZERO_ROOT);
+    const staleObserved = makeBlock(4 * SLOTS_PER_EPOCH - 1, finalized.blockRoot);
+    const confirmed = makeBlock(5 * SLOTS_PER_EPOCH - 2, staleObserved.blockRoot);
+    const head = makeBlock(5 * SLOTS_PER_EPOCH - 1, confirmed.blockRoot, {
+      unrealizedJustifiedEpoch: 4,
+      unrealizedJustifiedRoot: staleObserved.blockRoot,
+    });
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), finalized, staleObserved, confirmed, head];
+    const state = makeState(32, 32, [head.slot]);
+    const store = makeStore(
+      finalized.blockRoot,
+      finalized.blockRoot,
+      staleObserved.blockRoot,
+      3,
+      4,
+      confirmed.blockRoot,
+      head.blockRoot,
+      state
+    );
+    const ctx = makeContext(
+      (5 * SLOTS_PER_EPOCH) as Slot,
+      head.blockRoot,
+      blocks,
+      new Map(),
+      {epoch: 4, rootHex: staleObserved.blockRoot},
+      state
+    );
+    const snapshot = makeSnapshot(
+      (5 * SLOTS_PER_EPOCH) as Slot,
+      5,
+      head.blockRoot,
+      finalized.blockRoot,
+      finalized.slot,
+      3,
+      finalized.blockRoot,
+      staleObserved.blockRoot,
+      4,
+      staleObserved.blockRoot,
+      4
+    );
+
+    const result = advanceIfObservedJustified(snapshot, ctx, store, createFastConfirmationCache(), {
+      ...BASE_DECISION,
+      confirmedRoot: finalized.blockRoot,
+      didReset: true,
+    });
+
+    expect(result.confirmedRoot).toBe(finalized.blockRoot);
+    expect(result.reason).toBeUndefined();
+  });
+
   it("advanceToLatestConfirmedDescendant ignores confirmed blocks older than previous epoch", () => {
     const oldConfirmed = makeBlock(1, ZERO_ROOT);
     const head = makeBlock(2 * SLOTS_PER_EPOCH, oldConfirmed.blockRoot);

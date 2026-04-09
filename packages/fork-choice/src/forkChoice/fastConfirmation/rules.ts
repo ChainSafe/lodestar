@@ -49,9 +49,11 @@ export const advanceIfObservedJustified: FastConfirmationRule = (snapshot, ctx, 
   if (store.currentEpochObservedJustifiedCheckpoint.epoch + 1 !== snapshot.currentEpoch) return decision;
   if (!snapshot.headUnrealized) return decision;
   if (!equalCheckpointWithHex(store.currentEpochObservedJustifiedCheckpoint, snapshot.headUnrealized)) return decision;
+  const observedBlock = getBlock(ctx, cache, store.currentEpochObservedJustifiedCheckpoint.rootHex);
+  if (!observedBlock || computeEpochAtSlot(observedBlock.slot) + 1 < snapshot.currentEpoch) return decision;
 
   const confirmedSlot = getBlock(ctx, cache, decision.confirmedRoot)?.slot ?? null;
-  const observedSlot = getBlock(ctx, cache, store.currentEpochObservedJustifiedCheckpoint.rootHex)?.slot ?? null;
+  const observedSlot = observedBlock.slot;
   if (confirmedSlot !== null && observedSlot !== null && confirmedSlot < observedSlot) {
     return {
       ...decision,
