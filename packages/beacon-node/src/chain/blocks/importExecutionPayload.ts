@@ -278,6 +278,9 @@ export async function importExecutionPayload(
     toRootHex(postPayloadStateRoot),
     execStatus
   );
+  // TODO GLOAS: if this is called from gossip, the new head may not be correct because it does not go through
+  // tie-breaker rules since we're not yet at the next slot. Need to find a way to do that?
+  // see also https://github.com/ChainSafe/lodestar/pull/9164
   const newHead = this.recomputeForkChoiceHead(ForkchoiceCaller.importBlock);
 
   if (newHead.blockRoot !== oldHead.blockRoot) {

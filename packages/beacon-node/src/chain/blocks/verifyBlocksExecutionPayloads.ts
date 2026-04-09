@@ -305,6 +305,7 @@ function getSegmentErrorResponse(
       const blockHashHex = isGloasBeaconBlock(block.message)
         ? toRootHex(
             payloadEnvelopes?.get(blockInput.slot)?.getPayloadEnvelope()?.message.payload.blockHash ??
+              // should be parentBlockHash because there is no payload in this case
               block.message.body.signedExecutionPayloadBid.message.parentBlockHash
           )
         : toRootHex((block.message.body as bellatrix.BeaconBlockBody).executionPayload.blockHash);
