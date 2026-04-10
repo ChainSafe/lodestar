@@ -7,6 +7,7 @@ import {eth_estimateGas} from "../verified_requests/eth_estimateGas.js";
 import {eth_getBalance} from "../verified_requests/eth_getBalance.js";
 import {eth_getBlockByHash} from "../verified_requests/eth_getBlockByHash.js";
 import {eth_getBlockByNumber} from "../verified_requests/eth_getBlockByNumber.js";
+import {eth_getBlockNumber} from "../verified_requests/eth_getBlockNumber.js";
 import {eth_getCode} from "../verified_requests/eth_getCode.js";
 import {eth_getTransactionCount} from "../verified_requests/eth_getTransactionCount.js";
 import {getResponseForRequest, isBatchRequest, isRequest} from "./json_rpc.js";
@@ -19,6 +20,7 @@ export const verifiableMethodHandlers: Record<string, ELVerifiedRequestHandler<a
   eth_getTransactionCount: eth_getTransactionCount,
   eth_getBlockByHash: eth_getBlockByHash,
   eth_getBlockByNumber: eth_getBlockByNumber,
+  eth_getBlockNumber: eth_getBlockNumber,
   eth_getCode: eth_getCode,
   eth_call: eth_call,
   eth_estimateGas: eth_estimateGas,
