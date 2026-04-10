@@ -72,6 +72,8 @@ export function getCheckpointForBlock(
   }
 }
 
+// Spec: `get_ancestor_roots`
+// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md#get_ancestor_roots
 export function getAncestorRoots(
   ctx: FastConfirmationContext,
   cache: FastConfirmationCache,
@@ -88,26 +90,26 @@ export function getAncestorRoots(
     cache.ancestorRoots.set(cacheKey, null);
     return [];
   }
+
   let root = blockRoot;
   const ancestorRoots: RootHex[] = [];
-  while (true) {
-    const block = getBlock(ctx, cache, root);
-    if (!block) {
-      cache.ancestorRoots.set(cacheKey, null);
-      return [];
-    }
-    if (block.slot <= terminalBlock.slot) {
-      cache.ancestorRoots.set(cacheKey, null);
-      return [];
-    }
+
+  let block = getBlock(ctx, cache, root);
+  while (block && block.slot > terminalBlock.slot) {
     ancestorRoots.push(root);
     root = block.parentRoot;
+
     if (root === terminalRoot) {
       ancestorRoots.reverse();
       cache.ancestorRoots.set(cacheKey, ancestorRoots);
       return ancestorRoots;
     }
+
+    block = getBlock(ctx, cache, root);
   }
+
+  cache.ancestorRoots.set(cacheKey, null);
+  return [];
 }
 
 export function isAncestor(
@@ -129,10 +131,11 @@ export function getHeadState(
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache
-): CachedBeaconStateAllForks | null {
+): CachedBeaconStateAllForks {
   if (cache.headState !== undefined) return cache.headState;
   const headState = store.stateGetter({stateRoot: ctx.getHead().stateRoot});
-  cache.headState = headState ?? null;
+  if (!headState) throw new Error(`Head state not found for root ${ctx.getHead().stateRoot}`);
+  cache.headState = headState;
   return cache.headState;
 }
 
@@ -180,7 +183,6 @@ function getSlotRangeParticipants(
 ): Set<ValidatorIndex> {
   const participants = new Set<ValidatorIndex>();
   const headState = getHeadState(ctx, store, cache);
-  if (!headState) return participants;
 
   for (let slot = startSlot; slot <= endSlot; slot++) {
     for (const index of getSlotCommittee(cache, headState, slot)) {
@@ -243,6 +245,8 @@ export function getTotalActiveBalance(balanceSource: FastConfirmationBalanceSour
   if (balanceSource.state) {
     return balanceSource.state.epochCtx.totalActiveBalanceIncrements;
   }
+  // Fallback balances come from the justified-balance path and already zero inactive
+  // validators, so summing them gives the active justified total for this balance source.
   return computeTotalBalance(balanceSource.balances);
 }
 
@@ -797,6 +801,9 @@ export function isConfirmedChainSafe(
   }
   return true;
 }
+
+// Spec: `find_latest_confirmed_descendant`
+// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md#find_latest_confirmed_descendant
 export function findLatestConfirmedDescendant(
   snapshot: FastConfirmationSnapshot,
   ctx: FastConfirmationContext,
@@ -837,10 +844,13 @@ export function findLatestConfirmedDescendant(
     for (const blockRoot of canonicalRoots) {
       const block = getBlock(ctx, cache, blockRoot);
       const blockEpoch = block ? computeEpochAtSlot(block.slot) : null;
+      const blockSlot = block?.slot;
+
       if (blockEpoch === null || blockEpoch === currentEpoch) {
         logger?.debug("Fast confirmation previous-epoch loop stopped", {
           reason: "reached_current_epoch_or_unknown_epoch",
           blockRoot,
+          blockSlot,
           blockEpoch,
         });
         break;
@@ -849,6 +859,8 @@ export function findLatestConfirmedDescendant(
         logger?.debug("Fast confirmation previous-epoch loop stopped", {
           reason: "not_ancestor_of_previous_slot_head",
           blockRoot,
+          blockSlot,
+          blockEpoch,
           previousSlotHead: store.previousSlotHead,
         });
         break;
@@ -858,6 +870,8 @@ export function findLatestConfirmedDescendant(
         logger?.debug("Fast confirmation previous-epoch loop stopped", {
           reason: "block_not_one_confirmed",
           blockRoot,
+          blockSlot,
+          blockEpoch,
         });
         break;
       }
@@ -877,6 +891,7 @@ export function findLatestConfirmedDescendant(
     for (const blockRoot of canonicalRoots) {
       const block = getBlock(ctx, cache, blockRoot);
       const blockEpoch = block ? computeEpochAtSlot(block.slot) : null;
+      const blockSlot = block?.slot;
       const tentativeBlock = getBlock(ctx, cache, tentativeConfirmedRoot);
       const tentativeEpoch = tentativeBlock ? computeEpochAtSlot(tentativeBlock.slot) : null;
       if (blockEpoch === null || tentativeEpoch === null) break;
@@ -885,6 +900,7 @@ export function findLatestConfirmedDescendant(
         logger?.debug("Fast confirmation current-epoch loop stopped", {
           reason: "current_target_not_justified",
           blockRoot,
+          blockSlot,
           blockEpoch,
           tentativeEpoch,
         });
@@ -896,6 +912,8 @@ export function findLatestConfirmedDescendant(
         logger?.debug("Fast confirmation current-epoch loop stopped", {
           reason: "block_not_one_confirmed",
           blockRoot,
+          blockSlot,
+          blockEpoch,
         });
         break;
       }

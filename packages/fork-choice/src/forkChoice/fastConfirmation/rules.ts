@@ -92,6 +92,8 @@ export const FAST_CONFIRMATION_RULES: FastConfirmationRule[] = [
   advanceToLatestConfirmedDescendant,
 ];
 
+// Spec mapping: this rule runner implements the `get_latest_confirmed` decision flow
+// over Lodestar's snapshot/store/cache abstractions.
 export function runFastConfirmationRules(
   snapshot: FastConfirmationSnapshot,
   ctx: FastConfirmationContext,

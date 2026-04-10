@@ -64,6 +64,7 @@ export type FastConfirmationRule = (
   logger?: Logger
 ) => FastConfirmationDecision;
 
+// This cache is created once per slot
 export type FastConfirmationCache = {
   blockByRoot: Map<RootHex, ProtoBlock | null>;
   ancestorRoots: Map<string, RootHex[] | null>;
@@ -71,7 +72,7 @@ export type FastConfirmationCache = {
   isDescendantByRootPair: Map<string, boolean>;
   /** voteRoot -> totalWeight, keyed by sourceKey ("current" | "previous") */
   voteWeightBySource: Map<string, Map<RootHex, number>>;
-  headState?: CachedBeaconStateAllForks | null;
+  headState?: CachedBeaconStateAllForks;
   checkpointStateByKey: Map<string, CachedBeaconStateAllForks | null>;
 };
 
