@@ -3,9 +3,9 @@ import {getEmptyLogger} from "@lodestar/logger/empty";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {ProofProvider} from "../../../src/proof_provider/proof_provider.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
-import {eth_getBlockNumber} from "../../../src/verified_requests/eth_getBlockNumber.js";
+import {eth_blockNumber} from "../../../src/verified_requests/eth_blockNumber.js";
 
-describe("verified_requests / eth_getBlockNumber", () => {
+describe("verified_requests / eth_blockNumber", () => {
   it("should return the valid json-rpc response with the latest block number", async () => {
     const expectedBlockNumber = 1234567;
     const options = {
@@ -20,12 +20,12 @@ describe("verified_requests / eth_getBlockNumber", () => {
       },
     };
 
-    const response = await eth_getBlockNumber({
+    const response = await eth_blockNumber({
       ...options,
       payload: {
         jsonrpc: "2.0",
         id: 1,
-        method: "eth_getBlockNumber",
+        method: "eth_blockNumber",
         params: [] as [],
       },
     });
@@ -51,12 +51,12 @@ describe("verified_requests / eth_getBlockNumber", () => {
       },
     };
 
-    const response = await eth_getBlockNumber({
+    const response = await eth_blockNumber({
       ...options,
       payload: {
         jsonrpc: "2.0",
         id: 2,
-        method: "eth_getBlockNumber",
+        method: "eth_blockNumber",
         params: [] as [],
       },
     });
@@ -66,7 +66,7 @@ describe("verified_requests / eth_getBlockNumber", () => {
       id: 2,
       error: {
         code: VERIFICATION_FAILED_RESPONSE_CODE,
-        message: getVerificationFailedMessage("eth_getBlockNumber"),
+        message: getVerificationFailedMessage("eth_blockNumber"),
       },
     });
   });

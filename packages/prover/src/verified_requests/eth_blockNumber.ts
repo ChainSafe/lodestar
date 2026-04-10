@@ -7,7 +7,7 @@ import {
 } from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const eth_getBlockNumber: ELVerifiedRequestHandler<[], string> = async ({payload, logger, proofProvider}) => {
+export const eth_blockNumber: ELVerifiedRequestHandler<[], string> = async ({payload, logger, proofProvider}) => {
   try {
     const executionPayload = await proofProvider.getExecutionPayload("latest");
     const blockNumber = numberToHex(executionPayload.blockNumber);
@@ -17,7 +17,7 @@ export const eth_getBlockNumber: ELVerifiedRequestHandler<[], string> = async ({
     logger.error("Request could not be verified.", {method: payload.method}, err as Error);
     return getErrorResponseForRequestWithFailedVerification(
       payload,
-      getVerificationFailedMessage("eth_getBlockNumber")
+      getVerificationFailedMessage("eth_blockNumber")
     );
   }
 };
