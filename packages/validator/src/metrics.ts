@@ -282,6 +282,20 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       help: "Total count of errors on slashingProtection.checkAndInsertAttestation",
     }),
 
+    slashingProtectionBlockTime: register.histogram({
+      name: "vc_slashing_protection_block_check_seconds",
+      help: "Histogram of slashingProtection.checkAndInsertBlockProposal execution time",
+      // DB reads are fast (< 1ms typically), flag outliers above 100ms
+      buckets: [0.0001, 0.001, 0.01, 0.1],
+    }),
+
+    slashingProtectionAttestationTime: register.histogram({
+      name: "vc_slashing_protection_attestation_check_seconds",
+      help: "Histogram of slashingProtection.checkAndInsertAttestation execution time",
+      // Min-max surround check involves more DB work than block check
+      buckets: [0.0001, 0.001, 0.01, 0.1],
+    }),
+
     // REST API client
 
     beaconHealth: register.gauge({
