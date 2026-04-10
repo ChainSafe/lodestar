@@ -1,5 +1,5 @@
 import worker from "node:worker_threads";
-import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
+import {PublicKey, aggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
 import {expose} from "@chainsafe/threads/worker";
 import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
@@ -20,12 +20,12 @@ if (!workerData) throw Error("workerData must be defined");
 const {workerId} = workerData || {};
 
 expose({
-  verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
+  verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     return verifyManySignatureSets(workReqArr);
   },
 });
 
-async function verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
+function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
@@ -40,14 +40,13 @@ async function verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWor
     const workReq = workReqArr[i];
 
     if (workReq.type === "same_message") {
-      const aggregateResult = await new Promise<{pk: PublicKey; sig: {toBytes(): Uint8Array}} | null>((resolve) => {
-        try {
-          const mappedSets = workReq.sets.map((set) => ({pk: PublicKey.fromBytes(set.publicKey), sig: set.signature}));
-          asyncAggregateWithRandomness(mappedSets).then(resolve, () => resolve(null));
-        } catch (_e) {
-          resolve(null);
-        }
-      });
+      let aggregateResult: {pk: PublicKey; sig: {toBytes(): Uint8Array}} | null;
+      try {
+        const mappedSets = workReq.sets.map((set) => ({pk: PublicKey.fromBytes(set.publicKey), sig: set.signature}));
+        aggregateResult = aggregateWithRandomness(mappedSets);
+      } catch (_e) {
+        aggregateResult = null;
+      }
 
       if (aggregateResult === null) {
         // Malformed input, return false so the caller retries each individually
