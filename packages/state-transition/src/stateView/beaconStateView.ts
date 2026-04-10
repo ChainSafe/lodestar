@@ -8,6 +8,7 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
@@ -433,6 +434,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     return this.cachedState.epochCtx.getShufflingAtEpoch(epoch);
+  }
+
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
+    return this.cachedState.epochCtx.getBeaconCommittee(slot, index);
+  }
+
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number {
+    return this.cachedState.epochCtx.getCommitteeCountPerSlot(epoch);
   }
 
   get previousDecisionRoot(): RootHex {
