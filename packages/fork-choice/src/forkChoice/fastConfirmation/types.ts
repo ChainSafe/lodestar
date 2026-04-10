@@ -2,7 +2,7 @@ import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-tran
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ProtoBlock} from "../../protoArray/interface.ts";
-import {CheckpointWithHex} from "../store.ts";
+import {CheckpointWithPayloadStatus} from "../store.ts";
 
 export type FastConfirmationBalanceSource = {
   state: IBeaconStateView | null;
@@ -10,14 +10,14 @@ export type FastConfirmationBalanceSource = {
 };
 
 export type ForkChoiceStateGetter = (
-  opts: {stateRoot: RootHex; checkpoint?: never} | {stateRoot?: never; checkpoint: CheckpointWithHex}
+  opts: {stateRoot: RootHex; checkpoint?: never} | {stateRoot?: never; checkpoint: CheckpointWithPayloadStatus}
 ) => IBeaconStateView | null;
 
 type IFastConfirmationSpecStore = {
   confirmedRoot: RootHex;
-  previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
-  currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
-  previousEpochGreatestUnrealizedCheckpoint: CheckpointWithHex;
+  previousEpochObservedJustifiedCheckpoint: CheckpointWithPayloadStatus;
+  currentEpochObservedJustifiedCheckpoint: CheckpointWithPayloadStatus;
+  previousEpochGreatestUnrealizedCheckpoint: CheckpointWithPayloadStatus;
   previousSlotHead: RootHex;
   currentSlotHead: RootHex;
 };
@@ -43,8 +43,8 @@ export type FastConfirmationSnapshot = {
   confirmedRoot: RootHex;
   confirmedEpoch: Epoch | null;
   confirmedSlot: Slot | null;
-  observedJustified: CheckpointWithHex;
-  headUnrealized: CheckpointWithHex | null;
+  observedJustified: CheckpointWithPayloadStatus;
+  headUnrealized: CheckpointWithPayloadStatus | null;
   finalizedRoot: RootHex;
 };
 
@@ -87,8 +87,8 @@ export type FastConfirmationContext = {
   getAncestor(root: RootHex, slot: Slot): RootHex;
   isDescendant(ancestor: RootHex, descendant: RootHex): boolean;
   getLatestMessage(validatorIndex: ValidatorIndex): {root: RootHex; epoch: Epoch} | null;
-  getUnrealizedJustified(): {checkpoint: CheckpointWithHex; balances: EffectiveBalanceIncrements};
-  getFinalizedCheckpoint(): CheckpointWithHex;
+  getUnrealizedJustified(): {checkpoint: CheckpointWithPayloadStatus; balances: EffectiveBalanceIncrements};
+  getFinalizedCheckpoint(): CheckpointWithPayloadStatus;
   getEquivocatingIndices(): Set<ValidatorIndex>;
   getTrackedVotesCount(): number;
 };

@@ -15,8 +15,12 @@ export function rootFromNumber(n: number): RootHex {
   return `0x${n.toString(16).padStart(64, "0")}`;
 }
 
-export function checkpoint(epoch: Epoch, rootHex: RootHex): {epoch: Epoch; root: Uint8Array; rootHex: RootHex} {
-  return {epoch, root: fromHexString(rootHex), rootHex};
+export function checkpoint(
+  epoch: Epoch,
+  rootHex: RootHex,
+  payloadStatus: PayloadStatus = PayloadStatus.FULL
+): {epoch: Epoch; root: Uint8Array; rootHex: RootHex; payloadStatus: PayloadStatus} {
+  return {epoch, root: fromHexString(rootHex), rootHex, payloadStatus};
 }
 
 export function makeBlock(

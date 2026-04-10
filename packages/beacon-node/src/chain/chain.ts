@@ -396,7 +396,9 @@ export class BeaconChain implements IBeaconChain {
 
     const forkChoiceStateGetter: ForkChoiceStateGetter = ({stateRoot, checkpoint}) => {
       if (stateRoot) return blockStateCache.get(stateRoot);
-      if (checkpoint) return checkpointStateCache.get(checkpoint);
+
+      if (checkpoint) return checkpointStateCache.get(fcCheckpointToHexPayload(checkpoint));
+
       return null;
     };
 

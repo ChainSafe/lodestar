@@ -145,14 +145,17 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
         previousEpochObservedJustifiedCheckpoint: {
           ...justifiedCheckpoint,
           rootHex: toHexString(justifiedCheckpoint.root),
+          payloadStatus: PayloadStatus.FULL,
         },
         currentEpochObservedJustifiedCheckpoint: {
           ...justifiedCheckpoint,
           rootHex: toHexString(justifiedCheckpoint.root),
+          payloadStatus: PayloadStatus.FULL,
         },
         previousEpochGreatestUnrealizedCheckpoint: {
           ...justifiedCheckpoint,
           rootHex: toHexString(justifiedCheckpoint.root),
+          payloadStatus: PayloadStatus.FULL,
         },
         previousEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,
         currentEpochObservedJustifiedBalances: originalState.epochCtx.effectiveBalanceIncrements,

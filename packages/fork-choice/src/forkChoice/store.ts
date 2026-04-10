@@ -71,9 +71,9 @@ export class ForkChoiceStore implements IForkChoiceStore {
 
   // Fast Confirmation Rule spec fields
   confirmedRoot: RootHex;
-  previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
-  currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
-  previousEpochGreatestUnrealizedCheckpoint: CheckpointWithHex;
+  previousEpochObservedJustifiedCheckpoint: CheckpointWithPayloadStatus;
+  currentEpochObservedJustifiedCheckpoint: CheckpointWithPayloadStatus;
+  previousEpochGreatestUnrealizedCheckpoint: CheckpointWithPayloadStatus;
   previousSlotHead: RootHex;
   currentSlotHead: RootHex;
 
@@ -122,13 +122,13 @@ export class ForkChoiceStore implements IForkChoiceStore {
 
     // Initialize Fast Confirmation fields conservatively from finalized, matching
     // the spec's get_fast_confirmation_store() behavior.
-    const finalizedCheckpointWithHex = toCheckpointWithHex(finalizedCheckpoint);
-    const finalizedState = stateGetter({checkpoint: finalizedCheckpointWithHex});
+    const finalizedCheckpointWithPayload = toCheckpointWithPayload(finalizedCheckpoint, finalizedPayloadStatus);
+    const finalizedState = stateGetter({checkpoint: finalizedCheckpointWithPayload});
     const finalizedBalances = finalizedState?.effectiveBalanceIncrements ?? justifiedBalances;
-    const anchorRoot = finalizedCheckpointWithHex.rootHex;
-    this.previousEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
-    this.currentEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
-    this.previousEpochGreatestUnrealizedCheckpoint = finalizedCheckpointWithHex;
+    const anchorRoot = finalizedCheckpointWithPayload.rootHex;
+    this.previousEpochObservedJustifiedCheckpoint = finalizedCheckpointWithPayload;
+    this.currentEpochObservedJustifiedCheckpoint = finalizedCheckpointWithPayload;
+    this.previousEpochGreatestUnrealizedCheckpoint = finalizedCheckpointWithPayload;
     this.confirmedRoot = anchorRoot;
     this.previousEpochObservedJustifiedBalances = finalizedBalances;
     this.currentEpochObservedJustifiedBalances = finalizedBalances;
