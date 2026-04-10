@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {ForkName, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -84,6 +85,15 @@ export async function validateGossipBlock(
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+  }
+
+  // [IGNORE] The block's parent (defined by `block.parent_root`) passes all validation
+  // (including execution node verification of the `block.body.execution_payload`)
+  if (isForkPostBellatrix(fork) && parentBlock.executionStatus === ExecutionStatus.Invalid) {
+    throw new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.PARENT_EXECUTION_INVALID,
+      parentRoot,
+    });
   }
 
   // [IGNORE] The block's parent execution payload (defined by bid.parent_block_hash) has been seen
@@ -192,6 +202,11 @@ export async function validateGossipBlock(
         });
       }
     }
+  }
+
+  // [REJECT] The proposer index is a valid validator index
+  if (proposerIndex >= blockState.validatorCount) {
+    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
