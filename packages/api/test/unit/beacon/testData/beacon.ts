@@ -95,6 +95,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {signedExecutionPayloadEnvelope: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()},
     res: undefined,
   },
+  getSignedExecutionPayloadEnvelope: {
+    args: {blockId: "head"},
+    res: {
+      data: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
   getBlobSidecars: {
     args: {blockId: "head", indices: [0]},
     res: {
