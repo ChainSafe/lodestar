@@ -1,4 +1,4 @@
-import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
 import {RootHex} from "@lodestar/types";
 import {Metrics} from "../../metrics/metrics.js";
 
@@ -25,6 +25,7 @@ export type ArchiveStoreOpts = StatesArchiveOpts & {
   archiveDataEpochs?: number;
   pruneHistory?: boolean;
   serveHistoricalState?: boolean;
+  nativeStateView?: boolean;
 };
 
 export type ProposalStats = {
@@ -44,9 +45,9 @@ export type FinalizedStats = {
 
 export interface StateArchiveStrategy {
   onCheckpoint(stateRoot: RootHex, metrics?: Metrics | null): Promise<void>;
-  onFinalizedCheckpoint(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
-  maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
-  archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void>;
+  onFinalizedCheckpoint(finalized: CheckpointWithPayloadStatus, metrics?: Metrics | null): Promise<void>;
+  maybeArchiveState(finalized: CheckpointWithPayloadStatus, metrics?: Metrics | null): Promise<void>;
+  archiveState(finalized: CheckpointWithPayloadStatus, metrics?: Metrics | null): Promise<void>;
 }
 
 export interface IArchiveStore {

@@ -253,9 +253,6 @@ exceptions:
     - get_builder_withdrawals#gloas
     - get_builders_sweep_withdrawals#gloas
     - get_checkpoint_block#gloas
-    - get_data_column_sidecars#gloas
-    - get_data_column_sidecars_from_block#gloas
-    - get_data_column_sidecars_from_column_sidecar#gloas
     - get_execution_payload_bid_signature#gloas
     - get_execution_payload_envelope_signature#gloas
     - get_forkchoice_store#gloas
@@ -303,7 +300,6 @@ exceptions:
     - update_proposer_boost_root#gloas
     - validate_merge_block#gloas
     - validate_on_attestation#gloas
-    - verify_data_column_sidecar#gloas
 
   custom_types:
     # phase0

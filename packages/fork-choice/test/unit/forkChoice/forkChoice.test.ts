@@ -156,8 +156,6 @@ describe("Forkchoice", () => {
 
       parentBlockHash: null,
       payloadStatus: PayloadStatus.FULL,
-      builderIndex: null,
-      blockHashFromBid: null,
     };
   };
 

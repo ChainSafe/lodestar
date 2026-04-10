@@ -52,8 +52,6 @@ describe("Forkchoice / GetProposerHead", () => {
 
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const baseHeadBlock: ProtoBlockWithWeight = {
@@ -82,8 +80,6 @@ describe("Forkchoice / GetProposerHead", () => {
 
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const baseParentHeadBlock: ProtoBlockWithWeight = {
@@ -111,8 +107,6 @@ describe("Forkchoice / GetProposerHead", () => {
 
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const fcStore: IForkChoiceStore = {

@@ -43,6 +43,9 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     genesisSlot
   );
@@ -149,8 +152,6 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
 
       parentBlockHash: null,
       payloadStatus: PayloadStatus.FULL,
-      builderIndex: null,
-      blockHashFromBid: null,
     };
 
     protoArr.onBlock(block, block.slot, null);

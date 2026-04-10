@@ -1,10 +1,9 @@
-import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
+import {isStatePostCapella} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
@@ -86,7 +85,7 @@ export function getLodestarApi({
 
     async getLatestWeakSubjectivityCheckpointEpoch() {
       const state = chain.getHeadState();
-      return {data: getLatestWeakSubjectivityCheckpointEpoch(config, state)};
+      return {data: state.getLatestWeakSubjectivityCheckpointEpoch()};
     },
 
     async getSyncChainsDebugState() {
@@ -214,22 +213,23 @@ export function getLodestarApi({
     async getHistoricalSummaries({stateId}) {
       const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
 
-      const stateView = (
-        state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state
-      ) as BeaconStateCapella;
+      const stateView = state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state;
 
       const fork = config.getForkName(stateView.slot);
       if (ForkSeq[fork] < ForkSeq.capella) {
         throw new Error("Historical summaries are not supported before Capella");
       }
+      if (!isStatePostCapella(stateView)) {
+        throw new Error("Expected Capella state for historical summaries");
+      }
 
       const {gindex} = ssz[fork].BeaconState.getPathInfo(["historicalSummaries"]);
-      const proof = new Tree(stateView.node).getSingleProof(gindex);
+      const proof = stateView.getSingleProof(gindex);
 
       return {
         data: {
           slot: stateView.slot,
-          historicalSummaries: stateView.historicalSummaries.toValue(),
+          historicalSummaries: stateView.historicalSummaries,
           proof: proof,
         },
         meta: {executionOptimistic, finalized, version: fork},

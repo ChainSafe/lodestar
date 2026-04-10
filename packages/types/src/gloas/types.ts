@@ -21,3 +21,5 @@ export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 
 export type DataColumnSidecar = ValueOf<typeof ssz.DataColumnSidecar>;
 export type DataColumnSidecars = ValueOf<typeof ssz.DataColumnSidecars>;
+
+export type ExecutionPayloadEnvelopesByRangeRequest = ValueOf<typeof ssz.ExecutionPayloadEnvelopesByRangeRequest>;

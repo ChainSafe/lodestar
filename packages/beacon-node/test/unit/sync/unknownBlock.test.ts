@@ -5,10 +5,9 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
-import {BlockInputColumns, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../src/chain/index.js";
@@ -22,7 +21,6 @@ import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
-import {generateBlockWithColumnSidecars} from "../../utils/blocksAndData.js";
 import {getRandPeerIdStr, getRandPeerSyncMeta} from "../../utils/peer.js";
 
 describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
@@ -43,7 +41,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
 
   const testCases: {
     id: string;
-    event: ChainEvent.unknownParent | ChainEvent.unknownBlockRoot;
+    event: ChainEvent.blockUnknownParent | ChainEvent.unknownBlockRoot;
     finalizedSlot: number;
     reportPeer?: boolean;
     seenBlock?: boolean;
@@ -57,12 +55,12 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
     },
     {
       id: "fetch and process multiple unknown block parents",
-      event: ChainEvent.unknownParent,
+      event: ChainEvent.blockUnknownParent,
       finalizedSlot: 0,
     },
     {
       id: "downloaded parent is before finalized slot",
-      event: ChainEvent.unknownParent,
+      event: ChainEvent.blockUnknownParent,
       finalizedSlot: 2,
       // Peer reporting is currently disabled in source (commented out in removeAndDownScoreAllDescendants)
       // Test verifies blocks are cleaned up from pendingBlocks instead
@@ -88,7 +86,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
     },
     {
       id: "downloaded blocks only",
-      event: ChainEvent.unknownParent,
+      event: ChainEvent.blockUnknownParent,
       finalizedSlot: 0,
       maxPendingBlocks: 1,
     },
@@ -234,8 +232,8 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         clientAgent: "test-client",
       });
 
-      if (event === ChainEvent.unknownParent) {
-        emitter.emit(ChainEvent.unknownParent, {
+      if (event === ChainEvent.blockUnknownParent) {
+        emitter.emit(ChainEvent.blockUnknownParent, {
           blockInput: BlockInputPreData.createFromBlock({
             block: blockC,
             blockRootHex: blockRootHexC,
@@ -342,11 +340,11 @@ describe("UnknownBlockSync", () => {
 
         if (expected) {
           expect(events.listenerCount(ChainEvent.unknownBlockRoot)).toBe(1);
-          expect(events.listenerCount(ChainEvent.unknownParent)).toBe(1);
+          expect(events.listenerCount(ChainEvent.blockUnknownParent)).toBe(1);
           expect(service.isSubscribedToNetwork()).toBe(true);
         } else {
           expect(events.listenerCount(ChainEvent.unknownBlockRoot)).toBe(0);
-          expect(events.listenerCount(ChainEvent.unknownParent)).toBe(0);
+          expect(events.listenerCount(ChainEvent.blockUnknownParent)).toBe(0);
           expect(service.isSubscribedToNetwork()).toBe(false);
         }
       });
@@ -355,7 +353,6 @@ describe("UnknownBlockSync", () => {
 });
 
 describe("UnknownBlockPeerBalancer", async () => {
-  const custodyConfig = {sampledColumns: [0, 1, 2, 3]} as CustodyConfig;
   const peer0 = await getRandPeerSyncMeta("peer-0");
   const peer1 = await getRandPeerSyncMeta("peer-1");
   const peer2 = await getRandPeerSyncMeta("peer-2");
@@ -413,44 +410,6 @@ describe("UnknownBlockPeerBalancer", async () => {
     for (const [i, groups] of custodyGroups.entries()) {
       peers[i].custodyColumns = groups;
     }
-
-    const signedBlock = ssz.fulu.SignedBeaconBlock.defaultValue();
-    signedBlock.message.body.blobKzgCommitments = [ssz.fulu.KZGCommitment.defaultValue()];
-    const {block, rootHex, columnSidecars} = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
-    const blockInput = BlockInputColumns.createFromBlock({
-      block: block,
-      blockRootHex: rootHex,
-      forkName: ForkName.fulu,
-      daOutOfRange: false,
-      source: BlockInputSource.gossip,
-      seenTimestampSec: Math.floor(Date.now() / 1000),
-      custodyColumns: custodyConfig.custodyColumns,
-      sampledColumns: custodyConfig.sampledColumns,
-    });
-
-    // test cases rely on first 2 columns being known, the rest unknown
-    for (const sidecar of columnSidecars.slice(0, 2)) {
-      blockInput.addColumn({
-        columnSidecar: sidecar,
-        blockRootHex: rootHex,
-        seenTimestampSec: Math.floor(Date.now() / 1000),
-        source: BlockInputSource.gossip,
-      });
-    }
-
-    it(`bestPeerForBlockInput - test case ${testCaseIndex}`, () => {
-      for (const [i, activeRequest] of activeRequests.entries()) {
-        for (let j = 0; j < activeRequest; j++) {
-          peerBalancer.onRequest(peers[i].peerId);
-        }
-      }
-      const peer = peerBalancer.bestPeerForBlockInput(blockInput, new Set(excludedPeers));
-      if (bestPeer) {
-        expect(peer).toEqual(bestPeer);
-      } else {
-        expect(peer).toBeNull();
-      }
-    });
 
     it(`bestPeerForPendingColumns - test case ${testCaseIndex}`, () => {
       for (const [i, activeRequest] of activeRequests.entries()) {

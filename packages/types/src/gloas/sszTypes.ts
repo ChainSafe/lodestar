@@ -282,3 +282,8 @@ export const DataColumnSidecar = new ContainerType(
 );
 
 export const DataColumnSidecars = new ListCompositeType(DataColumnSidecar, NUMBER_OF_COLUMNS);
+
+export const ExecutionPayloadEnvelopesByRangeRequest = new ContainerType(
+  {startSlot: Slot, count: UintNum64},
+  {typeName: "ExecutionPayloadEnvelopesByRangeRequest", jsonCase: "eth2"}
+);

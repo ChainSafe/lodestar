@@ -1,14 +1,13 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateExecutions,
-  CachedBeaconStateGloas,
+  IBeaconStateView,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
@@ -121,9 +120,9 @@ export class PrepareNextSlotScheduler {
       );
 
       if (isForkPostBellatrix(fork)) {
-        const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
+        const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
-        let updatedPrepareState = prepareState as CachedBeaconStateExecutions | CachedBeaconStateGloas;
+        let updatedPrepareState = prepareState;
         let updatedHeadRoot = headRoot;
 
         if (feeRecipient) {
@@ -140,13 +139,13 @@ export class PrepareNextSlotScheduler {
               headRoot,
             });
             this.metrics?.weakHeadDetected.inc();
-            updatedPrepareState = (await this.chain.regen.getBlockSlotState(
+            updatedPrepareState = await this.chain.regen.getBlockSlotState(
               proposerHead,
               prepareSlot,
               // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
-            )) as CachedBeaconStateExecutions | CachedBeaconStateGloas;
+            );
             updatedHeadRoot = proposerHeadRoot;
           }
 
@@ -161,6 +160,9 @@ export class PrepareNextSlotScheduler {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
+          if (!isStatePostBellatrix(updatedPrepareState)) {
+            throw new Error("Expected Bellatrix state for payload preparation");
+          }
 
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
           const finalizedBlockHash =
@@ -183,6 +185,10 @@ export class PrepareNextSlotScheduler {
             proposerIndex,
             feeRecipient,
           });
+        }
+
+        if (!isStatePostBellatrix(updatedPrepareState)) {
+          throw new Error("Expected Bellatrix state for payload attributes");
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
@@ -211,7 +217,11 @@ export class PrepareNextSlotScheduler {
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
+        // Determine payloadPresent from head block's payload status
+        // Pre-Gloas: payloadStatus is always FULL → payloadPresent = true
+        // Post-Gloas: FULL → true, EMPTY → false, PENDING → false (conservative, treat as block state)
+        const payloadPresent = headBlock.payloadStatus === PayloadStatus.FULL;
+        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch, payloadPresent);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
@@ -235,7 +245,7 @@ export class PrepareNextSlotScheduler {
     }
   };
 
-  computeStateHashTreeRoot(state: CachedBeaconStateAllForks, isEpochTransition: boolean): void {
+  computeStateHashTreeRoot(state: IBeaconStateView, isEpochTransition: boolean): void {
     // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
     // see https://github.com/ChainSafe/lodestar/issues/6194
     const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({

@@ -104,7 +104,7 @@ export const defaultSkipOpts: SkipOpts = {
  * tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
  * tests / mainnet / altair / fork             / fork         / pyspec_tests / altair_fork_random_0/meta.yaml
  * ```
- * Ref: https://github.com/ethereum/consensus-specs/tree/dev/tests/formats#test-structure
+ * Ref: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/README.md#test-structure
  */
 export function specTestIterator(
   configDirpath: string,

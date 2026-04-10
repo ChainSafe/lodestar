@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
-import {BeaconStateAllForks, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
+import {IBeaconStateView, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
 import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {BlockSelectionResult, BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";
@@ -24,11 +24,8 @@ export function computeSubnetForCommitteesAtSlot(
  * Note: This is the fastest way of getting compressed pubkeys.
  *       See benchmark -> packages/beacon-node/test/perf/api/impl/validator/attester.test.ts
  */
-export function getPubkeysForIndices(
-  validators: BeaconStateAllForks["validators"],
-  indexes: ValidatorIndex[]
-): BLSPubkey[] {
-  const validatorsLen = validators.length; // Get once, it's expensive
+export function getPubkeysForIndices(state: IBeaconStateView, indexes: ValidatorIndex[]): BLSPubkey[] {
+  const validatorsLen = state.validatorCount; // Get once, it's expensive
 
   const pubkeys: BLSPubkey[] = [];
   for (let i = 0, len = indexes.length; i < len; i++) {
@@ -38,7 +35,7 @@ export function getPubkeysForIndices(
     }
 
     // NOTE: This could be optimized further by traversing the tree optimally with .getNodes()
-    const validator = validators.getReadonly(index);
+    const validator = state.getValidator(index);
     pubkeys.push(validator.pubkey);
   }
 
