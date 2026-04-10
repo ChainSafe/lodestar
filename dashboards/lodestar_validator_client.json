@@ -2782,7 +2782,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_db_read_req_total{bucket=~\".+\"}[$__rate_interval])",
+          "expr": "rate(vc_db_read_req_total{bucket=~\".+\"}[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "{{bucket}}",
@@ -2866,7 +2866,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_db_write_req_total{bucket=~\".+\"}[$__rate_interval])",
+          "expr": "rate(vc_db_write_req_total{bucket=~\".+\"}[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "{{bucket}}",
@@ -2950,7 +2950,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_db_read_items_total{bucket=~\".+\"}[$__rate_interval])",
+          "expr": "rate(vc_db_read_items_total{bucket=~\".+\"}[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "{{bucket}}",
@@ -3034,7 +3034,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_db_write_items_total{bucket=~\".+\"}[$__rate_interval])",
+          "expr": "rate(vc_db_write_items_total{bucket=~\".+\"}[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "{{bucket}}",
@@ -3200,7 +3200,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_db_approximate_size_time_seconds_sum[$__rate_interval])\n/\nrate(vc_db_approximate_size_time_seconds_count[$__rate_interval])",
+          "expr": "rate(vc_db_approximate_size_time_seconds_sum[$rate_interval])\n/\nrate(vc_db_approximate_size_time_seconds_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "avg duration",
@@ -3299,7 +3299,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_slashing_protection_block_check_seconds_sum[$__rate_interval])\n/\nrate(vc_slashing_protection_block_check_seconds_count[$__rate_interval])",
+          "expr": "rate(vc_slashing_protection_block_check_seconds_sum[$rate_interval])\n/\nrate(vc_slashing_protection_block_check_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "avg",
           "refId": "A"
@@ -3381,7 +3381,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_slashing_protection_attestation_check_seconds_sum[$__rate_interval])\n/\nrate(vc_slashing_protection_attestation_check_seconds_count[$__rate_interval])",
+          "expr": "rate(vc_slashing_protection_attestation_check_seconds_sum[$rate_interval])\n/\nrate(vc_slashing_protection_attestation_check_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "avg",
           "refId": "A"
