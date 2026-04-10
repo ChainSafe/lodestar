@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
+  IBeaconStateView,
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -131,7 +131,7 @@ export function getHeadState(
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache
-): CachedBeaconStateAllForks {
+): IBeaconStateView {
   if (cache.headState !== undefined) return cache.headState;
   const headState = store.stateGetter({stateRoot: ctx.getHead().stateRoot});
   if (!headState) throw new Error(`Head state not found for root ${ctx.getHead().stateRoot}`);
@@ -143,7 +143,7 @@ export function getCheckpointState(
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
   checkpoint: CheckpointWithHex
-): CachedBeaconStateAllForks | null {
+): IBeaconStateView | null {
   const key = `${checkpoint.epoch}:${checkpoint.rootHex}`;
   if (cache.checkpointStateByKey.has(key)) {
     return cache.checkpointStateByKey.get(key) ?? null;
@@ -155,17 +155,17 @@ export function getCheckpointState(
 
 export function getSlotCommittee(
   cache: FastConfirmationCache,
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   slot: Slot
 ): Set<ValidatorIndex> {
   if (cache.committeeBySlot.has(slot)) {
     return cache.committeeBySlot.get(slot) ?? new Set();
   }
   const epoch = computeEpochAtSlot(slot);
-  const committeesCount = state.epochCtx.getCommitteeCountPerSlot(epoch);
+  const committeesCount = state.getBeaconCommitteeCountPerSlot(epoch);
   const participants = new Set<ValidatorIndex>();
   for (let i = 0; i < committeesCount; i++) {
-    const committee = state.epochCtx.getBeaconCommittee(slot, i);
+    const committee = state.getBeaconCommittee(slot, i);
     for (const index of committee) {
       participants.add(index);
     }
@@ -223,7 +223,7 @@ export function getBalanceSource(
   const state = getCheckpointState(store, cache, checkpoint);
   return {
     state,
-    balances: state?.epochCtx.effectiveBalanceIncrements ?? fallbackBalances,
+    balances: state?.effectiveBalanceIncrements ?? fallbackBalances,
   };
 }
 
@@ -243,7 +243,7 @@ export function getPreviousBalanceSource(
 
 export function getTotalActiveBalance(balanceSource: FastConfirmationBalanceSource): number {
   if (balanceSource.state) {
-    return balanceSource.state.epochCtx.totalActiveBalanceIncrements;
+    return computeTotalBalance(balanceSource.state.getEffectiveBalanceIncrementsZeroInactive());
   }
   // Fallback balances come from the justified-balance path and already zero inactive
   // validators, so summing them gives the active justified total for this balance source.
@@ -331,12 +331,12 @@ function ensureVoteMaps(
   const voteMap = new Map<RootHex, number>();
   const balances = balanceSource.balances;
   const state = balanceSource.state;
-  const activeIndices = state?.epochCtx.currentShuffling.activeIndices ?? null;
+  const activeIndices = state?.getCurrentShuffling().activeIndices ?? null;
   const equivocating = ctx.getEquivocatingIndices();
 
   if (activeIndices !== null && state) {
     for (const i of activeIndices) {
-      if (state.validators.get(i)?.slashed) continue;
+      if (state.getValidator(i).slashed) continue;
       if (equivocating.has(i)) continue;
       const msg = ctx.getLatestMessage(i);
       if (!msg) continue;
@@ -398,7 +398,7 @@ export function getBlockSupportBetweenSlots(
   let score = 0;
   for (const i of participants) {
     if (i >= balances.length) continue;
-    const validator = state?.validators.get(i);
+    const validator = state?.getValidator(i);
     if (validator?.slashed) continue;
     if (validator && stateEpoch !== null && !isActiveValidator(validator, stateEpoch)) continue;
     if (equivocating.has(i)) continue;
@@ -430,7 +430,7 @@ export function getEquivocationScore(
   for (const i of participants) {
     if (!equivocating.has(i)) continue;
     if (i >= balances.length) continue;
-    const validator = state?.validators.get(i);
+    const validator = state?.getValidator(i);
     if (validator && stateEpoch !== null && !isActiveValidator(validator, stateEpoch)) continue;
     score += balances[i] ?? 0;
   }
@@ -631,7 +631,7 @@ export function getCurrentTargetState(
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache
-): CachedBeaconStateAllForks | null {
+): IBeaconStateView | null {
   const target = getCurrentTarget(ctx);
   if (!target) return null;
   return getCheckpointState(store, cache, target);
@@ -645,15 +645,15 @@ export function getCurrentTargetScore(
   const target = getCurrentTarget(ctx);
   const targetState = getCurrentTargetState(ctx, store, cache);
   if (!target || !targetState) return 0;
-  const balances = targetState.epochCtx.effectiveBalanceIncrements;
-  const activeIndices = targetState.epochCtx.currentShuffling.activeIndices;
+  const balances = targetState.effectiveBalanceIncrements;
+  const activeIndices = targetState.getCurrentShuffling().activeIndices;
   const equivocating = ctx.getEquivocatingIndices();
 
   // Group validators by (voteRoot, voteEpoch) to avoid per-validator getCheckpointForBlock calls.
   // On mainnet ~1M validators vote for only ~50 unique (root, epoch) pairs.
   const voteGroups = new Map<string, number>();
   for (const i of activeIndices) {
-    if (targetState.validators.get(i)?.slashed) continue;
+    if (targetState.getValidator(i).slashed) continue;
     if (equivocating.has(i)) continue;
     const msg = ctx.getLatestMessage(i);
     if (!msg) continue;
@@ -701,10 +701,10 @@ export function computeHonestFfgSupportForCurrentTarget(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const targetState = getCurrentTargetState(ctx, store, cache);
   if (!targetState) return 0;
-  const totalActiveBalance = targetState.epochCtx.totalActiveBalanceIncrements;
+  const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
   const ffgSupport = getCurrentTargetScore(ctx, store, cache);
   const tillNowFFGWeight = estimateCommitteeWeightBetweenSlots(
-    {state: targetState, balances: targetState.epochCtx.effectiveBalanceIncrements},
+    {state: targetState, balances: targetState.effectiveBalanceIncrements},
     computeStartSlotAtEpoch(currentEpoch),
     (currentSlot - 1) as Slot
   );
@@ -728,7 +728,7 @@ export function willNoConflictingCheckpointBeJustified(
   }
   const targetState = getCurrentTargetState(ctx, store, cache);
   if (!targetState) return false;
-  const totalActiveBalance = targetState.epochCtx.totalActiveBalanceIncrements;
+  const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
   const honestSupport = computeHonestFfgSupportForCurrentTarget(ctx, store, cache);
   return 3 * honestSupport > 1 * totalActiveBalance;
 }
@@ -740,7 +740,7 @@ export function willCurrentTargetBeJustified(
 ): boolean {
   const targetState = getCurrentTargetState(ctx, store, cache);
   if (!targetState) return false;
-  const totalActiveBalance = targetState.epochCtx.totalActiveBalanceIncrements;
+  const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
   const honestSupport = computeHonestFfgSupportForCurrentTarget(ctx, store, cache);
   return 3 * honestSupport >= 2 * totalActiveBalance;
 }

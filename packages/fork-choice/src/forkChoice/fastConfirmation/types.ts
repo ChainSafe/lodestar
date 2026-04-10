@@ -1,17 +1,17 @@
-import {CachedBeaconStateAllForks, EffectiveBalanceIncrements} from "@lodestar/state-transition";
+import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ProtoBlock} from "../../protoArray/interface.ts";
 import {CheckpointWithHex} from "../store.ts";
 
 export type FastConfirmationBalanceSource = {
-  state: CachedBeaconStateAllForks | null;
+  state: IBeaconStateView | null;
   balances: EffectiveBalanceIncrements;
 };
 
 export type ForkChoiceStateGetter = (
   opts: {stateRoot: RootHex; checkpoint?: never} | {stateRoot?: never; checkpoint: CheckpointWithHex}
-) => CachedBeaconStateAllForks | null;
+) => IBeaconStateView | null;
 
 type IFastConfirmationSpecStore = {
   confirmedRoot: RootHex;
@@ -72,8 +72,8 @@ export type FastConfirmationCache = {
   isDescendantByRootPair: Map<string, boolean>;
   /** voteRoot -> totalWeight, keyed by sourceKey ("current" | "previous") */
   voteWeightBySource: Map<string, Map<RootHex, number>>;
-  headState?: CachedBeaconStateAllForks;
-  checkpointStateByKey: Map<string, CachedBeaconStateAllForks | null>;
+  headState?: IBeaconStateView;
+  checkpointStateByKey: Map<string, IBeaconStateView | null>;
 };
 
 export type FastConfirmationContext = {

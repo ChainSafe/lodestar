@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateAllForks, DataAvailabilityStatus} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {
   FastConfirmationContext,
@@ -50,8 +50,6 @@ export function makeBlock(
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
     timeliness: false,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 }
 
@@ -60,29 +58,27 @@ export function makeState(
   balancePerValidator: number,
   committeeSlots: Slot[],
   slashedIndices: ValidatorIndex[] = []
-): CachedBeaconStateAllForks {
+): IBeaconStateView {
   const balances = new Uint16Array(Array.from({length: validatorCount}, () => balancePerValidator));
-  const activeIndices = Array.from({length: validatorCount}, (_, i) => i as ValidatorIndex);
+  const activeIndices = Uint32Array.from(Array.from({length: validatorCount}, (_, i) => i as ValidatorIndex));
   const slashed = new Set<ValidatorIndex>(slashedIndices);
-  const committees = new Map<Slot, ValidatorIndex[]>(committeeSlots.map((slot) => [slot, activeIndices]));
+  const committees = new Map<Slot, Uint32Array>(committeeSlots.map((slot) => [slot, activeIndices]));
 
   return {
     slot: (committeeSlots.length > 0 ? Math.max(...committeeSlots) : 0) as Slot,
-    epochCtx: {
-      totalActiveBalanceIncrements: validatorCount * balancePerValidator,
-      effectiveBalanceIncrements: balances,
-      currentShuffling: {activeIndices},
-      getCommitteeCountPerSlot: () => 1,
-      getBeaconCommittee: (slot: Slot) => committees.get(slot) ?? activeIndices,
-    },
-    validators: {
-      get: (index: ValidatorIndex) => ({
-        slashed: slashed.has(index),
-        activationEpoch: 0,
-        exitEpoch: FAR_FUTURE_EPOCH,
-      }),
-    },
-  } as unknown as CachedBeaconStateAllForks;
+    epoch: 0,
+    effectiveBalanceIncrements: balances,
+    getEffectiveBalanceIncrementsZeroInactive: () => balances,
+    getCurrentShuffling: () => ({activeIndices} as {activeIndices: Uint32Array}),
+    getBeaconCommitteeCountPerSlot: () => 1,
+    getBeaconCommittee: (slot: Slot) => committees.get(slot) ?? activeIndices,
+    getValidator: (index: ValidatorIndex) => ({
+      slashed: slashed.has(index),
+      activationEpoch: 0,
+      exitEpoch: FAR_FUTURE_EPOCH,
+    }),
+    validatorCount,
+  } as unknown as IBeaconStateView;
 }
 
 export function makeStore(
@@ -93,7 +89,7 @@ export function makeStore(
   currentObservedEpoch: Epoch,
   previousSlotHead: RootHex,
   currentSlotHead: RootHex,
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   opts: {
     previousGreatestUnrealizedRoot?: RootHex;
     previousGreatestUnrealizedEpoch?: Epoch;
@@ -102,7 +98,7 @@ export function makeStore(
     previousGreatestUnrealizedBalances?: Uint16Array;
   } = {}
 ): IFastConfirmationStore {
-  const balances = state.epochCtx.effectiveBalanceIncrements;
+  const balances = state.effectiveBalanceIncrements;
   return {
     previousEpochObservedJustifiedCheckpoint: checkpoint(previousObservedEpoch, previousObservedRoot),
     currentEpochObservedJustifiedCheckpoint: checkpoint(currentObservedEpoch, currentObservedRoot),
@@ -127,9 +123,9 @@ export function makeContext(
   blocks: ProtoBlock[],
   latestMessages: Map<ValidatorIndex, {root: RootHex; epoch: Epoch}>,
   unrealizedCheckpoint: {epoch: Epoch; rootHex: RootHex},
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   equivocatingIndices: ValidatorIndex[] = [],
-  unrealizedBalances: Uint16Array = state.epochCtx.effectiveBalanceIncrements
+  unrealizedBalances: Uint16Array = state.effectiveBalanceIncrements
 ): FastConfirmationContext {
   const blocksByRoot = new Map(blocks.map((block) => [block.blockRoot, block]));
   const equivocating = new Set(equivocatingIndices);

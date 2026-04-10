@@ -46,7 +46,7 @@ describe("fast confirmation", () => {
       ctx,
       store,
       createFastConfirmationCache(),
-      {state, balances: state.epochCtx.effectiveBalanceIncrements},
+      {state, balances: state.effectiveBalanceIncrements},
       block.blockRoot
     );
 
@@ -88,7 +88,7 @@ describe("fast confirmation", () => {
         enoughSupportCtx,
         store,
         createFastConfirmationCache(),
-        {state, balances: state.epochCtx.effectiveBalanceIncrements},
+        {state, balances: state.effectiveBalanceIncrements},
         block.blockRoot,
         "current"
       )
@@ -99,7 +99,7 @@ describe("fast confirmation", () => {
         lowSupportCtx,
         store,
         createFastConfirmationCache(),
-        {state, balances: state.epochCtx.effectiveBalanceIncrements},
+        {state, balances: state.effectiveBalanceIncrements},
         block.blockRoot,
         "current"
       )
@@ -124,7 +124,7 @@ describe("fast confirmation", () => {
       ctx,
       store,
       createFastConfirmationCache(),
-      {state, balances: state.epochCtx.effectiveBalanceIncrements},
+      {state, balances: state.effectiveBalanceIncrements},
       parent.blockRoot,
       2 as Slot,
       2 as Slot

@@ -124,7 +124,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
     // the spec's get_fast_confirmation_store() behavior.
     const finalizedCheckpointWithHex = toCheckpointWithHex(finalizedCheckpoint);
     const finalizedState = stateGetter({checkpoint: finalizedCheckpointWithHex});
-    const finalizedBalances = finalizedState?.epochCtx.effectiveBalanceIncrements ?? justifiedBalances;
+    const finalizedBalances = finalizedState?.effectiveBalanceIncrements ?? justifiedBalances;
     const anchorRoot = finalizedCheckpointWithHex.rootHex;
     this.previousEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
     this.currentEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
