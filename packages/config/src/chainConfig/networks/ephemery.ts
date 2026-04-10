@@ -68,15 +68,24 @@ const baseChainConfig: ChainConfig = {
   ],
 };
 
-// Reset interval (7 days) in milliseconds, based on ephemery-genesis values.env:
+// Reset interval (7 days) in seconds, based on ephemery-genesis values.env:
 // https://github.com/ephemery-testnet/ephemery-genesis/blob/9a28fbef950c8547d78785f8a0ea49a95ce19a48/values.env#L5
-const RESET_INTERVAL_MS = 604800000;
-const iteration = Math.floor(Date.now() - baseChainConfig.MIN_GENESIS_TIME) / RESET_INTERVAL_MS;
+export const EPHEMERY_RESET_INTERVAL_SECONDS = 604800;
 
-export const ephemeryChainConfig: ChainConfig = {
-  ...baseChainConfig,
+export function getEphemeryIteration(nowSeconds: number): number {
+  return Math.max(Math.floor((nowSeconds - baseChainConfig.MIN_GENESIS_TIME) / EPHEMERY_RESET_INTERVAL_SECONDS), 0);
+}
 
-  MIN_GENESIS_TIME: RESET_INTERVAL_MS * iteration + baseChainConfig.MIN_GENESIS_TIME,
-  DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + iteration,
-  DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + iteration,
-};
+export function getEphemeryChainConfig(nowSeconds = Math.floor(Date.now() / 1000)): ChainConfig {
+  const iteration = getEphemeryIteration(nowSeconds);
+
+  return {
+    ...baseChainConfig,
+
+    MIN_GENESIS_TIME: baseChainConfig.MIN_GENESIS_TIME + EPHEMERY_RESET_INTERVAL_SECONDS * iteration,
+    DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + iteration,
+    DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + iteration,
+  };
+}
+
+export const ephemeryChainConfig: ChainConfig = getEphemeryChainConfig();

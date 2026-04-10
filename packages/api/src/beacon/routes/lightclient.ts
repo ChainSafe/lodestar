@@ -26,6 +26,10 @@ import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
 export const HashListType = new ListCompositeType(ssz.Root, 10000);
 export type HashList = ValueOf<typeof HashListType>;
 
+function isBeaconConfig(config: ChainForkConfig): config is BeaconConfig {
+  return "genesisValidatorsRoot" in config;
+}
+
 export type Endpoints = {
   /**
    * Returns an array of best updates given a `startPeriod` and `count` number of sync committee period to return.
@@ -95,8 +99,12 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
 
   const cachedBeaconConfig = (): BeaconConfig => {
     if (beaconConfig === undefined) {
-      const genesisValidatorsRoot = genesisData[config.CONFIG_NAME as NetworkName]?.genesisValidatorsRoot;
-      beaconConfig = createBeaconConfig(config, genesisValidatorsRoot ? fromHex(genesisValidatorsRoot) : ZERO_HASH);
+      if (isBeaconConfig(config)) {
+        beaconConfig = config;
+      } else {
+        const genesisValidatorsRoot = genesisData[config.CONFIG_NAME as NetworkName]?.genesisValidatorsRoot;
+        beaconConfig = createBeaconConfig(config, genesisValidatorsRoot ? fromHex(genesisValidatorsRoot) : ZERO_HASH);
+      }
     }
     return beaconConfig;
   };
