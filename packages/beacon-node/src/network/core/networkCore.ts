@@ -492,52 +492,24 @@ export class NetworkCore implements INetworkCore {
   async dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
     const connections = this.getConnectionsByPeer().get(peerIdStr);
     if (!connections) return undefined;
-    const enrMap = await this.getPeerEnrMap();
+    const enrMap = this.getPeerEnrMap();
     return this._dumpPeer(peerIdStr, connections, enrMap.get(peerIdStr));
   }
 
   async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
-    const enrMap = await this.getPeerEnrMap();
+    const enrMap = this.getPeerEnrMap();
     return Array.from(this.getConnectionsByPeer().entries()).map(([peerIdStr, connections]) =>
       this._dumpPeer(peerIdStr, connections, enrMap.get(peerIdStr))
     );
   }
 
   /**
-   * Build a map of PeerIdStr to ENR text from the discv5 routing table.
+   * Get a map of PeerIdStr to ENR text from the discovery cache.
    * Used to populate the `enr` field in the peers API response.
    */
-  private async getPeerEnrMap(): Promise<Map<string, string>> {
-    const enrMap = new Map<string, string>();
-
-    // First, populate from discovery cache (covers most outbound peers discovered via discv5)
+  private getPeerEnrMap(): Map<string, string> {
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
-    const discoveredEnrs = this.peerManager["discovery"]?.getDiscoveredEnrs();
-    if (discoveredEnrs) {
-      for (const [peerIdStr, enrTxt] of discoveredEnrs) {
-        enrMap.set(peerIdStr, enrTxt);
-      }
-    }
-
-    // Then, overlay with kadValues for the freshest ENR versions (routing table may have
-    // updated ENRs with newer seq numbers) and to cover inbound peers not in discovery cache
-    try {
-      // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
-      const enrs = await this.peerManager["discovery"]?.discv5?.kadValues();
-      if (enrs) {
-        for (const enr of enrs) {
-          try {
-            enrMap.set(enr.peerId.toString(), enr.encodeTxt());
-          } catch (e) {
-            this.logger.debug("Failed to extract peerId from ENR, skipping", {}, e as Error);
-          }
-        }
-      }
-    } catch (e) {
-      this.logger.debug("Could not fetch ENRs from discv5", {}, e as Error);
-    }
-
-    return enrMap;
+    return this.peerManager["discovery"]?.getDiscoveredEnrs() ?? new Map();
   }
 
   async dumpPeerScoreStats(): Promise<PeerScoreStats> {
