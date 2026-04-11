@@ -47,6 +47,8 @@ export type ExecutionAddress = Bytes20;
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
+/** Common non-spec type to represent pubkeys as strings */
+export type PubkeyHex = string;
 /** Non-spec type to signal time is represented in seconds */
 export type TimeSeconds = number;
 export type ColumnIndex = UintNum64;

@@ -1,7 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
-import {BLSPubkey, Bytes32, UintNum64, electra, ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {BLSPubkey, Bytes32, PubkeyHex, UintNum64, electra, ssz} from "@lodestar/types";
+import {toPubkeyHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {computeEpochAtSlot, isValidatorKnown} from "../util/index.js";
@@ -76,19 +76,24 @@ function addBuilderToRegistry(
   }
 }
 
+// TODO GLOAS: pendingValidatorPubkeys cache is currently naive and has room for improvement.
+// Currently the cache lives in process_block, but we should put it in epochCache or elsewhere that has longer
+// lifetime to avoid duplicated deposit signature computation
+// See https://github.com/ChainSafe/lodestar/issues/9181
 export function processDepositRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   depositRequest: electra.DepositRequest,
-  pendingValidatorPubkeys?: Set<string>
+  pendingValidatorPubkeysCache?: Set<PubkeyHex>
 ): void {
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
   // Check if this is a builder or validator deposit
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
-    pendingValidatorPubkeys ??= getPendingValidatorPubkeys(state.config, stateGloas);
-    const pubkeyHex = toHex(pubkey);
+    const pendingValidatorPubkeys =
+      pendingValidatorPubkeysCache ?? getPendingValidatorPubkeys(state.config, stateGloas);
+    const pubkeyHex = toPubkeyHex(pubkey);
     const builderIndex = findBuilderIndexByPubkey(stateGloas, pubkey);
     const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
 
@@ -107,6 +112,7 @@ export function processDepositRequest(
     // Keep the shared cache in sync: if this deposit has a valid signature, subsequent
     // deposit requests for the same pubkey in this envelope must see it as a pending validator
     if (
+      pendingValidatorPubkeysCache &&
       !isValidator &&
       !isPendingValidator &&
       isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)
@@ -138,8 +144,8 @@ export function processDepositRequest(
  *
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/beacon-chain.md#new-is_pending_validator
  */
-export function getPendingValidatorPubkeys(config: BeaconConfig, state: CachedBeaconStateGloas): Set<string> {
-  const result = new Set<string>();
+export function getPendingValidatorPubkeys(config: BeaconConfig, state: CachedBeaconStateGloas): Set<PubkeyHex> {
+  const result = new Set<PubkeyHex>();
   for (const pendingDeposit of state.pendingDeposits.getAllReadonly()) {
     if (
       isValidDepositSignature(
@@ -150,7 +156,7 @@ export function getPendingValidatorPubkeys(config: BeaconConfig, state: CachedBe
         pendingDeposit.signature
       )
     ) {
-      result.add(toHex(pendingDeposit.pubkey));
+      result.add(toPubkeyHex(pendingDeposit.pubkey));
     }
   }
   return result;
