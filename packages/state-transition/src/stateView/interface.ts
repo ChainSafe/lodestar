@@ -1,7 +1,25 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
-import {ByteViews} from "@chainsafe/ssz";
+import {BitArray, ByteViews} from "@chainsafe/ssz";
+import {
+  ForkName,
+  ForkPostAltair,
+  ForkPostBellatrix,
+  ForkPostCapella,
+  ForkPostDeneb,
+  ForkPostElectra,
+  ForkPostFulu,
+  ForkPostGloas,
+  isForkPostAltair,
+  isForkPostBellatrix,
+  isForkPostCapella,
+  isForkPostDeneb,
+  isForkPostElectra,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   BeaconBlock,
+  BeaconState,
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
@@ -23,6 +41,7 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
+import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.js";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
@@ -39,6 +58,7 @@ export interface IBeaconStateView {
   // State access
 
   // phase0
+  forkName: ForkName;
   slot: Slot;
   fork: Fork;
   epoch: Epoch;
@@ -54,50 +74,6 @@ export interface IBeaconStateView {
   getStateRootAtSlot(slot: Slot): Root;
   getRandaoMix(epoch: Epoch): Bytes32;
 
-  // altair
-  previousEpochParticipation: Uint8Array;
-  currentEpochParticipation: Uint8Array;
-  getPreviousEpochParticipation(validatorIndex: ValidatorIndex): number;
-  getCurrentEpochParticipation(validatorIndex: ValidatorIndex): number;
-
-  // bellatrix
-  latestExecutionPayloadHeader: ExecutionPayloadHeader;
-  /**
-   * Cross-fork accessor for the execution block hash of the most recently included payload.
-   * Pre-gloas: returns latestExecutionPayloadHeader.blockHash (bellatrix–fulu).
-   * Gloas+: returns the dedicated latestBlockHash state field (EIP-7732).
-   * Throws before bellatrix.
-   */
-  latestBlockHash: Bytes32;
-  /**
-   * The execution block number of the most recently included payload.
-   * Named payloadBlockNumber (not latestBlockNumber) to mirror ExecutionPayloadHeader.blockNumber pre-gloas.
-   * Only available from bellatrix through fulu — not tracked on BeaconState in gloas+ (EIP-7732).
-   * Throws before bellatrix and from gloas onwards.
-   */
-  payloadBlockNumber: number;
-
-  // capella
-  historicalSummaries: capella.HistoricalSummaries;
-
-  // electra
-  pendingDeposits: electra.PendingDeposits;
-  pendingDepositsCount: number;
-  pendingPartialWithdrawals: electra.PendingPartialWithdrawals;
-  pendingPartialWithdrawalsCount: number;
-  pendingConsolidations: electra.PendingConsolidations;
-  pendingConsolidationsCount: number;
-
-  // fulu
-  proposerLookahead: fulu.ProposerLookahead;
-
-  // gloas
-  executionPayloadAvailability: boolean[];
-  latestExecutionPayloadBid: ExecutionPayloadBid;
-  getBuilder(index: BuilderIndex): gloas.Builder;
-  canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
-  validatorPTCCommitteeIndex(validatorIndex: ValidatorIndex, slot: Slot): number;
-
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
   // Decision roots
@@ -109,19 +85,11 @@ export interface IBeaconStateView {
   getCurrentShuffling(): EpochShuffling;
   getNextShuffling(): EpochShuffling;
 
-  // utils: proposers, anchor checkpoint
+  // Proposer shuffling
   previousProposers: ValidatorIndex[] | null;
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
-  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader};
-
-  // Sync committees
-  currentSyncCommittee: altair.SyncCommittee;
-  nextSyncCommittee: altair.SyncCommittee;
-  currentSyncCommitteeIndexed: SyncCommitteeCache;
-  syncProposerReward: number;
-  getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
 
   // Validators and balances
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
@@ -137,28 +105,10 @@ export interface IBeaconStateView {
   getAllValidators(): phase0.Validator[];
   getAllBalances(): number[];
 
-  // Merge
-  isExecutionStateType: boolean;
-  isMergeTransitionComplete: boolean;
-  // TODO this should go away (or rather only need block)
-  isExecutionEnabled(block: BeaconBlock | BlindedBeaconBlock): boolean;
-
-  // Block production
-  getExpectedWithdrawals(): {
-    expectedWithdrawals: capella.Withdrawal[];
-    processedBuilderWithdrawalsCount: number;
-    processedPartialWithdrawalsCount: number;
-    processedValidatorSweepCount: number;
-  };
-
   // API
   proposerRewards: RewardCache;
   computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards>;
   computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards>;
-  computeSyncCommitteeRewards(
-    block: BeaconBlock,
-    validatorIds: (ValidatorIndex | string)[]
-  ): Promise<rewards.SyncCommitteeRewards>;
   getLatestWeakSubjectivityCheckpointEpoch(): Epoch;
 
   // Validation
@@ -170,7 +120,6 @@ export interface IBeaconStateView {
 
   // Proofs
   getFinalizedRootProof(): Uint8Array[];
-  getSyncCommitteesWitness(): SyncCommitteeWitness;
   getSingleProof(gindex: bigint): Uint8Array[];
   createMultiProof(descriptor: Uint8Array): CompactMultiProof;
 
@@ -179,6 +128,7 @@ export interface IBeaconStateView {
     justifiedCheckpoint: phase0.Checkpoint;
     finalizedCheckpoint: phase0.Checkpoint;
   };
+  computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader};
 
   // this is for backward compatible
   clonedCount: number;
@@ -189,6 +139,7 @@ export interface IBeaconStateView {
 
   // Serialization
   loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
+  toValue(): BeaconState;
   serialize(): Uint8Array;
   serializedSize(): number;
   serializeToBytes(output: ByteViews, offset: number): number;
@@ -209,5 +160,133 @@ export interface IBeaconStateView {
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
     modules?: StateTransitionModules
   ): IBeaconStateView;
-  processExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope, verify: boolean): void;
+}
+
+/** Altair+ state fields — use isStatePostAltair() guard */
+export interface IBeaconStateViewAltair extends IBeaconStateView {
+  forkName: ForkPostAltair;
+  previousEpochParticipation: Uint8Array;
+  currentEpochParticipation: Uint8Array;
+  getPreviousEpochParticipation(validatorIndex: ValidatorIndex): number;
+  getCurrentEpochParticipation(validatorIndex: ValidatorIndex): number;
+  currentSyncCommittee: altair.SyncCommittee;
+  nextSyncCommittee: altair.SyncCommittee;
+  currentSyncCommitteeIndexed: SyncCommitteeCache;
+  syncProposerReward: number;
+  getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache;
+  /** Get indexed sync committee with slot+1 offset for duty lookups */
+  getIndexedSyncCommittee(slot: Slot): SyncCommitteeCache;
+  computeSyncCommitteeRewards(
+    block: BeaconBlock,
+    validatorIds: (ValidatorIndex | string)[]
+  ): Promise<rewards.SyncCommitteeRewards>;
+  getSyncCommitteesWitness(): SyncCommitteeWitness;
+}
+
+/** Bellatrix+ state fields — use isStatePostBellatrix() guard */
+export interface IBeaconStateViewBellatrix extends IBeaconStateViewAltair {
+  forkName: ForkPostBellatrix;
+  latestExecutionPayloadHeader: ExecutionPayloadHeader;
+  /**
+   * Cross-fork accessor for the execution block hash of the most recently included payload.
+   * Pre-gloas: returns latestExecutionPayloadHeader.blockHash (bellatrix–fulu).
+   * Gloas+: returns the dedicated latestBlockHash state field (EIP-7732).
+   * Throws before bellatrix.
+   */
+  latestBlockHash: Bytes32;
+  /**
+   * The execution block number of the most recently included payload.
+   * Named payloadBlockNumber (not latestBlockNumber) to mirror ExecutionPayloadHeader.blockNumber pre-gloas.
+   * Only available from bellatrix through fulu — not tracked on BeaconState in gloas+ (EIP-7732).
+   * Throws before bellatrix and from gloas onwards.
+   */
+  payloadBlockNumber: number;
+  isExecutionStateType: boolean;
+  isMergeTransitionComplete: boolean;
+  isExecutionEnabled(block: BeaconBlock | BlindedBeaconBlock): boolean;
+}
+
+/** Capella+ state fields — use isStatePostCapella() guard */
+export interface IBeaconStateViewCapella extends IBeaconStateViewBellatrix {
+  forkName: ForkPostCapella;
+  historicalSummaries: capella.HistoricalSummaries;
+  getExpectedWithdrawals(): {
+    expectedWithdrawals: capella.Withdrawal[];
+    processedBuilderWithdrawalsCount: number;
+    processedPartialWithdrawalsCount: number;
+    processedBuildersSweepCount: number;
+    processedValidatorSweepCount: number;
+  };
+}
+
+/** Deneb+ state — no new state-view fields; placeholder for fork completeness and isStatePostDeneb() narrowing */
+export interface IBeaconStateViewDeneb extends IBeaconStateViewCapella {
+  forkName: ForkPostDeneb;
+}
+
+/** Electra+ state fields — use isStatePostElectra() guard */
+export interface IBeaconStateViewElectra extends IBeaconStateViewDeneb {
+  forkName: ForkPostElectra;
+  pendingDeposits: electra.PendingDeposits;
+  pendingDepositsCount: number;
+  pendingPartialWithdrawals: electra.PendingPartialWithdrawals;
+  pendingPartialWithdrawalsCount: number;
+  pendingConsolidations: electra.PendingConsolidations;
+  pendingConsolidationsCount: number;
+}
+
+/** Fulu+ state fields — use isStatePostFulu() guard */
+export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
+  forkName: ForkPostFulu;
+  proposerLookahead: fulu.ProposerLookahead;
+}
+
+/** Gloas+ state fields — use isStatePostGloas() guard */
+export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
+  forkName: ForkPostGloas;
+  executionPayloadAvailability: BitArray;
+  latestExecutionPayloadBid: ExecutionPayloadBid;
+  payloadExpectedWithdrawals: capella.Withdrawal[];
+  getBuilder(index: BuilderIndex): gloas.Builder;
+  canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
+  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
+  processExecutionPayloadEnvelope(
+    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    opts?: ProcessExecutionPayloadEnvelopeOpts
+  ): IBeaconStateView;
+}
+
+/**
+ * Type constraint for the concrete BeaconStateView class.
+ * Requires all fields from the latest fork interface (IBeaconStateViewGloas) but keeps
+ * forkName as ForkName since the class wraps any fork's state.
+ * Sub-interfaces retain their narrowed forkName discriminants for caller-side type guards.
+ */
+export type IBeaconStateViewLatestFork = Omit<IBeaconStateViewGloas, "forkName"> & {forkName: ForkName};
+export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {
+  return isForkPostAltair(state.forkName);
+}
+
+export function isStatePostBellatrix(state: IBeaconStateView): state is IBeaconStateViewBellatrix {
+  return isForkPostBellatrix(state.forkName);
+}
+
+export function isStatePostCapella(state: IBeaconStateView): state is IBeaconStateViewCapella {
+  return isForkPostCapella(state.forkName);
+}
+
+export function isStatePostDeneb(state: IBeaconStateView): state is IBeaconStateViewDeneb {
+  return isForkPostDeneb(state.forkName);
+}
+
+export function isStatePostElectra(state: IBeaconStateView): state is IBeaconStateViewElectra {
+  return isForkPostElectra(state.forkName);
+}
+
+export function isStatePostFulu(state: IBeaconStateView): state is IBeaconStateViewFulu {
+  return isForkPostFulu(state.forkName);
+}
+
+export function isStatePostGloas(state: IBeaconStateView): state is IBeaconStateViewGloas {
+  return isForkPostGloas(state.forkName);
 }

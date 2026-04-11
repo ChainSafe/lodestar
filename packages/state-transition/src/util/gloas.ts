@@ -11,6 +11,7 @@ import {
 import {BuilderIndex, Epoch, ValidatorIndex, gloas} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
+import {IBeaconStateViewGloas} from "../stateView/interface.js";
 import {CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
@@ -167,6 +168,6 @@ export function isAttestationSameSlotRootCache(rootCache: RootCache, data: Attes
   return isMatchingBlockRoot && isCurrentBlockRoot;
 }
 
-export function isParentBlockFull(state: CachedBeaconStateGloas): boolean {
+export function isParentBlockFull(state: CachedBeaconStateGloas | IBeaconStateViewGloas): boolean {
   return byteArrayEquals(state.latestExecutionPayloadBid.blockHash, state.latestBlockHash);
 }

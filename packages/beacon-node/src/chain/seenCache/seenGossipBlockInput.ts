@@ -149,8 +149,8 @@ export class SeenBlockInput {
     });
   }
 
-  has(rootHex: RootHex): boolean {
-    return this.blockInputs.has(rootHex);
+  hasBlock(rootHex: RootHex): boolean {
+    return this.blockInputs.get(rootHex)?.hasBlock() ?? false;
   }
 
   get(rootHex: RootHex): IBlockInput | undefined {
@@ -180,7 +180,7 @@ export class SeenBlockInput {
       blockInput = this.blockInputs.get(parentRootHex ?? "");
       parentRootHex = blockInput?.parentRootHex;
     }
-    this.logger?.debug(`BlockInputCache.prune deleted ${deletedCount} cached BlockInputs`);
+    this.logger?.debug("BlockInputCache.prune deleted cached BlockInputs", {deletedCount});
     this.pruneToMaxSize();
   }
 
@@ -193,7 +193,7 @@ export class SeenBlockInput {
         this.evictBlockInput(blockInput);
       }
     }
-    this.logger?.debug(`BlockInputCache.onFinalized deleted ${deletedCount} cached BlockInputs`);
+    this.logger?.debug("BlockInputCache.onFinalized deleted cached BlockInputs", {deletedCount});
     this.pruneToMaxSize();
   };
 

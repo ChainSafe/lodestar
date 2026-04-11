@@ -1,14 +1,13 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
+  IBeaconStateView,
   ParticipationFlags,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  getBlockRootAtSlot,
   getCurrentSlot,
+  isStatePostAltair,
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
@@ -23,6 +22,7 @@ import {
   ValidatorIndex,
   altair,
   deneb,
+  gloas,
 } from "@lodestar/types";
 import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
@@ -61,6 +61,11 @@ export type ValidatorMonitor = {
   ): void;
   registerBeaconBlock(src: OpSource, delaySec: Seconds, block: BeaconBlock): void;
   registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
+  registerExecutionPayloadEnvelope(
+    src: OpSource,
+    delaySec: Seconds,
+    envelope: gloas.SignedExecutionPayloadEnvelope
+  ): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
@@ -96,7 +101,7 @@ export type ValidatorMonitor = {
     syncAggregate: altair.SyncAggregate,
     syncCommitteeIndices: Uint32Array
   ): void;
-  onceEveryEndOfEpoch(state: CachedBeaconStateAllForks): void;
+  onceEveryEndOfEpoch(state: IBeaconStateView): void;
   scrapeMetrics(slotClock: Slot): void;
   /** Returns the list of validator indices currently being monitored */
   getMonitoredValidatorIndices(): ValidatorIndex[];
@@ -450,6 +455,10 @@ export function createValidatorMonitor(
       //TODO: freetheblobs
     },
 
+    registerExecutionPayloadEnvelope(_src, _delaySec, _envelope) {
+      // TODO GLOAS: implement execution payload envelope monitoring
+    },
+
     registerImportedBlock(block, {proposerBalanceDelta}) {
       const validator = validators.get(block.proposerIndex);
       if (validator) {
@@ -726,16 +735,19 @@ export function createValidatorMonitor(
         return;
       }
 
+      if (validators.size === 0) {
+        return;
+      }
+
       const rootCache = new RootHexCache(headState);
 
-      if (config.getForkSeq(headState.slot) >= ForkSeq.altair) {
-        const {previousEpochParticipation} = headState as CachedBeaconStateAltair;
+      if (isStatePostAltair(headState)) {
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
-        const prevEpochTargetRoot = toRootHex(getBlockRootAtSlot(headState, prevEpochStartSlot));
+        const prevEpochTargetRoot = toRootHex(headState.getBlockRootAtSlot(prevEpochStartSlot));
 
         // Check attestation performance
         for (const [index, validator] of validators.entries()) {
-          const flags = parseParticipationFlags(previousEpochParticipation.get(index));
+          const flags = parseParticipationFlags(headState.getPreviousEpochParticipation(index));
           const attestationSummary = validator.attestations.get(prevEpoch)?.get(prevEpochTargetRoot);
           const summary = renderAttestationSummary(config, rootCache, attestationSummary, flags);
           validatorMonitorMetrics?.prevEpochAttestationSummary.inc({summary});
@@ -747,9 +759,9 @@ export function createValidatorMonitor(
         }
       }
 
-      if (headState.epochCtx.proposersPrevEpoch !== null) {
+      if (headState.previousProposers !== null) {
         // proposersPrevEpoch is null on the first epoch of `headState` being generated
-        for (const [slotIndex, validatorIndex] of headState.epochCtx.proposersPrevEpoch.entries()) {
+        for (const [slotIndex, validatorIndex] of headState.previousProposers.entries()) {
           const validator = validators.get(validatorIndex);
           if (validator) {
             // If expected proposer is a tracked validator
@@ -889,7 +901,7 @@ function renderAttestationSummary(
   summary: AttestationSummary | undefined,
   flags: ParticipationFlags
 ): string {
-  // Reference https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
+  // Reference https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
   //
   // is_matching_source = data.source == justified_checkpoint
   // is_matching_target = is_matching_source and data.target.root == get_block_root(state, data.target.epoch)
@@ -1129,12 +1141,12 @@ function renderBlockProposalSummary(
 export class RootHexCache {
   private readonly blockRootSlotCache = new Map<Slot, RootHex>();
 
-  constructor(private readonly state: CachedBeaconStateAllForks) {}
+  constructor(private readonly state: IBeaconStateView) {}
 
   getBlockRootAtSlot(slot: Slot): RootHex {
     let root = this.blockRootSlotCache.get(slot);
     if (!root) {
-      root = toRootHex(getBlockRootAtSlot(this.state, slot));
+      root = toRootHex(this.state.getBlockRootAtSlot(slot));
       this.blockRootSlotCache.set(slot, root);
     }
     return root;

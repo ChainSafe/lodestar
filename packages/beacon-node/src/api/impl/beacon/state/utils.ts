@@ -1,17 +1,8 @@
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus, IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, PubkeyCache} from "@lodestar/state-transition";
-import {
-  BLSPubkey,
-  Epoch,
-  RootHex,
-  Slot,
-  ValidatorIndex,
-  getValidatorStatus,
-  mapToGeneralStatus,
-  phase0,
-} from "@lodestar/types";
+import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
+import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
@@ -19,7 +10,7 @@ import {ApiError, ValidationError} from "../../errors.js";
 export function resolveStateId(
   forkChoice: IForkChoice,
   stateId: routes.beacon.StateId
-): RootHex | Slot | CheckpointWithHex {
+): RootHex | Slot | CheckpointWithPayloadStatus {
   if (stateId === "head") {
     return forkChoice.getHead().stateRoot;
   }
@@ -52,7 +43,7 @@ export function resolveStateId(
 export async function getStateResponseWithRegen(
   chain: IBeaconChain,
   inStateId: routes.beacon.StateId
-): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
+): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
   const stateId = resolveStateId(chain.forkChoice, inStateId);
 
   const res =
@@ -89,22 +80,17 @@ export function toValidatorResponse(
 
 export function filterStateValidatorsByStatus(
   statuses: string[],
-  state: BeaconStateAllForks,
+  state: IBeaconStateView,
   pubkeyCache: PubkeyCache,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
-  const validatorsArr = state.validators.getAllReadonlyValues();
-  const statusSet = new Set(statuses);
-
-  for (const validator of validatorsArr) {
-    const validatorStatus = getValidatorStatus(validator, currentEpoch);
-    const generalStatus = mapToGeneralStatus(validatorStatus);
-
+  const validators = state.getValidatorsByStatus(new Set(statuses), currentEpoch);
+  for (const validator of validators) {
     const resp = getStateValidatorIndex(validator.pubkey, state, pubkeyCache);
-    if (resp.valid && (statusSet.has(validatorStatus) || statusSet.has(generalStatus))) {
+    if (resp.valid) {
       responses.push(
-        toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
+        toValidatorResponse(resp.validatorIndex, validator, state.getBalance(resp.validatorIndex), currentEpoch)
       );
     }
   }
@@ -117,7 +103,7 @@ type StateValidatorIndexResponse =
 
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
-  state: BeaconStateAllForks,
+  state: IBeaconStateView,
   pubkeyCache: PubkeyCache
 ): StateValidatorIndexResponse {
   if (typeof id === "string") {
@@ -139,7 +125,7 @@ export function getStateValidatorIndex(
     if (!Number.isSafeInteger(validatorIndex)) {
       return {valid: false, code: 400, reason: "Invalid validator index"};
     }
-    if (validatorIndex >= state.validators.length) {
+    if (validatorIndex >= state.validatorCount) {
       return {valid: false, code: 404, reason: "Validator index from future state"};
     }
     return {valid: true, validatorIndex};
@@ -150,7 +136,7 @@ export function getStateValidatorIndex(
   if (validatorIndex === null) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }
-  if (validatorIndex >= state.validators.length) {
+  if (validatorIndex >= state.validatorCount) {
     return {valid: false, code: 404, reason: "Validator pubkey from future state"};
   }
   return {valid: true, validatorIndex};

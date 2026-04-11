@@ -75,7 +75,11 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/fork_choice\/.*$/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // TODO GLOAS: broken in v1.7.0-alpha.3 due to missing voluntary_exit.ssz_snappy input file
+    // Fixed by https://github.com/ethereum/consensus-specs/pull/5005 in v1.7.0-alpha.4
+    /^gloas\/operations\/voluntary_exit\/pyspec_tests\/builder_voluntary_exit__success$/,
+  ],
   skippedRunners: [],
 };
 
@@ -103,7 +107,7 @@ export const defaultSkipOpts: SkipOpts = {
  * tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
  * tests / mainnet / altair / fork             / fork         / pyspec_tests / altair_fork_random_0/meta.yaml
  * ```
- * Ref: https://github.com/ethereum/consensus-specs/tree/dev/tests/formats#test-structure
+ * Ref: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/README.md#test-structure
  */
 export function specTestIterator(
   configDirpath: string,

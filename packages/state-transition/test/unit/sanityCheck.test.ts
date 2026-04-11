@@ -3,6 +3,7 @@ import {ACTIVE_PRESET, EFFECTIVE_BALANCE_INCREMENT, PresetName} from "@lodestar/
 import {beforeProcessEpoch} from "../../src/index.js";
 import {
   generatePerfTestCachedStateAltair,
+  generatePerfTestCachedStateElectra,
   generatePerfTestCachedStatePhase0,
   perfStateId,
 } from "../../src/testUtils/util.js";
@@ -30,6 +31,28 @@ describe("Perf test sanity check", () => {
   it("altairState validator count is the same", () => {
     const altairState = generatePerfTestCachedStateAltair();
     expect(altairState.validators.length).toEqualWithMessage(numValidators, "altairState validator count has changed");
+  });
+
+  it("altair perf states are cached independently per validator count", () => {
+    const smallState = generatePerfTestCachedStateAltair({vc: 1000, goBackOneSlot: false});
+    expect(smallState.validators.length).toEqual(1000);
+
+    const defaultState = generatePerfTestCachedStateAltair();
+    expect(defaultState.validators.length).toEqualWithMessage(
+      numValidators,
+      "default altair perf state was poisoned by a custom vc"
+    );
+  });
+
+  it("electra perf states are cached independently per validator count", () => {
+    const smallState = generatePerfTestCachedStateElectra({vc: 1000, goBackOneSlot: false});
+    expect(smallState.validators.length).toEqual(1000);
+
+    const defaultState = generatePerfTestCachedStateElectra();
+    expect(defaultState.validators.length).toEqualWithMessage(
+      numValidators,
+      "default electra perf state was poisoned by a custom vc"
+    );
   });
 
   it("targetStake is in the same range", () => {

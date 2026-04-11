@@ -5,7 +5,7 @@ import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
-import {CachedBeaconStateElectra} from "@lodestar/state-transition";
+import {BeaconStateView, CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {Epoch, Slot, electra} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
@@ -359,9 +359,9 @@ describe("executionEngine / ExecutionEngineHttp", () => {
 
     await waitForSlot(bn, 5);
     // Expect new validator to be in unfinalized cache, in state.validators and not in finalized cache
-    let headState = bn.chain.getHeadState();
-    let epochCtx = headState.epochCtx;
-    if (headState.validators.length !== 33 || headState.balances.length !== 33) {
+    let headState = bn.chain.getHeadState() as BeaconStateView;
+    let epochCtx = headState.cachedState.epochCtx;
+    if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {
       throw Error("New validator is not reflected in the beacon state at slot 5");
     }
     if (epochCtx.pubkeyCache.size !== 33) {
@@ -385,17 +385,20 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     await sleep(500);
 
     // Check if new validator is in finalized cache
-    headState = bn.chain.getHeadState() as CachedBeaconStateElectra;
-    epochCtx = headState.epochCtx;
+    headState = bn.chain.getHeadState() as BeaconStateView;
+    epochCtx = headState.cachedState.epochCtx;
 
-    if (headState.validators.length !== 33 || headState.balances.length !== 33) {
+    if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {
       throw Error("New validator is not reflected in the beacon state.");
     }
     if (epochCtx.pubkeyCache.size !== 33) {
       throw Error("New validator is not in pubkey cache");
     }
 
-    if (headState.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+    if (
+      (headState.cachedState as CachedBeaconStateElectra).depositRequestsStartIndex ===
+      UNSET_DEPOSIT_REQUESTS_START_INDEX
+    ) {
       throw Error("state.depositRequestsStartIndex is not set upon processing new deposit receipt");
     }
 

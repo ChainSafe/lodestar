@@ -12,6 +12,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateView,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
   createCachedBeaconState,
@@ -107,7 +108,7 @@ export async function getDevBeaconNode(
         metrics: {enabled: false},
         network: {
           discv5: null,
-          localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
+          localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/udp/0/quic-v1", "/ip4/127.0.0.1/tcp/0"],
           // Increase of following value is just to circumvent the following error in e2e tests
           // > libp2p:mplex rate limit hit when receiving messages
           disconnectThreshold: 255,
@@ -153,7 +154,7 @@ export async function getDevBeaconNode(
     privateKey,
     dataDir: ".",
     peerStoreDir,
-    anchorState: cachedState,
+    anchorState: new BeaconStateView(cachedState),
     wsCheckpoint,
     isAnchorStateFinalized: true,
   });

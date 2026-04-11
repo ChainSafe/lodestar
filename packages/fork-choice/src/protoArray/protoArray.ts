@@ -9,6 +9,7 @@ import {
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
@@ -107,6 +108,14 @@ export class ProtoArray {
       currentSlot,
       null
     );
+
+    // Anchor block PTC votes must be all-true per spec get_forkchoice_store:
+    // payload_timeliness_vote={anchor_root: Vector[boolean, PTC_SIZE](True for _ in range(PTC_SIZE))}
+    // Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/fork-choice.md#modified-get_forkchoice_store
+    if (protoArray.ptcVotes.has(block.blockRoot)) {
+      protoArray.ptcVotes.set(block.blockRoot, BitArray.fromBoolArray(Array.from({length: PTC_SIZE}, () => true)));
+    }
+
     return protoArray;
   }
 
@@ -541,7 +550,8 @@ export class ProtoArray {
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
     executionPayloadStateRoot: RootHex,
-    proposerBoostRoot: RootHex | null
+    proposerBoostRoot: RootHex | null,
+    executionStatus: PayloadExecutionStatus
   ): void {
     // First check if block exists
     const variants = this.indices.get(blockRoot);
@@ -591,7 +601,8 @@ export class ProtoArray {
       weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,
-      executionStatus: ExecutionStatus.Valid,
+      // TODO GLOAS: handle optimistic sync
+      executionStatus,
       executionPayloadBlockHash,
       executionPayloadNumber,
       stateRoot: executionPayloadStateRoot,
@@ -650,9 +661,7 @@ export class ProtoArray {
     }
 
     // If payload is not locally available, it's not timely
-    // In our implementation, payload is locally available if proto array has FULL variant of the block
-    const fullNodeIndex = this.getNodeIndexByRootAndStatus(blockRoot, PayloadStatus.FULL);
-    if (fullNodeIndex === undefined) {
+    if (!this.hasPayload(blockRoot)) {
       return false;
     }
 
@@ -1059,10 +1068,8 @@ export class ProtoArray {
       });
     }
 
-    // Find the minimum index among all variants to ensure we don't prune too much
-    const finalizedIndex = Array.isArray(variants)
-      ? Math.min(...variants.filter((idx) => idx !== undefined))
-      : variants;
+    // For Gloas, PENDING variant (index 0) is always the smallest since it's inserted first
+    const finalizedIndex = Array.isArray(variants) ? variants[PayloadStatus.PENDING] : variants;
 
     if (finalizedIndex < this.pruneThreshold) {
       // Pruning at small numbers incurs more cost than benefit
@@ -1670,6 +1677,16 @@ export class ProtoArray {
    */
   hasBlock(blockRoot: RootHex): boolean {
     return this.getDefaultNodeIndex(blockRoot) !== undefined;
+  }
+
+  /**
+   * Check if a FULL payload variant (execution payload envelope) exists for this block root.
+   * Returns true once the SignedExecutionPayloadEnvelope for this block has been received and processed.
+   */
+  hasPayload(blockRoot: RootHex): boolean {
+    // we should also make sure this blockRoot is a gloas block, however we only call this function
+    // starting from GLOAS_FORK_EPOCH, so we can assume the blockRoot is from gloas block
+    return this.getNodeIndexByRootAndStatus(blockRoot, PayloadStatus.FULL) !== undefined;
   }
 
   /**
