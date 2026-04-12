@@ -492,24 +492,35 @@ export class NetworkCore implements INetworkCore {
   async dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
     const connections = this.getConnectionsByPeer().get(peerIdStr);
     if (!connections) return undefined;
-    const enrMap = this.getPeerEnrMap();
+    const enrMap = await this.getPeerEnrMap();
     return this._dumpPeer(peerIdStr, connections, enrMap.get(peerIdStr));
   }
 
   async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
-    const enrMap = this.getPeerEnrMap();
+    const enrMap = await this.getPeerEnrMap();
     return Array.from(this.getConnectionsByPeer().entries()).map(([peerIdStr, connections]) =>
       this._dumpPeer(peerIdStr, connections, enrMap.get(peerIdStr))
     );
   }
 
   /**
-   * Get a map of PeerIdStr to ENR text from the discovery cache.
-   * Used to populate the `enr` field in the peers API response.
+   * Build a map of PeerIdStr → ENR text for the peers API response.
+   * Starts from the discovery cache, then overlays fresher kadValues entries.
    */
-  private getPeerEnrMap(): Map<string, string> {
+  private async getPeerEnrMap(): Promise<Map<string, string>> {
     // biome-ignore lint/complexity/useLiteralKeys: `discovery` is a private attribute
-    return this.peerManager["discovery"]?.getDiscoveredEnrs() ?? new Map();
+    const discovery = this.peerManager["discovery"];
+    const enrMap = new Map(discovery?.getDiscoveredEnrs() ?? []);
+
+    try {
+      for (const enr of (await discovery?.discv5?.kadValues()) ?? []) {
+        try {
+          enrMap.set(enr.peerId.toString(), enr.encodeTxt());
+        } catch {}
+      }
+    } catch {}
+
+    return enrMap;
   }
 
   async dumpPeerScoreStats(): Promise<PeerScoreStats> {
