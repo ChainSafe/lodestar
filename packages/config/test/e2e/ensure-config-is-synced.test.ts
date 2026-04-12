@@ -28,6 +28,13 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // Future spec params not yet in Lodestar
   "EPOCHS_PER_SHUFFLING_PHASE" as keyof ChainConfig,
   "PROPOSER_SELECTION_GAP" as keyof ChainConfig,
+  // Future forks not yet implemented in Lodestar
+  "HEZE_FORK_VERSION" as keyof ChainConfig,
+  "HEZE_FORK_EPOCH" as keyof ChainConfig,
+  "EIP7928_FORK_VERSION" as keyof ChainConfig,
+  "EIP7928_FORK_EPOCH" as keyof ChainConfig,
+  "EIP8025_FORK_VERSION" as keyof ChainConfig,
+  "EIP8025_FORK_EPOCH" as keyof ChainConfig,
   // Network-specific fork epochs and versions - these vary per network deployment
   // and are not meant to be synced from the spec defaults
   "ALTAIR_FORK_EPOCH",

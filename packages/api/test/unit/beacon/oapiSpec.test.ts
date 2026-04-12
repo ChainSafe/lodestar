@@ -57,7 +57,6 @@ const ignoredOperations = [
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
   // TODO GLOAS: required by v5.0.0-alpha.1
   "publishExecutionPayloadBid",
-  "getSignedExecutionPayloadEnvelope",
   "getPoolPayloadAttestations",
   "submitPayloadAttestationMessages",
   "getPtcDuties",
