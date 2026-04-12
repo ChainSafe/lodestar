@@ -514,11 +514,11 @@ export class NetworkCore implements INetworkCore {
 
     try {
       for (const enr of (await discovery?.discv5?.kadValues()) ?? []) {
-        try {
-          enrMap.set(enr.peerId.toString(), enr.encodeTxt());
-        } catch {}
+        enrMap.set(enr.peerId.toString(), enr.encodeTxt());
       }
-    } catch {}
+    } catch (e) {
+      this.logger.debug("Could not overlay ENRs from discv5 kadValues", {}, e as Error);
+    }
 
     return enrMap;
   }
