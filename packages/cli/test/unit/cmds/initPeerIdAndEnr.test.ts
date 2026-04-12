@@ -9,7 +9,7 @@ import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {testLogger} from "../../utils.js";
 
 describe("overwriteEnrWithCliArgs", () => {
-  it("should set tcp but not quic fields by default", async () => {
+  it("should set tcp and quic fields by default", async () => {
     const privateKey = await generateKeyPair("secp256k1");
     const enr = SignableENR.createFromPrivateKey(privateKey);
     const logger = testLogger();
@@ -17,7 +17,7 @@ describe("overwriteEnrWithCliArgs", () => {
     overwriteEnrWithCliArgs(enr, {listenAddress: "0.0.0.0", port: 9000, nat: true} as unknown as BeaconArgs, logger);
 
     expect(enr.tcp).toBe(9000);
-    expect(enr.quic).toBeUndefined();
+    expect(enr.quic).toBe(9001);
   });
 
   it("should set both tcp and quic fields when quic is true", async () => {

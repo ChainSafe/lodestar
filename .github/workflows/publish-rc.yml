@@ -88,6 +88,7 @@ jobs:
           body_path: "CHANGELOG.md"
           name: Release ${{ needs.tag.outputs.tag }}
           prerelease: true
+          draft: true
 
       - name: Change and commit version
         # Write version before publishing so it's picked up by `lerna publish from-package`.
@@ -107,6 +108,11 @@ jobs:
 
       - name: Publish to npm registry
         run: pnpm run release:publish --dist-tag rc
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ needs.tag.outputs.tag }} --draft=false
 
       # In case of failure
       - name: Rollback on failure

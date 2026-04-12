@@ -11,7 +11,7 @@ import {
 } from "../../chain/blocks/blockInput/index.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
-import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
+import {validateFuluBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {INetwork} from "../../network/index.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
@@ -27,7 +27,7 @@ export type DownloadByRangeRequests = {
 export type DownloadByRangeResponses = {
   blocks?: SignedBeaconBlock[];
   blobSidecars?: deneb.BlobSidecars;
-  columnSidecars?: fulu.DataColumnSidecars;
+  columnSidecars?: fulu.DataColumnSidecar[];
 };
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
@@ -58,7 +58,7 @@ export type ValidatedBlobSidecars = {
 
 export type ValidatedColumnSidecars = {
   blockRoot: Uint8Array;
-  columnSidecars: fulu.DataColumnSidecars;
+  columnSidecars: fulu.DataColumnSidecar[];
 };
 
 export type ValidatedResponses = {
@@ -245,7 +245,7 @@ export async function requestByRange({
 }): Promise<DownloadByRangeResponses> {
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
-  let columnSidecars: undefined | fulu.DataColumnSidecars;
+  let columnSidecars: undefined | fulu.DataColumnSidecar[];
 
   const requests: Promise<unknown>[] = [];
 
@@ -268,7 +268,7 @@ export async function requestByRange({
   if (columnsRequest) {
     requests.push(
       network.sendDataColumnSidecarsByRange(peerIdStr, columnsRequest).then((columnResponse) => {
-        columnSidecars = columnResponse;
+        columnSidecars = columnResponse as fulu.DataColumnSidecar[];
       })
     );
   }
@@ -615,11 +615,13 @@ export async function validateColumnsByRangeResponse(
   config: ChainForkConfig,
   request: fulu.DataColumnSidecarsByRangeRequest,
   blocks: ValidatedBlock[],
-  columnSidecars: fulu.DataColumnSidecars,
+  columnSidecars: fulu.DataColumnSidecar[],
   peerDasMetrics?: BeaconMetrics["peerDas"] | null
 ): Promise<WarnResult<ValidatedColumnSidecars[], DownloadByRangeError>> {
   const warnings: DownloadByRangeError[] = [];
 
+  // TODO GLOAS: Extend by range column sync to support gloas.DataColumnSidecar and
+  // validate against the block bid commitments instead of the fulu signed header shape
   const seenColumns = new Map<Slot, Map<number, fulu.DataColumnSidecar>>();
   let currentSlot = -1;
   let currentIndex = -1;
@@ -767,7 +769,7 @@ export async function validateColumnsByRangeResponse(
     }
 
     validationPromises.push(
-      validateBlockDataColumnSidecars(
+      validateFuluBlockDataColumnSidecars(
         null, // do not pass chain here so we do not validate header signature
         slot,
         blockRoot,

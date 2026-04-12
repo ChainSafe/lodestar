@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {ColumnIndex, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecar, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
@@ -9,13 +9,14 @@ export enum DAType {
   NoData = "no-data",
 }
 
-export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars;
+export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecar[];
 
 /**
  * Represents were input originated. Blocks and Data can come from different
  * sources so each should be labelled individually.
  */
 export enum BlockInputSource {
+  network_processor = "network_processor",
   gossip = "gossip",
   api = "api",
   engine = "engine",
@@ -107,9 +108,9 @@ export type MissingColumnMeta = {
 export interface IDataColumnsInput {
   readonly slot: Slot;
   readonly blockRootHex: string;
-  getCustodyColumns(): fulu.DataColumnSidecars;
+  getCustodyColumns(): DataColumnSidecar[];
   hasComputedAllData(): boolean;
-  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<fulu.DataColumnSidecars>;
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecar[]>;
 }
 
 /**

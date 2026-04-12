@@ -73,6 +73,24 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
       req.reduce((total, item) => total + item.columns.length, 0)
     ),
   },
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: {
+    byPeer: {quota: config.MAX_REQUEST_PAYLOADS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(
+      fork,
+      config,
+      ReqRespMethod.ExecutionPayloadEnvelopesByRoot,
+      (req) => req.length
+    ),
+  },
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: {
+    byPeer: {quota: config.MAX_REQUEST_BLOCKS_DENEB, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(
+      fork,
+      config,
+      ReqRespMethod.ExecutionPayloadEnvelopesByRange,
+      (req) => req.count
+    ),
+  },
   [ReqRespMethod.LightClientBootstrap]: {
     // As similar in the nature of `Status` protocol so we use the same rate limits.
     byPeer: {quota: 5, quotaTimeMs: 15_000},
