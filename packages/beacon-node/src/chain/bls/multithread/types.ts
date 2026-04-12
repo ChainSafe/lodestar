@@ -44,5 +44,7 @@ export type BlsWorkResult = {
   workerStartTime: [number, number];
   /** Time worker function ends - UNIX timestamp in seconds and nanoseconds */
   workerEndTime: [number, number];
+  /** Total time spent in aggregateWithRandomness in seconds */
+  aggregateWithRandomnessTime: number;
   results: WorkResult<boolean>[];
 };

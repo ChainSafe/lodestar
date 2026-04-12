@@ -442,7 +442,15 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
       const [jobEndSec, jobEndNs] = process.hrtime();
-      const {workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results} = workResult;
+      const {
+        workerId,
+        batchRetries,
+        batchSigsSuccess,
+        workerStartTime,
+        workerEndTime,
+        aggregateWithRandomnessTime,
+        results,
+      } = workResult;
 
       const [workerStartSec, workerStartNs] = workerStartTime;
       const [workerEndSec, workerEndNs] = workerEndTime;
@@ -499,6 +507,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
       this.metrics?.blsThreadPool.batchRetries.inc(batchRetries);
       this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
+      if (aggregateWithRandomnessTime > 0) {
+        this.metrics?.blsThreadPool.aggregateWithRandomnessWorkerDuration.observe(aggregateWithRandomnessTime);
+      }
     } catch (e) {
       // Worker communications should never reject
       if (!this.closed) {
