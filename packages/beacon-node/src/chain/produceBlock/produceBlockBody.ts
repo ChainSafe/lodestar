@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, PayloadStatus, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
@@ -775,7 +775,7 @@ function preparePayloadAttributes(
 
     if (
       isStatePostGloas(prepareState) &&
-      chain.forkChoice.getBlockHex(toRootHex(parentBlockRoot), PayloadStatus.FULL) === null
+      !chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
     ) {
       // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
       // already deducted from CL balances but never credited on the EL (the envelope
