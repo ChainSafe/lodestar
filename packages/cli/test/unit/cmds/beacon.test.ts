@@ -7,12 +7,14 @@ import {describe, expect, it} from "vitest";
 import {ENR, SignableENR} from "@chainsafe/enr";
 import {chainConfigToJson} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {NativeStateViewErrorCode} from "@lodestar/state-transition";
 import {LogLevel} from "@lodestar/utils";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
 import {initPrivateKeyAndEnr, isLocalMultiAddr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {createFromJSON, exportToJSON} from "../../../src/config/peerId.js";
 import {GlobalArgs} from "../../../src/options/globalOptions.js";
+import {YargsError} from "../../../src/util/index.js";
 import {testFilesDir, testLogger} from "../../utils.js";
 
 describe("cmds / beacon / args handler", () => {
@@ -92,6 +94,18 @@ describe("cmds / beacon / args handler", () => {
 
     // Okay to hardcode, since this value will never change
     expect(network).toBe(networkName);
+  });
+
+  it("Fails fast when nativeStateView is enabled", async () => {
+    const error = await runBeaconHandlerInit({"chain.nativeStateView": true}).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(YargsError);
+    if (!(error instanceof YargsError)) {
+      return;
+    }
+
+    expect(error.message).toContain(NativeStateViewErrorCode.NOT_IMPLEMENTED);
+    expect(error.message).toContain("--chain.nativeStateView");
   });
 });
 

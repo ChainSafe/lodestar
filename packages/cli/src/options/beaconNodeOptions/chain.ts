@@ -284,7 +284,8 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.nativeStateView": {
     hidden: true,
-    description: "Use native (Zig) BeaconStateView instead of JS implementation",
+    description:
+      "Reserved for a future native (Zig) BeaconStateView implementation. Not implemented yet; enabling it fails fast.",
     type: "boolean",
     default: defaultOptions.chain.nativeStateView,
     group: "chain",

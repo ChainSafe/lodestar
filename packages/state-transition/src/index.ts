@@ -60,7 +60,14 @@ export {
   isStatePostFulu,
   isStatePostGloas,
 } from "./stateView/interface.js";
-export {createBeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/stateViewFactory.js";
+export {
+  NativeStateViewError,
+  NativeStateViewErrorCode,
+  assertNativeStateViewSupported,
+  createBeaconStateView,
+  createBeaconStateViewForHistoricalRegen,
+  createNativeStateViewError,
+} from "./stateView/stateViewFactory.js";
 export type {
   BeaconStateAllForks,
   BeaconStateAltair,

@@ -1,10 +1,37 @@
 import {BeaconConfig} from "@lodestar/config";
+import {LodestarError} from "@lodestar/utils";
 import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {BeaconStateAllForks} from "../cache/types.js";
 import {getStateTypeFromBytes} from "../util/sszBytes.js";
 import {BeaconStateView} from "./beaconStateView.js";
 import {IBeaconStateView} from "./interface.js";
+
+export enum NativeStateViewErrorCode {
+  NOT_IMPLEMENTED = "NATIVE_STATE_VIEW_NOT_IMPLEMENTED",
+}
+
+export type NativeStateViewContext = "beacon startup" | "historical state regeneration";
+
+export type NativeStateViewErrorType = {
+  code: NativeStateViewErrorCode.NOT_IMPLEMENTED;
+  context: NativeStateViewContext;
+};
+
+export class NativeStateViewError extends LodestarError<NativeStateViewErrorType> {}
+
+export function createNativeStateViewError(context: NativeStateViewContext): NativeStateViewError {
+  return new NativeStateViewError(
+    {code: NativeStateViewErrorCode.NOT_IMPLEMENTED, context},
+    `Native (Zig) BeaconStateView is not implemented for ${context}. Disable --chain.nativeStateView and retry.`
+  );
+}
+
+export function assertNativeStateViewSupported(useNative: boolean, context: NativeStateViewContext): void {
+  if (useNative) {
+    throw createNativeStateViewError(context);
+  }
+}
 
 // ---- createBeaconStateView (startup path) ----
 
@@ -30,7 +57,7 @@ type NativeOpts = {
  */
 export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    throw new Error("Native (Zig) BeaconStateView not yet implemented");
+    throw createNativeStateViewError("beacon startup");
   }
   const {anchorState, config, pubkeyCache} = opts;
   const cachedState = createCachedBeaconState(anchorState, {config, pubkeyCache}, {skipSyncPubkeys: true});
@@ -68,7 +95,7 @@ type RegenNativeOpts = {
  */
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    throw new Error("Native (Zig) BeaconStateView not yet implemented");
+    throw createNativeStateViewError("historical state regeneration");
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);

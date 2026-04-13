@@ -3,6 +3,7 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
+  assertNativeStateViewSupported,
   createBeaconStateViewForHistoricalRegen,
 } from "@lodestar/state-transition";
 import {byteArrayEquals} from "@lodestar/utils";
@@ -19,6 +20,7 @@ export async function getNearestState(
   db: IBeaconDb,
   nativeStateView: boolean
 ): Promise<IBeaconStateView> {
+  assertNativeStateViewSupported(nativeStateView, "historical state regeneration");
   const stateBytesArr = await db.stateArchive.binaries({limit: 1, lte: slot, reverse: true});
   if (!stateBytesArr.length) {
     throw new Error("No near state found in the database");

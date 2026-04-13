@@ -7,7 +7,12 @@ import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {createBeaconStateView, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
+import {
+  createBeaconStateView,
+  createNativeStateViewError,
+  createPubkeyCache,
+  syncPubkeys,
+} from "@lodestar/state-transition";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -15,6 +20,7 @@ import {getNetworkBootnodes, isKnownNetworkName, readBootnodes} from "../../netw
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {LogArgs} from "../../options/logOptions.js";
 import {
+  YargsError,
   cleanOldLogFiles,
   mkdir,
   onGracefulShutdown,
@@ -80,7 +86,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const pubkeyCache = createPubkeyCache();
     syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
-    const anchorStateView = args["chain.nativeStateView"]
+    const anchorStateView = options.chain.nativeStateView
       ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
       : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
 
@@ -177,6 +183,11 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const beaconNodeOptions = new BeaconNodeOptions(parseBeaconNodeArgs(args));
+  const parsedOptions = beaconNodeOptions.getWithDefaults();
+  if (parsedOptions.chain.nativeStateView) {
+    const error = createNativeStateViewError("beacon startup");
+    throw new YargsError(`[${error.type.code}] ${error.message}`);
+  }
 
   const {version, commit} = getVersionData();
   const beaconPaths = getBeaconPaths(args, network);
