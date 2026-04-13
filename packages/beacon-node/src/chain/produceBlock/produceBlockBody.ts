@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {IForkChoice, PayloadStatus, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
@@ -19,7 +19,6 @@ import {
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
   computeTimeAtSlot,
-  isParentBlockFull,
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
@@ -609,6 +608,7 @@ export async function prepareExecutionPayload(
   chain: {
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
+    forkChoice: IForkChoice;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -746,6 +746,7 @@ function preparePayloadAttributes(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
+    forkChoice: IForkChoice;
   },
   {
     prepareState,
@@ -772,7 +773,9 @@ function preparePayloadAttributes(
       throw new Error("Expected Capella state for withdrawals");
     }
 
-    if (isStatePostGloas(prepareState) && !isParentBlockFull(prepareState)) {
+    const isParentBlockFull = chain.forkChoice.getBlockHex(toRootHex(parentBlockRoot), PayloadStatus.FULL) !== null;
+
+    if (isStatePostGloas(prepareState) && !isParentBlockFull) {
       // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
       // already deducted from CL balances but never credited on the EL (the envelope
       // was not delivered). The next payload must carry those same withdrawals to
