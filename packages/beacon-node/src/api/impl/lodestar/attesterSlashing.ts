@@ -1,6 +1,6 @@
 import {ForkSeq} from "@lodestar/params";
-import {isSlashableAttestationData} from "@lodestar/state-transition";
-import {AttesterSlashing, IndexedAttestation, IndexedAttestationBigint, ssz} from "@lodestar/types";
+import {isSlashableAttestationData, toIndexedAttestationBigint} from "@lodestar/state-transition";
+import {AttesterSlashing, IndexedAttestation} from "@lodestar/types";
 
 /**
  * Find all slashable pairs within a list of IndexedAttestations and
@@ -55,15 +55,4 @@ function hasIntersection(indices1: number[], indices2: number[]): boolean {
   }
 
   return false;
-}
-
-/**
- * Convert IndexedAttestation to IndexedAttestationBigint via SSZ roundtrip.
- * Both types share the same binary layout — only the JS numeric representation differs.
- */
-function toIndexedAttestationBigint(att: IndexedAttestation, fork: ForkSeq): IndexedAttestationBigint {
-  const sszType = fork >= ForkSeq.electra ? ssz.electra.IndexedAttestation : ssz.phase0.IndexedAttestation;
-  const sszTypeBigint =
-    fork >= ForkSeq.electra ? ssz.electra.IndexedAttestationBigint : ssz.phase0.IndexedAttestationBigint;
-  return sszTypeBigint.deserialize(sszType.serialize(att));
 }

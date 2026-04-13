@@ -1,5 +1,6 @@
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {AttesterSlashing, Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
+import {AttesterSlashing, Slot, ValidatorIndex, phase0, IndexedAttestation, IndexedAttestationBigint, ssz} from "@lodestar/types";
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
@@ -33,4 +34,15 @@ export function getAttesterSlashableIndices(attesterSlashing: AttesterSlashing):
     }
   }
   return indices;
+}
+
+/**
+ * Convert IndexedAttestation to IndexedAttestationBigint via SSZ roundtrip.
+ * Both types share the same binary layout — only the JS numeric representation differs.
+ */
+export function toIndexedAttestationBigint(att: IndexedAttestation, fork: ForkSeq): IndexedAttestationBigint {
+  const sszType = fork >= ForkSeq.electra ? ssz.electra.IndexedAttestation : ssz.phase0.IndexedAttestation;
+  const sszTypeBigint =
+    fork >= ForkSeq.electra ? ssz.electra.IndexedAttestationBigint : ssz.phase0.IndexedAttestationBigint;
+  return sszTypeBigint.deserialize(sszType.serialize(att));
 }
