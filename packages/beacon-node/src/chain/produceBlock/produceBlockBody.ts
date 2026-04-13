@@ -773,9 +773,10 @@ function preparePayloadAttributes(
       throw new Error("Expected Capella state for withdrawals");
     }
 
-    const isParentBlockFull = chain.forkChoice.getBlockHex(toRootHex(parentBlockRoot), PayloadStatus.FULL) !== null;
-
-    if (isStatePostGloas(prepareState) && !isParentBlockFull) {
+    if (
+      isStatePostGloas(prepareState) &&
+      chain.forkChoice.getBlockHex(toRootHex(parentBlockRoot), PayloadStatus.FULL) === null
+    ) {
       // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
       // already deducted from CL balances but never credited on the EL (the envelope
       // was not delivered). The next payload must carry those same withdrawals to
