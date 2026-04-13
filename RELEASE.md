@@ -181,6 +181,8 @@ The critical piece of this process is using a merge commit to preserve the git h
 - Notifying the team that merge commits are enabled in [#lodestar-private](https://discord.com/channels/593655374469660673/605818244036821012) with "🚨 Merge Commits Enabled 🚨"
 - Go to the [GitHub setting for Lodestar](https://github.com/ChainSafe/lodestar/settings) and turn on "Allow merge commits" with the "Pull request title and description" setting
 - Merge the `chore: v1.XX.X release` PR into `stable` using a **_merge commit_**
+- Create a PR to merge `stable` into `unstable` with PR title `chore: merge v1.XX.X back to unstable`
+- Approve back-merge PR
 - Merge `stable` back into `unstable` using a **_merge commit_**
 - Notifying the team that merge commits are disabled in [#lodestar-private](https://discord.com/channels/593655374469660673/605818244036821012) with "✅ Merge Commits Disabled ✅"
 
