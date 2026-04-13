@@ -32,10 +32,10 @@ import {
   calculateShufflingDecisionRoot,
   computeEpochShuffling,
 } from "../util/epochShuffling.js";
+import {getPtcWindowEpochCacheData} from "../util/gloas.js";
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
-  computePayloadTimelinessCommitteesForEpoch,
   computeProposers,
   computeSyncPeriodAtEpoch,
   getActivationChurnLimit,
@@ -56,7 +56,7 @@ import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalanc
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
 import {PubkeyCache, createPubkeyCache, syncPubkeys} from "./pubkeyCache.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateFulu} from "./stateCache.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateFulu, CachedBeaconStateGloas} from "./stateCache.js";
 import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
@@ -226,11 +226,12 @@ export class EpochCache {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
-  // TODO GLOAS: See if we need to cache PTC for next epoch
   // PTC for previous epoch, required for slot N block validating slot N-1 attestations
   previousPayloadTimelinessCommittees: Uint32Array[];
   // PTC for current epoch, computed eagerly at epoch transition
   payloadTimelinessCommittees: Uint32Array[];
+  // PTC for next epoch, precomputed from the ptc window for future duty serving
+  nextPayloadTimelinessCommittees: Uint32Array[];
 
   // TODO: Helper stats
   syncPeriod: SyncPeriod;
@@ -270,6 +271,7 @@ export class EpochCache {
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     previousPayloadTimelinessCommittees: Uint32Array[];
     payloadTimelinessCommittees: Uint32Array[];
+    nextPayloadTimelinessCommittees: Uint32Array[];
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
@@ -301,6 +303,7 @@ export class EpochCache {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.previousPayloadTimelinessCommittees = data.previousPayloadTimelinessCommittees;
     this.payloadTimelinessCommittees = data.payloadTimelinessCommittees;
+    this.nextPayloadTimelinessCommittees = data.nextPayloadTimelinessCommittees;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
@@ -451,25 +454,13 @@ export class EpochCache {
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
     }
 
-    // Compute PTC for all slots in the prev/current epoch
+    // Copy previous/current epoch PTC slices from state.ptcWindow once, then serve hot-path lookups from epochCtx.
     let previousPayloadTimelinessCommittees: Uint32Array[] = [];
     let payloadTimelinessCommittees: Uint32Array[] = [];
+    let nextPayloadTimelinessCommittees: Uint32Array[] = [];
     if (currentEpoch >= config.GLOAS_FORK_EPOCH) {
-      payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
-        state,
-        currentEpoch,
-        currentShuffling.committees,
-        effectiveBalanceIncrements
-      );
-
-      if (!isGenesis && previousEpoch >= config.GLOAS_FORK_EPOCH) {
-        previousPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
-          state,
-          previousEpoch,
-          previousShuffling.committees,
-          effectiveBalanceIncrements
-        );
-      }
+      ({previousPayloadTimelinessCommittees, payloadTimelinessCommittees, nextPayloadTimelinessCommittees} =
+        getPtcWindowEpochCacheData(state as CachedBeaconStateGloas));
     }
 
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
@@ -546,6 +537,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed,
       previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees,
+      nextPayloadTimelinessCommittees,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
     });
@@ -592,6 +584,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       previousPayloadTimelinessCommittees: this.previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees: this.payloadTimelinessCommittees,
+      nextPayloadTimelinessCommittees: this.nextPayloadTimelinessCommittees,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
     });
@@ -702,14 +695,13 @@ export class EpochCache {
 
     this.proposersPrevEpoch = this.proposers;
     if (upcomingEpoch >= this.config.GLOAS_FORK_EPOCH) {
-      // Shift and compute current epoch PTC eagerly for all slots
-      this.previousPayloadTimelinessCommittees = this.payloadTimelinessCommittees;
-      this.payloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
-        state,
-        upcomingEpoch,
-        this.currentShuffling.committees,
-        this.effectiveBalanceIncrements
-      );
+      // processPtcWindow() already rotated the canonical state field earlier in process_epoch.
+      // Copy the previous/current epoch slices into epochCtx so validation stays on cached arrays.
+      ({
+        previousPayloadTimelinessCommittees: this.previousPayloadTimelinessCommittees,
+        payloadTimelinessCommittees: this.payloadTimelinessCommittees,
+        nextPayloadTimelinessCommittees: this.nextPayloadTimelinessCommittees,
+      } = getPtcWindowEpochCacheData(state as CachedBeaconStateGloas));
     }
     if (upcomingEpoch >= this.config.FULU_FORK_EPOCH) {
       // Populate proposer cache with lookahead from state
@@ -1040,6 +1032,10 @@ export class EpochCache {
 
     if (epoch === this.epoch - 1 && this.previousPayloadTimelinessCommittees.length > 0) {
       return this.previousPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
+    }
+
+    if (epoch === this.epoch + 1 && this.nextPayloadTimelinessCommittees.length > 0) {
+      return this.nextPayloadTimelinessCommittees[slot % SLOTS_PER_EPOCH];
     }
 
     throw new Error(`Payload Timeliness Committee is not available for slot=${slot}`);

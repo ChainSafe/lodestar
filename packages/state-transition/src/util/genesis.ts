@@ -15,10 +15,17 @@ import {processDeposit} from "../block/processDeposit.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {increaseBalance} from "../index.js";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
+  CachedBeaconStateFulu,
+} from "../types.js";
 import {newFilledArray} from "./array.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
+import {initializeProposerLookahead} from "./fulu.js";
+import {initializePtcWindow} from "./gloas.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
 import {getActiveValidatorIndices, getMaxEffectiveBalance} from "./validator.js";
 
@@ -326,15 +333,23 @@ export function initializeBeaconStateFromEth1(
     stateFulu.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.fulu.ExecutionPayloadHeader>) ??
       ssz.fulu.ExecutionPayloadHeader.defaultViewDU();
+    stateFulu.proposerLookahead = ssz.fulu.ProposerLookahead.toViewDU(
+      initializeProposerLookahead(state as CachedBeaconStateElectra)
+    );
   }
 
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
     stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
     stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
+    stateGloas.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(state as CachedBeaconStateFulu));
   }
 
   state.commit();
+
+  if (fork >= ForkSeq.fulu) {
+    return createCachedBeaconState(state as BeaconStateAllForks, immutableData, {skipSyncCommitteeCache: true});
+  }
 
   return state;
 }

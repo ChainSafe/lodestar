@@ -16,6 +16,7 @@ import {
   CachedBeaconStatePhase0,
   EpochTransitionCache,
 } from "../types.js";
+import {processPtcWindow} from "../util/gloas.js";
 import {processBuilderPendingPayments} from "./processBuilderPendingPayments.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
@@ -55,6 +56,7 @@ export {
   processPendingDeposits,
   processPendingConsolidations,
   processProposerLookahead,
+  processPtcWindow,
   processBuilderPendingPayments,
 };
 
@@ -81,6 +83,7 @@ export enum EpochTransitionStep {
   processPendingDeposits = "processPendingDeposits",
   processPendingConsolidations = "processPendingConsolidations",
   processProposerLookahead = "processProposerLookahead",
+  processPtcWindow = "processPtcWindow",
   processBuilderPendingPayments = "processBuilderPendingPayments",
 }
 
@@ -209,6 +212,12 @@ export function processEpoch(
       step: EpochTransitionStep.processProposerLookahead,
     });
     processProposerLookahead(fork, state as CachedBeaconStateFulu, cache);
+    timer?.();
+  }
+
+  if (fork >= ForkSeq.gloas) {
+    const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processPtcWindow});
+    processPtcWindow(state as CachedBeaconStateGloas, cache);
     timer?.();
   }
 }

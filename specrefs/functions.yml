@@ -1100,6 +1100,29 @@
         return (committee_weight * PROPOSER_SCORE_BOOST) // 100
     </spec>
 
+- name: compute_ptc#gloas
+  sources:
+    - file: packages/state-transition/src/util/seed.ts
+      search: export function computePayloadTimelinessCommitteeForSlot(
+  spec: |
+    <spec fn="compute_ptc" fork="gloas" hash="0f323552">
+    def compute_ptc(state: BeaconState, slot: Slot) -> Vector[ValidatorIndex, PTC_SIZE]:
+        """
+        Get the payload timeliness committee for the given ``slot``.
+        """
+        epoch = compute_epoch_at_slot(slot)
+        seed = hash(get_seed(state, epoch, DOMAIN_PTC_ATTESTER) + uint_to_bytes(slot))
+        indices: List[ValidatorIndex] = []
+        # Concatenate all committees for this slot in order
+        committees_per_slot = get_committee_count_per_slot(state, epoch)
+        for i in range(committees_per_slot):
+            committee = get_beacon_committee(state, slot, CommitteeIndex(i))
+            indices.extend(committee)
+        return compute_balance_weighted_selection(
+            state, indices, seed, size=PTC_SIZE, shuffle_indices=False
+        )
+    </spec>
+
 - name: compute_pulled_up_tip#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
@@ -4330,28 +4353,25 @@
       search: '^\s+getPayloadTimelinessCommittee\('
       regex: true
   spec: |
-    <spec fn="get_ptc" fork="gloas" hash="ae15f761">
+    <spec fn="get_ptc" fork="gloas" hash="b55ba184">
     def get_ptc(state: BeaconState, slot: Slot) -> Vector[ValidatorIndex, PTC_SIZE]:
         """
         Get the payload timeliness committee for the given ``slot``.
         """
         epoch = compute_epoch_at_slot(slot)
-        seed = hash(get_seed(state, epoch, DOMAIN_PTC_ATTESTER) + uint_to_bytes(slot))
-        indices: List[ValidatorIndex] = []
-        # Concatenate all committees for this slot in order
-        committees_per_slot = get_committee_count_per_slot(state, epoch)
-        for i in range(committees_per_slot):
-            committee = get_beacon_committee(state, slot, CommitteeIndex(i))
-            indices.extend(committee)
-        return compute_balance_weighted_selection(
-            state, indices, seed, size=PTC_SIZE, shuffle_indices=False
-        )
+        state_epoch = get_current_epoch(state)
+        if epoch < state_epoch:
+            assert epoch + 1 == state_epoch
+            return state.ptc_window[slot % SLOTS_PER_EPOCH]
+        assert epoch <= state_epoch + MIN_SEED_LOOKAHEAD
+        offset = (epoch - state_epoch + 1) * SLOTS_PER_EPOCH
+        return state.ptc_window[offset + slot % SLOTS_PER_EPOCH]
     </spec>
 
 - name: get_ptc_assignment#gloas
   sources: []
   spec: |
-    <spec fn="get_ptc_assignment" fork="gloas" hash="7fd50097">
+    <spec fn="get_ptc_assignment" fork="gloas" hash="ba09915b">
     def get_ptc_assignment(
         state: BeaconState, epoch: Epoch, validator_index: ValidatorIndex
     ) -> Optional[Slot]:
@@ -4360,8 +4380,8 @@
         index ``validator_index`` is a member of the PTC. Returns None if no
         assignment is found.
         """
-        next_epoch = Epoch(get_current_epoch(state) + 1)
-        assert epoch <= next_epoch
+        max_epoch = Epoch(get_current_epoch(state) + MIN_SEED_LOOKAHEAD)
+        assert epoch <= max_epoch
 
         start_slot = compute_start_slot_at_epoch(epoch)
         for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH):
@@ -5136,6 +5156,34 @@
         for i in range(MIN_SEED_LOOKAHEAD + 1):
             lookahead.extend(get_beacon_proposer_indices(state, Epoch(current_epoch + i)))
         return lookahead
+    </spec>
+
+- name: initialize_ptc_window#gloas
+  sources:
+    - file: packages/state-transition/src/util/gloas.ts
+      search: export function initializePtcWindow(
+  spec: |
+    <spec fn="initialize_ptc_window" fork="gloas" hash="3764b7f5">
+    def initialize_ptc_window(
+        state: BeaconState,
+    ) -> Vector[Vector[ValidatorIndex, PTC_SIZE], (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH]:
+        """
+        Return the cached PTC window starting from the current epoch.
+        Used to initialize the ``ptc_window`` field in the beacon state at genesis and after forks.
+        """
+        empty_previous_epoch = [
+            Vector[ValidatorIndex, PTC_SIZE]([ValidatorIndex(0) for _ in range(PTC_SIZE)])
+            for _ in range(SLOTS_PER_EPOCH)
+        ]
+
+        ptcs = []
+        current_epoch = get_current_epoch(state)
+        for e in range(1 + MIN_SEED_LOOKAHEAD):
+            epoch = Epoch(current_epoch + e)
+            start_slot = compute_start_slot_at_epoch(epoch)
+            ptcs += [compute_ptc(state, Slot(start_slot + i)) for i in range(SLOTS_PER_EPOCH)]
+
+        return empty_previous_epoch + ptcs
     </spec>
 
 - name: initiate_builder_exit#gloas
@@ -6275,12 +6323,21 @@
 - name: is_valid_proposal_slot#gloas
   sources: []
   spec: |
-    <spec fn="is_valid_proposal_slot" fork="gloas" hash="55b8762f">
+    <spec fn="is_valid_proposal_slot" fork="gloas" hash="33b8f094">
     def is_valid_proposal_slot(state: BeaconState, preferences: ProposerPreferences) -> bool:
         """
-        Check if the validator is the proposer for the given slot in the next epoch.
+        Check if the validator is the proposer for the given slot in the current or
+        next epoch.
         """
-        index = SLOTS_PER_EPOCH + preferences.proposal_slot % SLOTS_PER_EPOCH
+        current_epoch = get_current_epoch(state)
+        proposal_epoch = compute_epoch_at_slot(preferences.proposal_slot)
+        if proposal_epoch < current_epoch:
+            return False
+        if proposal_epoch > current_epoch + Epoch(1):
+            return False
+
+        index = (proposal_epoch - current_epoch) * SLOTS_PER_EPOCH
+        index += preferences.proposal_slot % SLOTS_PER_EPOCH
         return state.proposer_lookahead[index] == preferences.validator_index
     </spec>
 
@@ -6931,7 +6988,7 @@
 - name: on_payload_attestation_message#gloas
   sources: []
   spec: |
-    <spec fn="on_payload_attestation_message" fork="gloas" hash="b5602237">
+    <spec fn="on_payload_attestation_message" fork="gloas" hash="fd6b84cb">
     def on_payload_attestation_message(
         store: Store, ptc_message: PayloadAttestationMessage, is_from_block: bool = False
     ) -> None:
@@ -6942,6 +6999,7 @@
         # The beacon block root must be known
         data = ptc_message.data
         # PTC attestation must be for a known block. If block is unknown, delay consideration until the block is found
+        assert data.beacon_block_root in store.block_states
         state = store.block_states[data.beacon_block_root]
         ptc = get_ptc(state, data.slot)
         # PTC votes can only change the vote for their assigned beacon block, return early otherwise
@@ -8139,7 +8197,7 @@
 - name: process_epoch#gloas
   sources: []
   spec: |
-    <spec fn="process_epoch" fork="gloas" hash="393b69ef">
+    <spec fn="process_epoch" fork="gloas" hash="bf3575a9">
     def process_epoch(state: BeaconState) -> None:
         process_justification_and_finalization(state)
         process_inactivity_updates(state)
@@ -8158,6 +8216,8 @@
         process_participation_flag_updates(state)
         process_sync_committee_updates(state)
         process_proposer_lookahead(state)
+        # [New in Gloas:EIP7732]
+        process_ptc_window(state)
     </spec>
 
 - name: process_eth1_data#phase0
@@ -9208,6 +9268,26 @@
             state.builder_pending_payments[payment_index] = BuilderPendingPayment()
 
         slash_validator(state, header_1.proposer_index)
+    </spec>
+
+- name: process_ptc_window#gloas
+  sources:
+    - file: packages/state-transition/src/util/gloas.ts
+      search: export function processPtcWindow(
+  spec: |
+    <spec fn="process_ptc_window" fork="gloas" hash="7be3d509">
+    def process_ptc_window(state: BeaconState) -> None:
+        """
+        Update the cached PTC window.
+        """
+        # Shift all epochs forward by one
+        state.ptc_window[: len(state.ptc_window) - SLOTS_PER_EPOCH] = state.ptc_window[SLOTS_PER_EPOCH:]
+        # Fill in the last epoch
+        next_epoch = Epoch(get_current_epoch(state) + MIN_SEED_LOOKAHEAD + 1)
+        start_slot = compute_start_slot_at_epoch(next_epoch)
+        state.ptc_window[len(state.ptc_window) - SLOTS_PER_EPOCH :] = [
+            compute_ptc(state, Slot(slot)) for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH)
+        ]
     </spec>
 
 - name: process_randao#phase0
@@ -11377,7 +11457,7 @@
     - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
       search: export function upgradeStateToGloas(
   spec: |
-    <spec fn="upgrade_to_gloas" fork="gloas" hash="6e66df25">
+    <spec fn="upgrade_to_gloas" fork="gloas" hash="8f67112c">
     def upgrade_to_gloas(pre: fulu.BeaconState) -> BeaconState:
         epoch = fulu.get_current_epoch(pre)
 
@@ -11444,6 +11524,8 @@
             latest_block_hash=pre.latest_execution_payload_header.block_hash,
             # [New in Gloas:EIP7732]
             payload_expected_withdrawals=[],
+            # [New in Gloas:EIP7732]
+            ptc_window=initialize_ptc_window(pre),
         )
 
         # [New in Gloas:EIP7732]
@@ -11455,7 +11537,7 @@
 - name: upgrade_to_heze#heze
   sources: []
   spec: |
-    <spec fn="upgrade_to_heze" fork="heze" hash="0ace9d48">
+    <spec fn="upgrade_to_heze" fork="heze" hash="57cf94bf">
     def upgrade_to_heze(pre: gloas.BeaconState) -> BeaconState:
         epoch = gloas.get_current_epoch(pre)
         latest_execution_payload_bid = ExecutionPayloadBid(
@@ -11526,6 +11608,7 @@
             builder_pending_withdrawals=pre.builder_pending_withdrawals,
             latest_block_hash=pre.latest_block_hash,
             payload_expected_withdrawals=pre.payload_expected_withdrawals,
+            ptc_window=pre.ptc_window,
         )
 
         return post

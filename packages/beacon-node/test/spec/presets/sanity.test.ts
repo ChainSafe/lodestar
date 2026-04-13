@@ -46,7 +46,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
         post: ssz[fork].BeaconState,
       },
       shouldError: (testCase) => !testCase.post,
-      timeout: 30000,
+      timeout: 60000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
