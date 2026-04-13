@@ -31,6 +31,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   let batchRetries = 0;
   let batchSigsSuccess = 0;
   let aggregateWithRandomnessTime = 0;
+  let aggregateWithRandomnessCount = 0;
 
   // If there are multiple batchable sets attempt batch verification with them
   const batchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
@@ -48,6 +49,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
         aggregateResult = aggregateWithRandomness(mappedSets);
         const [aggrEndSec, aggrEndNs] = process.hrtime();
         aggregateWithRandomnessTime += aggrEndSec - aggrStartSec + (aggrEndNs - aggrStartNs) / 1e9;
+        aggregateWithRandomnessCount++;
       } catch (_e) {
         aggregateResult = null;
       }
@@ -131,6 +133,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     workerStartTime: [startSec, startNs],
     workerEndTime: [workerEndSec, workerEndNs],
     aggregateWithRandomnessTime,
+    aggregateWithRandomnessCount,
     results,
   };
 }

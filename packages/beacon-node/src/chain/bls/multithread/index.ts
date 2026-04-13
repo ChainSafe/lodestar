@@ -449,6 +449,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         workerStartTime,
         workerEndTime,
         aggregateWithRandomnessTime,
+        aggregateWithRandomnessCount,
         results,
       } = workResult;
 
@@ -507,8 +508,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
       this.metrics?.blsThreadPool.batchRetries.inc(batchRetries);
       this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
-      if (aggregateWithRandomnessTime > 0) {
-        this.metrics?.blsThreadPool.aggregateWithRandomnessWorkerDuration.observe(aggregateWithRandomnessTime);
+      if (aggregateWithRandomnessCount > 0) {
+        this.metrics?.blsThreadPool.aggregateWithRandomnessWorkerDuration.observe(
+          aggregateWithRandomnessTime / aggregateWithRandomnessCount
+        );
       }
     } catch (e) {
       // Worker communications should never reject

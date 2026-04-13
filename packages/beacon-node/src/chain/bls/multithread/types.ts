@@ -46,5 +46,7 @@ export type BlsWorkResult = {
   workerEndTime: [number, number];
   /** Total time spent in aggregateWithRandomness in seconds */
   aggregateWithRandomnessTime: number;
+  /** Number of aggregateWithRandomness calls */
+  aggregateWithRandomnessCount: number;
   results: WorkResult<boolean>[];
 };
