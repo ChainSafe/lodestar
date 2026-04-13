@@ -4,15 +4,29 @@ import {
   getErrorResponseForRequestWithFailedVerification,
   getResponseForRequest,
   getVerificationFailedMessage,
+  isValidResponse,
 } from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const eth_blockNumber: ELVerifiedRequestHandler<[], string> = async ({payload, logger, proofProvider}) => {
+export const eth_blockNumber: ELVerifiedRequestHandler<[], string> = async ({payload, rpc, logger, proofProvider}) => {
   try {
-    const executionPayload = await proofProvider.getExecutionPayload("latest");
-    const blockNumber = numberToHex(executionPayload.blockNumber);
+    const elResponse = await rpc.request("eth_blockNumber", [], {raiseError: false});
 
-    return getResponseForRequest(payload, blockNumber);
+    if (!isValidResponse(elResponse)) {
+      throw new Error("Invalid response from EL for eth_blockNumber");
+    }
+
+    const elBlockNumber = parseInt(elResponse.result, 16);
+    const executionPayload = await proofProvider.getExecutionPayload("latest");
+    const clBlockNumber = executionPayload.blockNumber;
+
+    if (elBlockNumber < clBlockNumber) {
+      throw new Error(
+        `EL block number (${elBlockNumber}) is behind CL block number (${clBlockNumber})`
+      );
+    }
+
+    return getResponseForRequest(payload, numberToHex(elBlockNumber));
   } catch (err) {
     logger.error("Request could not be verified.", {method: payload.method}, err as Error);
     return getErrorResponseForRequestWithFailedVerification(

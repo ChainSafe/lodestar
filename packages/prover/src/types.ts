@@ -146,6 +146,7 @@ export interface ELAccessListResponse {
 export type ELStorageProof = Pick<ELProof, "storageHash" | "storageProof">;
 
 export type ELApi = {
+  eth_blockNumber: () => HexString;
   eth_getBalance: (address: string, block?: number | string) => string;
   eth_createAccessList: (transaction: ELTransaction, block?: ELBlockNumberOrTag) => ELAccessListResponse;
   eth_call: (transaction: ELTransaction, block?: ELBlockNumberOrTag) => HexString;
