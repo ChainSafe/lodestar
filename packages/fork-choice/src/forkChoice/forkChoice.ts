@@ -1685,15 +1685,42 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    // For Gloas blocks, attestation index must be 0 or 1
-    if (isGloasBlock(block) && attestationData.index !== 0 && attestationData.index !== 1) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.INVALID_DATA_INDEX,
-          index: attestationData.index,
-        },
-      });
+    if (isGloasBlock(block)) {
+      // For Gloas blocks, attestation index must be 0 or 1
+      if (attestationData.index !== 0 && attestationData.index !== 1) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+          err: {
+            code: InvalidAttestationCode.INVALID_DATA_INDEX,
+            index: attestationData.index,
+          },
+        });
+      }
+
+      // Same-slot attestations can only vote for the PENDING variant
+      if (block.slot === slot && attestationData.index !== 0) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+          err: {
+            code: InvalidAttestationCode.INVALID_DATA_INDEX,
+            index: attestationData.index,
+          },
+        });
+      }
+
+      // If attesting for a full node, the payload must be known
+      if (attestationData.index === 1) {
+        const fullNodeIndex = this.protoArray.getNodeIndexByRootAndStatus(beaconBlockRootHex, PayloadStatus.FULL);
+        if (fullNodeIndex === undefined) {
+          throw new ForkChoiceError({
+            code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+            err: {
+              code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS,
+              beaconBlockRoot: beaconBlockRootHex,
+            },
+          });
+        }
+      }
     }
 
     this.validatedAttestationDatas.add(attDataRoot);
