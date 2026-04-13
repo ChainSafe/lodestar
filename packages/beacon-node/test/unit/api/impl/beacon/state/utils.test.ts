@@ -1,12 +1,13 @@
 import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {BeaconStateView} from "@lodestar/state-transition";
 import {getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
 describe("beacon state api utils", () => {
   describe("getStateValidatorIndex", () => {
-    const state = generateCachedAltairState();
-    const pubkeyCache = state.epochCtx.pubkeyCache;
+    const state = new BeaconStateView(generateCachedAltairState());
+    const pubkeyCache = state.cachedState.epochCtx.pubkeyCache;
 
     it("should return valid: false on invalid input", () => {
       // "invalid validator id number"
@@ -17,7 +18,7 @@ describe("beacon state api utils", () => {
 
     it("should return valid: false on validator indices / pubkeys not in the state", () => {
       // "validator id not in state"
-      expect(getStateValidatorIndex(String(state.validators.length), state, pubkeyCache).valid).toBe(false);
+      expect(getStateValidatorIndex(String(state.validatorCount), state, pubkeyCache).valid).toBe(false);
       // "validator pubkey not in state"
       expect(
         getStateValidatorIndex(
@@ -29,7 +30,7 @@ describe("beacon state api utils", () => {
     });
 
     it("should return valid: true on validator indices / pubkeys in the state", () => {
-      const index = state.validators.length - 1;
+      const index = state.validatorCount - 1;
       const resp1 = getStateValidatorIndex(String(index), state, pubkeyCache);
       if (resp1.valid) {
         expect(resp1.validatorIndex).toBe(index);
@@ -42,7 +43,7 @@ describe("beacon state api utils", () => {
       } else {
         expect.fail("validator index should be found - validator index as number input");
       }
-      const pubkey = state.validators.get(index).pubkey;
+      const pubkey = state.getValidator(index).pubkey;
       const resp3 = getStateValidatorIndex(pubkey, state, pubkeyCache);
       if (resp3.valid) {
         expect(resp3.validatorIndex).toBe(index);

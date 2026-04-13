@@ -1,13 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  CachedBeaconStateAllForks,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  isExecutionCachedStateType,
-  isMergeTransitionComplete,
-} from "@lodestar/state-transition";
+import {IBeaconStateView, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, prettyBytes, prettyBytesShort, sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
@@ -161,7 +155,7 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
 function getHeadExecutionInfo(
   config: BeaconConfig,
   clockEpoch: Epoch,
-  headState: CachedBeaconStateAllForks,
+  headState: IBeaconStateView,
   headInfo: ProtoBlock
 ): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
@@ -171,8 +165,8 @@ function getHeadExecutionInfo(
   const executionStatusStr = headInfo.executionStatus.toLowerCase();
 
   // Add execution status to notifier only if head is on/post bellatrix
-  if (isExecutionCachedStateType(headState)) {
-    if (isMergeTransitionComplete(headState)) {
+  if (headState.isExecutionStateType) {
+    if (headState.isMergeTransitionComplete) {
       const executionPayloadHashInfo =
         headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
       const executionPayloadNumberInfo =

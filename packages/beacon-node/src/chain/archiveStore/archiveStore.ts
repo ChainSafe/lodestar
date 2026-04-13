@@ -1,6 +1,5 @@
 import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
-import {ForkSeq} from "@lodestar/params";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
@@ -14,7 +13,6 @@ import {HistoricalStateRegen} from "./historicalState/historicalStateRegen.js";
 import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.js";
 import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
 import {archiveBlocks} from "./utils/archiveBlocks.js";
-import {archiveExecutionPayloadEnvelopes} from "./utils/archivePayloads.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
 import {updateBackfillRange} from "./utils/updateBackfillRange.js";
 
@@ -29,7 +27,6 @@ type ArchiveStoreInitOpts = ArchiveStoreOpts & {dbName: string; anchorState: {fi
 
 export enum ArchiveStoreTask {
   ArchiveBlocks = "archive_blocks",
-  ArchivePayloads = "archive_payloads",
   PruneHistory = "prune_history",
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
@@ -123,6 +120,7 @@ export class ArchiveStore {
         opts: {
           genesisTime: this.chain.clock.genesisTime,
           dbLocation: this.opts.dbName,
+          nativeStateView: this.opts.nativeStateView ?? false,
         },
         config: this.chain.config,
         metrics: this.metrics,
@@ -192,7 +190,6 @@ export class ArchiveStore {
   private processFinalizedCheckpoint = async (finalized: CheckpointWithPayloadStatus): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
-      const finalizedFork = this.chain.config.getForkSeqAtEpoch(finalizedEpoch);
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
 
       let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
@@ -209,12 +206,6 @@ export class ArchiveStore {
         this.chain.opts.persistOrphanedBlocksDir
       );
       timer?.({source: ArchiveStoreTask.ArchiveBlocks});
-
-      if (finalizedFork >= ForkSeq.gloas) {
-        timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-        await archiveExecutionPayloadEnvelopes(this.chain, finalized);
-        timer?.({source: ArchiveStoreTask.ArchivePayloads});
-      }
 
       if (this.opts.pruneHistory) {
         timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();

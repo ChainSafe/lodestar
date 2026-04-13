@@ -34,7 +34,7 @@
     "download-spec-tests": "pnpm -r download-spec-tests",
     "test:spec": "vitest run --project spec-minimal --project spec-mainnet",
     "benchmark": "pnpm benchmark:files 'packages/*/test/perf/**/*.test.ts'",
-    "benchmark:files": "NODE_OPTIONS='--max-old-space-size=4096 --loader=ts-node/esm' benchmark --config .benchrc.yaml --defaultBranch unstable",
+    "benchmark:files": "NODE_OPTIONS='--max-old-space-size=8192 --loader=ts-node/esm' benchmark --config .benchrc.yaml --defaultBranch unstable",
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
@@ -43,7 +43,7 @@
   "devDependencies": {
     "@actions/core": "^1.11.1",
     "@biomejs/biome": "^2.2.0",
-    "@chainsafe/benchmark": "^1.2.3",
+    "@chainsafe/benchmark": "^2.0.2",
     "@chainsafe/biomejs-config": "^1.0.0",
     "@lerna-lite/cli": "^4.9.4",
     "@lerna-lite/exec": "^4.9.4",

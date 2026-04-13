@@ -44,6 +44,8 @@ export async function createNodeJsLibp2p(
 ): Promise<Libp2p> {
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
   const disconnectThreshold = networkOpts.disconnectThreshold ?? defaultNetworkOptions.disconnectThreshold;
+  const tcpEnabled = networkOpts.tcp ?? defaultNetworkOptions.tcp;
+  const quicEnabled = networkOpts.quic ?? defaultNetworkOptions.quic;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
   let datastore: undefined | Eth2PeerDataStore = undefined;
@@ -58,7 +60,7 @@ export async function createNodeJsLibp2p(
       ...(networkOpts.bootMultiaddrs ?? defaultNetworkOptions.bootMultiaddrs ?? []),
       // Append discv5.bootEnrs to bootMultiaddrs if requested
       ...(networkOpts.connectToDiscv5Bootnodes
-        ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? [], networkOpts.quic)
+        ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? [], quicEnabled)
         : []),
     ];
 
@@ -71,7 +73,7 @@ export async function createNodeJsLibp2p(
     }
   }
   const transports: Libp2pInit["transports"] = [];
-  if (networkOpts.tcp ?? true) {
+  if (tcpEnabled) {
     transports.unshift(
       tcp({
         // Reject connections when the server's connection count gets high
@@ -87,17 +89,26 @@ export async function createNodeJsLibp2p(
       })
     );
   }
-  if (networkOpts.quic) {
-    transports.unshift(
-      quic({
-        handshakeTimeout: 5_000,
-        maxIdleTimeout: 10_000,
-        keepAliveInterval: 5_000,
-        maxConcurrentStreamLimit: 256,
-        maxStreamData: 10_000_000,
-        maxConnectionData: 15_000_000,
-      })
-    );
+  if (quicEnabled) {
+    const quicMultiaddrs = localMultiaddrs.filter((ma) => ma.includes("/quic-v1"));
+    const hasIpv4Quic = quicMultiaddrs.some((ma) => ma.includes("/ip4/"));
+    const hasIpv6Quic = quicMultiaddrs.some((ma) => ma.includes("/ip6/"));
+    // Only add QUIC transport if at least one QUIC listen address is configured,
+    // otherwise the transport constructor will throw
+    if (hasIpv4Quic || hasIpv6Quic) {
+      transports.unshift(
+        quic({
+          handshakeTimeout: 5_000,
+          maxIdleTimeout: 10_000,
+          keepAliveInterval: 5_000,
+          maxConcurrentStreamLimit: 256,
+          maxStreamData: 10_000_000,
+          maxConnectionData: 15_000_000,
+          ipv4: hasIpv4Quic,
+          ipv6: hasIpv6Quic,
+        })
+      );
+    }
   }
 
   const noiseCrypto = {

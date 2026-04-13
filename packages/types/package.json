@@ -11,13 +11,18 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.41.1",
+  "version": "1.42.0",
   "type": "module",
   "exports": {
     ".": {
       "bun": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
+    },
+    "./phase0": {
+      "bun": "./src/phase0/index.ts",
+      "types": "./lib/phase0/index.d.ts",
+      "import": "./lib/phase0/index.js"
     },
     "./altair": {
       "bun": "./src/altair/index.ts",
@@ -49,10 +54,10 @@
       "types": "./lib/fulu/index.d.ts",
       "import": "./lib/fulu/index.js"
     },
-    "./phase0": {
-      "bun": "./src/phase0/index.ts",
-      "types": "./lib/phase0/index.d.ts",
-      "import": "./lib/phase0/index.js"
+    "./gloas": {
+      "bun": "./src/gloas/index.ts",
+      "types": "./lib/gloas/index.d.ts",
+      "import": "./lib/gloas/index.js"
     }
   },
   "files": [

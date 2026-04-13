@@ -29,9 +29,19 @@ describe("validate indexed attestation", () => {
       name: "should return invalid indexed attestation - indexes not sorted",
     },
     {
+      indices: [0, 0],
+      expectedValue: false,
+      name: "should return invalid indexed attestation - duplicate indexes",
+    },
+    {
       indices: [0, 1, 2, 3],
       expectedValue: true,
       name: "should return valid indexed attestation",
+    },
+    {
+      indices: [0],
+      expectedValue: true,
+      name: "should return valid indexed attestation - single index 0",
     },
   ];
 
