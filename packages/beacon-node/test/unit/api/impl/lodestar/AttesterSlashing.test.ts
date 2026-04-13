@@ -19,8 +19,8 @@ describe("api - lodestar - attesterSlashing", () => {
 
       const result = getAttesterSlashingsFromIndexedAttestations(ForkSeq.phase0, [attestation1, attestation2]);
       expect(result).toHaveLength(1);
-      expect(result[0].attestation1.data.beaconBlockRoot).toEqual(attestation2.data.beaconBlockRoot);
-      expect(result[0].attestation2.data.beaconBlockRoot).toEqual(attestation1.data.beaconBlockRoot);
+      expect(result[0].attestation1.data.beaconBlockRoot).toEqual(attestation1.data.beaconBlockRoot);
+      expect(result[0].attestation2.data.beaconBlockRoot).toEqual(attestation2.data.beaconBlockRoot);
     });
     it("surrounding vote - first direction - slashing", () => {
       const attestation1 = ssz.phase0.IndexedAttestation.defaultValue();
