@@ -1,5 +1,6 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -406,7 +407,18 @@ export type Endpoints = {
   >;
 };
 
-export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  function assertBlocksMatchFork(signedBlocks: SignedBeaconBlock[], expectedFork: ForkName): void {
+    for(const block of signedBlocks) {
+      const blockFork = config.getForkName(block.message.slot);
+      if (blockFork !== expectedFork) {
+        throw new Error(
+          `Block at slot ${block.message.slot} is from fork ${blockFork}, expected ${expectedFork}`
+        );
+      }
+    }
+  }
+
   return {
     writeHeapdump: {
       url: "/eth/v1/lodestar/write_heapdump",
@@ -629,7 +641,8 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "POST",
       req: {
         writeReqJson: ({signedBlocks}) => {
-          const fork = _config.getForkName(signedBlocks[0]?.message.slot ?? 0);
+          if (signedBlocks.length === 0) throw new Error("No blocks provided.");
+          const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
             body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson(signedBlocks as SignedBeaconBlock<typeof fork>[]),
             headers: {[MetaHeader.Version]: fork},
@@ -637,12 +650,13 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
         parseReqJson: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {
-            signedBlocks: ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[],
-          };
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[];
+          assertBlocksMatchFork(signedBlocks, fork);
+          return {signedBlocks};
         },
         writeReqSsz: ({signedBlocks}) => {
-          const fork = _config.getForkName(signedBlocks[0]?.message.slot ?? 0);
+          if (signedBlocks.length === 0) throw new Error("No blocks provided.");
+          const fork = config.getForkName(signedBlocks[0].message.slot);
           return {
             body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize(signedBlocks as SignedBeaconBlock<typeof fork>[]),
             headers: {[MetaHeader.Version]: fork},
@@ -650,9 +664,9 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
         parseReqSsz: ({body, headers}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {
-            signedBlocks: ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[],
-          };
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[];
+          assertBlocksMatchFork(signedBlocks, fork);
+          return {signedBlocks};
         },
         schema: {
           body: Schema.ObjectArray,

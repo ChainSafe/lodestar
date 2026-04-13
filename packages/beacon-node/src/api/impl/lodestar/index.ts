@@ -281,10 +281,6 @@ export function getLodestarApi({
     },
 
     async getAttesterSlashingsFromBlocks({signedBlocks}) {
-      if (signedBlocks.length === 0) {
-        throw new ApiError(400, "No blocks provided");
-      }
-
       const attestations = new Map<Epoch, Attestation[]>();
 
       for (const block of signedBlocks) {
