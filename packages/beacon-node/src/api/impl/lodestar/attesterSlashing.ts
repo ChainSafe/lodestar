@@ -1,5 +1,9 @@
 import {ForkSeq} from "@lodestar/params";
-import {isSlashableAttestationData, toIndexedAttestationBigint} from "@lodestar/state-transition";
+import {
+  getIntersectingIndices,
+  isSlashableAttestationData,
+  toIndexedAttestationBigint,
+} from "@lodestar/state-transition";
 import {AttesterSlashing, IndexedAttestation} from "@lodestar/types";
 
 /**
@@ -21,7 +25,7 @@ export function getAttesterSlashingsFromIndexedAttestations(
           ? [indexedAttestations[j], indexedAttestations[i]]
           : [indexedAttestations[i], indexedAttestations[j]];
 
-      if (!hasIntersection(first.attestingIndices, second.attestingIndices)) continue;
+      if (getIntersectingIndices(first.attestingIndices, second.attestingIndices).length === 0) continue;
 
       const firstBigint = toIndexedAttestationBigint(first, fork);
       const secondBigint = toIndexedAttestationBigint(second, fork);
@@ -36,23 +40,4 @@ export function getAttesterSlashingsFromIndexedAttestations(
   }
 
   return slashings;
-}
-
-/**
- * Check if two sorted arrays share at least one common element.
- * attestingIndices are sorted per spec.
- */
-function hasIntersection(indices1: number[], indices2: number[]): boolean {
-  let i = 0;
-  let j = 0;
-
-  while (i < indices1.length && j < indices2.length) {
-    if (indices1[i] === indices2[j]) {
-      return true;
-    }
-    if (indices1[i] < indices2[j]) i++;
-    else j++;
-  }
-
-  return false;
 }
