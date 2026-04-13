@@ -409,12 +409,10 @@ export type Endpoints = {
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   function assertBlocksMatchFork(signedBlocks: SignedBeaconBlock[], expectedFork: ForkName): void {
-    for(const block of signedBlocks) {
+    for (const block of signedBlocks) {
       const blockFork = config.getForkName(block.message.slot);
       if (blockFork !== expectedFork) {
-        throw new Error(
-          `Block at slot ${block.message.slot} is from fork ${blockFork}, expected ${expectedFork}`
-        );
+        throw new Error(`Block at slot ${block.message.slot} is from fork ${blockFork}, expected ${expectedFork}`);
       }
     }
   }
