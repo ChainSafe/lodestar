@@ -72,27 +72,32 @@ The Stable Release Process goes through the following steps
 
 ### Creating a Stable Release Branch and PR
 
-Generally a release is cut from the HEAD of `unstable` but can be any `unstable` commit. The overall flow is as follows:
+```sh
+> git checkout unstable # or using a target commit behind the HEAD `git checkout b00855`
+> pnpm release:create-rc 1.41.0
+> # Open the PR
+```
 
-- Checkout the commit to target
-- Create a branch `rc/v1.41.0` from `unstable` for the Release Candidate
+Generally a release is cut from the HEAD of `unstable` but can be any `unstable` commit. The commands above will trigger a series of events and the overall flow is as follows:
+
+- Checkout the commit that is targeted
+- Create a branch `rc/v1.41.0`, from target, for the Release Candidate
 - Update the package versions
 - Push the branch
 - Open a draft PR named `chore: v1.41.0 release` for `rc/v1.41.0` that targets `stable`
 
-#### Stable All-In-One Script Process
-
-- `git checkout unstable` or using a target commit behind the HEAD `git checkout b00855`
-- `pnpm release:create-rc 1.41.0`
-- Open the PR
-
-#### Stable Manual Steps Process
+<details>
+  <summary>
+    Manual Steps
+  </summary>
 
 - `git checkout -b rc/v1.41.0 unstable` or `git checkout -b rc/v1.41.0 b00855`
 - `lerna version v1.41.0 --no-git-tag-version --force-publish --yes`
 - `git commit -am "v1.41.0"`
 - `git push origin rc/v1.41.0`
 - Open the PR
+
+</details>
 
 ## Hotfix Releases (example v1.41.1)
 
@@ -112,6 +117,13 @@ The Hotfix Release Process goes through the following steps
 
 ### Creating a Hotfix Release Branch and PR
 
+```sh
+git checkout -b rc/v1.41.1 stable # can omit the `stable` if already have tip of `stable` checked out
+pnpm release:create-rc 1.41.1
+git cherry-pick ****** # see "Prepare the Hotfix" below
+git push
+```
+
 A hotfix release is cut from the HEAD of `stable` because that represents the last stable release. We do not support backporting of fixes to older releases so we are always patching the tip of `stable`. The overall flow is as follows:
 
 - Checkout `stable`
@@ -119,17 +131,17 @@ A hotfix release is cut from the HEAD of `stable` because that represents the la
 - [Prepare the hotfix](#prepare-the-hotfix)
 - Open a draft PR named `chore: v1.41.1 release` for `rc/v1.41.1` that targets `stable`
 
-#### Hotfix Branch All-In-One Script Process
-
-- `git checkout stable`
-- `pnpm release:create-rc 1.41.1`
-
-#### Hotfix Branch Manual Steps Process
+<details>
+  <summary>
+    Manual Steps
+  </summary>
 
 - `git checkout -b rc/v1.41.1 stable`
 - `lerna version v1.41.1 --no-git-tag-version --force-publish --yes`
 - `git commit -am "v1.41.1"`
 - `git push origin rc/v1.41.1`
+
+</details>
 
 #### Prepare the Hotfix
 
@@ -143,16 +155,19 @@ Testing of a Release Candidate involves publishing an `-rc.X` version of the cod
 
 Checkout the `rc/v1.XX.X` branch to get ready to tag. The following must be run from an account with write-access to push a tag.
 
-#### RC Tagging All-in-One Script
-
 Simply run `pnpm release:tag-rc 1.XX.X` where `1.XX.X` corresponds to the current release version (stable or hotfix both apply). The script will look for the most recent `-rc.x`, increment to the next version and then push the tag.
 
-#### RC Tagging Manual Process
+<details>
+  <summary>
+    Manual Steps
+  </summary>
 
 - Look on GitHub for the most recent version of the `-rc.x`. Assume for this example its `v1.41.0-rc.2`
 - Mentally increment the RC to `-rc.3`
 - `git tag -am "v1.41.0-rc.3" v1.41.0-rc.3`
 - `git push origin v1.41.0-rc.3`
+
+</details>
 
 ### Testing the Tagged RC
 
@@ -199,12 +214,19 @@ There are two methods for tagging a Stable Release. The script runs some additio
 - `git checkout stable`
 - `pnpm release:tag-stable 1.41.0`
 
+<details>
+  <summary>
+    Manual Steps
+  </summary>
+
 ### Manually Tagging
 
 - `git checkout stable`
 - `git pull` after merging the release PR
 - `git tag -am "v1.41.0" v1.41.0`
 - `git push origin v1.41.0`
+
+</details>
 
 ## Announcing a Release
 
