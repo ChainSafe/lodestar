@@ -384,7 +384,7 @@ importers:
     devDependencies:
       '@chainsafe/swap-or-not-shuffle':
         specifier: github:guha-rahul/swap-or-not-shuffle#compute_ptc
-        version: https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/64bd5edc1ff8f3ee92b2b4a9635ef9b1d2a0f45f
+        version: https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/496bb401b5e7d4cb2fb8d7ab9acd26a67c883107
       '@libp2p/interface-internal':
         specifier: ^3.0.13
         version: 3.0.13
@@ -988,7 +988,7 @@ importers:
         version: 1.2.2
       '@chainsafe/swap-or-not-shuffle':
         specifier: github:guha-rahul/swap-or-not-shuffle#compute_ptc
-        version: https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/64bd5edc1ff8f3ee92b2b4a9635ef9b1d2a0f45f
+        version: https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/496bb401b5e7d4cb2fb8d7ab9acd26a67c883107
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -1612,8 +1612,8 @@ packages:
     cpu: [arm64]
     os: [win32]
 
-  '@chainsafe/swap-or-not-shuffle@https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/64bd5edc1ff8f3ee92b2b4a9635ef9b1d2a0f45f':
-    resolution: {tarball: https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/64bd5edc1ff8f3ee92b2b4a9635ef9b1d2a0f45f}
+  '@chainsafe/swap-or-not-shuffle@https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/496bb401b5e7d4cb2fb8d7ab9acd26a67c883107':
+    resolution: {tarball: https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/496bb401b5e7d4cb2fb8d7ab9acd26a67c883107}
     version: 1.2.1
     engines: {node: '>= 18'}
 
@@ -7991,7 +7991,7 @@ snapshots:
   '@chainsafe/swap-or-not-shuffle-win32-arm64-msvc@0.0.2':
     optional: true
 
-  '@chainsafe/swap-or-not-shuffle@https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/64bd5edc1ff8f3ee92b2b4a9635ef9b1d2a0f45f':
+  '@chainsafe/swap-or-not-shuffle@https://codeload.github.com/guha-rahul/swap-or-not-shuffle/tar.gz/496bb401b5e7d4cb2fb8d7ab9acd26a67c883107':
     optionalDependencies:
       '@chainsafe/swap-or-not-shuffle-darwin-arm64': 0.0.2
       '@chainsafe/swap-or-not-shuffle-linux-arm64-gnu': 0.0.2
