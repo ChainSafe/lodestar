@@ -883,6 +883,22 @@ export class BeaconChain implements IBeaconChain {
     );
   }
 
+  async getExecutionPayloadEnvelope(
+    blockSlot: Slot,
+    blockRootHex: string
+  ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      return payloadInput.getPayloadEnvelope();
+    }
+
+    return (
+      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
+      null
+    );
+  }
+
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
     const fork = this.config.getForkName(blockSlot);
 
