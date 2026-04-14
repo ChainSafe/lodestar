@@ -373,10 +373,10 @@ export class OpPool {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
 
     for (const [key, voluntaryExit] of this.voluntaryExits.entries()) {
-      // VoluntaryExit messages signed in the previous fork become invalid and can never be included in any future
-      // block, so just drop as the head state advances into the next fork.
-      if (this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch)) < headStateFork) {
+      const voluntaryExitFork = this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch));
+      if (!isVoluntaryExitSignatureIncludable(headStateFork, voluntaryExitFork)) {
         this.voluntaryExits.delete(key);
+        continue;
       }
 
       // TODO: Improve this simplistic condition
