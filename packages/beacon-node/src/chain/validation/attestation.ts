@@ -316,6 +316,8 @@ async function validateAttestationNoSignatureCheck(
           });
         }
 
+        // [REJECT] If `attestation.data.index == 1` (payload present for a past
+        //   block), the execution payload for `block` passes validation.
         // [IGNORE] When `attestation.data.index == 1` (payload present for a past block),
         // the corresponding execution payload for `block` has been seen (a client MAY queue
         // attestations for processing once the payload is retrieved and SHOULD request the
