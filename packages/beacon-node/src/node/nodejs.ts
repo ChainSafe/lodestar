@@ -2,6 +2,7 @@ import {setMaxListeners} from "node:events";
 import {PrivateKey} from "@libp2p/interface";
 import {Registry} from "prom-client";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
+import {routes} from "@lodestar/api";
 import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
@@ -339,6 +340,8 @@ export class BeaconNode {
         const exits = chain.deferredVoluntaryExitPool.retrieveProcessableExits(state);
         for (const exit of exits) {
           try {
+            chain.opPool.insertVoluntaryExit(exit);
+            chain.emitter.emit(routes.events.EventType.voluntaryExit, exit);
             await network.publishVoluntaryExit(exit);
             logger.info("Voluntary exit successfully published for validator", {
               validatorIndex: exit.message.validatorIndex,
