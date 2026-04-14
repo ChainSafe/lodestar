@@ -1,11 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
-import {
-  EFFECTIVE_BALANCE_INCREMENT,
-  ForkSeq,
-  MAX_EFFECTIVE_BALANCE_ELECTRA,
-  PTC_SIZE,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {fromHex} from "@lodestar/utils";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStateElectra} from "../../../src/testUtils/util.js";
 import {
