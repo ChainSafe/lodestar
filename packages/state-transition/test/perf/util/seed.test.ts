@@ -124,6 +124,37 @@ describe("computePayloadTimelinessCommitteesForEpoch - pure TS vs  Rust magic (2
     const epoch = epochCtx.epoch;
     const {effectiveBalanceIncrements} = epochCtx;
 
+    // Sanity: log the actual effectiveBalance increment the benchmark is running against.
+    // Acceptance rate in the PTC rejection sampler is ~ increment / MAX_EFFECTIVE_BALANCE_INCREMENT (2048 post-Electra).
+    // eslint-disable-next-line no-console
+    console.log(`[vc=${vc}] effectiveBalanceIncrements[0]=${effectiveBalanceIncrements[0]}`);
+
+    // Correctness check: the native Rust result must match the naive TS result for each slot.
+    const naiveResult = naiveComputePayloadTimelinessCommitteesForEpoch(
+      cachedState,
+      epoch,
+      epochCtx.currentShuffling.committees,
+      effectiveBalanceIncrements
+    );
+    const rustResult = computePayloadTimelinessCommitteesForEpoch(
+      cachedState,
+      epoch,
+      epochCtx.currentShuffling.committees,
+      effectiveBalanceIncrements
+    );
+    for (let i = 0; i < naiveResult.length; i++) {
+      const naive = naiveResult[i];
+      const rust = rustResult[i];
+      if (naive.length !== rust.length) {
+        throw new Error(`PTC length mismatch at slot ${i} (vc=${vc}): naive=${naive.length} rust=${rust.length}`);
+      }
+      for (let j = 0; j < naive.length; j++) {
+        if (naive[j] !== rust[j]) {
+          throw new Error(`PTC index mismatch at slot ${i} position ${j} (vc=${vc}): naive=${naive[j]} rust=${rust[j]}`);
+        }
+      }
+    }
+
     bench({
       id: `naive TS - naiveComputePayloadTimelinessCommitteesForEpoch - ${vc} validators`,
       fn: () => {
