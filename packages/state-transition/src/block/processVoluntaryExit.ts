@@ -23,11 +23,19 @@ export enum VoluntaryExitValidity {
   invalidSignature = "invalid_signature",
 }
 
+// Variants that can become valid in a future epoch without user action.
+// - earlyEpoch: exit.message.epoch is in the future; valid once current epoch catches up
+// - shortTimeActive: validator active < SHARD_COMMITTEE_PERIOD; valid once enough time passes
+// - pendingWithdrawals: Electra; valid once pending partial withdrawals drain
 const TRANSIENT_EXIT_VALIDITY = new Set([
   VoluntaryExitValidity.earlyEpoch,
   VoluntaryExitValidity.shortTimeActive,
-  // Adding others in the future
+  VoluntaryExitValidity.pendingWithdrawals,
 ]);
+// Note: VoluntaryExitValidity.inactive is intentionally excluded. It conflates
+// "validator does not exist" (permanent) with "validator not yet activated"
+// (transient), and cleanly classifying it requires splitting the enum variant
+// upstream. Left for a future follow-up.
 
 export function isTransientExitValidity(v: VoluntaryExitValidity): boolean {
   return TRANSIENT_EXIT_VALIDITY.has(v);
