@@ -10,6 +10,7 @@ const ARTIFACT_FILENAMES = new Set([
   "._.DS_Store",
   ".DS_Store",
   // File included by spec tests downloader
+  ".download-state",
   "version.txt",
 ]);
 
