@@ -147,6 +147,10 @@ export enum AttestationErrorCode {
    * Gloas: Current slot attestation is marking payload as present
    */
   PREMATURELY_INDICATED_PAYLOAD_PRESENT = "ATTESTATION_ERROR_PREMATURELY_INDICATED_PAYLOAD_PRESENT",
+  /**
+   * Gloas: index-1 attestation but the execution payload has not been seen yet
+   */
+  EXECUTION_PAYLOAD_NOT_SEEN = "ATTESTATION_ERROR_EXECUTION_PAYLOAD_NOT_SEEN",
 }
 
 export type AttestationErrorType =
@@ -185,7 +189,8 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX}
   | {code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE}
   | {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE; attDataIndex: number}
-  | {code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT};
+  | {code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT}
+  | {code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {

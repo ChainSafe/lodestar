@@ -90,6 +90,16 @@ async function validateAggregateAndProof(
       });
     }
 
+    // [IGNORE] When `aggregate.data.index == 1` (payload present for a past block),
+    // the corresponding execution payload for `block` has been seen (a client MAY queue
+    // attestations for processing once the payload is retrieved and SHOULD request the
+    // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
+    if (attData.index === 1 && !chain.forkChoice.hasPayloadUnsafe(attData.beaconBlockRoot)) {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+      });
+    }
+
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
     committeeIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
     if (committeeIndex === null) {
