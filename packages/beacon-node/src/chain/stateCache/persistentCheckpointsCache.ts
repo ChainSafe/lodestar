@@ -744,7 +744,13 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           } else {
             // delete the state from memory
             this.cache.delete(cpKey);
-            this.epochIndex.get(epoch)?.delete(rootHex);
+            const rootSet = this.epochIndex.get(epoch);
+            if (rootSet) {
+              rootSet.delete(rootHex);
+              if (rootSet.size === 0) {
+                this.epochIndex.delete(epoch);
+              }
+            }
           }
           this.metrics?.cpStateCache.statePruneFromMemoryCount.inc();
           this.logger.verbose("Pruned checkpoint state from memory", logMeta);
