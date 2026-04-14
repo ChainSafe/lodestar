@@ -251,6 +251,35 @@ describe("downloadGenericSpecTests", () => {
     expect(logs).toContain(`Extracted general.tar.gz to ${outputDir}`);
     expect(logs.every((message) => !message.includes("\r"))).toBe(true);
   });
+
+  it("treats invalid content-length as unknown size", async () => {
+    setStdoutIsTTY(true);
+    vi.useFakeTimers();
+
+    const outputDir = createTempDir();
+    const archivePath = createArchiveFixture("general", {"tests/general/file.txt": "general"});
+    setFetchMock(
+      {
+        "general.tar.gz": archivePath,
+      },
+      "not-a-number"
+    );
+
+    const downloadPromise = downloadGenericSpecTests(
+      {
+        specVersion: "v1.7.0-alpha.3",
+        outputDir,
+        specTestsRepoUrl: "https://example.test/specs",
+        testsToDownload: ["general"],
+      },
+      () => {}
+    );
+
+    vi.runAllTimers();
+    await downloadPromise;
+
+    expect(fs.readFileSync(path.join(outputDir, "tests", "general", "file.txt"), "utf8")).toBe("general");
+  });
 });
 
 describe("createDownloadProgressReporter", () => {
@@ -278,6 +307,24 @@ describe("createDownloadProgressReporter", () => {
     expect(writeSpy.mock.calls.some(([value]) => String(value).includes("mainnet.tar.gz ["))).toBe(true);
     expect(writeSpy.mock.calls.some(([value]) => String(value).includes("\u001b["))).toBe(true);
   });
+
+  it("treats non-finite totals as unknown size in tty mode", () => {
+    vi.useFakeTimers();
+    setStdoutIsTTY(true);
+
+    const log = vi.fn();
+    const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation((() => true) as TestConsoleWrite);
+    const reporter = createDownloadProgressReporter({log, enabled: true});
+
+    reporter.start("mainnet.tar.gz", Number.NaN);
+    vi.advanceTimersByTime(100);
+    reporter.update("mainnet.tar.gz", 50);
+    vi.advanceTimersByTime(100);
+    reporter.close();
+
+    expect(writeSpy.mock.calls.some(([value]) => String(value).includes("mainnet.tar.gz 50 B"))).toBe(true);
+    expect(writeSpy.mock.calls.every(([value]) => !String(value).includes("NaN"))).toBe(true);
+  });
 });
 
 function createTempDir(): string {
@@ -303,7 +350,7 @@ function createArchiveFixture(archiveName: string, files: Record<string, string>
   return archivePath;
 }
 
-function setFetchMock(archivesByName: Record<string, string>): void {
+function setFetchMock(archivesByName: Record<string, string>, contentLengthHeader?: string): void {
   fetchMock.mockImplementation(async (url) => {
     const archiveName = getArchiveName(url);
     const archivePath = archivesByName[archiveName];
@@ -311,11 +358,11 @@ function setFetchMock(archivesByName: Record<string, string>): void {
       throw new Error(`Unexpected archive ${archiveName}`);
     }
 
-    return createArchiveResponse(archivePath);
+    return createArchiveResponse(archivePath, contentLengthHeader);
   });
 }
 
-function createArchiveResponse(archivePath: string): Response {
+function createArchiveResponse(archivePath: string, contentLengthHeader?: string): Response {
   const bytes = fs.readFileSync(archivePath);
   const chunkSizeFile = `${archivePath}.chunk-size`;
   const chunkSize = fs.existsSync(chunkSizeFile) ? Number.parseInt(fs.readFileSync(chunkSizeFile, "utf8"), 10) : 32;
@@ -331,7 +378,7 @@ function createArchiveResponse(archivePath: string): Response {
 
   return new Response(body, {
     headers: {
-      "content-length": String(bytes.length),
+      "content-length": contentLengthHeader ?? String(bytes.length),
     },
   });
 }

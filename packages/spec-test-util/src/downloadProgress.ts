@@ -189,7 +189,7 @@ function formatProgressLine(label: string, progress: ProgressEntry | undefined):
   const totalBytes = progress.totalBytes;
   const transferred = formatBytes(progress.transferredBytes);
 
-  if (totalBytes === null || totalBytes <= 0) {
+  if (totalBytes === null || !Number.isFinite(totalBytes) || totalBytes <= 0) {
     return `${label} ${transferred}`;
   }
 

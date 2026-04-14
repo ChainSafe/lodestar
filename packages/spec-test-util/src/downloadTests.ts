@@ -180,7 +180,7 @@ async function downloadAndExtractArchive({
       }
 
       const totalBytesHeader = res.headers.get("content-length");
-      const totalBytes = totalBytesHeader ? Number.parseInt(totalBytesHeader, 10) : null;
+      const totalBytes = parseContentLength(totalBytesHeader);
       progressReporter.start(label, totalBytes);
 
       let transferredBytes = 0;
@@ -215,4 +215,13 @@ async function extractTarball(tarball: string, outputDir: string): Promise<void>
   await promisify(execFile)("tar", ["-xzf", tarball, "-C", outputDir, "--exclude=._*", "--exclude=*/._*"], {
     maxBuffer: 1000 * 1024 * 1024, // 1 GB
   });
+}
+
+function parseContentLength(contentLengthHeader: string | null): number | null {
+  if (contentLengthHeader === null) {
+    return null;
+  }
+
+  const totalBytes = Number.parseInt(contentLengthHeader, 10);
+  return Number.isFinite(totalBytes) && totalBytes > 0 ? totalBytes : null;
 }
