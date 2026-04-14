@@ -193,7 +193,21 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolVoluntaryExit({signedVoluntaryExit}) {
-      await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+      const result = await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+
+      if (result.status === "deferred") {
+        const currentEpoch = chain.clock.currentEpoch;
+        const inserted = chain.deferredVoluntaryExitPool.insert(signedVoluntaryExit, result.validity, currentEpoch);
+        if (!inserted) {
+          throw new ApiError(400, "Deferred voluntary exit pool is full or already contains this validator");
+        }
+        logger.info("Voluntary exit deferred until transient conditions are met", {
+          validatorIndex: signedVoluntaryExit.message.validatorIndex,
+          reason: result.validity,
+        });
+        return;
+      }
+
       chain.opPool.insertVoluntaryExit(signedVoluntaryExit);
       chain.emitter.emit(routes.events.EventType.voluntaryExit, signedVoluntaryExit);
       await network.publishVoluntaryExit(signedVoluntaryExit);

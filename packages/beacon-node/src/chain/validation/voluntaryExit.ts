@@ -1,4 +1,4 @@
-import {VoluntaryExitValidity, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
+import {VoluntaryExitValidity, getVoluntaryExitSignatureSet, isTransientExitValidity} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {
   GossipAction,
@@ -9,12 +9,43 @@ import {
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
+export type ApiVoluntaryExitResult = {status: "published"} | {status: "deferred"; validity: VoluntaryExitValidity};
+
+// Comments for each call are present inside `validateVoluntaryExit`.
 export async function validateApiVoluntaryExit(
   chain: IBeaconChain,
   voluntaryExit: phase0.SignedVoluntaryExit
-): Promise<void> {
+): Promise<ApiVoluntaryExitResult> {
   const prioritizeBls = true;
-  return validateVoluntaryExit(chain, voluntaryExit, prioritizeBls);
+
+  if (chain.opPool.hasSeenVoluntaryExit(voluntaryExit.message.validatorIndex)) {
+    throw new VoluntaryExitError(GossipAction.IGNORE, {
+      code: VoluntaryExitErrorCode.ALREADY_EXISTS,
+    });
+  }
+
+  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateApiVoluntaryExit);
+  const validity = state.getVoluntaryExitValidity(voluntaryExit, false);
+
+  if (validity !== VoluntaryExitValidity.valid && !isTransientExitValidity(validity)) {
+    throw new VoluntaryExitError(GossipAction.REJECT, {
+      code: voluntaryExitValidityToErrorCode(validity),
+    });
+  }
+
+  const signatureSet = getVoluntaryExitSignatureSet(chain.config, state, voluntaryExit);
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+    throw new VoluntaryExitError(GossipAction.REJECT, {
+      code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
+    });
+  }
+
+  if (validity !== VoluntaryExitValidity.valid) {
+    // Transient failure — signature is good, defer
+    return {status: "deferred", validity};
+  }
+
+  return {status: "published"};
 }
 
 export async function validateGossipVoluntaryExit(

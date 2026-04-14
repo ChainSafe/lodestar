@@ -20,6 +20,8 @@ export enum RegenCaller {
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
   validateGossipAttestation = "validateGossipAttestation",
   validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
+  validateApiVoluntaryExit = "validateApiVoluntaryExit",
+  publishDeferredVoluntaryExits = "publishDeferredVoluntaryExits",
   validateGossipExecutionPayloadBid = "validateGossipExecutionPayloadBid",
   onForkChoiceFinalized = "onForkChoiceFinalized",
   restApi = "restApi",

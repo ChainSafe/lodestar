@@ -23,6 +23,16 @@ export enum VoluntaryExitValidity {
   invalidSignature = "invalid_signature",
 }
 
+const TRANSIENT_EXIT_VALIDITY = new Set([
+  VoluntaryExitValidity.earlyEpoch,
+  VoluntaryExitValidity.shortTimeActive,
+  // Adding others in the future
+]);
+
+export function isTransientExitValidity(v: VoluntaryExitValidity): boolean {
+  return TRANSIENT_EXIT_VALIDITY.has(v);
+}
+
 /**
  * Process a VoluntaryExit operation. Initiates the exit of a validator or builder.
  *

@@ -12,6 +12,7 @@ import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
+import {RegenCaller} from "../chain/regen/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
 import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
@@ -20,7 +21,7 @@ import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
-import {Clock} from "../util/clock.js";
+import {Clock, ClockEvent} from "../util/clock.js";
 import {runNodeNotifier} from "./notifier.js";
 import {IBeaconNodeOptions} from "./options.js";
 
@@ -331,6 +332,29 @@ export class BeaconNode {
     }
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
+
+    chain.clock.addListener(ClockEvent.epoch, async () => {
+      try {
+        const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.publishDeferredVoluntaryExits);
+        const exits = chain.deferredVoluntaryExitPool.retrieveProcessableExits(state);
+        for (const exit of exits) {
+          try {
+            await network.publishVoluntaryExit(exit);
+            logger.info("Voluntary exit successfully published for validator", {
+              validatorIndex: exit.message.validatorIndex,
+            });
+          } catch (e) {
+            logger.warn(
+              "Failed to publish deferred voluntary exit",
+              {validatorIndex: exit.message.validatorIndex},
+              e as Error
+            );
+          }
+        }
+      } catch (e) {
+        logger.warn("Failed to drain deferred voluntary exit pool", {}, e as Error);
+      }
+    });
 
     return new BeaconNode({
       opts,
