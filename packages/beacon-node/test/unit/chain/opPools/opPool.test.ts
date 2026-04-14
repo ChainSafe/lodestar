@@ -36,14 +36,24 @@ describe("OpPool voluntary exits", () => {
     expect(pool.getAllVoluntaryExits()).toHaveLength(0);
   });
 
-  it("keeps older-fork exits after deneb because signatures remain perpetually valid", () => {
+  it("keeps capella exits after deneb because signatures remain perpetually valid", () => {
     const headSlot = computeStartSlotAtEpoch(chainConfig.ELECTRA_FORK_EPOCH);
     const {pool, headBlock, headState} = createPoolContext(headSlot);
 
-    pool.insertVoluntaryExit(createVoluntaryExit(chainConfig.ALTAIR_FORK_EPOCH));
+    pool.insertVoluntaryExit(createVoluntaryExit(chainConfig.CAPELLA_FORK_EPOCH));
     pool.pruneAll(headBlock, headState);
 
     expect(pool.getAllVoluntaryExits()).toHaveLength(1);
+  });
+
+  it("prunes pre-capella exits after deneb because their signature domain is no longer valid", () => {
+    const headSlot = computeStartSlotAtEpoch(chainConfig.ELECTRA_FORK_EPOCH);
+    const {pool, headBlock, headState} = createPoolContext(headSlot);
+
+    pool.insertVoluntaryExit(createVoluntaryExit(chainConfig.BELLATRIX_FORK_EPOCH));
+    pool.pruneAll(headBlock, headState);
+
+    expect(pool.getAllVoluntaryExits()).toHaveLength(0);
   });
 });
 
