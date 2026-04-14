@@ -320,7 +320,8 @@ async function validateAttestationNoSignatureCheck(
         // the corresponding execution payload for `block` has been seen (a client MAY queue
         // attestations for processing once the payload is retrieved and SHOULD request the
         // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
-        if (attData.index === 1 && !chain.forkChoice.hasPayloadUnsafe(attData.beaconBlockRoot)) {
+        // Only check when block is known; unknown blocks are handled by `verifyHeadBlockAndTargetRoot`
+        if (block !== null && attData.index === 1 && !chain.seenPayloadEnvelope(toRootHex(attData.beaconBlockRoot))) {
           throw new AttestationError(GossipAction.IGNORE, {
             code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
           });
