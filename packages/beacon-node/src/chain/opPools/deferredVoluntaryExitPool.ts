@@ -46,7 +46,7 @@ export class DeferredVoluntaryExitPool {
         }
         // Else if still transient - keep
       } catch (e) {
-        this.logger.warn("Processing deferred voluntary exit failed", {validatorIndex}, e as Error);
+        this.logger.debug("Processing deferred voluntary exit failed", {validatorIndex}, e as Error);
       }
     }
     return validExits;
