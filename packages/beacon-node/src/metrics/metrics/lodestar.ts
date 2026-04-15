@@ -680,6 +680,23 @@ export function createLodestarMetrics(
           labelNames: ["code", "client"],
         }),
       },
+      pendingPayloads: register.gauge({
+        name: "lodestar_sync_unknown_block_pending_payloads_size",
+        help: "Current size of BlockInputSync pending payloads cache",
+      }),
+      payloadRequests: register.gauge<{source: BlockInputSource}>({
+        name: "lodestar_sync_unknown_block_payload_requests_total",
+        help: "Total number of payload envelope fetch requests triggered",
+        labelNames: ["source"],
+      }),
+      payloadFetchSuccess: register.gauge({
+        name: "lodestar_sync_unknown_block_payload_fetch_success_total",
+        help: "Total number of successful payload envelope fetches",
+      }),
+      payloadFetchError: register.gauge({
+        name: "lodestar_sync_unknown_block_payload_fetch_error_total",
+        help: "Total number of errored payload envelope fetches",
+      }),
       peerBalancer: {
         peersMetaCount: register.gauge({
           name: "lodestar_sync_unknown_block_peer_balancer_peers_meta_count",

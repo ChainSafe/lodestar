@@ -1,5 +1,6 @@
 import {RootHex, Slot} from "@lodestar/types";
 import {IBlockInput} from "../chain/blocks/blockInput/index.js";
+import {PeerIdStr} from "../util/peerId.js";
 
 export enum PendingBlockType {
   /**
@@ -55,3 +56,12 @@ export function getBlockInputSyncCacheItemRootHex(block: BlockInputSyncCacheItem
 export function getBlockInputSyncCacheItemSlot(block: BlockInputSyncCacheItem): Slot | string {
   return isPendingBlockInput(block) ? block.blockInput.slot : "unknown";
 }
+
+export type PendingPayloadEnvelope = {
+  status: "pending" | "fetching";
+  blockRootHex: RootHex;
+  slot: Slot;
+  attempts: number;
+  peerIdStrings: Set<PeerIdStr>;
+  timeAddedSec: number;
+};
