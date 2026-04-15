@@ -25,6 +25,13 @@ export async function validateApiVoluntaryExit(
   }
 
   const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateApiVoluntaryExit);
+
+  if (voluntaryExit.message.validatorIndex >= state.validatorCount) {
+    throw new VoluntaryExitError(GossipAction.REJECT, {
+      code: VoluntaryExitErrorCode.INACTIVE,
+    });
+  }
+
   const validity = state.getVoluntaryExitValidity(voluntaryExit, false);
 
   if (validity !== VoluntaryExitValidity.valid && !isTransientExitValidity(validity)) {
