@@ -198,6 +198,23 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     } catch (e) {
       if (e instanceof BlockGossipError) {
         logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
+        if (e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN && blockInput) {
+          logger.debug("Gossip block has parent payload unknown", {slot, root: blockShortHex, code: e.type.code});
+          // Track the child block for processing after parent envelope arrives
+          chain.emitter.emit(ChainEvent.blockUnknownParent, {
+            blockInput,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+          });
+          // Trigger parent envelope fetch
+          chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+            rootHex: e.type.parentRoot,
+            peer: peerIdStr,
+            source: BlockInputSource.gossip,
+          });
+          throw e;
+        }
+
         if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput) {
           chain.emitter.emit(ChainEvent.blockUnknownParent, {
             blockInput,
