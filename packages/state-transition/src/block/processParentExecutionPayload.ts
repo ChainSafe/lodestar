@@ -1,5 +1,5 @@
 import {ForkPostGloas, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {BeaconBlock, ssz} from "@lodestar/types";
+import {BeaconBlock, electra, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
@@ -49,7 +49,7 @@ export function processParentExecutionPayload(
 function applyParentExecutionPayload(
   state: CachedBeaconStateGloas,
   parentBid: {slot: number; blockHash: Uint8Array; builderIndex: number},
-  requests: {deposits: unknown[]; withdrawals: unknown[]; consolidations: unknown[]}
+  requests: electra.ExecutionRequests
 ): void {
   const fork = state.config.getForkSeq(state.slot);
   const parentSlot = parentBid.slot;
@@ -97,11 +97,7 @@ function applyParentExecutionPayload(
   state.latestBlockHash = parentBid.blockHash;
 }
 
-function assertEmptyExecutionRequests(requests: {
-  deposits: unknown[];
-  withdrawals: unknown[];
-  consolidations: unknown[];
-}): void {
+function assertEmptyExecutionRequests(requests: electra.ExecutionRequests): void {
   if (requests.deposits.length !== 0 || requests.withdrawals.length !== 0 || requests.consolidations.length !== 0) {
     throw new Error("Parent execution requests must be empty when parent block is EMPTY");
   }
