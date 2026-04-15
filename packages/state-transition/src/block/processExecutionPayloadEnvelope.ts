@@ -1,4 +1,3 @@
-import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getExecutionPayloadEnvelopeSignatureSet} from "../signatureSets/executionPayloadEnvelope.js";
@@ -6,75 +5,32 @@ import {BeaconStateView} from "../stateView/beaconStateView.js";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeTimeAtSlot} from "../util/index.js";
 import {verifySignatureSet} from "../util/signatureSets.js";
-import {processConsolidationRequest} from "./processConsolidationRequest.js";
-import {getPendingValidatorPubkeys, processDepositRequest} from "./processDepositRequest.js";
-import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 export type ProcessExecutionPayloadEnvelopeOpts = {
   verifySignature?: boolean;
-  verifyStateRoot?: boolean;
-  dontTransferCache?: boolean;
 };
 
-// Unlike other block processing functions which mutate state in-place, this function
-// clones the state and returns the post-state, similar to stateTransition().
-// This function does not call execution engine to verify payload. Need to call it from other place.
+/**
+ * Pure verification of execution payload envelope — no state mutation.
+ * Payload processing is deferred to the next beacon block via processParentExecutionPayload.
+ *
+ * This function does not call the execution engine. That must be done separately.
+ *
+ * Spec: consensus-specs#5094 verify_execution_payload_envelope
+ */
 export function processExecutionPayloadEnvelope(
   state: CachedBeaconStateGloas,
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   opts?: ProcessExecutionPayloadEnvelopeOpts
-): CachedBeaconStateGloas {
+): void {
   const {verifySignature = true} = opts ?? {};
   const envelope = signedEnvelope.message;
-  const payload = envelope.payload;
-  const fork = state.config.getForkSeq(payload.slotNumber);
 
   if (verifySignature && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
     throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
   }
 
-  // .clone() before mutating state, similar to stateTransition()
-  const postState = state.clone(opts?.dontTransferCache) as CachedBeaconStateGloas;
-
-  validateExecutionPayloadEnvelope(postState, envelope);
-
-  const requests = envelope.executionRequests;
-
-  if (requests.deposits.length > 0) {
-    // Build cache of pending validator pubkeys once, shared across all deposit requests
-    const pendingValidatorPubkeys = getPendingValidatorPubkeys(postState.config, postState);
-
-    for (const deposit of requests.deposits) {
-      processDepositRequest(fork, postState, deposit, pendingValidatorPubkeys);
-    }
-  }
-
-  for (const withdrawal of requests.withdrawals) {
-    processWithdrawalRequest(fork, postState, withdrawal);
-  }
-
-  for (const consolidation of requests.consolidations) {
-    processConsolidationRequest(postState, consolidation);
-  }
-
-  // Queue the builder payment
-  const paymentIndex = SLOTS_PER_EPOCH + (postState.slot % SLOTS_PER_EPOCH);
-  const payment = postState.builderPendingPayments.get(paymentIndex).clone();
-  const amount = payment.withdrawal.amount;
-
-  if (amount > 0) {
-    postState.builderPendingWithdrawals.push(payment.withdrawal);
-  }
-
-  postState.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
-
-  // Cache the execution payload hash
-  postState.executionPayloadAvailability.set(postState.slot % SLOTS_PER_HISTORICAL_ROOT, true);
-  postState.latestBlockHash = payload.blockHash;
-
-  postState.commit();
-
-  return postState;
+  validateExecutionPayloadEnvelope(state, envelope);
 }
 
 function validateExecutionPayloadEnvelope(
@@ -84,15 +40,21 @@ function validateExecutionPayloadEnvelope(
   const payload = envelope.payload;
 
   // Cache latest block header state root
+  // Note: we read but do NOT mutate state — we compute the header root on a copy
+  let headerRoot: Uint8Array;
   if (byteArrayEquals(state.latestBlockHeader.stateRoot, ssz.Root.defaultValue())) {
-    const previousStateRoot = state.hashTreeRoot();
-    state.latestBlockHeader.stateRoot = previousStateRoot;
+    // Compute what the header root would be with the state root filled in
+    const header = ssz.phase0.BeaconBlockHeader.toViewDU(state.latestBlockHeader.toValue());
+    header.stateRoot = state.hashTreeRoot();
+    headerRoot = header.hashTreeRoot();
+  } else {
+    headerRoot = state.latestBlockHeader.hashTreeRoot();
   }
 
   // Verify consistency with the beacon block
-  if (!byteArrayEquals(envelope.beaconBlockRoot, state.latestBlockHeader.hashTreeRoot())) {
+  if (!byteArrayEquals(envelope.beaconBlockRoot, headerRoot)) {
     throw new Error(
-      `Envelope's block is not the latest block header envelope=${toRootHex(envelope.beaconBlockRoot)} latestBlockHeader=${toRootHex(state.latestBlockHeader.hashTreeRoot())}`
+      `Envelope's block is not the latest block header envelope=${toRootHex(envelope.beaconBlockRoot)} latestBlockHeader=${toRootHex(headerRoot)}`
     );
   }
 
@@ -137,6 +99,14 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
+  // Verify execution_requests_root matches bid commitment (consensus-specs#5094)
+  const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+  if (!byteArrayEquals(requestsRoot, committedBid.executionRequestsRoot)) {
+    throw new Error(
+      `Execution requests root mismatch envelope=${toRootHex(requestsRoot)} committedBid=${toRootHex(committedBid.executionRequestsRoot)}`
+    );
+  }
+
   // Verify consistency of the parent hash with respect to the previous execution payload
   if (!byteArrayEquals(payload.parentHash, state.latestBlockHash)) {
     throw new Error(
@@ -151,7 +121,7 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  // Skipped: Verify the execution payload is valid
+  // Execution engine verification (verify_and_notify_new_payload) is done externally
 }
 
 function verifyExecutionPayloadEnvelopeSignature(
