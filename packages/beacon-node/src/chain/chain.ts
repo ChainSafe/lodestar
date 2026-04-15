@@ -118,7 +118,7 @@ import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datasto
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
-import {PersistentCheckpointStateCache, fcCheckpointToHexPayload} from "./stateCache/persistentCheckpointsCache.js";
+import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
@@ -685,8 +685,8 @@ export class BeaconChain implements IBeaconChain {
     checkpoint: CheckpointWithPayloadStatus
   ): {state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null {
     // finalized or justified checkpoint states maynot be available with PersistentCheckpointStateCache, use getCheckpointStateOrBytes() api to get Uint8Array
-    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
-    const cachedStateCtx = this.regen.getCheckpointStateSync(checkpointHexPayload);
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const cachedStateCtx = this.regen.getCheckpointStateSync(checkpointHex);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlockDefaultStatus(
         ssz.phase0.BeaconBlockHeader.hashTreeRoot(cachedStateCtx.latestBlockHeader)
@@ -705,8 +705,8 @@ export class BeaconChain implements IBeaconChain {
   async getStateOrBytesByCheckpoint(
     checkpoint: CheckpointWithPayloadStatus
   ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
-    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHexPayload);
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHex);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlockDefaultStatus(checkpoint.root);
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
@@ -1338,8 +1338,8 @@ export class BeaconChain implements IBeaconChain {
     checkpoint: CheckpointWithPayloadStatus,
     blockState: IBeaconStateView
   ): {state: IBeaconStateView; stateId: string; shouldWarn: boolean} {
-    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
-    const state = this.regen.getCheckpointStateSync(checkpointHexPayload);
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const state = this.regen.getCheckpointStateSync(checkpointHex);
     if (state) {
       return {state, stateId: "checkpoint_state", shouldWarn: false};
     }
