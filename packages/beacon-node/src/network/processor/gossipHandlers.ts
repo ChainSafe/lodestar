@@ -1118,7 +1118,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         builderIndex: envelope.builderIndex,
         blockHash: toRootHex(envelope.payload.blockHash),
         blockRoot: blockRootHex,
-        stateRoot: toRootHex(envelope.stateRoot),
       });
 
       chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
