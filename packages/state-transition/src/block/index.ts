@@ -16,6 +16,7 @@ import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processExecutionPayloadBid} from "./processExecutionPayloadBid.js";
 import {processExecutionPayloadEnvelope} from "./processExecutionPayloadEnvelope.js";
 import {processOperations} from "./processOperations.js";
+import {processParentExecutionPayload} from "./processParentExecutionPayload.js";
 import {processPayloadAttestation} from "./processPayloadAttestation.js";
 import {processRandao} from "./processRandao.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
@@ -33,6 +34,7 @@ export {
   processExecutionPayloadBid,
   processPayloadAttestation,
   processExecutionPayloadEnvelope,
+  processParentExecutionPayload,
 };
 
 export * from "./externalData.js";
@@ -51,10 +53,16 @@ export function processBlock(
 ): void {
   const {verifySignatures = true} = opts ?? {};
 
+  // Process parent execution payload effects first (consensus-specs#5094)
+  // Must run before processBlockHeader and processExecutionPayloadBid
+  if (fork >= ForkSeq.gloas) {
+    processParentExecutionPayload(state as CachedBeaconStateGloas, block as BeaconBlock<ForkPostGloas>);
+  }
+
   processBlockHeader(state, block);
 
   if (fork >= ForkSeq.gloas) {
-    // After gloas, processWithdrawals does not take a payload parameter
+    // After consensus-specs#5094, processParentExecutionPayload has already handled parent effects
     processWithdrawals(fork, state as CachedBeaconStateGloas);
   } else if (fork >= ForkSeq.capella) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
