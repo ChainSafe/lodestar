@@ -240,7 +240,7 @@ export async function importExecutionPayload(
   );
 
   // 8. Cache payload state
-  this.regen.processBlockState(blockRootHex, postPayloadState);
+  this.regen.processState(blockRootHex, postPayloadState);
   if (postPayloadState.slot % SLOTS_PER_EPOCH === 0) {
     const {checkpoint} = postPayloadState.computeAnchorCheckpoint();
     this.regen.addCheckpointState(checkpoint, postPayloadState);

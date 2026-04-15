@@ -17,11 +17,11 @@ export function computeNewStateRoot(
   metrics: Metrics | null,
   state: IBeaconStateView,
   block: BeaconBlock | BlindedBeaconBlock
-): {newStateRoot: Root; proposerReward: Gwei; postBlockState: IBeaconStateView} {
+): {newStateRoot: Root; proposerReward: Gwei; postState: IBeaconStateView} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH};
 
-  const postBlockState = state.stateTransition(
+  const postState = state.stateTransition(
     blockEmptySig,
     {
       // ExecutionPayloadStatus.valid: Assume payload valid, it has been produced by a trusted EL
@@ -40,14 +40,14 @@ export function computeNewStateRoot(
     {metrics}
   );
 
-  const {attestations, syncAggregate, slashing} = postBlockState.proposerRewards;
+  const {attestations, syncAggregate, slashing} = postState.proposerRewards;
   const proposerReward = BigInt(attestations + syncAggregate + slashing);
 
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
     source: StateHashTreeRootSource.computeNewStateRoot,
   });
-  const newStateRoot = postBlockState.hashTreeRoot();
+  const newStateRoot = postState.hashTreeRoot();
   hashTreeRootTimer?.();
 
-  return {newStateRoot, proposerReward, postBlockState};
+  return {newStateRoot, proposerReward, postState};
 }

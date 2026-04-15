@@ -153,7 +153,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
   }
 
-  processBlockState(blockRootHex: RootHex, postState: IBeaconStateView): void {
+  processState(blockRootHex: RootHex, postState: IBeaconStateView): void {
     this.blockStateCache.add(postState);
     this.checkpointStateCache.processState(blockRootHex, postState).catch((e) => {
       this.logger.debug("Error processing block state", {blockRootHex, slot: postState.slot}, e);
