@@ -78,10 +78,10 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   ): CachedBeaconStateAllForks | void => {
     const fork = state.config.getForkSeq(state.slot);
     if (fork >= ForkSeq.gloas) {
-      return blockFns.processExecutionPayloadEnvelope(state as CachedBeaconStateGloas, testCase.signed_envelope, {
+      blockFns.processExecutionPayloadEnvelope(state as CachedBeaconStateGloas, testCase.signed_envelope, {
         verifySignature: true,
-        verifyStateRoot: true,
       });
+      return;
     }
     blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
       executionPayloadStatus: testCase.execution.execution_valid
@@ -144,7 +144,6 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
       const cachedState = createCachedBeaconStateTest(state, getConfig(fork, epoch));
 
       const postState = operationFn(cachedState, testcase);
-      // processExecutionPayloadEnvelope returns the postState, other operations mutate the state in-place and return void
       if (postState !== undefined) {
         postState.commit();
         return postState;
