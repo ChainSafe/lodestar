@@ -572,7 +572,6 @@ export class ProtoArray {
     currentSlot: Slot,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex,
     proposerBoostRoot: RootHex | null,
     executionStatus: PayloadExecutionStatus
   ): void {
@@ -617,6 +616,8 @@ export class ProtoArray {
     }
 
     // Create FULL variant as a child of PENDING (sibling to EMPTY)
+    // With deferred payload processing (consensus-specs#5094), FULL shares the same
+    // stateRoot as PENDING since envelope no longer produces a separate post-state
     const fullNode: ProtoNode = {
       ...pendingNode,
       parent: pendingIndex, // Points to own PENDING (same as EMPTY)
@@ -628,7 +629,6 @@ export class ProtoArray {
       executionStatus,
       executionPayloadBlockHash,
       executionPayloadNumber,
-      stateRoot: executionPayloadStateRoot,
     };
 
     const fullIndex = this.nodes.length;

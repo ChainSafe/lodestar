@@ -980,7 +980,6 @@ export class ForkChoice implements IForkChoice {
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex,
     executionStatus: PayloadExecutionStatus
   ): void {
     this.protoArray.onExecutionPayload(
@@ -988,7 +987,6 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.currentSlot,
       executionPayloadBlockHash,
       executionPayloadNumber,
-      executionPayloadStateRoot,
       this.proposerBoostRoot,
       executionStatus
     );
