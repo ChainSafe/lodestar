@@ -45,7 +45,7 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   getClosestHeadState(head: ProtoBlock): IBeaconStateView | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   pruneOnFinalized(finalizedEpoch: Epoch): void;
-  processBlockState(blockRootHex: RootHex, postState: IBeaconStateView): void;
+  processState(blockRootHex: RootHex, postState: IBeaconStateView): void;
   addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView): void;
   updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
