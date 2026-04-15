@@ -250,10 +250,10 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
   getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
-  processExecutionPayloadEnvelope(
+  verifyExecutionPayloadEnvelope(
     signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
     opts?: ProcessExecutionPayloadEnvelopeOpts
-  ): IBeaconStateView;
+  ): void;
 }
 
 /**
