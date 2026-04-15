@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu} from "@lodestar/params";
-import {SignedBeaconBlock, Slot, deneb, fulu, phase0} from "@lodestar/types";
+import {SignedBeaconBlock, Slot, deneb, fulu, gloas, phase0} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
@@ -22,12 +22,14 @@ export type DownloadByRangeRequests = {
   blocksRequest?: phase0.BeaconBlocksByRangeRequest;
   blobsRequest?: deneb.BlobSidecarsByRangeRequest;
   columnsRequest?: fulu.DataColumnSidecarsByRangeRequest;
+  envelopesRequest?: gloas.ExecutionPayloadEnvelopesByRangeRequest;
 };
 
 export type DownloadByRangeResponses = {
   blocks?: SignedBeaconBlock[];
   blobSidecars?: deneb.BlobSidecars;
   columnSidecars?: fulu.DataColumnSidecar[];
+  payloadEnvelopes?: gloas.SignedExecutionPayloadEnvelope[];
 };
 
 export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
@@ -198,8 +200,14 @@ export async function downloadByRange({
   blocksRequest,
   blobsRequest,
   columnsRequest,
+  envelopesRequest,
   peerDasMetrics,
-}: DownloadAndCacheByRangeProps): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
+}: DownloadAndCacheByRangeProps): Promise<
+  WarnResult<
+    {responses: ValidatedResponses; payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null},
+    DownloadByRangeError
+  >
+> {
   let response: DownloadByRangeResponses;
   try {
     response = await requestByRange({
@@ -208,6 +216,7 @@ export async function downloadByRange({
       blocksRequest,
       blobsRequest,
       columnsRequest,
+      envelopesRequest,
     });
   } catch (err) {
     throw new DownloadByRangeError({
@@ -217,17 +226,16 @@ export async function downloadByRange({
     });
   }
 
-  const validated = await validateResponses({
+  return validateResponses({
     config,
     batchBlocks,
     blocksRequest,
     blobsRequest,
     columnsRequest,
+    envelopesRequest,
     peerDasMetrics,
     ...response,
   });
-
-  return validated;
 }
 
 /**
@@ -239,6 +247,7 @@ export async function requestByRange({
   blocksRequest,
   blobsRequest,
   columnsRequest,
+  envelopesRequest,
 }: DownloadByRangeRequests & {
   network: INetwork;
   peerIdStr: PeerIdStr;
@@ -246,6 +255,7 @@ export async function requestByRange({
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
   let columnSidecars: undefined | fulu.DataColumnSidecar[];
+  let payloadEnvelopes: undefined | gloas.SignedExecutionPayloadEnvelope[];
 
   const requests: Promise<unknown>[] = [];
 
@@ -273,12 +283,21 @@ export async function requestByRange({
     );
   }
 
+  if (envelopesRequest) {
+    requests.push(
+      network.sendExecutionPayloadEnvelopesByRange(peerIdStr, envelopesRequest).then((envelopeResponse) => {
+        payloadEnvelopes = envelopeResponse;
+      })
+    );
+  }
+
   await Promise.all(requests);
 
   return {
     blocks,
     blobSidecars,
     columnSidecars,
+    payloadEnvelopes,
   };
 }
 
@@ -291,16 +310,23 @@ export async function validateResponses({
   blocksRequest,
   blobsRequest,
   columnsRequest,
+  envelopesRequest,
   blocks,
   blobSidecars,
   columnSidecars,
+  payloadEnvelopes,
   peerDasMetrics,
 }: DownloadByRangeRequests &
   DownloadByRangeResponses & {
     config: ChainForkConfig;
     batchBlocks?: IBlockInput[];
     peerDasMetrics?: BeaconMetrics["peerDas"] | null;
-  }): Promise<WarnResult<ValidatedResponses, DownloadByRangeError>> {
+  }): Promise<
+  WarnResult<
+    {responses: ValidatedResponses; payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null},
+    DownloadByRangeError
+  >
+> {
   // Blocks are always required for blob/column validation
   // If a blocksRequest is provided, blocks have just been downloaded
   // If no blocksRequest is provided, batchBlocks must have been provided from cache
@@ -326,8 +352,21 @@ export async function validateResponses({
   }
 
   const dataRequest = blobsRequest ?? columnsRequest;
+  if (!dataRequest && !envelopesRequest) {
+    return {result: {responses: validatedResponses, payloadEnvelopes: null}, warnings};
+  }
+
   if (!dataRequest) {
-    return {result: validatedResponses, warnings};
+    // Only envelope validation needed
+    let validatedPayloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null;
+    if (envelopesRequest) {
+      validatedPayloadEnvelopes = validateEnvelopesByRangeResponse(
+        validatedResponses.validatedBlocks ?? [],
+        batchBlocks,
+        payloadEnvelopes ?? []
+      );
+    }
+    return {result: {responses: validatedResponses, payloadEnvelopes: validatedPayloadEnvelopes}, warnings};
   }
 
   const blocksForDataValidation = getBlocksForDataValidation(
@@ -385,7 +424,17 @@ export async function validateResponses({
     warnings = validatedColumnSidecarsResult.warnings;
   }
 
-  return {result: validatedResponses, warnings};
+  // Validate envelopes if an envelopes request was made
+  let validatedPayloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null = null;
+  if (envelopesRequest) {
+    validatedPayloadEnvelopes = validateEnvelopesByRangeResponse(
+      validatedResponses.validatedBlocks ?? [],
+      batchBlocks,
+      payloadEnvelopes ?? []
+    );
+  }
+
+  return {result: {responses: validatedResponses, payloadEnvelopes: validatedPayloadEnvelopes}, warnings};
 }
 
 /**
@@ -882,6 +931,9 @@ export enum DownloadByRangeErrorCode {
   /** Cached block input type mismatches new data */
   MISMATCH_BLOCK_FORK = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_FORK",
   MISMATCH_BLOCK_INPUT_TYPE = "DOWNLOAD_BY_RANGE_ERROR_MISMATCH_BLOCK_INPUT_TYPE",
+
+  /** Envelope beaconBlockRoot does not match the block's root */
+  INVALID_ENVELOPE_BEACON_BLOCK_ROOT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_ENVELOPE_BEACON_BLOCK_ROOT",
 }
 
 export type DownloadByRangeErrorType =
@@ -973,6 +1025,61 @@ export type DownloadByRangeErrorType =
       blockRoot: string;
       expected: DAType;
       actual: DAType;
+    }
+  | {
+      code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT;
+      slot: Slot;
+      expected: string;
+      actual: string;
     };
 
 export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType> {}
+
+/**
+ * Validates SignedExecutionPayloadEnvelopes received for a range request.
+ * For each envelope whose slot appears in the downloaded blocks, verifies that
+ * envelope.message.beaconBlockRoot matches the corresponding block's root.
+ * Envelopes for slots not in the batch (orphaned payloads) are silently ignored.
+ */
+export function validateEnvelopesByRangeResponse(
+  validatedBlocks: ValidatedBlock[],
+  batchBlocks: IBlockInput[] | undefined,
+  payloadEnvelopes: gloas.SignedExecutionPayloadEnvelope[]
+): Map<Slot, gloas.SignedExecutionPayloadEnvelope> {
+  // Build a map of slot -> blockRoot for all blocks in the batch
+  const batchBlockRoots = new Map<Slot, Uint8Array>();
+  if (batchBlocks) {
+    for (const blockInput of batchBlocks) {
+      batchBlockRoots.set(blockInput.slot, fromHex(blockInput.blockRootHex));
+    }
+  }
+  for (const {block, blockRoot} of validatedBlocks) {
+    batchBlockRoots.set(block.message.slot, blockRoot);
+  }
+
+  const payloadEnvelopeMap = new Map<Slot, gloas.SignedExecutionPayloadEnvelope>();
+
+  for (const payloadEnvelope of payloadEnvelopes) {
+    const slot = payloadEnvelope.message.slot;
+    const batchBlockRoot = batchBlockRoots.get(slot);
+
+    // Envelopes for slots not in the batch are silently ignored (orphaned payloads)
+    if (batchBlockRoot === undefined) {
+      continue;
+    }
+
+    // Verify beaconBlockRoot matches the block's root
+    if (!byteArrayEquals(payloadEnvelope.message.beaconBlockRoot, batchBlockRoot)) {
+      throw new DownloadByRangeError({
+        code: DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT,
+        slot,
+        expected: toRootHex(batchBlockRoot),
+        actual: toRootHex(payloadEnvelope.message.beaconBlockRoot),
+      });
+    }
+
+    payloadEnvelopeMap.set(slot, payloadEnvelope);
+  }
+
+  return payloadEnvelopeMap;
+}

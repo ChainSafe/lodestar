@@ -161,7 +161,12 @@ export async function importExecutionPayload(
 
   // 5a. Pure envelope verification (no state mutation)
   try {
-    blockState.verifyExecutionPayloadEnvelope(signedEnvelope, {verifySignature: false});
+    // When validSignature is true, the envelope came from gossip/API where both
+    // signature and executionRequestsRoot were already verified — skip re-hashing
+    blockState.verifyExecutionPayloadEnvelope(signedEnvelope, {
+      verifySignature: false,
+      verifyExecutionRequestsRoot: !opts.validSignature,
+    });
   } catch (e) {
     throw new PayloadError(
       {

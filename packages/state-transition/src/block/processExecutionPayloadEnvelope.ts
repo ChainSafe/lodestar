@@ -8,6 +8,7 @@ import {verifySignatureSet} from "../util/signatureSets.js";
 
 export type ProcessExecutionPayloadEnvelopeOpts = {
   verifySignature?: boolean;
+  verifyExecutionRequestsRoot?: boolean;
 };
 
 /**
@@ -23,19 +24,20 @@ export function processExecutionPayloadEnvelope(
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   opts?: ProcessExecutionPayloadEnvelopeOpts
 ): void {
-  const {verifySignature = true} = opts ?? {};
+  const {verifySignature = true, verifyExecutionRequestsRoot = true} = opts ?? {};
   const envelope = signedEnvelope.message;
 
   if (verifySignature && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
     throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
   }
 
-  validateExecutionPayloadEnvelope(state, envelope);
+  validateExecutionPayloadEnvelope(state, envelope, verifyExecutionRequestsRoot);
 }
 
 function validateExecutionPayloadEnvelope(
   state: CachedBeaconStateGloas,
-  envelope: gloas.ExecutionPayloadEnvelope
+  envelope: gloas.ExecutionPayloadEnvelope,
+  verifyExecutionRequestsRoot: boolean
 ): void {
   const payload = envelope.payload;
 
@@ -100,11 +102,14 @@ function validateExecutionPayloadEnvelope(
   }
 
   // Verify execution_requests_root matches bid commitment (consensus-specs#5094)
-  const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
-  if (!byteArrayEquals(requestsRoot, committedBid.executionRequestsRoot)) {
-    throw new Error(
-      `Execution requests root mismatch envelope=${toRootHex(requestsRoot)} committedBid=${toRootHex(committedBid.executionRequestsRoot)}`
-    );
+  // Can be skipped if already verified during gossip validation
+  if (verifyExecutionRequestsRoot) {
+    const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+    if (!byteArrayEquals(requestsRoot, committedBid.executionRequestsRoot)) {
+      throw new Error(
+        `Execution requests root mismatch envelope=${toRootHex(requestsRoot)} committedBid=${toRootHex(committedBid.executionRequestsRoot)}`
+      );
+    }
   }
 
   // Verify consistency of the parent hash with respect to the previous execution payload
