@@ -1,8 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getExecutionPayloadEnvelopeSignatureSet, isStatePostGloas} from "@lodestar/state-transition";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils";
+import {fromHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -69,18 +69,20 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 /**
  * Import an execution payload envelope after all data is available.
  *
- * This function:
- * 1. Emits `execution_payload_available` if payload is for current slot
- * 2. Gets the ProtoBlock from fork choice
- * 3. Applies write-queue backpressure (waitForSpace) early, before verification
- * 4. Regenerates the block state
- * 5. Runs EL verification (notifyNewPayload) in parallel with signature verification and processExecutionPayloadEnvelope
- * 6. Persists verified payload envelope to hot DB
- * 7. Updates fork choice
- * 8. Caches the post-execution payload state
- * 9. Records metrics for column sources
- * 10. Emits `execution_payload` for recent enough payloads after successful import
+ * With deferred processing (consensus-specs#5094), the envelope is purely verified
+ * here — no state mutation. State effects are applied in the next block via
+ * processParentExecutionPayload.
  *
+ * Steps:
+ * 1. Emit `execution_payload_available` for payload attestation
+ * 2. Get the ProtoBlock from fork choice
+ * 3. Apply write-queue backpressure
+ * 4. Regenerate block state for envelope field validation
+ * 5. Run EL verification and signature verification in parallel, plus pure envelope verification
+ * 6. Persist verified payload envelope to hot DB
+ * 7. Update fork choice (no stateRoot — FULL shares PENDING's stateRoot)
+ * 8. Record metrics
+ * 9. Emit `execution_payload` event
  */
 export async function importExecutionPayload(
   this: BeaconChain,
@@ -138,7 +140,7 @@ export async function importExecutionPayload(
   }
 
   // 6. Run verification steps in parallel
-  const [execResult, signatureValid, postPayloadResult] = await Promise.all([
+  const [execResult, signatureValid] = await Promise.all([
     this.executionEngine.notifyNewPayload(
       fork,
       envelope.payload,
@@ -159,35 +161,27 @@ export async function importExecutionPayload(
           );
           return this.bls.verifySignatureSets([signatureSet]);
         })(),
-
-    // Signature verified separately above.
-    // State root check is done separately below with better error typing (matching block pipeline pattern).
-    (async () => {
-      try {
-        return {
-          postPayloadState: blockState.processExecutionPayloadEnvelope(signedEnvelope, {
-            verifySignature: false,
-            verifyStateRoot: false,
-          }),
-        };
-      } catch (e) {
-        throw new PayloadError(
-          {
-            code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-            message: (e as Error).message,
-          },
-          `State transition error: ${(e as Error).message}`
-        );
-      }
-    })(),
   ]);
 
-  // 5a. Check signature verification result
+  // 5a. Pure envelope verification (no state mutation)
+  try {
+    blockState.verifyExecutionPayloadEnvelope(signedEnvelope, {verifySignature: false});
+  } catch (e) {
+    throw new PayloadError(
+      {
+        code: PayloadErrorCode.STATE_TRANSITION_ERROR,
+        message: (e as Error).message,
+      },
+      `Envelope verification error: ${(e as Error).message}`
+    );
+  }
+
+  // 5b. Check signature verification result
   if (!signatureValid) {
     throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
   }
 
-  // 5b. Handle EL response
+  // 5c. Handle EL response
   switch (execResult.status) {
     case ExecutionPayloadStatus.VALID:
       break;
@@ -213,11 +207,7 @@ export async function importExecutionPayload(
       });
   }
 
-  // 5c. Compute post-payload state root
-  const postPayloadState = postPayloadResult.postPayloadState;
-  const postPayloadStateRoot = postPayloadState.hashTreeRoot();
-
-  // 6. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
+  // 6. Persist payload envelope to hot DB
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error(
@@ -228,23 +218,11 @@ export async function importExecutionPayload(
     }
   });
 
-  // 7. Update fork choice
-  this.forkChoice.onExecutionPayload(
-    blockRootHex,
-    blockHashHex,
-    envelope.payload.blockNumber,
-    toRootHex(postPayloadStateRoot),
-    toForkChoiceExecutionStatus(execResult.status)
-  );
+  // 7. Update fork choice — no separate stateRoot since envelope doesn't produce post-state
+  const execStatus = toForkChoiceExecutionStatus(execResult.status);
+  this.forkChoice.onExecutionPayload(blockRootHex, blockHashHex, envelope.payload.blockNumber, execStatus);
 
-  // 8. Cache payload state
-  this.regen.processState(blockRootHex, postPayloadState);
-  if (postPayloadState.slot % SLOTS_PER_EPOCH === 0) {
-    const {checkpoint} = postPayloadState.computeAnchorCheckpoint();
-    this.regen.addCheckpointState(checkpoint, postPayloadState);
-  }
-
-  // 9. Record metrics for payload envelope and column sources
+  // 8. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
