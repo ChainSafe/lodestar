@@ -73,6 +73,7 @@ import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
+import {PayloadEnvelopeInputSource} from "./blocks/payloadEnvelopeInput/types.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
@@ -1100,8 +1101,35 @@ export class BeaconChain implements IBeaconChain {
     return this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob(blocks, opts);
+  async processChainSegment(
+    blocks: IBlockInput[],
+    payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    opts?: ImportBlockOpts
+  ): Promise<void> {
+    await this.blockProcessor.processBlocksJob(blocks, opts);
+
+    // After blocks are imported, add downloaded envelopes to their PayloadEnvelopeInput
+    // and trigger processing. Each block's importBlock() already created a PayloadEnvelopeInput
+    // in seenPayloadEnvelopeInputCache.
+    if (payloadEnvelopes) {
+      for (const [slot, envelope] of payloadEnvelopes) {
+        const blockRootHex = toRootHex(envelope.message.beaconBlockRoot);
+        const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+        if (!payloadInput || payloadInput.hasPayloadEnvelope()) continue;
+
+        payloadInput.addPayloadEnvelope({
+          envelope,
+          source: PayloadEnvelopeInputSource.byRange,
+          seenTimestampSec: Date.now() / 1000,
+        });
+
+        if (payloadInput.isComplete()) {
+          this.processExecutionPayload(payloadInput, {validSignature: false}).catch((e) => {
+            this.logger.debug("Error processing envelope from range sync", {slot, root: blockRootHex}, e as Error);
+          });
+        }
+      }
+    }
   }
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
