@@ -39,6 +39,7 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
+  electra,
   gloas,
   isBlindedBeaconBlock,
   phase0,
@@ -868,6 +869,20 @@ export class BeaconChain implements IBeaconChain {
       (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
       null
     );
+  }
+
+  /**
+   * Get execution requests from parent's payload envelope for block production.
+   * If parent was FULL, returns the execution requests from the cached envelope.
+   * If parent was EMPTY or envelope unknown, returns empty execution requests.
+   */
+  getParentExecutionRequests(parentBlockRootHex: RootHex): electra.ExecutionRequests {
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      return payloadInput.getPayloadEnvelope().message.executionRequests;
+    }
+    // Parent was EMPTY or we don't have the envelope — return empty requests
+    return ssz.electra.ExecutionRequests.defaultValue();
   }
 
   async getExecutionPayloadEnvelope(

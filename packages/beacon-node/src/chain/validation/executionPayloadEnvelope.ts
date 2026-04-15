@@ -4,8 +4,8 @@ import {
   getExecutionPayloadEnvelopeSignatureSet,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {gloas} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {gloas, ssz} from "@lodestar/types";
+import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -95,6 +95,16 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.BUILDER_INDEX_MISMATCH,
       envelopeBuilderIndex: envelope.builderIndex,
       bidBuilderIndex: payloadInput.getBuilderIndex(),
+    });
+  }
+
+  // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
+  const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+  if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
+      envelopeRequestsRoot: toRootHex(requestsRoot),
+      bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
     });
   }
 
