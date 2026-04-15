@@ -4,9 +4,6 @@ import {Epoch, RootHex, phase0} from "@lodestar/types";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 
-/** TODO GLOAS: payloadPresent is ignored — remove after rolling back regen dual-state changes */
-export type CheckpointHexPayload = {epoch: Epoch; rootHex: RootHex; payloadPresent: boolean};
-
 /**
  * Lodestar currently keeps two state caches around.
  *

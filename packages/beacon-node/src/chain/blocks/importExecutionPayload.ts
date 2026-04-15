@@ -240,10 +240,10 @@ export async function importExecutionPayload(
   );
 
   // 8. Cache payload state
-  this.regen.processPayloadState(postPayloadState);
+  this.regen.processBlockState(blockRootHex, postPayloadState);
   if (postPayloadState.slot % SLOTS_PER_EPOCH === 0) {
     const {checkpoint} = postPayloadState.computeAnchorCheckpoint();
-    this.regen.addCheckpointState(checkpoint, postPayloadState, true);
+    this.regen.addCheckpointState(checkpoint, postPayloadState);
   }
 
   // 9. Record metrics for payload envelope and column sources

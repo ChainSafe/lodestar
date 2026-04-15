@@ -5,7 +5,7 @@ import {BeaconBlock, Epoch, RootHex, Slot, isGloasBeaconBlock, phase0} from "@lo
 import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {BlockStateCache, CheckpointHexPayload, CheckpointStateCache} from "../stateCache/types.js";
+import {BlockStateCache, CheckpointHex, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {
   IStateRegenerator,
@@ -125,14 +125,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return null;
   }
 
-  async getCheckpointStateOrBytes(cp: CheckpointHexPayload): Promise<IBeaconStateView | Uint8Array | null> {
+  async getCheckpointStateOrBytes(cp: CheckpointHex): Promise<IBeaconStateView | Uint8Array | null> {
     return this.checkpointStateCache.getStateOrBytes(cp);
   }
 
   /**
    * Get checkpoint state from cache
    */
-  getCheckpointStateSync(cp: CheckpointHexPayload): IBeaconStateView | null {
+  getCheckpointStateSync(cp: CheckpointHex): IBeaconStateView | null {
     return this.checkpointStateCache.get(cp);
   }
 
@@ -160,15 +160,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     });
   }
 
-  /**
-   * Process payload state for caching after importing execution payload.
-   */
-  processPayloadState(payloadState: IBeaconStateView): void {
-    // Add payload state to block state cache (keyed by payload state root)
-    this.blockStateCache.add(payloadState);
-  }
-
-  addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView, _payloadPresent: boolean): void {
+  addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView): void {
     this.checkpointStateCache.add(cp, item);
   }
 
@@ -205,7 +197,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     }
   }
 
-  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch, _payloadPresent: boolean): number | null {
+  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null {
     return this.checkpointStateCache.updatePreComputedCheckpoint(rootHex, epoch);
   }
 

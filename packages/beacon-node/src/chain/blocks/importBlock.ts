@@ -8,7 +8,6 @@ import {
   ForkChoiceErrorCode,
   NotReorgedReason,
   getSafeExecutionBlockHash,
-  isGloasBlock,
 } from "@lodestar/fork-choice";
 import {
   ForkPostAltair,
@@ -134,10 +133,6 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true
-  // Post-Gloas: blockSummary.payloadStatus is always PENDING, so payloadPresent = false (block state only, no payload processing yet)
-  const payloadPresent = !isGloasBlock(blockSummary);
-  // processState manages both block state and payload state variants together for memory/disk management
   this.regen.processBlockState(blockRootHex, postBlockState);
 
   // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
@@ -514,7 +509,7 @@ export async function importBlock(
     // Cache state to preserve epoch transition work
     const checkpointState = postBlockState;
     const cp = getCheckpointFromState(checkpointState);
-    this.regen.addCheckpointState(cp, checkpointState, payloadPresent);
+    this.regen.addCheckpointState(cp, checkpointState);
     // consumers should not mutate state ever
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
