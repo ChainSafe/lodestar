@@ -1153,6 +1153,12 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_attester_slashing_pool_size",
         help: "Current size of the AttesterSlashingPool",
       }),
+      deferredVoluntaryExitPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_deferred_voluntary_exit_pool_size",
+          help: "Current size of the DeferredVoluntaryExitPool",
+        }),
+      },
       proposerSlashingPoolSize: register.gauge({
         name: "lodestar_oppool_proposer_slashing_pool_size",
         help: "Current size of the ProposerSlashingPool",
