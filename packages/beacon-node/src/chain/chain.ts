@@ -5,7 +5,6 @@ import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithPayloadStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
-  BUILDER_INDEX_SELF_BUILD,
   EFFECTIVE_BALANCE_INCREMENT,
   type ForkPostFulu,
   type ForkPostGloas,
@@ -24,7 +23,6 @@ import {
   getEffectiveBalancesFromStateBytes,
   isStatePostAltair,
   isStatePostElectra,
-  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -93,8 +91,8 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {computeNewStateRoot, computePayloadEnvelopeStateRoot} from "./produceBlock/computeNewStateRoot.js";
-import {AssembledBlockType, BlockType, ProduceFullGloas, ProduceResult} from "./produceBlock/index.js";
+import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
@@ -1062,7 +1060,7 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    const {newStateRoot, proposerReward, postBlockState} = computeNewStateRoot(this.metrics, state, block);
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full
@@ -1071,26 +1069,9 @@ export class BeaconChain implements IBeaconChain {
     const blockRootHex = toRootHex(blockRoot);
 
     const fork = this.config.getForkName(slot);
-    if (isForkPostGloas(fork)) {
-      // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
-      if (produceResult.type !== BlockType.Full) {
-        throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
-      }
-
-      const gloasResult = produceResult as ProduceFullGloas;
-      const envelope: gloas.ExecutionPayloadEnvelope = {
-        payload: gloasResult.executionPayload,
-        executionRequests: gloasResult.executionRequests,
-        builderIndex: BUILDER_INDEX_SELF_BUILD,
-        beaconBlockRoot: blockRoot,
-        slot,
-        stateRoot: ZERO_HASH,
-      };
-      if (!isStatePostGloas(postBlockState)) {
-        throw Error(`Expected gloas+ post-state for execution payload envelope, got fork=${postBlockState.forkName}`);
-      }
-      const payloadEnvelopeStateRoot = computePayloadEnvelopeStateRoot(this.metrics, postBlockState, envelope);
-      gloasResult.payloadEnvelopeStateRoot = payloadEnvelopeStateRoot;
+    // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
+    if (isForkPostGloas(fork) && produceResult.type !== BlockType.Full) {
+      throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
     }
 
     // Track the produced block for consensus broadcast validations, later validation, etc.

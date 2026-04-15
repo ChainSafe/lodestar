@@ -111,12 +111,6 @@ export type ProduceFullGloas = {
   executionRequests: electra.ExecutionRequests;
   blobsBundle: BlobsBundle<ForkPostGloas>;
   cells: fulu.Cell[][];
-  /**
-   * Cached payload envelope state root computed during block production.
-   * This is the state root after running `processExecutionPayloadEnvelope` on the
-   * post-block state, and later used to construct the `ExecutionPayloadEnvelope`.
-   */
-  payloadEnvelopeStateRoot: Root;
 };
 export type ProduceFullFulu = {
   type: BlockType.Full;
