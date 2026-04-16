@@ -18,6 +18,7 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
+  type IBeaconStateViewGloas,
   computeTimeAtSlot,
   isParentBlockFull,
   isStatePostBellatrix,
@@ -609,6 +610,8 @@ export async function prepareExecutionPayload(
   chain: {
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
+    forkChoice?: IForkChoice;
+    seenPayloadEnvelopeInputCache?: {get(rootHex: string): {hasPayloadEnvelope(): boolean; getPayloadEnvelope(): gloas.SignedExecutionPayloadEnvelope} | undefined};
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -618,7 +621,40 @@ export async function prepareExecutionPayload(
   state: IBeaconStateViewBellatrix,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  const parentHash = state.latestBlockHash;
+  let parentHash = state.latestBlockHash;
+  let withdrawalsOverride: capella.Withdrawal[] | undefined;
+
+  // For Gloas: determine FULL vs EMPTY parent per spec's prepare_execution_payload
+  // If extending FULL parent: apply parent payload to get correct withdrawals and use bid.blockHash
+  // If EMPTY parent: use state.payloadExpectedWithdrawals and bid.parentBlockHash
+  if (isForkPostGloas(fork) && chain.forkChoice && chain.seenPayloadEnvelopeInputCache) {
+    const gloasState = state as unknown as {
+      latestExecutionPayloadBid: {
+        slot: number;
+        blockHash: Uint8Array;
+        parentBlockHash: Uint8Array;
+        builderIndex: number;
+        value: number;
+        feeRecipient: Uint8Array;
+      };
+    };
+    const parentRootHex = toRootHex(parentBlockRoot);
+
+    if (chain.forkChoice.shouldExtendPayload(parentRootHex)) {
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(parentRootHex);
+      if (payloadInput?.hasPayloadEnvelope()) {
+        // Build on FULL variant: apply parent payload to compute correct withdrawals,
+        // use bid.blockHash as EL head (per spec's prepare_execution_payload)
+        const gloasView = state as unknown as IBeaconStateViewGloas;
+        withdrawalsOverride = gloasView.getExpectedWithdrawalsForFullParent(payloadInput.getPayloadEnvelope());
+        parentHash = gloasState.latestExecutionPayloadBid.blockHash;
+      }
+    } else {
+      // EMPTY parent: use bid.parentBlockHash as the EL head
+      parentHash = gloasState.latestExecutionPayloadBid.parentBlockHash;
+    }
+  }
+
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
@@ -653,6 +689,7 @@ export async function prepareExecutionPayload(
       prepareSlot: state.slot,
       parentBlockRoot,
       feeRecipient: suggestedFeeRecipient,
+      withdrawalsOverride,
     });
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
@@ -752,11 +789,13 @@ function preparePayloadAttributes(
     prepareSlot,
     parentBlockRoot,
     feeRecipient,
+    withdrawalsOverride,
   }: {
     prepareState: IBeaconStateViewBellatrix;
     prepareSlot: Slot;
     parentBlockRoot: Root;
     feeRecipient: string;
+    withdrawalsOverride?: capella.Withdrawal[];
   }
 ): SSEPayloadAttributes["payloadAttributes"] {
   const timestamp = computeTimeAtSlot(chain.config, prepareSlot, prepareState.genesisTime);
@@ -772,15 +811,15 @@ function preparePayloadAttributes(
       throw new Error("Expected Capella state for withdrawals");
     }
 
-    if (isStatePostGloas(prepareState) && !isParentBlockFull(prepareState)) {
-      // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
-      // already deducted from CL balances but never credited on the EL (the envelope
-      // was not delivered). The next payload must carry those same withdrawals to
-      // restore CL/EL consistency, otherwise validators permanently lose that balance.
+    if (withdrawalsOverride) {
+      // FULL parent: withdrawals computed from state with parent payload applied
+      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = withdrawalsOverride;
+    } else if (isStatePostGloas(prepareState) && !isParentBlockFull(prepareState)) {
+      // EMPTY parent: use pre-computed expected withdrawals from state
       (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
         prepareState.payloadExpectedWithdrawals;
     } else {
-      // withdrawals logic is now fork aware as it changes on electra fork post capella
+      // Pre-Gloas or Gloas with full parent but no override (shouldn't happen in normal flow)
       (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
         prepareState.getExpectedWithdrawals().expectedWithdrawals;
     }

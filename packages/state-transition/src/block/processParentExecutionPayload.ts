@@ -46,9 +46,21 @@ export function processParentExecutionPayload(
  *
  * Spec: apply_parent_execution_payload
  */
-function applyParentExecutionPayload(
+/**
+ * Settle a builder payment at the given index.
+ * Spec: settle_builder_payment
+ */
+function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: number): void {
+  const payment = state.builderPendingPayments.get(paymentIndex).clone();
+  if (payment.withdrawal.amount > 0) {
+    state.builderPendingWithdrawals.push(payment.withdrawal);
+  }
+  state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
+}
+
+export function applyParentExecutionPayload(
   state: CachedBeaconStateGloas,
-  parentBid: {slot: number; blockHash: Uint8Array; builderIndex: number},
+  parentBid: {slot: number; blockHash: Uint8Array; builderIndex: number; value: number; feeRecipient: Uint8Array},
   requests: electra.ExecutionRequests
 ): void {
   const fork = state.config.getForkSeq(state.slot);
@@ -73,23 +85,21 @@ function applyParentExecutionPayload(
     processConsolidationRequest(state, consolidation);
   }
 
-  // Queue the builder payment
-  let paymentIndex: number | null;
+  // Settle the builder payment
   if (parentEpoch === currentEpoch) {
-    paymentIndex = SLOTS_PER_EPOCH + (parentSlot % SLOTS_PER_EPOCH);
+    settleBuilderPayment(state, SLOTS_PER_EPOCH + (parentSlot % SLOTS_PER_EPOCH));
   } else if (parentEpoch === currentEpoch - 1) {
-    paymentIndex = parentSlot % SLOTS_PER_EPOCH;
-  } else {
-    // Parent is older than previous epoch — payment already settled/evicted
-    paymentIndex = null;
-  }
-
-  if (paymentIndex !== null) {
-    const payment = state.builderPendingPayments.get(paymentIndex).clone();
-    if (payment.withdrawal.amount > 0) {
-      state.builderPendingWithdrawals.push(payment.withdrawal);
-    }
-    state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
+    settleBuilderPayment(state, parentSlot % SLOTS_PER_EPOCH);
+  } else if (parentBid.value > 0) {
+    // Parent is older than previous epoch — payment entry already settled/evicted.
+    // Directly append the withdrawal to ensure the builder gets paid.
+    state.builderPendingWithdrawals.push(
+      ssz.gloas.BuilderPendingWithdrawal.toViewDU({
+        feeRecipient: parentBid.feeRecipient,
+        amount: parentBid.value,
+        builderIndex: parentBid.builderIndex,
+      })
+    );
   }
 
   // Update parent payload availability and latest block hash

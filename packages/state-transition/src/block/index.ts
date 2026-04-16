@@ -14,7 +14,6 @@ import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processExecutionPayloadBid} from "./processExecutionPayloadBid.js";
-import {processExecutionPayloadEnvelope} from "./processExecutionPayloadEnvelope.js";
 import {processOperations} from "./processOperations.js";
 import {processParentExecutionPayload} from "./processParentExecutionPayload.js";
 import {processPayloadAttestation} from "./processPayloadAttestation.js";
@@ -33,7 +32,6 @@ export {
   processWithdrawals,
   processExecutionPayloadBid,
   processPayloadAttestation,
-  processExecutionPayloadEnvelope,
   processParentExecutionPayload,
 };
 

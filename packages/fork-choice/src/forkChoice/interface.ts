@@ -230,6 +230,12 @@ export interface IForkChoice {
    */
   hasPayloadUnsafe(blockRoot: Root): boolean;
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
+  /**
+   * Whether to extend the payload for a given block root.
+   * Checks PTC timeliness and data availability, with fallback logic.
+   * Spec: gloas/fork-choice.md#should_extend_payload
+   */
+  shouldExtendPayload(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
