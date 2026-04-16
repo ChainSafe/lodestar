@@ -54,7 +54,6 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView, payloadPresent: boolean): void;
   updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch, payloadPresent: boolean): number | null;
-  upgradeForGloas(epoch: Epoch): void;
 }
 
 /**
