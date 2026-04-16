@@ -4679,18 +4679,23 @@
 - name: get_upcoming_proposal_slots#gloas
   sources: []
   spec: |
-    <spec fn="get_upcoming_proposal_slots" fork="gloas" hash="802ba480">
+    <spec fn="get_upcoming_proposal_slots" fork="gloas" hash="87d7a07d">
     def get_upcoming_proposal_slots(
         state: BeaconState, validator_index: ValidatorIndex
     ) -> Sequence[Slot]:
         """
-        Get the slots in the next epoch for which ``validator_index`` is proposing.
+        Get the future slots in the current epoch and the slots in the next
+        epoch for which ``validator_index`` is proposing.
         """
-        return [
-            Slot(compute_start_slot_at_epoch(get_current_epoch(state) + Epoch(1)) + offset)
-            for offset, proposer_index in enumerate(state.proposer_lookahead[SLOTS_PER_EPOCH:])
-            if validator_index == proposer_index
-        ]
+        current_epoch_start_slot = compute_start_slot_at_epoch(get_current_epoch(state))
+        upcoming_proposal_slots = []
+        for offset, proposer_index in enumerate(state.proposer_lookahead):
+            slot = Slot(current_epoch_start_slot + offset)
+            if slot <= state.slot:
+                continue
+            if validator_index == proposer_index:
+                upcoming_proposal_slots.append(slot)
+        return upcoming_proposal_slots
     </spec>
 
 - name: get_validator_activation_churn_limit#deneb
