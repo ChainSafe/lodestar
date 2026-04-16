@@ -48,7 +48,7 @@ import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
-import {toCheckpointHexPayload} from "../stateCache/persistentCheckpointsCache.js";
+import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
@@ -519,7 +519,7 @@ export async function importBlock(
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
-    this.logger.verbose("Checkpoint processed", toCheckpointHexPayload(cp, payloadPresent));
+    this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
     const activeValidatorsCount = checkpointState.activeValidatorCount;
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
@@ -537,7 +537,7 @@ export async function importBlock(
       const justifiedEpoch = justifiedCheckpoint.epoch;
       const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
       if (justifiedEpoch > preJustifiedEpoch) {
-        this.logger.verbose("Checkpoint justified", toCheckpointHexPayload(justifiedCheckpoint, payloadPresent));
+        this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
         this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
         this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
       }
@@ -551,7 +551,7 @@ export async function importBlock(
           state: toRootHex(checkpointState.hashTreeRoot()),
           executionOptimistic: false,
         });
-        this.logger.verbose("Checkpoint finalized", toCheckpointHexPayload(finalizedCheckpoint, payloadPresent));
+        this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
         this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
       }
     }

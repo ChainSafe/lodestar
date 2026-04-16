@@ -2,14 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {
-  CheckpointWithPayloadStatus,
-  IForkChoice,
-  PayloadStatus,
-  ProtoBlock,
-  UpdateHeadOpt,
-  getCheckpointPayloadStatus,
-} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   BUILDER_INDEX_SELF_BUILD,
@@ -390,8 +383,7 @@ export class BeaconChain implements IBeaconChain {
     const {checkpoint} = anchorState.computeAnchorCheckpoint();
     blockStateCache.add(anchorState);
     blockStateCache.setHeadState(anchorState);
-    const payloadPresent = getCheckpointPayloadStatus(config, anchorState, checkpoint.epoch) === PayloadStatus.FULL;
-    checkpointStateCache.add(checkpoint, anchorState, payloadPresent);
+    checkpointStateCache.add(checkpoint, anchorState);
 
     const forkChoice = initializeForkChoice(
       config,
@@ -685,7 +677,7 @@ export class BeaconChain implements IBeaconChain {
 
     // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint for backwards compatibility.
     // because pre-gloas we always store FULL checkpoint state.
-    const persistedKey = checkpointToDatastoreKey(checkpoint, true);
+    const persistedKey = checkpointToDatastoreKey(checkpoint);
     return this.cpStateDatastore.read(persistedKey);
   }
 
@@ -1470,10 +1462,6 @@ export class BeaconChain implements IBeaconChain {
 
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
-
-    if (epoch === this.config.GLOAS_FORK_EPOCH) {
-      this.regen.upgradeForGloas(epoch);
-    }
 
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);

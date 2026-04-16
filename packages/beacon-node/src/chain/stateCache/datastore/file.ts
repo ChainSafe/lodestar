@@ -1,13 +1,12 @@
 import path from "node:path";
-import {phase0} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
-import {checkpointToDatastoreKey, getLatestSafeDatastoreKey} from "./db.js";
+import {getLatestSafeDatastoreKey} from "./db.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 
 const CHECKPOINT_STATES_FOLDER = "checkpoint_states";
-/** 41 bytes (40 checkpoint + 1 payloadPresent) = 82 hex chars + "0x" prefix = 84 */
-const CHECKPOINT_FILE_NAME_LENGTH = 84;
+const CHECKPOINT_FILE_NAME_LENGTH = 82;
 
 /**
  * Implementation of CPStateDatastore using file system, this is beneficial for debugging.
@@ -29,8 +28,8 @@ export class FileCPStateDatastore implements CPStateDatastore {
     }
   }
 
-  async write(cpKey: phase0.Checkpoint, stateBytes: Uint8Array, payloadPresent: boolean): Promise<DatastoreKey> {
-    const serializedCheckpoint = checkpointToDatastoreKey(cpKey, payloadPresent);
+  async write(cpKey: phase0.Checkpoint, stateBytes: Uint8Array): Promise<DatastoreKey> {
+    const serializedCheckpoint = ssz.phase0.Checkpoint.serialize(cpKey);
     const filePath = path.join(this.folderPath, toHex(serializedCheckpoint));
     await writeIfNotExist(filePath, stateBytes);
     return serializedCheckpoint;
