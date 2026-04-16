@@ -11,7 +11,12 @@ import {
 import {BuilderIndex, ValidatorIndex, capella, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
-import {convertBuilderIndexToValidatorIndex, convertValidatorIndexToBuilderIndex, isBuilderIndex} from "../util/gloas.js";
+import {
+  convertBuilderIndexToValidatorIndex,
+  convertValidatorIndexToBuilderIndex,
+  isBuilderIndex,
+  isParentBlockFull,
+} from "../util/gloas.js";
 import {
   decreaseBalance,
   getMaxEffectiveBalance,
@@ -26,8 +31,12 @@ export function processWithdrawals(
   state: CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas,
   payload?: capella.FullOrBlindedExecutionPayload
 ): void {
-  // After consensus-specs#5094, processParentExecutionPayload has already handled parent effects
-  // before processWithdrawals is called, so no early return needed for Gloas.
+  // Return early if the parent block is empty.
+  // After processParentExecutionPayload runs, latestBlockHash is updated only if parent was FULL.
+  // If still mismatched, the parent was EMPTY and no withdrawals should be computed.
+  if (fork >= ForkSeq.gloas && !isParentBlockFull(state as CachedBeaconStateGloas)) {
+    return;
+  }
 
   // processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas (EIP-7732)
   // processedPartialWithdrawalsCount is withdrawals coming from EL since electra (EIP-7002)
