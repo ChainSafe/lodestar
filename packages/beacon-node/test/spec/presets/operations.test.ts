@@ -1,6 +1,6 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -72,18 +72,11 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   execution_payload: (
     state,
     testCase: {
-      body: bellatrix.BeaconBlockBody | gloas.BeaconBlockBody;
-      signed_envelope: gloas.SignedExecutionPayloadEnvelope;
+      body: bellatrix.BeaconBlockBody;
       execution: {execution_valid: boolean};
     }
-  ): CachedBeaconStateAllForks | void => {
+  ) => {
     const fork = state.config.getForkSeq(state.slot);
-    if (fork >= ForkSeq.gloas) {
-      blockFns.processExecutionPayloadEnvelope(state as CachedBeaconStateGloas, testCase.signed_envelope, {
-        verifySignature: true,
-      });
-      return;
-    }
     blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
       executionPayloadStatus: testCase.execution.execution_valid
         ? ExecutionPayloadStatus.valid
@@ -185,7 +178,6 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         deposit_request: ssz.electra.DepositRequest,
         consolidation_request: ssz.electra.ConsolidationRequest,
         payload_attestation: ssz.gloas.PayloadAttestation,
-        signed_envelope: ssz.gloas.SignedExecutionPayloadEnvelope,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,

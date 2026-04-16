@@ -1,6 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
-import {getExecutionPayloadEnvelopeSignatureSet, isStatePostGloas} from "@lodestar/state-transition";
+import {isStatePostGloas} from "@lodestar/state-transition";
+import {verifyExecutionPayloadEnvelope, verifyExecutionPayloadEnvelopeSignature} from "./verifyExecutionPayloadEnvelope.js";
 import {fromHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -147,24 +148,21 @@ export async function importExecutionPayload(
 
     opts.validSignature === true
       ? Promise.resolve(true)
-      : (async () => {
-          const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
-            this.config,
-            this.pubkeyCache,
-            blockState,
-            signedEnvelope,
-            payloadInput.proposerIndex
-          );
-          return this.bls.verifySignatureSets([signatureSet]);
-        })(),
+      : verifyExecutionPayloadEnvelopeSignature(
+          this.config,
+          blockState,
+          this.pubkeyCache,
+          signedEnvelope,
+          payloadInput.proposerIndex,
+          this.bls
+        ),
   ]);
 
-  // 5a. Pure envelope verification (no state mutation)
+  // 5a. Verify envelope fields against state (spec: verify_execution_payload_envelope)
   try {
     // When validSignature is true, the envelope came from gossip/API where both
     // signature and executionRequestsRoot were already verified — skip re-hashing
-    blockState.verifyExecutionPayloadEnvelope(signedEnvelope, {
-      verifySignature: false,
+    verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
       verifyExecutionRequestsRoot: !opts.validSignature,
     });
   } catch (e) {

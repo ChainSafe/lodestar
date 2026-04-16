@@ -28,8 +28,7 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
-import {processExecutionPayloadEnvelope} from "../block/index.js";
-import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.js";
+import {applyParentExecutionPayload} from "../block/processParentExecutionPayload.js";
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
@@ -784,14 +783,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return new BeaconStateView(newState);
   }
 
-  verifyExecutionPayloadEnvelope(
-    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    opts?: ProcessExecutionPayloadEnvelopeOpts
-  ): void {
-    const fork = this.config.getForkName(this.cachedState.slot);
-    if (!isForkPostGloas(fork)) {
-      throw Error(`verifyExecutionPayloadEnvelope is only available for gloas+ forks, got fork=${fork}`);
+  getExpectedWithdrawalsForFullParent(envelope: gloas.SignedExecutionPayloadEnvelope): capella.Withdrawal[] {
+    const fork = this.config.getForkSeq(this.cachedState.slot);
+    if (!isForkPostGloas(this.config.getForkName(this.cachedState.slot))) {
+      throw Error("getExpectedWithdrawalsForFullParent is only available for gloas+ forks");
     }
-    processExecutionPayloadEnvelope(this.cachedState as CachedBeaconStateGloas, signedEnvelope, opts);
+    const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
+    applyParentExecutionPayload(stateCopy, stateCopy.latestExecutionPayloadBid, envelope.message.executionRequests);
+    const {expectedWithdrawals} = getExpectedWithdrawals(fork, stateCopy);
+    return expectedWithdrawals;
   }
 }
