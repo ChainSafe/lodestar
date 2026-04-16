@@ -592,7 +592,13 @@ const forkChoiceTest =
           // which conditionally suppresses proposer boost when the parent is weak and from the previous slot.
           // Pre-Gloas forks always apply boost; Gloas adds is_head_weak + equivocation checks.
           (name.includes("gloas") &&
-            name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch")),
+            name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch")) ||
+          // TODO GLOAS: These two tests are affected by the wrong proposer boost cutoff time from the 
+          // consensus-specs and thus have wrong expectation of proposer boost. Our implementation 
+          // should pass these two tests after https://github.com/ethereum/consensus-specs/pull/5095 
+          // is included the spec release.
+          (name.includes("gloas/fork_choice/on_block") &&
+            (name.endsWith("proposer_boost") || name.endsWith("proposer_boost_is_first_block"))),
       },
     };
   };
