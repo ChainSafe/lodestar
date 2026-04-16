@@ -73,6 +73,7 @@ export class PayloadEnvelopeInput {
   private timeCreatedSec: number;
 
   private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
+  private readonly allDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
   private readonly columnsDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
 
   state: PayloadEnvelopeInputState;
@@ -97,6 +98,7 @@ export class PayloadEnvelopeInput {
     this.custodyColumns = props.custodyColumns;
     this.timeCreatedSec = props.timeCreatedSec;
     this.payloadEnvelopeDataPromise = createPromise();
+    this.allDataPromise = createPromise();
     this.columnsDataPromise = createPromise();
 
     const noBlobs = props.bid.blobKzgCommitments.length === 0;
@@ -105,6 +107,7 @@ export class PayloadEnvelopeInput {
 
     if (hasAllData) {
       this.state = {hasPayload: false, hasAllData: true, hasComputedAllData: true};
+      this.allDataPromise.resolve(this.getSampledColumns());
       this.columnsDataPromise.resolve(this.getSampledColumns());
     } else {
       this.state = {hasPayload: false, hasAllData: false, hasComputedAllData: false};
@@ -201,6 +204,12 @@ export class PayloadEnvelopeInput {
 
     if (!hasAllData) {
       return true;
+    }
+
+    // Resolve allDataPromise on the first transition to hasAllData (either sampled-complete or
+    // reconstruction-threshold branch). Guarded so it fires exactly once.
+    if (hasAllData) {
+      this.allDataPromise.resolve(sampledColumns);
     }
 
     if (hasComputedAllData) {
@@ -313,6 +322,13 @@ export class PayloadEnvelopeInput {
 
   hasComputedAllData(): boolean {
     return this.state.hasComputedAllData;
+  }
+
+  waitForAllData(timeout: number, signal?: AbortSignal): Promise<gloas.DataColumnSidecar[]> {
+    if (this.state.hasAllData) {
+      return Promise.resolve(this.getSampledColumns());
+    }
+    return withTimeout(() => this.allDataPromise.promise, timeout, signal);
   }
 
   waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<gloas.DataColumnSidecar[]> {

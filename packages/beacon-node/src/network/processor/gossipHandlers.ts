@@ -745,13 +745,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           });
         }
 
-        chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
-          chain.logger.debug(
-            "Error processing execution payload from gossip data column",
-            {slot: dataColumnSlot, root: payloadInput.blockRootHex},
-            e as Error
-          );
-        });
+        // NOTE: we do NOT call chain.processExecutionPayload here. That is triggered only by
+        // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
+        // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
       } else {
         if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {
           throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
