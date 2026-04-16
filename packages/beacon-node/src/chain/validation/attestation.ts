@@ -325,6 +325,7 @@ async function validateAttestationNoSignatureCheck(
         if (block !== null && attData.index === 1 && !chain.seenPayloadEnvelope(toRootHex(attData.beaconBlockRoot))) {
           throw new AttestationError(GossipAction.IGNORE, {
             code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+            beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
           });
         }
       } else {

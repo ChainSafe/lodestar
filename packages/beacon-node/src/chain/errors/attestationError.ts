@@ -190,7 +190,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.ATTESTER_NOT_IN_COMMITTEE}
   | {code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE; attDataIndex: number}
   | {code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT}
-  | {code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN};
+  | {code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN; beaconBlockRoot: RootHex};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {
