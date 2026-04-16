@@ -10,6 +10,7 @@ import {
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
   ExecutionPayloadStatus,
+  processSlots,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
@@ -115,6 +116,13 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
 
   execution_payload_bid: (state, testCase: {block: gloas.BeaconBlock}) => {
     blockFns.processExecutionPayloadBid(state as CachedBeaconStateGloas, testCase.block);
+  },
+
+  parent_execution_payload: (state, testCase: {block: gloas.BeaconBlock}): CachedBeaconStateAllForks => {
+    // Spec test calls process_slots then process_parent_execution_payload
+    const postState = processSlots(state, testCase.block.slot);
+    blockFns.processParentExecutionPayload(postState as CachedBeaconStateGloas, testCase.block);
+    return postState;
   },
 
   payload_attestation: (state, testCase: {payload_attestation: gloas.PayloadAttestation}) => {
