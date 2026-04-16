@@ -208,7 +208,7 @@ export class PayloadEnvelopeInput {
 
     // Resolve allDataPromise on the first transition to hasAllData (either sampled-complete or
     // reconstruction-threshold branch). Guarded so it fires exactly once.
-    if (hasAllData) {
+    if (!this.state.hasAllData && hasAllData) {
       this.allDataPromise.resolve(sampledColumns);
     }
 
