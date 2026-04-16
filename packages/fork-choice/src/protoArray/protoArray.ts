@@ -114,6 +114,22 @@ export class ProtoArray {
     // Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/fork-choice.md#modified-get_forkchoice_store
     if (protoArray.ptcVotes.has(block.blockRoot)) {
       protoArray.ptcVotes.set(block.blockRoot, BitArray.fromBoolArray(Array.from({length: PTC_SIZE}, () => true)));
+
+      // Anchor block must have FULL variant per spec get_forkchoice_store:
+      // payload_states = {anchor_root: anchor_state.copy()}
+      // This means the anchor's "payload" is considered received (the anchor state IS the post-payload state).
+      // Without FULL, blocks extending FULL from the anchor would be orphaned.
+      if (block.executionPayloadBlockHash !== null) {
+        protoArray.onExecutionPayload(
+          block.blockRoot,
+          currentSlot,
+          block.executionPayloadBlockHash,
+          (block as {executionPayloadNumber?: number}).executionPayloadNumber ?? 0,
+          block.stateRoot,
+          null,
+          ExecutionStatus.Valid
+        );
+      }
     }
 
     return protoArray;
