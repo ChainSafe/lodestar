@@ -1082,6 +1082,10 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.hasPayload(blockRoot);
   }
 
+  shouldExtendPayload(blockRoot: RootHex): boolean {
+    return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
+  }
+
   /**
    * Returns a MUTABLE `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */

@@ -41,7 +41,6 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
-import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.js";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
@@ -254,10 +253,12 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
   getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
-  verifyExecutionPayloadEnvelope(
-    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    opts?: ProcessExecutionPayloadEnvelopeOpts
-  ): void;
+  /**
+   * Compute expected withdrawals as if the parent was FULL.
+   * Clones the state, applies parent payload effects, then computes withdrawals.
+   * Used by prepare_execution_payload when building on FULL parent.
+   */
+  getExpectedWithdrawalsForFullParent(envelope: gloas.SignedExecutionPayloadEnvelope): capella.Withdrawal[];
 }
 
 /**

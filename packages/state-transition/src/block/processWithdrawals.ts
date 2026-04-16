@@ -50,7 +50,7 @@ export function processWithdrawals(
   } = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
-  // After gloas, withdrawals are verified later in processExecutionPayloadEnvelope
+  // After gloas, withdrawals are verified later in verifyExecutionPayloadEnvelope
   if (fork < ForkSeq.gloas) {
     if (payload === undefined) {
       throw Error("payload is required for pre-gloas processWithdrawals");
