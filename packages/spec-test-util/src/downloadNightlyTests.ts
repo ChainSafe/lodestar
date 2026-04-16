@@ -20,9 +20,12 @@ async function ghApiFetch<T>(endpoint: string, token: string): Promise<T> {
 }
 
 async function resolveNightlyRunId(repo: string, token: string, date?: string, branch?: string): Promise<number> {
-  const query = "status=success&per_page=1" + (branch ? `&branch=${branch}` : "") + (date ? `&created=${date}` : "");
-  const {workflow_runs} = await ghApiFetch<WorkflowRunsResponse>(
-    `/repos/${repo}/actions/workflows/tests.yml/runs?${query}`,
+  const params = new URLSearchParams({status: "success", per_page: "1"});
+  if (branch) params.append("branch", branch);
+  if (date) params.append("created", date);
+
+  const { workflow_runs } = await ghApiFetch<WorkflowRunsResponse>(
+    `/repos/${repo}/actions/workflows/tests.yml/runs?${params}`,
     token
   );
 
@@ -50,10 +53,7 @@ export async function downloadNightlyTests(
   const runId = await resolveNightlyRunId(repo, token, resolvedDate, opts.branch);
   log(`Resolved nightly${resolvedDate ? ` ${resolvedDate}` : ""} to run ${runId}`);
 
-  const {artifacts} = await ghApiFetch<ArtifactsListResponse>(
-    `/repos/${repo}/actions/runs/${runId}/artifacts`,
-    token
-  );
+  const {artifacts} = await ghApiFetch<ArtifactsListResponse>(`/repos/${repo}/actions/runs/${runId}/artifacts`, token);
 
   const urlByTest: Record<string, string> = {};
   const available: string[] = [];
