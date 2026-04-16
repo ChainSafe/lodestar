@@ -1,19 +1,19 @@
 import path from "node:path";
-import {getHeapStatistics} from "node:v8";
-import {SignableENR} from "@chainsafe/enr";
-import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
-import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
-import {LevelDbController} from "@lodestar/db/controller/level";
-import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
-import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {createBeaconStateView, getPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
-import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
-import {ProcessShutdownCallback} from "@lodestar/validator";
-import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
-import {getNetworkBootnodes, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
-import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
-import {LogArgs} from "../../options/logOptions.js";
+import { getHeapStatistics } from "node:v8";
+import { SignableENR } from "@chainsafe/enr";
+import { hasher } from "@chainsafe/persistent-merkle-tree";
+import { BeaconDb, BeaconNode } from "@lodestar/beacon-node";
+import { ChainForkConfig, createBeaconConfig } from "@lodestar/config";
+import { LevelDbController } from "@lodestar/db/controller/level";
+import { LoggerNode, getNodeLogger } from "@lodestar/logger/node";
+import { ACTIVE_PRESET, PresetName } from "@lodestar/params";
+import { createBeaconStateView, getPubkeyCache, syncPubkeys } from "@lodestar/state-transition";
+import { ErrorAborted, bytesToInt, formatBytes } from "@lodestar/utils";
+import { ProcessShutdownCallback } from "@lodestar/validator";
+import { BeaconNodeOptions, getBeaconConfigFromArgs } from "../../config/index.js";
+import { getNetworkBootnodes, isKnownNetworkName, readBootnodes } from "../../networks/index.js";
+import { GlobalArgs, parseBeaconNodeArgs } from "../../options/index.js";
+import { LogArgs } from "../../options/logOptions.js";
 import {
   cleanOldLogFiles,
   mkdir,
@@ -22,11 +22,11 @@ import {
   pruneOldFilesInDir,
   writeFile600Perm,
 } from "../../util/index.js";
-import {getVersionData} from "../../util/version.js";
-import {initBeaconState} from "./initBeaconState.js";
-import {initPrivateKeyAndEnr} from "./initPeerIdAndEnr.js";
-import {BeaconArgs} from "./options.js";
-import {getBeaconPaths} from "./paths.js";
+import { getVersionData } from "../../util/version.js";
+import { initBeaconState } from "./initBeaconState.js";
+import { initPrivateKeyAndEnr } from "./initPeerIdAndEnr.js";
+import { BeaconArgs } from "./options.js";
+import { getBeaconPaths } from "./paths.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -36,7 +36,7 @@ const EIGHT_GB = 8 * 1024 * 1024 * 1024;
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
-  const {config, options, beaconPaths, network, version, commit, privateKey, logger} = await beaconHandlerInit(args);
+  const { config, options, beaconPaths, network, version, commit, privateKey, logger } = await beaconHandlerInit(args);
 
   if (hasher.name !== "hashtree") {
     logger.warn(`hashtree is not supported, using hasher ${hasher.name}`);
@@ -56,7 +56,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   const abortController = new AbortController();
 
-  logger.info("Lodestar", {network, version, commit});
+  logger.info("Lodestar", { network, version, commit });
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
   // forkchoice errors
   const processShutdownCallback: ProcessShutdownCallback = (err) => {
@@ -66,8 +66,8 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
-  const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
-  logger.info("Connected to LevelDB database", {path: options.db.name});
+  const db = new BeaconDb(config, await LevelDbController.create(options.db, { metrics: null, logger }));
+  logger.info("Connected to LevelDB database", { path: options.db.name });
 
   // BeaconNode setup
   try {
@@ -82,8 +82,8 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     pubkeyCache.ensureCapacity(anchorState.validators.length);
     syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
     const anchorStateView = args["chain.nativeStateView"]
-      ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
-      : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
+      ? createBeaconStateView({ useNative: true, stateBytes: anchorStateBytes })
+      : createBeaconStateView({ useNative: false, anchorState, config: beaconConfig, pubkeyCache });
 
     const node = await BeaconNode.init({
       opts: options,
@@ -102,25 +102,25 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
     // dev debug option to have access to the BN instance
     if (args.attachToGlobalThis) {
-      (globalThis as unknown as {bn: BeaconNode}).bn = node;
+      (globalThis as unknown as { bn: BeaconNode }).bn = node;
     }
 
     // Prune invalid SSZ objects every interval
-    const {persistInvalidSszObjectsDir, persistInvalidSszObjects} = options.chain;
+    const { persistInvalidSszObjectsDir, persistInvalidSszObjects } = options.chain;
     const pruneInvalidSSZObjectsInterval =
       persistInvalidSszObjectsDir && persistInvalidSszObjects
         ? setInterval(() => {
-            try {
-              const deletedFileCount = pruneOldFilesInDir(
-                persistInvalidSszObjectsDir,
-                (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
-              );
-              logger.info("Pruned invalid SSZ objects", {deletedFileCount});
-            } catch (e) {
-              logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
-            }
-            // Run every ~1 hour
-          }, HOURS_TO_MS)
+          try {
+            const deletedFileCount = pruneOldFilesInDir(
+              persistInvalidSszObjectsDir,
+              (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
+            );
+            logger.info("Pruned invalid SSZ objects", { deletedFileCount });
+          } catch (e) {
+            logger.warn("Error pruning invalid SSZ objects", { persistInvalidSszObjectsDir }, e as Error);
+          }
+          // Run every ~1 hour
+        }, HOURS_TO_MS)
         : null;
 
     // Intercept SIGINT signal, to perform final ops before exiting
@@ -160,7 +160,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
           process.exit(1);
         }
       },
-      {once: true}
+      { once: true }
     );
   } catch (e) {
     await db.close();
@@ -175,14 +175,14 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
 /** Separate function to simplify unit testing of options merging */
 export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
-  const {config, network} = getBeaconConfigFromArgs(args);
+  const { config, network } = getBeaconConfigFromArgs(args);
 
   const beaconNodeOptions = new BeaconNodeOptions(parseBeaconNodeArgs(args));
 
-  const {version, commit} = getVersionData();
+  const { version, commit } = getVersionData();
   const beaconPaths = getBeaconPaths(args, network);
   // TODO: Rename db.name to db.path or db.location
-  beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
+  beaconNodeOptions.set({ db: { name: beaconPaths.dbDir } });
   beaconNodeOptions.set({
     chain: {
       validatorMonitorLogs: args.validatorMonitorLogs,
@@ -191,16 +191,16 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     },
   });
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
-  beaconNodeOptions.set({metrics: {metadata: {version, commit, network}}});
+  beaconNodeOptions.set({ metrics: { metadata: { version, commit, network } } });
   // Add detailed version string for API node/version endpoint
-  beaconNodeOptions.set({api: {commit, version}});
+  beaconNodeOptions.set({ api: { commit, version } });
 
   const logger = initLogger(args, beaconPaths.dataDir, config);
-  const {privateKey, enr} = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
+  const { privateKey, enr } = await initPrivateKeyAndEnr(args, beaconPaths.beaconDir, logger);
 
   if (args.discv5 !== false) {
     // Inject ENR to beacon options
-    beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
+    beaconNodeOptions.set({ network: { discv5: { enr: enr.encodeTxt(), config: { enrUpdate: !enr.ip && !enr.ip6 } } } });
 
     // Combine bootnodes from different sources
     const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
@@ -208,33 +208,33 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
       isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
     );
     // Deduplicate and set combined bootnodes
-    beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
+    beaconNodeOptions.set({ network: { discv5: { bootEnrs: [...new Set(bootnodes)] } } });
   }
 
-  beaconNodeOptions.set({chain: {initialCustodyGroupCount: getInitialCustodyGroupCount(args, config, logger, enr)}});
+  beaconNodeOptions.set({ chain: { initialCustodyGroupCount: getInitialCustodyGroupCount(args, config, logger, enr) } });
 
   if (args.disableLightClientServer) {
-    beaconNodeOptions.set({chain: {disableLightClientServer: true}});
+    beaconNodeOptions.set({ chain: { disableLightClientServer: true } });
   }
 
   if (args.private) {
-    beaconNodeOptions.set({network: {private: true}, api: {private: true}});
+    beaconNodeOptions.set({ network: { private: true }, api: { private: true } });
   } else {
     const versionStr = `Lodestar/${version}`;
     // Add version string for libp2p agent version
-    beaconNodeOptions.set({network: {version}});
+    beaconNodeOptions.set({ network: { version } });
     // Add User-Agent header to all builder requests
-    beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
+    beaconNodeOptions.set({ executionBuilder: { userAgent: versionStr } });
     // Set jwt version with version string
-    beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}});
+    beaconNodeOptions.set({ executionEngine: { jwtVersion: versionStr } });
     // Set commit and version for ClientVersion
-    beaconNodeOptions.set({executionEngine: {commit, version}});
+    beaconNodeOptions.set({ executionEngine: { commit, version } });
   }
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  return {config, options, beaconPaths, network, version, commit, privateKey, logger};
+  return { config, options, beaconPaths, network, version, commit, privateKey, logger };
 }
 
 export function initLogger(
@@ -244,9 +244,9 @@ export function initLogger(
   fileName = "beacon.log"
 ): LoggerNode {
   const defaultLogFilepath = path.join(dataDir, fileName);
-  const logger = getNodeLogger(parseLoggerArgs(args, {defaultLogFilepath}, config));
+  const logger = getNodeLogger(parseLoggerArgs(args, { defaultLogFilepath }, config));
   try {
-    cleanOldLogFiles(args, {defaultLogFilepath});
+    cleanOldLogFiles(args, { defaultLogFilepath });
   } catch (e) {
     logger.debug("Not able to delete log files", {}, e as Error);
   }
