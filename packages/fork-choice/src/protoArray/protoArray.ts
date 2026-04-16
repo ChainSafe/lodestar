@@ -115,10 +115,11 @@ export class ProtoArray {
     if (protoArray.ptcVotes.has(block.blockRoot)) {
       protoArray.ptcVotes.set(block.blockRoot, BitArray.fromBoolArray(Array.from({length: PTC_SIZE}, () => true)));
 
-      // Anchor block must have FULL variant per spec get_forkchoice_store:
-      // payload_states = {anchor_root: anchor_state.copy()}
-      // This means the anchor's "payload" is considered received (the anchor state IS the post-payload state).
+      // In the spec, we have payload_states = {anchor_root: anchor_state.copy()}
+      // which means the anchor's "payload" is considered received
       // Without FULL, blocks extending FULL from the anchor would be orphaned.
+      // TODO GLOAS: This is a bug in the spec. Keep this to pass the current spec test
+      // for now. Need to remove this when we work on v1.7.0-alpha.5
       if (block.executionPayloadBlockHash !== null) {
         protoArray.onExecutionPayload(
           block.blockRoot,
