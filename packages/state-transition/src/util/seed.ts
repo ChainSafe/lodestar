@@ -286,14 +286,12 @@ export function naiveComputePayloadTimelinessCommitteesForEpoch(
   const startSlot = epoch * SLOTS_PER_EPOCH;
   const result: Uint32Array[] = new Array(SLOTS_PER_EPOCH);
 
-  // Pre-allocate slot seed buffer once, reuse across all slots
   const slotSeedInput = new Uint8Array(epochSeed.length + 8);
   slotSeedInput.set(epochSeed, 0);
   const slotSeedView = new DataView(slotSeedInput.buffer, slotSeedInput.byteOffset, slotSeedInput.byteLength);
 
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
     const slot = startSlot + i;
-    // Write slot as little-endian uint64 (fits in uint32 range)
     slotSeedView.setUint32(epochSeed.length, slot, true);
     slotSeedView.setUint32(epochSeed.length + 4, 0, true);
     const slotSeed = digest(slotSeedInput);
@@ -337,7 +335,6 @@ export function computePayloadTimelinessCommitteesForEpoch(
     EFFECTIVE_BALANCE_INCREMENT
   );
 
-  // Slice flat result into per-slot subarrays
   const result = new Array<Uint32Array>(SLOTS_PER_EPOCH);
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
     result[i] = flat.subarray(i * PTC_SIZE, (i + 1) * PTC_SIZE);
@@ -356,7 +353,6 @@ export function naiveComputePayloadTimelinessCommitteeForSlot(
   slotCommittees: Uint32Array[],
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array {
-  // Concatenate all committee Uint32Arrays for this slot
   const totalLen = slotCommittees.reduce((sum, c) => sum + c.length, 0);
   const allIndices = new Uint32Array(totalLen);
   let offset = 0;
@@ -375,7 +371,6 @@ export function computePayloadTimelinessCommitteeForSlot(
   slotCommittees: Uint32Array[],
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array {
-  // Concatenate all committee Uint32Arrays for this slot
   const totalLen = slotCommittees.reduce((sum, c) => sum + c.length, 0);
   const allIndices = new Uint32Array(totalLen);
   let offset = 0;
