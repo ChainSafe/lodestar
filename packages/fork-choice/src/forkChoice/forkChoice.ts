@@ -649,10 +649,7 @@ export class ForkChoice implements IForkChoice {
     // Check block is a descendant of the finalized block at the checkpoint finalized slot.
     const blockAncestorNode = this.getAncestor(parentRootHex, finalizedSlot);
     const fcStoreFinalized = this.fcStore.finalizedCheckpoint;
-    if (
-      blockAncestorNode.blockRoot !== fcStoreFinalized.rootHex ||
-      blockAncestorNode.payloadStatus !== fcStoreFinalized.payloadStatus
-    ) {
+    if (blockAncestorNode.blockRoot !== fcStoreFinalized.rootHex) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {

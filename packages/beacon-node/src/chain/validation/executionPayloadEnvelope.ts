@@ -32,7 +32,7 @@ async function validateExecutionPayloadEnvelope(
   const {payload} = envelope;
   const blockRootHex = toRootHex(envelope.beaconBlockRoot);
 
-  // [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
+  // [IGNORE] The envelope's block root `envelope.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
   // TODO GLOAS: Need to review this, we should queue the envelope for later
