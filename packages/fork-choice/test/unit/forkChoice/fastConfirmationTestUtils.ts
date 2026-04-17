@@ -69,11 +69,24 @@ export function makeState(
   const slashed = new Set<ValidatorIndex>(slashedIndices);
   const committees = new Map<Slot, Uint32Array>(committeeSlots.map((slot) => [slot, activeIndices]));
 
+  // Matches production `getEffectiveBalanceIncrementsZeroInactive`, which zeros
+  // BOTH inactive and slashed validators. The mock lives at the `activeIndices`
+  // level (no separate shuffling), so inactive-zero falls out for free; we only
+  // need to explicitly zero slashed indices.
+  const balancesZeroSlashed =
+    slashed.size > 0
+      ? (() => {
+          const copy = new Uint16Array(balances);
+          for (const i of slashed) copy[i] = 0;
+          return copy;
+        })()
+      : balances;
+
   return {
     slot: (committeeSlots.length > 0 ? Math.max(...committeeSlots) : 0) as Slot,
     epoch: 0,
     effectiveBalanceIncrements: balances,
-    getEffectiveBalanceIncrementsZeroInactive: () => balances,
+    getEffectiveBalanceIncrementsZeroInactive: () => balancesZeroSlashed,
     getCurrentShuffling: () => ({activeIndices}) as {activeIndices: Uint32Array},
     getBeaconCommitteeCountPerSlot: () => 1,
     getBeaconCommittee: (slot: Slot) => committees.get(slot) ?? activeIndices,

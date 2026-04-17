@@ -9,7 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
-import {PayloadStatus, ProtoBlock} from "../../protoArray/interface.ts";
+import {NULL_VOTE_INDEX, PayloadStatus, ProtoBlock} from "../../protoArray/interface.ts";
 import {CheckpointWithPayloadStatus, computeTotalBalance, equalCheckpointWithHex} from "../store.ts";
 import {
   FastConfirmationBalanceSource,
@@ -17,6 +17,7 @@ import {
   FastConfirmationContext,
   FastConfirmationSnapshot,
   IFastConfirmationStore,
+  ProtoNodeReadView,
 } from "./types.ts";
 
 const COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR = 5;
@@ -389,6 +390,152 @@ export function getAttestationScore(
   }
 
   return score;
+}
+
+/**
+ * Performance-optimised replacement for the spec's per-block `get_attestation_score`.
+ * https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md#get_attestation_score
+ *
+ * Spec computes one block's score by iterating every validator and summing balances
+ * whose latest-message root descends from the block — O(V × depth) per block, called
+ * O(B) times per chain-walk loop → O(B × V × depth) total.
+ *
+ * This function flips the computation: one pass over validators that walks each vote's
+ * parent chain until it hits a block on the target canonical chain, accumulates a
+ * `scoreAtPosition` array, then does a single suffix sum. Total: O(V × depth + B).
+ *
+ * Lodestar-specific optimisation over Lighthouse: `voteNextIndices[i]` already holds
+ * the ProtoArray node index, so we skip Lighthouse's `indices.get(vote_root)` hash
+ * lookup per validator.
+ *
+ * Chain ordering is terminal-first (see `getAncestorRoots`): position 0 is the block
+ * directly after `terminalRoot`, position `len-1` is `chainTip`. `terminalRoot` itself
+ * is NOT in the chain array.
+ *
+ * @param sourceKey Unused by the computation but kept in the signature for symmetry
+ * with `getAttestationScore` during the migration. Safe to remove once the legacy
+ * function is deleted.
+ */
+export function precomputeChainAttestationScores(
+  ctx: FastConfirmationContext,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
+  chainTip: RootHex,
+  terminalRoot: RootHex,
+  _sourceKey: "current" | "previous"
+): Map<RootHex, number> {
+  const scores = new Map<RootHex, number>();
+
+  const chain = getAncestorRoots(ctx, cache, chainTip, terminalRoot);
+  if (chain.length === 0) return scores;
+
+  const terminalBlock = getBlock(ctx, cache, terminalRoot);
+  if (!terminalBlock) return scores;
+  const terminalSlot = terminalBlock.slot;
+
+  // Register every variant index of each chain block, so a vote that walks to
+  // any variant (pre-Gloas: just FULL; Gloas: PENDING/EMPTY/FULL) lands at the
+  // same chain position. This preserves the root-collapsing semantics of the
+  // old `isDescendant(blockRoot, voteRoot)` path.
+  const indexToPosition = new Map<number, number>();
+  for (let pos = 0; pos < chain.length; pos++) {
+    for (const nodeIdx of ctx.getNodeIndices(chain[pos])) {
+      indexToPosition.set(nodeIdx, pos);
+    }
+  }
+
+  const scoreAtPosition = new Array<number>(chain.length).fill(0);
+
+  const {nodes: protoNodes} = ctx.getProtoNodeView();
+  const voteNextIndices = ctx.getVoteNextIndices();
+  const unslashedActiveBalances = balanceSource.unslashedActiveBalances;
+  const equivocating = ctx.getEquivocatingIndices();
+
+  // Fast-path cache for consecutive validators voting for the same node.
+  // Most validators on a healthy network vote for the current head, so the
+  // same `voteIdx` repeats → reuse the cached landing position and skip the
+  // parent-chain walk. `-1` is the sentinel for "this vote lands nowhere".
+  let lastVoteIdx = NULL_VOTE_INDEX;
+  let lastLandedPos = -1;
+
+  for (let i = 0; i < voteNextIndices.length; i++) {
+    // Filters match the old `ensureVoteMaps` behavior:
+    // - `unslashedActiveBalances[i] === 0` covers both inactive and slashed
+    //   validators when state was available at balance-source construction;
+    //   when state was null, the fallback preserves the null-state behavior
+    //   (inactive zeroed, slashed NOT zeroed).
+    // - Equivocators are filtered here because latest-message balances
+    //   should not count for validators with attester slashings.
+    // - `NULL_VOTE_INDEX` = validator never voted (or votes pruned past the
+    //   finalized root).
+    const balance = unslashedActiveBalances[i] ?? 0;
+    if (balance === 0) continue;
+    if (equivocating.has(i)) continue;
+    const voteIdx = voteNextIndices[i];
+    if (voteIdx === NULL_VOTE_INDEX) continue;
+
+    let landedPos: number;
+    if (voteIdx === lastVoteIdx) {
+      // Fast path: same vote target as the previous validator. Skip the walk.
+      landedPos = lastLandedPos;
+    } else {
+      // Slow path: walk parent chain from the vote's node until we either
+      // land on a chain block, walk below the chain window, or run out of
+      // parents.
+      let cur: number | undefined = voteIdx;
+      landedPos = -1;
+      while (cur !== undefined) {
+        // Case 1 — landed. `cur` is a variant index of some `chain[pos]`.
+        // The suffix sum at the end of this function propagates this vote's
+        // contribution to every position closer to terminal.
+        const hit = indexToPosition.get(cur);
+        if (hit !== undefined) {
+          landedPos = hit;
+          break;
+        }
+
+        const node: ProtoNodeReadView | undefined = protoNodes[cur];
+        // Case 2 — defensive: malformed node index. `voteNextIndices` should
+        // always point into `protoArray.nodes`, so this shouldn't happen in
+        // production. Treat as "did not land".
+        if (node === undefined) break;
+
+        // Case 3 — walked below the chain window. Chain invariant:
+        // `chain[i].slot > terminalSlot` for every i. Block parent-slot
+        // invariant: `parent.slot < node.slot` strictly. Once we cross below
+        // `terminalSlot`, no chain block is reachable. The vote is either
+        // terminalRoot itself, an ancestor of terminalRoot, or on a fork
+        // that diverged at or below terminalRoot's depth — equivalent to
+        // the old `isDescendant(chain[k], voteRoot) === false` for all k.
+        if (node.slot <= terminalSlot) break;
+
+        // Case 4 — walk up. `node.parent` may be `undefined` for genesis;
+        // the next iteration's `cur !== undefined` check handles that exit.
+        cur = node.parent;
+      }
+
+      lastVoteIdx = voteIdx;
+      lastLandedPos = landedPos;
+    }
+
+    if (landedPos !== -1) {
+      scoreAtPosition[landedPos] += balance;
+    }
+  }
+
+  // Suffix sum over the chain. Chain is terminal-first (position 0 is closest
+  // to terminalRoot, position len-1 is chainTip). A vote landing at position j
+  // supports every chain[k] with k ≤ j, because chain[j] is a descendant of
+  // every chain[k] with k ≤ j by the terminal-first ordering. Iterating from
+  // tip (highest position) down to 0 and accumulating gives `scores[chain[k]]`
+  // = total weight of votes landing at positions k..len-1.
+  let running = 0;
+  for (let k = chain.length - 1; k >= 0; k--) {
+    running += scoreAtPosition[k];
+    scores.set(chain[k], running);
+  }
+
+  return scores;
 }
 
 export function getBlockSupportBetweenSlots(
