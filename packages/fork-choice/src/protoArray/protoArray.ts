@@ -684,8 +684,8 @@ export class ProtoArray {
    * Determine if we should extend the payload (prefer FULL over EMPTY)
    * Spec: gloas/fork-choice.md#new-should_extend_payload
    *
-   * Returns true if:
-   * 1. Payload is timely, OR
+   * Returns true if payload is verified (FULL variant exists) AND:
+   * 1. Payload is timely and data available, OR
    * 2. No proposer boost root (empty/zero hash), OR
    * 3. Proposer boost root's parent is not this block, OR
    * 4. Proposer boost root extends FULL parent
@@ -694,6 +694,10 @@ export class ProtoArray {
    * @param proposerBoostRoot - Current proposer boost root (from ForkChoice)
    */
   shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {
+    if (!this.hasPayload(blockRoot)) {
+      return false;
+    }
+
     // Condition 1: Payload is timely
     if (this.isPayloadTimely(blockRoot)) {
       return true;

@@ -47,7 +47,7 @@ import {
   fulu,
   gloas,
 } from "@lodestar/types";
-import {Logger, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {
@@ -618,7 +618,13 @@ export async function prepareExecutionPayload(
   state: IBeaconStateViewBellatrix,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  const parentHash = state.latestBlockHash;
+  let parentHash: Bytes32;
+  if (isStatePostGloas(state)) {
+    const bid = state.latestExecutionPayloadBid;
+    parentHash = chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot)) ? bid.blockHash : bid.parentBlockHash;
+  } else {
+    parentHash = state.latestBlockHash;
+  }
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
@@ -652,6 +658,7 @@ export async function prepareExecutionPayload(
       prepareState: state,
       prepareSlot: state.slot,
       parentBlockRoot,
+      parentHash,
       feeRecipient: suggestedFeeRecipient,
     });
 
@@ -712,11 +719,19 @@ export function getPayloadAttributesForSSE(
     feeRecipient,
   }: {prepareState: IBeaconStateViewBellatrix; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
 ): SSEPayloadAttributes {
-  const parentHash = prepareState.latestBlockHash;
+  let parentHash: Bytes32;
+  if (isStatePostGloas(prepareState)) {
+    parentHash = chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
+      ? prepareState.latestExecutionPayloadBid.blockHash
+      : prepareState.latestExecutionPayloadBid.parentBlockHash;
+  } else {
+    parentHash = prepareState.latestBlockHash;
+  }
   const payloadAttributes = preparePayloadAttributes(fork, chain, {
     prepareState,
     prepareSlot,
     parentBlockRoot,
+    parentHash,
     feeRecipient,
   });
 
@@ -752,11 +767,13 @@ function preparePayloadAttributes(
     prepareState,
     prepareSlot,
     parentBlockRoot,
+    parentHash,
     feeRecipient,
   }: {
     prepareState: IBeaconStateViewBellatrix;
     prepareSlot: Slot;
     parentBlockRoot: Root;
+    parentHash: Bytes32;
     feeRecipient: string;
   }
 ): SSEPayloadAttributes["payloadAttributes"] {
@@ -773,16 +790,15 @@ function preparePayloadAttributes(
       throw new Error("Expected Capella state for withdrawals");
     }
 
-    if (
-      isStatePostGloas(prepareState) &&
-      !chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
-    ) {
+    if (isStatePostGloas(prepareState)) {
+      const isExtendingPayload = byteArrayEquals(parentHash, prepareState.latestExecutionPayloadBid.blockHash);
       // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
       // already deducted from CL balances but never credited on the EL (the envelope
       // was not delivered). The next payload must carry those same withdrawals to
       // restore CL/EL consistency, otherwise validators permanently lose that balance.
-      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
-        prepareState.payloadExpectedWithdrawals;
+      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = isExtendingPayload
+        ? prepareState.getExpectedWithdrawals().expectedWithdrawals
+        : prepareState.payloadExpectedWithdrawals;
     } else {
       // withdrawals logic is now fork aware as it changes on electra fork post capella
       (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
