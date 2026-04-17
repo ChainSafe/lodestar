@@ -790,6 +790,10 @@ function preparePayloadAttributes(
     (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
   }
 
+  if (isForkPostGloas(fork)) {
+    (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).slotNumber = prepareSlot;
+  }
+
   return payloadAttributes;
 }
 

@@ -25,3 +25,5 @@ export type DataColumnSidecar = ValueOf<typeof ssz.DataColumnSidecar>;
 export type DataColumnSidecars = ValueOf<typeof ssz.DataColumnSidecars>;
 
 export type ExecutionPayloadEnvelopesByRangeRequest = ValueOf<typeof ssz.ExecutionPayloadEnvelopesByRangeRequest>;
+export type PayloadAttributes = ValueOf<typeof ssz.PayloadAttributes>;
+export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;
