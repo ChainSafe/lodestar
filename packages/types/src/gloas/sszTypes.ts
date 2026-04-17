@@ -255,7 +255,7 @@ export const BeaconState = new ContainerType(
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
     // latestExecutionPayloadHeader: ExecutionPayloadHeader, // Removed in GLOAS:EIP7732
-    latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
+    latestBlockHash: Bytes32, // New in GLOAS:EIP7732
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
@@ -276,7 +276,7 @@ export const BeaconState = new ContainerType(
     executionPayloadAvailability: new BitVectorType(SLOTS_PER_HISTORICAL_ROOT), // New in GLOAS:EIP7732
     builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH), // New in GLOAS:EIP7732
     builderPendingWithdrawals: new ListCompositeType(BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT), // New in GLOAS:EIP7732
-    latestBlockHash: Bytes32, // New in GLOAS:EIP7732
+    latestExecutionPayloadBid: ExecutionPayloadBid,
     payloadExpectedWithdrawals: capellaSsz.Withdrawals, // New in GLOAS:EIP7732
     ptcWindow: PtcWindow, // New in GLOAS:EIP7732
   },
