@@ -19,6 +19,7 @@ import {
   capella,
   deneb,
   electra,
+  gloas,
   ssz,
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
@@ -180,6 +181,7 @@ export type ExecutionPayloadRpc = {
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
+  blockAccessList?: DATA; // GLOAS:EIP-7928
 };
 
 export type WithdrawalRpc = {
@@ -280,6 +282,11 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
 
   // No changes in Electra
 
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blockAccessList} = data as gloas.ExecutionPayload;
+    payload.blockAccessList = bytesToData(blockAccessList);
+  }
+
   return payload;
 }
 
@@ -374,6 +381,16 @@ export function parseExecutionPayload(
   }
 
   // No changes in Electra
+
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blockAccessList} = data;
+    if (blockAccessList == null) {
+      throw Error(
+        `blockAccessList missing for ${fork} >= gloas executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    (executionPayload as gloas.ExecutionPayload).blockAccessList = dataToBytes(blockAccessList, null);
+  }
 
   return {executionPayload, executionPayloadValue, blobsBundle, executionRequests, shouldOverrideBuilder};
 }

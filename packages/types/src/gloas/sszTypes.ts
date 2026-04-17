@@ -1,4 +1,11 @@
-import {BitVectorType, ByteListType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {
+  BitVectorType,
+  ByteListType,
+  ContainerType,
+  ListBasicType,
+  ListCompositeType,
+  VectorCompositeType,
+} from "@chainsafe/ssz";
 import {
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
   BUILDER_REGISTRY_LIMIT,
