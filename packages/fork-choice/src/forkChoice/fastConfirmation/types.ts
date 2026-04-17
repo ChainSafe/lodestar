@@ -7,6 +7,21 @@ import {CheckpointWithPayloadStatus} from "../store.ts";
 export type FastConfirmationBalanceSource = {
   state: IBeaconStateView | null;
   balances: EffectiveBalanceIncrements;
+  /**
+   * Per-validator effective balance, pre-zeroed for both inactive and slashed
+   * validators at the balance source epoch. Mirrors Lighthouse's `unslashed_balance`
+   * and is the single filter used by the per-validator hot loop in
+   * `precomputeChainAttestationScores` — removing all beacon-state access from
+   * that path.
+   *
+   * When `state` is available at construction, this is populated via
+   * `state.getEffectiveBalanceIncrementsZeroInactive()`, which zeros both
+   * inactive and slashed entries. When `state` is null, this equals `balances`
+   * (the fallback path's justified balances — inactive-zeroed but NOT
+   * slashed-zeroed; matches the pre-existing null-state behavior of
+   * `ensureVoteMaps`).
+   */
+  unslashedActiveBalances: EffectiveBalanceIncrements;
 };
 
 export type ForkChoiceStateGetter = (

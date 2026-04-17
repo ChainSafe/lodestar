@@ -46,7 +46,11 @@ describe("fast confirmation", () => {
       ctx,
       store,
       createFastConfirmationCache(),
-      {state, balances: state.effectiveBalanceIncrements},
+      {
+        state,
+        balances: state.effectiveBalanceIncrements,
+        unslashedActiveBalances: state.getEffectiveBalanceIncrementsZeroInactive(),
+      },
       block.blockRoot
     );
 
@@ -88,7 +92,11 @@ describe("fast confirmation", () => {
         enoughSupportCtx,
         store,
         createFastConfirmationCache(),
-        {state, balances: state.effectiveBalanceIncrements},
+        {
+          state,
+          balances: state.effectiveBalanceIncrements,
+          unslashedActiveBalances: state.getEffectiveBalanceIncrementsZeroInactive(),
+        },
         block.blockRoot,
         "current"
       )
@@ -99,7 +107,11 @@ describe("fast confirmation", () => {
         lowSupportCtx,
         store,
         createFastConfirmationCache(),
-        {state, balances: state.effectiveBalanceIncrements},
+        {
+          state,
+          balances: state.effectiveBalanceIncrements,
+          unslashedActiveBalances: state.getEffectiveBalanceIncrementsZeroInactive(),
+        },
         block.blockRoot,
         "current"
       )
@@ -124,7 +136,11 @@ describe("fast confirmation", () => {
       ctx,
       store,
       createFastConfirmationCache(),
-      {state, balances: state.effectiveBalanceIncrements},
+      {
+        state,
+        balances: state.effectiveBalanceIncrements,
+        unslashedActiveBalances: state.getEffectiveBalanceIncrementsZeroInactive(),
+      },
       parent.blockRoot,
       2 as Slot,
       2 as Slot

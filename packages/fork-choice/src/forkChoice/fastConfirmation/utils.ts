@@ -226,9 +226,17 @@ export function getBalanceSource(
   const fallbackBalances =
     kind === "previous" ? store.previousEpochObservedJustifiedBalances : store.currentEpochObservedJustifiedBalances;
   const state = getCheckpointState(store, cache, checkpoint);
+  const balances = state?.effectiveBalanceIncrements ?? fallbackBalances;
+  // When state is available, `getEffectiveBalanceIncrementsZeroInactive()` zeros BOTH
+  // inactive and slashed validators (see packages/state-transition/src/util/balance.ts).
+  // That gives us Lighthouse's `unslashed_balance` semantics in one bulk-iteration pass.
+  // When state is null, fall back to `balances`, which zero inactive validators but not
+  // slashed — matches the pre-existing null-state behavior of `ensureVoteMaps`.
+  const unslashedActiveBalances = state?.getEffectiveBalanceIncrementsZeroInactive() ?? fallbackBalances;
   return {
     state,
-    balances: state?.effectiveBalanceIncrements ?? fallbackBalances,
+    balances,
+    unslashedActiveBalances,
   };
 }
 
@@ -709,7 +717,11 @@ export function computeHonestFfgSupportForCurrentTarget(
   const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
   const ffgSupport = getCurrentTargetScore(ctx, store, cache);
   const tillNowFFGWeight = estimateCommitteeWeightBetweenSlots(
-    {state: targetState, balances: targetState.effectiveBalanceIncrements},
+    {
+      state: targetState,
+      balances: targetState.effectiveBalanceIncrements,
+      unslashedActiveBalances: targetState.getEffectiveBalanceIncrementsZeroInactive(),
+    },
     computeStartSlotAtEpoch(currentEpoch),
     (currentSlot - 1) as Slot
   );

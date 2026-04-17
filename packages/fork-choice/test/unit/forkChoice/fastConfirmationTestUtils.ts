@@ -73,7 +73,7 @@ export function makeState(
     epoch: 0,
     effectiveBalanceIncrements: balances,
     getEffectiveBalanceIncrementsZeroInactive: () => balances,
-    getCurrentShuffling: () => ({activeIndices} as {activeIndices: Uint32Array}),
+    getCurrentShuffling: () => ({activeIndices}) as {activeIndices: Uint32Array},
     getBeaconCommitteeCountPerSlot: () => 1,
     getBeaconCommittee: (slot: Slot) => committees.get(slot) ?? activeIndices,
     getValidator: (index: ValidatorIndex) => ({
