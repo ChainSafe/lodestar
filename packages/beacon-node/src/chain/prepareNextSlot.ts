@@ -8,9 +8,10 @@ import {
   computeEpochAtSlot,
   computeTimeAtSlot,
   isStatePostBellatrix,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
-import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
+import {Bytes32, Slot} from "@lodestar/types";
+import {Logger, fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {Metrics} from "../metrics/index.js";
@@ -156,25 +157,39 @@ export class PrepareNextSlotScheduler {
               this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
             });
           }
+        }
 
+        if (!isStatePostBellatrix(updatedPrepareState)) {
+          throw new Error("Expected Bellatrix state for payload attributes");
+        }
+
+        // Compute parentHash once — used by both prepareExecutionPayload and SSE
+        const parentBlockRoot = fromHex(updatedHeadRoot);
+        let parentHash: Bytes32;
+        if (isStatePostGloas(updatedPrepareState)) {
+          const bid = updatedPrepareState.latestExecutionPayloadBid;
+          parentHash = this.chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
+            ? bid.blockHash
+            : bid.parentBlockHash;
+        } else {
+          parentHash = updatedPrepareState.latestBlockHash;
+        }
+
+        if (feeRecipient) {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
-          if (!isStatePostBellatrix(updatedPrepareState)) {
-            throw new Error("Expected Bellatrix state for payload preparation");
-          }
 
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-          // awaiting here instead of throwing an async call because there is no other task
-          // left for scheduler and this gives nice sematics to catch and log errors in the
-          // try/catch wrapper here.
+
           await prepareExecutionPayload(
             this.chain,
             this.logger,
             fork as ForkPostBellatrix, // State is of execution type
-            fromHex(updatedHeadRoot),
+            parentBlockRoot,
+            parentHash,
             safeBlockHash,
             finalizedBlockHash,
             updatedPrepareState,
@@ -187,10 +202,6 @@ export class PrepareNextSlotScheduler {
           });
         }
 
-        if (!isStatePostBellatrix(updatedPrepareState)) {
-          throw new Error("Expected Bellatrix state for payload attributes");
-        }
-
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
@@ -201,7 +212,8 @@ export class PrepareNextSlotScheduler {
           const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
-            parentBlockRoot: fromHex(headRoot),
+            parentBlockRoot,
+            parentHash,
             // The likely consumers of this API are builders and will anyway ignore the
             // feeRecipient, so just pass zero hash for now till a real use case arises
             feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",

@@ -219,11 +219,16 @@ export async function produceBlockBody<T extends BlockType>(
     });
 
     // Get execution payload from EL
+    const parentBid = currentState.latestExecutionPayloadBid;
+    const parentHash = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
+      ? parentBid.blockHash
+      : parentBid.parentBlockHash;
     const prepareRes = await prepareExecutionPayload(
       this,
       this.logger,
       fork,
       parentBlockRoot,
+      parentHash,
       safeBlockHash,
       finalizedBlockHash ?? ZERO_HASH_HEX,
       currentState,
@@ -260,7 +265,7 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Create self-build execution payload bid
     const bid: gloas.ExecutionPayloadBid = {
-      parentBlockHash: currentState.latestBlockHash,
+      parentBlockHash: parentHash,
       parentBlockRoot: parentBlockRoot,
       blockHash: executionPayload.blockHash,
       prevRandao: currentState.getRandaoMix(currentState.epoch),
@@ -339,6 +344,7 @@ export async function produceBlockBody<T extends BlockType>(
             this.logger,
             fork,
             parentBlockRoot,
+            currentState.latestBlockHash,
             safeBlockHash,
             finalizedBlockHash ?? ZERO_HASH_HEX,
             currentState,
@@ -447,6 +453,7 @@ export async function produceBlockBody<T extends BlockType>(
           this.logger,
           fork,
           parentBlockRoot,
+          currentState.latestBlockHash,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState,
@@ -613,19 +620,12 @@ export async function prepareExecutionPayload(
   logger: Logger,
   fork: ForkPostBellatrix,
   parentBlockRoot: Root,
+  parentHash: Bytes32,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   state: IBeaconStateViewBellatrix,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  let parentHash: Bytes32;
-  if (isStatePostGloas(state)) {
-    parentHash = chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
-      ? state.latestExecutionPayloadBid.blockHash
-      : state.latestExecutionPayloadBid.parentBlockHash;
-  } else {
-    parentHash = state.latestBlockHash;
-  }
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const prevRandao = state.getRandaoMix(state.epoch);
 
@@ -718,16 +718,15 @@ export function getPayloadAttributesForSSE(
     prepareSlot,
     parentBlockRoot,
     feeRecipient,
-  }: {prepareState: IBeaconStateViewBellatrix; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
-): SSEPayloadAttributes {
-  let parentHash: Bytes32;
-  if (isStatePostGloas(prepareState)) {
-    parentHash = chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
-      ? prepareState.latestExecutionPayloadBid.blockHash
-      : prepareState.latestExecutionPayloadBid.parentBlockHash;
-  } else {
-    parentHash = prepareState.latestBlockHash;
+    parentHash,
+  }: {
+    prepareState: IBeaconStateViewBellatrix;
+    prepareSlot: Slot;
+    parentBlockRoot: Root;
+    feeRecipient: string;
+    parentHash: Bytes32;
   }
+): SSEPayloadAttributes {
   const payloadAttributes = preparePayloadAttributes(fork, chain, {
     prepareState,
     prepareSlot,
