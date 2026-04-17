@@ -105,10 +105,14 @@ export function initializeForkChoiceFromFinalizedState(
   const isForkPostGloas = computeEpochAtSlot(state.slot) >= config.GLOAS_FORK_EPOCH;
 
   // Determine justified checkpoint payload status
-  const justifiedPayloadStatus = getCheckpointPayloadStatus(config, state, justifiedCheckpoint.epoch);
+  const justifiedPayloadStatus = isForkPostGloas
+    ? PayloadStatus.PENDING
+    : getCheckpointPayloadStatus(config, state, justifiedCheckpoint.epoch);
 
   // Determine finalized checkpoint payload status
-  const finalizedPayloadStatus = getCheckpointPayloadStatus(config, state, finalizedCheckpoint.epoch);
+  const finalizedPayloadStatus = isForkPostGloas
+    ? PayloadStatus.PENDING
+    : getCheckpointPayloadStatus(config, state, finalizedCheckpoint.epoch);
 
   return new forkchoiceConstructor(
     config,
