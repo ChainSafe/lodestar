@@ -72,7 +72,6 @@ export const defaultSkipOpts: SkipOpts = {
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    /^gloas\/fork_choice\/.*$/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
     // Ignore the partial data column container additions for now; they are outside the alpha.4/#4979 runtime scope.
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,

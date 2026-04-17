@@ -59,7 +59,12 @@ import {getBlockRootAtSlot} from "../util/blockRoot.js";
 import {computeAnchorCheckpoint} from "../util/computeAnchorCheckpoint.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "../util/epoch.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
-import {isExecutionEnabled, isExecutionStateType, isMergeTransitionComplete} from "../util/execution.js";
+import {
+  isExecutionEnabled,
+  isExecutionStateType,
+  isGloasStateType,
+  isMergeTransitionComplete,
+} from "../util/execution.js";
 import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
@@ -589,7 +594,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   get isMergeTransitionComplete(): boolean {
-    return isExecutionStateType(this.cachedState) && isMergeTransitionComplete(this.cachedState);
+    return (
+      (isExecutionStateType(this.cachedState) || isGloasStateType(this.cachedState)) &&
+      isMergeTransitionComplete(this.cachedState)
+    );
   }
 
   // Block production
