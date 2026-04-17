@@ -1,8 +1,9 @@
-import {BitVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {BitVectorType, ByteListType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
 import {
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
   BUILDER_REGISTRY_LIMIT,
   HISTORICAL_ROOTS_LIMIT,
+  MAX_BYTES_PER_TRANSACTION,
   MAX_PAYLOAD_ATTESTATIONS,
   NUMBER_OF_COLUMNS,
   PTC_SIZE,
@@ -146,9 +147,19 @@ export const SignedExecutionPayloadBid = new ContainerType(
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
 );
 
+export const BlockAccessList = new ByteListType(MAX_BYTES_PER_TRANSACTION);
+
+export const ExecutionPayload = new ContainerType(
+  {
+    ...electraSsz.ExecutionPayload.fields,
+    blockAccessList: BlockAccessList, // New in GLOAS:EIP-7928
+  },
+  {typeName: "ExecutionPayload", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadEnvelope = new ContainerType(
   {
-    payload: electraSsz.ExecutionPayload,
+    payload: ExecutionPayload,
     executionRequests: electraSsz.ExecutionRequests,
     builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
