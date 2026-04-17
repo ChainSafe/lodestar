@@ -219,10 +219,9 @@ export async function produceBlockBody<T extends BlockType>(
     });
 
     // Get execution payload from EL
-    const parentBid = currentState.latestExecutionPayloadBid;
     const parentHash = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
-      ? parentBid.blockHash
-      : parentBid.parentBlockHash;
+      ? currentState.latestExecutionPayloadBid.blockHash
+      : currentState.latestExecutionPayloadBid.parentBlockHash;
     const prepareRes = await prepareExecutionPayload(
       this,
       this.logger,
@@ -344,7 +343,7 @@ export async function produceBlockBody<T extends BlockType>(
             this.logger,
             fork,
             parentBlockRoot,
-            currentState.latestBlockHash,
+            currentState.latestExecutionPayloadHeader.blockHash,
             safeBlockHash,
             finalizedBlockHash ?? ZERO_HASH_HEX,
             currentState,
@@ -453,7 +452,7 @@ export async function produceBlockBody<T extends BlockType>(
           this.logger,
           fork,
           parentBlockRoot,
-          currentState.latestBlockHash,
+          currentState.latestExecutionPayloadHeader.blockHash,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState,

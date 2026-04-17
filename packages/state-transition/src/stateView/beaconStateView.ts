@@ -84,8 +84,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   private _currentEpochParticipation: Uint8Array | null = null;
   // bellatrix
   private _latestExecutionPayloadHeader: ExecutionPayloadHeader | null = null;
-  // Caches the cross-fork latestBlockHash value
-  private _latestBlockHash: Bytes32 | null = null;
   // capella
   private _historicalSummaries: capella.HistoricalSummaries | null = null;
   // electra
@@ -232,30 +230,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   /**
-   * Cross-fork accessor for the execution block hash of the most recently included payload.
-   * Pre-gloas: reads from latestExecutionPayloadHeader.blockHash.
-   * Gloas+: reads the dedicated latestBlockHash field (EIP-7732).
-   */
-  get latestBlockHash(): Bytes32 {
-    const forkSeq = this.config.getForkSeq(this.cachedState.slot);
-    if (forkSeq < ForkSeq.bellatrix) {
-      throw new Error("latestBlockHash is not available before Bellatrix");
-    }
-
-    if (this._latestBlockHash === null) {
-      if (forkSeq >= ForkSeq.gloas) {
-        this._latestBlockHash = (this.cachedState as CachedBeaconStateGloas).latestBlockHash;
-      } else {
-        this._latestBlockHash = (
-          this.cachedState as CachedBeaconStateExecutions
-        ).latestExecutionPayloadHeader.blockHash;
-      }
-    }
-
-    return this._latestBlockHash;
-  }
-
-  /**
    * The execution block number of the most recently included payload.
    * Named payloadBlockNumber (not latestBlockNumber) to mirror ExecutionPayloadHeader.blockNumber pre-gloas.
    * Only available from bellatrix through fulu — not tracked on BeaconState in gloas+ (EIP-7732).
@@ -364,6 +338,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   // gloas
+
+  get latestBlockHash(): Bytes32 {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("latestBlockHash is only available from Gloas onwards");
+    }
+    return (this.cachedState as CachedBeaconStateGloas).latestBlockHash;
+  }
 
   get executionPayloadAvailability(): BitArray {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {

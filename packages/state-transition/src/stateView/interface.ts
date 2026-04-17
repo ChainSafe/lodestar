@@ -188,13 +188,6 @@ export interface IBeaconStateViewBellatrix extends IBeaconStateViewAltair {
   forkName: ForkPostBellatrix;
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
   /**
-   * Cross-fork accessor for the execution block hash of the most recently included payload.
-   * Pre-gloas: returns latestExecutionPayloadHeader.blockHash (bellatrix–fulu).
-   * Gloas+: returns the dedicated latestBlockHash state field (EIP-7732).
-   * Throws before bellatrix.
-   */
-  latestBlockHash: Bytes32;
-  /**
    * The execution block number of the most recently included payload.
    * Named payloadBlockNumber (not latestBlockNumber) to mirror ExecutionPayloadHeader.blockNumber pre-gloas.
    * Only available from bellatrix through fulu — not tracked on BeaconState in gloas+ (EIP-7732).
@@ -244,6 +237,8 @@ export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
 /** Gloas+ state fields — use isStatePostGloas() guard */
 export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   forkName: ForkPostGloas;
+  /** The execution block hash on the BeaconState (EIP-7732 dedicated field, replaces header-based access). */
+  latestBlockHash: Bytes32;
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];

@@ -172,7 +172,7 @@ export class PrepareNextSlotScheduler {
             ? bid.blockHash
             : bid.parentBlockHash;
         } else {
-          parentHash = updatedPrepareState.latestBlockHash;
+          parentHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
         }
 
         if (feeRecipient) {
