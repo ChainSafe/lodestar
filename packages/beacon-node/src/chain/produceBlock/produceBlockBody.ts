@@ -620,8 +620,9 @@ export async function prepareExecutionPayload(
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
   let parentHash: Bytes32;
   if (isStatePostGloas(state)) {
-    const bid = state.latestExecutionPayloadBid;
-    parentHash = chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot)) ? bid.blockHash : bid.parentBlockHash;
+    parentHash = chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
+      ? state.latestExecutionPayloadBid.blockHash
+      : state.latestExecutionPayloadBid.parentBlockHash;
   } else {
     parentHash = state.latestBlockHash;
   }
@@ -761,7 +762,6 @@ function preparePayloadAttributes(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
-    forkChoice: IForkChoice;
   },
   {
     prepareState,
