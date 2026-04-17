@@ -308,7 +308,7 @@ export const ExecutionPayloadEnvelopesByRangeRequest = new ContainerType(
   {typeName: "ExecutionPayloadEnvelopesByRangeRequest", jsonCase: "eth2"}
 );
 
-// PayloadAttributes primarily for SSE event - New in GLOAS:EIP-7843
+// PayloadAttributes primarily for SSE event
 export const PayloadAttributes = new ContainerType(
   {
     ...denebSsz.PayloadAttributes.fields,
