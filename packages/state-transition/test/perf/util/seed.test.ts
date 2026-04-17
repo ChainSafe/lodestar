@@ -136,7 +136,7 @@ describe("computePayloadTimelinessCommitteesForEpoch - pure TS vs  Rust magic (2
     const rustResult = computePayloadTimelinessCommitteesForEpoch(
       cachedState,
       epoch,
-      epochCtx.currentShuffling.committees,
+      epochCtx.currentShuffling,
       effectiveBalanceIncrements
     );
     for (let i = 0; i < naiveResult.length; i++) {
@@ -172,7 +172,7 @@ describe("computePayloadTimelinessCommitteesForEpoch - pure TS vs  Rust magic (2
         computePayloadTimelinessCommitteesForEpoch(
           cachedState,
           epoch,
-          epochCtx.currentShuffling.committees,
+          epochCtx.currentShuffling,
           effectiveBalanceIncrements
         );
       },

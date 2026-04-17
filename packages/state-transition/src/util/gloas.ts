@@ -192,7 +192,7 @@ export function initializePtcWindow(state: CachedBeaconStateFulu): number[][] {
       ...computePayloadTimelinessCommitteesForEpoch(
         state,
         epoch,
-        shuffling.committees,
+        shuffling,
         state.epochCtx.effectiveBalanceIncrements
       ).map((committee) => Array.from(committee))
     );
@@ -211,7 +211,7 @@ export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTran
   const nextEpochPtcs = computePayloadTimelinessCommitteesForEpoch(
     state,
     nextEpoch,
-    nextShuffling.committees,
+    nextShuffling,
     state.epochCtx.effectiveBalanceIncrements
   );
 

@@ -25,6 +25,7 @@ import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
+import {EpochShuffling} from "./epochShuffling.js";
 
 /**
  * Compute proposer indices for an epoch
@@ -307,11 +308,12 @@ export function naiveComputePayloadTimelinessCommitteesForEpoch(
 export function computePayloadTimelinessCommitteesForEpoch(
   state: BeaconStateAllForks,
   epoch: number,
-  committees: Uint32Array[][],
+  epochShuffling: EpochShuffling,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): Uint32Array[] {
   const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
   const startSlot = epoch * SLOTS_PER_EPOCH;
+  const {committees, shuffling} = epochShuffling;
 
   const slotOffsets = new Uint32Array(SLOTS_PER_EPOCH + 1);
   for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
@@ -319,9 +321,9 @@ export function computePayloadTimelinessCommitteesForEpoch(
     for (const c of committees[i]) slotLen += c.length;
     slotOffsets[i + 1] = slotOffsets[i] + slotLen;
   }
-  const totalLen = slotOffsets[SLOTS_PER_EPOCH];
-  const first = committees[0][0];
-  const shuffling = new Uint32Array(first.buffer, first.byteOffset, totalLen);
+  if (shuffling.length === 0) {
+    throw Error("Validator indices must not be empty");
+  }
 
   const flat = computePtcIndicesForEpoch(
     epochSeed,
