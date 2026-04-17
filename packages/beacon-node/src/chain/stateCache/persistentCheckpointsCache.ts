@@ -9,7 +9,7 @@ import {IClock} from "../../util/clock.js";
 import {serializeState} from "../serializeState.js";
 import {CPStateDatastore, DatastoreKey} from "./datastore/index.js";
 import {MapTracker} from "./mapMetrics.js";
-import {BlockStateCache, CacheItemType, CheckpointHex, CheckpointHexPayload, CheckpointStateCache} from "./types.js";
+import {BlockStateCache, CacheItemType, CheckpointHex, CheckpointStateCache} from "./types.js";
 
 export type PersistentCheckpointStateCacheOpts = {
   /** Keep max n state epochs in memory, persist the rest to disk */
@@ -840,19 +840,6 @@ export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
   return {
     epoch: checkpoint.epoch,
     rootHex: toRootHex(checkpoint.root),
-  };
-}
-
-/** TODO GLOAS: remove after rolling back regen dual-state changes */
-export function fcCheckpointToHexPayload(checkpoint: {
-  epoch: Epoch;
-  rootHex: RootHex;
-  payloadStatus?: number;
-}): CheckpointHexPayload {
-  return {
-    epoch: checkpoint.epoch,
-    rootHex: checkpoint.rootHex,
-    payloadPresent: true,
   };
 }
 

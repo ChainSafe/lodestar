@@ -90,7 +90,7 @@ export type ImportBlockOpts = {
 
 type FullyVerifiedBlockBase = {
   blockInput: IBlockInput;
-  postBlockState: IBeaconStateView;
+  postState: IBeaconStateView;
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;
   dataAvailabilityStatus: DataAvailabilityStatus;
