@@ -184,6 +184,9 @@ export class PrepareNextSlotScheduler {
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
 
+          // awaiting here instead of throwing an async call because there is no other task
+          // left for scheduler and this gives nice semantics to catch and log errors in the
+          // try/catch wrapper here.
           await prepareExecutionPayload(
             this.chain,
             this.logger,
