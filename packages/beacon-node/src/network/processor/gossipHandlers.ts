@@ -748,6 +748,26 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // NOTE: we do NOT call chain.processExecutionPayload here. That is triggered only by
         // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
         // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
+
+        if (!payloadInput.isComplete()) {
+          const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
+          // do not await here to not delay gossip validation
+          payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch((_e) => {
+            chain.logger.debug(
+              "Waited for envelope and data after receiving gossip column. Cut-off reached so emitting incompletePayloadEnvelope",
+              {
+                dataColumnIndex: index,
+                ...payloadInputMeta,
+              }
+            );
+            // TODO GLOAS: UnknownBlockSync to handle this event
+            chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+              payloadInput,
+              peer: peerIdStr,
+              source: BlockInputSource.gossip,
+            });
+          });
+        }
       } else {
         if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {
           throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});

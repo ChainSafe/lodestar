@@ -331,6 +331,17 @@ export class PayloadEnvelopeInput {
     return withTimeout(() => this.allDataPromise.promise, timeout, signal);
   }
 
+  async waitForEnvelopeAndAllData(timeout: number, signal?: AbortSignal): Promise<this> {
+    if (!this.state.hasPayload || !this.state.hasAllData) {
+      await withTimeout(
+        () => Promise.all([this.payloadEnvelopeDataPromise.promise, this.allDataPromise.promise]),
+        timeout,
+        signal
+      );
+    }
+    return this;
+  }
+
   waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<gloas.DataColumnSidecar[]> {
     if (this.state.hasComputedAllData) {
       return Promise.resolve(this.getSampledColumns());

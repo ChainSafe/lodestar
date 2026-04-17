@@ -150,6 +150,114 @@ describe("verifyPayloadsDataAvailability", () => {
   });
 });
 
+describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
+  function buildPayloadInputNoEnvelope({
+    blobCount,
+    sampledColumns,
+  }: {
+    blobCount: number;
+    sampledColumns: ColumnIndex[];
+  }): {payloadInput: PayloadEnvelopeInput; signedEnvelope: gloas.SignedExecutionPayloadEnvelope} {
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    block.message.slot = 0;
+    const commitments = Array.from({length: blobCount}, () => Buffer.alloc(48, 0x77));
+    block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = commitments;
+
+    const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+    const blockRootHex = toRootHex(blockRoot);
+
+    const payloadInput = PayloadEnvelopeInput.createFromBlock({
+      blockRootHex,
+      block: block as SignedBeaconBlock<typeof ForkName.gloas>,
+      forkName: ForkName.gloas,
+      sampledColumns,
+      custodyColumns: sampledColumns,
+      timeCreatedSec: Date.now() / 1000,
+    });
+
+    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    signedEnvelope.message.beaconBlockRoot = blockRoot;
+    signedEnvelope.message.slot = block.message.slot;
+
+    return {payloadInput, signedEnvelope};
+  }
+
+  it("resolves immediately when already complete", async () => {
+    const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 0, sampledColumns: [0, 1, 2, 3]});
+    expect(payloadInput.isComplete()).toBe(true);
+
+    await expect(payloadInput.waitForEnvelopeAndAllData(60_000)).resolves.toBe(payloadInput);
+  });
+
+  it("waits for envelope and columns, then resolves", async () => {
+    const sampled = [0, 1];
+    const {payloadInput, signedEnvelope} = buildPayloadInputNoEnvelope({blobCount: 1, sampledColumns: sampled});
+    expect(payloadInput.isComplete()).toBe(false);
+
+    const controller = new AbortController();
+    const waitPromise = payloadInput.waitForEnvelopeAndAllData(60_000, controller.signal);
+
+    // Envelope + columns arrive asynchronously
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    payloadInput.addPayloadEnvelope({
+      envelope: signedEnvelope,
+      source: PayloadEnvelopeInputSource.gossip,
+      seenTimestampSec: Date.now() / 1000,
+    });
+    for (const idx of sampled) {
+      payloadInput.addColumn({
+        columnSidecar: buildColumnSidecar(idx),
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+    }
+
+    await expect(waitPromise).resolves.toBe(payloadInput);
+    expect(payloadInput.isComplete()).toBe(true);
+  });
+
+  it("rejects with timeout when envelope never arrives", async () => {
+    const sampled = [0, 1];
+    const {payloadInput} = buildPayloadInputNoEnvelope({blobCount: 1, sampledColumns: sampled});
+    // Columns complete, but no envelope
+    for (const idx of sampled) {
+      payloadInput.addColumn({
+        columnSidecar: buildColumnSidecar(idx),
+        source: PayloadEnvelopeInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+    }
+    expect(payloadInput.hasAllData()).toBe(true);
+    expect(payloadInput.isComplete()).toBe(false);
+
+    await expect(payloadInput.waitForEnvelopeAndAllData(10)).rejects.toThrow();
+  });
+
+  it("rejects with timeout when columns never arrive", async () => {
+    const sampled = [0, 1];
+    const {payloadInput, signedEnvelope} = buildPayloadInputNoEnvelope({blobCount: 1, sampledColumns: sampled});
+    payloadInput.addPayloadEnvelope({
+      envelope: signedEnvelope,
+      source: PayloadEnvelopeInputSource.gossip,
+      seenTimestampSec: Date.now() / 1000,
+    });
+    expect(payloadInput.hasAllData()).toBe(false);
+    expect(payloadInput.isComplete()).toBe(false);
+
+    await expect(payloadInput.waitForEnvelopeAndAllData(10)).rejects.toThrow();
+  });
+
+  it("rejects promptly when signal is aborted", async () => {
+    const sampled = [0, 1];
+    const {payloadInput} = buildPayloadInputNoEnvelope({blobCount: 1, sampledColumns: sampled});
+
+    const controller = new AbortController();
+    const waitPromise = payloadInput.waitForEnvelopeAndAllData(60_000, controller.signal);
+    controller.abort();
+    await expect(waitPromise).rejects.toThrow();
+  });
+});
+
 describe("PayloadEnvelopeInput.waitForAllData", () => {
   it("resolves on reconstruction threshold without resolving waitForComputedAllData", async () => {
     const sampled = [0, 1, 2, 3];
