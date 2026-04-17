@@ -781,6 +781,72 @@ export function isOneConfirmed(
   return isConfirmed;
 }
 
+/**
+ * Spec: `is_one_confirmed(store, balance_source, block_root)`.
+ * https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md#is_one_confirmed
+ *
+ * Difference from the spec: the attestation score is passed in as a precomputed
+ * parameter rather than computed inline via `get_attestation_score`. Callers obtain
+ * it from `precomputeChainAttestationScores`, which computes scores for every block
+ * on a chain in a single pass — O(V × depth + B) instead of the spec's O(B × V × depth).
+ * The rest of the logic (proposer score boost, support discount, adversarial weight,
+ * safety threshold) is identical to the spec.
+ */
+export function isOneConfirmedWithScore(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache,
+  balanceSource: FastConfirmationBalanceSource,
+  blockRoot: RootHex,
+  attestationScore: number,
+  sourceKey: "current" | "previous",
+  logger?: Logger
+): boolean {
+  const currentSlot = ctx.getCurrentSlot();
+  if (currentSlot === 0) return false;
+  const block = getBlock(ctx, cache, blockRoot);
+  if (!block) return false;
+
+  const {threshold, proposerScore, maximumSupport, supportDiscount, adversarialWeight} = computeSafetyThreshold(
+    ctx,
+    store,
+    cache,
+    balanceSource,
+    blockRoot
+  );
+  const isConfirmed = attestationScore > threshold;
+
+  logger?.debug("Fast confirmation one-confirmed evaluation", {
+    blockRoot,
+    blockSlot: block.slot,
+    currentSlot,
+    sourceKey,
+    support: attestationScore,
+    threshold,
+    proposerScore,
+    maximumSupport,
+    supportDiscount,
+    adversarialWeight,
+    isConfirmed,
+  });
+
+  return isConfirmed;
+}
+
+/**
+ * Looks up the precomputed attestation score for a block on the chain that was
+ * passed to `precomputeChainAttestationScores`. Throws if the block is not in
+ * the map — a miss indicates the caller stepped outside the chain used for the
+ * precompute, which is a programming bug, not "no validators voted".
+ */
+export function getPrecomputedScoreOrThrow(scores: Map<RootHex, number>, blockRoot: RootHex): number {
+  const score = scores.get(blockRoot);
+  if (score === undefined) {
+    throw new Error(`Fast confirmation: attestation score not precomputed for blockRoot ${blockRoot}`);
+  }
+  return score;
+}
+
 export function getCurrentTarget(ctx: FastConfirmationContext): CheckpointWithPayloadStatus | null {
   const head = ctx.getHead().blockRoot;
   const currentEpoch = computeEpochAtSlot(ctx.getCurrentSlot());
@@ -984,6 +1050,23 @@ export function findLatestConfirmedDescendant(
   const headJustification = snapshot.headUnrealized ?? getUnrealizedJustification(ctx, cache, snapshot.headRoot);
   const currentBalanceSource = getCurrentBalanceSource(store, cache);
 
+  // Precompute per-chain attestation scores once.
+  // Scores are valid for both loops because loop 2's chain (head → newConfirmedRoot)
+  // is a tip-side prefix of loop 1's chain (head → latestConfirmedRoot). For any
+  // block B in loop 2's chain, the set of chain-descendants of B is identical in
+  // both chains, so score[B] is unchanged. A vote whose loop-1 landing position
+  // falls between newConfirmedRoot and latestConfirmedRoot contributes only to
+  // `score[ancestors of newConfirmedRoot]`, none of which loop 2 ever queries —
+  // so no over-counting either.
+  const chainScores = precomputeChainAttestationScores(
+    ctx,
+    cache,
+    currentBalanceSource,
+    snapshot.headRoot,
+    latestConfirmedRoot,
+    "current"
+  );
+
   const confirmedBlock = getBlock(ctx, cache, confirmedRoot);
   const confirmedEpoch = confirmedBlock ? computeEpochAtSlot(confirmedBlock.slot) : null;
   const loop1Condition =
@@ -1029,7 +1112,17 @@ export function findLatestConfirmedDescendant(
         });
         break;
       }
-      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, "current", logger);
+      const attestationScore = getPrecomputedScoreOrThrow(chainScores, blockRoot);
+      const isConfirmed = isOneConfirmedWithScore(
+        ctx,
+        store,
+        cache,
+        currentBalanceSource,
+        blockRoot,
+        attestationScore,
+        "current",
+        logger
+      );
       if (!isConfirmed) {
         logger?.debug("Fast confirmation previous-epoch loop stopped", {
           reason: "block_not_one_confirmed",
@@ -1071,7 +1164,17 @@ export function findLatestConfirmedDescendant(
         break;
       }
 
-      const isConfirmed = isOneConfirmed(ctx, store, cache, currentBalanceSource, blockRoot, "current", logger);
+      const attestationScore = getPrecomputedScoreOrThrow(chainScores, blockRoot);
+      const isConfirmed = isOneConfirmedWithScore(
+        ctx,
+        store,
+        cache,
+        currentBalanceSource,
+        blockRoot,
+        attestationScore,
+        "current",
+        logger
+      );
       if (!isConfirmed) {
         logger?.debug("Fast confirmation current-epoch loop stopped", {
           reason: "block_not_one_confirmed",
