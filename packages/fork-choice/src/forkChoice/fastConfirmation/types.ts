@@ -18,8 +18,7 @@ export type FastConfirmationBalanceSource = {
    * `state.getEffectiveBalanceIncrementsZeroInactive()`, which zeros both
    * inactive and slashed entries. When `state` is null, this equals `balances`
    * (the fallback path's justified balances — inactive-zeroed but NOT
-   * slashed-zeroed; matches the pre-existing null-state behavior of
-   * `ensureVoteMaps`).
+   * slashed-zeroed).
    */
   unslashedActiveBalances: EffectiveBalanceIncrements;
 };
@@ -84,9 +83,6 @@ export type FastConfirmationCache = {
   blockByRoot: Map<RootHex, ProtoBlock | null>;
   ancestorRoots: Map<string, RootHex[] | null>;
   committeeBySlot: Map<Slot, Set<ValidatorIndex>>;
-  isDescendantByRootPair: Map<string, boolean>;
-  /** voteRoot -> totalWeight, keyed by sourceKey ("current" | "previous") */
-  voteWeightBySource: Map<string, Map<RootHex, number>>;
   headState?: IBeaconStateView;
   checkpointStateByKey: Map<string, IBeaconStateView | null>;
 };

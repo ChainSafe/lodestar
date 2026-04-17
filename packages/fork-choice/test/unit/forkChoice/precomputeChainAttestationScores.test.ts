@@ -2,25 +2,19 @@ import {describe, expect, it} from "vitest";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {createFastConfirmationCache} from "../../../src/forkChoice/fastConfirmation/data.js";
 import {FastConfirmationContext, ProtoNodeReadView} from "../../../src/forkChoice/fastConfirmation/types.js";
-import {
-  getAncestorRoots,
-  getAttestationScore,
-  precomputeChainAttestationScores,
-} from "../../../src/forkChoice/fastConfirmation/utils.js";
+import {getAncestorRoots, precomputeChainAttestationScores} from "../../../src/forkChoice/fastConfirmation/utils.js";
 import {ProtoBlock} from "../../../src/index.js";
 import {NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
 import {ZERO_ROOT, makeBlock, makeContext, makeState, rootFromNumber} from "./fastConfirmationTestUtils.js";
 
 /**
- * Equivalence test: `precomputeChainAttestationScores` must produce the same
- * per-block attestation scores as the legacy `ensureVoteMaps` + `getAttestationScore`
- * pair for every block on the chain, across a matrix of fixtures.
- *
- * Runs during the migration window (steps 3-5) while both implementations are live.
- * At step 6 (deletion), this file is rewritten to compare against hand-constructed
- * expected values instead of the deleted old code.
+ * Regression tests for `precomputeChainAttestationScores`. Each fixture pairs an
+ * input scenario with the exact per-block scores the algorithm should produce.
+ * Originally this matrix compared output against the pre-optimization
+ * `getAttestationScore` — now deleted — and the expected values here are the
+ * ones that comparison produced.
  */
-describe("precomputeChainAttestationScores — equivalence with getAttestationScore", () => {
+describe("precomputeChainAttestationScores", () => {
   type Fixture = {
     name: string;
     blocks: ProtoBlock[];
@@ -34,6 +28,8 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
     terminalRoot: RootHex;
     headRoot: RootHex;
     currentSlot: Slot;
+    /** Expected score per chain position, terminal-first. `undefined` means chain is empty. */
+    expectedScores: number[] | undefined;
   };
 
   function buildLinearChain(n: number): ProtoBlock[] {
@@ -63,6 +59,8 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
 
     return [
       {
+        // All 32 validators vote for tip. Suffix sum makes every chain position
+        // see the full 32 × 32 = 1024 weight.
         name: "1) linear chain — all votes on tip",
         blocks: linear,
         validatorCount: 32,
@@ -73,8 +71,14 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
         terminalRoot: ZERO_ROOT,
         headRoot: tip.blockRoot,
         currentSlot: (tip.slot + 1) as Slot,
+        // Chain terminal-first: [base, mid, tip]; all see 32×32.
+        expectedScores: [1024, 1024, 1024],
       },
       {
+        // 10 on tip, 10 on mid, 10 on base. Suffix sum:
+        //   base  = 10 (tip) + 10 (mid) + 10 (base) = 30 × 32 = 960
+        //   mid   = 10 (tip) + 10 (mid)             = 20 × 32 = 640
+        //   tip   = 10 (tip)                         = 10 × 32 = 320
         name: "2) linear chain — votes spread across positions",
         blocks: linear,
         validatorCount: 30,
@@ -89,26 +93,32 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
         terminalRoot: ZERO_ROOT,
         headRoot: tip.blockRoot,
         currentSlot: (tip.slot + 1) as Slot,
+        expectedScores: [960, 640, 320],
       },
       {
-        name: "3) fork — some votes off the canonical chain (dropped equally)",
+        // 10 on tip + 10 on forkBlock (a sibling of `mid` under `base`).
+        // Fork votes land at position 0 (base); tip votes land at position 2 (tip).
+        //   base = 10 (tip) + 10 (fork) = 640
+        //   mid  = 10 (tip)             = 320
+        //   tip  = 10 (tip)             = 320
+        name: "3) fork — off-chain votes land at the deepest shared ancestor",
         blocks: forkChain,
         validatorCount: 20,
         balancePerValidator: 32,
         committeeSlots: [tip.slot],
         latestMessages: new Map([
           ...Array.from({length: 10}, (_, i) => [i, {root: tip.blockRoot, epoch: 0}] as const),
-          // 10 validators vote for the fork block — a descendant of `base`
-          // (chain[0]), sibling of `mid` (chain[1]).
           ...Array.from({length: 10}, (_, i) => [i + 10, {root: forkBlock.blockRoot, epoch: 0}] as const),
         ]),
         chainTip: tip.blockRoot,
         terminalRoot: ZERO_ROOT,
         headRoot: tip.blockRoot,
         currentSlot: (tip.slot + 1) as Slot,
+        expectedScores: [640, 320, 320],
       },
       {
-        name: "4) equivocators present — filtered equally",
+        // 5 equivocators out of 32; only 27 × 32 = 864 count.
+        name: "4) equivocators filtered",
         blocks: linear,
         validatorCount: 32,
         balancePerValidator: 32,
@@ -119,9 +129,12 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
         terminalRoot: ZERO_ROOT,
         headRoot: tip.blockRoot,
         currentSlot: (tip.slot + 1) as Slot,
+        expectedScores: [864, 864, 864],
       },
       {
-        name: "5) slashed validators — filtered equally",
+        // 5 slashed out of 32 — balance zeroed by getEffectiveBalanceIncrementsZeroInactive.
+        // 27 × 32 = 864.
+        name: "5) slashed filtered",
         blocks: linear,
         validatorCount: 32,
         balancePerValidator: 32,
@@ -132,23 +145,27 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
         terminalRoot: ZERO_ROOT,
         headRoot: tip.blockRoot,
         currentSlot: (tip.slot + 1) as Slot,
+        expectedScores: [864, 864, 864],
       },
       {
-        name: "6) validators without latest message — NULL_VOTE_INDEX, skipped equally",
+        // Only half (16 of 32) have a latest message. The rest have
+        // voteNextIndices[i] === NULL_VOTE_INDEX and are skipped.
+        // 16 × 32 = 512.
+        name: "6) validators without latest message are skipped",
         blocks: linear,
         validatorCount: 32,
         balancePerValidator: 32,
         committeeSlots: [tip.slot],
-        // Only half the validators have a latest message; the rest map to
-        // NULL_VOTE_INDEX in the mock's voteNextIndices.
         latestMessages: allVotingFor(16, tip.blockRoot),
         chainTip: tip.blockRoot,
         terminalRoot: ZERO_ROOT,
         headRoot: tip.blockRoot,
         currentSlot: (tip.slot + 1) as Slot,
+        expectedScores: [512, 512, 512],
       },
       {
-        name: "7) degenerate chain — terminalRoot === chainTip",
+        // terminalRoot === chainTip → getAncestorRoots returns []; empty map.
+        name: "7) degenerate chain — terminalRoot equals chainTip",
         blocks: linear,
         validatorCount: 16,
         balancePerValidator: 32,
@@ -158,27 +175,41 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
         terminalRoot: tip.blockRoot,
         headRoot: tip.blockRoot,
         currentSlot: (tip.slot + 1) as Slot,
+        expectedScores: undefined,
       },
       {
-        name: "8) off-chain fork deeper than terminal — walk break on terminalSlot",
+        // Chain = [mid, tip] (terminal = base, excluded). forkBlock's parent is
+        // base (slot 1, === terminalSlot), so the walk from forkBlock hits
+        // base.slot <= terminalSlot and breaks without landing — fork votes are
+        // dropped. Tip votes land at tip (position 1).
+        //   mid = 0 (nothing lands at mid) + 320 (from suffix of tip) = 320
+        //   tip = 320
+        name: "8) shorter chain — fork votes break at terminalSlot",
         blocks: forkChain,
         validatorCount: 20,
         balancePerValidator: 32,
         committeeSlots: [tip.slot],
         latestMessages: new Map([
-          // 10 on tip
           ...Array.from({length: 10}, (_, i) => [i, {root: tip.blockRoot, epoch: 0}] as const),
-          // 10 on the fork block — its walk goes forkBlock → base(chain[0]) → below terminal
           ...Array.from({length: 10}, (_, i) => [i + 10, {root: forkBlock.blockRoot, epoch: 0}] as const),
         ]),
         chainTip: tip.blockRoot,
-        // Terminal is `base` — the fork block's walk hits `base` at position 0
-        // after one step. We verify equivalence at the mid block.
         terminalRoot: base.blockRoot,
         headRoot: tip.blockRoot,
         currentSlot: (tip.slot + 1) as Slot,
+        expectedScores: [320, 320],
       },
       {
+        // Indices 0,1 equivocating; 2,3 slashed. 4–13 vote tip, 14–18 vote mid,
+        // 19–23 vote base, 24–28 vote fork, 29–39 are NULL_VOTE_INDEX.
+        // Effective contributions (per-validator balance 32):
+        //   tip: 10 validators at tip → 320
+        //   mid: 5 validators at mid → 160
+        //   base: 5 validators at base + 5 at fork (land at base) → 320
+        // Suffix sum (terminal-first [base, mid, tip]):
+        //   base = 320 + 160 + 320 = 800
+        //   mid  = 320 + 160       = 480
+        //   tip  = 320             = 320
         name: "9) mixed filters — equivocators + slashed + null votes + off-chain fork",
         blocks: forkChain,
         validatorCount: 40,
@@ -187,25 +218,20 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
         equivocatingIndices: [0, 1],
         slashedIndices: [2, 3],
         latestMessages: new Map([
-          // 0,1 equivocate; 2,3 slashed — should all be filtered.
           [0, {root: tip.blockRoot, epoch: 0}],
           [1, {root: tip.blockRoot, epoch: 0}],
           [2, {root: tip.blockRoot, epoch: 0}],
           [3, {root: tip.blockRoot, epoch: 0}],
-          // 4..13 vote for tip
           ...Array.from({length: 10}, (_, i) => [i + 4, {root: tip.blockRoot, epoch: 0}] as const),
-          // 14..18 vote for mid
           ...Array.from({length: 5}, (_, i) => [i + 14, {root: mid.blockRoot, epoch: 0}] as const),
-          // 19..23 vote for base
           ...Array.from({length: 5}, (_, i) => [i + 19, {root: base.blockRoot, epoch: 0}] as const),
-          // 24..28 vote for the off-chain fork — descendant of base, sibling of mid
           ...Array.from({length: 5}, (_, i) => [i + 24, {root: forkBlock.blockRoot, epoch: 0}] as const),
-          // 29..39 have no latest message → NULL_VOTE_INDEX
         ]),
         chainTip: tip.blockRoot,
         terminalRoot: ZERO_ROOT,
         headRoot: tip.blockRoot,
         currentSlot: (tip.slot + 1) as Slot,
+        expectedScores: [800, 480, 320],
       },
     ];
   }
@@ -234,30 +260,23 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
       };
       const cache = createFastConfirmationCache();
 
-      // New implementation.
       const precomputed = precomputeChainAttestationScores(
         ctx,
         cache,
         balanceSource,
         fixture.chainTip,
-        fixture.terminalRoot,
-        "current"
+        fixture.terminalRoot
       );
 
-      // For each block on the chain, the new map must agree with the old per-block
-      // `getAttestationScore`. A separate cache for the old call prevents
-      // cross-contamination of `voteWeightBySource` between new and old paths.
-      const oldCache = createFastConfirmationCache();
-      const chain = getAncestorRoots(ctx, cache, fixture.chainTip, fixture.terminalRoot);
-
-      if (chain.length === 0) {
+      if (fixture.expectedScores === undefined) {
         expect(precomputed.size).toBe(0);
         return;
       }
 
-      for (const root of chain) {
-        const oldScore = getAttestationScore(ctx, oldCache, balanceSource, root, "current");
-        expect(precomputed.get(root), `score mismatch for ${root}`).toEqual(oldScore);
+      const chain = getAncestorRoots(ctx, cache, fixture.chainTip, fixture.terminalRoot);
+      expect(chain.length, "chain length should match expected scores length").toBe(fixture.expectedScores.length);
+      for (let i = 0; i < chain.length; i++) {
+        expect(precomputed.get(chain[i]), `score at chain[${i}] (${chain[i]})`).toBe(fixture.expectedScores[i]);
       }
     });
   }
@@ -283,8 +302,6 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
     const voteNextIndices = [2 /* validator 0 voted for EMPTY */, NULL_VOTE_INDEX];
     const unslashedActiveBalances = new Uint16Array([32, 32]);
 
-    // Minimal context supplying just what the precompute function reads. Other
-    // methods throw if called — the algorithm should never touch them.
     const unused = () => {
       throw new Error("unused accessor called");
     };
@@ -313,7 +330,7 @@ describe("precomputeChainAttestationScores — equivalence with getAttestationSc
     const cache = createFastConfirmationCache();
     const balanceSource = {state: null, balances: unslashedActiveBalances, unslashedActiveBalances};
 
-    const precomputed = precomputeChainAttestationScores(ctx, cache, balanceSource, chainTip, terminalRoot, "current");
+    const precomputed = precomputeChainAttestationScores(ctx, cache, balanceSource, chainTip, terminalRoot);
 
     // Validator 0 voted for EMPTY variant of chainTip (node idx 2). Because
     // `indexToPosition` registers all three variants of chainTip at position 0,

@@ -199,22 +199,6 @@ function getSlotRangeParticipants(
   return participants;
 }
 
-function isDescendantCached(
-  ctx: FastConfirmationContext,
-  cache: FastConfirmationCache,
-  ancestorRoot: RootHex,
-  descendantRoot: RootHex
-): boolean {
-  const cacheKey = `${ancestorRoot}:${descendantRoot}`;
-  if (cache.isDescendantByRootPair.has(cacheKey)) {
-    return cache.isDescendantByRootPair.get(cacheKey) ?? false;
-  }
-
-  const isDescendant = ctx.isDescendant(ancestorRoot, descendantRoot);
-  cache.isDescendantByRootPair.set(cacheKey, isDescendant);
-  return isDescendant;
-}
-
 export function getBalanceSource(
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
@@ -232,7 +216,7 @@ export function getBalanceSource(
   // inactive and slashed validators (see packages/state-transition/src/util/balance.ts).
   // That gives us Lighthouse's `unslashed_balance` semantics in one bulk-iteration pass.
   // When state is null, fall back to `balances`, which zero inactive validators but not
-  // slashed — matches the pre-existing null-state behavior of `ensureVoteMaps`.
+  // slashed.
   const unslashedActiveBalances = state?.getEffectiveBalanceIncrementsZeroInactive() ?? fallbackBalances;
   return {
     state,
@@ -330,69 +314,6 @@ export function computeProposerScore(
 }
 
 /**
- * Build vote weight map in a single pass over all active validators.
- * Groups validators by their latest vote root, summing their balances.
- * Cached per sourceKey ("current" | "previous").
- */
-function ensureVoteMaps(
-  ctx: FastConfirmationContext,
-  cache: FastConfirmationCache,
-  balanceSource: FastConfirmationBalanceSource,
-  sourceKey: "current" | "previous"
-): void {
-  if (cache.voteWeightBySource.has(sourceKey)) return;
-
-  const voteMap = new Map<RootHex, number>();
-  const balances = balanceSource.balances;
-  const state = balanceSource.state;
-  const activeIndices = state?.getCurrentShuffling().activeIndices ?? null;
-  const equivocating = ctx.getEquivocatingIndices();
-
-  if (activeIndices !== null && state) {
-    for (const i of activeIndices) {
-      if (state.getValidator(i).slashed) continue;
-      if (equivocating.has(i)) continue;
-      const msg = ctx.getLatestMessage(i);
-      if (!msg) continue;
-      const weight = balances[i] ?? 0;
-      if (weight === 0) continue;
-      voteMap.set(msg.root, (voteMap.get(msg.root) ?? 0) + weight);
-    }
-  } else {
-    for (let i = 0; i < balances.length; i++) {
-      const weight = balances[i] ?? 0;
-      if (weight === 0) continue;
-      if (equivocating.has(i)) continue;
-      const msg = ctx.getLatestMessage(i);
-      if (!msg) continue;
-      voteMap.set(msg.root, (voteMap.get(msg.root) ?? 0) + weight);
-    }
-  }
-
-  cache.voteWeightBySource.set(sourceKey, voteMap);
-}
-
-export function getAttestationScore(
-  ctx: FastConfirmationContext,
-  cache: FastConfirmationCache,
-  balanceSource: FastConfirmationBalanceSource,
-  blockRoot: RootHex,
-  sourceKey: "current" | "previous"
-): number {
-  ensureVoteMaps(ctx, cache, balanceSource, sourceKey);
-  const voteMap = cache.voteWeightBySource.get(sourceKey) ?? new Map();
-
-  let score = 0;
-  for (const [voteRoot, weight] of voteMap) {
-    if (isDescendantCached(ctx, cache, blockRoot, voteRoot)) {
-      score += weight;
-    }
-  }
-
-  return score;
-}
-
-/**
  * Performance-optimised replacement for the spec's per-block `get_attestation_score`.
  * https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md#get_attestation_score
  *
@@ -411,18 +332,13 @@ export function getAttestationScore(
  * Chain ordering is terminal-first (see `getAncestorRoots`): position 0 is the block
  * directly after `terminalRoot`, position `len-1` is `chainTip`. `terminalRoot` itself
  * is NOT in the chain array.
- *
- * @param sourceKey Unused by the computation but kept in the signature for symmetry
- * with `getAttestationScore` during the migration. Safe to remove once the legacy
- * function is deleted.
  */
 export function precomputeChainAttestationScores(
   ctx: FastConfirmationContext,
   cache: FastConfirmationCache,
   balanceSource: FastConfirmationBalanceSource,
   chainTip: RootHex,
-  terminalRoot: RootHex,
-  _sourceKey: "current" | "previous"
+  terminalRoot: RootHex
 ): Map<RootHex, number> {
   const scores = new Map<RootHex, number>();
 
@@ -459,7 +375,7 @@ export function precomputeChainAttestationScores(
   let lastLandedPos = -1;
 
   for (let i = 0; i < voteNextIndices.length; i++) {
-    // Filters match the old `ensureVoteMaps` behavior:
+    // Filters:
     // - `unslashedActiveBalances[i] === 0` covers both inactive and slashed
     //   validators when state was available at balance-source construction;
     //   when state was null, the fallback preserves the null-state behavior
@@ -738,49 +654,6 @@ export function computeSafetyThreshold(
   return {threshold, proposerScore, maximumSupport, supportDiscount, adversarialWeight};
 }
 
-export function isOneConfirmed(
-  ctx: FastConfirmationContext,
-  store: IFastConfirmationStore,
-  cache: FastConfirmationCache,
-  balanceSource: FastConfirmationBalanceSource,
-  blockRoot: RootHex,
-  sourceKey: "current" | "previous",
-  logger?: Logger
-): boolean {
-  const currentSlot = ctx.getCurrentSlot();
-  if (currentSlot === 0) return false;
-  const block = getBlock(ctx, cache, blockRoot);
-  if (!block) return false;
-
-  // Spec: is_one_confirmed(store, balance_source, block_root)
-  // Compare actual support for this block against the computed LMD-GHOST safety threshold.
-  const support = getAttestationScore(ctx, cache, balanceSource, blockRoot, sourceKey);
-  const {threshold, proposerScore, maximumSupport, supportDiscount, adversarialWeight} = computeSafetyThreshold(
-    ctx,
-    store,
-    cache,
-    balanceSource,
-    blockRoot
-  );
-  const isConfirmed = support > threshold;
-
-  logger?.debug("Fast confirmation one-confirmed evaluation", {
-    blockRoot,
-    blockSlot: block.slot,
-    currentSlot,
-    sourceKey,
-    support,
-    threshold,
-    proposerScore,
-    maximumSupport,
-    supportDiscount,
-    adversarialWeight,
-    isConfirmed,
-  });
-
-  return isConfirmed;
-}
-
 /**
  * Spec: `is_one_confirmed(store, balance_source, block_root)`.
  * https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md#is_one_confirmed
@@ -1019,14 +892,7 @@ export function isConfirmedChainSafe(
 
   const chainRoots = getAncestorRoots(ctx, cache, confirmedRoot, startRoot);
   const previousBalanceSource = getPreviousBalanceSource(store, cache);
-  const chainScores = precomputeChainAttestationScores(
-    ctx,
-    cache,
-    previousBalanceSource,
-    confirmedRoot,
-    startRoot,
-    "previous"
-  );
+  const chainScores = precomputeChainAttestationScores(ctx, cache, previousBalanceSource, confirmedRoot, startRoot);
   for (const root of chainRoots) {
     const attestationScore = getPrecomputedScoreOrThrow(chainScores, root);
     if (
@@ -1074,8 +940,7 @@ export function findLatestConfirmedDescendant(
     cache,
     currentBalanceSource,
     snapshot.headRoot,
-    latestConfirmedRoot,
-    "current"
+    latestConfirmedRoot
   );
 
   const confirmedBlock = getBlock(ctx, cache, confirmedRoot);

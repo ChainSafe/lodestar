@@ -13,7 +13,8 @@ import {
   findLatestConfirmedDescendant,
   getBlockSupportBetweenSlots,
   isConfirmedChainSafe,
-  isOneConfirmed,
+  isOneConfirmedWithScore,
+  precomputeChainAttestationScores,
 } from "../../../src/forkChoice/fastConfirmation/utils.js";
 import {
   ZERO_ROOT,
@@ -64,58 +65,41 @@ describe("fast confirmation", () => {
     expect(adjustCommitteeWeightEstimateToEnsureSafety(1001)).toBe(1007);
   });
 
-  it("isOneConfirmed returns true only when support exceeds the computed threshold", () => {
+  it("isOneConfirmedWithScore returns true only when support exceeds the computed threshold", () => {
     const block = makeBlock(1, ZERO_ROOT);
     const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), block];
     const state = makeState(100, 32, [1 as Slot]);
     const store = makeStore(ZERO_ROOT, ZERO_ROOT, ZERO_ROOT, 0, 0, ZERO_ROOT, block.blockRoot, state);
+    const balanceSource = {
+      state,
+      balances: state.effectiveBalanceIncrements,
+      unslashedActiveBalances: state.getEffectiveBalanceIncrementsZeroInactive(),
+    };
 
-    const enoughSupportCtx = makeContext(
-      2 as Slot,
-      block.blockRoot,
-      blocks,
-      latestMessagesFor(100, block.blockRoot, 0, 4),
-      {epoch: 0, rootHex: ZERO_ROOT},
-      state
-    );
-    const lowSupportCtx = makeContext(
-      2 as Slot,
-      block.blockRoot,
-      blocks,
-      latestMessagesFor(100, block.blockRoot, 0, 2),
-      {epoch: 0, rootHex: ZERO_ROOT},
-      state
-    );
-
-    expect(
-      isOneConfirmed(
-        enoughSupportCtx,
-        store,
-        createFastConfirmationCache(),
-        {
-          state,
-          balances: state.effectiveBalanceIncrements,
-          unslashedActiveBalances: state.getEffectiveBalanceIncrementsZeroInactive(),
-        },
+    const run = (voterCount: number): boolean => {
+      const ctx = makeContext(
+        2 as Slot,
         block.blockRoot,
-        "current"
-      )
-    ).toBe(true);
-
-    expect(
-      isOneConfirmed(
-        lowSupportCtx,
+        blocks,
+        latestMessagesFor(100, block.blockRoot, 0, voterCount),
+        {epoch: 0, rootHex: ZERO_ROOT},
+        state
+      );
+      const cache = createFastConfirmationCache();
+      const scores = precomputeChainAttestationScores(ctx, cache, balanceSource, block.blockRoot, ZERO_ROOT);
+      return isOneConfirmedWithScore(
+        ctx,
         store,
-        createFastConfirmationCache(),
-        {
-          state,
-          balances: state.effectiveBalanceIncrements,
-          unslashedActiveBalances: state.getEffectiveBalanceIncrementsZeroInactive(),
-        },
+        cache,
+        balanceSource,
         block.blockRoot,
+        scores.get(block.blockRoot) ?? 0,
         "current"
-      )
-    ).toBe(false);
+      );
+    };
+
+    expect(run(4)).toBe(true); // 4 of 100 validators voting gives enough support
+    expect(run(2)).toBe(false); // 2 of 100 is below threshold
   });
 
   it("getBlockSupportBetweenSlots counts validators whose latest message is exactly the target block", () => {
