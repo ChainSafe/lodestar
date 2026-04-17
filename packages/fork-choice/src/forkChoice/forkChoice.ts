@@ -1964,6 +1964,13 @@ export class ForkChoice implements IForkChoice {
         }
         return count;
       },
+      getNodeIndices: (root: RootHex) => {
+        const entry = this.protoArray.indices.get(root);
+        if (entry === undefined) return [];
+        return typeof entry === "number" ? [entry] : entry;
+      },
+      getProtoNodeView: () => ({nodes: this.protoArray.nodes}),
+      getVoteNextIndices: () => this.voteNextIndices,
     };
   }
 }

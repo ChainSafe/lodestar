@@ -91,6 +91,17 @@ export type FastConfirmationCache = {
   checkpointStateByKey: Map<string, IBeaconStateView | null>;
 };
 
+/**
+ * Minimal read-only view of a ProtoArray node, sufficient for parent-walking
+ * in `precomputeChainAttestationScores`. Narrowed from `ProtoNode` so mocks
+ * can satisfy this shape without constructing a real ProtoArray.
+ */
+export type ProtoNodeReadView = {
+  readonly parent?: number;
+  readonly slot: Slot;
+  readonly blockRoot: RootHex;
+};
+
 export type FastConfirmationContext = {
   config: {
     CONFIRMATION_BYZANTINE_THRESHOLD: number;
@@ -106,6 +117,33 @@ export type FastConfirmationContext = {
   getFinalizedCheckpoint(): CheckpointWithPayloadStatus;
   getEquivocatingIndices(): Set<ValidatorIndex>;
   getTrackedVotesCount(): number;
+
+  /**
+   * Returns all ProtoArray node indices for this root.
+   * - Pre-Gloas: `[fullIdx]`
+   * - Gloas, payload not yet observed: `[pendingIdx, emptyIdx]`
+   * - Gloas, payload observed: `[pendingIdx, emptyIdx, fullIdx]`
+   * - Unknown root: `[]`
+   *
+   * Used once per chain block by `precomputeChainAttestationScores` to build
+   * the `indexToPosition` map covering every variant of each chain block.
+   */
+  getNodeIndices(root: RootHex): readonly number[];
+
+  /**
+   * Read-only view of ProtoArray nodes for parent-walking in the precompute
+   * hot loop. Hoisted once at the top of `precomputeChainAttestationScores`
+   * so the inner walk does plain array access with no function-call overhead
+   * (walk runs up to O(V × depth) times per precompute invocation).
+   */
+  getProtoNodeView(): {readonly nodes: ReadonlyArray<ProtoNodeReadView>};
+
+  /**
+   * Read-only handle on `voteNextIndices`. Hoisted once at the top of
+   * `precomputeChainAttestationScores` for direct indexed access in the
+   * per-validator loop. `NULL_VOTE_INDEX` sentinel is preserved.
+   */
+  getVoteNextIndices(): readonly number[];
 };
 
 export interface IFastConfirmationRule {

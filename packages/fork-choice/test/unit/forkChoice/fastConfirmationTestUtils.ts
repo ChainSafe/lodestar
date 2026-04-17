@@ -8,6 +8,7 @@ import {
   IFastConfirmationStore,
 } from "../../../src/forkChoice/fastConfirmation/types.js";
 import {ExecutionStatus, PayloadStatus, ProtoBlock} from "../../../src/index.js";
+import {NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
 
 export const ZERO_ROOT = rootFromNumber(0);
 
@@ -134,6 +135,31 @@ export function makeContext(
   const blocksByRoot = new Map(blocks.map((block) => [block.blockRoot, block]));
   const equivocating = new Set(equivocatingIndices);
 
+  // Build a fake ProtoArray-like structure so the three new accessors can
+  // satisfy `precomputeChainAttestationScores` without a real ProtoArray.
+  // Assumes `blocks` is in topological order (ancestors before descendants),
+  // which all existing fixtures satisfy.
+  const nodeIndexByRoot = new Map<RootHex, number>();
+  const protoNodes: {readonly parent?: number; readonly slot: Slot; readonly blockRoot: RootHex}[] = [];
+  for (const block of blocks) {
+    const parentIdx = nodeIndexByRoot.get(block.parentRoot);
+    const idx = protoNodes.length;
+    protoNodes.push({parent: parentIdx, slot: block.slot, blockRoot: block.blockRoot});
+    nodeIndexByRoot.set(block.blockRoot, idx);
+  }
+
+  // voteNextIndices: one entry per validator. Derive from latestMessages —
+  // validators without a latest message (or voting for a block we don't know
+  // about) get NULL_VOTE_INDEX.
+  const validatorCount = state.effectiveBalanceIncrements.length;
+  const voteNextIndices = new Array<number>(validatorCount).fill(NULL_VOTE_INDEX);
+  for (const [vIdx, msg] of latestMessages) {
+    const nodeIdx = nodeIndexByRoot.get(msg.root);
+    if (nodeIdx !== undefined && vIdx < validatorCount) {
+      voteNextIndices[vIdx] = nodeIdx;
+    }
+  }
+
   return {
     config: {
       CONFIRMATION_BYZANTINE_THRESHOLD: 25,
@@ -169,6 +195,12 @@ export function makeContext(
     getFinalizedCheckpoint: () => checkpoint(0, ZERO_ROOT),
     getEquivocatingIndices: () => equivocating,
     getTrackedVotesCount: () => latestMessages.size,
+    getNodeIndices: (root: RootHex) => {
+      const idx = nodeIndexByRoot.get(root);
+      return idx === undefined ? [] : [idx];
+    },
+    getProtoNodeView: () => ({nodes: protoNodes}),
+    getVoteNextIndices: () => voteNextIndices,
   };
 }
 
