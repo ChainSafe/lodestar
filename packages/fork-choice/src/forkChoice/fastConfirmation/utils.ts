@@ -1019,8 +1019,19 @@ export function isConfirmedChainSafe(
 
   const chainRoots = getAncestorRoots(ctx, cache, confirmedRoot, startRoot);
   const previousBalanceSource = getPreviousBalanceSource(store, cache);
+  const chainScores = precomputeChainAttestationScores(
+    ctx,
+    cache,
+    previousBalanceSource,
+    confirmedRoot,
+    startRoot,
+    "previous"
+  );
   for (const root of chainRoots) {
-    if (!isOneConfirmed(ctx, store, cache, previousBalanceSource, root, "previous", logger)) {
+    const attestationScore = getPrecomputedScoreOrThrow(chainScores, root);
+    if (
+      !isOneConfirmedWithScore(ctx, store, cache, previousBalanceSource, root, attestationScore, "previous", logger)
+    ) {
       logger?.debug("Fast confirmation chain-safety failed", {
         confirmedRoot,
         reason: "unconfirmed_block_in_chain",
