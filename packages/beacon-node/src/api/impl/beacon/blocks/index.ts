@@ -191,7 +191,10 @@ export function getBeaconBlockApi({
           try {
             await validateGossipBlock(config, chain, signedBlock, fork);
           } catch (error) {
-            if (error instanceof BlockGossipError && error.type.code === BlockErrorCode.ALREADY_KNOWN) {
+            if (
+              error instanceof BlockGossipError &&
+              (error.type.code === BlockErrorCode.ALREADY_KNOWN || error.type.code === BlockErrorCode.REPEAT_PROPOSAL)
+            ) {
               chain.logger.debug("Ignoring known block during publishing", valLogMeta);
               // Blocks might already be published by another node as part of a fallback setup or DVT cluster
               // and can reach our node by gossip before the api. The error can be ignored and should not result in a 500 response.
