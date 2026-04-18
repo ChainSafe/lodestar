@@ -357,7 +357,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<PayloadId | null> {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
-    const method = isForkPostGloas(fork)
+    const method = ForkSeq[fork] >= ForkSeq.gloas
       ? "engine_forkchoiceUpdatedV4"
       : ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_forkchoiceUpdatedV3"
