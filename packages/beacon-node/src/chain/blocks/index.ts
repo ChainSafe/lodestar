@@ -88,7 +88,7 @@ export async function processBlocks(
     const fullyVerifiedBlocks = relevantBlocks.map(
       (block, i): FullyVerifiedBlock => ({
         blockInput: block,
-        postBlockState: postStates[i],
+        postState: postStates[i],
         postPayloadState: null,
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],

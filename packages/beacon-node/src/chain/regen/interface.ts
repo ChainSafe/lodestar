@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
-import {CheckpointHexPayload} from "../stateCache/types.js";
+import {CheckpointHex} from "../stateCache/types.js";
 
 export enum RegenCaller {
   getDuties = "getDuties",
@@ -40,20 +40,15 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): IBeaconStateView | null;
   getPreStateSync(block: BeaconBlock): IBeaconStateView | null;
-  getCheckpointStateOrBytes(cp: CheckpointHexPayload): Promise<IBeaconStateView | Uint8Array | null>;
-  getCheckpointStateSync(cp: CheckpointHexPayload): IBeaconStateView | null;
+  getCheckpointStateOrBytes(cp: CheckpointHex): Promise<IBeaconStateView | Uint8Array | null>;
+  getCheckpointStateSync(cp: CheckpointHex): IBeaconStateView | null;
   getClosestHeadState(head: ProtoBlock): IBeaconStateView | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   pruneOnFinalized(finalizedEpoch: Epoch): void;
-  processBlockState(blockRootHex: RootHex, postState: IBeaconStateView): void;
-  processPayloadState(payloadState: IBeaconStateView): void;
-  /**
-   * payloadPresent is true if this is payload state, false if block state.
-   * payloadPresent is always true for pre-gloas.
-   */
-  addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView, payloadPresent: boolean): void;
+  processState(blockRootHex: RootHex, postState: IBeaconStateView): void;
+  addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView): void;
   updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void;
-  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch, payloadPresent: boolean): number | null;
+  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
 }
 
 /**
