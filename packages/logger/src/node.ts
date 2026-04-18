@@ -25,6 +25,10 @@ export type LoggerNodeOpts = {
      * Rotation config for file output transport
      */
     dailyRotate?: number;
+    /**
+     * Maximum size per individual file
+     */
+    maxSize?: number;
   };
   /**
    * Module prefix for all logs
@@ -91,16 +95,19 @@ function getNodeLoggerTransports(opts: LoggerNodeOpts): winston.transport[] {
     // `lodestar --logFileDailyRotate 10` -> set daily rotate to custom value 10
     // `lodestar --logFileDailyRotate 0` -> disable daily rotate and accumulate in same file
     const enableDailyRotate = opts.file.dailyRotate != null && opts.file.dailyRotate > 0;
+    const maxFileSizeInBytes = opts.file.maxSize != null ? opts.file.maxSize * 1024 * 1024 : undefined;
 
     transports.push(
       enableDailyRotate
         ? new DailyRotateFile({
             level: opts.file.level,
-            //insert the date pattern in filename before the file extension.
+            // insert the date pattern in filename before the file extension.
             filename: filename.replace(/\.(?=[^.]*$)|$/, "-%DATE%$&"),
             datePattern: DATE_PATTERN,
             handleExceptions: true,
-            maxFiles: opts.file.dailyRotate,
+            // ensure that there are always at least 2 files in rotation.
+            maxFiles: maxFileSizeInBytes != null ? Math.max(opts.file.dailyRotate || 2, 2) : opts.file.dailyRotate,
+            maxSize: maxFileSizeInBytes,
             auditFile: path.join(path.dirname(filename), ".log_rotate_audit.json"),
           })
         : new winston.transports.File({

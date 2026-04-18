@@ -7,6 +7,7 @@ export type LogArgs = {
   logFile?: string;
   logFileLevel: LogLevel;
   logFileDailyRotate: number;
+  logFileDirMaxSize: number;
   logFormatGenesisTime?: number;
   logPrefix?: string;
   logFormat?: string;
@@ -37,6 +38,12 @@ export const logOptions: CliCommandOptions<LogArgs> = {
     description:
       "Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation",
     default: 5,
+    type: "number",
+  },
+
+  logFileDirMaxSize: {
+    description: "Maximum reachable size of all output logs in MB. Only applies when log file daily rotation is enabled",
+    default: 2048,
     type: "number",
   },
 

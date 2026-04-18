@@ -19,6 +19,9 @@ export function parseLoggerArgs(
   config: ChainForkConfig,
   opts?: {hideTimestamp?: boolean}
 ): LoggerNodeOpts {
+  const effectiveMaxFiles = Math.max(args.logFileDailyRotate || 2, 2);
+  const perFileMaxSize =
+    args.logFileDailyRotate > 0 ? Math.max(Math.floor(args.logFileDirMaxSize / effectiveMaxFiles), 1) : undefined;
   return {
     level: parseLogLevel(args.logLevel),
     file:
@@ -28,6 +31,7 @@ export function parseLoggerArgs(
             filepath: args.logFile ?? paths.defaultLogFilepath,
             level: parseLogLevel(args.logFileLevel),
             dailyRotate: args.logFileDailyRotate,
+            maxSize: perFileMaxSize,
           },
     module: args.logPrefix,
     format: args.logFormat ? parseLogFormat(args.logFormat) : undefined,
