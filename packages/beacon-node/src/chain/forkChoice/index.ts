@@ -138,6 +138,8 @@ export function initializeForkChoiceFromFinalizedState(
         stateRoot: toRootHex(blockHeader.stateRoot),
         blockRoot: toRootHex(checkpoint.root),
         timeliness: true, // Optimistically assume is timely
+        ptcTimeliness: true, // Spec: block_timeliness for anchor = [True, True]
+        proposerIndex: blockHeader.proposerIndex,
 
         justifiedEpoch: justifiedCheckpoint.epoch,
         justifiedRoot: toRootHex(justifiedCheckpoint.root),
@@ -235,6 +237,8 @@ export function initializeForkChoiceFromUnfinalizedState(
     blockRoot: headRoot,
     targetRoot: headRoot,
     timeliness: true, // Optimistically assume is timely
+    ptcTimeliness: true, // Spec: block_timeliness for anchor = [True, True]
+    proposerIndex: blockHeader.proposerIndex,
 
     justifiedEpoch: justifiedCheckpoint.epoch,
     justifiedRoot: toRootHex(justifiedCheckpoint.root),
