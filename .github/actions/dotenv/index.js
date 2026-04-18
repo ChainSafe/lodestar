@@ -11,19 +11,14 @@ const result = dotEnv.config({path: envFile});
 if (result.error) {
   core.setFailed(result.error.message);
 } else {
-  core.setOutput("env", result.parsed);
   core.info("Env file loaded");
   core.info("Populating env variables...");
 
   for (const key in result.parsed) {
     const value = result.parsed[key];
-    core.info(`${key}=${value}`);
+    core.setSecret(value);
 
     // Export variable
     core.exportVariable(key, value);
-
-    // Set to output so it can be used in as the input for the next job/step
-    core.setOutput(key, value);
-    
   }
 }
