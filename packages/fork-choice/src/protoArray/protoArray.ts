@@ -1868,6 +1868,30 @@ export class ProtoArray {
     return node;
   }
 
+  /**
+   * Find blocks at the given slot from the same proposer that are PTC-timely,
+   * excluding the given block root.
+   * Spec: gloas/fork-choice.md#new-should_apply_proposer_boost (equivocations check)
+   */
+  findEquivocatingBlocks(proposerIndex: number, slot: Slot, excludeRoot: RootHex): ProtoNode[] {
+    const result: ProtoNode[] = [];
+    for (const [root, variantOrArr] of this.indices.entries()) {
+      if (root === excludeRoot) continue;
+      const nodeIndex = Array.isArray(variantOrArr) ? variantOrArr[0] : variantOrArr;
+      if (nodeIndex === undefined) continue;
+      const node = this.nodes[nodeIndex];
+      if (
+        node !== undefined &&
+        node.slot === slot &&
+        node.proposerIndex === proposerIndex &&
+        node.ptcTimeliness
+      ) {
+        result.push(node);
+      }
+    }
+    return result;
+  }
+
   private getNodesBetween(upperIndex: number, lowerIndex: number): ProtoNode[] {
     const result = [];
     for (let index = upperIndex - 1; index > lowerIndex; index--) {
