@@ -77,6 +77,28 @@ describe("validator / signers / importKeystoreDefinitionsFromExternalDir", () =>
     );
   });
 
+  it("should use lowercase per-keystore password filename for mixed-case pubkey keystore", async () => {
+    tmpDir = fs.mkdtempSync("cli-keystores-import-test");
+
+    const passphrase = "AAAAAAAA0000000000";
+    const [secretKey] = cachedSeckeysHex;
+    const [pubkey] = cachedPubkeysHex;
+    const [keystoreStr] = await getKeystoresStr(passphrase, [secretKey]);
+    const keystorePath = inTmp("keystore_0.json");
+    const passwordsDir = inTmp("passwords");
+
+    const keystore = JSON.parse(keystoreStr) as {pubkey: string};
+    keystore.pubkey = keystore.pubkey.toUpperCase();
+
+    fs.mkdirSync(passwordsDir, {recursive: true});
+    fs.writeFileSync(keystorePath, JSON.stringify(keystore));
+    fs.writeFileSync(path.join(passwordsDir, `${pubkey}.txt`), passphrase);
+
+    const definitions = importKeystoreDefinitionsFromExternalDir({keystoresPath: [tmpDir], passwordsDir});
+
+    expect(definitions).toEqual([{keystorePath, password: passphrase}]);
+  });
+
   it("should throw if per-keystore passwords dir does not exist", async () => {
     tmpDir = fs.mkdtempSync("cli-keystores-import-test");
 

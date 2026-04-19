@@ -96,7 +96,7 @@ function getPasswordFilepathForKeystore(keystorePath: string, passwordsDir: stri
     throw new YargsError(`Failed to read keystore ${keystorePath}: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  const passwordFilepath = path.join(passwordsDir, `${pubkeyHex}.txt`);
+  const passwordFilepath = path.join(passwordsDir, `${pubkeyHex.toLowerCase()}.txt`);
 
   if (!fs.existsSync(passwordFilepath)) {
     throw new YargsError(
