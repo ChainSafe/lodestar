@@ -56,6 +56,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
+    importKeystoresPasswords?: string;
     disableKeystoresThreadPool?: boolean;
 
     "http.requestWireFormat"?: string;
@@ -303,6 +304,15 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     alias: ["passphraseFile"], // Backwards compatibility with old `validator import` cmd
     description: "Path to a file with password to decrypt all keystores from `importKeystores` option",
     defaultDescription: "./password.txt",
+    conflicts: ["importKeystoresPasswords"],
+    type: "string",
+  },
+
+  importKeystoresPasswords: {
+    description:
+      "Path to a directory containing per-keystore password files named `0x<validator-public-key-hex>.txt` for `importKeystores`",
+    defaultDescription: "./passwords/0x<validator-public-key-hex>.txt",
+    conflicts: ["importKeystoresPassword"],
     type: "string",
   },
 

@@ -55,3 +55,47 @@ describe("import from fs same cmd as validate", () => {
     await stopValidator();
   });
 });
+
+describe("import from fs same cmd as validate with per-keystore passwords", () => {
+  vi.setConfig({testTimeout: 30_000});
+
+  const dataDir = path.join(testFilesDir, "import-and-validate-multi-password-test");
+  const importFromDir = path.join(dataDir, "eth2.0_deposit_out");
+  const passwordsDir = path.join(dataDir, "passwords");
+
+  const passphrases = ["AAAAAAAA0000000000", "BBBBBBBB1111111111"];
+  const keyCount = passphrases.length;
+  const pubkeys = cachedPubkeysHex.slice(0, keyCount);
+  const secretKeys = cachedSeckeysHex.slice(0, keyCount);
+
+  beforeAll(async () => {
+    rimraf.sync(dataDir);
+    rimraf.sync(importFromDir);
+    rimraf.sync(passwordsDir);
+
+    const keystoresStr = await Promise.all(
+      secretKeys.map(async (secretKey, index) => {
+        const [keystoreStr] = await getKeystoresStr(passphrases[index], [secretKey]);
+        return keystoreStr;
+      })
+    );
+
+    fs.mkdirSync(importFromDir, {recursive: true});
+    fs.mkdirSync(passwordsDir, {recursive: true});
+
+    for (let i = 0; i < keyCount; i++) {
+      fs.writeFileSync(path.join(importFromDir, `keystore_${i}.json`), keystoresStr[i]);
+      fs.writeFileSync(path.join(passwordsDir, `${pubkeys[i]}.txt`), passphrases[i]);
+    }
+  });
+
+  it("run 'validator' with per-keystore password files and check keys are loaded", async () => {
+    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager(
+      [`--importKeystores=${importFromDir}`, `--importKeystoresPasswords=${passwordsDir}`],
+      {dataDir, logPrefix: "case-3"}
+    );
+
+    await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys response data");
+    await stopValidator();
+  });
+});
