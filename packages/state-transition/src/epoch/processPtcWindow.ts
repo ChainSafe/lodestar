@@ -30,6 +30,7 @@ export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTran
 
   // Write shifted window to state: current(N) + next(N+1) + newlyComputed(N+2)
   // From the perspective of upcoming epoch N+1, this is previous + current + next
+  // TODO: Remove Array.from() once @chainsafe/ssz is upgraded to v1.3.1+ (accepts Uint32Array directly)
   state.ptcWindow = ssz.gloas.PtcWindow.toViewDU([
     ...state.epochCtx.payloadTimelinessCommittees.map((c) => Array.from(c)),
     ...state.epochCtx.nextPayloadTimelinessCommittees.map((c) => Array.from(c)),

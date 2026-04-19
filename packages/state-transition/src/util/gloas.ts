@@ -193,6 +193,7 @@ export function initializePtcWindow(state: CachedBeaconStateFulu): number[][] {
         epoch,
         shuffling.committees,
         state.epochCtx.effectiveBalanceIncrements
+      // TODO: Remove Array.from() once @chainsafe/ssz is upgraded to v1.3.1+ (accepts Uint32Array directly)
       ).map((committee) => Array.from(committee))
     );
   }
