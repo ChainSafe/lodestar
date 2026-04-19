@@ -10,10 +10,9 @@ import {
   PTC_SIZE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {BuilderIndex, Epoch, ValidatorIndex, gloas, ssz} from "@lodestar/types";
+import {BuilderIndex, Epoch, ValidatorIndex, gloas} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
-import type {EpochTransitionCache} from "../cache/epochTransitionCache.js";
 import type {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../cache/stateCache.js";
 import type {IBeaconStateViewGloas} from "../stateView/interface.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
@@ -201,42 +200,21 @@ export function initializePtcWindow(state: CachedBeaconStateFulu): number[][] {
   return ptcWindow;
 }
 
-export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTransitionCache): void {
-  const nextEpoch = state.epochCtx.epoch + MIN_SEED_LOOKAHEAD + 1;
-  const nextShuffling =
-    cache.nextShuffling ?? computeEpochShuffling(state, cache.nextShufflingActiveIndices, nextEpoch);
-  cache.nextShuffling = nextShuffling;
-
-  const remainingPtcWindow = state.ptcWindow.toValue().slice(SLOTS_PER_EPOCH);
-  const nextEpochPtcs = computePayloadTimelinessCommitteesForEpoch(
-    state,
-    nextEpoch,
-    nextShuffling.committees,
-    state.epochCtx.effectiveBalanceIncrements
-  );
-
-  state.ptcWindow = ssz.gloas.PtcWindow.toViewDU([
-    ...remainingPtcWindow,
-    ...nextEpochPtcs.map((committee) => Array.from(committee)),
-  ]);
-}
-
 export function getPtcWindowEpochCacheData(state: CachedBeaconStateGloas): {
   previousPayloadTimelinessCommittees: Uint32Array[];
   payloadTimelinessCommittees: Uint32Array[];
   nextPayloadTimelinessCommittees: Uint32Array[];
 } {
-  const ptcWindow = state.ptcWindow.toValue();
+  const toUint32Arrays = (views: ReturnType<typeof state.ptcWindow.getReadonlyByRange>) =>
+    views.map((v) => Uint32Array.from(v.getAll()));
+
+  const previousPtcWindow = state.ptcWindow.getReadonlyByRange(0, SLOTS_PER_EPOCH);
+  const currentPtcWindow = state.ptcWindow.getReadonlyByRange(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH);
+  const nextPtcWindow = state.ptcWindow.getReadonlyByRange(2 * SLOTS_PER_EPOCH, SLOTS_PER_EPOCH);
 
   return {
-    previousPayloadTimelinessCommittees: ptcWindow
-      .slice(0, SLOTS_PER_EPOCH)
-      .map((committee: ValidatorIndex[]) => Uint32Array.from(committee)),
-    payloadTimelinessCommittees: ptcWindow
-      .slice(SLOTS_PER_EPOCH, 2 * SLOTS_PER_EPOCH)
-      .map((committee: ValidatorIndex[]) => Uint32Array.from(committee)),
-    nextPayloadTimelinessCommittees: ptcWindow
-      .slice(2 * SLOTS_PER_EPOCH, 3 * SLOTS_PER_EPOCH)
-      .map((committee: ValidatorIndex[]) => Uint32Array.from(committee)),
+    previousPayloadTimelinessCommittees: toUint32Arrays(previousPtcWindow),
+    payloadTimelinessCommittees: toUint32Arrays(currentPtcWindow),
+    nextPayloadTimelinessCommittees: toUint32Arrays(nextPtcWindow),
   };
 }

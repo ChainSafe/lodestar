@@ -16,7 +16,6 @@ import {
   CachedBeaconStatePhase0,
   EpochTransitionCache,
 } from "../types.js";
-import {processPtcWindow} from "../util/gloas.js";
 import {processBuilderPendingPayments} from "./processBuilderPendingPayments.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
@@ -29,6 +28,7 @@ import {processParticipationRecordUpdates} from "./processParticipationRecordUpd
 import {processPendingConsolidations} from "./processPendingConsolidations.js";
 import {processPendingDeposits} from "./processPendingDeposits.js";
 import {processProposerLookahead} from "./processProposerLookahead.js";
+import {processPtcWindow} from "./processPtcWindow.js";
 import {processRandaoMixesReset} from "./processRandaoMixesReset.js";
 import {processRegistryUpdates} from "./processRegistryUpdates.js";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
