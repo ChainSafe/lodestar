@@ -279,7 +279,6 @@ export const eventTestData: EventData = {
     builderIndex: 42,
     blockHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
     blockRoot: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
-    stateRoot: "0x600e852a08c1200654ddf11025f1ceacb3c2e74bdd5c630cde0838b2591b69f9",
     executionOptimistic: false,
   },
   [EventType.executionPayloadGossip]: {
@@ -287,7 +286,6 @@ export const eventTestData: EventData = {
     builderIndex: 42,
     blockHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
     blockRoot: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
-    stateRoot: "0x600e852a08c1200654ddf11025f1ceacb3c2e74bdd5c630cde0838b2591b69f9",
   },
   [EventType.executionPayloadAvailable]: {
     slot: 10,
