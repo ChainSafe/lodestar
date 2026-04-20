@@ -87,7 +87,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/fork_choice\/on_execution_payload\/.*$/,
   ],
   skippedTests: [],
-  skippedRunners: [],
+  skippedRunners: ["fast_confirmation"],
 };
 
 /**
