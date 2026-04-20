@@ -224,7 +224,7 @@ export class BeaconNode {
       const eth1BlockHash =
         isStatePostBellatrix(anchorState) && anchorState.isExecutionStateType
           ? isStatePostGloas(anchorState)
-            ? toRootHex(anchorState.latestExecutionPayloadBid.parentBlockHash)
+            ? toRootHex(anchorState.latestBlockHash)
             : toRootHex(anchorState.latestExecutionPayloadHeader.blockHash)
           : undefined;
       executionEngineOpts = {

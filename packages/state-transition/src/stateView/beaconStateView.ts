@@ -343,6 +343,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   // gloas
 
+  get latestBlockHash(): Bytes32 {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("latestBlockHash is not available before Gloas");
+    }
+    return (this.cachedState as CachedBeaconStateGloas).latestBlockHash;
+  }
+
   get executionPayloadAvailability(): BitArray {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("executionPayloadAvailability is not available before Gloas");
