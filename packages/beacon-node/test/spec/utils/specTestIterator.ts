@@ -73,7 +73,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
-    // Ignore the partial data column container additions for now. Unskip them when 
+    // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
