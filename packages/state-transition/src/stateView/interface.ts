@@ -237,11 +237,10 @@ export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
 /** Gloas+ state fields — use isStatePostGloas() guard */
 export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   forkName: ForkPostGloas;
-  /** Removed from BeaconState in gloas (EIP-7732); use latestBlockHash instead. */
+  /** Removed from BeaconState in gloas. Use `latestBlockHash` instead. */
   latestExecutionPayloadHeader: never;
-  /** Removed from BeaconState in gloas (EIP-7732). */
+  /** Removed from BeaconState in gloas. */
   payloadBlockNumber: never;
-  /** The execution block hash on the BeaconState (EIP-7732 dedicated field, replaces header-based access). */
   latestBlockHash: Bytes32;
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
