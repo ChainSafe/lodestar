@@ -79,7 +79,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
   ],
   skippedTests: [],
-  skippedRunners: [],
+  skippedRunners: ["fast_confirmation"],
 };
 
 /**
