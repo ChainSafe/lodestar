@@ -9,6 +9,7 @@ import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {ImportPayloadOpts} from "./types.js";
+import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
@@ -86,6 +87,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 export async function importExecutionPayload(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
+  signal: AbortSignal,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
   const signedEnvelope = payloadInput.getPayloadEnvelope();
@@ -111,10 +113,16 @@ export async function importExecutionPayload(
     });
   }
 
-  // 3. Apply backpressure from the write queue early, before doing verification work
+  // 3. Wait for data columns to be available before claiming a write-queue slot.
+  // The helper is shared with future gloas sync services; take the single-item batch form here.
+  await verifyPayloadsDataAvailability([payloadInput], signal);
+
+  // 4. Apply backpressure from the write queue, before doing verification work.
+  // The actual DB write is deferred until after verification succeeds.
   await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
 
-  // 4. Get block state for envelope field validation
+  // 5. Get pre-state for processExecutionPayloadEnvelope
+  // We need the block state (post-block, pre-payload) to process the envelope
   const blockState = await this.regen.getBlockSlotState(
     protoBlock,
     protoBlock.slot,
