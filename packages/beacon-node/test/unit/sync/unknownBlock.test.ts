@@ -41,7 +41,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
 
   const testCases: {
     id: string;
-    event: ChainEvent.unknownParent | ChainEvent.unknownBlockRoot;
+    event: ChainEvent.blockUnknownParent | ChainEvent.unknownBlockRoot;
     finalizedSlot: number;
     reportPeer?: boolean;
     seenBlock?: boolean;
@@ -55,12 +55,12 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
     },
     {
       id: "fetch and process multiple unknown block parents",
-      event: ChainEvent.unknownParent,
+      event: ChainEvent.blockUnknownParent,
       finalizedSlot: 0,
     },
     {
       id: "downloaded parent is before finalized slot",
-      event: ChainEvent.unknownParent,
+      event: ChainEvent.blockUnknownParent,
       finalizedSlot: 2,
       // Peer reporting is currently disabled in source (commented out in removeAndDownScoreAllDescendants)
       // Test verifies blocks are cleaned up from pendingBlocks instead
@@ -86,7 +86,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
     },
     {
       id: "downloaded blocks only",
-      event: ChainEvent.unknownParent,
+      event: ChainEvent.blockUnknownParent,
       finalizedSlot: 0,
       maxPendingBlocks: 1,
     },
@@ -232,8 +232,8 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         clientAgent: "test-client",
       });
 
-      if (event === ChainEvent.unknownParent) {
-        emitter.emit(ChainEvent.unknownParent, {
+      if (event === ChainEvent.blockUnknownParent) {
+        emitter.emit(ChainEvent.blockUnknownParent, {
           blockInput: BlockInputPreData.createFromBlock({
             block: blockC,
             blockRootHex: blockRootHexC,
@@ -340,11 +340,11 @@ describe("UnknownBlockSync", () => {
 
         if (expected) {
           expect(events.listenerCount(ChainEvent.unknownBlockRoot)).toBe(1);
-          expect(events.listenerCount(ChainEvent.unknownParent)).toBe(1);
+          expect(events.listenerCount(ChainEvent.blockUnknownParent)).toBe(1);
           expect(service.isSubscribedToNetwork()).toBe(true);
         } else {
           expect(events.listenerCount(ChainEvent.unknownBlockRoot)).toBe(0);
-          expect(events.listenerCount(ChainEvent.unknownParent)).toBe(0);
+          expect(events.listenerCount(ChainEvent.blockUnknownParent)).toBe(0);
           expect(service.isSubscribedToNetwork()).toBe(false);
         }
       });

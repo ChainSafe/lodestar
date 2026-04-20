@@ -9,7 +9,6 @@ import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {IStateRegenerator} from "../../regen/interface.js";
 import {serializeState} from "../../serializeState.js";
-import {fcCheckpointToHexPayload} from "../../stateCache/persistentCheckpointsCache.js";
 import {StateArchiveStrategy, StatesArchiveOpts} from "../interface.js";
 
 /**
@@ -108,9 +107,8 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
   async archiveState(finalized: CheckpointWithPayloadStatus, metrics?: Metrics | null): Promise<void> {
     // starting from Mar 2024, the finalized state could be from disk or in memory
     let timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
-    // Convert fork-choice checkpoint to beacon-node checkpoint with payloadPresent
-    const finalizedHexPayload = fcCheckpointToHexPayload(finalized);
-    const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalizedHexPayload);
+    const finalizedHex = {epoch: finalized.epoch, rootHex: finalized.rootHex};
+    const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalizedHex);
     timer?.({step: FrequencyStateArchiveStep.GetFinalizedState});
 
     const {rootHex} = finalized;

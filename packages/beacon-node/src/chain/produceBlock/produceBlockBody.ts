@@ -14,7 +14,16 @@ import {
   isForkPostBellatrix,
   isForkPostGloas,
 } from "@lodestar/params";
-import {G2_POINT_AT_INFINITY, IBeaconStateView, computeTimeAtSlot} from "@lodestar/state-transition";
+import {
+  G2_POINT_AT_INFINITY,
+  IBeaconStateView,
+  type IBeaconStateViewBellatrix,
+  computeTimeAtSlot,
+  isParentBlockFull,
+  isStatePostBellatrix,
+  isStatePostCapella,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BLSSignature,
@@ -102,12 +111,6 @@ export type ProduceFullGloas = {
   executionRequests: electra.ExecutionRequests;
   blobsBundle: BlobsBundle<ForkPostGloas>;
   cells: fulu.Cell[][];
-  /**
-   * Cached envelope state root computed during block production.
-   * This is the state root after running `processExecutionPayloadEnvelope` on the
-   * post-block state, and later used to construct the `ExecutionPayloadEnvelope`.
-   */
-  envelopeStateRoot: Root;
 };
 export type ProduceFullFulu = {
   type: BlockType.Full;
@@ -191,6 +194,10 @@ export async function produceBlockBody<T extends BlockType>(
   this.logger.verbose("Producing beacon block body", logMeta);
 
   if (isForkPostGloas(fork)) {
+    if (!isStatePostGloas(currentState)) {
+      throw new Error("Expected Gloas state for Gloas block production");
+    }
+
     // TODO GLOAS: support non self-building here, the block type differentiation between
     // full and blinded no longer makes sense in gloas, it might be a good idea to move
     // this into a completely separate function and have pre/post gloas more separated
@@ -297,6 +304,10 @@ export async function produceBlockBody<T extends BlockType>(
       shouldOverrideBuilder,
     });
   } else if (isForkPostBellatrix(fork)) {
+    if (!isStatePostBellatrix(currentState)) {
+      throw new Error("Expected Bellatrix state for execution block production");
+    }
+
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
@@ -598,7 +609,7 @@ export async function prepareExecutionPayload(
   parentBlockRoot: Root,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
-  state: IBeaconStateView,
+  state: IBeaconStateViewBellatrix,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
   const parentHash = state.latestBlockHash;
@@ -666,7 +677,7 @@ async function prepareExecutionPayloadHeader(
     config: ChainForkConfig;
   },
   fork: ForkPostBellatrix,
-  state: IBeaconStateView,
+  state: IBeaconStateViewBellatrix,
   proposerPubKey: BLSPubkey
 ): Promise<{
   header: ExecutionPayloadHeader;
@@ -693,7 +704,7 @@ export function getPayloadAttributesForSSE(
     prepareSlot,
     parentBlockRoot,
     feeRecipient,
-  }: {prepareState: IBeaconStateView; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
+  }: {prepareState: IBeaconStateViewBellatrix; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
 ): SSEPayloadAttributes {
   const parentHash = prepareState.latestBlockHash;
   const payloadAttributes = preparePayloadAttributes(fork, chain, {
@@ -736,7 +747,7 @@ function preparePayloadAttributes(
     parentBlockRoot,
     feeRecipient,
   }: {
-    prepareState: IBeaconStateView;
+    prepareState: IBeaconStateViewBellatrix;
     prepareSlot: Slot;
     parentBlockRoot: Root;
     feeRecipient: string;
@@ -751,9 +762,22 @@ function preparePayloadAttributes(
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    // withdrawals logic is now fork aware as it changes on electra fork post capella
-    (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
-      prepareState.getExpectedWithdrawals().expectedWithdrawals;
+    if (!isStatePostCapella(prepareState)) {
+      throw new Error("Expected Capella state for withdrawals");
+    }
+
+    if (isStatePostGloas(prepareState) && !isParentBlockFull(prepareState)) {
+      // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
+      // already deducted from CL balances but never credited on the EL (the envelope
+      // was not delivered). The next payload must carry those same withdrawals to
+      // restore CL/EL consistency, otherwise validators permanently lose that balance.
+      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
+        prepareState.payloadExpectedWithdrawals;
+    } else {
+      // withdrawals logic is now fork aware as it changes on electra fork post capella
+      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
+        prepareState.getExpectedWithdrawals().expectedWithdrawals;
+    }
   }
 
   if (ForkSeq[fork] >= ForkSeq.deneb) {

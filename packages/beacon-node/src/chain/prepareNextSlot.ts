@@ -1,12 +1,13 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
   IBeaconStateView,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
@@ -159,6 +160,9 @@ export class PrepareNextSlotScheduler {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
+          if (!isStatePostBellatrix(updatedPrepareState)) {
+            throw new Error("Expected Bellatrix state for payload preparation");
+          }
 
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
           const finalizedBlockHash =
@@ -181,6 +185,10 @@ export class PrepareNextSlotScheduler {
             proposerIndex,
             feeRecipient,
           });
+        }
+
+        if (!isStatePostBellatrix(updatedPrepareState)) {
+          throw new Error("Expected Bellatrix state for payload attributes");
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
@@ -209,11 +217,7 @@ export class PrepareNextSlotScheduler {
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        // Determine payloadPresent from head block's payload status
-        // Pre-Gloas: payloadStatus is always FULL → payloadPresent = true
-        // Post-Gloas: FULL → true, EMPTY → false, PENDING → false (conservative, treat as block state)
-        const payloadPresent = headBlock.payloadStatus === PayloadStatus.FULL;
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch, payloadPresent);
+        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }

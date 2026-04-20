@@ -1,4 +1,4 @@
-import {ForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkPostGloas} from "@lodestar/params";
 import {ColumnIndex, RootHex, SignedBeaconBlock, gloas} from "@lodestar/types";
 
 export enum PayloadEnvelopeInputSource {
@@ -23,6 +23,7 @@ export type ColumnWithSource = SourceMeta & {
 export type CreateFromBlockProps = {
   blockRootHex: RootHex;
   block: SignedBeaconBlock<ForkPostGloas>;
+  forkName: ForkName;
   sampledColumns: ColumnIndex[];
   custodyColumns: ColumnIndex[];
   timeCreatedSec: number;

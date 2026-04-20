@@ -1,7 +1,7 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconState,
@@ -34,7 +34,6 @@ import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processV
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
@@ -48,7 +47,6 @@ import {
   isStateValidatorsNodesPopulated,
 } from "../cache/stateCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
-import {BeaconStateAllForks} from "../cache/types.js";
 import {computeUnrealizedCheckpoints} from "../epoch/computeUnrealizedCheckpoints.js";
 import {getFinalizedRootProof, getSyncCommitteesWitness} from "../lightClient/proofs.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
@@ -61,15 +59,19 @@ import {getBlockRootAtSlot} from "../util/blockRoot.js";
 import {computeAnchorCheckpoint} from "../util/computeAnchorCheckpoint.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "../util/epoch.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
-import {isExecutionEnabled, isExecutionStateType, isMergeTransitionComplete} from "../util/execution.js";
+import {
+  isExecutionEnabled,
+  isExecutionStateType,
+  isGloasStateType,
+  isMergeTransitionComplete,
+} from "../util/execution.js";
 import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
-import {getStateTypeFromBytes} from "../util/sszBytes.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {IBeaconStateView} from "./interface.js";
+import {IBeaconStateView, IBeaconStateViewLatestFork} from "./interface.js";
 
-export class BeaconStateView implements IBeaconStateView {
+export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
   // Cached values extracted from the tree
   // phase0
@@ -95,12 +97,17 @@ export class BeaconStateView implements IBeaconStateView {
   // gloas
   private _executionPayloadAvailability: BitArray | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
+  private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
     this.config = cachedState.config;
   }
 
   // phase0
+
+  get forkName(): ForkName {
+    return this.config.getForkName(this.cachedState.slot);
+  }
 
   get slot(): number {
     return this.cachedState.slot;
@@ -360,7 +367,7 @@ export class BeaconStateView implements IBeaconStateView {
 
   get executionPayloadAvailability(): BitArray {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("executionPayloadAvailability is not available before GLOAS");
+      throw new Error("executionPayloadAvailability is not available before Gloas");
     }
 
     if (this._executionPayloadAvailability === null) {
@@ -374,7 +381,7 @@ export class BeaconStateView implements IBeaconStateView {
 
   get latestExecutionPayloadBid(): ExecutionPayloadBid {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("latestExecutionPayloadBid is not available before GLOAS");
+      throw new Error("latestExecutionPayloadBid is not available before Gloas");
     }
 
     if (this._latestExecutionPayloadBid === null) {
@@ -385,9 +392,22 @@ export class BeaconStateView implements IBeaconStateView {
     return this._latestExecutionPayloadBid;
   }
 
+  get payloadExpectedWithdrawals(): capella.Withdrawal[] {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("payloadExpectedWithdrawals is not available before Gloas");
+    }
+
+    if (this._payloadExpectedWithdrawals === null) {
+      this._payloadExpectedWithdrawals = (
+        this.cachedState as CachedBeaconStateGloas
+      ).payloadExpectedWithdrawals.toValue();
+    }
+    return this._payloadExpectedWithdrawals;
+  }
+
   getBuilder(index: BuilderIndex): gloas.Builder {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("Builders are not supported before GLOAS");
+      throw new Error("Builders are not supported before Gloas");
     }
 
     return (this.cachedState as CachedBeaconStateGloas).builders.getReadonly(index);
@@ -395,7 +415,7 @@ export class BeaconStateView implements IBeaconStateView {
 
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("Builders are not supported before GLOAS");
+      throw new Error("Builders are not supported before Gloas");
     }
 
     return canBuilderCoverBid(this.cachedState as CachedBeaconStateGloas, builderIndex, bidAmount);
@@ -407,7 +427,7 @@ export class BeaconStateView implements IBeaconStateView {
    */
   getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("PTC committees are not supported before GLOAS");
+      throw new Error("PTC committees are not supported before Gloas");
     }
 
     const ptcCommittee = (this.cachedState as CachedBeaconStateGloas).epochCtx.getPayloadTimelinessCommittee(slot);
@@ -574,7 +594,10 @@ export class BeaconStateView implements IBeaconStateView {
   }
 
   get isMergeTransitionComplete(): boolean {
-    return isExecutionStateType(this.cachedState) && isMergeTransitionComplete(this.cachedState);
+    return (
+      (isExecutionStateType(this.cachedState) || isGloasStateType(this.cachedState)) &&
+      isMergeTransitionComplete(this.cachedState)
+    );
   }
 
   // Block production
@@ -785,43 +808,5 @@ export class BeaconStateView implements IBeaconStateView {
       opts
     );
     return new BeaconStateView(postPayloadState);
-  }
-}
-
-/**
- * Create BeaconStateView for historical state regen, this is called from a worker thread.
- */
-export function createBeaconStateViewForHistoricalRegen(
-  config: BeaconConfig,
-  stateBytes: Uint8Array,
-  pubkeyCache: PubkeyCache
-): IBeaconStateView {
-  const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-
-  syncPubkeyCache(state, pubkeyCache);
-  const cachedState = createCachedBeaconState(
-    state,
-    {
-      config,
-      pubkeyCache,
-    },
-    {
-      skipSyncPubkeys: true,
-    }
-  );
-
-  return new BeaconStateView(cachedState);
-}
-
-/**
- * Populate a PubkeyIndexMap with any new entries based on a BeaconState
- */
-function syncPubkeyCache(state: BeaconStateAllForks, pubkeyCache: PubkeyCache): void {
-  // Get the validators sub tree once for all the loop
-
-  const newCount = state.validators.length;
-  for (let i = pubkeyCache.size; i < newCount; i++) {
-    const pubkey = state.validators.getReadonly(i).pubkey;
-    pubkeyCache.set(i, pubkey);
   }
 }

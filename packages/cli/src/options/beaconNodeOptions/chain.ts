@@ -31,6 +31,7 @@ export type ChainArgs = {
   "chain.archiveDataEpochs"?: number;
   "chain.archiveMode": ArchiveMode;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
+  "chain.nativeStateView"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
   "chain.maxCPStateEpochsOnDisk"?: number;
@@ -71,6 +72,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
+    nativeStateView: args["chain.nativeStateView"] ?? defaultOptions.chain.nativeStateView,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
@@ -277,6 +279,14 @@ Will double processing times. Use only for debugging purposes.",
     description: "Use fs to store checkpoint state for PersistentCheckpointStateCache or not",
     type: "boolean",
     default: defaultOptions.chain.nHistoricalStatesFileDataStore,
+    group: "chain",
+  },
+
+  "chain.nativeStateView": {
+    hidden: true,
+    description: "Use native (Zig) BeaconStateView instead of JS implementation",
+    type: "boolean",
+    default: defaultOptions.chain.nativeStateView,
     group: "chain",
   },
 

@@ -1,11 +1,11 @@
 import {routes} from "@lodestar/api";
-import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, isGloasBeaconBlock, phase0} from "@lodestar/types";
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {BlockStateCache, CheckpointHexPayload, CheckpointStateCache} from "../stateCache/types.js";
+import {BlockStateCache, CheckpointHex, CheckpointStateCache} from "../stateCache/types.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 import {
   IStateRegenerator,
@@ -104,19 +104,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     const parentEpoch = computeEpochAtSlot(parentBlock.slot);
     const blockEpoch = computeEpochAtSlot(block.slot);
 
-    // Convert PayloadStatus to payloadPresent boolean
-    if (parentBlock.payloadStatus === PayloadStatus.PENDING) {
-      throw new RegenError({
-        code: RegenErrorCode.UNEXPECTED_PAYLOAD_STATUS,
-        blockRoot: block.parentRoot,
-        payloadStatus: parentBlock.payloadStatus,
-      });
-    }
-    const payloadPresent = parentBlock.payloadStatus === PayloadStatus.FULL;
-
     // Check the checkpoint cache (if the pre-state is a checkpoint state)
     if (parentEpoch < blockEpoch) {
-      const checkpointState = this.checkpointStateCache.getLatest(parentRoot, blockEpoch, payloadPresent);
+      const checkpointState = this.checkpointStateCache.getLatest(parentRoot, blockEpoch);
       if (checkpointState && computeEpochAtSlot(checkpointState.slot) === blockEpoch) {
         return checkpointState;
       }
@@ -135,14 +125,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return null;
   }
 
-  async getCheckpointStateOrBytes(cp: CheckpointHexPayload): Promise<IBeaconStateView | Uint8Array | null> {
+  async getCheckpointStateOrBytes(cp: CheckpointHex): Promise<IBeaconStateView | Uint8Array | null> {
     return this.checkpointStateCache.getStateOrBytes(cp);
   }
 
   /**
    * Get checkpoint state from cache
    */
-  getCheckpointStateSync(cp: CheckpointHexPayload): IBeaconStateView | null {
+  getCheckpointStateSync(cp: CheckpointHex): IBeaconStateView | null {
     return this.checkpointStateCache.get(cp);
   }
 
@@ -150,19 +140,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * Get state closest to head
    */
   getClosestHeadState(head: ProtoBlock): IBeaconStateView | null {
-    // Convert PayloadStatus to payloadPresent boolean
-    if (head.payloadStatus === PayloadStatus.PENDING) {
-      throw new RegenError({
-        code: RegenErrorCode.UNEXPECTED_PAYLOAD_STATUS,
-        blockRoot: fromHex(head.blockRoot),
-        payloadStatus: head.payloadStatus,
-      });
-    }
-    const payloadPresent = head.payloadStatus === PayloadStatus.FULL;
-    return (
-      this.checkpointStateCache.getLatest(head.blockRoot, Infinity, payloadPresent) ||
-      this.blockStateCache.get(head.stateRoot)
-    );
+    return this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.blockStateCache.get(head.stateRoot);
   }
 
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
@@ -175,24 +153,15 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
   }
 
-  processBlockState(blockRootHex: RootHex, postState: IBeaconStateView): void {
+  processState(blockRootHex: RootHex, postState: IBeaconStateView): void {
     this.blockStateCache.add(postState);
     this.checkpointStateCache.processState(blockRootHex, postState).catch((e) => {
       this.logger.debug("Error processing block state", {blockRootHex, slot: postState.slot}, e);
     });
   }
 
-  /**
-   * Process payload state for caching after importing execution payload.
-   */
-  processPayloadState(payloadState: IBeaconStateView): void {
-    // Add payload state to block state cache (keyed by payload state root)
-    this.blockStateCache.add(payloadState);
-  }
-
-  // TODO GLOAS: This should also be called when importing execution payload after we implement it
-  addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView, payloadPresent: boolean): void {
-    this.checkpointStateCache.add(cp, item, payloadPresent);
+  addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView): void {
+    this.checkpointStateCache.add(cp, item);
   }
 
   updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void {
@@ -228,13 +197,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     }
   }
 
-  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch, payloadPresent: boolean): number | null {
-    return this.checkpointStateCache.updatePreComputedCheckpoint(rootHex, epoch, payloadPresent);
-  }
-
-  upgradeForGloas(epoch: Epoch): void {
-    this.logger.verbose("Upgrading block state cache for Gloas fork", {epoch});
-    this.blockStateCache.upgradeToGloas();
+  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null {
+    return this.checkpointStateCache.updatePreComputedCheckpoint(rootHex, epoch);
   }
 
   /**

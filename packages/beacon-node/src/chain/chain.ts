@@ -2,22 +2,14 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {
-  CheckpointWithPayloadStatus,
-  IForkChoice,
-  PayloadStatus,
-  ProtoBlock,
-  UpdateHeadOpt,
-  getCheckpointPayloadStatus,
-} from "@lodestar/fork-choice";
+import {CheckpointWithPayloadStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
-  BUILDER_INDEX_SELF_BUILD,
   EFFECTIVE_BALANCE_INCREMENT,
   type ForkPostFulu,
+  type ForkPostGloas,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
-  isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
@@ -29,12 +21,14 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getEffectiveBalancesFromStateBytes,
+  isStatePostAltair,
+  isStatePostElectra,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
   BlindedBeaconBlockBody,
-  DataColumnSidecars,
+  DataColumnSidecar,
   Epoch,
   Root,
   RootHex,
@@ -97,8 +91,8 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {computeEnvelopeStateRoot, computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
-import {AssembledBlockType, BlockType, ProduceFullGloas, ProduceResult} from "./produceBlock/index.js";
+import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
@@ -122,7 +116,7 @@ import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datasto
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
-import {PersistentCheckpointStateCache, fcCheckpointToHexPayload} from "./stateCache/persistentCheckpointsCache.js";
+import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
@@ -387,8 +381,7 @@ export class BeaconChain implements IBeaconChain {
     const {checkpoint} = anchorState.computeAnchorCheckpoint();
     blockStateCache.add(anchorState);
     blockStateCache.setHeadState(anchorState);
-    const payloadPresent = getCheckpointPayloadStatus(config, anchorState, checkpoint.epoch) === PayloadStatus.FULL;
-    checkpointStateCache.add(checkpoint, anchorState, payloadPresent);
+    checkpointStateCache.add(checkpoint, anchorState);
 
     const forkChoice = initializeForkChoice(
       config,
@@ -504,7 +497,11 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenBlockInputCache.has(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+    return this.seenBlockInputCache.hasBlock(blockRoot) || this.forkChoice.hasBlockHexUnsafe(blockRoot);
+  }
+
+  seenPayloadEnvelope(blockRoot: RootHex): boolean {
+    return this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) || this.forkChoice.hasPayloadHexUnsafe(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {
@@ -678,7 +675,7 @@ export class BeaconChain implements IBeaconChain {
 
     // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint for backwards compatibility.
     // because pre-gloas we always store FULL checkpoint state.
-    const persistedKey = checkpointToDatastoreKey(checkpoint, true);
+    const persistedKey = checkpointToDatastoreKey(checkpoint);
     return this.cpStateDatastore.read(persistedKey);
   }
 
@@ -686,8 +683,8 @@ export class BeaconChain implements IBeaconChain {
     checkpoint: CheckpointWithPayloadStatus
   ): {state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null {
     // finalized or justified checkpoint states maynot be available with PersistentCheckpointStateCache, use getCheckpointStateOrBytes() api to get Uint8Array
-    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
-    const cachedStateCtx = this.regen.getCheckpointStateSync(checkpointHexPayload);
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const cachedStateCtx = this.regen.getCheckpointStateSync(checkpointHex);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlockDefaultStatus(
         ssz.phase0.BeaconBlockHeader.hashTreeRoot(cachedStateCtx.latestBlockHeader)
@@ -706,8 +703,8 @@ export class BeaconChain implements IBeaconChain {
   async getStateOrBytesByCheckpoint(
     checkpoint: CheckpointWithPayloadStatus
   ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
-    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHexPayload);
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHex);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlockDefaultStatus(checkpoint.root);
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
@@ -855,20 +852,66 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputColumns(blockInput)) {
-        throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      const envelope = payloadInput.getPayloadEnvelope();
+      const serialized = this.serializedCache.get(envelope);
+      if (serialized) {
+        return serialized;
       }
-      return blockInput.getAllColumns();
+      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
     }
+
+    return (
+      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
+      null
+    );
+  }
+
+  async getExecutionPayloadEnvelope(
+    blockSlot: Slot,
+    blockRootHex: string
+  ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      return payloadInput.getPayloadEnvelope();
+    }
+
+    return (
+      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
+      null
+    );
+  }
+
+  async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
+    const fork = this.config.getForkName(blockSlot);
+
+    if (isForkPostGloas(fork)) {
+      // After gloas, columns are tracked in PayloadEnvelopeInput
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput) {
+        return payloadInput.getAllColumns();
+      }
+    } else {
+      // Before gloas, columns are tracked in BlockInput
+      const blockInput = this.seenBlockInputCache.get(blockRootHex);
+      if (blockInput) {
+        if (!isBlockInputColumns(blockInput)) {
+          throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+        }
+        return blockInput.getAllColumns();
+      }
+    }
+
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
     if (sidecarsUnfinalized.length > 0) {
-      return sidecarsUnfinalized as DataColumnSidecars;
+      return sidecarsUnfinalized;
     }
     const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
-    return sidecarsFinalized as DataColumnSidecars;
+    return sidecarsFinalized;
   }
 
   async getSerializedDataColumnSidecars(
@@ -876,23 +919,45 @@ export class BeaconChain implements IBeaconChain {
     blockRootHex: string,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]> {
-    const blockInput = this.seenBlockInputCache.get(blockRootHex);
-    if (blockInput) {
-      if (!isBlockInputColumns(blockInput)) {
-        throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
+    const fork = this.config.getForkName(blockSlot);
+
+    if (isForkPostGloas(fork)) {
+      // After gloas, columns are tracked in PayloadEnvelopeInput
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput) {
+        return indices.map((index) => {
+          const sidecar = payloadInput.getColumn(index);
+          if (!sidecar) {
+            return undefined;
+          }
+          const serialized = this.serializedCache.get(sidecar);
+          if (serialized) {
+            return serialized;
+          }
+          return sszTypesFor(fork as ForkPostGloas).DataColumnSidecar.serialize(sidecar);
+        });
       }
-      return indices.map((index) => {
-        const sidecar = blockInput.getColumn(index);
-        if (!sidecar) {
-          return undefined;
+    } else {
+      // Before gloas, columns are tracked in BlockInput
+      const blockInput = this.seenBlockInputCache.get(blockRootHex);
+      if (blockInput) {
+        if (!isBlockInputColumns(blockInput)) {
+          throw new Error(`Expected block input to have columns: slot=${blockSlot} root=${blockRootHex}`);
         }
-        const serialized = this.serializedCache.get(sidecar);
-        if (serialized) {
-          return serialized;
-        }
-        return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
-      });
+        return indices.map((index) => {
+          const sidecar = blockInput.getColumn(index);
+          if (!sidecar) {
+            return undefined;
+          }
+          const serialized = this.serializedCache.get(sidecar);
+          if (serialized) {
+            return serialized;
+          }
+          return sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(sidecar);
+        });
+      }
     }
+
     const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
     if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
       return sidecarsUnfinalized;
@@ -995,7 +1060,7 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    const {newStateRoot, proposerReward, postState} = computeNewStateRoot(this.metrics, state, block);
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full
@@ -1004,23 +1069,9 @@ export class BeaconChain implements IBeaconChain {
     const blockRootHex = toRootHex(blockRoot);
 
     const fork = this.config.getForkName(slot);
-    if (isForkPostGloas(fork)) {
-      // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
-      if (produceResult.type !== BlockType.Full) {
-        throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
-      }
-
-      const gloasResult = produceResult as ProduceFullGloas;
-      const envelope: gloas.ExecutionPayloadEnvelope = {
-        payload: gloasResult.executionPayload,
-        executionRequests: gloasResult.executionRequests,
-        builderIndex: BUILDER_INDEX_SELF_BUILD,
-        beaconBlockRoot: blockRoot,
-        slot,
-        stateRoot: ZERO_HASH,
-      };
-      const envelopeStateRoot = computeEnvelopeStateRoot(this.metrics, postState, envelope);
-      gloasResult.envelopeStateRoot = envelopeStateRoot;
+    // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
+    if (isForkPostGloas(fork) && produceResult.type !== BlockType.Full) {
+      throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
     }
 
     // Track the produced block for consensus broadcast validations, later validation, etc.
@@ -1268,8 +1319,8 @@ export class BeaconChain implements IBeaconChain {
     checkpoint: CheckpointWithPayloadStatus,
     blockState: IBeaconStateView
   ): {state: IBeaconStateView; stateId: string; shouldWarn: boolean} {
-    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
-    const state = this.regen.getCheckpointStateSync(checkpointHexPayload);
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const state = this.regen.getCheckpointStateSync(checkpointHex);
     if (state) {
       return {state, stateId: "checkpoint_state", shouldWarn: false};
     }
@@ -1347,9 +1398,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
     const headState = this.getHeadState();
-    const fork = this.config.getForkName(headState.slot);
-
-    if (isForkPostElectra(fork)) {
+    if (isStatePostElectra(headState)) {
       metrics.pendingDeposits.set(headState.pendingDepositsCount);
       metrics.pendingPartialWithdrawals.set(headState.pendingPartialWithdrawalsCount);
       metrics.pendingConsolidations.set(headState.pendingConsolidationsCount);
@@ -1394,10 +1443,6 @@ export class BeaconChain implements IBeaconChain {
 
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
-
-    if (epoch === this.config.GLOAS_FORK_EPOCH) {
-      this.regen.upgradeForGloas(epoch);
-    }
 
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);
@@ -1596,6 +1641,9 @@ export class BeaconChain implements IBeaconChain {
     }
 
     preState = preState.processSlots(block.slot); // Dial preState's slot to block.slot
+    if (!isStatePostAltair(preState)) {
+      throw new Error("Sync committee rewards are not supported before Altair");
+    }
 
     return preState.computeSyncCommitteeRewards(block, validatorIds ?? []);
   }
