@@ -17,34 +17,28 @@ export async function updateBackfillRange(
   {chain, db, logger}: {chain: IBeaconChain; db: IBeaconDb; logger: Logger},
   finalized: CheckpointWithHex
 ): Promise<void> {
-  try {
-    // Mark the sequence in backfill db from finalized block's slot till anchor slot as
-    // filled.
-    const finalizedBlockFC = chain.forkChoice.getBlockHexDefaultStatus(finalized.rootHex);
-    if (finalizedBlockFC && finalizedBlockFC.slot > chain.anchorStateLatestBlockSlot) {
-      await db.backfilledRanges.put(finalizedBlockFC.slot, chain.anchorStateLatestBlockSlot);
-
-      // Clear previously marked sequence till anchorStateLatestBlockSlot, without
-      // touching backfill sync process sequence which are at
-      // <=anchorStateLatestBlockSlot i.e. clear >anchorStateLatestBlockSlot
-      // and < currentSlot
-      const filteredSeqs = await db.backfilledRanges.entries({
-        gt: chain.anchorStateLatestBlockSlot,
-        lt: finalizedBlockFC.slot,
-      });
-      logger.debug("updated backfilledRanges", {
-        key: finalizedBlockFC.slot,
-        value: chain.anchorStateLatestBlockSlot,
-      });
-      if (filteredSeqs.length > 0) {
-        await db.backfilledRanges.batchDelete(filteredSeqs.map((entry) => entry.key));
-        logger.debug(
-          `Forward Sync - cleaned up backfilledRanges between ${finalizedBlockFC.slot},${chain.anchorStateLatestBlockSlot}`,
-          {seqs: JSON.stringify(filteredSeqs)}
-        );
-      }
-    }
-  } catch (e) {
-    logger.error("Error updating backfilledRanges on finalization", {epoch: finalized.epoch}, e as Error);
-  }
+  // try {
+  //   const finalizedBlockFC = chain.forkChoice.getBlockHexDefaultStatus(finalized.rootHex);
+  //   if (finalizedBlockFC && finalizedBlockFC.slot > chain.anchorStateLatestBlockSlot) {
+  //     await db.backfilledRanges.put(finalizedBlockFC.slot, chain.anchorStateLatestBlockSlot);
+  //
+  //     const filteredSeqs = await db.backfilledRanges.entries({
+  //       gt: chain.anchorStateLatestBlockSlot,
+  //       lt: finalizedBlockFC.slot,
+  //     });
+  //     logger.debug("updated backfilledRanges", {
+  //       key: finalizedBlockFC.slot,
+  //       value: chain.anchorStateLatestBlockSlot,
+  //     });
+  //     if (filteredSeqs.length > 0) {
+  //       await db.backfilledRanges.batchDelete(filteredSeqs.map((entry) => entry.key));
+  //       logger.debug(
+  //         `Forward Sync - cleaned up backfilledRanges between ${finalizedBlockFC.slot},${chain.anchorStateLatestBlockSlot}`,
+  //         {seqs: JSON.stringify(filteredSeqs)}
+  //       );
+  //     }
+  //   }
+  // } catch (e) {
+  //   logger.error("Error updating backfilledRanges on finalization", {epoch: finalized.epoch}, e as Error);
+  // }
 }
