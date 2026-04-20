@@ -278,7 +278,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -298,7 +297,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -318,7 +316,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
       protoArray.onExecutionPayload(
@@ -327,7 +324,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -351,7 +347,6 @@ describe("Gloas Fork Choice", () => {
           "0x02",
           gloasForkSlot - 1,
           stateRoot,
-          null,
           ExecutionStatus.Valid
         )
       ).toThrow();
@@ -365,7 +360,6 @@ describe("Gloas Fork Choice", () => {
           "0x99",
           gloasForkSlot,
           stateRoot,
-          null,
           ExecutionStatus.Valid
         )
       ).toThrow();
@@ -438,7 +432,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -462,7 +455,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -486,7 +478,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -547,7 +538,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -569,7 +559,6 @@ describe("Gloas Fork Choice", () => {
         "0x02Hash",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -600,7 +589,7 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot, null);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, ExecutionStatus.Valid);
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
@@ -677,7 +666,7 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot, null);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, ExecutionStatus.Valid);
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
@@ -740,7 +729,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -793,7 +781,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 
@@ -828,7 +815,6 @@ describe("Gloas Fork Choice", () => {
         "0x02",
         gloasForkSlot,
         stateRoot,
-        null,
         ExecutionStatus.Valid
       );
 

@@ -1,5 +1,13 @@
 import {Logger} from "@lodestar/logger";
-import {ForkName, ForkPostFulu, ForkPreFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPreFulu,
+  ForkSeq,
+  SLOTS_PER_EPOCH,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
@@ -216,13 +224,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.electra
-        ? "engine_newPayloadV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_newPayloadV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_newPayloadV2"
-            : "engine_newPayloadV1";
+      ForkSeq[fork] >= ForkSeq.gloas
+        ? "engine_newPayloadV5"
+        : ForkSeq[fork] >= ForkSeq.electra
+          ? "engine_newPayloadV4"
+          : ForkSeq[fork] >= ForkSeq.deneb
+            ? "engine_newPayloadV3"
+            : ForkSeq[fork] >= ForkSeq.capella
+              ? "engine_newPayloadV2"
+              : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -244,7 +254,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
         const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
         engineRequest = {
-          method: "engine_newPayloadV4",
+          method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
           params: [
             serializedExecutionPayload,
             serializedVersionedHashes,
@@ -347,8 +357,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<PayloadId | null> {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
-    const method =
-      ForkSeq[fork] >= ForkSeq.deneb
+    const method = isForkPostGloas(fork)
+      ? "engine_forkchoiceUpdatedV4"
+      : ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_forkchoiceUpdatedV3"
         : ForkSeq[fork] >= ForkSeq.capella
           ? "engine_forkchoiceUpdatedV2"
@@ -438,8 +449,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case ForkName.electra:
         method = "engine_getPayloadV4";
         break;
-      default:
+      case ForkName.fulu:
         method = "engine_getPayloadV5";
+        break;
+      default:
+        method = "engine_getPayloadV6";
         break;
     }
     const payloadResponse = await this.rpc.fetchWithRetries<

@@ -12,9 +12,10 @@ export type PayloadAttestationMessage = ValueOf<typeof ssz.PayloadAttestationMes
 export type IndexedPayloadAttestation = ValueOf<typeof ssz.IndexedPayloadAttestation>;
 export type ProposerPreferences = ValueOf<typeof ssz.ProposerPreferences>;
 export type SignedProposerPreferences = ValueOf<typeof ssz.SignedProposerPreferences>;
-export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadBid = ValueOf<typeof ssz.ExecutionPayloadBid>;
 export type SignedExecutionPayloadBid = ValueOf<typeof ssz.SignedExecutionPayloadBid>;
+export type BlockAccessList = ValueOf<typeof ssz.BlockAccessList>;
+export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadEnvelope = ValueOf<typeof ssz.ExecutionPayloadEnvelope>;
 export type SignedExecutionPayloadEnvelope = ValueOf<typeof ssz.SignedExecutionPayloadEnvelope>;
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
@@ -26,3 +27,5 @@ export type DataColumnSidecar = ValueOf<typeof ssz.DataColumnSidecar>;
 export type DataColumnSidecars = ValueOf<typeof ssz.DataColumnSidecars>;
 
 export type ExecutionPayloadEnvelopesByRangeRequest = ValueOf<typeof ssz.ExecutionPayloadEnvelopesByRangeRequest>;
+export type PayloadAttributes = ValueOf<typeof ssz.PayloadAttributes>;
+export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;

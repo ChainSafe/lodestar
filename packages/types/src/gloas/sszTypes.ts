@@ -1,5 +1,6 @@
 import {
   BitVectorType,
+  ByteListType,
   ContainerType,
   ListBasicType,
   ListCompositeType,
@@ -10,6 +11,7 @@ import {
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
   BUILDER_REGISTRY_LIMIT,
   HISTORICAL_ROOTS_LIMIT,
+  MAX_BYTES_PER_TRANSACTION,
   MAX_PAYLOAD_ATTESTATIONS,
   MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
@@ -18,6 +20,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
+import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
@@ -161,10 +164,13 @@ export const SignedExecutionPayloadBid = new ContainerType(
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
 );
 
+export const BlockAccessList = new ByteListType(MAX_BYTES_PER_TRANSACTION);
+
 export const ExecutionPayload = new ContainerType(
   {
-    ...denebSsz.ExecutionPayload.fields,
-    slotNumber: UintNum64, // [New in Gloas:EIP7843]
+    ...electraSsz.ExecutionPayload.fields,
+    blockAccessList: BlockAccessList, // New in GLOAS:EIP-7928
+    slotNumber: Slot, // New in GLOAS:EIP-7843
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -309,4 +315,21 @@ export const DataColumnSidecars = new ListCompositeType(DataColumnSidecar, NUMBE
 export const ExecutionPayloadEnvelopesByRangeRequest = new ContainerType(
   {startSlot: Slot, count: UintNum64},
   {typeName: "ExecutionPayloadEnvelopesByRangeRequest", jsonCase: "eth2"}
+);
+
+// PayloadAttributes primarily for SSE event
+export const PayloadAttributes = new ContainerType(
+  {
+    ...denebSsz.PayloadAttributes.fields,
+    slotNumber: Slot,
+  },
+  {typeName: "PayloadAttributes", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributes = new ContainerType(
+  {
+    ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
+    payloadAttributes: PayloadAttributes,
+  },
+  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );

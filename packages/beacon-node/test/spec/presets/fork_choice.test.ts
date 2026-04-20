@@ -381,7 +381,6 @@ const forkChoiceTest =
                 const beaconBlockRoot = toHex(envelope.message.beaconBlockRoot);
                 const blockHash = toHex(envelope.message.payload.blockHash);
                 const blockNumber = envelope.message.payload.blockNumber;
-                const stateRoot = toHex(envelope.message.stateRoot);
 
                 // Add predefined VALID status for the payload's block hash so the EL mock accepts it
                 executionEngineBackend.addPredefinedPayloadStatus(blockHash, {
@@ -394,7 +393,6 @@ const forkChoiceTest =
                   beaconBlockRoot,
                   blockHash,
                   blockNumber,
-                  stateRoot,
                   ExecutionStatus.Valid
                 );
                 if (!isValid) throw Error("Expect error since this is a negative test");

@@ -830,7 +830,7 @@ function preparePayloadAttributes(
   }
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
-    (payloadAttributes as PayloadAttributes).slotNumber = prepareSlot;
+    (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).slotNumber = prepareSlot;
   }
 
   return payloadAttributes;
